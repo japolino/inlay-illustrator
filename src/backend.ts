@@ -1462,7 +1462,7 @@ function isOwnMessage(message: { content?: string; metadata?: Record<string, unk
 }
 
 function imageUrlFromId(imageId: string): string {
-  return `/api/v1/images/${encodeURIComponent(imageId)}`;
+  return `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
 }
 
 function htmlAttr(value: string): string {
@@ -1624,9 +1624,11 @@ async function generateForMessage(chatId: string, messageId: string, content: st
       });
       if (result.imageId) {
         imageIds.push(result.imageId);
-        imageUrls.push(imageUrlFromId(result.imageId));
-      } else if (result.imageUrl) {
+      }
+      if (result.imageUrl) {
         imageUrls.push(result.imageUrl);
+      } else if (result.imageId) {
+        imageUrls.push(imageUrlFromId(result.imageId));
       }
       logStage(config, "image_generation_done", {
         index: index + 1,

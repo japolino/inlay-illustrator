@@ -1296,7 +1296,7 @@ function isOwnMessage(message) {
   return Boolean(message.metadata?.extension === EXTENSION_ID);
 }
 function imageUrlFromId(imageId) {
-  return `/api/v1/images/${encodeURIComponent(imageId)}`;
+  return `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
 }
 function htmlAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -1468,9 +1468,11 @@ async function generateForMessage(chatId, messageId, content, userId) {
       });
       if (result.imageId) {
         imageIds.push(result.imageId);
-        imageUrls.push(imageUrlFromId(result.imageId));
-      } else if (result.imageUrl) {
+      }
+      if (result.imageUrl) {
         imageUrls.push(result.imageUrl);
+      } else if (result.imageId) {
+        imageUrls.push(imageUrlFromId(result.imageId));
       }
       logStage(config, "image_generation_done", {
         index: index + 1,
