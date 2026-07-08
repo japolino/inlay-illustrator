@@ -132,6 +132,20 @@ type ParserGenerationRequest = {
   reasoning: { source: "off" };
   userId?: string;
 };
+type CorsTextResponse = {
+  status?: number;
+  statusText?: string;
+  body?: unknown;
+};
+type DanbooruSuggestion = { tag?: string; score?: number };
+type DanbooruPayload = {
+  valid?: string[];
+  suggestions?: Record<string, DanbooruSuggestion[]>;
+  data?: {
+    valid?: string[];
+    suggestions?: Record<string, DanbooruSuggestion[]>;
+  };
+};
 
 const DEFAULT_CONFIG: Config = {
   enabled: true,
@@ -211,6 +225,26 @@ function cleanParameters(value: unknown): Record<string, unknown> {
 
 function cleanArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? value as T[] : [];
+}
+
+function parseCorsJson<T>(response: unknown, label: string): T {
+  const wrapper = asRecord(response);
+  if (wrapper && ("body" in wrapper || "status" in wrapper || "statusText" in wrapper)) {
+    const { status, statusText, body } = wrapper as CorsTextResponse;
+    if (typeof status === "number" && (status < 200 || status >= 300)) {
+      throw new Error(`${label} returned HTTP ${status}${statusText ? ` ${statusText}` : ""}`);
+    }
+    if (typeof body === "string") {
+      try {
+        return JSON.parse(body) as T;
+      } catch {
+        throw new Error(`${label} returned invalid JSON`);
+      }
+    }
+    if (body && typeof body === "object") return body as T;
+    throw new Error(`${label} returned an empty response body`);
+  }
+  return response as T;
 }
 
 function normalizeConfig(raw: RawConfig): Config {
@@ -1433,11 +1467,11 @@ async function cleanupPrompt(prompt: string, config: Config): Promise<string> {
   const requestTags = unique(tags.flatMap((tag) => [tag, ...localCandidates(tag)]));
   logStage(config, "danbooru_cleanup_start", { endpoint: config.danbooruEndpoint.trim(), tagCount: tags.length, requestTagCount: requestTags.length });
   try {
-    const response = await spindle.cors(config.danbooruEndpoint.trim(), {
+    const response = parseCorsJson<DanbooruPayload>(await spindle.cors(config.danbooruEndpoint.trim(), {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json" },
       body: JSON.stringify({ tags: requestTags })
-    }) as { valid?: string[]; suggestions?: Record<string, Array<{ tag?: string; score?: number }>>; data?: { valid?: string[]; suggestions?: Record<string, Array<{ tag?: string; score?: number }>> } };
+    }), "Danbooru cleanup");
     const valid = response.valid || response.data?.valid || [];
     const suggestions = response.suggestions || response.data?.suggestions || {};
     const validKeys = new Set(valid.map((tag) => tag.toLowerCase()));
@@ -1739,11 +1773,11 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       const config = await getConfig(userId);
       configForError = config;
       logStage(config, "danbooru_test_start", { endpoint: config.danbooruEndpoint });
-      const result = await spindle.cors(config.danbooruEndpoint, {
+      const result = parseCorsJson<DanbooruPayload>(await spindle.cors(config.danbooruEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({ tags: ["1girl", "blonde hair", "red eyes"] })
-      });
+      }), "Danbooru test");
       spindle.sendToFrontend({ type: "danbooru_test", ok: true, result }, userId);
     }
   } catch (err) {
