@@ -78,6 +78,26 @@ function cleanParameters(value) {
 function cleanArray(value) {
   return Array.isArray(value) ? value : [];
 }
+function parseCorsJson(response, label) {
+  const wrapper = asRecord(response);
+  if (wrapper && (("body" in wrapper) || ("status" in wrapper) || ("statusText" in wrapper))) {
+    const { status, statusText, body } = wrapper;
+    if (typeof status === "number" && (status < 200 || status >= 300)) {
+      throw new Error(`${label} returned HTTP ${status}${statusText ? ` ${statusText}` : ""}`);
+    }
+    if (typeof body === "string") {
+      try {
+        return JSON.parse(body);
+      } catch {
+        throw new Error(`${label} returned invalid JSON`);
+      }
+    }
+    if (body && typeof body === "object")
+      return body;
+    throw new Error(`${label} returned an empty response body`);
+  }
+  return response;
+}
 function normalizeConfig(raw) {
   const imageGeneration = raw.imageGeneration || {};
   const includeMin = clampInt(raw.includeMinMessages, 0, 32, DEFAULT_CONFIG.includeMinMessages);
@@ -1266,11 +1286,11 @@ async function cleanupPrompt(prompt, config) {
   const requestTags = unique(tags.flatMap((tag) => [tag, ...localCandidates(tag)]));
   logStage(config, "danbooru_cleanup_start", { endpoint: config.danbooruEndpoint.trim(), tagCount: tags.length, requestTagCount: requestTags.length });
   try {
-    const response = await spindle.cors(config.danbooruEndpoint.trim(), {
+    const response = parseCorsJson(await spindle.cors(config.danbooruEndpoint.trim(), {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ tags: requestTags })
-    });
+    }), "Danbooru cleanup");
     const valid = response.valid || response.data?.valid || [];
     const suggestions = response.suggestions || response.data?.suggestions || {};
     const validKeys = new Set(valid.map((tag) => tag.toLowerCase()));
@@ -1587,11 +1607,11 @@ spindle.onFrontendMessage(async (payload, userId) => {
       const config = await getConfig(userId);
       configForError = config;
       logStage(config, "danbooru_test_start", { endpoint: config.danbooruEndpoint });
-      const result = await spindle.cors(config.danbooruEndpoint, {
+      const result = parseCorsJson(await spindle.cors(config.danbooruEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ tags: ["1girl", "blonde hair", "red eyes"] })
-      });
+      }), "Danbooru test");
       spindle.sendToFrontend({ type: "danbooru_test", ok: true, result }, userId);
     }
   } catch (err) {
