@@ -1496,7 +1496,7 @@ function isOwnMessage(message: { content?: string; metadata?: Record<string, unk
 }
 
 function imageUrlFromId(imageId: string): string {
-  return `/api/v1/images/${encodeURIComponent(imageId)}`;
+  return `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
 }
 
 function htmlAttr(value: string): string {
@@ -1620,6 +1620,19 @@ async function generateForMessage(chatId: string, messageId: string, content: st
     }
     if (!parsed) throw new Error(lastParserError instanceof Error ? lastParserError.message : "Parser did not return usable prompts.");
     updateCache(state.characterAppearance, parsed);
+    // The parser is the source of truth for rolling appearance memory. Persist
+    // its result before any image request so a provider failure cannot discard
+    // a successfully parsed visual baseline.
+    await writeJson(`states/${chatId}.json`, state, userId);
+    spindle.sendToFrontend({
+      type: "character_memory_updated",
+      chatId,
+      characterAppearance: state.characterAppearance
+    }, userId);
+    logStage(config, "character_memory_persisted", {
+      chatId,
+      characterCount: Object.keys(state.characterAppearance).length
+    });
     const scenes = parsed.scenes || [];
     const normalized = normalizeScenePayload(parsed);
     logStage(config, "parsed_payload_summary", {
@@ -1656,12 +1669,12 @@ async function generateForMessage(chatId: string, messageId: string, content: st
         owner_chat_id: chatId,
         userId
       });
-      if (result.imageId) {
-        imageIds.push(result.imageId);
-        imageUrls.push(imageUrlFromId(result.imageId));
-      } else if (result.imageUrl) {
-        imageUrls.push(result.imageUrl);
-      }
+      // Providers may return a directly usable URL. Keep imageId separately
+      // for message metadata, and use Lumiverse's documented result route only
+      // when the provider result has no URL.
+      if (result.imageId) imageIds.push(result.imageId);
+      const imageUrl = result.imageUrl || (result.imageId ? imageUrlFromId(result.imageId) : "");
+      if (imageUrl) imageUrls.push(imageUrl);
       logStage(config, "image_generation_done", {
         index: index + 1,
         imageId: result.imageId || null,

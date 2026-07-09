@@ -1316,7 +1316,7 @@ function isOwnMessage(message) {
   return Boolean(message.metadata?.extension === EXTENSION_ID);
 }
 function imageUrlFromId(imageId) {
-  return `/api/v1/images/${encodeURIComponent(imageId)}`;
+  return `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
 }
 function htmlAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -1450,6 +1450,16 @@ async function generateForMessage(chatId, messageId, content, userId) {
     if (!parsed)
       throw new Error(lastParserError instanceof Error ? lastParserError.message : "Parser did not return usable prompts.");
     updateCache(state.characterAppearance, parsed);
+    await writeJson(`states/${chatId}.json`, state, userId);
+    spindle.sendToFrontend({
+      type: "character_memory_updated",
+      chatId,
+      characterAppearance: state.characterAppearance
+    }, userId);
+    logStage(config, "character_memory_persisted", {
+      chatId,
+      characterCount: Object.keys(state.characterAppearance).length
+    });
     const scenes = parsed.scenes || [];
     const normalized = normalizeScenePayload(parsed);
     logStage(config, "parsed_payload_summary", {
@@ -1486,12 +1496,11 @@ async function generateForMessage(chatId, messageId, content, userId) {
         owner_chat_id: chatId,
         userId
       });
-      if (result.imageId) {
+      if (result.imageId)
         imageIds.push(result.imageId);
-        imageUrls.push(imageUrlFromId(result.imageId));
-      } else if (result.imageUrl) {
-        imageUrls.push(result.imageUrl);
-      }
+      const imageUrl = result.imageUrl || (result.imageId ? imageUrlFromId(result.imageId) : "");
+      if (imageUrl)
+        imageUrls.push(imageUrl);
       logStage(config, "image_generation_done", {
         index: index + 1,
         imageId: result.imageId || null,

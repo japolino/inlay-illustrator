@@ -39,12 +39,15 @@ type Config = {
   customPositiveSuffix: string;
   customNegative: string;
 };
+
 type ParserConnection = {
   id: string;
   name: string;
   provider: string;
   model: string;
 };
+
+type MountedComponent = { destroy(): void };
 
 const DEFAULT_CONFIG: Config = {
   enabled: true,
@@ -101,6 +104,8 @@ export function setup(ctx: SpindleFrontendContext) {
   let characterAppearance: Record<string, string> = {};
   let status = "Loading...";
   let triedImageGenerationParserDefault = false;
+  let drawerWasActive = false;
+  let mountedComponents: MountedComponent[] = [];
 
   const tab = ctx.ui.registerDrawerTab({
     id: "inlay_illustrator",
@@ -113,74 +118,23 @@ export function setup(ctx: SpindleFrontendContext) {
   });
 
   const removeStyle = ctx.dom.addStyle(`
-    .inlay-panel{padding:12px;color:var(--lumiverse-text)}
-    .inlay-section{border-top:1px solid var(--lumiverse-border);padding-top:12px;margin-top:12px}
-    .inlay-row{display:grid;grid-template-columns:minmax(110px,.9fr) minmax(0,1.1fr);align-items:center;gap:8px;margin:8px 0;font-size:13px}
+    .inlay-panel{padding:12px;color:var(--lumiverse-text);display:flex;flex-direction:column;gap:10px}
+    .inlay-section-body{display:flex;flex-direction:column;gap:10px;padding:4px 0}
+    .inlay-row{display:grid;grid-template-columns:minmax(116px,.9fr) minmax(0,1.1fr);align-items:center;gap:8px;font-size:13px}
     .inlay-row label{color:var(--lumiverse-text-muted)}
-    .inlay-row input,.inlay-row select,.inlay-row textarea{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:7px 9px;font:inherit}
+    .inlay-row input,.inlay-row textarea{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:7px 9px;font:inherit}
     .inlay-row textarea{min-height:76px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
-    .inlay-parser-summary{margin:8px 0 0;font-size:12px;color:var(--lumiverse-text-muted)}
-    .inlay-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-    .inlay-actions button{border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:8px 10px;cursor:pointer}
-    .inlay-actions button:hover{background:var(--lumiverse-fill-hover)}
-    .inlay-subtitle{font-size:13px;font-weight:600;margin:0 0 8px}
-    .inlay-tag-row{display:grid;grid-template-columns:minmax(72px,.55fr) minmax(112px,1fr);gap:6px;margin:8px 0}
-    .inlay-tag-row input{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:7px 9px;font:inherit}
+    .inlay-hint{grid-column:2;color:var(--lumiverse-text-muted);font-size:12px;line-height:1.35}
+    .inlay-actions{display:flex;flex-wrap:wrap;gap:8px}
+    .inlay-actions button,.inlay-tag-actions button{border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:8px 10px;cursor:pointer;font:inherit}
+    .inlay-actions button:hover,.inlay-tag-actions button:hover{background:var(--lumiverse-fill-hover)}
+    .inlay-primary{background:var(--lumiverse-primary)!important;color:var(--lumiverse-primary-contrast)!important;border-color:var(--lumiverse-primary)!important}
+    .inlay-subtitle{font-size:13px;font-weight:600;margin:2px 0}
+    .inlay-parser-summary{font-size:12px;color:var(--lumiverse-text-muted);line-height:1.4}
+    .inlay-tag-row{display:grid;grid-template-columns:minmax(72px,.55fr) minmax(112px,1fr);gap:6px}
     .inlay-tag-actions{grid-column:1 / -1;display:flex;gap:6px;justify-content:flex-end}
-    .inlay-tag-actions button{border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:6px 9px;cursor:pointer}
-    .inlay-tag-actions button:hover{background:var(--lumiverse-fill-hover)}
-    .inlay-status{margin-top:10px;font-size:12px;color:var(--lumiverse-text-muted);white-space:pre-wrap}
+    .inlay-status{padding:9px 10px;border:1px solid var(--lumiverse-border);border-radius:7px;background:var(--lumiverse-fill-subtle);font-size:12px;color:var(--lumiverse-text-muted);white-space:pre-wrap;min-height:18px}
   `);
-
-  function boolInput(key: keyof Config, label: string): string {
-    return `<div class="inlay-row"><label>${label}</label><input data-key="${String(key)}" type="checkbox" ${config[key] ? "checked" : ""}/></div>`;
-  }
-
-  function textInput(key: keyof Config, label: string): string {
-    return `<div class="inlay-row"><label>${label}</label><input data-key="${String(key)}" value="${escapeHtml(String(config[key] ?? ""))}"/></div>`;
-  }
-
-  function numberInput(key: keyof Config, label: string, min = 1, max = 12): string {
-    return `<div class="inlay-row"><label>${label}</label><input data-key="${String(key)}" type="number" min="${min}" max="${max}" value="${escapeHtml(String(config[key] ?? ""))}"/></div>`;
-  }
-
-  function selectInput(key: keyof Config, label: string, options: string[]): string {
-    return `<div class="inlay-row"><label>${label}</label><select data-key="${String(key)}">${options.map((option) => `<option value="${option}" ${config[key] === option ? "selected" : ""}>${option}</option>`).join("")}</select></div>`;
-  }
-
-  function parserConnectionSelect(): string {
-    const selected = parserConnections.find((connection) => connection.id === config.parserConnectionId);
-    const options = [
-      `<option value="" ${config.parserConnectionId ? "" : "selected"}>Select parser...</option>`,
-      ...parserConnections.map((connection) => {
-        const label = `${connection.name} (${connection.provider}${connection.model ? ` / ${connection.model}` : ""})`;
-        return `<option value="${escapeHtml(connection.id)}" ${connection.id === config.parserConnectionId ? "selected" : ""}>${escapeHtml(label)}</option>`;
-      })
-    ];
-    if (config.parserConnectionId && !selected) {
-      options.push(`<option value="${escapeHtml(config.parserConnectionId)}" selected>Missing: ${escapeHtml(config.parserConnectionId)}</option>`);
-    }
-    const summary = selected
-      ? `Selected parser: ${selected.name} / ${selected.provider}${config.parserModel ? ` / ${config.parserModel}` : selected.model ? ` / ${selected.model}` : ""}`
-      : config.parserConnectionId ? "Selected parser connection is missing." : "No parser connection selected.";
-    return `
-      <div class="inlay-row"><label>Parser connection</label><select data-key="parserConnectionId">${options.join("")}</select></div>
-      <div class="inlay-parser-summary">${escapeHtml(summary)}</div>`;
-  }
-
-  function parserModelInput(): string {
-    const selected = parserConnections.find((connection) => connection.id === config.parserConnectionId);
-    const options = selected?.model ? `<option value="${escapeHtml(selected.model)}"></option>` : "";
-    return `<div class="inlay-row"><label>Parser model</label><input data-key="parserModel" list="inlay-parser-models" placeholder="${escapeHtml(selected?.model || "Use connection model")}" value="${escapeHtml(config.parserModel || "")}"/><datalist id="inlay-parser-models">${options}</datalist></div>`;
-  }
-
-  function parserParametersInput(): string {
-    return `<div class="inlay-row"><label>Parser parameters</label><textarea data-key="parserParameters" spellcheck="false">${escapeHtml(JSON.stringify(config.parserParameters || {}, null, 2))}</textarea></div>`;
-  }
-
-  function textareaInput(key: keyof Config, label: string): string {
-    return `<div class="inlay-row"><label>${label}</label><textarea data-key="${String(key)}" spellcheck="false">${escapeHtml(String(config[key] ?? ""))}</textarea></div>`;
-  }
 
   function activeChatId(): string {
     try {
@@ -190,36 +144,19 @@ export function setup(ctx: SpindleFrontendContext) {
     }
   }
 
-  function requestState(): void {
-    ctx.sendToBackend({ type: "get_state", chatId: activeChatId() });
+  function requestState(chatId = activeChatId()): void {
+    ctx.sendToBackend({ type: "get_state", chatId });
   }
 
-  function characterMemorySection(): string {
-    const entries = Object.entries(characterAppearance)
-      .filter(([name, tags]) => name.trim() && tags.trim())
-      .sort(([left], [right]) => left.localeCompare(right));
-    const rows = entries.map(([name, tags]) => `
-      <div class="inlay-tag-row" data-old-name="${escapeHtml(name)}">
-        <input class="inlay-tag-name" placeholder="Name" value="${escapeHtml(name)}"/>
-        <input class="inlay-tag-tags" placeholder="Tags" value="${escapeHtml(tags)}"/>
-        <div class="inlay-tag-actions">
-          <button class="inlay-tag-save" type="button">Save</button>
-          <button class="inlay-tag-delete" type="button">Delete</button>
-        </div>
-      </div>`).join("");
-    return `
-      <div class="inlay-section">
-        ${boolInput("characterTagContextEnabled", "Use character tag memory")}
-        <div class="inlay-subtitle">Character tag memory (Current chat only)</div>
-        ${rows || `<div class="inlay-parser-summary">No character tags saved for this chat.</div>`}
-        <div class="inlay-tag-row inlay-tag-add">
-          <input class="inlay-tag-name" placeholder="Name"/>
-          <input class="inlay-tag-tags" placeholder="Tags"/>
-          <div class="inlay-tag-actions">
-            <button class="inlay-tag-add-button" type="button">Add character</button>
-          </div>
-        </div>
-      </div>`;
+  function updateStatus(next: string): void {
+    status = next;
+    const node = tab.root.querySelector<HTMLElement>(".inlay-status");
+    if (node) node.textContent = status;
+  }
+
+  function patchConfig(patch: Partial<Config>): void {
+    config = { ...config, ...patch };
+    ctx.sendToBackend({ type: "set_config", patch, chatId: activeChatId() });
   }
 
   async function applyImageGenerationDefaults(): Promise<void> {
@@ -248,9 +185,9 @@ export function setup(ctx: SpindleFrontendContext) {
         patch.imageModel = imageGeneration.model || "";
         patch.imageParameters = imageGeneration.parameters || {};
       }
-      if (Object.keys(patch).length > 0) ctx.sendToBackend({ type: "set_config", patch, chatId: activeChatId() });
+      if (Object.keys(patch).length > 0) patchConfig(patch);
     } catch {
-      // Keep explicit extension configuration authoritative if settings cannot be read.
+      // Explicit extension configuration remains authoritative when app settings are unavailable.
     }
   }
 
@@ -271,138 +208,248 @@ export function setup(ctx: SpindleFrontendContext) {
       parserConnections = [...parserConnections, ...next.filter((connection) => !seen.has(connection.id))];
       render();
     } catch {
-      // The backend Spindle list remains the primary source; this only mirrors the app's current-user API.
+      // The backend connection list remains the primary source.
     }
   }
 
-  function render() {
-    tab.root.innerHTML = `
-      <div class="inlay-panel">
-        ${boolInput("enabled", "Power")}
-        ${boolInput("autoGenerate", "Auto generate")}
-        ${boolInput("debugLogging", "Debug logging")}
-        <div class="inlay-section">
-          ${parserConnectionSelect()}
-          ${parserModelInput()}
-          ${parserParametersInput()}
-          ${boolInput("preprocessingEnabled", "Illustration tag preprocessing")}
-          ${numberInput("includeMinMessages", "Min included messages", 0, 32)}
-          ${numberInput("includeMaxMessages", "Max included messages", 0, 32)}
-          ${numberInput("parserRetries", "Parser retries", 0, 5)}
-        </div>
-        ${selectInput("mode", "Mode", ["illustration", "asset"])}
-        ${selectInput("promptStyle", "Prompt style", ["default", "anima"])}
-        ${selectInput("promptSyntax", "Prompt syntax", ["nai", "comfyui"])}
-        ${numberInput("minImages", "Min images")}
-        ${numberInput("maxImages", "Max images")}
-        ${numberInput("maxCharacters", "Max characters")}
-        <div class="inlay-section">
-          ${numberInput("inlayImageWidth", "Image width px", 120, 2400)}
-          ${numberInput("assetImageWidth", "Asset width px", 120, 2400)}
-          ${numberInput("inlayImageMaxHeightVh", "Max height vh", 10, 100)}
-        </div>
-        <div class="inlay-section">
-          <div class="inlay-subtitle">Reference context</div>
-          ${boolInput("includeUserInfo", "Include user info")}
-          ${boolInput("includeCharacterInfo", "Include character info")}
-          ${boolInput("includeLorebook", "Include lorebook")}
-          ${boolInput("userInstructionsEnabled", "User instructions")}
-          ${textareaInput("customParserInstructions", "Parser override")}
-        </div>
-        <div class="inlay-section">
-          ${boolInput("originalReference", "Original reference")}
-          ${textInput("originalCreationName", "Creation name")}
-          ${boolInput("supplement", "Natural supplement")}
-        </div>
-        ${characterMemorySection()}
-        <div class="inlay-section">
-          ${boolInput("danbooruCleanup", "Danbooru cleanup")}
-          ${textInput("danbooruEndpoint", "Danbooru endpoint")}
-          ${textareaInput("ignoredTags", "Ignored tags")}
-        </div>
-        <div class="inlay-section">
-          ${textInput("customPositivePrefix", "Positive prefix")}
-          ${textInput("customPositiveSuffix", "Positive suffix")}
-          ${textInput("customNegative", "Negative prompt")}
-        </div>
-        <div class="inlay-actions">
-          <button class="inlay-generate">Generate latest</button>
-          <button class="inlay-test">Test Danbooru</button>
-          <button class="inlay-refresh">Refresh</button>
-        </div>
-        <div class="inlay-status">${escapeHtml(status)}</div>
-      </div>`;
+  function destroyMountedComponents(): void {
+    for (const component of mountedComponents) component.destroy();
+    mountedComponents = [];
+  }
 
-    tab.root.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input[data-key],select[data-key],textarea[data-key]").forEach((input) => {
-      input.addEventListener("change", () => {
-        const key = input.dataset.key as keyof Config;
-        let value: unknown = input instanceof HTMLInputElement && input.type === "checkbox" ? input.checked : input instanceof HTMLInputElement && input.type === "number" ? Number(input.value) : input.value;
-        if (key === "parserParameters") {
-          try {
-            value = JSON.parse(String(value || "{}"));
-          } catch {
-            status = "Parser parameters must be valid JSON.";
-            render();
-            return;
-          }
-        }
-        ctx.sendToBackend({ type: "set_config", patch: { [key]: value }, chatId: activeChatId() });
+  function render() {
+    destroyMountedComponents();
+    tab.root.innerHTML = '<div class="inlay-panel"><div class="inlay-sections"></div><div class="inlay-status"></div></div>';
+    const sections = tab.root.querySelector<HTMLElement>(".inlay-sections")!;
+    updateStatus(status);
+
+    const section = (title: string, defaultExpanded: boolean): HTMLElement => {
+      const host = document.createElement("div");
+      sections.append(host);
+      const component = ctx.components.mountCollapsibleSection(host, { title, defaultExpanded });
+      mountedComponents.push(component);
+      component.body.classList.add("inlay-section-body");
+      return component.body;
+    };
+    const row = (parent: HTMLElement, label: string, hint = ""): HTMLElement => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "inlay-row";
+      const labelNode = document.createElement("label");
+      labelNode.textContent = label;
+      const target = document.createElement("div");
+      wrapper.append(labelNode, target);
+      if (hint) {
+        const hintNode = document.createElement("div");
+        hintNode.className = "inlay-hint";
+        hintNode.textContent = hint;
+        wrapper.append(hintNode);
+      }
+      parent.append(wrapper);
+      return target;
+    };
+    const addSwitch = (parent: HTMLElement, key: keyof Config, label: string, hint = "") => {
+      const target = row(parent, label, hint);
+      const component = ctx.components.mountSwitch(target, {
+        checked: Boolean(config[key]),
+        ariaLabel: label,
+        onChange: (checked) => patchConfig({ [key]: checked } as Partial<Config>)
       });
-    });
-    tab.root.querySelectorAll<HTMLElement>(".inlay-tag-save").forEach((button) => {
-      button.addEventListener("click", () => {
-        const row = button.closest<HTMLElement>(".inlay-tag-row");
-        if (!row) return;
-        ctx.sendToBackend({
-          type: "character_tags_update",
-          chatId: activeChatId(),
-          oldName: row.dataset.oldName || "",
-          name: row.querySelector<HTMLInputElement>(".inlay-tag-name")?.value || "",
-          tags: row.querySelector<HTMLInputElement>(".inlay-tag-tags")?.value || ""
-        });
+      mountedComponents.push(component);
+    };
+    const addNumber = (parent: HTMLElement, key: keyof Config, label: string, min: number, max: number, hint = "") => {
+      const target = row(parent, label, hint);
+      const component = ctx.components.mountNumericInput(target, {
+        value: Number(config[key]), min, max, integer: true,
+        onChange: (value) => { if (value !== null) patchConfig({ [key]: value } as Partial<Config>); }
       });
-    });
-    tab.root.querySelectorAll<HTMLElement>(".inlay-tag-delete").forEach((button) => {
-      button.addEventListener("click", () => {
-        const row = button.closest<HTMLElement>(".inlay-tag-row");
-        if (!row) return;
-        ctx.sendToBackend({
-          type: "character_tags_delete",
-          chatId: activeChatId(),
-          name: row.dataset.oldName || row.querySelector<HTMLInputElement>(".inlay-tag-name")?.value || ""
-        });
+      mountedComponents.push(component);
+    };
+    const addSelect = (parent: HTMLElement, key: keyof Config, label: string, options: Array<{ value: string; label: string }>, hint = "") => {
+      const target = row(parent, label, hint);
+      const component = ctx.components.mountSelect(target, {
+        value: String(config[key] || ""), options,
+        onChange: (value) => patchConfig({ [key]: value } as Partial<Config>)
       });
-    });
-    tab.root.querySelector(".inlay-tag-add-button")?.addEventListener("click", () => {
-      const row = tab.root.querySelector<HTMLElement>(".inlay-tag-add");
-      if (!row) return;
-      ctx.sendToBackend({
-        type: "character_tags_update",
-        chatId: activeChatId(),
-        oldName: "",
-        name: row.querySelector<HTMLInputElement>(".inlay-tag-name")?.value || "",
-        tags: row.querySelector<HTMLInputElement>(".inlay-tag-tags")?.value || ""
+      mountedComponents.push(component);
+    };
+    const addText = (parent: HTMLElement, key: keyof Config, label: string, hint = "") => {
+      const target = row(parent, label, hint);
+      const component = ctx.components.mountTextInput(target, {
+        value: String(config[key] || ""), ariaLabel: label,
+        onChange: (value) => patchConfig({ [key]: value } as Partial<Config>)
       });
+      mountedComponents.push(component);
+    };
+    const addTextarea = (parent: HTMLElement, key: keyof Config, label: string, hint = "") => {
+      const target = row(parent, label, hint);
+      const component = ctx.components.mountTextArea(target, {
+        value: String(config[key] || ""), ariaLabel: label,
+        onChange: (value) => patchConfig({ [key]: value } as Partial<Config>)
+      });
+      mountedComponents.push(component);
+    };
+    const addActions = (parent: HTMLElement, actions: Array<{ label: string; primary?: boolean; onClick: () => void }>) => {
+      const container = document.createElement("div");
+      container.className = "inlay-actions";
+      for (const action of actions) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = action.label;
+        if (action.primary) button.classList.add("inlay-primary");
+        button.addEventListener("click", action.onClick);
+        container.append(button);
+      }
+      parent.append(container);
+    };
+
+    const generation = section("Generation", true);
+    addSwitch(generation, "enabled", "Power");
+    addSwitch(generation, "autoGenerate", "Auto generate");
+    addSelect(generation, "mode", "Mode", [{ value: "illustration", label: "Illustration" }, { value: "asset", label: "Asset" }]);
+    addNumber(generation, "minImages", "Minimum images", 1, 12);
+    addNumber(generation, "maxImages", "Maximum images", 1, 12);
+    addNumber(generation, "maxCharacters", "Maximum characters", 1, 8);
+    addActions(generation, [{
+      label: "Generate latest", primary: true, onClick: () => {
+        updateStatus("Generating...");
+        ctx.sendToBackend({ type: "generate_latest", chatId: activeChatId() });
+      }
+    }]);
+
+    const parser = section("Parser and context", false);
+    const selectedParser = parserConnections.find((connection) => connection.id === config.parserConnectionId);
+    const parserOptions = parserConnections.map((connection) => ({
+      value: connection.id,
+      label: `${connection.name} (${connection.provider}${connection.model ? ` / ${connection.model}` : ""})`
+    }));
+    if (config.parserConnectionId && !selectedParser) parserOptions.push({ value: config.parserConnectionId, label: `Missing: ${config.parserConnectionId}` });
+    addSelect(parser, "parserConnectionId", "Parser connection", parserOptions, selectedParser ? `Selected: ${selectedParser.name} / ${selectedParser.provider}` : "Choose the model that turns chat text into image prompts.");
+    addText(parser, "parserModel", "Parser model", selectedParser?.model ? `Leave empty to use ${selectedParser.model}.` : "Leave empty to use the connection default.");
+    const parserParameterTarget = row(parser, "Parser parameters", "JSON parameters sent to the parser connection.");
+    const parserParameterInput = document.createElement("textarea");
+    parserParameterInput.value = JSON.stringify(config.parserParameters || {}, null, 2);
+    parserParameterInput.spellcheck = false;
+    parserParameterInput.addEventListener("change", () => {
+      try {
+        patchConfig({ parserParameters: JSON.parse(parserParameterInput.value || "{}") as Record<string, unknown> });
+      } catch {
+        updateStatus("Parser parameters must be valid JSON.");
+      }
     });
-    tab.root.querySelector(".inlay-generate")?.addEventListener("click", () => {
-      status = "Generating...";
-      render();
-      ctx.sendToBackend({ type: "generate_latest", chatId: activeChatId() });
-    });
-    tab.root.querySelector(".inlay-test")?.addEventListener("click", () => {
-      status = "Testing Danbooru endpoint...";
-      render();
-      ctx.sendToBackend({ type: "test_danbooru" });
-    });
-    tab.root.querySelector(".inlay-refresh")?.addEventListener("click", () => {
-      status = "Refreshing...";
-      render();
-      requestState();
-    });
+    parserParameterTarget.append(parserParameterInput);
+    addSwitch(parser, "preprocessingEnabled", "Illustration preprocessing");
+    addNumber(parser, "includeMinMessages", "Minimum context", 0, 32);
+    addNumber(parser, "includeMaxMessages", "Maximum context", 0, 32);
+    addNumber(parser, "parserRetries", "Parser retries", 0, 5);
+    const sources = document.createElement("div");
+    sources.className = "inlay-subtitle";
+    sources.textContent = "Context sources";
+    parser.append(sources);
+    addSwitch(parser, "includeUserInfo", "User info");
+    addSwitch(parser, "includeCharacterInfo", "Character info");
+    addSwitch(parser, "includeLorebook", "Lorebook");
+    addSwitch(parser, "userInstructionsEnabled", "User instructions");
+    addTextarea(parser, "customParserInstructions", "Parser override");
+
+    const prompt = section("Prompt output", false);
+    addSelect(prompt, "promptStyle", "Prompt style", [{ value: "default", label: "Default" }, { value: "anima", label: "Anima" }]);
+    addSelect(prompt, "promptSyntax", "Prompt syntax", [{ value: "nai", label: "NovelAI" }, { value: "comfyui", label: "ComfyUI" }]);
+    addSwitch(prompt, "originalReference", "Source reference");
+    addText(prompt, "originalCreationName", "Creation name");
+    addSwitch(prompt, "supplement", "Natural supplement");
+    addText(prompt, "customPositivePrefix", "Positive prefix");
+    addText(prompt, "customPositiveSuffix", "Positive suffix");
+    addText(prompt, "customNegative", "Negative additions");
+
+    const output = section("Image output and cleanup", false);
+    addNumber(output, "inlayImageWidth", "Illustration width", 120, 2400);
+    addNumber(output, "assetImageWidth", "Asset width", 120, 2400);
+    addNumber(output, "inlayImageMaxHeightVh", "Maximum height", 10, 100, "Viewport height percentage.");
+    addSwitch(output, "danbooruCleanup", "Danbooru cleanup");
+    addText(output, "danbooruEndpoint", "Danbooru endpoint");
+    addTextarea(output, "ignoredTags", "Ignored tags", "Separate tags with commas or semicolons.");
+    addActions(output, [{
+      label: "Test endpoint", onClick: () => {
+        updateStatus("Testing Danbooru endpoint...");
+        ctx.sendToBackend({ type: "test_danbooru" });
+      }
+    }]);
+
+    const memory = section("Character memory", true);
+    addSwitch(memory, "characterTagContextEnabled", "Use character visual baseline");
+    const memoryTitle = document.createElement("div");
+    memoryTitle.className = "inlay-subtitle";
+    memoryTitle.textContent = "Current-chat visual baseline";
+    memory.append(memoryTitle);
+    const entries = Object.entries(characterAppearance)
+      .filter(([name, tags]) => name.trim() && tags.trim())
+      .sort(([left], [right]) => left.localeCompare(right));
+    for (const [name, tags] of entries) {
+      const memoryRow = document.createElement("div");
+      memoryRow.className = "inlay-tag-row";
+      memoryRow.innerHTML = `<input class="inlay-tag-name" aria-label="Character name" value="${escapeHtml(name)}"/><input class="inlay-tag-tags" aria-label="Character appearance tags" value="${escapeHtml(tags)}"/>`;
+      const actions = document.createElement("div");
+      actions.className = "inlay-tag-actions";
+      const save = document.createElement("button");
+      save.type = "button";
+      save.textContent = "Save";
+      save.addEventListener("click", () => ctx.sendToBackend({
+        type: "character_tags_update", chatId: activeChatId(), oldName: name,
+        name: memoryRow.querySelector<HTMLInputElement>(".inlay-tag-name")?.value || "",
+        tags: memoryRow.querySelector<HTMLInputElement>(".inlay-tag-tags")?.value || ""
+      }));
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "Delete";
+      remove.addEventListener("click", () => ctx.sendToBackend({ type: "character_tags_delete", chatId: activeChatId(), name }));
+      actions.append(save, remove);
+      memoryRow.append(actions);
+      memory.append(memoryRow);
+    }
+    if (entries.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "inlay-parser-summary";
+      empty.textContent = "No character baseline is saved for this chat yet.";
+      memory.append(empty);
+    }
+    const addRow = document.createElement("div");
+    addRow.className = "inlay-tag-row";
+    addRow.innerHTML = '<input class="inlay-tag-name" aria-label="New character name" placeholder="Name"/><input class="inlay-tag-tags" aria-label="New character appearance tags" placeholder="Appearance tags"/>';
+    const addMemoryActions = document.createElement("div");
+    addMemoryActions.className = "inlay-tag-actions";
+    const add = document.createElement("button");
+    add.type = "button";
+    add.textContent = "Add character";
+    add.addEventListener("click", () => ctx.sendToBackend({
+      type: "character_tags_update", chatId: activeChatId(), oldName: "",
+      name: addRow.querySelector<HTMLInputElement>(".inlay-tag-name")?.value || "",
+      tags: addRow.querySelector<HTMLInputElement>(".inlay-tag-tags")?.value || ""
+    }));
+    addMemoryActions.append(add);
+    addRow.append(addMemoryActions);
+    memory.append(addRow);
+
+    const diagnostics = section("Diagnostics", false);
+    addSwitch(diagnostics, "debugLogging", "Debug logging");
+    const diagnosticStatus = document.createElement("div");
+    diagnosticStatus.className = "inlay-parser-summary";
+    diagnosticStatus.textContent = "Status appears below this section and updates after parser, image, and endpoint operations.";
+    diagnostics.append(diagnosticStatus);
+    addActions(diagnostics, [{ label: "Refresh state", onClick: () => { updateStatus("Refreshing..."); requestState(); } }]);
   }
 
   const unsub = ctx.onBackendMessage((payload: unknown) => {
-    const msg = payload as { type?: string; config?: Config; parserConnections?: ParserConnection[]; characterAppearance?: Record<string, string>; status?: string; error?: string; result?: unknown; record?: { imageUrls?: string[] } };
+    const msg = payload as {
+      type?: string;
+      chatId?: string;
+      config?: Config;
+      parserConnections?: ParserConnection[];
+      characterAppearance?: Record<string, string>;
+      status?: string;
+      error?: string;
+      result?: unknown;
+      record?: { imageUrls?: string[] };
+    };
     if (msg.type === "state" && msg.config) {
       config = { ...DEFAULT_CONFIG, ...msg.config };
       parserConnections = msg.parserConnections || [];
@@ -411,14 +458,29 @@ export function setup(ctx: SpindleFrontendContext) {
       render();
       if (parserConnections.length === 0) void refreshParserConnectionsFromApi();
       void applyImageGenerationDefaults();
+    } else if (msg.type === "character_memory_updated") {
+      if (msg.chatId && msg.chatId === activeChatId()) {
+        characterAppearance = msg.characterAppearance || {};
+        status = "Character visual baseline updated.";
+        render();
+      }
     } else if (msg.type === "status") {
-      status = msg.error ? `${msg.status}: ${msg.error}` : String(msg.status || "Ready");
-      if (msg.record?.imageUrls) status += `\n${msg.record.imageUrls.length} image(s) generated.`;
-      render();
+      let next = msg.error ? `${msg.status}: ${msg.error}` : String(msg.status || "Ready");
+      if (msg.record?.imageUrls) next += `\n${msg.record.imageUrls.length} image(s) generated.`;
+      updateStatus(next);
     } else if (msg.type === "danbooru_test") {
-      status = `Danbooru endpoint responded.\n${JSON.stringify(msg.result, null, 2).slice(0, 1000)}`;
-      render();
+      updateStatus(`Danbooru endpoint responded.\n${JSON.stringify(msg.result, null, 2).slice(0, 1000)}`);
     }
+  });
+
+  const unsubDrawer = ctx.ui.events.onDrawerChange((drawer) => {
+    const active = drawer.open && drawer.tabId === tab.tabId;
+    if (active && !drawerWasActive) requestState();
+    drawerWasActive = active;
+  });
+  const unsubChatSwitched = ctx.events.on("CHAT_SWITCHED", (payload) => {
+    const chatId = (payload as { chatId?: unknown } | null)?.chatId;
+    requestState(typeof chatId === "string" ? chatId : "");
   });
 
   render();
@@ -427,6 +489,9 @@ export function setup(ctx: SpindleFrontendContext) {
 
   const cleanup = () => {
     unsub();
+    unsubDrawer();
+    unsubChatSwitched();
+    destroyMountedComponents();
     removeStyle();
     tab.destroy();
     if ((globalThis as Record<string, unknown>)[CLEANUP_KEY] === cleanup) delete (globalThis as Record<string, unknown>)[CLEANUP_KEY];
