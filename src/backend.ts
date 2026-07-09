@@ -3,6 +3,13 @@ declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 const EXTENSION_ID = "inlay_illustrator";
 const MARKER = "<!-- inlay_illustrator -->";
 
+type PromptPreset = {
+  id: string;
+  name: string;
+  positivePrefix: string;
+  negativePrefix: string;
+};
+
 type Config = {
   enabled: boolean;
   autoGenerate: boolean;
@@ -41,6 +48,8 @@ type Config = {
   customPositivePrefix: string;
   customPositiveSuffix: string;
   customNegative: string;
+  promptPresets: PromptPreset[];
+  activePromptPresetId: string | null;
 };
 
 type CharacterJson = {
@@ -67,7 +76,15 @@ type ShotJson = {
 
 type SceneJson = ShotJson & { place?: unknown; shots?: ShotJson[] };
 type ParsedPayload = { scenes?: SceneJson[] };
-type PromptEntry = { prompt: string; negative: string; paragraph: number; parserParagraph: number };
+type AssembledPrompt = {
+  /** Tag-only sections, kept separate so tag cleanup never sees prose. */
+  tagSections: string[];
+  /** Natural-language prose appended at its original point in the prompt. */
+  supplement: string;
+  /** Number of tag sections that occur before the supplement. */
+  supplementAfterTagSections: number;
+};
+type PromptEntry = { prompt: AssembledPrompt; negative: string; paragraph: number; parserParagraph: number };
 type PreparedParagraph = { parserIndex: number; originalIndex: number; text: string };
 type NormalizedScene = { scene: SceneJson; shot: ShotJson; parserParagraph: number };
 type ChatMessage = {
@@ -184,7 +201,9 @@ const DEFAULT_CONFIG: Config = {
   ignoredTags: "",
   customPositivePrefix: "",
   customPositiveSuffix: "",
-  customNegative: ""
+  customNegative: "",
+  promptPresets: [],
+  activePromptPresetId: null
 };
 
 const running = new Set<string>();
@@ -227,6 +246,24 @@ function cleanArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? value as T[] : [];
 }
 
+function normalizePromptPresets(value: unknown): PromptPreset[] {
+  const seen = new Set<string>();
+  const presets: PromptPreset[] = [];
+  for (const candidate of cleanArray<Record<string, unknown>>(value)) {
+    const id = cleanString(candidate.id);
+    const name = cleanString(candidate.name);
+    if (!id || !name || seen.has(id)) continue;
+    seen.add(id);
+    presets.push({
+      id,
+      name,
+      positivePrefix: cleanString(candidate.positivePrefix),
+      negativePrefix: cleanString(candidate.negativePrefix)
+    });
+  }
+  return presets;
+}
+
 function parseCorsJson<T>(response: unknown, label: string): T {
   const wrapper = asRecord(response);
   if (wrapper && ("body" in wrapper || "status" in wrapper || "statusText" in wrapper)) {
@@ -253,6 +290,8 @@ function normalizeConfig(raw: RawConfig): Config {
   const includeMax = clampInt(raw.includeMaxMessages, 0, 32, DEFAULT_CONFIG.includeMaxMessages);
   const minImages = clampInt(raw.minImages, 1, 12, DEFAULT_CONFIG.minImages);
   const maxImages = clampInt(raw.maxImages, 1, 12, DEFAULT_CONFIG.maxImages);
+  const promptPresets = normalizePromptPresets(raw.promptPresets);
+  const activePromptPresetId = cleanNullableString(raw.activePromptPresetId);
   return {
     ...DEFAULT_CONFIG,
     ...raw,
@@ -284,7 +323,11 @@ function normalizeConfig(raw: RawConfig): Config {
     ignoredTags: cleanString(raw.ignoredTags),
     customPositivePrefix: cleanString(raw.customPositivePrefix),
     customPositiveSuffix: cleanString(raw.customPositiveSuffix),
-    customNegative: cleanString(raw.customNegative)
+    customNegative: cleanString(raw.customNegative),
+    promptPresets,
+    activePromptPresetId: activePromptPresetId && promptPresets.some((preset) => preset.id === activePromptPresetId)
+      ? activePromptPresetId
+      : null
   };
 }
 
@@ -605,6 +648,19 @@ function joinSections(sections: string[], syntax: Config["promptSyntax"]): strin
   return syntax === "comfyui" ? clean.join(",\n") : clean.join(", ");
 }
 
+function renderPrompt(prompt: AssembledPrompt, syntax: Config["promptSyntax"]): string {
+  const supplementIndex = Math.min(Math.max(prompt.supplementAfterTagSections, 0), prompt.tagSections.length);
+  return joinSections([
+    ...prompt.tagSections.slice(0, supplementIndex),
+    prompt.supplement,
+    ...prompt.tagSections.slice(supplementIndex)
+  ], syntax);
+}
+
+function activePromptPreset(config: Config): PromptPreset | null {
+  return config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
+}
+
 function characterTags(character: CharacterJson, config: Config, includeAction = true): string {
   return unique(csvParts(
     character.label,
@@ -651,7 +707,7 @@ function assembleCharacterBlock(character: CharacterJson, config: Config, replac
   )).join(", ");
 }
 
-function assembleAnimaPrompt(scene: SceneJson, shot: ShotJson, config: Config, replacements: Map<string, string>): string {
+function assembleAnimaPrompt(scene: SceneJson, shot: ShotJson, config: Config, replacements: Map<string, string>): AssembledPrompt {
   const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
   const characters = cleanArray<CharacterJson>(shot.characters).slice(0, maxCharacters);
   const characterBlocks = characters
@@ -661,29 +717,29 @@ function assembleAnimaPrompt(scene: SceneJson, shot: ShotJson, config: Config, r
   const supplement = config.supplement
     ? stripOrReplaceNames(removeSupplementActionDuplicates(cleanString(shot.supplement), sceneAction), replacements, false)
     : "";
-  return joinSections(dedupePromptSections([
+  const tagSections = dedupePromptSections([
     stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
     ...characterBlocks,
     sceneAction,
     stripOrReplaceNames(unique(csvParts(shot.camera, config.mode === "asset" ? "portrait, cowboy shot" : "")).join(", "), replacements, true),
-    stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true),
-    supplement
-  ]), config.promptSyntax);
+    stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true)
+  ]);
+  return { tagSections, supplement, supplementAfterTagSections: tagSections.length };
 }
 
-function assembleDefaultPrompt(scene: SceneJson, shot: ShotJson, config: Config, replacements: Map<string, string>): string {
+function assembleDefaultPrompt(scene: SceneJson, shot: ShotJson, config: Config, replacements: Map<string, string>): AssembledPrompt {
   const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
   const characters = cleanArray<CharacterJson>(shot.characters).slice(0, maxCharacters);
   const characterBlocks = characters
     .map((character) => assembleCharacterBlock(character, config, replacements, true))
     .filter(Boolean);
   const supplement = config.supplement ? stripOrReplaceNames(cleanString(shot.supplement), replacements, false) : "";
-  return joinSections(dedupePromptSections([
+  const tagSections = dedupePromptSections([
     stripOrReplaceNames(unique(csvParts(shot.camera, shot.situation, shot.action, config.mode === "asset" ? "portrait, cowboy shot, looking at viewer" : "")).join(", "), replacements, true),
     stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true),
-    ...characterBlocks,
-    supplement
-  ]), config.promptSyntax);
+    ...characterBlocks
+  ]);
+  return { tagSections, supplement, supplementAfterTagSections: tagSections.length };
 }
 
 function assemblePrompt(scene: SceneJson, shot: ShotJson, config: Config, parserParagraph: number, originalParagraph: number): PromptEntry {
@@ -692,13 +748,18 @@ function assemblePrompt(scene: SceneJson, shot: ShotJson, config: Config, parser
   const core = config.promptStyle === "anima"
     ? assembleAnimaPrompt(scene, shot, config, replacements)
     : assembleDefaultPrompt(scene, shot, config, replacements);
+  const preset = activePromptPreset(config);
+  const presetPrefix = stripOrReplaceNames(preset?.positivePrefix || "", replacements, true);
+  const prefix = stripOrReplaceNames(config.customPositivePrefix, replacements, true);
+  const suffix = stripOrReplaceNames(config.customPositiveSuffix, replacements, true);
+  const prefixes = [presetPrefix, prefix].filter(Boolean);
   return {
-    prompt: joinSections(dedupePromptSections([
-      stripOrReplaceNames(config.customPositivePrefix, replacements, true),
-      core,
-      stripOrReplaceNames(config.customPositiveSuffix, replacements, true)
-    ]), config.promptSyntax),
-    negative: stripOrReplaceNames(unique(csvParts(config.customNegative, shot.negative)).join(", "), replacements, true),
+    prompt: {
+      tagSections: [...prefixes, ...core.tagSections, suffix].map((section) => section.trim()).filter(Boolean),
+      supplement: core.supplement,
+      supplementAfterTagSections: prefixes.length + core.supplementAfterTagSections
+    },
+    negative: stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "), replacements, true),
     paragraph: originalParagraph,
     parserParagraph
   };
@@ -1380,7 +1441,7 @@ function selectPromptEntries(payload: ParsedPayload, paragraphs: PreparedParagra
     if (!paragraph) continue;
     if (byParserParagraph.has(entry.parserParagraph)) continue;
     const prompt = assemblePrompt(entry.scene, entry.shot, config, entry.parserParagraph, paragraph.originalIndex);
-    if (prompt.prompt) byParserParagraph.set(entry.parserParagraph, prompt);
+    if (renderPrompt(prompt.prompt, config.promptSyntax)) byParserParagraph.set(entry.parserParagraph, prompt);
   }
   const limit = config.mode === "asset" ? paragraphs.length : config.maxImages;
   return [...byParserParagraph.entries()]
@@ -1458,12 +1519,13 @@ function localCandidates(tag: string): string[] {
   return out;
 }
 
-async function cleanupPrompt(prompt: string, config: Config): Promise<string> {
+async function cleanupPrompt(prompt: AssembledPrompt, config: Config): Promise<string> {
   if (!config.danbooruCleanup || !config.danbooruEndpoint.trim()) {
     logStage(config, "danbooru_cleanup_skipped", { enabled: config.danbooruCleanup, endpointConfigured: Boolean(config.danbooruEndpoint.trim()) });
-    return prompt;
+    return renderPrompt(prompt, config.promptSyntax);
   }
-  const tags = csvParts(prompt);
+  const sectionTags = prompt.tagSections.map((section) => csvParts(section));
+  const tags = sectionTags.flat();
   const requestTags = unique(tags.flatMap((tag) => [tag, ...localCandidates(tag)]));
   logStage(config, "danbooru_cleanup_start", { endpoint: config.danbooruEndpoint.trim(), tagCount: tags.length, requestTagCount: requestTags.length });
   try {
@@ -1475,21 +1537,35 @@ async function cleanupPrompt(prompt: string, config: Config): Promise<string> {
     const valid = response.valid || response.data?.valid || [];
     const suggestions = response.suggestions || response.data?.suggestions || {};
     const validKeys = new Set(valid.map((tag) => tag.toLowerCase()));
-    const expanded: string[] = [];
-    for (const tag of tags) {
-      expanded.push(tag);
-      for (const candidate of localCandidates(tag)) if (validKeys.size === 0 || validKeys.has(candidate.toLowerCase())) expanded.push(candidate);
-      const best = (suggestions[tag] || []).filter((s) => s.tag && typeof s.score === "number").sort((a, b) => (b.score || 0) - (a.score || 0))[0];
-      if (best?.tag && (best.score || 0) >= 0.88) expanded.push(best.tag);
-    }
-    const cleaned = unique(expanded).join(", ");
-    logStage(config, "danbooru_cleanup_done", { beforeTagCount: tags.length, afterTagCount: csvParts(cleaned).length });
+    const cleanTags = (section: string[]): string[] => {
+      const expanded: string[] = [];
+      for (const tag of section) {
+        expanded.push(tag);
+        for (const candidate of localCandidates(tag)) if (validKeys.size === 0 || validKeys.has(candidate.toLowerCase())) expanded.push(candidate);
+        const best = (suggestions[tag] || []).filter((s) => s.tag && typeof s.score === "number").sort((a, b) => (b.score || 0) - (a.score || 0))[0];
+        if (best?.tag && (best.score || 0) >= 0.88) expanded.push(best.tag);
+      }
+      return unique(expanded);
+    };
+    const seen = new Set<string>();
+    const cleanedSections = sectionTags.map((section) => cleanTags(section)
+      .filter((tag) => {
+        const key = tag.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .join(", "));
+    const cleaned = renderPrompt({ ...prompt, tagSections: cleanedSections }, config.promptSyntax);
+    logStage(config, "danbooru_cleanup_done", { beforeTagCount: tags.length, afterTagCount: cleanedSections.flatMap((section) => csvParts(section)).length });
     return cleaned;
   } catch (err) {
     spindle.log.warn(`Danbooru cleanup skipped: ${err instanceof Error ? err.message : String(err)}`);
-    return prompt;
+    return renderPrompt(prompt, config.promptSyntax);
   }
 }
+
+export const __testables = { DEFAULT_CONFIG, activePromptPreset, assemblePrompt, cleanupPrompt, normalizeConfig, renderPrompt };
 
 function isOwnMessage(message: { content?: string; metadata?: Record<string, unknown> }): boolean {
   return Boolean(message.metadata?.extension === EXTENSION_ID);
@@ -1647,7 +1723,7 @@ async function generateForMessage(chatId: string, messageId: string, content: st
       selectedCount: selected.length,
       parserParagraphs: selected.map((entry) => entry.parserParagraph),
       originalParagraphs: selected.map((entry) => entry.paragraph),
-      promptLengths: selected.map((entry) => entry.prompt.length),
+      promptLengths: selected.map((entry) => renderPrompt(entry.prompt, config.promptSyntax).length),
       negativeLengths: selected.map((entry) => entry.negative.length)
     });
     const imageIds: string[] = [];

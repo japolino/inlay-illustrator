@@ -1,4 +1,4 @@
-// src/frontend.ts
+// inlay-illustrator/src/frontend.ts
 var DEFAULT_CONFIG = {
   enabled: true,
   autoGenerate: true,
@@ -36,7 +36,9 @@ var DEFAULT_CONFIG = {
   ignoredTags: "",
   customPositivePrefix: "",
   customPositiveSuffix: "",
-  customNegative: ""
+  customNegative: "",
+  promptPresets: [],
+  activePromptPresetId: null
 };
 var CLEANUP_KEY = "__inlayIllustratorCleanup";
 function escapeHtml(value) {
@@ -67,7 +69,7 @@ function setup(ctx) {
     .inlay-section-body{display:flex;flex-direction:column;gap:10px;padding:4px 0}
     .inlay-row{display:grid;grid-template-columns:minmax(116px,.9fr) minmax(0,1.1fr);align-items:center;gap:8px;font-size:13px}
     .inlay-row label{color:var(--lumiverse-text-muted)}
-    .inlay-row input,.inlay-row textarea{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:7px 9px;font:inherit}
+    .inlay-row input,.inlay-row textarea,.inlay-row select{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:7px 9px;font:inherit}
     .inlay-row textarea{min-height:76px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
     .inlay-hint{grid-column:2;color:var(--lumiverse-text-muted);font-size:12px;line-height:1.35}
     .inlay-actions{display:flex;flex-wrap:wrap;gap:8px}
@@ -99,6 +101,11 @@ function setup(ctx) {
   function patchConfig(patch) {
     config = { ...config, ...patch };
     ctx.sendToBackend({ type: "set_config", patch, chatId: activeChatId() });
+  }
+  function presetId() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
+      return crypto.randomUUID();
+    return `preset-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
   async function applyImageGenerationDefaults() {
     if (triedImageGenerationParserDefault)
@@ -299,6 +306,130 @@ function setup(ctx) {
     addSwitch(prompt, "originalReference", "Source reference");
     addText(prompt, "originalCreationName", "Creation name");
     addSwitch(prompt, "supplement", "Natural supplement");
+    const presetsTitle = document.createElement("div");
+    presetsTitle.className = "inlay-subtitle";
+    presetsTitle.textContent = "Prompt presets";
+    prompt.append(presetsTitle);
+    const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
+    const presetSelectTarget = row(prompt, "Active preset", "Preset prefixes are inserted before the custom prompt fields below.");
+    const presetSelect = document.createElement("select");
+    presetSelect.setAttribute("aria-label", "Active prompt preset");
+    presetSelect.innerHTML = '<option value="">No preset</option>';
+    for (const preset of config.promptPresets) {
+      const option = document.createElement("option");
+      option.value = preset.id;
+      option.textContent = preset.name;
+      option.selected = preset.id === config.activePromptPresetId;
+      presetSelect.append(option);
+    }
+    presetSelect.addEventListener("change", () => {
+      patchConfig({ activePromptPresetId: presetSelect.value || null });
+      render();
+    });
+    presetSelectTarget.append(presetSelect);
+    const presetNameTarget = row(prompt, "Preset name", "Save a new preset or update the selected preset with these values.");
+    const presetName = document.createElement("input");
+    presetName.type = "text";
+    presetName.value = selectedPreset?.name || "";
+    presetName.placeholder = "e.g. Cinematic anime";
+    presetName.setAttribute("aria-label", "Preset name");
+    presetNameTarget.append(presetName);
+    const presetPositiveTarget = row(prompt, "Preset positive", "Tags placed before the custom positive prefix and generated prompt.");
+    const presetPositive = document.createElement("textarea");
+    presetPositive.value = selectedPreset?.positivePrefix || "";
+    presetPositive.placeholder = "masterpiece, best quality";
+    presetPositive.setAttribute("aria-label", "Preset positive prefix");
+    presetPositiveTarget.append(presetPositive);
+    const presetNegativeTarget = row(prompt, "Preset negative", "Tags placed before the custom negative additions and shot negatives.");
+    const presetNegative = document.createElement("textarea");
+    presetNegative.value = selectedPreset?.negativePrefix || "";
+    presetNegative.placeholder = "lowres, bad anatomy";
+    presetNegative.setAttribute("aria-label", "Preset negative prefix");
+    presetNegativeTarget.append(presetNegative);
+    const presetValues = (forNew = false) => {
+      const name = presetName.value.trim();
+      if (!name) {
+        updateStatus("A preset name is required.");
+        return null;
+      }
+      const duplicate = config.promptPresets.find((preset) => preset.name.localeCompare(name, undefined, { sensitivity: "accent" }) === 0 && (forNew || preset.id !== selectedPreset?.id));
+      if (duplicate) {
+        updateStatus(`A preset named "${name}" already exists.`);
+        return null;
+      }
+      return {
+        id: forNew ? presetId() : selectedPreset?.id || presetId(),
+        name,
+        positivePrefix: presetPositive.value.trim(),
+        negativePrefix: presetNegative.value.trim()
+      };
+    };
+    addActions(prompt, [
+      {
+        label: "Save new",
+        primary: true,
+        onClick: () => {
+          const next = presetValues(true);
+          if (!next)
+            return;
+          patchConfig({ promptPresets: [...config.promptPresets, next], activePromptPresetId: next.id });
+          updateStatus(`Saved preset "${next.name}".`);
+          render();
+        }
+      },
+      {
+        label: "Update selected",
+        onClick: () => {
+          if (!selectedPreset) {
+            updateStatus("Select a preset to update.");
+            return;
+          }
+          const next = presetValues();
+          if (!next)
+            return;
+          patchConfig({ promptPresets: config.promptPresets.map((preset) => preset.id === selectedPreset.id ? next : preset) });
+          updateStatus(`Updated preset "${next.name}".`);
+          render();
+        }
+      },
+      {
+        label: "Rename",
+        onClick: () => {
+          if (!selectedPreset) {
+            updateStatus("Select a preset to rename.");
+            return;
+          }
+          const name = presetName.value.trim();
+          if (!name) {
+            updateStatus("A preset name is required.");
+            return;
+          }
+          const duplicate = config.promptPresets.find((preset) => preset.name.localeCompare(name, undefined, { sensitivity: "accent" }) === 0 && preset.id !== selectedPreset.id);
+          if (duplicate) {
+            updateStatus(`A preset named "${name}" already exists.`);
+            return;
+          }
+          patchConfig({ promptPresets: config.promptPresets.map((preset) => preset.id === selectedPreset.id ? { ...preset, name } : preset) });
+          updateStatus(`Renamed preset to "${name}".`);
+          render();
+        }
+      },
+      {
+        label: "Delete",
+        onClick: () => {
+          if (!selectedPreset) {
+            updateStatus("Select a preset to delete.");
+            return;
+          }
+          patchConfig({
+            promptPresets: config.promptPresets.filter((preset) => preset.id !== selectedPreset.id),
+            activePromptPresetId: null
+          });
+          updateStatus(`Deleted preset "${selectedPreset.name}".`);
+          render();
+        }
+      }
+    ]);
     addText(prompt, "customPositivePrefix", "Positive prefix");
     addText(prompt, "customPositiveSuffix", "Positive suffix");
     addText(prompt, "customNegative", "Negative additions");
