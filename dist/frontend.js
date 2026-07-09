@@ -65,14 +65,10 @@ function setup(ctx) {
     iconSvg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M21 16l-5-5L5 19"/></svg>'
   });
   const removeStyle = ctx.dom.addStyle(`
-    .inlay-panel{padding:12px;color:var(--lumiverse-text);display:flex;flex-direction:column;gap:10px;min-width:0;max-width:100%;box-sizing:border-box}
-    .inlay-sections,.inlay-section-host,.inlay-section-body,.inlay-row,.inlay-control{min-width:0;max-width:100%;box-sizing:border-box}
-    .inlay-section-host{overflow-x:clip;overflow-y:visible}
+    .inlay-panel{padding:12px;color:var(--lumiverse-text);display:flex;flex-direction:column;gap:10px}
     .inlay-section-body{display:flex;flex-direction:column;gap:10px;padding:4px 0}
     .inlay-row{display:grid;grid-template-columns:minmax(116px,.9fr) minmax(0,1.1fr);align-items:center;gap:8px;font-size:13px}
-    .inlay-row>*{min-width:0;max-width:100%;box-sizing:border-box}
     .inlay-row label{color:var(--lumiverse-text-muted)}
-    .inlay-control>:first-child,.inlay-control :is(select,button,[role="combobox"]){width:100%;min-width:0;max-width:100%;box-sizing:border-box}
     .inlay-row input,.inlay-row textarea,.inlay-row select{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:7px 9px;font:inherit}
     .inlay-row textarea{min-height:76px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
     .inlay-hint{grid-column:2;color:var(--lumiverse-text-muted);font-size:12px;line-height:1.35}
@@ -168,7 +164,6 @@ function setup(ctx) {
     updateStatus(status);
     const section = (title, defaultExpanded) => {
       const host = document.createElement("div");
-      host.className = "inlay-section-host";
       sections.append(host);
       const component = ctx.components.mountCollapsibleSection(host, { title, defaultExpanded });
       mountedComponents.push(component);
@@ -181,7 +176,6 @@ function setup(ctx) {
       const labelNode = document.createElement("label");
       labelNode.textContent = label;
       const target = document.createElement("div");
-      target.className = "inlay-control";
       wrapper.append(labelNode, target);
       if (hint) {
         const hintNode = document.createElement("div");
