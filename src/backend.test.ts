@@ -1,8 +1,10 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
 const cleanupRequests: Array<{ tags: string[] }> = [];
+const parserRequests: Array<{ messages: Array<{ role: string; content: string }> }> = [];
 type CleanupResponse = { status?: number; statusText?: string; body?: unknown };
 let cleanupHandler: (request: { tags: string[] }) => CleanupResponse | Promise<CleanupResponse>;
+let parserResponse = "";
 let helpers: typeof import("./backend").__testables;
 
 function defaultCleanupResponse(): CleanupResponse {
@@ -21,6 +23,12 @@ beforeAll(async () => {
       cleanupRequests.push(parsed);
       return cleanupHandler(parsed);
     },
+    generate: {
+      raw: async (request: { messages: Array<{ role: string; content: string }> }) => {
+        parserRequests.push(request);
+        return { content: parserResponse };
+      }
+    },
     log: { info: () => undefined, warn: () => undefined, error: () => undefined }
   };
   helpers = (await import("./backend")).__testables;
@@ -28,7 +36,9 @@ beforeAll(async () => {
 
 beforeEach(() => {
   cleanupRequests.splice(0);
+  parserRequests.splice(0);
   cleanupHandler = defaultCleanupResponse;
+  parserResponse = "";
 });
 
 function promptWithSupplement(danbooruCleanup: boolean) {
@@ -299,6 +309,131 @@ describe("prompt presets", () => {
     expect(config.promptPresets).toEqual([{ id: "cinematic", name: "Cinematic", positivePrefix: "quality", negativePrefix: "lowres" }]);
     expect(config.activePromptPresetId).toBeNull();
     expect(helpers.activePromptPreset(config)).toBeNull();
+  });
+});
+
+describe("illustration parser construction", () => {
+  const paragraphs = [
+    { parserIndex: 1, originalIndex: 1, text: "She enters the empty station." },
+    { parserIndex: 2, originalIndex: 2, text: "A train bursts through the rain." },
+    { parserIndex: 3, originalIndex: 3, text: "She reaches for the closing door." },
+    { parserIndex: 4, originalIndex: 4, text: "Their hands meet through the glass." },
+    { parserIndex: 5, originalIndex: 5, text: "The platform falls silent." }
+  ];
+
+  test("places schema guidance and continuity in system messages, current paragraphs in the user request, and overrides last", () => {
+    const guidance = helpers.parserInstruction(helpers.DEFAULT_CONFIG);
+    const reference = helpers.continuityReference("## Character baseline\nred coat", "assistant: earlier scene");
+    const request = helpers.parserUserRequest(helpers.formatTargetParagraphs(paragraphs));
+    const messages = helpers.parserMessages(guidance, reference, request, "Prefer the rain-soaked climax.");
+
+    expect(messages.map((message) => message.role)).toEqual(["system", "system", "user", "user"]);
+    expect(messages[0].content).toContain("# Image Tagging System");
+    expect(messages[0].content).toContain('"scenes"');
+    expect(messages[0].content).not.toContain("She enters the empty station.");
+    expect(messages[1].content).toContain("# Continuity Reference Only");
+    expect(messages[1].content).toContain("Never restore outdated scene facts");
+    expect(messages[2].content).toContain("[P1]\nShe enters the empty station.");
+    expect(messages.at(-1)?.content).toContain("Prefer the rain-soaked climax.");
+  });
+
+  test("requires batch-wide cinematic contrast without weakening visual continuity", () => {
+    const guidance = helpers.parserInstruction(helpers.DEFAULT_CONFIG);
+
+    expect(guidance).toContain("most visually consequential");
+    expect(guidance).toContain("at least two of these dimensions");
+    expect(guidance).toContain("alternate shots of the same paragraph");
+    expect(guidance).toContain("stable appearance, attire, location, and persistent actions");
+    expect(guidance).toContain("Continuity does not require repeating camera angle");
+    expect(guidance).toContain("continuous pov only when the narrative establishes");
+    expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, mode: "asset" })).not.toContain("at least two of these dimensions");
+    expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, mode: "asset" })).not.toContain("Vary those deliberately");
+  });
+
+  test("asks preprocessing for significant visual beats and a camera/composition note", () => {
+    const instruction = helpers.preprocessingInstruction(paragraphs, { ...helpers.DEFAULT_CONFIG, minImages: 3, maxImages: 4 });
+
+    expect(instruction).toContain("Select between 3 and 4 unique paragraphs");
+    expect(instruction).toContain("most significant visual changes");
+    expect(instruction).toContain("Do not favor early paragraphs");
+    expect(instruction).toContain("Camera/composition");
+  });
+
+  test("accepts a valid selected subset and rejects missing, malformed, duplicate, unknown, or camera-less markers", () => {
+    const config = { ...helpers.DEFAULT_CONFIG, minImages: 2, maxImages: 3 };
+    const valid = [
+      "[Appearance: woman: black hair, red coat]",
+      "[P4]: Visual beat: hands against wet glass; Camera/composition: close-up through rain-streaked window",
+      "[P2]: Visual beat: train entering station; Camera/composition: low wide shot with rails in foreground"
+    ].join("\n");
+
+    expect(helpers.validatePreprocessedTarget(valid, paragraphs, config)).toMatchObject({ selectedParagraphs: [4, 2] });
+    expect(helpers.validatePreprocessedTarget(valid.split("\n").slice(0, 2).join("\n"), paragraphs, config)).toBeNull();
+    expect(helpers.validatePreprocessedTarget(valid.replace("[P4]", "[Paragraph 4]"), paragraphs, config)).toBeNull();
+    expect(helpers.validatePreprocessedTarget(valid.replace("[P2]", "[P4]"), paragraphs, config)).toBeNull();
+    expect(helpers.validatePreprocessedTarget(valid.replace("[P4]", "[P9]"), paragraphs, config)).toBeNull();
+    expect(helpers.validatePreprocessedTarget(valid.replace("Camera/composition:", "Composition:"), paragraphs, config)).toBeNull();
+  });
+
+  test("falls back to raw numbered paragraphs when preprocessing output is invalid", async () => {
+    const config = { ...helpers.DEFAULT_CONFIG, preprocessingEnabled: true, minImages: 3, maxImages: 4 };
+    parserResponse = [
+      "[Appearance: woman: black hair, red coat]",
+      "[P4]: Visual beat: hands meet; Camera/composition: close-up through glass"
+    ].join("\n");
+
+    const result = await helpers.preprocessTargetParagraphs(
+      { id: "parser", name: "Parser", provider: "openai", model: "model" },
+      config,
+      paragraphs,
+      { systemContext: "baseline", recentContext: "history", override: "focus on drama", diagnostics: {} }
+    );
+
+    expect(result).toBe(helpers.formatTargetParagraphs(paragraphs));
+    expect(parserRequests[0].messages.map((message) => message.role)).toEqual(["system", "system", "user", "user"]);
+    expect(parserRequests[0].messages[2].content).toContain("[P5]\nThe platform falls silent.");
+  });
+});
+
+describe("illustration candidate selection", () => {
+  test("keeps distinct same-paragraph shots, collapses exact duplicates, ignores invalid references, and caps before paragraph sorting", () => {
+    const paragraphs = [
+      { parserIndex: 1, originalIndex: 10, text: "First" },
+      { parserIndex: 2, originalIndex: 20, text: "Second" },
+      { parserIndex: 3, originalIndex: 30, text: "Third" }
+    ];
+    const firstThird = {
+      paragraph: 3, camera: "from below, wide shot", situation: "1girl", action: "running",
+      characters: [{ name: "A", label: "girl", appearance: "black hair", expression: "afraid", action: "looking back" }],
+      supplement: "Deep platform perspective with rails in the foreground."
+    };
+    const payload = { scenes: [{ place: "exterior, station", shots: [
+      firstThird,
+      { paragraph: 1, camera: "close-up, from side", situation: "1girl", action: "reaching", characters: [{ expression: "determined", action: "arm outstretched" }], supplement: "Her hand dominates the foreground." },
+      { ...firstThird, characters: [{ ...firstThird.characters[0], appearance: "black hair, red coat" }] },
+      { paragraph: 3, camera: "from above, full body", situation: "1girl", action: "running", characters: [{ expression: "afraid", action: "looking back" }], supplement: "The lone figure is boxed in by converging platforms." },
+      { paragraph: 9, camera: "portrait", situation: "1girl", action: "smiling", characters: [] },
+      { paragraph: 2, camera: "straight-on", situation: "1girl", action: "waiting", characters: [] }
+    ] }] };
+    const config = { ...helpers.DEFAULT_CONFIG, maxImages: 3, promptStyle: "default" as const, promptSyntax: "nai" as const };
+
+    const selected = helpers.selectPromptEntries(payload, paragraphs, config);
+
+    expect(selected.map((entry) => entry.parserParagraph)).toEqual([1, 3, 3]);
+    expect(selected.map((entry) => entry.paragraph)).toEqual([10, 30, 30]);
+    expect(selected.map((entry) => helpers.renderPrompt(entry.prompt, config.promptSyntax))).toEqual([
+      expect.stringContaining("close-up, from side"),
+      expect.stringContaining("from below, wide shot"),
+      expect.stringContaining("from above, full body")
+    ]);
+  });
+});
+
+describe("illustration defaults", () => {
+  test("uses 3-5 only for missing values and preserves explicit stored values", () => {
+    expect(helpers.normalizeConfig({})).toMatchObject({ minImages: 3, maxImages: 5 });
+    expect(helpers.normalizeConfig({ minImages: 1, maxImages: 2 })).toMatchObject({ minImages: 1, maxImages: 2 });
+    expect(helpers.normalizeConfig({ minImages: 6, maxImages: 4 })).toMatchObject({ minImages: 4, maxImages: 6 });
   });
 });
 

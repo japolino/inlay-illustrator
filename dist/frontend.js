@@ -1,4 +1,4 @@
-// inlay-illustrator/src/frontend.ts
+// src/frontend.ts
 var DEFAULT_CONFIG = {
   enabled: true,
   autoGenerate: true,
@@ -10,8 +10,8 @@ var DEFAULT_CONFIG = {
   imageConnectionId: null,
   imageModel: "",
   imageParameters: {},
-  minImages: 1,
-  maxImages: 3,
+  minImages: 3,
+  maxImages: 5,
   maxCharacters: 2,
   includeMinMessages: 0,
   includeMaxMessages: 8,

@@ -1,0 +1,2 @@
+# Preserve the archived upstream script exactly as received.
+references/original-module/original_script.txt whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab

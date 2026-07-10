@@ -185,8 +185,8 @@ const DEFAULT_CONFIG: Config = {
   imageConnectionId: null,
   imageModel: "",
   imageParameters: {},
-  minImages: 1,
-  maxImages: 3,
+  minImages: 3,
+  maxImages: 5,
   maxCharacters: 2,
   includeMinMessages: 0,
   includeMaxMessages: 8,
@@ -779,7 +779,7 @@ function formatTargetParagraphs(paragraphs: PreparedParagraph[]): string {
   return paragraphs.map((paragraph) => `[P${paragraph.parserIndex}]\n${paragraph.text}`).join("\n\n");
 }
 
-function parserInstruction(paragraphs: PreparedParagraph[], targetSource: string, context: string, config: Config): string {
+function parserInstruction(config: Config): string {
   const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
   const shotInstruction = config.mode === "asset"
     ? [
@@ -788,7 +788,13 @@ function parserInstruction(paragraphs: PreparedParagraph[], targetSource: string
       "Force place to include white background, simple background.",
       "Favor clean reusable character portrait tags over narrative scene illustration tags."
     ].join("\n")
-    : `Generate ${config.minImages}-${config.maxImages} shots total when possible.`;
+    : [
+      `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
+      "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
+      "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
+      "If the source contains too few distinct visual beats, create alternate shots of the same paragraph with genuinely different cinematography. Do not invent narrative events.",
+      "Distinct shots may reference the same paragraph. Order shots by their visual importance, not paragraph number."
+    ].join("\n");
   const source = config.originalReference
     ? [
       "Original Creation Tag:",
@@ -862,7 +868,8 @@ function parserInstruction(paragraphs: PreparedParagraph[], targetSource: string
     "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
     `Character limit: max ${maxCharacters} visible character(s) per shot. Characters outside the limit should be represented only by visible partial body parts, such as out of frame, hand, arm, or legs. Do not output their expressions or attire. Only output visible body parts and actions when needed.`,
     config.mode === "asset" ? "Asset mode requires one character in characters[] for every shot, no group shots, no narrative background beyond a simple white background." : "",
-    "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for persistent actions, attire, and location details.",
+    "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for stable appearance, attire, location, and persistent actions.",
+    config.mode === "illustration" ? "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts." : "",
     "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
     "## Field Reference",
     "### place - scene-level",
@@ -923,7 +930,7 @@ function parserInstruction(paragraphs: PreparedParagraph[], targetSource: string
     "## Repetition is Consistency",
     "- If a detail appears in one shot and persists, tag it in all subsequent shots.",
     "- If an action or attire is still in motion or still present, repeat it in later shots.",
-    "- When pov is used, the viewpoint should remain consistent until the text clearly changes it.",
+    config.mode === "illustration" ? "- Preserve a continuous pov only when the narrative establishes an ongoing viewpoint. Otherwise choose the strongest perspective for each visual beat." : "",
     "- appearance + body + attire must be identical for the same character across all shots unless the current message explicitly changes their present visual state.",
     "## Data Priority",
     "1. Client comments or explicit user instructions in the current message override all instructions.",
@@ -941,10 +948,29 @@ function parserInstruction(paragraphs: PreparedParagraph[], targetSource: string
     "- Positive tags only unless client says otherwise.",
     "- English only.",
     "## Character Names",
-    source,
-    "Recent context:",
-    context,
-    "Target assistant message paragraphs:",
+    source
+  ].join("\n\n");
+}
+
+function continuityReference(systemContext: string, recentContext: string): string {
+  const references = [
+    systemContext.trim(),
+    recentContext.trim() ? `## Recent Assistant Context\n${recentContext.trim()}` : ""
+  ].filter(Boolean);
+  if (references.length === 0) return "";
+  return [
+    "# Continuity Reference Only",
+    "Use this reference only to fill missing stable appearance, attire, location, and persistent-action details.",
+    "The current numbered source is authoritative. Never restore outdated scene facts or copy an earlier camera angle or composition merely for continuity.",
+    ...references
+  ].join("\n\n");
+}
+
+function parserUserRequest(targetSource: string): string {
+  return [
+    "Create the requested image-prompt batch from the current numbered paragraph source below.",
+    "Use only its narrative events. Return one raw JSON object with a top-level scenes array and no other text.",
+    "## Current Numbered Paragraph Source",
     targetSource
   ].join("\n\n");
 }
@@ -1126,12 +1152,12 @@ async function generateParserText(
   }
 }
 
-function parserMessages(systemContext: string, instruction: string, override: string): ParserGenerationRequest["messages"] {
+function parserMessages(stableInstruction: string, referenceContext: string, userRequest: string, override: string): ParserGenerationRequest["messages"] {
   const messages: ParserGenerationRequest["messages"] = [
-    { role: "system", content: "You are a strict JSON image prompt parser." }
+    { role: "system", content: stableInstruction.trim() }
   ];
-  if (systemContext.trim()) messages.push({ role: "system", content: systemContext.trim() });
-  messages.push({ role: "user", content: instruction });
+  if (referenceContext.trim()) messages.push({ role: "system", content: referenceContext.trim() });
+  messages.push({ role: "user", content: userRequest.trim() });
   if (override.trim()) messages.push({
     role: "user",
     content: [
@@ -1140,6 +1166,65 @@ function parserMessages(systemContext: string, instruction: string, override: st
     ].join("\n\n")
   });
   return messages;
+}
+
+function preprocessingInstruction(paragraphs: PreparedParagraph[], config: Config): string {
+  const minimum = Math.min(config.minImages, paragraphs.length);
+  const maximum = Math.min(config.maxImages, paragraphs.length);
+  return [
+    "# Illustration Visual-Beat Editor",
+    "Select and summarize the strongest visual beats from the current numbered assistant paragraphs.",
+    `Select between ${minimum} and ${maximum} unique paragraphs.`,
+    "Choose paragraphs with the most significant visual changes, actions, interactions, location changes, or emotional beats across the whole source. Do not favor early paragraphs by default.",
+    "Output plain text only. The first line must have exactly this form:",
+    "[Appearance: character name1: current visual baseline tags, character name2: current visual baseline tags]",
+    "Then output one line per selected paragraph in exactly this form:",
+    "[P#]: Visual beat: concise visible details; Camera/composition: concrete angle, framing, depth, or foreground-occlusion note",
+    "Use each selected [P#] once. Do not invent or alter paragraph numbers.",
+    "Every selected line must include a non-empty Camera/composition note.",
+    "Use only visual details and concise English tags or short tag-like phrases. Output no markdown, greeting, or explanation."
+  ].join("\n\n");
+}
+
+function preprocessingUserRequest(rawTarget: string): string {
+  return [
+    "Edit these current numbered paragraphs into the requested visual-beat selection:",
+    rawTarget
+  ].join("\n\n");
+}
+
+type PreprocessedSelection = { summary: string; selectedParagraphs: number[]; cameraNotes: string[] };
+
+function validatePreprocessedTarget(
+  value: string,
+  paragraphs: PreparedParagraph[],
+  config: Config
+): PreprocessedSelection | null {
+  const summary = cleanString(value);
+  if (!summary) return null;
+  const lines = summary.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (!/^\[Appearance:[^\]\r\n]*\]$/i.test(lines[0] || "")) return null;
+  const minimum = Math.min(config.minImages, paragraphs.length);
+  const maximum = Math.min(config.maxImages, paragraphs.length);
+  const paragraphLines = lines.slice(1);
+  if (paragraphLines.length < minimum || paragraphLines.length > maximum) return null;
+
+  const validParagraphs = new Set(paragraphs.map((paragraph) => paragraph.parserIndex));
+  const selectedParagraphs: number[] = [];
+  const cameraNotes: string[] = [];
+  const seen = new Set<number>();
+  for (const line of paragraphLines) {
+    const match = line.match(/^\[P(\d+)\]\s*:\s*(.+)$/i);
+    if (!match) return null;
+    const paragraph = Number(match[1]);
+    if (!validParagraphs.has(paragraph) || seen.has(paragraph)) return null;
+    const camera = match[2].match(/\bCamera\/composition\s*:\s*(\S.*)$/i)?.[1]?.trim() || "";
+    if (!camera) return null;
+    seen.add(paragraph);
+    selectedParagraphs.push(paragraph);
+    cameraNotes.push(camera);
+  }
+  return { summary: compactBlock(summary, 12000), selectedParagraphs, cameraNotes };
 }
 
 async function preprocessTargetParagraphs(
@@ -1151,26 +1236,25 @@ async function preprocessTargetParagraphs(
 ): Promise<string> {
   const rawTarget = formatTargetParagraphs(paragraphs);
   if (!config.preprocessingEnabled || config.mode !== "illustration") return rawTarget;
-  const instruction = [
-    "# Illustration Tag Preprocessing",
-    "Summarize the numbered assistant paragraphs into compact visual planning notes.",
-    "Output plain text only in this exact shape:",
-    "[Appearance: character name1: current visual baseline tags, character name2: current visual baseline tags]",
-    "[P#]: Location/setting tags, camera angle, character actions and expressions.",
-    "Keep every [P#] that appears in the input. Do not invent paragraph numbers.",
-    "Use only visual details and concise English tags or short tag-like phrases.",
-    context.recentContext ? `Recent context:\n${context.recentContext}` : "",
-    "Target assistant message paragraphs:",
-    rawTarget
-  ].filter(Boolean).join("\n\n");
   try {
-    const summary = cleanString(await generateParserText(parserConnection, config, parserMessages(context.systemContext, instruction, context.override), userId));
-    const hasParagraphMarkers = paragraphs.every((paragraph) => summary.includes(`[P${paragraph.parserIndex}]`));
-    if (summary && hasParagraphMarkers) {
-      logStage(config, "preprocessing_done", { summaryLength: summary.length });
-      return compactBlock(summary, 12000);
+    const summary = await generateParserText(parserConnection, config, parserMessages(
+      preprocessingInstruction(paragraphs, config),
+      continuityReference(context.systemContext, context.recentContext),
+      preprocessingUserRequest(rawTarget),
+      context.override
+    ), userId);
+    const selection = validatePreprocessedTarget(summary, paragraphs, config);
+    if (selection) {
+      logStage(config, "preprocessing_done", {
+        summaryLength: selection.summary.length,
+        candidateCount: paragraphs.length,
+        selectedCount: selection.selectedParagraphs.length,
+        selectedParagraphs: selection.selectedParagraphs,
+        cameraNotes: selection.cameraNotes
+      });
+      return selection.summary;
     }
-    logStage(config, "preprocessing_fallback", { reason: "missing_markers", summaryLength: summary.length }, "warn");
+    logStage(config, "preprocessing_fallback", { reason: "invalid_selection", summaryLength: cleanString(summary).length }, "warn");
   } catch (err) {
     logStage(config, "preprocessing_fallback", { reason: err instanceof Error ? err.message : String(err) }, "warn");
   }
@@ -1502,21 +1586,68 @@ function normalizeScenePayload(payload: ParsedPayload): NormalizedScene[] {
   return normalized;
 }
 
+function normalizedVisualValue(value: unknown): string {
+  return cleanString(value).replace(/\s+/g, " ").toLowerCase();
+}
+
+function exactVisualKey(entry: NormalizedScene): string {
+  return JSON.stringify({
+    paragraph: entry.parserParagraph,
+    camera: normalizedVisualValue(entry.shot.camera),
+    situation: normalizedVisualValue(entry.shot.situation),
+    sceneAction: normalizedVisualValue(entry.scene.action),
+    shotAction: normalizedVisualValue(entry.shot.action),
+    characters: cleanArray<CharacterJson>(entry.shot.characters).map((character) => ({
+      expression: normalizedVisualValue(character.expression),
+      action: normalizedVisualValue(character.action)
+    })),
+    composition: normalizedVisualValue(entry.shot.supplement)
+  });
+}
+
 function selectPromptEntries(payload: ParsedPayload, paragraphs: PreparedParagraph[], config: Config): PromptEntry[] {
-  const byParserParagraph = new Map<number, PromptEntry>();
   const normalized = normalizeScenePayload(payload);
-  for (const entry of normalized) {
-    const paragraph = paragraphs[entry.parserParagraph - 1];
-    if (!paragraph) continue;
-    if (byParserParagraph.has(entry.parserParagraph)) continue;
-    const prompt = assemblePrompt(entry.scene, entry.shot, config, entry.parserParagraph, paragraph.originalIndex);
-    if (renderPrompt(prompt.prompt, config.promptSyntax)) byParserParagraph.set(entry.parserParagraph, prompt);
+  const paragraphMap = new Map(paragraphs.map((paragraph) => [paragraph.parserIndex, paragraph]));
+  const valid = normalized.filter((entry) => paragraphMap.has(entry.parserParagraph));
+  let distinct: NormalizedScene[];
+  if (config.mode === "asset") {
+    const seenParagraphs = new Set<number>();
+    distinct = valid.filter((entry) => {
+      if (seenParagraphs.has(entry.parserParagraph)) return false;
+      seenParagraphs.add(entry.parserParagraph);
+      return true;
+    });
+  } else {
+    const seenVisuals = new Set<string>();
+    distinct = valid.filter((entry) => {
+      const key = exactVisualKey(entry);
+      if (seenVisuals.has(key)) return false;
+      seenVisuals.add(key);
+      return true;
+    });
   }
   const limit = config.mode === "asset" ? paragraphs.length : config.maxImages;
-  return [...byParserParagraph.entries()]
-    .sort(([left], [right]) => left - right)
-    .slice(0, limit)
-    .map(([, entry]) => entry);
+  const prioritized = distinct.slice(0, limit);
+  const selected = prioritized
+    .map((entry, modelPriority) => ({ entry, modelPriority }))
+    .sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority)
+    .map(({ entry }) => entry);
+  const prompts: PromptEntry[] = [];
+  for (const entry of selected) {
+    const paragraph = paragraphMap.get(entry.parserParagraph);
+    if (!paragraph) continue;
+    const prompt = assemblePrompt(entry.scene, entry.shot, config, entry.parserParagraph, paragraph.originalIndex);
+    if (renderPrompt(prompt.prompt, config.promptSyntax)) prompts.push(prompt);
+  }
+  logStage(config, "illustration_candidates_selected", {
+    candidateCount: normalized.length,
+    validCandidateCount: valid.length,
+    distinctCandidateCount: distinct.length,
+    selectedCount: prompts.length,
+    selectedParagraphs: selected.map((entry) => entry.parserParagraph),
+    cameraTags: selected.map((entry) => cleanString(entry.shot.camera))
+  });
+  return prompts;
 }
 
 const VOLATILE_MEMORY_TERMS = [
@@ -1720,9 +1851,20 @@ export const __testables = {
   activePromptPreset,
   assemblePrompt,
   cleanupPrompt,
+  continuityReference,
+  exactVisualKey,
+  formatTargetParagraphs,
+  parserInstruction,
+  parserMessages,
+  parserUserRequest,
+  preprocessTargetParagraphs,
+  preprocessingInstruction,
+  preprocessingUserRequest,
   prepareAndDispatchImageJobs,
   normalizeConfig,
-  renderPrompt
+  renderPrompt,
+  selectPromptEntries,
+  validatePreprocessedTarget
 };
 
 function isOwnMessage(message: { content?: string; metadata?: Record<string, unknown> }): boolean {
@@ -1826,7 +1968,9 @@ async function generateForMessage(chatId: string, messageId: string, content: st
       try {
         const context = await buildParserContext(chatId, typedMessages, targetIndex, state.characterAppearance, config, attempt, userId);
         const targetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
-        const instruction = parserInstruction(paragraphs, targetSource, context.recentContext, config);
+        const instruction = parserInstruction(config);
+        const referenceContext = continuityReference(context.systemContext, context.recentContext);
+        const userRequest = parserUserRequest(targetSource);
         logStage(config, "parser_prompt_built", {
           attempt,
           instructionLength: instruction.length,
@@ -1842,7 +1986,7 @@ async function generateForMessage(chatId: string, messageId: string, content: st
           preprocessingEnabled: config.preprocessingEnabled,
           contextDiagnostics: context.diagnostics
         });
-        parsed = await parsePayloadWithRepair(parserConnection, config, parserMessages(context.systemContext, instruction, context.override), userId);
+        parsed = await parsePayloadWithRepair(parserConnection, config, parserMessages(instruction, referenceContext, userRequest, context.override), userId);
         selected = selectPromptEntries(parsed, paragraphs, config);
         if (selected.length === 0) throw new Error("No usable prompts were parsed.");
         break;
