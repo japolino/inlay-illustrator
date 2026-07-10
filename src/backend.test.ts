@@ -1,25 +1,35 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
 const cleanupRequests: Array<{ tags: string[] }> = [];
+type CleanupResponse = { status?: number; statusText?: string; body?: unknown };
+let cleanupHandler: (request: { tags: string[] }) => CleanupResponse | Promise<CleanupResponse>;
 let helpers: typeof import("./backend").__testables;
+
+function defaultCleanupResponse(): CleanupResponse {
+  return {
+    status: 200,
+    body: JSON.stringify({ suggestions: { garden: [{ tag: "outdoors", score: 0.95 }] } })
+  };
+}
 
 beforeAll(async () => {
   (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle = {
     on: () => undefined,
     onFrontendMessage: () => undefined,
     cors: async (_endpoint: string, request: { body: string }) => {
-      cleanupRequests.push(JSON.parse(request.body) as { tags: string[] });
-      return {
-        status: 200,
-        body: JSON.stringify({ suggestions: { garden: [{ tag: "outdoors", score: 0.95 }] } })
-      };
+      const parsed = JSON.parse(request.body) as { tags: string[] };
+      cleanupRequests.push(parsed);
+      return cleanupHandler(parsed);
     },
     log: { info: () => undefined, warn: () => undefined, error: () => undefined }
   };
   helpers = (await import("./backend")).__testables;
 });
 
-beforeEach(() => cleanupRequests.splice(0));
+beforeEach(() => {
+  cleanupRequests.splice(0);
+  cleanupHandler = defaultCleanupResponse;
+});
 
 function promptWithSupplement(danbooruCleanup: boolean) {
   const config = {
@@ -92,6 +102,96 @@ describe("Danbooru cleanup", () => {
 
     expect(cleanupRequests).toEqual([]);
     expect(finalPrompt).toBe(helpers.renderPrompt(prompt, config.promptSyntax));
+  });
+
+  test("splits large cleanup lists into ordered batches of at most 16 tags", async () => {
+    const tags = Array.from({ length: 35 }, (_, index) => `tag ${index + 1}`);
+    const config = { ...helpers.DEFAULT_CONFIG, danbooruCleanup: true, danbooruEndpoint: "http://cleanup.test/validate" };
+    cleanupHandler = () => ({ status: 200, body: JSON.stringify({ valid: [] }) });
+
+    await helpers.cleanupPrompt({ tagSections: [tags.join(", ")], supplement: "", supplementAfterTagSections: 1 }, config);
+
+    expect(cleanupRequests.map((request) => request.tags)).toEqual([
+      tags.slice(0, 16),
+      tags.slice(16, 32),
+      tags.slice(32)
+    ]);
+    expect(cleanupRequests.every((request) => request.tags.length <= 16)).toBe(true);
+  });
+
+  test("merges valid tags and suggestions returned by different batches", async () => {
+    const tags = [...Array.from({ length: 15 }, (_, index) => `tag ${index + 1}`), "exterior"];
+    const config = {
+      ...helpers.DEFAULT_CONFIG,
+      promptSyntax: "nai" as const,
+      danbooruCleanup: true,
+      danbooruEndpoint: "http://cleanup.test/validate"
+    };
+    cleanupHandler = ({ tags: batch }) => batch[0] === "tag 1"
+      ? {
+          status: 200,
+          body: JSON.stringify({ suggestions: { "tag 1": [{ tag: "first suggestion", score: 0.91 }] } })
+        }
+      : {
+          status: 200,
+          body: JSON.stringify({
+            data: {
+              valid: ["outdoors"],
+              suggestions: { exterior: [{ tag: "second suggestion", score: 0.93 }] }
+            }
+          })
+        };
+
+    const finalPrompt = await helpers.cleanupPrompt({
+      tagSections: [tags.join(", ")],
+      supplement: "",
+      supplementAfterTagSections: 1
+    }, config);
+
+    expect(cleanupRequests.map((request) => request.tags)).toEqual([tags, ["outdoors"]]);
+    expect(finalPrompt).toContain("tag 1, first suggestion");
+    expect(finalPrompt).toContain("exterior, outdoors, second suggestion");
+  });
+
+  test("waits for each cleanup batch before submitting the next", async () => {
+    const first = deferred<CleanupResponse>();
+    const second = deferred<CleanupResponse>();
+    const tags = Array.from({ length: 17 }, (_, index) => `tag ${index + 1}`);
+    const config = { ...helpers.DEFAULT_CONFIG, danbooruCleanup: true, danbooruEndpoint: "http://cleanup.test/validate" };
+    cleanupHandler = ({ tags: batch }) => batch[0] === "tag 1" ? first.promise : second.promise;
+
+    const completed = helpers.cleanupPrompt({ tagSections: [tags.join(", ")], supplement: "", supplementAfterTagSections: 1 }, config);
+    expect(cleanupRequests).toEqual([{ tags: tags.slice(0, 16) }]);
+
+    first.resolve({ status: 200, body: JSON.stringify({ valid: [] }) });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(cleanupRequests).toEqual([{ tags: tags.slice(0, 16) }, { tags: tags.slice(16) }]);
+
+    second.resolve({ status: 200, body: JSON.stringify({ valid: [] }) });
+    await expect(completed).resolves.toBe(tags.join(", "));
+  });
+
+  test("discards partial cleanup results and returns the original prompt when a batch fails", async () => {
+    const tags = Array.from({ length: 33 }, (_, index) => `tag ${index + 1}`);
+    const prompt = { tagSections: [tags.join(", ")], supplement: "", supplementAfterTagSections: 1 };
+    const config = {
+      ...helpers.DEFAULT_CONFIG,
+      promptSyntax: "nai" as const,
+      danbooruCleanup: true,
+      danbooruEndpoint: "http://cleanup.test/validate"
+    };
+    cleanupHandler = ({ tags: batch }) => batch[0] === "tag 17"
+      ? { status: 502, statusText: "Bad Gateway", body: "proxy disconnected" }
+      : {
+          status: 200,
+          body: JSON.stringify({ suggestions: { "tag 1": [{ tag: "partial result", score: 0.99 }] } })
+        };
+
+    const finalPrompt = await helpers.cleanupPrompt(prompt, config);
+
+    expect(cleanupRequests.map((request) => request.tags)).toEqual([tags.slice(0, 16), tags.slice(16, 32)]);
+    expect(finalPrompt).toBe(helpers.renderPrompt(prompt, config.promptSyntax));
+    expect(finalPrompt).not.toContain("partial result");
   });
 });
 

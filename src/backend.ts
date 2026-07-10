@@ -172,6 +172,8 @@ type DanbooruPayload = {
   };
 };
 
+const DANBOORU_CLEANUP_BATCH_SIZE = 16;
+
 const DEFAULT_CONFIG: Config = {
   enabled: true,
   autoGenerate: true,
@@ -1571,15 +1573,56 @@ async function cleanupPrompt(prompt: AssembledPrompt, config: Config): Promise<s
   const sectionTags = prompt.tagSections.map((section) => csvParts(section));
   const tags = sectionTags.flat();
   const requestTags = unique(tags.flatMap((tag) => [tag, ...localCandidates(tag)]));
-  logStage(config, "danbooru_cleanup_start", { endpoint: config.danbooruEndpoint.trim(), tagCount: tags.length, requestTagCount: requestTags.length });
+  const batches = Array.from(
+    { length: Math.ceil(requestTags.length / DANBOORU_CLEANUP_BATCH_SIZE) },
+    (_, index) => requestTags.slice(index * DANBOORU_CLEANUP_BATCH_SIZE, (index + 1) * DANBOORU_CLEANUP_BATCH_SIZE)
+  );
+  const cleanupStartedAt = Date.now();
+  logStage(config, "danbooru_cleanup_start", {
+    endpoint: config.danbooruEndpoint.trim(),
+    tagCount: tags.length,
+    requestTagCount: requestTags.length,
+    batchCount: batches.length
+  });
   try {
-    const response = parseCorsJson<DanbooruPayload>(await spindle.cors(config.danbooruEndpoint.trim(), {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ tags: requestTags })
-    }), "Danbooru cleanup");
-    const valid = response.valid || response.data?.valid || [];
-    const suggestions = response.suggestions || response.data?.suggestions || {};
+    const valid: string[] = [];
+    const suggestions: Record<string, DanbooruSuggestion[]> = {};
+    for (const [index, batch] of batches.entries()) {
+      const batchNumber = index + 1;
+      const batchStartedAt = Date.now();
+      logStage(config, "danbooru_cleanup_batch_start", {
+        batchNumber,
+        batchCount: batches.length,
+        tagCount: batch.length
+      });
+      try {
+        const response = parseCorsJson<DanbooruPayload>(await spindle.cors(config.danbooruEndpoint.trim(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ tags: batch })
+        }), `Danbooru cleanup batch ${batchNumber}/${batches.length}`);
+        valid.push(...(response.valid || response.data?.valid || []));
+        const batchSuggestions = response.suggestions || response.data?.suggestions || {};
+        for (const [tag, entries] of Object.entries(batchSuggestions)) {
+          suggestions[tag] = [...(suggestions[tag] || []), ...entries];
+        }
+        logStage(config, "danbooru_cleanup_batch_done", {
+          batchNumber,
+          batchCount: batches.length,
+          tagCount: batch.length,
+          elapsedMs: Date.now() - batchStartedAt
+        });
+      } catch (err) {
+        logStage(config, "danbooru_cleanup_batch_failed", {
+          batchNumber,
+          batchCount: batches.length,
+          tagCount: batch.length,
+          elapsedMs: Date.now() - batchStartedAt,
+          error: err instanceof Error ? err.message : String(err)
+        }, "warn");
+        throw err;
+      }
+    }
     const validKeys = new Set(valid.map((tag) => tag.toLowerCase()));
     const cleanTags = (section: string[]): string[] => {
       const expanded: string[] = [];
@@ -1601,7 +1644,12 @@ async function cleanupPrompt(prompt: AssembledPrompt, config: Config): Promise<s
       })
       .join(", "));
     const cleaned = renderPrompt({ ...prompt, tagSections: cleanedSections }, config.promptSyntax);
-    logStage(config, "danbooru_cleanup_done", { beforeTagCount: tags.length, afterTagCount: cleanedSections.flatMap((section) => csvParts(section)).length });
+    logStage(config, "danbooru_cleanup_done", {
+      beforeTagCount: tags.length,
+      afterTagCount: cleanedSections.flatMap((section) => csvParts(section)).length,
+      batchCount: batches.length,
+      elapsedMs: Date.now() - cleanupStartedAt
+    });
     return cleaned;
   } catch (err) {
     spindle.log.warn(`Danbooru cleanup skipped: ${err instanceof Error ? err.message : String(err)}`);
