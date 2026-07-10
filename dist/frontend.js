@@ -65,14 +65,14 @@ function setup(ctx) {
     iconSvg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M21 16l-5-5L5 19"/></svg>'
   });
   const removeStyle = ctx.dom.addStyle(`
-    .inlay-panel{padding:12px;color:var(--lumiverse-text);display:flex;flex-direction:column;gap:10px;min-width:0;max-width:100%;box-sizing:border-box}
+    .inlay-panel{width:100%;padding:12px;color:var(--lumiverse-text);display:flex;flex-direction:column;gap:10px;min-width:0;max-width:100%;box-sizing:border-box}
     .inlay-sections,.inlay-section-host,.inlay-section-body,.inlay-row,.inlay-control{min-width:0;max-width:100%;box-sizing:border-box}
-    .inlay-section-host{overflow-x:clip;overflow-y:visible}
+    .inlay-section-host{width:100%;contain:inline-size;overflow-x:clip;overflow-y:visible}
     .inlay-section-body{display:flex;flex-direction:column;gap:10px;padding:4px 0}
     .inlay-row{display:grid;grid-template-columns:minmax(116px,.9fr) minmax(0,1.1fr);align-items:center;gap:8px;font-size:13px}
     .inlay-row>*{min-width:0;max-width:100%;box-sizing:border-box}
     .inlay-row label{color:var(--lumiverse-text-muted)}
-    .inlay-control :is(select,[role="combobox"]){width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+    .inlay-select-control,.inlay-select-trigger,.inlay-native-select{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
     .inlay-row input,.inlay-row textarea,.inlay-row select{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:7px 9px;font:inherit}
     .inlay-row textarea{min-height:76px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
     .inlay-hint{grid-column:2;color:var(--lumiverse-text-muted);font-size:12px;line-height:1.35}
@@ -220,6 +220,9 @@ function setup(ctx) {
       const component = ctx.components.mountSelect(target, {
         value: String(config[key] || ""),
         options,
+        className: "inlay-select-control",
+        triggerClassName: "inlay-select-trigger",
+        portal: true,
         onChange: (value) => patchConfig({ [key]: value })
       });
       mountedComponents.push(component);
@@ -319,6 +322,7 @@ function setup(ctx) {
     const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
     const presetSelectTarget = row(prompt, "Active preset", "Preset prefixes are inserted before the custom prompt fields below.");
     const presetSelect = document.createElement("select");
+    presetSelect.className = "inlay-native-select";
     presetSelect.setAttribute("aria-label", "Active prompt preset");
     presetSelect.innerHTML = '<option value="">No preset</option>';
     for (const preset of config.promptPresets) {
