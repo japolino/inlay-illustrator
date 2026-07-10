@@ -41,9 +41,6 @@ var DEFAULT_CONFIG = {
   activePromptPresetId: null
 };
 var CLEANUP_KEY = "__inlayIllustratorCleanup";
-function escapeHtml(value) {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
 function setup(ctx) {
   const previousCleanup = globalThis[CLEANUP_KEY];
   if (typeof previousCleanup === "function")
@@ -77,13 +74,11 @@ function setup(ctx) {
     .inlay-row textarea{min-height:76px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
     .inlay-hint{grid-column:2;color:var(--lumiverse-text-muted);font-size:12px;line-height:1.35}
     .inlay-actions{display:flex;flex-wrap:wrap;gap:8px}
-    .inlay-actions button,.inlay-tag-actions button{border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:8px 10px;cursor:pointer;font:inherit}
-    .inlay-actions button:hover,.inlay-tag-actions button:hover{background:var(--lumiverse-fill-hover)}
+    .inlay-actions button{border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:8px 10px;cursor:pointer;font:inherit}
+    .inlay-actions button:hover{background:var(--lumiverse-fill-hover)}
     .inlay-primary{background:var(--lumiverse-primary)!important;color:var(--lumiverse-primary-contrast)!important;border-color:var(--lumiverse-primary)!important}
     .inlay-subtitle{font-size:13px;font-weight:600;margin:2px 0}
     .inlay-parser-summary{font-size:12px;color:var(--lumiverse-text-muted);line-height:1.4}
-    .inlay-tag-row{display:grid;grid-template-columns:minmax(72px,.55fr) minmax(112px,1fr);gap:6px}
-    .inlay-tag-actions{grid-column:1 / -1;display:flex;gap:6px;justify-content:flex-end}
     .inlay-status{padding:9px 10px;border:1px solid var(--lumiverse-border);border-radius:7px;background:var(--lumiverse-fill-subtle);font-size:12px;color:var(--lumiverse-text-muted);white-space:pre-wrap;min-height:18px}
   `);
   function activeChatId() {
@@ -465,11 +460,20 @@ function setup(ctx) {
     memory.append(memoryTitle);
     const entries = Object.entries(characterAppearance).filter(([name, tags]) => name.trim() && tags.trim()).sort(([left], [right]) => left.localeCompare(right));
     for (const [name, tags] of entries) {
-      const memoryRow = document.createElement("div");
-      memoryRow.className = "inlay-tag-row";
-      memoryRow.innerHTML = `<input class="inlay-tag-name" aria-label="Character name" value="${escapeHtml(name)}"/><input class="inlay-tag-tags" aria-label="Character appearance tags" value="${escapeHtml(tags)}"/>`;
-      const actions = document.createElement("div");
-      actions.className = "inlay-tag-actions";
+      const nameControl = row(memory, "Character name");
+      const nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.ariaLabel = "Character name";
+      nameInput.value = name;
+      nameControl.append(nameInput);
+      const tagsControl = row(memory, "Appearance tags");
+      const tagsInput = document.createElement("input");
+      tagsInput.type = "text";
+      tagsInput.ariaLabel = "Character appearance tags";
+      tagsInput.value = tags;
+      tagsControl.append(tagsInput);
+      const actions = row(memory, "");
+      actions.classList.add("inlay-actions");
       const save = document.createElement("button");
       save.type = "button";
       save.textContent = "Save";
@@ -477,16 +481,14 @@ function setup(ctx) {
         type: "character_tags_update",
         chatId: activeChatId(),
         oldName: name,
-        name: memoryRow.querySelector(".inlay-tag-name")?.value || "",
-        tags: memoryRow.querySelector(".inlay-tag-tags")?.value || ""
+        name: nameInput.value,
+        tags: tagsInput.value
       }));
       const remove = document.createElement("button");
       remove.type = "button";
       remove.textContent = "Delete";
       remove.addEventListener("click", () => ctx.sendToBackend({ type: "character_tags_delete", chatId: activeChatId(), name }));
       actions.append(save, remove);
-      memoryRow.append(actions);
-      memory.append(memoryRow);
     }
     if (entries.length === 0) {
       const empty = document.createElement("div");
@@ -494,11 +496,20 @@ function setup(ctx) {
       empty.textContent = "No character baseline is saved for this chat yet.";
       memory.append(empty);
     }
-    const addRow = document.createElement("div");
-    addRow.className = "inlay-tag-row";
-    addRow.innerHTML = '<input class="inlay-tag-name" aria-label="New character name" placeholder="Name"/><input class="inlay-tag-tags" aria-label="New character appearance tags" placeholder="Appearance tags"/>';
-    const addMemoryActions = document.createElement("div");
-    addMemoryActions.className = "inlay-tag-actions";
+    const newNameControl = row(memory, "Character name");
+    const newNameInput = document.createElement("input");
+    newNameInput.type = "text";
+    newNameInput.ariaLabel = "New character name";
+    newNameInput.placeholder = "Name";
+    newNameControl.append(newNameInput);
+    const newTagsControl = row(memory, "Appearance tags");
+    const newTagsInput = document.createElement("input");
+    newTagsInput.type = "text";
+    newTagsInput.ariaLabel = "New character appearance tags";
+    newTagsInput.placeholder = "Appearance tags";
+    newTagsControl.append(newTagsInput);
+    const addMemoryActions = row(memory, "");
+    addMemoryActions.classList.add("inlay-actions");
     const add = document.createElement("button");
     add.type = "button";
     add.textContent = "Add character";
@@ -506,12 +517,10 @@ function setup(ctx) {
       type: "character_tags_update",
       chatId: activeChatId(),
       oldName: "",
-      name: addRow.querySelector(".inlay-tag-name")?.value || "",
-      tags: addRow.querySelector(".inlay-tag-tags")?.value || ""
+      name: newNameInput.value,
+      tags: newTagsInput.value
     }));
     addMemoryActions.append(add);
-    addRow.append(addMemoryActions);
-    memory.append(addRow);
     const diagnostics = section("Diagnostics", false);
     addSwitch(diagnostics, "debugLogging", "Debug logging");
     const diagnosticStatus = document.createElement("div");
