@@ -91,7 +91,7 @@ describe("Danbooru cleanup", () => {
       tags: ["quality", "upper body", "1girl", "smiling", "garden", "girl", "blonde hair", "masterpiece"]
     }]);
     expect(finalPrompt).toBe(
-      "quality, upper body, 1girl, smiling, garden, outdoors, girl, blonde hair, A cinematic composition places her among softly lit flowers., masterpiece"
+      "quality, upper body, 1girl, smiling, outdoors, girl, blonde hair, A cinematic composition places her among softly lit flowers., masterpiece"
     );
   });
 
@@ -119,7 +119,7 @@ describe("Danbooru cleanup", () => {
     expect(cleanupRequests.every((request) => request.tags.length <= 16)).toBe(true);
   });
 
-  test("merges valid tags and suggestions returned by different batches", async () => {
+  test("merges candidate validation and suggestions returned by different batches", async () => {
     const tags = [...Array.from({ length: 15 }, (_, index) => `tag ${index + 1}`), "exterior"];
     const config = {
       ...helpers.DEFAULT_CONFIG,
@@ -149,8 +149,89 @@ describe("Danbooru cleanup", () => {
     }, config);
 
     expect(cleanupRequests.map((request) => request.tags)).toEqual([tags, ["outdoors"]]);
-    expect(finalPrompt).toContain("tag 1, first suggestion");
-    expect(finalPrompt).toContain("exterior, outdoors, second suggestion");
+    expect(finalPrompt).toStartWith("first suggestion, tag 2");
+    expect(finalPrompt).toEndWith("tag 15, outdoors");
+    expect(finalPrompt).not.toContain("tag 1,");
+    expect(finalPrompt).not.toContain("exterior");
+    expect(finalPrompt).not.toContain("second suggestion");
+  });
+
+  test("keeps valid originals and replaces invalid tags with only the best confident suggestion", async () => {
+    const config = {
+      ...helpers.DEFAULT_CONFIG,
+      promptSyntax: "nai" as const,
+      danbooruCleanup: true,
+      danbooruEndpoint: "http://cleanup.test/validate"
+    };
+    cleanupHandler = () => ({
+      status: 200,
+      body: JSON.stringify({
+        valid: ["valid original"],
+        suggestions: {
+          "valid original": [{ tag: "unwanted replacement", score: 0.99 }],
+          "replace me": [
+            { tag: "weaker replacement", score: 0.89 },
+            { tag: "best replacement", score: 0.96 }
+          ],
+          "low confidence": [{ tag: "uncertain replacement", score: 0.879 }]
+        }
+      })
+    });
+
+    const finalPrompt = await helpers.cleanupPrompt({
+      tagSections: ["valid original, replace me, low confidence, unmatched"],
+      supplement: "",
+      supplementAfterTagSections: 1
+    }, config);
+
+    expect(finalPrompt).toBe("valid original, best replacement, low confidence, unmatched");
+  });
+
+  test("uses the most specific validated descriptor plus validated hair length regardless of word order", async () => {
+    const config = {
+      ...helpers.DEFAULT_CONFIG,
+      promptSyntax: "nai" as const,
+      danbooruCleanup: true,
+      danbooruEndpoint: "http://cleanup.test/validate"
+    };
+    cleanupHandler = () => ({
+      status: 200,
+      body: JSON.stringify({ valid: ["golden blonde hair", "blonde hair", "short hair"] })
+    });
+
+    const finalPrompt = await helpers.cleanupPrompt({
+      tagSections: ["golden blonde short hair, short golden blonde hair"],
+      supplement: "",
+      supplementAfterTagSections: 1
+    }, config);
+
+    expect(cleanupRequests).toEqual([{ tags: [
+      "golden blonde short hair", "golden blonde hair", "blonde hair", "short hair", "short golden blonde hair"
+    ] }]);
+    expect(finalPrompt).toBe("golden blonde hair, short hair");
+  });
+
+  test("replaces the reported compound samples and globally deduplicates their validated tags", async () => {
+    const config = {
+      ...helpers.DEFAULT_CONFIG,
+      promptSyntax: "nai" as const,
+      danbooruCleanup: true,
+      danbooruEndpoint: "http://cleanup.test/validate"
+    };
+    cleanupHandler = () => ({
+      status: 200,
+      body: JSON.stringify({ valid: ["red eyes", "blonde hair", "short hair"] })
+    });
+
+    const finalPrompt = await helpers.cleanupPrompt({
+      tagSections: ["red eyes, brilliant red eyes", "golden blonde short hair"],
+      supplement: "",
+      supplementAfterTagSections: 2
+    }, config);
+
+    expect(finalPrompt).toBe("red eyes, blonde hair, short hair");
+    expect(finalPrompt).not.toContain("brilliant red eyes");
+    expect(finalPrompt).not.toContain("golden blonde short hair");
   });
 
   test("waits for each cleanup batch before submitting the next", async () => {
@@ -243,63 +324,121 @@ const imageJobs = [
   { index: 2, total: 3, prompt: "third prompt", negative: "", paragraph: 2, parameters: {} }
 ];
 
-describe("image job scheduling", () => {
-  test("queues every ComfyUI request before the first result resolves and preserves prompt order", async () => {
-    const requests = imageJobs.map(() => deferred<{ imageId: string }>());
-    const invoked: number[] = [];
-    const completed = helpers.dispatchPreparedImageJobs(imageJobs, true, (job) => {
-      invoked.push(job.index);
-      return requests[job.index].promise;
+describe("image preparation and generation pipeline", () => {
+  test("submits each ComfyUI image as soon as its sequential cleanup completes", async () => {
+    const preparations = imageJobs.map(() => deferred<(typeof imageJobs)[number]>());
+    const generations = imageJobs.map(() => deferred<{ imageId: string }>());
+    const preparing: number[] = [];
+    const submitted: number[] = [];
+    const events: string[] = [];
+    const completed = helpers.prepareAndDispatchImageJobs([0, 1, 2], true, (index) => {
+      preparing.push(index);
+      events.push(`cleanup ${index}`);
+      return preparations[index].promise;
+    }, (job) => {
+      submitted.push(job.index);
+      events.push(`generate ${job.index}`);
+      return generations[job.index].promise;
     });
 
-    expect(invoked).toEqual([0, 1, 2]);
-    requests[2].resolve({ imageId: "third" });
-    requests[0].resolve({ imageId: "first" });
-    requests[1].resolve({ imageId: "second" });
+    expect(preparing).toEqual([0]);
+    expect(submitted).toEqual([]);
 
-    const results = await completed;
+    preparations[0].resolve(imageJobs[0]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(submitted).toEqual([0]);
+    expect(preparing).toEqual([0, 1]);
+    expect(events).toEqual(["cleanup 0", "generate 0", "cleanup 1"]);
+
+    preparations[1].resolve(imageJobs[1]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(submitted).toEqual([0, 1]);
+    expect(preparing).toEqual([0, 1, 2]);
+
+    preparations[2].resolve(imageJobs[2]);
+    generations[2].resolve({ imageId: "third" });
+    generations[0].resolve({ imageId: "first" });
+    generations[1].resolve({ imageId: "second" });
+
+    const { jobs, results } = await completed;
+    expect(jobs.map((job) => job.index)).toEqual([0, 1, 2]);
     expect(results.map((result) => result.imageId)).toEqual(["first", "second", "third"]);
-    expect(imageJobs.map((job) => job.paragraph)).toEqual([3, 1, 2]);
   });
 
-  test("keeps non-ComfyUI requests strictly sequential", async () => {
-    const requests = imageJobs.map(() => deferred<string>());
-    const invoked: number[] = [];
-    const completed = helpers.dispatchPreparedImageJobs(imageJobs, false, (job) => {
-      invoked.push(job.index);
-      return requests[job.index].promise;
+  test("overlaps later cleanup with generation while keeping non-ComfyUI requests serial", async () => {
+    const preparations = imageJobs.map(() => deferred<(typeof imageJobs)[number]>());
+    const generations = imageJobs.map(() => deferred<string>());
+    const preparing: number[] = [];
+    const submitted: number[] = [];
+    const completed = helpers.prepareAndDispatchImageJobs([0, 1, 2], false, (index) => {
+      preparing.push(index);
+      return preparations[index].promise;
+    }, (job) => {
+      submitted.push(job.index);
+      return generations[job.index].promise;
     });
 
-    expect(invoked).toEqual([0]);
-    requests[0].resolve("first");
-    await Promise.resolve();
-    expect(invoked).toEqual([0, 1]);
-    requests[1].resolve("second");
-    await Promise.resolve();
-    expect(invoked).toEqual([0, 1, 2]);
-    requests[2].resolve("third");
+    preparations[0].resolve(imageJobs[0]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(submitted).toEqual([0]);
+    expect(preparing).toEqual([0, 1]);
 
-    await expect(completed).resolves.toEqual(["first", "second", "third"]);
+    preparations[1].resolve(imageJobs[1]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(submitted).toEqual([0]);
+    expect(preparing).toEqual([0, 1, 2]);
+
+    preparations[2].resolve(imageJobs[2]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(submitted).toEqual([0]);
+
+    generations[0].resolve("first");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(submitted).toEqual([0, 1]);
+    generations[1].resolve("second");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(submitted).toEqual([0, 1, 2]);
+    generations[2].resolve("third");
+
+    await expect(completed).resolves.toEqual({ jobs: imageJobs, results: ["first", "second", "third"] });
   });
 
-  test("waits for all submitted ComfyUI jobs before propagating a failure", async () => {
-    const requests = imageJobs.map(() => deferred<string>());
-    const invoked: number[] = [];
-    const completed = helpers.dispatchPreparedImageJobs(imageJobs, true, (job) => {
-      invoked.push(job.index);
-      return requests[job.index].promise;
-    });
+  test("waits for every eagerly submitted job before propagating a failure", async () => {
+    const generations = imageJobs.map(() => deferred<string>());
+    const submitted: number[] = [];
     const failure = new Error("first job failed");
+    const completed = helpers.prepareAndDispatchImageJobs([0, 1, 2], true, (index) => imageJobs[index], (job) => {
+      submitted.push(job.index);
+      return generations[job.index].promise;
+    });
     let settled = false;
     void completed.catch(() => { settled = true; });
 
-    expect(invoked).toEqual([0, 1, 2]);
-    requests[0].reject(failure);
-    requests[1].resolve("second");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(submitted).toEqual([0, 1, 2]);
+    generations[0].reject(failure);
+    generations[1].resolve("second");
     await Promise.resolve();
     expect(settled).toBe(false);
-    requests[2].resolve("third");
+    generations[2].resolve("third");
 
     await expect(completed).rejects.toBe(failure);
+  });
+
+  test("waits for submitted generation before propagating a later preparation failure", async () => {
+    const generation = deferred<string>();
+    const preparationFailure = new Error("second cleanup failed");
+    const completed = helpers.prepareAndDispatchImageJobs([0, 1], true, (index) => {
+      if (index === 1) throw preparationFailure;
+      return imageJobs[index];
+    }, () => generation.promise);
+    let settled = false;
+    void completed.catch(() => { settled = true; });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(settled).toBe(false);
+    generation.resolve("first");
+
+    await expect(completed).rejects.toBe(preparationFailure);
   });
 });

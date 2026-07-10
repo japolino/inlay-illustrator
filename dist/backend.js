@@ -1,4 +1,4 @@
-// inlay-illustrator/src/backend.ts
+// src/backend.ts
 var EXTENSION_ID = "inlay_illustrator";
 var MARKER = "<!-- inlay_illustrator -->";
 var DANBOORU_CLEANUP_BATCH_SIZE = 16;
@@ -1097,25 +1097,47 @@ async function buildImageParameters(config, connection, prompt, negative) {
   });
   return { ...parameters, workflow: patched, workflowFormat: "api_prompt", preserveImportedWorkflow: true };
 }
-async function dispatchPreparedImageJobs(jobs, eager, generate) {
-  if (!eager) {
-    const results = [];
-    for (const job of jobs)
-      results.push(await generate(job));
-    return results;
-  }
-  const requests = jobs.map((job) => {
+async function prepareAndDispatchImageJobs(inputs, eager, prepare, generate) {
+  const jobs = [];
+  const requests = [];
+  let serialRequest = Promise.resolve();
+  let preparationFailure;
+  let hasPreparationFailure = false;
+  for (const [index, input] of inputs.entries()) {
+    let job;
     try {
-      return Promise.resolve(generate(job));
+      job = await prepare(input, index);
     } catch (err) {
-      return Promise.reject(err);
+      preparationFailure = err;
+      hasPreparationFailure = true;
+      break;
     }
-  });
+    jobs.push(job);
+    const invoke = () => {
+      try {
+        return Promise.resolve(generate(job));
+      } catch (err) {
+        return Promise.reject(err);
+      }
+    };
+    const request = eager || requests.length === 0 ? invoke() : serialRequest.then(invoke);
+    request.catch(() => {
+      return;
+    });
+    requests.push(request);
+    if (!eager)
+      serialRequest = request;
+  }
   const settled = await Promise.allSettled(requests);
+  if (hasPreparationFailure)
+    throw preparationFailure;
   const failure = settled.find((result) => result.status === "rejected");
   if (failure?.status === "rejected")
     throw failure.reason;
-  return settled.map((result) => result.value);
+  return {
+    jobs,
+    results: settled.map((result) => result.value)
+  };
 }
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1317,24 +1339,47 @@ function deleteCharacterTag(state, name) {
   const key = Object.keys(state.characterAppearance).find((candidate) => candidate.toLowerCase() === target.toLowerCase()) || target;
   delete state.characterAppearance[key];
 }
-function localCandidates(tag) {
+function descriptorCandidates(words, suffix, original) {
+  const candidates = [];
+  for (let index = 0;index < words.length; index += 1) {
+    const candidate = `${words.slice(index).join(" ")} ${suffix}`.trim();
+    if (candidate.toLowerCase() !== original.toLowerCase())
+      candidates.push(candidate);
+  }
+  return unique(candidates);
+}
+function localCandidateGroups(tag) {
   const lower = tag.toLowerCase();
-  const out = [];
+  const groups = [];
   if (lower === "exterior")
-    out.push("outdoors");
+    groups.push(["outdoors"]);
   if (lower === "smug smirk")
-    out.push("smirk", "smug");
+    groups.push(["smirk"], ["smug"]);
   if (lower.includes("pleated mini skirt"))
-    out.push("pleated skirt", "miniskirt");
+    groups.push(["pleated skirt"], ["miniskirt"]);
   if (lower === "revealing dark purple dress")
-    out.push("purple dress", "revealing clothes");
-  const hair = lower.match(/\b(long|short|medium)\s+(.+?)\s+hair\b/);
-  if (hair)
-    out.push(`${hair[2]} hair`, `${hair[1]} hair`);
-  const eyes = lower.match(/\b(?:brilliant\s+)?(.+?)\s+(?:irises|eyes)\b/);
-  if (eyes && !lower.includes("pupils"))
-    out.push(`${eyes[1]} eyes`);
-  return out;
+    groups.push(["purple dress"], ["revealing clothes"]);
+  const hair = lower.match(/\b(.+?)\s+hair\b/);
+  if (hair) {
+    const words = hair[1].trim().split(/\s+/);
+    const length = words.find((word) => word === "long" || word === "short" || word === "medium");
+    const descriptors = words.filter((word) => word !== length);
+    const descriptorGroup = descriptorCandidates(descriptors, "hair", lower);
+    if (descriptorGroup.length)
+      groups.push(descriptorGroup);
+    if (length && `${length} hair` !== lower)
+      groups.push([`${length} hair`]);
+  }
+  const eyes = lower.match(/\b(.+?)\s+(?:irises|eyes)\b/);
+  if (eyes && !lower.includes("pupils")) {
+    const descriptorGroup = descriptorCandidates(eyes[1].trim().split(/\s+/), "eyes", lower);
+    if (descriptorGroup.length)
+      groups.push(descriptorGroup);
+  }
+  return groups.map((group) => unique(group));
+}
+function localCandidates(tag) {
+  return localCandidateGroups(tag).flat();
 }
 async function cleanupPrompt(prompt, config) {
   if (!config.danbooruCleanup || !config.danbooruEndpoint.trim()) {
@@ -1372,7 +1417,8 @@ async function cleanupPrompt(prompt, config) {
         valid.push(...response.valid || response.data?.valid || []);
         const batchSuggestions = response.suggestions || response.data?.suggestions || {};
         for (const [tag, entries] of Object.entries(batchSuggestions)) {
-          suggestions[tag] = [...suggestions[tag] || [], ...entries];
+          const key = tag.toLowerCase();
+          suggestions[key] = [...suggestions[key] || [], ...entries];
         }
         logStage(config, "danbooru_cleanup_batch_done", {
           batchNumber,
@@ -1392,18 +1438,20 @@ async function cleanupPrompt(prompt, config) {
       }
     }
     const validKeys = new Set(valid.map((tag) => tag.toLowerCase()));
+    const replacementsFor = (tag) => {
+      const key = tag.toLowerCase();
+      if (validKeys.has(key))
+        return [tag];
+      const decomposed = localCandidateGroups(tag).map((group) => group.find((candidate) => validKeys.has(candidate.toLowerCase()))).filter((candidate) => Boolean(candidate));
+      if (decomposed.length > 0)
+        return unique(decomposed);
+      const best = (suggestions[key] || []).filter((suggestion) => suggestion.tag && typeof suggestion.score === "number").sort((left, right) => (right.score || 0) - (left.score || 0))[0];
+      if (best?.tag && (best.score || 0) >= 0.88)
+        return [best.tag];
+      return [tag];
+    };
     const cleanTags = (section) => {
-      const expanded = [];
-      for (const tag of section) {
-        expanded.push(tag);
-        for (const candidate of localCandidates(tag))
-          if (validKeys.size === 0 || validKeys.has(candidate.toLowerCase()))
-            expanded.push(candidate);
-        const best = (suggestions[tag] || []).filter((s) => s.tag && typeof s.score === "number").sort((a, b) => (b.score || 0) - (a.score || 0))[0];
-        if (best?.tag && (best.score || 0) >= 0.88)
-          expanded.push(best.tag);
-      }
-      return unique(expanded);
+      return unique(section.flatMap(replacementsFor));
     };
     const seen = new Set;
     const cleanedSections = sectionTags.map((section) => cleanTags(section).filter((tag) => {
@@ -1431,7 +1479,7 @@ var __testables = {
   activePromptPreset,
   assemblePrompt,
   cleanupPrompt,
-  dispatchPreparedImageJobs,
+  prepareAndDispatchImageJobs,
   normalizeConfig,
   renderPrompt
 };
@@ -1607,20 +1655,21 @@ async function generateForMessage(chatId, messageId, content, userId) {
       provider: imageConnection?.provider || "(default)",
       connectionId: imageConnection?.id || null
     });
-    const preparedJobs = [];
-    for (const [index, entry] of selected.entries()) {
+    const eagerComfyQueueing = imageConnection?.provider === "comfyui";
+    const submissionStartedAt = Date.now();
+    const { jobs: preparedJobs, results } = await prepareAndDispatchImageJobs(selected, eagerComfyQueueing, async (entry, index) => {
       const jobStartedAt = Date.now();
       logStage(config, "image_generation_preparation_job_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
       const prompt = await cleanupPrompt(entry.prompt, config);
       const parameters = await buildImageParameters(config, imageConnection, prompt, entry.negative || "");
-      preparedJobs.push({
+      const job = {
         index,
         total: selected.length,
         prompt,
         negative: entry.negative || "",
         paragraph: entry.paragraph,
         parameters
-      });
+      };
       logStage(config, "image_generation_prepared", {
         index: index + 1,
         total: selected.length,
@@ -1630,15 +1679,15 @@ async function generateForMessage(chatId, messageId, content, userId) {
         promptLength: prompt.length,
         parameterKeys: keysOf(parameters)
       });
-    }
-    logStage(config, "image_generation_preparation_done", {
-      total: preparedJobs.length,
-      elapsedMs: Date.now() - preparationStartedAt,
-      provider: imageConnection?.provider || "(default)"
-    });
-    const eagerComfyQueueing = imageConnection?.provider === "comfyui";
-    const submissionStartedAt = Date.now();
-    const results = await dispatchPreparedImageJobs(preparedJobs, eagerComfyQueueing, (job) => {
+      if (index === selected.length - 1) {
+        logStage(config, "image_generation_preparation_done", {
+          total: selected.length,
+          elapsedMs: Date.now() - preparationStartedAt,
+          provider: imageConnection?.provider || "(default)"
+        });
+      }
+      return job;
+    }, (job) => {
       const submittedAt = Date.now();
       logStage(config, "image_generation_request_submitted", {
         index: job.index + 1,

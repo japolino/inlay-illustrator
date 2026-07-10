@@ -1335,35 +1335,58 @@ async function buildImageParameters(
 }
 
 /**
- * Runs image requests in prompt order. ComfyUI accepts jobs into its own queue,
- * so callers can submit all jobs before waiting for any completion. Other
- * providers deliberately remain serial to preserve their rate-limit behavior.
+ * Prepares prompts one at a time and submits each image as soon as its prompt is
+ * ready. ComfyUI submissions are eager; other providers use a promise chain so
+ * preparation of later prompts can overlap the currently running image without
+ * allowing two provider requests to run at once.
  */
-async function dispatchPreparedImageJobs<T>(
-  jobs: PreparedImageJob[],
+async function prepareAndDispatchImageJobs<TInput, TResult>(
+  inputs: TInput[],
   eager: boolean,
-  generate: (job: PreparedImageJob) => Promise<T> | T
-): Promise<T[]> {
-  if (!eager) {
-    const results: T[] = [];
-    for (const job of jobs) results.push(await generate(job));
-    return results;
+  prepare: (input: TInput, index: number) => Promise<PreparedImageJob> | PreparedImageJob,
+  generate: (job: PreparedImageJob) => Promise<TResult> | TResult
+): Promise<{ jobs: PreparedImageJob[]; results: TResult[] }> {
+  const jobs: PreparedImageJob[] = [];
+  const requests: Promise<TResult>[] = [];
+  let serialRequest: Promise<unknown> = Promise.resolve();
+  let preparationFailure: unknown;
+  let hasPreparationFailure = false;
+
+  for (const [index, input] of inputs.entries()) {
+    let job: PreparedImageJob;
+    try {
+      job = await prepare(input, index);
+    } catch (err) {
+      preparationFailure = err;
+      hasPreparationFailure = true;
+      break;
+    }
+    jobs.push(job);
+
+    const invoke = (): Promise<TResult> => {
+      try {
+        return Promise.resolve(generate(job));
+      } catch (err) {
+        return Promise.reject(err);
+      }
+    };
+    const request = eager || requests.length === 0 ? invoke() : serialRequest.then(invoke);
+    // A generation can reject while cleanup for the next prompt is still in
+    // progress. Attach a handler immediately, then retain the original promise
+    // so ordered failure propagation remains unchanged.
+    void request.catch(() => undefined);
+    requests.push(request);
+    if (!eager) serialRequest = request;
   }
 
-  // Invoke every generator synchronously before awaiting any of their results.
-  // allSettled is intentional: a failed job must not let us return while jobs
-  // already accepted by ComfyUI are still running.
-  const requests = jobs.map((job) => {
-    try {
-      return Promise.resolve(generate(job));
-    } catch (err) {
-      return Promise.reject(err);
-    }
-  });
   const settled = await Promise.allSettled(requests);
+  if (hasPreparationFailure) throw preparationFailure;
   const failure = settled.find((result) => result.status === "rejected");
   if (failure?.status === "rejected") throw failure.reason;
-  return settled.map((result) => (result as PromiseFulfilledResult<T>).value);
+  return {
+    jobs,
+    results: settled.map((result) => (result as PromiseFulfilledResult<TResult>).value)
+  };
 }
 
 function escapeRegExp(value: string): string {
@@ -1551,18 +1574,44 @@ function deleteCharacterTag(state: State, name: unknown): void {
   delete state.characterAppearance[key];
 }
 
-function localCandidates(tag: string): string[] {
+function descriptorCandidates(words: string[], suffix: string, original: string): string[] {
+  const candidates: string[] = [];
+  for (let index = 0; index < words.length; index += 1) {
+    const candidate = `${words.slice(index).join(" ")} ${suffix}`.trim();
+    if (candidate.toLowerCase() !== original.toLowerCase()) candidates.push(candidate);
+  }
+  return unique(candidates);
+}
+
+/** Each group contains alternatives from most to least specific. */
+function localCandidateGroups(tag: string): string[][] {
   const lower = tag.toLowerCase();
-  const out: string[] = [];
-  if (lower === "exterior") out.push("outdoors");
-  if (lower === "smug smirk") out.push("smirk", "smug");
-  if (lower.includes("pleated mini skirt")) out.push("pleated skirt", "miniskirt");
-  if (lower === "revealing dark purple dress") out.push("purple dress", "revealing clothes");
-  const hair = lower.match(/\b(long|short|medium)\s+(.+?)\s+hair\b/);
-  if (hair) out.push(`${hair[2]} hair`, `${hair[1]} hair`);
-  const eyes = lower.match(/\b(?:brilliant\s+)?(.+?)\s+(?:irises|eyes)\b/);
-  if (eyes && !lower.includes("pupils")) out.push(`${eyes[1]} eyes`);
-  return out;
+  const groups: string[][] = [];
+  if (lower === "exterior") groups.push(["outdoors"]);
+  if (lower === "smug smirk") groups.push(["smirk"], ["smug"]);
+  if (lower.includes("pleated mini skirt")) groups.push(["pleated skirt"], ["miniskirt"]);
+  if (lower === "revealing dark purple dress") groups.push(["purple dress"], ["revealing clothes"]);
+
+  const hair = lower.match(/\b(.+?)\s+hair\b/);
+  if (hair) {
+    const words = hair[1].trim().split(/\s+/);
+    const length = words.find((word) => word === "long" || word === "short" || word === "medium");
+    const descriptors = words.filter((word) => word !== length);
+    const descriptorGroup = descriptorCandidates(descriptors, "hair", lower);
+    if (descriptorGroup.length) groups.push(descriptorGroup);
+    if (length && `${length} hair` !== lower) groups.push([`${length} hair`]);
+  }
+
+  const eyes = lower.match(/\b(.+?)\s+(?:irises|eyes)\b/);
+  if (eyes && !lower.includes("pupils")) {
+    const descriptorGroup = descriptorCandidates(eyes[1].trim().split(/\s+/), "eyes", lower);
+    if (descriptorGroup.length) groups.push(descriptorGroup);
+  }
+  return groups.map((group) => unique(group));
+}
+
+function localCandidates(tag: string): string[] {
+  return localCandidateGroups(tag).flat();
 }
 
 async function cleanupPrompt(prompt: AssembledPrompt, config: Config): Promise<string> {
@@ -1604,7 +1653,8 @@ async function cleanupPrompt(prompt: AssembledPrompt, config: Config): Promise<s
         valid.push(...(response.valid || response.data?.valid || []));
         const batchSuggestions = response.suggestions || response.data?.suggestions || {};
         for (const [tag, entries] of Object.entries(batchSuggestions)) {
-          suggestions[tag] = [...(suggestions[tag] || []), ...entries];
+          const key = tag.toLowerCase();
+          suggestions[key] = [...(suggestions[key] || []), ...entries];
         }
         logStage(config, "danbooru_cleanup_batch_done", {
           batchNumber,
@@ -1624,15 +1674,23 @@ async function cleanupPrompt(prompt: AssembledPrompt, config: Config): Promise<s
       }
     }
     const validKeys = new Set(valid.map((tag) => tag.toLowerCase()));
+    const replacementsFor = (tag: string): string[] => {
+      const key = tag.toLowerCase();
+      if (validKeys.has(key)) return [tag];
+
+      const decomposed = localCandidateGroups(tag)
+        .map((group) => group.find((candidate) => validKeys.has(candidate.toLowerCase())))
+        .filter((candidate): candidate is string => Boolean(candidate));
+      if (decomposed.length > 0) return unique(decomposed);
+
+      const best = (suggestions[key] || [])
+        .filter((suggestion) => suggestion.tag && typeof suggestion.score === "number")
+        .sort((left, right) => (right.score || 0) - (left.score || 0))[0];
+      if (best?.tag && (best.score || 0) >= 0.88) return [best.tag];
+      return [tag];
+    };
     const cleanTags = (section: string[]): string[] => {
-      const expanded: string[] = [];
-      for (const tag of section) {
-        expanded.push(tag);
-        for (const candidate of localCandidates(tag)) if (validKeys.size === 0 || validKeys.has(candidate.toLowerCase())) expanded.push(candidate);
-        const best = (suggestions[tag] || []).filter((s) => s.tag && typeof s.score === "number").sort((a, b) => (b.score || 0) - (a.score || 0))[0];
-        if (best?.tag && (best.score || 0) >= 0.88) expanded.push(best.tag);
-      }
-      return unique(expanded);
+      return unique(section.flatMap(replacementsFor));
     };
     const seen = new Set<string>();
     const cleanedSections = sectionTags.map((section) => cleanTags(section)
@@ -1662,7 +1720,7 @@ export const __testables = {
   activePromptPreset,
   assemblePrompt,
   cleanupPrompt,
-  dispatchPreparedImageJobs,
+  prepareAndDispatchImageJobs,
   normalizeConfig,
   renderPrompt
 };
@@ -1833,20 +1891,21 @@ async function generateForMessage(chatId: string, messageId: string, content: st
       provider: imageConnection?.provider || "(default)",
       connectionId: imageConnection?.id || null
     });
-    const preparedJobs: PreparedImageJob[] = [];
-    for (const [index, entry] of selected.entries()) {
+    const eagerComfyQueueing = imageConnection?.provider === "comfyui";
+    const submissionStartedAt = Date.now();
+    const { jobs: preparedJobs, results } = await prepareAndDispatchImageJobs(selected, eagerComfyQueueing, async (entry, index) => {
       const jobStartedAt = Date.now();
       logStage(config, "image_generation_preparation_job_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
       const prompt = await cleanupPrompt(entry.prompt, config);
       const parameters = await buildImageParameters(config, imageConnection, prompt, entry.negative || "");
-      preparedJobs.push({
+      const job: PreparedImageJob = {
         index,
         total: selected.length,
         prompt,
         negative: entry.negative || "",
         paragraph: entry.paragraph,
         parameters
-      });
+      };
       logStage(config, "image_generation_prepared", {
         index: index + 1,
         total: selected.length,
@@ -1856,16 +1915,15 @@ async function generateForMessage(chatId: string, messageId: string, content: st
         promptLength: prompt.length,
         parameterKeys: keysOf(parameters)
       });
-    }
-    logStage(config, "image_generation_preparation_done", {
-      total: preparedJobs.length,
-      elapsedMs: Date.now() - preparationStartedAt,
-      provider: imageConnection?.provider || "(default)"
-    });
-
-    const eagerComfyQueueing = imageConnection?.provider === "comfyui";
-    const submissionStartedAt = Date.now();
-    const results = await dispatchPreparedImageJobs(preparedJobs, eagerComfyQueueing, (job) => {
+      if (index === selected.length - 1) {
+        logStage(config, "image_generation_preparation_done", {
+          total: selected.length,
+          elapsedMs: Date.now() - preparationStartedAt,
+          provider: imageConnection?.provider || "(default)"
+        });
+      }
+      return job;
+    }, (job) => {
       const submittedAt = Date.now();
       logStage(config, "image_generation_request_submitted", {
         index: job.index + 1,
@@ -1905,7 +1963,6 @@ async function generateForMessage(chatId: string, messageId: string, content: st
         throw err;
       });
     });
-
     const imageIds: string[] = [];
     const imageUrls: string[] = [];
     const finalPrompts = preparedJobs.map((job) => job.prompt);
