@@ -125,6 +125,14 @@ type ComfyUIConfig = {
   workflow_api_json?: Record<string, unknown>;
   field_mappings?: ComfyUIMapping[];
 };
+type PreparedImageJob = {
+  index: number;
+  total: number;
+  prompt: string;
+  negative: string;
+  paragraph: number;
+  parameters: Record<string, unknown>;
+};
 type State = {
   characterAppearance: Record<string, string>;
   generated: Record<string, unknown>;
@@ -1255,8 +1263,12 @@ function patchComfyWorkflow(
   return patched as Record<string, unknown>;
 }
 
-async function buildImageParameters(config: Config, prompt: string, negative: string, userId?: string): Promise<Record<string, unknown>> {
-  const connection = await resolveImageConnection(config, userId);
+async function buildImageParameters(
+  config: Config,
+  connection: ImageConnection | null,
+  prompt: string,
+  negative: string
+): Promise<Record<string, unknown>> {
   const parameters = {
     ...(connection?.default_parameters || {}),
     ...config.imageParameters
@@ -1318,6 +1330,38 @@ async function buildImageParameters(config: Config, prompt: string, negative: st
     parameterKeys: keysOf({ ...parameters, workflow: patched, workflowFormat: "api_prompt", preserveImportedWorkflow: true })
   });
   return { ...parameters, workflow: patched, workflowFormat: "api_prompt", preserveImportedWorkflow: true };
+}
+
+/**
+ * Runs image requests in prompt order. ComfyUI accepts jobs into its own queue,
+ * so callers can submit all jobs before waiting for any completion. Other
+ * providers deliberately remain serial to preserve their rate-limit behavior.
+ */
+async function dispatchPreparedImageJobs<T>(
+  jobs: PreparedImageJob[],
+  eager: boolean,
+  generate: (job: PreparedImageJob) => Promise<T> | T
+): Promise<T[]> {
+  if (!eager) {
+    const results: T[] = [];
+    for (const job of jobs) results.push(await generate(job));
+    return results;
+  }
+
+  // Invoke every generator synchronously before awaiting any of their results.
+  // allSettled is intentional: a failed job must not let us return while jobs
+  // already accepted by ComfyUI are still running.
+  const requests = jobs.map((job) => {
+    try {
+      return Promise.resolve(generate(job));
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  });
+  const settled = await Promise.allSettled(requests);
+  const failure = settled.find((result) => result.status === "rejected");
+  if (failure?.status === "rejected") throw failure.reason;
+  return settled.map((result) => (result as PromiseFulfilledResult<T>).value);
 }
 
 function escapeRegExp(value: string): string {
@@ -1565,7 +1609,15 @@ async function cleanupPrompt(prompt: AssembledPrompt, config: Config): Promise<s
   }
 }
 
-export const __testables = { DEFAULT_CONFIG, activePromptPreset, assemblePrompt, cleanupPrompt, normalizeConfig, renderPrompt };
+export const __testables = {
+  DEFAULT_CONFIG,
+  activePromptPreset,
+  assemblePrompt,
+  cleanupPrompt,
+  dispatchPreparedImageJobs,
+  normalizeConfig,
+  renderPrompt
+};
 
 function isOwnMessage(message: { content?: string; metadata?: Record<string, unknown> }): boolean {
   return Boolean(message.metadata?.extension === EXTENSION_ID);
@@ -1726,32 +1778,98 @@ async function generateForMessage(chatId: string, messageId: string, content: st
       promptLengths: selected.map((entry) => renderPrompt(entry.prompt, config.promptSyntax).length),
       negativeLengths: selected.map((entry) => entry.negative.length)
     });
-    const imageIds: string[] = [];
-    const imageUrls: string[] = [];
-    const finalPrompts: string[] = [];
-    const finalParagraphs: number[] = [];
+    const imageConnection = await resolveImageConnection(config, userId);
+    const preparationStartedAt = Date.now();
+    logStage(config, "image_generation_preparation_start", {
+      total: selected.length,
+      provider: imageConnection?.provider || "(default)",
+      connectionId: imageConnection?.id || null
+    });
+    const preparedJobs: PreparedImageJob[] = [];
     for (const [index, entry] of selected.entries()) {
-      logStage(config, "image_generation_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
+      const jobStartedAt = Date.now();
+      logStage(config, "image_generation_preparation_job_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
       const prompt = await cleanupPrompt(entry.prompt, config);
-      finalPrompts.push(prompt);
-      finalParagraphs.push(entry.paragraph);
-      const parameters = await buildImageParameters(config, prompt, entry.negative || "", userId);
-      const result = await spindle.imageGen.generate({
-        connection_id: config.imageConnectionId || undefined,
+      const parameters = await buildImageParameters(config, imageConnection, prompt, entry.negative || "");
+      preparedJobs.push({
+        index,
+        total: selected.length,
         prompt,
-        negativePrompt: entry.negative || undefined,
+        negative: entry.negative || "",
+        paragraph: entry.paragraph,
+        parameters
+      });
+      logStage(config, "image_generation_prepared", {
+        index: index + 1,
+        total: selected.length,
+        paragraph: entry.paragraph,
+        elapsedMs: Date.now() - jobStartedAt,
+        preparationElapsedMs: Date.now() - preparationStartedAt,
+        promptLength: prompt.length,
+        parameterKeys: keysOf(parameters)
+      });
+    }
+    logStage(config, "image_generation_preparation_done", {
+      total: preparedJobs.length,
+      elapsedMs: Date.now() - preparationStartedAt,
+      provider: imageConnection?.provider || "(default)"
+    });
+
+    const eagerComfyQueueing = imageConnection?.provider === "comfyui";
+    const submissionStartedAt = Date.now();
+    const results = await dispatchPreparedImageJobs(preparedJobs, eagerComfyQueueing, (job) => {
+      const submittedAt = Date.now();
+      logStage(config, "image_generation_request_submitted", {
+        index: job.index + 1,
+        total: job.total,
+        paragraph: job.paragraph,
+        provider: imageConnection?.provider || "(default)",
+        dispatch: eagerComfyQueueing ? "eager_comfyui" : "sequential",
+        elapsedMs: submittedAt - submissionStartedAt
+      });
+      return spindle.imageGen.generate({
+        connection_id: config.imageConnectionId || undefined,
+        prompt: job.prompt,
+        negativePrompt: job.negative || undefined,
         model: config.imageModel || undefined,
-        parameters,
+        parameters: job.parameters,
         owner_chat_id: chatId,
         userId
+      }).then((result) => {
+        logStage(config, "image_generation_completed", {
+          index: job.index + 1,
+          total: job.total,
+          paragraph: job.paragraph,
+          elapsedMs: Date.now() - submittedAt,
+          imageId: result.imageId || null,
+          provider: result.provider || imageConnection?.provider || null,
+          model: result.model || null
+        });
+        return result;
+      }, (err) => {
+        logStage(config, "image_generation_failed", {
+          index: job.index + 1,
+          total: job.total,
+          paragraph: job.paragraph,
+          elapsedMs: Date.now() - submittedAt,
+          error: err instanceof Error ? err.message : String(err)
+        }, "error");
+        throw err;
       });
+    });
+
+    const imageIds: string[] = [];
+    const imageUrls: string[] = [];
+    const finalPrompts = preparedJobs.map((job) => job.prompt);
+    const finalParagraphs = preparedJobs.map((job) => job.paragraph);
+    for (const [index, result] of results.entries()) {
       // Providers may return a directly usable URL. Keep imageId separately
       // for message metadata, and use Lumiverse's documented result route only
       // when the provider result has no URL.
       if (result.imageId) imageIds.push(result.imageId);
       const imageUrl = result.imageUrl || (result.imageId ? imageUrlFromId(result.imageId) : "");
       if (imageUrl) imageUrls.push(imageUrl);
-      logStage(config, "image_generation_done", {
+      logStage(config, "image_generation_results_collected", {
         index: index + 1,
         imageId: result.imageId || null,
         returnedImageUrl: result.imageUrl || null,

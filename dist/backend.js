@@ -1039,8 +1039,7 @@ function patchComfyWorkflow(workflow, mappings, values) {
   }
   return patched;
 }
-async function buildImageParameters(config, prompt, negative, userId) {
-  const connection = await resolveImageConnection(config, userId);
+async function buildImageParameters(config, connection, prompt, negative) {
   const parameters = {
     ...connection?.default_parameters || {},
     ...config.imageParameters
@@ -1096,6 +1095,26 @@ async function buildImageParameters(config, prompt, negative, userId) {
     parameterKeys: keysOf({ ...parameters, workflow: patched, workflowFormat: "api_prompt", preserveImportedWorkflow: true })
   });
   return { ...parameters, workflow: patched, workflowFormat: "api_prompt", preserveImportedWorkflow: true };
+}
+async function dispatchPreparedImageJobs(jobs, eager, generate) {
+  if (!eager) {
+    const results = [];
+    for (const job of jobs)
+      results.push(await generate(job));
+    return results;
+  }
+  const requests = jobs.map((job) => {
+    try {
+      return Promise.resolve(generate(job));
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  });
+  const settled = await Promise.allSettled(requests);
+  const failure = settled.find((result) => result.status === "rejected");
+  if (failure?.status === "rejected")
+    throw failure.reason;
+  return settled.map((result) => result.value);
 }
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1363,7 +1382,15 @@ async function cleanupPrompt(prompt, config) {
     return renderPrompt(prompt, config.promptSyntax);
   }
 }
-var __testables = { DEFAULT_CONFIG, activePromptPreset, assemblePrompt, cleanupPrompt, normalizeConfig, renderPrompt };
+var __testables = {
+  DEFAULT_CONFIG,
+  activePromptPreset,
+  assemblePrompt,
+  cleanupPrompt,
+  dispatchPreparedImageJobs,
+  normalizeConfig,
+  renderPrompt
+};
 function isOwnMessage(message) {
   return Boolean(message.metadata?.extension === EXTENSION_ID);
 }
@@ -1529,31 +1556,95 @@ async function generateForMessage(chatId, messageId, content, userId) {
       promptLengths: selected.map((entry) => renderPrompt(entry.prompt, config.promptSyntax).length),
       negativeLengths: selected.map((entry) => entry.negative.length)
     });
-    const imageIds = [];
-    const imageUrls = [];
-    const finalPrompts = [];
-    const finalParagraphs = [];
+    const imageConnection = await resolveImageConnection(config, userId);
+    const preparationStartedAt = Date.now();
+    logStage(config, "image_generation_preparation_start", {
+      total: selected.length,
+      provider: imageConnection?.provider || "(default)",
+      connectionId: imageConnection?.id || null
+    });
+    const preparedJobs = [];
     for (const [index, entry] of selected.entries()) {
-      logStage(config, "image_generation_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
+      const jobStartedAt = Date.now();
+      logStage(config, "image_generation_preparation_job_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
       const prompt = await cleanupPrompt(entry.prompt, config);
-      finalPrompts.push(prompt);
-      finalParagraphs.push(entry.paragraph);
-      const parameters = await buildImageParameters(config, prompt, entry.negative || "", userId);
-      const result = await spindle.imageGen.generate({
-        connection_id: config.imageConnectionId || undefined,
+      const parameters = await buildImageParameters(config, imageConnection, prompt, entry.negative || "");
+      preparedJobs.push({
+        index,
+        total: selected.length,
         prompt,
-        negativePrompt: entry.negative || undefined,
+        negative: entry.negative || "",
+        paragraph: entry.paragraph,
+        parameters
+      });
+      logStage(config, "image_generation_prepared", {
+        index: index + 1,
+        total: selected.length,
+        paragraph: entry.paragraph,
+        elapsedMs: Date.now() - jobStartedAt,
+        preparationElapsedMs: Date.now() - preparationStartedAt,
+        promptLength: prompt.length,
+        parameterKeys: keysOf(parameters)
+      });
+    }
+    logStage(config, "image_generation_preparation_done", {
+      total: preparedJobs.length,
+      elapsedMs: Date.now() - preparationStartedAt,
+      provider: imageConnection?.provider || "(default)"
+    });
+    const eagerComfyQueueing = imageConnection?.provider === "comfyui";
+    const submissionStartedAt = Date.now();
+    const results = await dispatchPreparedImageJobs(preparedJobs, eagerComfyQueueing, (job) => {
+      const submittedAt = Date.now();
+      logStage(config, "image_generation_request_submitted", {
+        index: job.index + 1,
+        total: job.total,
+        paragraph: job.paragraph,
+        provider: imageConnection?.provider || "(default)",
+        dispatch: eagerComfyQueueing ? "eager_comfyui" : "sequential",
+        elapsedMs: submittedAt - submissionStartedAt
+      });
+      return spindle.imageGen.generate({
+        connection_id: config.imageConnectionId || undefined,
+        prompt: job.prompt,
+        negativePrompt: job.negative || undefined,
         model: config.imageModel || undefined,
-        parameters,
+        parameters: job.parameters,
         owner_chat_id: chatId,
         userId
+      }).then((result) => {
+        logStage(config, "image_generation_completed", {
+          index: job.index + 1,
+          total: job.total,
+          paragraph: job.paragraph,
+          elapsedMs: Date.now() - submittedAt,
+          imageId: result.imageId || null,
+          provider: result.provider || imageConnection?.provider || null,
+          model: result.model || null
+        });
+        return result;
+      }, (err) => {
+        logStage(config, "image_generation_failed", {
+          index: job.index + 1,
+          total: job.total,
+          paragraph: job.paragraph,
+          elapsedMs: Date.now() - submittedAt,
+          error: err instanceof Error ? err.message : String(err)
+        }, "error");
+        throw err;
       });
+    });
+    const imageIds = [];
+    const imageUrls = [];
+    const finalPrompts = preparedJobs.map((job) => job.prompt);
+    const finalParagraphs = preparedJobs.map((job) => job.paragraph);
+    for (const [index, result] of results.entries()) {
       if (result.imageId)
         imageIds.push(result.imageId);
       const imageUrl = result.imageUrl || (result.imageId ? imageUrlFromId(result.imageId) : "");
       if (imageUrl)
         imageUrls.push(imageUrl);
-      logStage(config, "image_generation_done", {
+      logStage(config, "image_generation_results_collected", {
         index: index + 1,
         imageId: result.imageId || null,
         returnedImageUrl: result.imageUrl || null,
