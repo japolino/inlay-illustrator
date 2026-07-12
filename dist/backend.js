@@ -516,6 +516,46 @@ async function cleanupPrompt(prompt, config) {
 var EXTENSION_ID = "inlay_illustrator";
 var MARKER = "<!-- inlay_illustrator -->";
 
+// src/backend/inlay-content.ts
+var MARKER_PATTERN = String.raw`<!--\s*inlay_illustrator\s*-->`;
+var CURRENT_DIV_PATTERN = String.raw`<div\b(?=[^>]*[\t\n\f\r ]data-inlay-illustrator\s*=\s*(?:"true"|'true'|true(?=[\s>])))[^>]*>[\s\S]*?<\/div\s*>`;
+var MARKDOWN_IMAGE_PATTERN = String.raw`!\[[^\]\r\n]*\]\([^\r\n]*\)`;
+var HTML_IMAGE_PATTERN = String.raw`<img\b[^>]*>`;
+var LEGACY_DETAILS_PATTERN = String.raw`<details\b[^>]*>\s*<summary\b[^>]*>\s*Prompt\b[\s\S]*?<\/details\s*>`;
+function ownedBlock(pattern) {
+  return new RegExp(`${pattern}(?:(?:[ \\t]*\\r?\\n){2})?`, "gi");
+}
+var LEGACY_BLOCK = ownedBlock(`${MARKER_PATTERN}\\s*(?:(?:${MARKDOWN_IMAGE_PATTERN}|${HTML_IMAGE_PATTERN})\\s*)?${LEGACY_DETAILS_PATTERN}`);
+var CURRENT_BLOCK = ownedBlock(`(?:${MARKER_PATTERN}\\s*)?${CURRENT_DIV_PATTERN}`);
+var MARKER_IMAGE_BLOCK = ownedBlock(`${MARKER_PATTERN}\\s*(?:${MARKDOWN_IMAGE_PATTERN}|${HTML_IMAGE_PATTERN})`);
+var PROMPT_PRE_BLOCK = ownedBlock(String.raw`<pre\b(?=[^>]*[\t\n\f\r ]class\s*=\s*(?:"(?:[^"]*[\t\n\f\r ])?inlay-illustrator-prompt(?:[\t\n\f\r ][^"]*)?"|'(?:[^']*[\t\n\f\r ])?inlay-illustrator-prompt(?:[\t\n\f\r ][^']*)?'|inlay-illustrator-prompt(?=[\s>])))[^>]*>[\s\S]*?<\/pre\s*>`);
+var ORPHAN_MARKER = ownedBlock(MARKER_PATTERN);
+var PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-prompt(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
+function stripInlayContent(content) {
+  return content.replace(LEGACY_BLOCK, "").replace(CURRENT_BLOCK, "").replace(MARKER_IMAGE_BLOCK, "").replace(PROMPT_PRE_BLOCK, "").replace(ORPHAN_MARKER, "").replace(PROMPT_ATTRIBUTE, "");
+}
+function stripInlayFromMessages(messages) {
+  return messages.map((message) => {
+    if (message.role !== "assistant")
+      return message;
+    if (typeof message.content === "string") {
+      const content2 = stripInlayContent(message.content);
+      return content2 === message.content ? message : { ...message, content: content2 };
+    }
+    let changed = false;
+    const content = message.content.map((part) => {
+      if (part.type !== "text")
+        return part;
+      const text = stripInlayContent(part.text);
+      if (text === part.text)
+        return part;
+      changed = true;
+      return { ...part, text };
+    });
+    return changed ? { ...message, content } : message;
+  });
+}
+
 // src/backend/context.ts
 function isOwnMessage(message) {
   return Boolean(message.metadata?.extension === EXTENSION_ID);
@@ -547,7 +587,7 @@ function collectExtraInstructionStrings(root) {
 function formatRecentContext(messages, targetIndex, includeCount) {
   if (includeCount <= 0)
     return "";
-  const previous = messages.slice(0, Math.max(0, targetIndex)).filter((message) => message.role === "assistant" && !isOwnMessage(message)).slice(-includeCount);
+  const previous = messages.slice(0, Math.max(0, targetIndex)).filter((message) => message.role === "assistant" && !isOwnMessage(message)).map((message) => ({ ...message, content: stripInlayContent(message.content) })).filter((message) => message.content.trim()).slice(-includeCount);
   return compactBlock(previous.map((message) => `${message.role}: ${message.content}`).join(`
 
 `), 8000);
@@ -1044,23 +1084,8 @@ function cleanParagraphText(text, config) {
 }
 function prepareParagraphs(content, config) {
   const paragraphs = [];
-  const originalBlocks = splitParagraphBlocks(content);
-  let inInlay = false;
+  const originalBlocks = splitParagraphBlocks(stripInlayContent(content));
   for (const [index, block] of originalBlocks.entries()) {
-    const trimmed = block.trim();
-    if (trimmed.includes(MARKER)) {
-      inInlay = /<details/i.test(trimmed) && !/<\/details>/i.test(trimmed);
-      continue;
-    }
-    if (/^<details\b[\s\S]*<summary>\s*Prompt\b/i.test(trimmed)) {
-      inInlay = !/<\/details>/i.test(trimmed);
-      continue;
-    }
-    if (inInlay) {
-      if (/<\/details>/i.test(trimmed))
-        inInlay = false;
-      continue;
-    }
     const cleaned = cleanParagraphText(block, config);
     if (cleaned)
       paragraphs.push({ parserIndex: paragraphs.length + 1, originalIndex: index + 1, text: cleaned });
@@ -1601,15 +1626,16 @@ function renderInlayBlock(url, prompt, index, config) {
 <div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-lightbox data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre></div>`;
 }
 function renderInlaidMessage(original, record, config) {
+  const cleanOriginal = stripInlayContent(original);
   const blocks = new Map;
-  const count = Math.max(1, paragraphCount(original));
+  const count = Math.max(1, paragraphCount(cleanOriginal));
   record.imageUrls.forEach((url, index) => {
     const paragraph2 = clampInt2(record.paragraphs[index], 1, count, Math.min(index + 1, count));
     const existing = blocks.get(paragraph2) || [];
     existing.push(renderInlayBlock(url, record.prompts[index] || "", index, config));
     blocks.set(paragraph2, existing);
   });
-  const tokens = original.trimEnd().split(/(\r?\n\s*\r?\n)/);
+  const tokens = cleanOriginal.trimEnd().split(/(\r?\n\s*\r?\n)/);
   let paragraph = 0;
   const output = [];
   for (const token of tokens) {
@@ -1978,8 +2004,11 @@ var __testables = {
   normalizeConfig,
   renderPrompt,
   selectPromptEntries,
+  stripInlayContent,
+  stripInlayFromMessages,
   validatePreprocessedTarget
 };
+spindle.registerInterceptor(async (messages) => stripInlayFromMessages(messages));
 spindle.on("GENERATION_ENDED", async (payload, userId) => {
   let configForError = null;
   try {

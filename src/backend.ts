@@ -3,6 +3,7 @@ import { cleanupPrompt } from "./backend/cleanup.js";
 import { isOwnMessage } from "./backend/context.js";
 import { generateForMessage } from "./backend/generation.js";
 import { prepareAndDispatchImageJobs } from "./backend/images.js";
+import { stripInlayContent, stripInlayFromMessages } from "./backend/inlay-content.js";
 import { logStage } from "./backend/logging.js";
 import { deleteCharacterTag, upsertCharacterTag } from "./backend/memory.js";
 import {
@@ -43,8 +44,12 @@ export const __testables = {
   normalizeConfig,
   renderPrompt,
   selectPromptEntries,
+  stripInlayContent,
+  stripInlayFromMessages,
   validatePreprocessedTarget
 };
+
+spindle.registerInterceptor(async (messages) => stripInlayFromMessages(messages));
 
 spindle.on("GENERATION_ENDED", async (payload, userId) => {
   let configForError: Config | null = null;

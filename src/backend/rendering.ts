@@ -1,5 +1,6 @@
 import { DEFAULT_CONFIG, type Config } from "../shared/config.js";
 import { MARKER } from "./constants.js";
+import { stripInlayContent } from "./inlay-content.js";
 import { paragraphCount } from "./paragraphs.js";
 import { clampInt } from "./utils.js";
 
@@ -24,8 +25,9 @@ function renderInlayBlock(url: string, prompt: string, index: number, config: Co
 }
 
 export function renderInlaidMessage(original: string, record: InlayRecord, config: Config): string {
+  const cleanOriginal = stripInlayContent(original);
   const blocks = new Map<number, string[]>();
-  const count = Math.max(1, paragraphCount(original));
+  const count = Math.max(1, paragraphCount(cleanOriginal));
   record.imageUrls.forEach((url, index) => {
     const paragraph = clampInt(record.paragraphs[index], 1, count, Math.min(index + 1, count));
     const existing = blocks.get(paragraph) || [];
@@ -33,7 +35,7 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
     blocks.set(paragraph, existing);
   });
 
-  const tokens = original.trimEnd().split(/(\r?\n\s*\r?\n)/);
+  const tokens = cleanOriginal.trimEnd().split(/(\r?\n\s*\r?\n)/);
   let paragraph = 0;
   const output: string[] = [];
   for (const token of tokens) {

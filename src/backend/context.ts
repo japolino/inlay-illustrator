@@ -1,5 +1,6 @@
 import type { Config } from "../shared/config.js";
 import { EXTENSION_ID } from "./constants.js";
+import { stripInlayContent } from "./inlay-content.js";
 import { buildCharacterTagReference } from "./prompt.js";
 import type { ChatMessage, ParserContext } from "./types.js";
 import { asRecord, cleanString, compactBlock, unique } from "./utils.js";
@@ -36,11 +37,13 @@ function collectExtraInstructionStrings(root: unknown): string[] {
   return unique(values.filter(Boolean)).map((value) => compactBlock(value, 2000));
 }
 
-function formatRecentContext(messages: ChatMessage[], targetIndex: number, includeCount: number): string {
+export function formatRecentContext(messages: ChatMessage[], targetIndex: number, includeCount: number): string {
   if (includeCount <= 0) return "";
   const previous = messages
     .slice(0, Math.max(0, targetIndex))
     .filter((message) => message.role === "assistant" && !isOwnMessage(message))
+    .map((message) => ({ ...message, content: stripInlayContent(message.content) }))
+    .filter((message) => message.content.trim())
     .slice(-includeCount);
   return compactBlock(previous.map((message) => `${message.role}: ${message.content}`).join("\n\n"), 8000);
 }

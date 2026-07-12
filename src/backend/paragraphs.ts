@@ -1,5 +1,5 @@
 import type { Config } from "../shared/config.js";
-import { MARKER } from "./constants.js";
+import { stripInlayContent } from "./inlay-content.js";
 import type { PreparedParagraph } from "./types.js";
 import { escapeRegExp, unique } from "./utils.js";
 
@@ -56,22 +56,8 @@ function cleanParagraphText(text: string, config: Config): string {
 
 export function prepareParagraphs(content: string, config: Config): PreparedParagraph[] {
   const paragraphs: PreparedParagraph[] = [];
-  const originalBlocks = splitParagraphBlocks(content);
-  let inInlay = false;
+  const originalBlocks = splitParagraphBlocks(stripInlayContent(content));
   for (const [index, block] of originalBlocks.entries()) {
-    const trimmed = block.trim();
-    if (trimmed.includes(MARKER)) {
-      inInlay = /<details/i.test(trimmed) && !/<\/details>/i.test(trimmed);
-      continue;
-    }
-    if (/^<details\b[\s\S]*<summary>\s*Prompt\b/i.test(trimmed)) {
-      inInlay = !/<\/details>/i.test(trimmed);
-      continue;
-    }
-    if (inInlay) {
-      if (/<\/details>/i.test(trimmed)) inInlay = false;
-      continue;
-    }
     const cleaned = cleanParagraphText(block, config);
     if (cleaned) paragraphs.push({ parserIndex: paragraphs.length + 1, originalIndex: index + 1, text: cleaned });
   }

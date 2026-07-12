@@ -1,10 +1,16 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import type { InterceptorResultDTO, LlmMessageDTO } from "lumiverse-spindle-types";
 
 const cleanupRequests: Array<{ tags: string[] }> = [];
 const parserRequests: Array<{ messages: Array<{ role: string; content: string }> }> = [];
 type CleanupResponse = { status?: number; statusText?: string; body?: unknown };
+type PromptInterceptor = (
+  messages: LlmMessageDTO[],
+  context: unknown
+) => Promise<LlmMessageDTO[] | InterceptorResultDTO>;
 let cleanupHandler: (request: { tags: string[] }) => CleanupResponse | Promise<CleanupResponse>;
 let parserResponse = "";
+let promptInterceptor: PromptInterceptor;
 let helpers: typeof import("./backend").__testables;
 
 function defaultCleanupResponse(): CleanupResponse {
@@ -16,6 +22,9 @@ function defaultCleanupResponse(): CleanupResponse {
 
 beforeAll(async () => {
   (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle = {
+    registerInterceptor: (handler: PromptInterceptor) => {
+      promptInterceptor = handler;
+    },
     on: () => undefined,
     onFrontendMessage: () => undefined,
     cors: async (_endpoint: string, request: { body: string }) => {
@@ -39,6 +48,71 @@ beforeEach(() => {
   parserRequests.splice(0);
   cleanupHandler = defaultCleanupResponse;
   parserResponse = "";
+});
+
+describe("primary-model context interceptor", () => {
+  test("runs for every generation flow and preserves non-content message data", async () => {
+    const inlay = '<!-- inlay_illustrator -->\n<div data-inlay-illustrator="true"><img src="/generated.png" data-inlay-illustrator-prompt="secret"><pre class="inlay-illustrator-prompt" hidden>secret</pre></div>';
+    const system: LlmMessageDTO = { role: "system", content: inlay };
+    const user: LlmMessageDTO = { role: "user", content: inlay };
+    const imagePart = { type: "image" as const, data: "image-data", mime_type: "image/png" };
+    const toolResultPart = {
+      type: "tool_result" as const,
+      tool_use_id: "tool-1",
+      content: inlay,
+      is_error: false
+    };
+    const assistant: LlmMessageDTO = {
+      role: "assistant",
+      content: `${inlay}\n\nAssistant narrative.`,
+      name: "narrator",
+      reasoning_content: inlay,
+      __isChatHistory: true,
+      sourceMessageId: "assistant-1",
+      sourceIndexInChat: 4
+    };
+    const multipart: LlmMessageDTO = {
+      role: "assistant",
+      content: [
+        { type: "text", text: `Before.\n\n${inlay}\n\nAfter.` },
+        imagePart,
+        toolResultPart
+      ],
+      reasoning_content: "reasoning stays"
+    };
+    const messages = [system, user, assistant, multipart];
+    const generationTypes = ["normal", "regenerate", "swipe", "continue", "impersonate"];
+
+    expect(typeof promptInterceptor).toBe("function");
+    for (const generationType of generationTypes) {
+      const result = await promptInterceptor(messages, { generationType });
+      expect(Array.isArray(result)).toBe(true);
+      if (!Array.isArray(result)) throw new Error("Expected the interceptor to return messages.");
+
+      expect(result[0]).toBe(system);
+      expect(result[1]).toBe(user);
+      expect(result[2]).toEqual({
+        ...assistant,
+        content: "Assistant narrative."
+      });
+      expect(result[2].reasoning_content).toBe(inlay);
+      expect(result[2].sourceMessageId).toBe("assistant-1");
+      expect(result[2].sourceIndexInChat).toBe(4);
+
+      const parts = result[3].content;
+      expect(Array.isArray(parts)).toBe(true);
+      if (!Array.isArray(parts)) throw new Error("Expected multipart content.");
+      expect(parts[0]).toEqual({ type: "text", text: "Before.\n\nAfter." });
+      expect(parts[1]).toBe(imagePart);
+      expect(parts[2]).toBe(toolResultPart);
+    }
+
+    expect(assistant.content).toContain("secret");
+    expect(Array.isArray(multipart.content) && multipart.content[0]).toMatchObject({
+      type: "text",
+      text: expect.stringContaining("secret")
+    });
+  });
 });
 
 function promptWithSupplement(danbooruCleanup: boolean) {

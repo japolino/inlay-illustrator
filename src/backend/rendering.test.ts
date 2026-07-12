@@ -72,4 +72,19 @@ describe("inlay rendering", () => {
   test("encodes provider image IDs for the Lumiverse result route", () => {
     expect(imageUrlFromId("folder/id ?#value")).toBe("/api/v1/image-gen/results/folder%2Fid%20%3F%23value");
   });
+
+  test("replaces existing Inlay blocks instead of duplicating them", () => {
+    const original = "First paragraph.\n\nSecond paragraph.";
+    const record = {
+      imageUrls: ["/first.png", "/second.png"],
+      prompts: ["first prompt", "second prompt"],
+      paragraphs: [1, 2]
+    };
+
+    const rendered = renderInlaidMessage(original, record, DEFAULT_CONFIG);
+    const rerendered = renderInlaidMessage(rendered, record, DEFAULT_CONFIG);
+
+    expect(rerendered).toBe(rendered);
+    expect(rerendered.split(MARKER)).toHaveLength(3);
+  });
 });
