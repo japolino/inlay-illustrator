@@ -1,7 +1,4 @@
-// src/backend.ts
-var EXTENSION_ID = "inlay_illustrator";
-var MARKER = "<!-- inlay_illustrator -->";
-var DANBOORU_CLEANUP_BATCH_SIZE = 16;
+// src/shared/config.ts
 var DEFAULT_CONFIG = {
   enabled: true,
   autoGenerate: true,
@@ -43,26 +40,6 @@ var DEFAULT_CONFIG = {
   promptPresets: [],
   activePromptPresetId: null
 };
-var running = new Set;
-function logStage(config, stage, details, level = "info") {
-  if (!config?.debugLogging && level !== "error")
-    return;
-  const suffix = details ? ` ${JSON.stringify(details, (_key, value) => {
-    if (typeof value === "string" && value.length > 300)
-      return `${value.slice(0, 300)}...(${value.length} chars)`;
-    return value;
-  })}` : "";
-  const message = `[Inlay:${stage}]${suffix}`;
-  if (level === "warn")
-    spindle.log.warn(message);
-  else if (level === "error")
-    spindle.log.error(message);
-  else
-    spindle.log.info(message);
-}
-function keysOf(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? Object.keys(value) : [];
-}
 function clampInt(value, min, max, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : fallback;
@@ -71,19 +48,19 @@ function cleanString(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 function cleanNullableString(value) {
-  const clean = cleanString(value);
-  return clean || null;
+  return cleanString(value) || null;
 }
 function cleanParameters(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
-function cleanArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 function normalizePromptPresets(value) {
+  if (!Array.isArray(value))
+    return [];
   const seen = new Set;
   const presets = [];
-  for (const candidate of cleanArray(value)) {
+  for (const candidate of value) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate))
+      continue;
     const id = cleanString(candidate.id);
     const name = cleanString(candidate.name);
     if (!id || !name || seen.has(id))
@@ -98,26 +75,6 @@ function normalizePromptPresets(value) {
   }
   return presets;
 }
-function parseCorsJson(response, label) {
-  const wrapper = asRecord(response);
-  if (wrapper && (("body" in wrapper) || ("status" in wrapper) || ("statusText" in wrapper))) {
-    const { status, statusText, body } = wrapper;
-    if (typeof status === "number" && (status < 200 || status >= 300)) {
-      throw new Error(`${label} returned HTTP ${status}${statusText ? ` ${statusText}` : ""}`);
-    }
-    if (typeof body === "string") {
-      try {
-        return JSON.parse(body);
-      } catch {
-        throw new Error(`${label} returned invalid JSON`);
-      }
-    }
-    if (body && typeof body === "object")
-      return body;
-    throw new Error(`${label} returned an empty response body`);
-  }
-  return response;
-}
 function normalizeConfig(raw) {
   const imageGeneration = raw.imageGeneration || {};
   const includeMin = clampInt(raw.includeMinMessages, 0, 32, DEFAULT_CONFIG.includeMinMessages);
@@ -126,16 +83,18 @@ function normalizeConfig(raw) {
   const maxImages = clampInt(raw.maxImages, 1, 12, DEFAULT_CONFIG.maxImages);
   const promptPresets = normalizePromptPresets(raw.promptPresets);
   const activePromptPresetId = cleanNullableString(raw.activePromptPresetId);
+  const parserParameters = cleanParameters(raw.parserParameters);
+  const imageParameters = cleanParameters(raw.imageParameters);
   return {
     ...DEFAULT_CONFIG,
     ...raw,
     mode: raw.mode === "asset" ? "asset" : "illustration",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
-    parserParameters: Object.keys(cleanParameters(raw.parserParameters)).length > 0 ? cleanParameters(raw.parserParameters) : cleanParameters(imageGeneration.promptParserParameters),
+    parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
     imageConnectionId: cleanNullableString(raw.imageConnectionId) || cleanNullableString(imageGeneration.activeImageGenConnectionId),
     imageModel: cleanString(raw.imageModel) || cleanString(imageGeneration.model),
-    imageParameters: Object.keys(cleanParameters(raw.imageParameters)).length > 0 ? cleanParameters(raw.imageParameters) : cleanParameters(imageGeneration.parameters),
+    imageParameters: Object.keys(imageParameters).length > 0 ? imageParameters : cleanParameters(imageGeneration.parameters),
     minImages: Math.min(minImages, maxImages),
     maxImages: Math.max(minImages, maxImages),
     maxCharacters: clampInt(raw.maxCharacters, 1, 8, DEFAULT_CONFIG.maxCharacters),
@@ -162,60 +121,41 @@ function normalizeConfig(raw) {
     activePromptPresetId: activePromptPresetId && promptPresets.some((preset) => preset.id === activePromptPresetId) ? activePromptPresetId : null
   };
 }
-async function readJson(path, fallback, userId) {
-  try {
-    if (!await spindle.userStorage.exists(path, userId))
-      return fallback;
-    const text = await spindle.userStorage.read(path, userId);
-    return { ...fallback, ...JSON.parse(text) };
-  } catch {
-    return fallback;
-  }
+
+// src/backend/logging.ts
+function logStage(config, stage, details, level = "info") {
+  if (!config?.debugLogging && level !== "error")
+    return;
+  const suffix = details ? ` ${JSON.stringify(details, (_key, value) => {
+    if (typeof value === "string" && value.length > 300)
+      return `${value.slice(0, 300)}...(${value.length} chars)`;
+    return value;
+  })}` : "";
+  const message = `[Inlay:${stage}]${suffix}`;
+  if (level === "warn")
+    spindle.log.warn(message);
+  else if (level === "error")
+    spindle.log.error(message);
+  else
+    spindle.log.info(message);
 }
-async function writeJson(path, value, userId) {
-  const slash = path.lastIndexOf("/");
-  if (slash > 0)
-    await spindle.userStorage.mkdir(path.slice(0, slash), userId).catch(() => {
-      return;
-    });
-  await spindle.userStorage.write(path, JSON.stringify(value, null, 2), userId);
-}
-async function getConfig(userId) {
-  return normalizeConfig(await readJson("config.json", DEFAULT_CONFIG, userId));
-}
-async function setConfig(patch, userId) {
-  const next = normalizeConfig({ ...await getConfig(userId), ...patch });
-  await writeJson("config.json", next, userId);
-  return next;
-}
-async function getState(chatId, userId) {
-  return readJson(`states/${chatId}.json`, { characterAppearance: {}, generated: {} }, userId);
-}
-async function getParserConnections(userId) {
-  try {
-    return (await spindle.connections.list(userId)).map((connection) => ({
-      id: connection.id,
-      name: connection.name,
-      provider: connection.provider,
-      model: connection.model
-    }));
-  } catch (err) {
-    spindle.log.warn(`Parser connection list unavailable: ${err instanceof Error ? err.message : String(err)}`);
-    return [];
-  }
-}
-async function sendState(userId, chatId) {
-  const state = chatId ? await getState(chatId, userId) : null;
-  spindle.sendToFrontend({
-    type: "state",
-    config: await getConfig(userId),
-    parserConnections: await getParserConnections(userId),
-    chatId: chatId || "",
-    characterAppearance: state?.characterAppearance || {}
-  }, userId);
-}
+
+// src/backend/utils.ts
 function asRecord(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+function keysOf(value) {
+  return Object.keys(asRecord(value));
+}
+function clampInt2(value, min, max, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : fallback;
+}
+function cleanString2(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+function cleanArray(value) {
+  return Array.isArray(value) ? value : [];
 }
 function compactBlock(value, maxLength) {
   const clean = value.replace(/\r\n/g, `
@@ -226,170 +166,51 @@ function compactBlock(value, maxLength) {
   return clean.length > maxLength ? `${clean.slice(0, maxLength).trim()}
 ...[truncated]` : clean;
 }
-function namedField(label, value) {
-  const text = cleanString(value);
-  return text ? `${label}: ${text}` : "";
-}
-function formatInfoBlock(title, lines, maxLength = 4000) {
-  const clean = lines.map((line) => line.trim()).filter(Boolean);
-  return clean.length ? compactBlock([`## ${title}`, ...clean].join(`
-`), maxLength) : "";
-}
-function findNestedString(root, path) {
-  let current = root;
-  for (const part of path)
-    current = asRecord(current)[part];
-  return cleanString(current);
-}
-function collectExtraInstructionStrings(root) {
-  const values = [
-    findNestedString(root, ["lb-xnai", "lb", "extra"]),
-    findNestedString(root, ["lb_xnai", "lb", "extra"]),
-    findNestedString(root, ["Inlay", "extra"]),
-    findNestedString(root, ["inlay", "extra"])
-  ];
-  return unique(values.filter(Boolean)).map((value) => compactBlock(value, 2000));
-}
-function formatRecentContext(messages, targetIndex, includeCount) {
-  if (includeCount <= 0)
-    return "";
-  const previous = messages.slice(0, Math.max(0, targetIndex)).filter((message) => message.role === "assistant" && !isOwnMessage(message)).slice(-includeCount);
-  return compactBlock(previous.map((message) => `${message.role}: ${message.content}`).join(`
-
-`), 8000);
-}
-function includeCountForAttempt(config, attempt) {
-  if (config.includeMaxMessages <= config.includeMinMessages)
-    return config.includeMinMessages;
-  if (config.parserRetries <= 0)
-    return config.includeMinMessages;
-  const step = Math.ceil((config.includeMaxMessages - config.includeMinMessages) / config.parserRetries);
-  return Math.min(config.includeMaxMessages, config.includeMinMessages + step * attempt);
-}
-async function buildParserContext(chatId, messages, targetIndex, cache, config, attempt, userId) {
-  const blocks = [];
-  const overrides = [];
-  const diagnostics = { attempt, includeCount: includeCountForAttempt(config, attempt) };
-  let chat = null;
-  if (config.includeCharacterInfo || config.includeLorebook || config.userInstructionsEnabled) {
-    try {
-      chat = await spindle.chats.get(chatId, userId);
-      overrides.push(...collectExtraInstructionStrings(chat?.metadata));
-    } catch (err) {
-      diagnostics.chatLookupError = err instanceof Error ? err.message : String(err);
-    }
-  }
-  if (config.includeUserInfo || config.userInstructionsEnabled) {
-    try {
-      const persona = await spindle.personas.getActive(userId);
-      const record = asRecord(persona);
-      const block = config.includeUserInfo ? formatInfoBlock("{{user}} Info", [
-        namedField("Name", record.name),
-        namedField("Title", record.title),
-        namedField("Description", record.description)
-      ]) : "";
-      if (block)
-        blocks.push(block);
-      overrides.push(...collectExtraInstructionStrings(record.metadata));
-      diagnostics.userInfo = Boolean(block);
-    } catch (err) {
-      diagnostics.userInfoError = err instanceof Error ? err.message : String(err);
-    }
-  }
-  if (config.includeCharacterInfo && chat?.character_id) {
-    try {
-      const character = await spindle.characters.get(String(chat.character_id), userId);
-      const record = asRecord(character);
-      const block = formatInfoBlock("{{char}} Info", [
-        namedField("Name", record.name),
-        namedField("Description", record.description),
-        namedField("Personality", record.personality),
-        namedField("Scenario", record.scenario),
-        namedField("Creator notes", record.creator_notes),
-        namedField("System prompt", record.system_prompt),
-        namedField("Post-history instructions", record.post_history_instructions),
-        Array.isArray(record.tags) && record.tags.length ? `Tags: ${record.tags.join(", ")}` : ""
-      ], 6000);
-      if (block)
-        blocks.push(block);
-      overrides.push(...collectExtraInstructionStrings(record.extensions));
-      diagnostics.characterInfo = Boolean(block);
-    } catch (err) {
-      diagnostics.characterInfoError = err instanceof Error ? err.message : String(err);
-    }
-  }
-  if (config.includeLorebook) {
-    try {
-      const activated = await spindle.world_books.getActivated(chatId, userId);
-      const rows = [];
-      for (const entry of activated.slice(0, 24)) {
-        const record = asRecord(entry);
-        let content = "";
-        try {
-          const full = await spindle.world_books.entries.get(String(record.id || ""), userId);
-          content = cleanString(asRecord(full).content);
-        } catch {
-          content = "";
-        }
-        const title = cleanString(record.comment) || (Array.isArray(record.keys) ? record.keys.join(", ") : "");
-        const summary = content || [title, Array.isArray(record.keys) && record.keys.length ? `Keys: ${record.keys.join(", ")}` : ""].filter(Boolean).join(`
-`);
-        if (summary)
-          rows.push(title ? `### ${title}
-${summary}` : summary);
-      }
-      const block = rows.length ? compactBlock(["## Lorebook", ...rows].join(`
-
-`), 8000) : "";
-      if (block)
-        blocks.push(block);
-      diagnostics.lorebookEntries = rows.length;
-    } catch (err) {
-      diagnostics.lorebookError = err instanceof Error ? err.message : String(err);
-    }
-  }
-  if (config.characterTagContextEnabled) {
-    const characterReference = buildCharacterTagReference(cache);
-    if (characterReference) {
-      blocks.push(`${characterReference}
-Use these as a baseline for returning characters (including their base attire). The current message always wins over this reference.`);
-    }
-    diagnostics.cacheCharacters = Object.keys(cache).length;
-  }
-  if (config.userInstructionsEnabled) {
-    overrides.unshift(config.customParserInstructions);
-  }
-  return {
-    systemContext: blocks.filter(Boolean).join(`
-
-`),
-    recentContext: formatRecentContext(messages, targetIndex, includeCountForAttempt(config, attempt)),
-    override: unique(overrides.map((value) => cleanString(value)).filter(Boolean)).join(`
-
-`),
-    diagnostics
-  };
-}
 function csvParts(...values) {
-  return values.flatMap((v) => String(v || "").split(",")).map((v) => v.trim()).filter(Boolean);
+  return values.flatMap((value) => String(value || "").split(",")).map((value) => value.trim()).filter(Boolean);
 }
+function unique(parts) {
+  const seen = new Set;
+  const output = [];
+  for (const part of parts) {
+    const key = part.toLowerCase();
+    if (seen.has(key))
+      continue;
+    seen.add(key);
+    output.push(part);
+  }
+  return output;
+}
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function parseCorsJson(response, label) {
+  const wrapper = asRecord(response);
+  if ("body" in wrapper || "status" in wrapper || "statusText" in wrapper) {
+    const { status, statusText, body } = wrapper;
+    if (typeof status === "number" && (status < 200 || status >= 300)) {
+      throw new Error(`${label} returned HTTP ${status}${statusText ? ` ${statusText}` : ""}`);
+    }
+    if (typeof body === "string") {
+      try {
+        return JSON.parse(body);
+      } catch {
+        throw new Error(`${label} returned invalid JSON`);
+      }
+    }
+    if (body && typeof body === "object")
+      return body;
+    throw new Error(`${label} returned an empty response body`);
+  }
+  return response;
+}
+
+// src/backend/prompt.ts
 function normalizeReferenceTags(tagString) {
   return unique(csvParts(tagString).filter((tag) => {
     const normalized = tag.toLowerCase();
     return normalized !== "null" && normalized !== "none";
   })).join(", ");
-}
-function unique(parts) {
-  const seen = new Set;
-  const out = [];
-  for (const part of parts) {
-    const key = part.toLowerCase();
-    if (!seen.has(key)) {
-      seen.add(key);
-      out.push(part);
-    }
-  }
-  return out;
 }
 function stripParenthetical(value) {
   return value.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim();
@@ -400,7 +221,7 @@ function displayName(name, config) {
   return config.originalReference && clean && source ? `${clean} \\(${source}\\)` : clean;
 }
 function normalizeCharacterName(value) {
-  return stripParenthetical(cleanString(value));
+  return stripParenthetical(cleanString2(value));
 }
 function shouldIncludeCharacterNames(config) {
   return config.originalReference === true && config.originalCreationName.trim().length > 0;
@@ -420,7 +241,7 @@ function buildNameReplacementMap(characters) {
   const replacements = new Map;
   for (const character of characters) {
     const descriptor = characterDescriptor(character);
-    const raw = cleanString(character.name);
+    const raw = cleanString2(character.name);
     const normalized = normalizeCharacterName(raw);
     for (const name of unique([raw, normalized].filter(Boolean))) {
       if (name.length >= 2)
@@ -461,7 +282,7 @@ function buildCharacterTagReference(map) {
 `) : "";
 }
 function joinSections(sections, syntax) {
-  const clean = sections.map((s) => s.trim()).filter(Boolean);
+  const clean = sections.map((section) => section.trim()).filter(Boolean);
   return syntax === "comfyui" ? clean.join(`,
 `) : clean.join(", ");
 }
@@ -478,15 +299,15 @@ function activePromptPreset(config) {
 }
 function dedupePromptSections(sections) {
   const seen = new Set;
-  const out = [];
-  for (const section of sections.map((s) => s.trim()).filter(Boolean)) {
+  const output = [];
+  for (const section of sections.map((value) => value.trim()).filter(Boolean)) {
     const key = section.toLowerCase();
     if (seen.has(key))
       continue;
     seen.add(key);
-    out.push(section);
+    output.push(section);
   }
-  return out;
+  return output;
 }
 function removeSupplementActionDuplicates(supplement, actionTags) {
   let next = supplement.trim();
@@ -496,14 +317,14 @@ function removeSupplementActionDuplicates(supplement, actionTags) {
   return next.replace(/\s+([,.])/g, "$1").replace(/\s+/g, " ").trim();
 }
 function assembleCharacterBlock(character, config, replacements, includeAction) {
-  return unique(csvParts(stripOrReplaceNames(cleanString(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString(character.name), config) : "", stripOrReplaceNames(cleanString(character.age), replacements, true), stripOrReplaceNames(cleanString(character.appearance), replacements, true), stripOrReplaceNames(cleanString(character.body), replacements, true), stripOrReplaceNames(cleanString(character.attire), replacements, true), stripOrReplaceNames(cleanString(character.expression), replacements, true), includeAction ? stripOrReplaceNames(cleanString(character.action), replacements, true) : "")).join(", ");
+  return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", stripOrReplaceNames(cleanString2(character.age), replacements, true), stripOrReplaceNames(cleanString2(character.appearance), replacements, true), stripOrReplaceNames(cleanString2(character.body), replacements, true), stripOrReplaceNames(cleanString2(character.attire), replacements, true), stripOrReplaceNames(cleanString2(character.expression), replacements, true), includeAction ? stripOrReplaceNames(cleanString2(character.action), replacements, true) : "")).join(", ");
 }
 function assembleAnimaPrompt(scene, shot, config, replacements) {
   const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
   const characters = cleanArray(shot.characters).slice(0, maxCharacters);
   const characterBlocks = characters.map((character) => assembleCharacterBlock(character, config, replacements, false)).filter(Boolean);
-  const sceneAction = stripOrReplaceNames(unique(csvParts(shot.action, ...characters.map((c) => c.action), config.mode === "asset" ? "looking at viewer" : "")).join(", "), replacements, true);
-  const supplement = config.supplement ? stripOrReplaceNames(removeSupplementActionDuplicates(cleanString(shot.supplement), sceneAction), replacements, false) : "";
+  const sceneAction = stripOrReplaceNames(unique(csvParts(shot.action, ...characters.map((character) => character.action), config.mode === "asset" ? "looking at viewer" : "")).join(", "), replacements, true);
+  const supplement = config.supplement ? stripOrReplaceNames(removeSupplementActionDuplicates(cleanString2(shot.supplement), sceneAction), replacements, false) : "";
   const tagSections = dedupePromptSections([
     stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
     ...characterBlocks,
@@ -517,7 +338,7 @@ function assembleDefaultPrompt(scene, shot, config, replacements) {
   const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
   const characters = cleanArray(shot.characters).slice(0, maxCharacters);
   const characterBlocks = characters.map((character) => assembleCharacterBlock(character, config, replacements, true)).filter(Boolean);
-  const supplement = config.supplement ? stripOrReplaceNames(cleanString(shot.supplement), replacements, false) : "";
+  const supplement = config.supplement ? stripOrReplaceNames(cleanString2(shot.supplement), replacements, false) : "";
   const tagSections = dedupePromptSections([
     stripOrReplaceNames(unique(csvParts(shot.camera, shot.situation, shot.action, config.mode === "asset" ? "portrait, cowboy shot, looking at viewer" : "")).join(", "), replacements, true),
     stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true),
@@ -545,12 +366,712 @@ function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph)
     parserParagraph
   };
 }
-function formatTargetParagraphs(paragraphs) {
-  return paragraphs.map((paragraph) => `[P${paragraph.parserIndex}]
-${paragraph.text}`).join(`
 
-`);
+// src/backend/cleanup.ts
+var DANBOORU_CLEANUP_BATCH_SIZE = 16;
+function descriptorCandidates(words, suffix, original) {
+  const candidates = [];
+  for (let index = 0;index < words.length; index += 1) {
+    const candidate = `${words.slice(index).join(" ")} ${suffix}`.trim();
+    if (candidate.toLowerCase() !== original.toLowerCase())
+      candidates.push(candidate);
+  }
+  return unique(candidates);
 }
+function localCandidateGroups(tag) {
+  const lower = tag.toLowerCase();
+  const groups = [];
+  if (lower === "exterior")
+    groups.push(["outdoors"]);
+  if (lower === "smug smirk")
+    groups.push(["smirk"], ["smug"]);
+  if (lower.includes("pleated mini skirt"))
+    groups.push(["pleated skirt"], ["miniskirt"]);
+  if (lower === "revealing dark purple dress")
+    groups.push(["purple dress"], ["revealing clothes"]);
+  const hair = lower.match(/\b(.+?)\s+hair\b/);
+  if (hair) {
+    const words = hair[1].trim().split(/\s+/);
+    const length = words.find((word) => word === "long" || word === "short" || word === "medium");
+    const descriptors = words.filter((word) => word !== length);
+    const descriptorGroup = descriptorCandidates(descriptors, "hair", lower);
+    if (descriptorGroup.length)
+      groups.push(descriptorGroup);
+    if (length && `${length} hair` !== lower)
+      groups.push([`${length} hair`]);
+  }
+  const eyes = lower.match(/\b(.+?)\s+(?:irises|eyes)\b/);
+  if (eyes && !lower.includes("pupils")) {
+    const descriptorGroup = descriptorCandidates(eyes[1].trim().split(/\s+/), "eyes", lower);
+    if (descriptorGroup.length)
+      groups.push(descriptorGroup);
+  }
+  return groups.map((group) => unique(group));
+}
+function localCandidates(tag) {
+  return localCandidateGroups(tag).flat();
+}
+function bestSuggestion(suggestions) {
+  let best;
+  for (const suggestion of suggestions) {
+    if (!suggestion.tag || typeof suggestion.score !== "number")
+      continue;
+    if (!best || suggestion.score > (best.score || 0))
+      best = suggestion;
+  }
+  return best;
+}
+async function cleanupPrompt(prompt, config) {
+  const endpoint = config.danbooruEndpoint.trim();
+  if (!config.danbooruCleanup || !endpoint) {
+    logStage(config, "danbooru_cleanup_skipped", { enabled: config.danbooruCleanup, endpointConfigured: Boolean(endpoint) });
+    return renderPrompt(prompt, config.promptSyntax);
+  }
+  const sectionTags = prompt.tagSections.map((section) => csvParts(section));
+  const tags = sectionTags.flat();
+  const requestTags = unique(tags.flatMap((tag) => [tag, ...localCandidates(tag)]));
+  const batches = [];
+  for (let start = 0;start < requestTags.length; start += DANBOORU_CLEANUP_BATCH_SIZE) {
+    batches.push(requestTags.slice(start, start + DANBOORU_CLEANUP_BATCH_SIZE));
+  }
+  const cleanupStartedAt = Date.now();
+  logStage(config, "danbooru_cleanup_start", {
+    endpoint,
+    tagCount: tags.length,
+    requestTagCount: requestTags.length,
+    batchCount: batches.length
+  });
+  try {
+    const valid = [];
+    const suggestions = {};
+    for (const [index, batch] of batches.entries()) {
+      const batchNumber = index + 1;
+      const batchStartedAt = Date.now();
+      logStage(config, "danbooru_cleanup_batch_start", { batchNumber, batchCount: batches.length, tagCount: batch.length });
+      try {
+        const response = parseCorsJson(await spindle.cors(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ tags: batch })
+        }), `Danbooru cleanup batch ${batchNumber}/${batches.length}`);
+        valid.push(...response.valid || response.data?.valid || []);
+        const batchSuggestions = response.suggestions || response.data?.suggestions || {};
+        for (const [tag, entries] of Object.entries(batchSuggestions)) {
+          const key = tag.toLowerCase();
+          suggestions[key] = [...suggestions[key] || [], ...entries];
+        }
+        logStage(config, "danbooru_cleanup_batch_done", {
+          batchNumber,
+          batchCount: batches.length,
+          tagCount: batch.length,
+          elapsedMs: Date.now() - batchStartedAt
+        });
+      } catch (error) {
+        logStage(config, "danbooru_cleanup_batch_failed", {
+          batchNumber,
+          batchCount: batches.length,
+          tagCount: batch.length,
+          elapsedMs: Date.now() - batchStartedAt,
+          error: error instanceof Error ? error.message : String(error)
+        }, "warn");
+        throw error;
+      }
+    }
+    const validKeys = new Set(valid.map((tag) => tag.toLowerCase()));
+    const replacementsFor = (tag) => {
+      const key = tag.toLowerCase();
+      if (validKeys.has(key))
+        return [tag];
+      const decomposed = localCandidateGroups(tag).map((group) => group.find((candidate) => validKeys.has(candidate.toLowerCase()))).filter((candidate) => Boolean(candidate));
+      if (decomposed.length > 0)
+        return unique(decomposed);
+      const best = bestSuggestion(suggestions[key] || []);
+      if (best?.tag && (best.score || 0) >= 0.88)
+        return [best.tag];
+      return [tag];
+    };
+    const seen = new Set;
+    const cleanedSections = sectionTags.map((section) => unique(section.flatMap(replacementsFor)).filter((tag) => {
+      const key = tag.toLowerCase();
+      if (seen.has(key))
+        return false;
+      seen.add(key);
+      return true;
+    }).join(", "));
+    const cleaned = renderPrompt({ ...prompt, tagSections: cleanedSections }, config.promptSyntax);
+    logStage(config, "danbooru_cleanup_done", {
+      beforeTagCount: tags.length,
+      afterTagCount: cleanedSections.flatMap((section) => csvParts(section)).length,
+      batchCount: batches.length,
+      elapsedMs: Date.now() - cleanupStartedAt
+    });
+    return cleaned;
+  } catch (error) {
+    spindle.log.warn(`Danbooru cleanup skipped: ${error instanceof Error ? error.message : String(error)}`);
+    return renderPrompt(prompt, config.promptSyntax);
+  }
+}
+
+// src/backend/constants.ts
+var EXTENSION_ID = "inlay_illustrator";
+var MARKER = "<!-- inlay_illustrator -->";
+
+// src/backend/context.ts
+function isOwnMessage(message) {
+  return Boolean(message.metadata?.extension === EXTENSION_ID);
+}
+function namedField(label, value) {
+  const text = cleanString2(value);
+  return text ? `${label}: ${text}` : "";
+}
+function formatInfoBlock(title, lines, maxLength = 4000) {
+  const clean = lines.map((line) => line.trim()).filter(Boolean);
+  return clean.length ? compactBlock([`## ${title}`, ...clean].join(`
+`), maxLength) : "";
+}
+function findNestedString(root, path) {
+  let current = root;
+  for (const part of path)
+    current = asRecord(current)[part];
+  return cleanString2(current);
+}
+function collectExtraInstructionStrings(root) {
+  const values = [
+    findNestedString(root, ["lb-xnai", "lb", "extra"]),
+    findNestedString(root, ["lb_xnai", "lb", "extra"]),
+    findNestedString(root, ["Inlay", "extra"]),
+    findNestedString(root, ["inlay", "extra"])
+  ];
+  return unique(values.filter(Boolean)).map((value) => compactBlock(value, 2000));
+}
+function formatRecentContext(messages, targetIndex, includeCount) {
+  if (includeCount <= 0)
+    return "";
+  const previous = messages.slice(0, Math.max(0, targetIndex)).filter((message) => message.role === "assistant" && !isOwnMessage(message)).slice(-includeCount);
+  return compactBlock(previous.map((message) => `${message.role}: ${message.content}`).join(`
+
+`), 8000);
+}
+function includeCountForAttempt(config, attempt) {
+  if (config.includeMaxMessages <= config.includeMinMessages)
+    return config.includeMinMessages;
+  if (config.parserRetries <= 0)
+    return config.includeMinMessages;
+  const step = Math.ceil((config.includeMaxMessages - config.includeMinMessages) / config.parserRetries);
+  return Math.min(config.includeMaxMessages, config.includeMinMessages + step * attempt);
+}
+async function buildParserContext(chatId, messages, targetIndex, cache, config, attempt, userId) {
+  const blocks = [];
+  const overrides = [];
+  const diagnostics = { attempt, includeCount: includeCountForAttempt(config, attempt) };
+  let chat = null;
+  if (config.includeCharacterInfo || config.includeLorebook || config.userInstructionsEnabled) {
+    try {
+      chat = await spindle.chats.get(chatId, userId);
+      overrides.push(...collectExtraInstructionStrings(chat?.metadata));
+    } catch (error) {
+      diagnostics.chatLookupError = error instanceof Error ? error.message : String(error);
+    }
+  }
+  if (config.includeUserInfo || config.userInstructionsEnabled) {
+    try {
+      const persona = await spindle.personas.getActive(userId);
+      const record = asRecord(persona);
+      const block = config.includeUserInfo ? formatInfoBlock("{{user}} Info", [
+        namedField("Name", record.name),
+        namedField("Title", record.title),
+        namedField("Description", record.description)
+      ]) : "";
+      if (block)
+        blocks.push(block);
+      overrides.push(...collectExtraInstructionStrings(record.metadata));
+      diagnostics.userInfo = Boolean(block);
+    } catch (error) {
+      diagnostics.userInfoError = error instanceof Error ? error.message : String(error);
+    }
+  }
+  if (config.includeCharacterInfo && chat?.character_id) {
+    try {
+      const character = await spindle.characters.get(String(chat.character_id), userId);
+      const record = asRecord(character);
+      const block = formatInfoBlock("{{char}} Info", [
+        namedField("Name", record.name),
+        namedField("Description", record.description),
+        namedField("Personality", record.personality),
+        namedField("Scenario", record.scenario),
+        namedField("Creator notes", record.creator_notes),
+        namedField("System prompt", record.system_prompt),
+        namedField("Post-history instructions", record.post_history_instructions),
+        Array.isArray(record.tags) && record.tags.length ? `Tags: ${record.tags.join(", ")}` : ""
+      ], 6000);
+      if (block)
+        blocks.push(block);
+      overrides.push(...collectExtraInstructionStrings(record.extensions));
+      diagnostics.characterInfo = Boolean(block);
+    } catch (error) {
+      diagnostics.characterInfoError = error instanceof Error ? error.message : String(error);
+    }
+  }
+  if (config.includeLorebook) {
+    try {
+      const activated = await spindle.world_books.getActivated(chatId, userId);
+      const rows = [];
+      for (const entry of activated.slice(0, 24)) {
+        const record = asRecord(entry);
+        let content = "";
+        try {
+          const full = await spindle.world_books.entries.get(String(record.id || ""), userId);
+          content = cleanString2(asRecord(full).content);
+        } catch {
+          content = "";
+        }
+        const title = cleanString2(record.comment) || (Array.isArray(record.keys) ? record.keys.join(", ") : "");
+        const summary = content || [title, Array.isArray(record.keys) && record.keys.length ? `Keys: ${record.keys.join(", ")}` : ""].filter(Boolean).join(`
+`);
+        if (summary)
+          rows.push(title ? `### ${title}
+${summary}` : summary);
+      }
+      const block = rows.length ? compactBlock(["## Lorebook", ...rows].join(`
+
+`), 8000) : "";
+      if (block)
+        blocks.push(block);
+      diagnostics.lorebookEntries = rows.length;
+    } catch (error) {
+      diagnostics.lorebookError = error instanceof Error ? error.message : String(error);
+    }
+  }
+  if (config.characterTagContextEnabled) {
+    const characterReference = buildCharacterTagReference(cache);
+    if (characterReference) {
+      blocks.push(`${characterReference}
+Use these as a baseline for returning characters (including their base attire). The current message always wins over this reference.`);
+    }
+    diagnostics.cacheCharacters = Object.keys(cache).length;
+  }
+  if (config.userInstructionsEnabled)
+    overrides.unshift(config.customParserInstructions);
+  return {
+    systemContext: blocks.filter(Boolean).join(`
+
+`),
+    recentContext: formatRecentContext(messages, targetIndex, includeCountForAttempt(config, attempt)),
+    override: unique(overrides.map((value) => cleanString2(value)).filter(Boolean)).join(`
+
+`),
+    diagnostics
+  };
+}
+
+// src/backend/images.ts
+async function resolveImageConnection(config, userId) {
+  logStage(config, "image_connection_resolve_start", { configuredConnectionId: config.imageConnectionId });
+  if (config.imageConnectionId) {
+    const configured = await spindle.imageGen.getConnection(config.imageConnectionId, userId);
+    if (configured) {
+      logStage(config, "image_connection_resolved", {
+        id: configured.id,
+        name: configured.name,
+        provider: configured.provider,
+        model: configured.model,
+        source: "configured"
+      });
+      return configured;
+    }
+    logStage(config, "image_connection_missing", { configuredConnectionId: config.imageConnectionId }, "warn");
+  }
+  const connections = await spindle.imageGen.listConnections(userId);
+  const fallback = connections.find((connection) => connection.is_default) || connections[0] || null;
+  logStage(config, "image_connection_resolved", fallback ? {
+    id: fallback.id,
+    name: fallback.name,
+    provider: fallback.provider,
+    model: fallback.model,
+    source: fallback.is_default ? "default" : "first_available"
+  } : { source: "none", availableConnections: 0 }, fallback ? "info" : "warn");
+  return fallback;
+}
+function readComfyConfig(metadata) {
+  if (!metadata || typeof metadata !== "object")
+    return null;
+  const comfy = metadata.comfyui;
+  if (!comfy || typeof comfy !== "object")
+    return null;
+  const config = comfy;
+  const workflow = config.workflow_api_json || config.workflow_json;
+  if (!workflow || typeof workflow !== "object" || !Array.isArray(config.field_mappings))
+    return null;
+  return config;
+}
+function numberParam(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+function stringParam(value) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+function patchComfyWorkflow(workflow, mappings, values) {
+  const patched = JSON.parse(JSON.stringify(workflow));
+  for (const mapping of mappings) {
+    const node = patched[mapping.nodeId];
+    if (!node || !node.inputs || typeof node.inputs !== "object")
+      continue;
+    const value = mapping.mappedAs === "custom" ? values.custom && typeof values.custom === "object" ? values.custom[`${mapping.nodeId}:${mapping.fieldName}`] : undefined : values[mapping.mappedAs];
+    if (value !== undefined)
+      node.inputs[mapping.fieldName] = value;
+  }
+  return patched;
+}
+async function buildImageParameters(config, connection, prompt, negative) {
+  const parameters = { ...connection?.default_parameters || {}, ...config.imageParameters };
+  logStage(config, "image_parameters_start", {
+    provider: connection?.provider || "(default)",
+    connectionId: connection?.id || null,
+    promptLength: prompt.length,
+    negativeLength: negative.length,
+    parameterKeys: keysOf(parameters)
+  });
+  if (connection?.provider !== "comfyui" && connection?.provider !== "swarmui") {
+    logStage(config, "image_parameters_ready", { provider: connection?.provider || "(default)", workflowPresent: Boolean(parameters.workflow) });
+    return parameters;
+  }
+  if (parameters.workflow && typeof parameters.workflow === "object") {
+    logStage(config, "comfy_workflow_existing", { parameterKeys: keysOf(parameters) });
+    return parameters;
+  }
+  const comfy = readComfyConfig(connection.metadata);
+  if (!comfy) {
+    logStage(config, "comfy_workflow_missing", { metadataKeys: keysOf(connection.metadata) }, "warn");
+    return parameters;
+  }
+  const workflow = comfy.workflow_api_json || comfy.workflow_json;
+  const mappings = comfy.field_mappings || [];
+  logStage(config, "comfy_workflow_config_found", {
+    workflowSource: comfy.workflow_api_json ? "api" : "json",
+    mappingCount: mappings.length,
+    mappedAs: mappings.map((mapping) => mapping.mappedAs)
+  });
+  if (!mappings.some((mapping) => mapping.mappedAs === "positive_prompt")) {
+    throw new Error("Imported ComfyUI workflow must map at least one positive prompt field");
+  }
+  const customValues = parameters.comfyui_custom_fields && typeof parameters.comfyui_custom_fields === "object" ? parameters.comfyui_custom_fields : parameters.custom && typeof parameters.custom === "object" ? parameters.custom : {};
+  const values = {
+    positive_prompt: prompt,
+    negative_prompt: negative || parameters.negativePrompt,
+    seed: numberParam(parameters.seed) ?? Math.floor(Math.random() * 2147483647),
+    steps: numberParam(parameters.steps),
+    cfg: numberParam(parameters.cfg),
+    sampler_name: stringParam(parameters.sampler_name),
+    scheduler: stringParam(parameters.scheduler),
+    width: numberParam(parameters.width),
+    height: numberParam(parameters.height),
+    checkpoint: stringParam(parameters.checkpoint || parameters.ckpt_name),
+    custom: customValues
+  };
+  const patched = patchComfyWorkflow(workflow, mappings, values);
+  logStage(config, "comfy_workflow_patched", {
+    workflowPresent: true,
+    workflowFormat: "api_prompt",
+    parameterKeys: keysOf({ ...parameters, workflow: patched, workflowFormat: "api_prompt", preserveImportedWorkflow: true })
+  });
+  return { ...parameters, workflow: patched, workflowFormat: "api_prompt", preserveImportedWorkflow: true };
+}
+async function prepareAndDispatchImageJobs(inputs, eager, prepare, generate) {
+  const jobs = [];
+  const requests = [];
+  let serialRequest = Promise.resolve();
+  let preparationFailure;
+  let hasPreparationFailure = false;
+  for (const [index, input] of inputs.entries()) {
+    let job;
+    try {
+      job = await prepare(input, index);
+    } catch (error) {
+      preparationFailure = error;
+      hasPreparationFailure = true;
+      break;
+    }
+    jobs.push(job);
+    const invoke = () => {
+      try {
+        return Promise.resolve(generate(job));
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    };
+    const request = eager || requests.length === 0 ? invoke() : serialRequest.then(invoke);
+    request.catch(() => {
+      return;
+    });
+    requests.push(request);
+    if (!eager)
+      serialRequest = request;
+  }
+  const settled = await Promise.allSettled(requests);
+  if (hasPreparationFailure)
+    throw preparationFailure;
+  const failure = settled.find((result) => result.status === "rejected");
+  if (failure?.status === "rejected")
+    throw failure.reason;
+  return {
+    jobs,
+    results: settled.map((result) => result.value)
+  };
+}
+
+// src/backend/scenes.ts
+function parseParagraphNumber(value) {
+  const match = String(value ?? "").match(/\d+/);
+  if (!match)
+    return null;
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function normalizeScenePayload(payload) {
+  const normalized = [];
+  for (const rawScene of cleanArray(payload.scenes)) {
+    const parentPlace = cleanString2(rawScene.place);
+    const shots = cleanArray(rawScene.shots);
+    if (shots.length > 0) {
+      for (const rawShot of shots) {
+        const parserParagraph2 = parseParagraphNumber(rawShot.paragraph);
+        if (!parserParagraph2)
+          continue;
+        const shot2 = { ...rawShot, paragraph: parserParagraph2 };
+        const scene2 = { ...rawScene, place: parentPlace, shots: [shot2] };
+        normalized.push({ scene: scene2, shot: shot2, parserParagraph: parserParagraph2 });
+      }
+      continue;
+    }
+    const parserParagraph = parseParagraphNumber(rawScene.paragraph);
+    if (!parserParagraph)
+      continue;
+    const situation = cleanString2(rawScene.situation) || parentPlace;
+    const shot = { ...rawScene, paragraph: parserParagraph, situation };
+    const scene = { place: parentPlace, shots: [shot] };
+    normalized.push({ scene, shot, parserParagraph });
+  }
+  return normalized;
+}
+function normalizedVisualValue(value) {
+  return cleanString2(value).replace(/\s+/g, " ").toLowerCase();
+}
+function exactVisualKey(entry) {
+  return JSON.stringify({
+    paragraph: entry.parserParagraph,
+    camera: normalizedVisualValue(entry.shot.camera),
+    situation: normalizedVisualValue(entry.shot.situation),
+    sceneAction: normalizedVisualValue(entry.scene.action),
+    shotAction: normalizedVisualValue(entry.shot.action),
+    characters: cleanArray(entry.shot.characters).map((character) => ({
+      expression: normalizedVisualValue(character.expression),
+      action: normalizedVisualValue(character.action)
+    })),
+    composition: normalizedVisualValue(entry.shot.supplement)
+  });
+}
+function selectPromptEntries(payload, paragraphs, config) {
+  const normalized = normalizeScenePayload(payload);
+  const paragraphMap = new Map(paragraphs.map((paragraph) => [paragraph.parserIndex, paragraph]));
+  const valid = normalized.filter((entry) => paragraphMap.has(entry.parserParagraph));
+  let distinct;
+  if (config.mode === "asset") {
+    const seenParagraphs = new Set;
+    distinct = valid.filter((entry) => {
+      if (seenParagraphs.has(entry.parserParagraph))
+        return false;
+      seenParagraphs.add(entry.parserParagraph);
+      return true;
+    });
+  } else {
+    const seenVisuals = new Set;
+    distinct = valid.filter((entry) => {
+      const key = exactVisualKey(entry);
+      if (seenVisuals.has(key))
+        return false;
+      seenVisuals.add(key);
+      return true;
+    });
+  }
+  const limit = config.mode === "asset" ? paragraphs.length : config.maxImages;
+  const selected = distinct.slice(0, limit).map((entry, modelPriority) => ({ entry, modelPriority })).sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority).map(({ entry }) => entry);
+  const prompts = [];
+  for (const entry of selected) {
+    const paragraph = paragraphMap.get(entry.parserParagraph);
+    if (!paragraph)
+      continue;
+    const prompt = assemblePrompt(entry.scene, entry.shot, config, entry.parserParagraph, paragraph.originalIndex);
+    if (renderPrompt(prompt.prompt, config.promptSyntax))
+      prompts.push(prompt);
+  }
+  logStage(config, "illustration_candidates_selected", {
+    candidateCount: normalized.length,
+    validCandidateCount: valid.length,
+    distinctCandidateCount: distinct.length,
+    selectedCount: prompts.length,
+    selectedParagraphs: selected.map((entry) => entry.parserParagraph),
+    cameraTags: selected.map((entry) => cleanString2(entry.shot.camera))
+  });
+  return prompts;
+}
+
+// src/backend/memory.ts
+var VOLATILE_MEMORY_TERMS = [
+  "sitting",
+  "standing",
+  "leaning",
+  "guided",
+  "guiding",
+  "holding",
+  "pulling",
+  "looking",
+  "gaze",
+  "smug",
+  "flustered",
+  "blush",
+  "smile",
+  "angry",
+  "crying",
+  "grin",
+  "embarrassed",
+  "annoyed",
+  "chair",
+  "bed",
+  "sofa",
+  "couch",
+  "desk",
+  "table",
+  "from above",
+  "from below",
+  "from behind",
+  "close-up",
+  "wide shot",
+  "portrait",
+  "upper body",
+  "full body",
+  "cowboy shot",
+  "pov"
+];
+var TRANSIENT_ATTIRE_MEMORY_TERMS = [
+  "torn clothes",
+  "open shirt",
+  "shirt lift",
+  "panty pull",
+  "clothes pull",
+  "undressing"
+];
+function sanitizeMemoryTags(tags) {
+  return normalizeReferenceTags(csvParts(tags).filter((tag) => {
+    const normalized = tag.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!normalized)
+      return false;
+    if (TRANSIENT_ATTIRE_MEMORY_TERMS.some((term) => normalized === term || normalized.includes(term)))
+      return false;
+    return !VOLATILE_MEMORY_TERMS.some((term) => normalized === term || normalized.includes(term));
+  }).join(", "));
+}
+function baselineCharacterTags(character) {
+  return sanitizeMemoryTags(unique(csvParts(character.label, character.age, character.appearance, character.body, character.attire)).join(", "));
+}
+function updateCache(cache, payload) {
+  for (const { shot } of normalizeScenePayload(payload)) {
+    for (const character of cleanArray(shot.characters)) {
+      const name = normalizeCharacterName(character.name);
+      const tags = baselineCharacterTags(character);
+      if (name && tags)
+        cache[name] = tags;
+    }
+  }
+}
+function upsertCharacterTag(state, oldName, nextName, nextTags) {
+  const previous = normalizeCharacterName(oldName);
+  const name = normalizeCharacterName(nextName);
+  const tags = sanitizeMemoryTags(normalizeReferenceTags(nextTags));
+  if (previous && previous !== name)
+    deleteCharacterTag(state, previous);
+  if (name && tags)
+    state.characterAppearance[name] = tags;
+}
+function deleteCharacterTag(state, name) {
+  const target = normalizeCharacterName(name);
+  if (!target)
+    return;
+  const key = Object.keys(state.characterAppearance).find((candidate) => candidate.toLowerCase() === target.toLowerCase()) || target;
+  delete state.characterAppearance[key];
+}
+
+// src/backend/paragraphs.ts
+function ignoredTagNames(config) {
+  return unique(String(config.ignoredTags || "").split(/[\n,]/).map((tag) => tag.trim().replace(/^<|>$/g, "").replace(/^\/+/, "")).filter(Boolean));
+}
+function splitParagraphBlocks(content) {
+  const blocks = [];
+  let current = [];
+  for (const line of content.replace(/\r\n/g, `
+`).split(`
+`)) {
+    if (line.trim()) {
+      current.push(line);
+    } else if (current.length > 0) {
+      blocks.push(current.join(`
+`));
+      current = [];
+    }
+  }
+  if (current.length > 0)
+    blocks.push(current.join(`
+`));
+  return blocks;
+}
+function stripIgnoredTags(text, config) {
+  let output = text;
+  for (const tag of ignoredTagNames(config)) {
+    const name = escapeRegExp(tag);
+    output = output.replace(new RegExp(`<${name}\\b[^>]*>[\\s\\S]*?<\\/${name}>`, "gi"), "").replace(new RegExp(`<\\/?${name}\\b[^>]*>`, "gi"), "").replace(new RegExp(`^\\s*\\[${name}\\b[^\\]]*\\]\\s*$`, "gim"), "");
+  }
+  return output;
+}
+function cleanParagraphText(text, config) {
+  const stripped = stripIgnoredTags(text, config).replace(/CARDDATA:.*$/gim, "").replace(/<Update Log\b[\s\S]*?<\/Update Log>/gi, "").replace(/<Choice\b[\s\S]*?<\/Choice>/gi, "");
+  return stripped.split(/\r?\n/).filter((line) => {
+    const trimmed = line.trim();
+    if (!trimmed)
+      return false;
+    return !/^\[(?:Date|FLOOR|RESERVEDFLOOR)\s*:/i.test(trimmed) && !/^<\s*(?:suggestion|scene\s+seed=|check|choice)\b/i.test(trimmed);
+  }).join(`
+`).trim();
+}
+function prepareParagraphs(content, config) {
+  const paragraphs = [];
+  const originalBlocks = splitParagraphBlocks(content);
+  let inInlay = false;
+  for (const [index, block] of originalBlocks.entries()) {
+    const trimmed = block.trim();
+    if (trimmed.includes(MARKER)) {
+      inInlay = /<details/i.test(trimmed) && !/<\/details>/i.test(trimmed);
+      continue;
+    }
+    if (/^<details\b[\s\S]*<summary>\s*Prompt\b/i.test(trimmed)) {
+      inInlay = !/<\/details>/i.test(trimmed);
+      continue;
+    }
+    if (inInlay) {
+      if (/<\/details>/i.test(trimmed))
+        inInlay = false;
+      continue;
+    }
+    const cleaned = cleanParagraphText(block, config);
+    if (cleaned)
+      paragraphs.push({ parserIndex: paragraphs.length + 1, originalIndex: index + 1, text: cleaned });
+  }
+  return paragraphs;
+}
+function paragraphCount(content) {
+  return content.split(/(\r?\n\s*\r?\n)/).filter((part) => part.trim()).length;
+}
+
+// src/backend/instructions.ts
 function parserInstruction(config) {
   const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
   const shotInstruction = config.mode === "asset" ? [
@@ -724,6 +1245,14 @@ function parserInstruction(config) {
 
 `);
 }
+
+// src/backend/parser.ts
+function formatTargetParagraphs(paragraphs) {
+  return paragraphs.map((paragraph) => `[P${paragraph.parserIndex}]
+${paragraph.text}`).join(`
+
+`);
+}
 function continuityReference(systemContext, recentContext) {
   const references = [
     systemContext.trim(),
@@ -755,10 +1284,11 @@ function extractText(result) {
   if (typeof result === "string")
     return result;
   if (result && typeof result === "object") {
-    const obj = result;
-    for (const key of ["content", "text", "message", "output"])
-      if (typeof obj[key] === "string")
-        return obj[key];
+    const object = result;
+    for (const key of ["content", "text", "message", "output"]) {
+      if (typeof object[key] === "string")
+        return object[key];
+    }
   }
   return "";
 }
@@ -786,15 +1316,15 @@ var FUZZY_KEYS = [
   "supplement"
 ];
 function levenshtein(a, b) {
-  const prev = Array.from({ length: b.length + 1 }, (_v, i) => i);
+  let previous = Array.from({ length: b.length + 1 }, (_value, index) => index);
   for (let i = 1;i <= a.length; i += 1) {
     const next = [i];
     for (let j = 1;j <= b.length; j += 1) {
-      next[j] = Math.min(next[j - 1] + 1, prev[j] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      next[j] = Math.min(next[j - 1] + 1, previous[j] + 1, previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
     }
-    prev.splice(0, prev.length, ...next);
+    previous = next;
   }
-  return prev[b.length];
+  return previous[b.length];
 }
 function fuzzyKey(key) {
   if (FUZZY_KEYS.includes(key))
@@ -841,38 +1371,37 @@ function balancedObjects(text) {
   const starts = [];
   let inString = false;
   let escaped = false;
-  for (let i = 0;i < text.length; i += 1) {
-    const char = text[i];
+  for (let index = 0;index < text.length; index += 1) {
+    const character = text[index];
     if (inString) {
       if (escaped)
         escaped = false;
-      else if (char === "\\")
+      else if (character === "\\")
         escaped = true;
-      else if (char === '"')
+      else if (character === '"')
         inString = false;
       continue;
     }
-    if (char === '"') {
+    if (character === '"') {
       inString = true;
       continue;
     }
-    if (char === "{")
-      starts.push(i);
-    else if (char === "}" && starts.length > 0) {
+    if (character === "{")
+      starts.push(index);
+    else if (character === "}" && starts.length > 0) {
       const start = starts.pop();
       if (start !== undefined)
-        objects.push(text.slice(start, i + 1));
+        objects.push(text.slice(start, index + 1));
     }
   }
-  return [...new Set(objects.sort((a, b) => b.length - a.length))];
+  return [...new Set(objects.sort((left, right) => right.length - left.length))];
 }
 function parseJson(text) {
   const trimmed = text.trim().replace(/\\\(/g, "(").replace(/\\\)/g, ")");
   const whole = tryParseObject(trimmed);
   if (hasScenes(whole))
     return whole;
-  const unfenced = stripJsonFences(trimmed);
-  const candidates = balancedObjects(unfenced);
+  const candidates = balancedObjects(stripJsonFences(trimmed));
   for (const candidate of candidates) {
     const parsed = tryParseObject(candidate);
     if (hasScenes(parsed))
@@ -884,11 +1413,11 @@ function parseJson(text) {
     const parsed = tryParseObject(candidate);
     if (!parsed || typeof parsed !== "object")
       continue;
-    const obj = parsed;
-    if (Array.isArray(obj.shots))
-      collectedGroups.push(obj);
-    else if (obj.paragraph !== undefined)
-      collectedShots.push(obj);
+    const object = parsed;
+    if (Array.isArray(object.shots))
+      collectedGroups.push(object);
+    else if (object.paragraph !== undefined)
+      collectedShots.push(object);
   }
   if (collectedGroups.length > 0)
     return { scenes: collectedGroups };
@@ -910,12 +1439,7 @@ async function resolveParserConnection(config, userId) {
     connectionModel: connection.model,
     effectiveModel: config.parserModel || connection.model
   });
-  return {
-    id: connection.id,
-    name: connection.name,
-    provider: connection.provider,
-    model: connection.model
-  };
+  return { id: connection.id, name: connection.name, provider: connection.provider, model: connection.model };
 }
 async function generateParserText(connection, config, messages, userId) {
   try {
@@ -939,15 +1463,13 @@ async function generateParserText(connection, config, messages, userId) {
     }));
     logStage(config, "parser_llm_done", { outputLength: text.length });
     return text;
-  } catch (err) {
-    logStage(config, "parser_llm_error", { error: err instanceof Error ? err.message : String(err) }, "error");
-    throw new Error(`Parser generation failed: ${err instanceof Error ? err.message : String(err)}`);
+  } catch (error) {
+    logStage(config, "parser_llm_error", { error: error instanceof Error ? error.message : String(error) }, "error");
+    throw new Error(`Parser generation failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 function parserMessages(stableInstruction, referenceContext, userRequest, override) {
-  const messages = [
-    { role: "system", content: stableInstruction.trim() }
-  ];
+  const messages = [{ role: "system", content: stableInstruction.trim() }];
   if (referenceContext.trim())
     messages.push({ role: "system", content: referenceContext.trim() });
   messages.push({ role: "user", content: userRequest.trim() });
@@ -983,15 +1505,12 @@ function preprocessingInstruction(paragraphs, config) {
 `);
 }
 function preprocessingUserRequest(rawTarget) {
-  return [
-    "Edit these current numbered paragraphs into the requested visual-beat selection:",
-    rawTarget
-  ].join(`
+  return ["Edit these current numbered paragraphs into the requested visual-beat selection:", rawTarget].join(`
 
 `);
 }
 function validatePreprocessedTarget(value, paragraphs, config) {
-  const summary = cleanString(value);
+  const summary = cleanString2(value);
   if (!summary)
     return null;
   const lines = summary.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -1039,9 +1558,9 @@ async function preprocessTargetParagraphs(parserConnection, config, paragraphs, 
       });
       return selection.summary;
     }
-    logStage(config, "preprocessing_fallback", { reason: "invalid_selection", summaryLength: cleanString(summary).length }, "warn");
-  } catch (err) {
-    logStage(config, "preprocessing_fallback", { reason: err instanceof Error ? err.message : String(err) }, "warn");
+    logStage(config, "preprocessing_fallback", { reason: "invalid_selection", summaryLength: cleanString2(summary).length }, "warn");
+  } catch (error) {
+    logStage(config, "preprocessing_fallback", { reason: error instanceof Error ? error.message : String(error) }, "warn");
   }
   return rawTarget;
 }
@@ -1063,567 +1582,8 @@ async function parsePayloadWithRepair(parserConnection, config, messages, userId
     return parsed;
   }
 }
-async function resolveImageConnection(config, userId) {
-  logStage(config, "image_connection_resolve_start", { configuredConnectionId: config.imageConnectionId });
-  if (config.imageConnectionId) {
-    const configured = await spindle.imageGen.getConnection(config.imageConnectionId, userId);
-    if (configured) {
-      logStage(config, "image_connection_resolved", {
-        id: configured.id,
-        name: configured.name,
-        provider: configured.provider,
-        model: configured.model,
-        source: "configured"
-      });
-      return configured;
-    }
-    logStage(config, "image_connection_missing", { configuredConnectionId: config.imageConnectionId }, "warn");
-  }
-  const connections = await spindle.imageGen.listConnections(userId);
-  const fallback = connections.find((connection) => connection.is_default) || connections[0] || null;
-  logStage(config, "image_connection_resolved", fallback ? {
-    id: fallback.id,
-    name: fallback.name,
-    provider: fallback.provider,
-    model: fallback.model,
-    source: fallback.is_default ? "default" : "first_available"
-  } : { source: "none", availableConnections: 0 }, fallback ? "info" : "warn");
-  return fallback;
-}
-function readComfyConfig(metadata) {
-  if (!metadata || typeof metadata !== "object")
-    return null;
-  const comfy = metadata.comfyui;
-  if (!comfy || typeof comfy !== "object")
-    return null;
-  const config = comfy;
-  const workflow = config.workflow_api_json || config.workflow_json;
-  if (!workflow || typeof workflow !== "object" || !Array.isArray(config.field_mappings))
-    return null;
-  return config;
-}
-function numberParam(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-function stringParam(value) {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-function patchComfyWorkflow(workflow, mappings, values) {
-  const patched = JSON.parse(JSON.stringify(workflow));
-  for (const mapping of mappings) {
-    const node = patched[mapping.nodeId];
-    if (!node || !node.inputs || typeof node.inputs !== "object")
-      continue;
-    const value = mapping.mappedAs === "custom" ? values.custom && typeof values.custom === "object" ? values.custom[`${mapping.nodeId}:${mapping.fieldName}`] : undefined : values[mapping.mappedAs];
-    if (value !== undefined)
-      node.inputs[mapping.fieldName] = value;
-  }
-  return patched;
-}
-async function buildImageParameters(config, connection, prompt, negative) {
-  const parameters = {
-    ...connection?.default_parameters || {},
-    ...config.imageParameters
-  };
-  logStage(config, "image_parameters_start", {
-    provider: connection?.provider || "(default)",
-    connectionId: connection?.id || null,
-    promptLength: prompt.length,
-    negativeLength: negative.length,
-    parameterKeys: keysOf(parameters)
-  });
-  if (connection?.provider !== "comfyui" && connection?.provider !== "swarmui") {
-    logStage(config, "image_parameters_ready", { provider: connection?.provider || "(default)", workflowPresent: Boolean(parameters.workflow) });
-    return parameters;
-  }
-  if (parameters.workflow && typeof parameters.workflow === "object") {
-    logStage(config, "comfy_workflow_existing", { parameterKeys: keysOf(parameters) });
-    return parameters;
-  }
-  const comfy = readComfyConfig(connection.metadata);
-  if (!comfy) {
-    logStage(config, "comfy_workflow_missing", { metadataKeys: keysOf(connection.metadata) }, "warn");
-    return parameters;
-  }
-  const workflow = comfy.workflow_api_json || comfy.workflow_json;
-  const mappings = comfy.field_mappings || [];
-  logStage(config, "comfy_workflow_config_found", {
-    workflowSource: comfy.workflow_api_json ? "api" : "json",
-    mappingCount: mappings.length,
-    mappedAs: mappings.map((mapping) => mapping.mappedAs)
-  });
-  if (!mappings.some((mapping) => mapping.mappedAs === "positive_prompt")) {
-    throw new Error("Imported ComfyUI workflow must map at least one positive prompt field");
-  }
-  const customValues = parameters.comfyui_custom_fields && typeof parameters.comfyui_custom_fields === "object" ? parameters.comfyui_custom_fields : parameters.custom && typeof parameters.custom === "object" ? parameters.custom : {};
-  const values = {
-    positive_prompt: prompt,
-    negative_prompt: negative || parameters.negativePrompt,
-    seed: numberParam(parameters.seed) ?? Math.floor(Math.random() * 2147483647),
-    steps: numberParam(parameters.steps),
-    cfg: numberParam(parameters.cfg),
-    sampler_name: stringParam(parameters.sampler_name),
-    scheduler: stringParam(parameters.scheduler),
-    width: numberParam(parameters.width),
-    height: numberParam(parameters.height),
-    checkpoint: stringParam(parameters.checkpoint || parameters.ckpt_name)
-  };
-  values.custom = customValues;
-  const patched = patchComfyWorkflow(workflow, mappings, values);
-  logStage(config, "comfy_workflow_patched", {
-    workflowPresent: true,
-    workflowFormat: "api_prompt",
-    parameterKeys: keysOf({ ...parameters, workflow: patched, workflowFormat: "api_prompt", preserveImportedWorkflow: true })
-  });
-  return { ...parameters, workflow: patched, workflowFormat: "api_prompt", preserveImportedWorkflow: true };
-}
-async function prepareAndDispatchImageJobs(inputs, eager, prepare, generate) {
-  const jobs = [];
-  const requests = [];
-  let serialRequest = Promise.resolve();
-  let preparationFailure;
-  let hasPreparationFailure = false;
-  for (const [index, input] of inputs.entries()) {
-    let job;
-    try {
-      job = await prepare(input, index);
-    } catch (err) {
-      preparationFailure = err;
-      hasPreparationFailure = true;
-      break;
-    }
-    jobs.push(job);
-    const invoke = () => {
-      try {
-        return Promise.resolve(generate(job));
-      } catch (err) {
-        return Promise.reject(err);
-      }
-    };
-    const request = eager || requests.length === 0 ? invoke() : serialRequest.then(invoke);
-    request.catch(() => {
-      return;
-    });
-    requests.push(request);
-    if (!eager)
-      serialRequest = request;
-  }
-  const settled = await Promise.allSettled(requests);
-  if (hasPreparationFailure)
-    throw preparationFailure;
-  const failure = settled.find((result) => result.status === "rejected");
-  if (failure?.status === "rejected")
-    throw failure.reason;
-  return {
-    jobs,
-    results: settled.map((result) => result.value)
-  };
-}
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-function ignoredTagNames(config) {
-  return unique(String(config.ignoredTags || "").split(/[\n,]/).map((tag) => tag.trim().replace(/^<|>$/g, "").replace(/^\/+/, "")).filter(Boolean));
-}
-function splitParagraphBlocks(content) {
-  const blocks = [];
-  let current = [];
-  for (const line of content.replace(/\r\n/g, `
-`).split(`
-`)) {
-    if (line.trim()) {
-      current.push(line);
-    } else if (current.length > 0) {
-      blocks.push(current.join(`
-`));
-      current = [];
-    }
-  }
-  if (current.length > 0)
-    blocks.push(current.join(`
-`));
-  return blocks;
-}
-function stripIgnoredTags(text, config) {
-  let out = text;
-  for (const tag of ignoredTagNames(config)) {
-    const name = escapeRegExp(tag);
-    out = out.replace(new RegExp(`<${name}\\b[^>]*>[\\s\\S]*?<\\/${name}>`, "gi"), "").replace(new RegExp(`<\\/?${name}\\b[^>]*>`, "gi"), "").replace(new RegExp(`^\\s*\\[${name}\\b[^\\]]*\\]\\s*$`, "gim"), "");
-  }
-  return out;
-}
-function cleanParagraphText(text, config) {
-  const stripped = stripIgnoredTags(text, config).replace(/CARDDATA:.*$/gim, "").replace(/<Update Log\b[\s\S]*?<\/Update Log>/gi, "").replace(/<Choice\b[\s\S]*?<\/Choice>/gi, "");
-  return stripped.split(/\r?\n/).filter((line) => {
-    const trimmed = line.trim();
-    if (!trimmed)
-      return false;
-    return !/^\[(?:Date|FLOOR|RESERVEDFLOOR)\s*:/i.test(trimmed) && !/^<\s*(?:suggestion|scene\s+seed=|check|choice)\b/i.test(trimmed);
-  }).join(`
-`).trim();
-}
-function prepareParagraphs(content, config) {
-  const paragraphs = [];
-  const originalBlocks = splitParagraphBlocks(content);
-  let inInlay = false;
-  for (const [index, block] of originalBlocks.entries()) {
-    const trimmed = block.trim();
-    const startsInlay = trimmed.includes(MARKER);
-    if (startsInlay) {
-      inInlay = /<details/i.test(trimmed) && !/<\/details>/i.test(trimmed);
-      continue;
-    }
-    if (/^<details\b[\s\S]*<summary>\s*Prompt\b/i.test(trimmed)) {
-      inInlay = !/<\/details>/i.test(trimmed);
-      continue;
-    }
-    if (inInlay) {
-      if (/<\/details>/i.test(trimmed))
-        inInlay = false;
-      continue;
-    }
-    const cleaned = cleanParagraphText(block, config);
-    if (cleaned)
-      paragraphs.push({ parserIndex: paragraphs.length + 1, originalIndex: index + 1, text: cleaned });
-  }
-  return paragraphs;
-}
-function parseParagraphNumber(value) {
-  const match = String(value ?? "").match(/\d+/);
-  if (!match)
-    return null;
-  const parsed = Number(match[0]);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-function normalizeScenePayload(payload) {
-  const normalized = [];
-  for (const rawScene of cleanArray(payload.scenes)) {
-    const parentPlace = cleanString(rawScene.place);
-    const shots = cleanArray(rawScene.shots);
-    if (shots.length > 0) {
-      for (const rawShot of shots) {
-        const parserParagraph2 = parseParagraphNumber(rawShot.paragraph);
-        if (!parserParagraph2)
-          continue;
-        const shot2 = { ...rawShot, paragraph: parserParagraph2 };
-        const scene2 = { ...rawScene, place: parentPlace, shots: [shot2] };
-        normalized.push({ scene: scene2, shot: shot2, parserParagraph: parserParagraph2 });
-      }
-      continue;
-    }
-    const parserParagraph = parseParagraphNumber(rawScene.paragraph);
-    if (!parserParagraph)
-      continue;
-    const situation = cleanString(rawScene.situation) || parentPlace;
-    const shot = { ...rawScene, paragraph: parserParagraph, situation };
-    const scene = { place: parentPlace, shots: [shot] };
-    normalized.push({ scene, shot, parserParagraph });
-  }
-  return normalized;
-}
-function normalizedVisualValue(value) {
-  return cleanString(value).replace(/\s+/g, " ").toLowerCase();
-}
-function exactVisualKey(entry) {
-  return JSON.stringify({
-    paragraph: entry.parserParagraph,
-    camera: normalizedVisualValue(entry.shot.camera),
-    situation: normalizedVisualValue(entry.shot.situation),
-    sceneAction: normalizedVisualValue(entry.scene.action),
-    shotAction: normalizedVisualValue(entry.shot.action),
-    characters: cleanArray(entry.shot.characters).map((character) => ({
-      expression: normalizedVisualValue(character.expression),
-      action: normalizedVisualValue(character.action)
-    })),
-    composition: normalizedVisualValue(entry.shot.supplement)
-  });
-}
-function selectPromptEntries(payload, paragraphs, config) {
-  const normalized = normalizeScenePayload(payload);
-  const paragraphMap = new Map(paragraphs.map((paragraph) => [paragraph.parserIndex, paragraph]));
-  const valid = normalized.filter((entry) => paragraphMap.has(entry.parserParagraph));
-  let distinct;
-  if (config.mode === "asset") {
-    const seenParagraphs = new Set;
-    distinct = valid.filter((entry) => {
-      if (seenParagraphs.has(entry.parserParagraph))
-        return false;
-      seenParagraphs.add(entry.parserParagraph);
-      return true;
-    });
-  } else {
-    const seenVisuals = new Set;
-    distinct = valid.filter((entry) => {
-      const key = exactVisualKey(entry);
-      if (seenVisuals.has(key))
-        return false;
-      seenVisuals.add(key);
-      return true;
-    });
-  }
-  const limit = config.mode === "asset" ? paragraphs.length : config.maxImages;
-  const prioritized = distinct.slice(0, limit);
-  const selected = prioritized.map((entry, modelPriority) => ({ entry, modelPriority })).sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority).map(({ entry }) => entry);
-  const prompts = [];
-  for (const entry of selected) {
-    const paragraph = paragraphMap.get(entry.parserParagraph);
-    if (!paragraph)
-      continue;
-    const prompt = assemblePrompt(entry.scene, entry.shot, config, entry.parserParagraph, paragraph.originalIndex);
-    if (renderPrompt(prompt.prompt, config.promptSyntax))
-      prompts.push(prompt);
-  }
-  logStage(config, "illustration_candidates_selected", {
-    candidateCount: normalized.length,
-    validCandidateCount: valid.length,
-    distinctCandidateCount: distinct.length,
-    selectedCount: prompts.length,
-    selectedParagraphs: selected.map((entry) => entry.parserParagraph),
-    cameraTags: selected.map((entry) => cleanString(entry.shot.camera))
-  });
-  return prompts;
-}
-var VOLATILE_MEMORY_TERMS = [
-  "sitting",
-  "standing",
-  "leaning",
-  "guided",
-  "guiding",
-  "holding",
-  "pulling",
-  "looking",
-  "gaze",
-  "smug",
-  "flustered",
-  "blush",
-  "smile",
-  "angry",
-  "crying",
-  "grin",
-  "embarrassed",
-  "annoyed",
-  "chair",
-  "bed",
-  "sofa",
-  "couch",
-  "desk",
-  "table",
-  "from above",
-  "from below",
-  "from behind",
-  "close-up",
-  "wide shot",
-  "portrait",
-  "upper body",
-  "full body",
-  "cowboy shot",
-  "pov"
-];
-var TRANSIENT_ATTIRE_MEMORY_TERMS = [
-  "torn clothes",
-  "open shirt",
-  "shirt lift",
-  "panty pull",
-  "clothes pull",
-  "undressing"
-];
-function sanitizeMemoryTags(tags) {
-  return normalizeReferenceTags(csvParts(tags).filter((tag) => {
-    const normalized = tag.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-    if (!normalized)
-      return false;
-    if (TRANSIENT_ATTIRE_MEMORY_TERMS.some((term) => normalized === term || normalized.includes(term)))
-      return false;
-    return !VOLATILE_MEMORY_TERMS.some((term) => normalized === term || normalized.includes(term));
-  }).join(", "));
-}
-function baselineCharacterTags(character) {
-  return sanitizeMemoryTags(unique(csvParts(character.label, character.age, character.appearance, character.body, character.attire)).join(", "));
-}
-function updateCache(cache, payload) {
-  for (const { shot } of normalizeScenePayload(payload))
-    for (const character of cleanArray(shot.characters)) {
-      const name = normalizeCharacterName(character.name);
-      const tags = baselineCharacterTags(character);
-      if (name && tags)
-        cache[name] = tags;
-    }
-}
-function upsertCharacterTag(state, oldName, nextName, nextTags) {
-  const previous = normalizeCharacterName(oldName);
-  const name = normalizeCharacterName(nextName);
-  const tags = sanitizeMemoryTags(normalizeReferenceTags(nextTags));
-  if (previous && previous !== name)
-    deleteCharacterTag(state, previous);
-  if (name && tags)
-    state.characterAppearance[name] = tags;
-}
-function deleteCharacterTag(state, name) {
-  const target = normalizeCharacterName(name);
-  if (!target)
-    return;
-  const key = Object.keys(state.characterAppearance).find((candidate) => candidate.toLowerCase() === target.toLowerCase()) || target;
-  delete state.characterAppearance[key];
-}
-function descriptorCandidates(words, suffix, original) {
-  const candidates = [];
-  for (let index = 0;index < words.length; index += 1) {
-    const candidate = `${words.slice(index).join(" ")} ${suffix}`.trim();
-    if (candidate.toLowerCase() !== original.toLowerCase())
-      candidates.push(candidate);
-  }
-  return unique(candidates);
-}
-function localCandidateGroups(tag) {
-  const lower = tag.toLowerCase();
-  const groups = [];
-  if (lower === "exterior")
-    groups.push(["outdoors"]);
-  if (lower === "smug smirk")
-    groups.push(["smirk"], ["smug"]);
-  if (lower.includes("pleated mini skirt"))
-    groups.push(["pleated skirt"], ["miniskirt"]);
-  if (lower === "revealing dark purple dress")
-    groups.push(["purple dress"], ["revealing clothes"]);
-  const hair = lower.match(/\b(.+?)\s+hair\b/);
-  if (hair) {
-    const words = hair[1].trim().split(/\s+/);
-    const length = words.find((word) => word === "long" || word === "short" || word === "medium");
-    const descriptors = words.filter((word) => word !== length);
-    const descriptorGroup = descriptorCandidates(descriptors, "hair", lower);
-    if (descriptorGroup.length)
-      groups.push(descriptorGroup);
-    if (length && `${length} hair` !== lower)
-      groups.push([`${length} hair`]);
-  }
-  const eyes = lower.match(/\b(.+?)\s+(?:irises|eyes)\b/);
-  if (eyes && !lower.includes("pupils")) {
-    const descriptorGroup = descriptorCandidates(eyes[1].trim().split(/\s+/), "eyes", lower);
-    if (descriptorGroup.length)
-      groups.push(descriptorGroup);
-  }
-  return groups.map((group) => unique(group));
-}
-function localCandidates(tag) {
-  return localCandidateGroups(tag).flat();
-}
-async function cleanupPrompt(prompt, config) {
-  if (!config.danbooruCleanup || !config.danbooruEndpoint.trim()) {
-    logStage(config, "danbooru_cleanup_skipped", { enabled: config.danbooruCleanup, endpointConfigured: Boolean(config.danbooruEndpoint.trim()) });
-    return renderPrompt(prompt, config.promptSyntax);
-  }
-  const sectionTags = prompt.tagSections.map((section) => csvParts(section));
-  const tags = sectionTags.flat();
-  const requestTags = unique(tags.flatMap((tag) => [tag, ...localCandidates(tag)]));
-  const batches = Array.from({ length: Math.ceil(requestTags.length / DANBOORU_CLEANUP_BATCH_SIZE) }, (_, index) => requestTags.slice(index * DANBOORU_CLEANUP_BATCH_SIZE, (index + 1) * DANBOORU_CLEANUP_BATCH_SIZE));
-  const cleanupStartedAt = Date.now();
-  logStage(config, "danbooru_cleanup_start", {
-    endpoint: config.danbooruEndpoint.trim(),
-    tagCount: tags.length,
-    requestTagCount: requestTags.length,
-    batchCount: batches.length
-  });
-  try {
-    const valid = [];
-    const suggestions = {};
-    for (const [index, batch] of batches.entries()) {
-      const batchNumber = index + 1;
-      const batchStartedAt = Date.now();
-      logStage(config, "danbooru_cleanup_batch_start", {
-        batchNumber,
-        batchCount: batches.length,
-        tagCount: batch.length
-      });
-      try {
-        const response = parseCorsJson(await spindle.cors(config.danbooruEndpoint.trim(), {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ tags: batch })
-        }), `Danbooru cleanup batch ${batchNumber}/${batches.length}`);
-        valid.push(...response.valid || response.data?.valid || []);
-        const batchSuggestions = response.suggestions || response.data?.suggestions || {};
-        for (const [tag, entries] of Object.entries(batchSuggestions)) {
-          const key = tag.toLowerCase();
-          suggestions[key] = [...suggestions[key] || [], ...entries];
-        }
-        logStage(config, "danbooru_cleanup_batch_done", {
-          batchNumber,
-          batchCount: batches.length,
-          tagCount: batch.length,
-          elapsedMs: Date.now() - batchStartedAt
-        });
-      } catch (err) {
-        logStage(config, "danbooru_cleanup_batch_failed", {
-          batchNumber,
-          batchCount: batches.length,
-          tagCount: batch.length,
-          elapsedMs: Date.now() - batchStartedAt,
-          error: err instanceof Error ? err.message : String(err)
-        }, "warn");
-        throw err;
-      }
-    }
-    const validKeys = new Set(valid.map((tag) => tag.toLowerCase()));
-    const replacementsFor = (tag) => {
-      const key = tag.toLowerCase();
-      if (validKeys.has(key))
-        return [tag];
-      const decomposed = localCandidateGroups(tag).map((group) => group.find((candidate) => validKeys.has(candidate.toLowerCase()))).filter((candidate) => Boolean(candidate));
-      if (decomposed.length > 0)
-        return unique(decomposed);
-      const best = (suggestions[key] || []).filter((suggestion) => suggestion.tag && typeof suggestion.score === "number").sort((left, right) => (right.score || 0) - (left.score || 0))[0];
-      if (best?.tag && (best.score || 0) >= 0.88)
-        return [best.tag];
-      return [tag];
-    };
-    const cleanTags = (section) => {
-      return unique(section.flatMap(replacementsFor));
-    };
-    const seen = new Set;
-    const cleanedSections = sectionTags.map((section) => cleanTags(section).filter((tag) => {
-      const key = tag.toLowerCase();
-      if (seen.has(key))
-        return false;
-      seen.add(key);
-      return true;
-    }).join(", "));
-    const cleaned = renderPrompt({ ...prompt, tagSections: cleanedSections }, config.promptSyntax);
-    logStage(config, "danbooru_cleanup_done", {
-      beforeTagCount: tags.length,
-      afterTagCount: cleanedSections.flatMap((section) => csvParts(section)).length,
-      batchCount: batches.length,
-      elapsedMs: Date.now() - cleanupStartedAt
-    });
-    return cleaned;
-  } catch (err) {
-    spindle.log.warn(`Danbooru cleanup skipped: ${err instanceof Error ? err.message : String(err)}`);
-    return renderPrompt(prompt, config.promptSyntax);
-  }
-}
-var __testables = {
-  DEFAULT_CONFIG,
-  activePromptPreset,
-  assemblePrompt,
-  cleanupPrompt,
-  continuityReference,
-  exactVisualKey,
-  formatTargetParagraphs,
-  parserInstruction,
-  parserMessages,
-  parserUserRequest,
-  preprocessTargetParagraphs,
-  preprocessingInstruction,
-  preprocessingUserRequest,
-  prepareAndDispatchImageJobs,
-  normalizeConfig,
-  renderPrompt,
-  selectPromptEntries,
-  validatePreprocessedTarget
-};
-function isOwnMessage(message) {
-  return Boolean(message.metadata?.extension === EXTENSION_ID);
-}
+
+// src/backend/rendering.ts
 function imageUrlFromId(imageId) {
   return `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
 }
@@ -1634,50 +1594,319 @@ function renderInlayBlock(url, prompt, index, config) {
   const label = `Inlay ${index + 1}`;
   const configuredWidth = config.mode === "asset" ? config.assetImageWidth : config.inlayImageWidth;
   const fallbackWidth = config.mode === "asset" ? DEFAULT_CONFIG.assetImageWidth : DEFAULT_CONFIG.inlayImageWidth;
-  const width = clampInt(configuredWidth, 120, 2400, fallbackWidth);
-  const maxHeight = clampInt(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
+  const width = clampInt2(configuredWidth, 120, 2400, fallbackWidth);
+  const maxHeight = clampInt2(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
   const safePrompt = prompt.replace(/```/g, "'''");
   return `${MARKER}
 <div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-lightbox data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre></div>`;
-}
-function paragraphCount(content) {
-  return content.split(/(\r?\n\s*\r?\n)/).filter((part) => part.trim()).length;
 }
 function renderInlaidMessage(original, record, config) {
   const blocks = new Map;
   const count = Math.max(1, paragraphCount(original));
   record.imageUrls.forEach((url, index) => {
-    const paragraph2 = clampInt(record.paragraphs[index], 1, count, Math.min(index + 1, count));
+    const paragraph2 = clampInt2(record.paragraphs[index], 1, count, Math.min(index + 1, count));
     const existing = blocks.get(paragraph2) || [];
     existing.push(renderInlayBlock(url, record.prompts[index] || "", index, config));
     blocks.set(paragraph2, existing);
   });
   const tokens = original.trimEnd().split(/(\r?\n\s*\r?\n)/);
   let paragraph = 0;
-  const out = [];
+  const output = [];
   for (const token of tokens) {
     if (!token.trim()) {
-      out.push(token);
+      output.push(token);
       continue;
     }
     paragraph += 1;
     const inlays = blocks.get(paragraph);
     if (inlays?.length)
-      out.push(`${inlays.join(`
+      output.push(`${inlays.join(`
 
 `)}
 
 `);
-    out.push(token);
+    output.push(token);
   }
-  const unused = [...blocks.entries()].filter(([para]) => para > paragraph).flatMap(([, inlays]) => inlays);
+  const unused = [...blocks.entries()].filter(([number]) => number > paragraph).flatMap(([, inlays]) => inlays);
   if (unused.length)
-    out.push(`
+    output.push(`
 
 ${unused.join(`
 
 `)}`);
-  return out.join("");
+  return output.join("");
+}
+
+// src/backend/storage.ts
+async function readJson(path, fallback, userId) {
+  try {
+    if (!await spindle.userStorage.exists(path, userId))
+      return fallback;
+    const text = await spindle.userStorage.read(path, userId);
+    return { ...fallback, ...JSON.parse(text) };
+  } catch {
+    return fallback;
+  }
+}
+async function writeJson(path, value, userId) {
+  const slash = path.lastIndexOf("/");
+  if (slash > 0)
+    await spindle.userStorage.mkdir(path.slice(0, slash), userId).catch(() => {
+      return;
+    });
+  await spindle.userStorage.write(path, JSON.stringify(value, null, 2), userId);
+}
+async function getConfig(userId) {
+  return normalizeConfig(await readJson("config.json", DEFAULT_CONFIG, userId));
+}
+async function setConfig(patch, userId) {
+  const next = normalizeConfig({ ...await getConfig(userId), ...patch });
+  await writeJson("config.json", next, userId);
+  return next;
+}
+async function getState(chatId, userId) {
+  return readJson(`states/${chatId}.json`, { characterAppearance: {}, generated: {} }, userId);
+}
+async function getParserConnections(userId) {
+  try {
+    return (await spindle.connections.list(userId)).map((connection) => ({
+      id: connection.id,
+      name: connection.name,
+      provider: connection.provider,
+      model: connection.model
+    }));
+  } catch (error) {
+    spindle.log.warn(`Parser connection list unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
+  }
+}
+async function sendState(userId, chatId) {
+  const state = chatId ? await getState(chatId, userId) : null;
+  spindle.sendToFrontend({
+    type: "state",
+    config: await getConfig(userId),
+    parserConnections: await getParserConnections(userId),
+    chatId: chatId || "",
+    characterAppearance: state?.characterAppearance || {}
+  }, userId);
+}
+
+// src/backend/generation.ts
+var running = new Set;
+async function parseAndSelectPrompts(input) {
+  const { chatId, messageId, messages, paragraphs, state, config, userId } = input;
+  const parserConnection = await resolveParserConnection(config, userId);
+  const targetIndex = Math.max(0, messages.findIndex((message) => message.id === messageId));
+  let parsed = null;
+  let selected = [];
+  let lastParserError = null;
+  for (let attempt = 0;attempt <= config.parserRetries; attempt += 1) {
+    try {
+      const context = await buildParserContext(chatId, messages, targetIndex, state.characterAppearance, config, attempt, userId);
+      const targetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
+      const instruction = parserInstruction(config);
+      const referenceContext = continuityReference(context.systemContext, context.recentContext);
+      const userRequest = parserUserRequest(targetSource);
+      logStage(config, "parser_prompt_built", {
+        attempt,
+        instructionLength: instruction.length,
+        systemContextLength: context.systemContext.length,
+        recentContextLength: context.recentContext.length,
+        overrideLength: context.override.length,
+        parserParagraphs: paragraphs.length,
+        cacheCharacters: Object.keys(state.characterAppearance).length,
+        promptStyle: config.promptStyle,
+        promptSyntax: config.promptSyntax,
+        mode: config.mode,
+        maxCharacters: config.mode === "asset" ? 1 : config.maxCharacters,
+        preprocessingEnabled: config.preprocessingEnabled,
+        contextDiagnostics: context.diagnostics
+      });
+      parsed = await parsePayloadWithRepair(parserConnection, config, parserMessages(instruction, referenceContext, userRequest, context.override), userId);
+      selected = selectPromptEntries(parsed, paragraphs, config);
+      if (selected.length === 0)
+        throw new Error("No usable prompts were parsed.");
+      break;
+    } catch (error) {
+      lastParserError = error;
+      logStage(config, "parser_attempt_failed", { attempt, retries: config.parserRetries, error: error instanceof Error ? error.message : String(error) }, attempt >= config.parserRetries ? "error" : "warn");
+      if (attempt >= config.parserRetries)
+        throw error;
+    }
+  }
+  if (!parsed)
+    throw new Error(lastParserError instanceof Error ? lastParserError.message : "Parser did not return usable prompts.");
+  return { parsed, selected };
+}
+async function persistCharacterMemory(chatId, state, parsed, config, userId) {
+  updateCache(state.characterAppearance, parsed);
+  await writeJson(`states/${chatId}.json`, state, userId);
+  spindle.sendToFrontend({
+    type: "character_memory_updated",
+    chatId,
+    characterAppearance: state.characterAppearance
+  }, userId);
+  logStage(config, "character_memory_persisted", { chatId, characterCount: Object.keys(state.characterAppearance).length });
+}
+function logParsedSelection(parsed, selected, paragraphs, config) {
+  const scenes = parsed.scenes || [];
+  const normalized = normalizeScenePayload(parsed);
+  logStage(config, "parsed_payload_summary", {
+    sceneCount: scenes.length,
+    normalizedCount: normalized.length,
+    parserParagraphs: normalized.map((entry) => entry.parserParagraph),
+    rejectedParagraphs: normalized.map((entry) => entry.parserParagraph).filter((paragraph) => paragraph < 1 || paragraph > paragraphs.length),
+    charactersPerShot: normalized.map((entry) => cleanArray(entry.shot.characters).length)
+  });
+  logStage(config, "prompt_selection_done", {
+    promptCount: normalized.length,
+    selectedCount: selected.length,
+    parserParagraphs: selected.map((entry) => entry.parserParagraph),
+    originalParagraphs: selected.map((entry) => entry.paragraph),
+    promptLengths: selected.map((entry) => renderPrompt(entry.prompt, config.promptSyntax).length),
+    negativeLengths: selected.map((entry) => entry.negative.length)
+  });
+}
+async function prepareAndDispatchImages(chatId, selected, config, userId) {
+  const imageConnection = await resolveImageConnection(config, userId);
+  const preparationStartedAt = Date.now();
+  logStage(config, "image_generation_preparation_start", {
+    total: selected.length,
+    provider: imageConnection?.provider || "(default)",
+    connectionId: imageConnection?.id || null
+  });
+  const eagerComfyQueueing = imageConnection?.provider === "comfyui";
+  const submissionStartedAt = Date.now();
+  return prepareAndDispatchImageJobs(selected, eagerComfyQueueing, async (entry, index) => {
+    const jobStartedAt = Date.now();
+    logStage(config, "image_generation_preparation_job_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
+    const prompt = await cleanupPrompt(entry.prompt, config);
+    const parameters = await buildImageParameters(config, imageConnection, prompt, entry.negative || "");
+    const job = {
+      index,
+      total: selected.length,
+      prompt,
+      negative: entry.negative || "",
+      paragraph: entry.paragraph,
+      parameters
+    };
+    logStage(config, "image_generation_prepared", {
+      index: index + 1,
+      total: selected.length,
+      paragraph: entry.paragraph,
+      elapsedMs: Date.now() - jobStartedAt,
+      preparationElapsedMs: Date.now() - preparationStartedAt,
+      promptLength: prompt.length,
+      parameterKeys: keysOf(parameters)
+    });
+    if (index === selected.length - 1) {
+      logStage(config, "image_generation_preparation_done", {
+        total: selected.length,
+        elapsedMs: Date.now() - preparationStartedAt,
+        provider: imageConnection?.provider || "(default)"
+      });
+    }
+    return job;
+  }, (job) => {
+    const submittedAt = Date.now();
+    logStage(config, "image_generation_request_submitted", {
+      index: job.index + 1,
+      total: job.total,
+      paragraph: job.paragraph,
+      provider: imageConnection?.provider || "(default)",
+      dispatch: eagerComfyQueueing ? "eager_comfyui" : "sequential",
+      elapsedMs: submittedAt - submissionStartedAt
+    });
+    return spindle.imageGen.generate({
+      connection_id: config.imageConnectionId || undefined,
+      prompt: job.prompt,
+      negativePrompt: job.negative || undefined,
+      model: config.imageModel || undefined,
+      parameters: job.parameters,
+      owner_chat_id: chatId,
+      userId
+    }).then((result) => {
+      logStage(config, "image_generation_completed", {
+        index: job.index + 1,
+        total: job.total,
+        paragraph: job.paragraph,
+        elapsedMs: Date.now() - submittedAt,
+        imageId: result.imageId || null,
+        provider: result.provider || imageConnection?.provider || null,
+        model: result.model || null
+      });
+      return result;
+    }, (error) => {
+      logStage(config, "image_generation_failed", {
+        index: job.index + 1,
+        total: job.total,
+        paragraph: job.paragraph,
+        elapsedMs: Date.now() - submittedAt,
+        error: error instanceof Error ? error.message : String(error)
+      }, "error");
+      throw error;
+    });
+  });
+}
+function collectImageResults(stage, config) {
+  const imageIds = [];
+  const imageUrls = [];
+  const prompts = stage.jobs.map((job) => job.prompt);
+  const paragraphs = stage.jobs.map((job) => job.paragraph);
+  for (const [index, result] of stage.results.entries()) {
+    if (result.imageId)
+      imageIds.push(result.imageId);
+    const imageUrl = result.imageUrl || (result.imageId ? imageUrlFromId(result.imageId) : "");
+    if (imageUrl)
+      imageUrls.push(imageUrl);
+    logStage(config, "image_generation_results_collected", {
+      index: index + 1,
+      imageId: result.imageId || null,
+      returnedImageUrl: result.imageUrl || null,
+      markdownImageUrl: imageUrls[imageUrls.length - 1] || null,
+      provider: result.provider || null,
+      model: result.model || null
+    });
+  }
+  return { prompts, paragraphs, imageIds, imageUrls };
+}
+async function persistGeneration(input) {
+  const { chatId, messageId, swipeId, key, target, state, parsed, assets, config, userId } = input;
+  const record = {
+    chatId,
+    messageId,
+    swipeId,
+    prompts: assets.prompts,
+    paragraphs: assets.paragraphs,
+    imageIds: assets.imageIds,
+    imageUrls: assets.imageUrls,
+    rawJson: parsed,
+    createdAt: new Date().toISOString()
+  };
+  state.generated[key] = record;
+  await writeJson(`states/${chatId}.json`, state, userId);
+  logStage(config, "state_persisted", { key, imageCount: assets.imageIds.length, paragraphs: assets.paragraphs });
+  const originalContent = String(target.content || "");
+  const nextContent = renderInlaidMessage(originalContent, record, config);
+  logStage(config, "inlay_rendered", {
+    originalLength: originalContent.length,
+    finalLength: nextContent.length,
+    originalParagraphs: paragraphCount(originalContent),
+    imageCount: assets.imageUrls.length,
+    paragraphs: assets.paragraphs
+  });
+  await spindle.chat.updateMessage(chatId, messageId, {
+    content: nextContent,
+    metadata: {
+      ...target.metadata || {},
+      inlayIllustratorImageIds: assets.imageIds,
+      inlayIllustratorParagraphs: assets.paragraphs,
+      inlayIllustratorGeneratedAt: record.createdAt
+    }
+  });
+  logStage(config, "message_updated", { chatId, messageId, imageIds: assets.imageIds, paragraphs: assets.paragraphs });
+  spindle.sendToFrontend({ type: "status", status: "Generated", record }, userId);
+  return record;
 }
 async function generateForMessage(chatId, messageId, content, userId) {
   const config = await getConfig(userId);
@@ -1687,7 +1916,7 @@ async function generateForMessage(chatId, messageId, content, userId) {
     return;
   }
   const messages = await spindle.chat.getMessages(chatId);
-  const target = messages.find((m) => m.id === messageId);
+  const target = messages.find((message) => message.id === messageId);
   logStage(config, "target_checked", {
     found: Boolean(target),
     role: target?.role || null,
@@ -1709,210 +1938,48 @@ async function generateForMessage(chatId, messageId, content, userId) {
       logStage(config, "request_skipped", { reason: "already_generated", key });
       return;
     }
-    const paragraphs = prepareParagraphs(content || target.content || "", config);
+    const sourceContent = String(content || target.content || "");
+    const paragraphs = prepareParagraphs(sourceContent, config);
     logStage(config, "paragraph_cleanup_done", {
-      originalParagraphs: paragraphCount(String(content || target.content || "")),
+      originalParagraphs: paragraphCount(sourceContent),
       parserParagraphs: paragraphs.length,
       mappedOriginalParagraphs: paragraphs.map((paragraph) => paragraph.originalIndex),
       ignoredTagCount: ignoredTagNames(config).length
     });
     if (paragraphs.length === 0)
       throw new Error("No usable paragraphs found for image parsing.");
-    const parserConnection = await resolveParserConnection(config, userId);
-    const typedMessages = messages;
-    const targetIndex = Math.max(0, typedMessages.findIndex((m) => m.id === messageId));
-    let parsed = null;
-    let selected = [];
-    let lastParserError = null;
-    for (let attempt = 0;attempt <= config.parserRetries; attempt += 1) {
-      try {
-        const context = await buildParserContext(chatId, typedMessages, targetIndex, state.characterAppearance, config, attempt, userId);
-        const targetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
-        const instruction = parserInstruction(config);
-        const referenceContext = continuityReference(context.systemContext, context.recentContext);
-        const userRequest = parserUserRequest(targetSource);
-        logStage(config, "parser_prompt_built", {
-          attempt,
-          instructionLength: instruction.length,
-          systemContextLength: context.systemContext.length,
-          recentContextLength: context.recentContext.length,
-          overrideLength: context.override.length,
-          parserParagraphs: paragraphs.length,
-          cacheCharacters: Object.keys(state.characterAppearance).length,
-          promptStyle: config.promptStyle,
-          promptSyntax: config.promptSyntax,
-          mode: config.mode,
-          maxCharacters: config.mode === "asset" ? 1 : config.maxCharacters,
-          preprocessingEnabled: config.preprocessingEnabled,
-          contextDiagnostics: context.diagnostics
-        });
-        parsed = await parsePayloadWithRepair(parserConnection, config, parserMessages(instruction, referenceContext, userRequest, context.override), userId);
-        selected = selectPromptEntries(parsed, paragraphs, config);
-        if (selected.length === 0)
-          throw new Error("No usable prompts were parsed.");
-        break;
-      } catch (err) {
-        lastParserError = err;
-        logStage(config, "parser_attempt_failed", { attempt, retries: config.parserRetries, error: err instanceof Error ? err.message : String(err) }, attempt >= config.parserRetries ? "error" : "warn");
-        if (attempt >= config.parserRetries)
-          throw err;
-      }
-    }
-    if (!parsed)
-      throw new Error(lastParserError instanceof Error ? lastParserError.message : "Parser did not return usable prompts.");
-    updateCache(state.characterAppearance, parsed);
-    await writeJson(`states/${chatId}.json`, state, userId);
-    spindle.sendToFrontend({
-      type: "character_memory_updated",
-      chatId,
-      characterAppearance: state.characterAppearance
-    }, userId);
-    logStage(config, "character_memory_persisted", {
-      chatId,
-      characterCount: Object.keys(state.characterAppearance).length
-    });
-    const scenes = parsed.scenes || [];
-    const normalized = normalizeScenePayload(parsed);
-    logStage(config, "parsed_payload_summary", {
-      sceneCount: scenes.length,
-      normalizedCount: normalized.length,
-      parserParagraphs: normalized.map((entry) => entry.parserParagraph),
-      rejectedParagraphs: normalized.map((entry) => entry.parserParagraph).filter((paragraph) => paragraph < 1 || paragraph > paragraphs.length),
-      charactersPerShot: normalized.map((entry) => cleanArray(entry.shot.characters).length)
-    });
-    logStage(config, "prompt_selection_done", {
-      promptCount: normalized.length,
-      selectedCount: selected.length,
-      parserParagraphs: selected.map((entry) => entry.parserParagraph),
-      originalParagraphs: selected.map((entry) => entry.paragraph),
-      promptLengths: selected.map((entry) => renderPrompt(entry.prompt, config.promptSyntax).length),
-      negativeLengths: selected.map((entry) => entry.negative.length)
-    });
-    const imageConnection = await resolveImageConnection(config, userId);
-    const preparationStartedAt = Date.now();
-    logStage(config, "image_generation_preparation_start", {
-      total: selected.length,
-      provider: imageConnection?.provider || "(default)",
-      connectionId: imageConnection?.id || null
-    });
-    const eagerComfyQueueing = imageConnection?.provider === "comfyui";
-    const submissionStartedAt = Date.now();
-    const { jobs: preparedJobs, results } = await prepareAndDispatchImageJobs(selected, eagerComfyQueueing, async (entry, index) => {
-      const jobStartedAt = Date.now();
-      logStage(config, "image_generation_preparation_job_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
-      const prompt = await cleanupPrompt(entry.prompt, config);
-      const parameters = await buildImageParameters(config, imageConnection, prompt, entry.negative || "");
-      const job = {
-        index,
-        total: selected.length,
-        prompt,
-        negative: entry.negative || "",
-        paragraph: entry.paragraph,
-        parameters
-      };
-      logStage(config, "image_generation_prepared", {
-        index: index + 1,
-        total: selected.length,
-        paragraph: entry.paragraph,
-        elapsedMs: Date.now() - jobStartedAt,
-        preparationElapsedMs: Date.now() - preparationStartedAt,
-        promptLength: prompt.length,
-        parameterKeys: keysOf(parameters)
-      });
-      if (index === selected.length - 1) {
-        logStage(config, "image_generation_preparation_done", {
-          total: selected.length,
-          elapsedMs: Date.now() - preparationStartedAt,
-          provider: imageConnection?.provider || "(default)"
-        });
-      }
-      return job;
-    }, (job) => {
-      const submittedAt = Date.now();
-      logStage(config, "image_generation_request_submitted", {
-        index: job.index + 1,
-        total: job.total,
-        paragraph: job.paragraph,
-        provider: imageConnection?.provider || "(default)",
-        dispatch: eagerComfyQueueing ? "eager_comfyui" : "sequential",
-        elapsedMs: submittedAt - submissionStartedAt
-      });
-      return spindle.imageGen.generate({
-        connection_id: config.imageConnectionId || undefined,
-        prompt: job.prompt,
-        negativePrompt: job.negative || undefined,
-        model: config.imageModel || undefined,
-        parameters: job.parameters,
-        owner_chat_id: chatId,
-        userId
-      }).then((result) => {
-        logStage(config, "image_generation_completed", {
-          index: job.index + 1,
-          total: job.total,
-          paragraph: job.paragraph,
-          elapsedMs: Date.now() - submittedAt,
-          imageId: result.imageId || null,
-          provider: result.provider || imageConnection?.provider || null,
-          model: result.model || null
-        });
-        return result;
-      }, (err) => {
-        logStage(config, "image_generation_failed", {
-          index: job.index + 1,
-          total: job.total,
-          paragraph: job.paragraph,
-          elapsedMs: Date.now() - submittedAt,
-          error: err instanceof Error ? err.message : String(err)
-        }, "error");
-        throw err;
-      });
-    });
-    const imageIds = [];
-    const imageUrls = [];
-    const finalPrompts = preparedJobs.map((job) => job.prompt);
-    const finalParagraphs = preparedJobs.map((job) => job.paragraph);
-    for (const [index, result] of results.entries()) {
-      if (result.imageId)
-        imageIds.push(result.imageId);
-      const imageUrl = result.imageUrl || (result.imageId ? imageUrlFromId(result.imageId) : "");
-      if (imageUrl)
-        imageUrls.push(imageUrl);
-      logStage(config, "image_generation_results_collected", {
-        index: index + 1,
-        imageId: result.imageId || null,
-        returnedImageUrl: result.imageUrl || null,
-        markdownImageUrl: imageUrls[imageUrls.length - 1] || null,
-        provider: result.provider || null,
-        model: result.model || null
-      });
-    }
-    const record = { chatId, messageId, swipeId, prompts: finalPrompts, paragraphs: finalParagraphs, imageIds, imageUrls, rawJson: parsed, createdAt: new Date().toISOString() };
-    state.generated[key] = record;
-    await writeJson(`states/${chatId}.json`, state, userId);
-    logStage(config, "state_persisted", { key, imageCount: imageIds.length, paragraphs: finalParagraphs });
-    const nextContent = renderInlaidMessage(String(target.content || ""), record, config);
-    logStage(config, "inlay_rendered", {
-      originalLength: String(target.content || "").length,
-      finalLength: nextContent.length,
-      originalParagraphs: paragraphCount(String(target.content || "")),
-      imageCount: imageUrls.length,
-      paragraphs: finalParagraphs
-    });
-    await spindle.chat.updateMessage(chatId, messageId, {
-      content: nextContent,
-      metadata: {
-        ...target.metadata || {},
-        inlayIllustratorImageIds: imageIds,
-        inlayIllustratorParagraphs: finalParagraphs,
-        inlayIllustratorGeneratedAt: record.createdAt
-      }
-    });
-    logStage(config, "message_updated", { chatId, messageId, imageIds, paragraphs: finalParagraphs });
-    spindle.sendToFrontend({ type: "status", status: "Generated", record }, userId);
+    const { parsed, selected } = await parseAndSelectPrompts({ chatId, messageId, messages, paragraphs, state, config, userId });
+    await persistCharacterMemory(chatId, state, parsed, config, userId);
+    logParsedSelection(parsed, selected, paragraphs, config);
+    const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId);
+    const assets = collectImageResults(imageStage, config);
+    await persistGeneration({ chatId, messageId, swipeId, key, target, state, parsed, assets, config, userId });
   } finally {
     running.delete(key);
   }
 }
+
+// src/backend.ts
+var __testables = {
+  DEFAULT_CONFIG,
+  activePromptPreset,
+  assemblePrompt,
+  cleanupPrompt,
+  continuityReference,
+  exactVisualKey,
+  formatTargetParagraphs,
+  parserInstruction,
+  parserMessages,
+  parserUserRequest,
+  preprocessTargetParagraphs,
+  preprocessingInstruction,
+  preprocessingUserRequest,
+  prepareAndDispatchImageJobs,
+  normalizeConfig,
+  renderPrompt,
+  selectPromptEntries,
+  validatePreprocessedTarget
+};
 spindle.on("GENERATION_ENDED", async (payload, userId) => {
   let configForError = null;
   try {
@@ -1931,64 +1998,64 @@ spindle.on("GENERATION_ENDED", async (payload, userId) => {
     if (payload.generationType === "continue" || payload.generationType === "impersonate")
       return;
     await generateForMessage(payload.chatId, payload.messageId, payload.content, userId);
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    logStage(configForError || { debugLogging: true }, "auto_generation_error", { error }, "error");
-    spindle.log.error(`Auto generation failed: ${error}`);
-    spindle.sendToFrontend({ type: "status", status: "Error", error }, userId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logStage(configForError || { debugLogging: true }, "auto_generation_error", { error: message }, "error");
+    spindle.log.error(`Auto generation failed: ${message}`);
+    spindle.sendToFrontend({ type: "status", status: "Error", error: message }, userId);
   }
 });
 spindle.onFrontendMessage(async (payload, userId) => {
-  const msg = payload;
+  const message = payload;
   let configForError = null;
   try {
-    if (msg.type === "get_state") {
+    if (message.type === "get_state") {
       const config = await getConfig(userId);
       configForError = config;
-      const chatId = String(msg.chatId || "");
+      const chatId = String(message.chatId || "");
       logStage(config, "frontend_get_state", { chatId: chatId || null });
       await sendState(userId, chatId);
-    } else if (msg.type === "set_config") {
-      const next = await setConfig(msg.patch || {}, userId);
+    } else if (message.type === "set_config") {
+      const next = await setConfig(message.patch || {}, userId);
       configForError = next;
-      logStage(next, "frontend_set_config", { patchKeys: keysOf(msg.patch) });
-      await sendState(userId, String(msg.chatId || ""));
-    } else if (msg.type === "character_tags_update") {
+      logStage(next, "frontend_set_config", { patchKeys: keysOf(message.patch) });
+      await sendState(userId, String(message.chatId || ""));
+    } else if (message.type === "character_tags_update") {
       const config = await getConfig(userId);
       configForError = config;
-      const chatId = String(msg.chatId || "");
+      const chatId = String(message.chatId || "");
       if (!chatId)
         throw new Error("Open a chat first.");
       const state = await getState(chatId, userId);
-      upsertCharacterTag(state, msg.oldName, msg.name, msg.tags);
+      upsertCharacterTag(state, message.oldName, message.name, message.tags);
       await writeJson(`states/${chatId}.json`, state, userId);
-      logStage(config, "character_tags_update", { chatId, oldName: String(msg.oldName || ""), name: String(msg.name || "") });
+      logStage(config, "character_tags_update", { chatId, oldName: String(message.oldName || ""), name: String(message.name || "") });
       await sendState(userId, chatId);
-    } else if (msg.type === "character_tags_delete") {
+    } else if (message.type === "character_tags_delete") {
       const config = await getConfig(userId);
       configForError = config;
-      const chatId = String(msg.chatId || "");
+      const chatId = String(message.chatId || "");
       if (!chatId)
         throw new Error("Open a chat first.");
       const state = await getState(chatId, userId);
-      deleteCharacterTag(state, msg.name);
+      deleteCharacterTag(state, message.name);
       await writeJson(`states/${chatId}.json`, state, userId);
-      logStage(config, "character_tags_delete", { chatId, name: String(msg.name || "") });
+      logStage(config, "character_tags_delete", { chatId, name: String(message.name || "") });
       await sendState(userId, chatId);
-    } else if (msg.type === "generate_latest") {
+    } else if (message.type === "generate_latest") {
       const config = await getConfig(userId);
       configForError = config;
-      const chatId = String(msg.chatId || "");
+      const chatId = String(message.chatId || "");
       if (!chatId)
         throw new Error("Open a chat first.");
       logStage(config, "manual_generate_latest", { chatId });
       const messages = await spindle.chat.getMessages(chatId);
-      const target = [...messages].reverse().find((m) => m.role === "assistant" && !isOwnMessage(m));
+      const target = [...messages].reverse().find((candidate) => candidate.role === "assistant" && !isOwnMessage(candidate));
       if (!target)
         throw new Error("No assistant message found.");
       spindle.sendToFrontend({ type: "status", status: "Generating..." }, userId);
       await generateForMessage(chatId, target.id, target.content, userId);
-    } else if (msg.type === "test_danbooru") {
+    } else if (message.type === "test_danbooru") {
       const config = await getConfig(userId);
       configForError = config;
       logStage(config, "danbooru_test_start", { endpoint: config.danbooruEndpoint });
@@ -1999,11 +2066,11 @@ spindle.onFrontendMessage(async (payload, userId) => {
       }), "Danbooru test");
       spindle.sendToFrontend({ type: "danbooru_test", ok: true, result }, userId);
     }
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    logStage(configForError || { debugLogging: true }, "frontend_message_error", { type: String(msg.type || ""), error }, "error");
-    spindle.log.error(error);
-    spindle.sendToFrontend({ type: "status", status: "Error", error }, userId);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logStage(configForError || { debugLogging: true }, "frontend_message_error", { type: String(message.type || ""), error: errorMessage }, "error");
+    spindle.log.error(errorMessage);
+    spindle.sendToFrontend({ type: "status", status: "Error", error: errorMessage }, userId);
   }
 });
 spindle.log.info("Inlay Illustrator loaded.");

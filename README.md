@@ -26,5 +26,11 @@ The built extension files are included in `dist/`, so no build step is required 
 ## Development
 
 ```powershell
-frontend\node_modules\.bin\tsc.exe -p data\extensions\inlay_illustrator\repo\tsconfig.json --rootDir data\extensions\inlay_illustrator\repo\src --outDir data\extensions\inlay_illustrator\repo\dist
+$env:BUN_INSTALL_CACHE_DIR = "$PWD\.cache\bun"
+bun install --frozen-lockfile
+bun run verify
+bun run build
 ```
+
+`verify` runs the Bun test suite and strict TypeScript checking. `build` type-checks
+the runtime sources, then bundles the backend and frontend entrypoints into `dist/`.

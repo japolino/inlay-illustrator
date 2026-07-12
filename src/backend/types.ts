@@ -1,0 +1,134 @@
+export type CharacterJson = {
+  name?: unknown;
+  label?: unknown;
+  age?: unknown;
+  identity?: unknown;
+  appearance?: unknown;
+  body?: unknown;
+  attire?: unknown;
+  expression?: unknown;
+  action?: unknown;
+};
+
+export type ShotJson = {
+  paragraph?: unknown;
+  camera?: unknown;
+  situation?: unknown;
+  action?: unknown;
+  characters?: CharacterJson[];
+  supplement?: unknown;
+  negative?: unknown;
+};
+
+export type SceneJson = ShotJson & { place?: unknown; shots?: ShotJson[] };
+export type ParsedPayload = { scenes?: SceneJson[] };
+
+export type AssembledPrompt = {
+  /** Tag-only sections, kept separate so tag cleanup never sees prose. */
+  tagSections: string[];
+  /** Natural-language prose appended at its original point in the prompt. */
+  supplement: string;
+  /** Number of tag sections that occur before the supplement. */
+  supplementAfterTagSections: number;
+};
+
+export type PromptEntry = {
+  prompt: AssembledPrompt;
+  negative: string;
+  paragraph: number;
+  parserParagraph: number;
+};
+
+export type PreparedParagraph = { parserIndex: number; originalIndex: number; text: string };
+export type NormalizedScene = { scene: SceneJson; shot: ShotJson; parserParagraph: number };
+
+export type ChatMessage = {
+  id: string;
+  role: string;
+  content: string;
+  metadata?: Record<string, unknown>;
+  swipe_id?: unknown;
+};
+
+export type ParserContext = {
+  systemContext: string;
+  recentContext: string;
+  override: string;
+  diagnostics: Record<string, unknown>;
+};
+
+export type ParserConnection = {
+  id: string;
+  name: string;
+  provider: string;
+  model: string;
+};
+
+export type ImageConnection = {
+  id: string;
+  name: string;
+  provider: string;
+  model: string;
+  is_default?: boolean;
+  default_parameters?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+};
+
+export type ComfyUIMapping = {
+  nodeId: string;
+  fieldName: string;
+  mappedAs: string;
+};
+
+export type ComfyUIConfig = {
+  workflow_json?: Record<string, unknown>;
+  workflow_api_json?: Record<string, unknown>;
+  field_mappings?: ComfyUIMapping[];
+};
+
+export type PreparedImageJob = {
+  index: number;
+  total: number;
+  prompt: string;
+  negative: string;
+  paragraph: number;
+  parameters: Record<string, unknown>;
+};
+
+export type State = {
+  characterAppearance: Record<string, string>;
+  generated: Record<string, unknown>;
+};
+
+export type ParserGenerationRequest = {
+  type: "raw";
+  provider: string;
+  model: string;
+  connection_id: string;
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  parameters?: Record<string, unknown>;
+  reasoning: { source: "off" };
+  userId?: string;
+};
+
+export type DanbooruSuggestion = { tag?: string; score?: number };
+export type DanbooruPayload = {
+  valid?: string[];
+  suggestions?: Record<string, DanbooruSuggestion[]>;
+  data?: {
+    valid?: string[];
+    suggestions?: Record<string, DanbooruSuggestion[]>;
+  };
+};
+
+export type GeneratedRecord = {
+  chatId: string;
+  messageId: string;
+  swipeId: number;
+  prompts: string[];
+  paragraphs: number[];
+  imageIds: string[];
+  imageUrls: string[];
+  rawJson: ParsedPayload;
+  createdAt: string;
+};
