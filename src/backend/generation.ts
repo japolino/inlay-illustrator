@@ -17,7 +17,7 @@ import {
 import { renderPrompt } from "./prompt.js";
 import { imageUrlFromId, renderInlaidMessage } from "./rendering.js";
 import { normalizeScenePayload, selectPromptEntries } from "./scenes.js";
-import { getConfig, getState, writeJson } from "./storage.js";
+import { getConfig, getState, updateState } from "./storage.js";
 import type {
   CharacterJson,
   ChatMessage,
@@ -53,7 +53,6 @@ type PersistStageInput = {
   swipeId: number;
   key: string;
   target: ChatMessage;
-  state: State;
   parsed: ParsedPayload;
   assets: ImageAssets;
   config: Config;
@@ -118,19 +117,19 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
 
 async function persistCharacterMemory(
   chatId: string,
-  state: State,
   parsed: ParsedPayload,
   config: Config,
   userId?: string
 ): Promise<void> {
-  updateCache(state.characterAppearance, parsed);
-  await writeJson(`states/${chatId}.json`, state, userId);
+  const committed = await updateState(chatId, userId, (state) => {
+    updateCache(state.characterAppearance, parsed);
+  });
   spindle.sendToFrontend({
     type: "character_memory_updated",
     chatId,
-    characterAppearance: state.characterAppearance
+    characterAppearance: committed.characterAppearance
   }, userId);
-  logStage(config, "character_memory_persisted", { chatId, characterCount: Object.keys(state.characterAppearance).length });
+  logStage(config, "character_memory_persisted", { chatId, characterCount: Object.keys(committed.characterAppearance).length });
 }
 
 function logParsedSelection(
@@ -267,7 +266,7 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
 }
 
 async function persistGeneration(input: PersistStageInput): Promise<GeneratedRecord> {
-  const { chatId, messageId, swipeId, key, target, state, parsed, assets, config, userId } = input;
+  const { chatId, messageId, swipeId, key, target, parsed, assets, config, userId } = input;
   const record: GeneratedRecord = {
     chatId,
     messageId,
@@ -279,8 +278,9 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
     rawJson: parsed,
     createdAt: new Date().toISOString()
   };
-  state.generated[key] = record;
-  await writeJson(`states/${chatId}.json`, state, userId);
+  await updateState(chatId, userId, (state) => {
+    state.generated[key] = record;
+  });
   logStage(config, "state_persisted", { key, imageCount: assets.imageIds.length, paragraphs: assets.paragraphs });
   const originalContent = String(target.content || "");
   const nextContent = renderInlaidMessage(originalContent, record, config);
@@ -323,11 +323,12 @@ export async function generateForMessage(chatId: string, messageId: string, cont
   if (!target || target.role !== "assistant" || isOwnMessage(target)) return;
   const swipeId = Number.isFinite(Number(target.swipe_id)) ? Number(target.swipe_id) : 0;
   const key = `${chatId}:${messageId}:${swipeId}`;
-  if (running.has(key)) {
+  const runningKey = JSON.stringify([userId ?? null, key]);
+  if (running.has(runningKey)) {
     logStage(config, "request_skipped", { reason: "already_running", key });
     return;
   }
-  running.add(key);
+  running.add(runningKey);
   try {
     const state = await getState(chatId, userId);
     if (state.generated[key]) {
@@ -345,12 +346,12 @@ export async function generateForMessage(chatId: string, messageId: string, cont
     if (paragraphs.length === 0) throw new Error("No usable paragraphs found for image parsing.");
 
     const { parsed, selected } = await parseAndSelectPrompts({ chatId, messageId, messages, paragraphs, state, config, userId });
-    await persistCharacterMemory(chatId, state, parsed, config, userId);
+    await persistCharacterMemory(chatId, parsed, config, userId);
     logParsedSelection(parsed, selected, paragraphs, config);
     const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId);
     const assets = collectImageResults(imageStage, config);
-    await persistGeneration({ chatId, messageId, swipeId, key, target, state, parsed, assets, config, userId });
+    await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, config, userId });
   } finally {
-    running.delete(key);
+    running.delete(runningKey);
   }
 }

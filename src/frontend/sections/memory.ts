@@ -1,4 +1,5 @@
 import type { SectionContext } from "./section-context.js";
+import { sendCharacterMemoryMutation } from "./memory-actions.js";
 
 function createTextInput(ariaLabel: string, value = "", placeholder = ""): HTMLInputElement {
   const input = document.createElement("input");
@@ -30,9 +31,8 @@ export function renderMemorySection({ ui, characterAppearance, actions }: Sectio
     const save = document.createElement("button");
     save.type = "button";
     save.textContent = "Save";
-    save.addEventListener("click", () => actions.sendToBackend({
+    save.addEventListener("click", () => sendCharacterMemoryMutation(actions, {
       type: "character_tags_update",
-      chatId: actions.activeChatId(),
       oldName: name,
       name: nameInput.value,
       tags: tagsInput.value
@@ -40,9 +40,8 @@ export function renderMemorySection({ ui, characterAppearance, actions }: Sectio
     const remove = document.createElement("button");
     remove.type = "button";
     remove.textContent = "Delete";
-    remove.addEventListener("click", () => actions.sendToBackend({
+    remove.addEventListener("click", () => sendCharacterMemoryMutation(actions, {
       type: "character_tags_delete",
-      chatId: actions.activeChatId(),
       name
     }));
     actionTarget.append(save, remove);
@@ -62,9 +61,8 @@ export function renderMemorySection({ ui, characterAppearance, actions }: Sectio
   const add = document.createElement("button");
   add.type = "button";
   add.textContent = "Add character";
-  add.addEventListener("click", () => actions.sendToBackend({
+  add.addEventListener("click", () => sendCharacterMemoryMutation(actions, {
     type: "character_tags_update",
-    chatId: actions.activeChatId(),
     oldName: "",
     name: newNameInput.value,
     tags: newTagsInput.value

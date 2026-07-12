@@ -22,6 +22,7 @@ export function routeBackendMessage(
   actions: BackendMessageActions
 ): void {
   if (message.type === "state" && message.config) {
+    if (message.chatId && message.chatId !== getActiveChatId()) return;
     const parserConnections = message.parserConnections || [];
     actions.replaceState({
       config: { ...DEFAULT_CONFIG, ...message.config },
@@ -35,12 +36,11 @@ export function routeBackendMessage(
   }
 
   if (message.type === "character_memory_updated") {
-    if (message.chatId && message.chatId === getActiveChatId()) {
-      actions.replaceCharacterMemory(
-        message.characterAppearance || {},
-        "Character visual baseline updated."
-      );
-    }
+    if (message.chatId && message.chatId !== getActiveChatId()) return;
+    actions.replaceCharacterMemory(
+      message.characterAppearance || {},
+      "Character visual baseline updated."
+    );
     return;
   }
 

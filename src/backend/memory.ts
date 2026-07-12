@@ -49,8 +49,20 @@ export function upsertCharacterTag(state: State, oldName: unknown, nextName: unk
   const previous = normalizeCharacterName(oldName);
   const name = normalizeCharacterName(nextName);
   const tags = sanitizeMemoryTags(normalizeReferenceTags(nextTags));
-  if (previous && previous !== name) deleteCharacterTag(state, previous);
-  if (name && tags) state.characterAppearance[name] = tags;
+  if (!name) throw new Error("Character name is required.");
+  if (!tags) throw new Error("Character appearance tags must include at least one durable tag.");
+
+  const entries = Object.keys(state.characterAppearance);
+  const sourceKey = previous
+    ? entries.find((candidate) => candidate.toLowerCase() === previous.toLowerCase())
+    : undefined;
+  const destinationCollision = entries.find((candidate) =>
+    candidate.toLowerCase() === name.toLowerCase() && candidate !== sourceKey
+  );
+  if (destinationCollision) throw new Error(`A character named "${name}" already exists.`);
+
+  if (sourceKey && sourceKey !== name) delete state.characterAppearance[sourceKey];
+  state.characterAppearance[name] = tags;
 }
 
 export function deleteCharacterTag(state: State, name: unknown): void {

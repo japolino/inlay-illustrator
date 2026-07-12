@@ -19,7 +19,7 @@ import {
 } from "./backend/parser.js";
 import { activePromptPreset, assemblePrompt, renderPrompt } from "./backend/prompt.js";
 import { exactVisualKey, selectPromptEntries } from "./backend/scenes.js";
-import { getConfig, getState, sendState, setConfig, writeJson } from "./backend/storage.js";
+import { getConfig, sendState, setConfig, updateState } from "./backend/storage.js";
 import type { DanbooruPayload } from "./backend/types.js";
 import { keysOf, parseCorsJson } from "./backend/utils.js";
 
@@ -95,21 +95,29 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       configForError = config;
       const chatId = String(message.chatId || "");
       if (!chatId) throw new Error("Open a chat first.");
-      const state = await getState(chatId, userId);
-      upsertCharacterTag(state, message.oldName, message.name, message.tags);
-      await writeJson(`states/${chatId}.json`, state, userId);
+      const state = await updateState(chatId, userId, (current) => {
+        upsertCharacterTag(current, message.oldName, message.name, message.tags);
+      });
       logStage(config, "character_tags_update", { chatId, oldName: String(message.oldName || ""), name: String(message.name || "") });
-      await sendState(userId, chatId);
+      spindle.sendToFrontend({
+        type: "character_memory_updated",
+        chatId,
+        characterAppearance: state.characterAppearance
+      }, userId);
     } else if (message.type === "character_tags_delete") {
       const config = await getConfig(userId);
       configForError = config;
       const chatId = String(message.chatId || "");
       if (!chatId) throw new Error("Open a chat first.");
-      const state = await getState(chatId, userId);
-      deleteCharacterTag(state, message.name);
-      await writeJson(`states/${chatId}.json`, state, userId);
+      const state = await updateState(chatId, userId, (current) => {
+        deleteCharacterTag(current, message.name);
+      });
       logStage(config, "character_tags_delete", { chatId, name: String(message.name || "") });
-      await sendState(userId, chatId);
+      spindle.sendToFrontend({
+        type: "character_memory_updated",
+        chatId,
+        characterAppearance: state.characterAppearance
+      }, userId);
     } else if (message.type === "generate_latest") {
       const config = await getConfig(userId);
       configForError = config;

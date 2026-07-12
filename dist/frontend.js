@@ -188,6 +188,8 @@ var PANEL_STYLES = `
 // src/frontend/message-router.ts
 function routeBackendMessage(message, getActiveChatId, actions) {
   if (message.type === "state" && message.config) {
+    if (message.chatId && message.chatId !== getActiveChatId())
+      return;
     const parserConnections = message.parserConnections || [];
     actions.replaceState({
       config: { ...DEFAULT_CONFIG, ...message.config },
@@ -201,9 +203,9 @@ function routeBackendMessage(message, getActiveChatId, actions) {
     return;
   }
   if (message.type === "character_memory_updated") {
-    if (message.chatId && message.chatId === getActiveChatId()) {
-      actions.replaceCharacterMemory(message.characterAppearance || {}, "Character visual baseline updated.");
-    }
+    if (message.chatId && message.chatId !== getActiveChatId())
+      return;
+    actions.replaceCharacterMemory(message.characterAppearance || {}, "Character visual baseline updated.");
     return;
   }
   if (message.type === "status") {
@@ -257,6 +259,12 @@ function renderGenerationSection({ ui, actions }) {
   }]);
 }
 
+// src/frontend/sections/memory-actions.ts
+function sendCharacterMemoryMutation(actions, mutation) {
+  actions.updateStatus("Saving character baseline…");
+  actions.sendToBackend({ ...mutation, chatId: actions.activeChatId() });
+}
+
 // src/frontend/sections/memory.ts
 function createTextInput(ariaLabel, value = "", placeholder = "") {
   const input = document.createElement("input");
@@ -281,9 +289,8 @@ function renderMemorySection({ ui, characterAppearance, actions }) {
     const save = document.createElement("button");
     save.type = "button";
     save.textContent = "Save";
-    save.addEventListener("click", () => actions.sendToBackend({
+    save.addEventListener("click", () => sendCharacterMemoryMutation(actions, {
       type: "character_tags_update",
-      chatId: actions.activeChatId(),
       oldName: name,
       name: nameInput.value,
       tags: tagsInput.value
@@ -291,9 +298,8 @@ function renderMemorySection({ ui, characterAppearance, actions }) {
     const remove = document.createElement("button");
     remove.type = "button";
     remove.textContent = "Delete";
-    remove.addEventListener("click", () => actions.sendToBackend({
+    remove.addEventListener("click", () => sendCharacterMemoryMutation(actions, {
       type: "character_tags_delete",
-      chatId: actions.activeChatId(),
       name
     }));
     actionTarget.append(save, remove);
@@ -310,9 +316,8 @@ function renderMemorySection({ ui, characterAppearance, actions }) {
   const add = document.createElement("button");
   add.type = "button";
   add.textContent = "Add character";
-  add.addEventListener("click", () => actions.sendToBackend({
+  add.addEventListener("click", () => sendCharacterMemoryMutation(actions, {
     type: "character_tags_update",
-    chatId: actions.activeChatId(),
     oldName: "",
     name: newNameInput.value,
     tags: newTagsInput.value

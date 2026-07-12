@@ -58,11 +58,28 @@ describe("frontend backend-message routing", () => {
     expect(defaultsApplied).toBe(1);
   });
 
-  test("applies memory updates only to the active non-empty chat", () => {
+  test("ignores state responses scoped to another chat", () => {
+    routeBackendMessage({
+      type: "state",
+      chatId: "other-chat",
+      config: { ...DEFAULT_CONFIG, enabled: false },
+      characterAppearance: { Ignored: "red hair" }
+    }, () => "chat-1", actions);
+
+    expect(states).toEqual([]);
+    expect(refreshes).toBe(0);
+    expect(defaultsApplied).toBe(0);
+  });
+
+  test("ignores memory updates scoped to another chat while retaining unscoped compatibility", () => {
     routeBackendMessage({
       type: "character_memory_updated",
       chatId: "other-chat",
       characterAppearance: { Ignored: "red hair" }
+    }, () => "chat-1", actions);
+    routeBackendMessage({
+      type: "character_memory_updated",
+      characterAppearance: { Legacy: "green eyes" }
     }, () => "chat-1", actions);
     routeBackendMessage({
       type: "character_memory_updated",
@@ -71,6 +88,9 @@ describe("frontend backend-message routing", () => {
     }, () => "chat-1", actions);
 
     expect(memories).toEqual([{
+      characterAppearance: { Legacy: "green eyes" },
+      status: "Character visual baseline updated."
+    }, {
       characterAppearance: { Alice: "blue eyes" },
       status: "Character visual baseline updated."
     }]);

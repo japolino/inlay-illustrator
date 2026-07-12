@@ -66,6 +66,38 @@ describe("character memory", () => {
     expect(current.characterAppearance).toEqual({ Bob: "black hair", Alicia: "blue hair" });
   });
 
+  test("rejects a blank normalized name without deleting the original entry", () => {
+    const current = state({ Alice: "red hair", Bob: "black hair" });
+
+    expect(() => upsertCharacterTag(current, "Alice", " (source) ", "blue hair"))
+      .toThrow("Character name is required.");
+    expect(current.characterAppearance).toEqual({ Alice: "red hair", Bob: "black hair" });
+  });
+
+  test("rejects fully filtered tags without deleting the original entry", () => {
+    const current = state({ Alice: "red hair", Bob: "black hair" });
+
+    expect(() => upsertCharacterTag(current, "Alice", "Alicia", "standing, portrait, open shirt, none"))
+      .toThrow("Character appearance tags must include at least one durable tag.");
+    expect(current.characterAppearance).toEqual({ Alice: "red hair", Bob: "black hair" });
+  });
+
+  test("rejects case-insensitive rename collisions and preserves both entries", () => {
+    const current = state({ Alice: "red hair", Bob: "black hair" });
+
+    expect(() => upsertCharacterTag(current, "alice", " bOb (source) ", "blue hair"))
+      .toThrow('A character named "bOb" already exists.');
+    expect(current.characterAppearance).toEqual({ Alice: "red hair", Bob: "black hair" });
+  });
+
+  test("allows a casing-only rename of the same entry", () => {
+    const current = state({ Alice: "red hair", Bob: "black hair" });
+
+    upsertCharacterTag(current, "alice", "ALICE", "blue hair, standing");
+
+    expect(current.characterAppearance).toEqual({ Bob: "black hair", ALICE: "blue hair" });
+  });
+
   test("removes entries case-insensitively and treats blank names as a no-op", () => {
     const current = state({ Alice: "red hair", Bob: "black hair" });
 

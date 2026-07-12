@@ -8,10 +8,20 @@ type PromptInterceptor = (
   messages: LlmMessageDTO[],
   context: unknown
 ) => Promise<LlmMessageDTO[] | InterceptorResultDTO>;
+type FrontendMessageHandler = (payload: unknown, userId?: string) => Promise<void>;
 let cleanupHandler: (request: { tags: string[] }) => CleanupResponse | Promise<CleanupResponse>;
 let parserResponse = "";
 let promptInterceptor: PromptInterceptor;
+let frontendMessageHandler: FrontendMessageHandler;
 let helpers: typeof import("./backend").__testables;
+const storedFiles = new Map<string, string>();
+const storageWrites: string[] = [];
+const frontendMessages: unknown[] = [];
+let rejectedWritePath = "";
+
+function storageKey(path: string, userId?: string): string {
+  return JSON.stringify([userId ?? null, path]);
+}
 
 function defaultCleanupResponse(): CleanupResponse {
   return {
@@ -26,7 +36,27 @@ beforeAll(async () => {
       promptInterceptor = handler;
     },
     on: () => undefined,
-    onFrontendMessage: () => undefined,
+    onFrontendMessage: (handler: FrontendMessageHandler) => {
+      frontendMessageHandler = handler;
+    },
+    userStorage: {
+      exists: async (path: string, userId?: string) => storedFiles.has(storageKey(path, userId)),
+      read: async (path: string, userId?: string) => {
+        const value = storedFiles.get(storageKey(path, userId));
+        if (value === undefined) throw new Error(`Missing test file: ${path}`);
+        return value;
+      },
+      mkdir: async () => undefined,
+      write: async (path: string, value: string, userId?: string) => {
+        storageWrites.push(storageKey(path, userId));
+        if (path === rejectedWritePath) throw new Error("Storage unavailable.");
+        storedFiles.set(storageKey(path, userId), value);
+      }
+    },
+    connections: { list: async () => [] },
+    sendToFrontend: (message: unknown) => {
+      frontendMessages.push(message);
+    },
     cors: async (_endpoint: string, request: { body: string }) => {
       const parsed = JSON.parse(request.body) as { tags: string[] };
       cleanupRequests.push(parsed);
@@ -46,8 +76,97 @@ beforeAll(async () => {
 beforeEach(() => {
   cleanupRequests.splice(0);
   parserRequests.splice(0);
+  storedFiles.clear();
+  storageWrites.splice(0);
+  frontendMessages.splice(0);
+  rejectedWritePath = "";
   cleanupHandler = defaultCleanupResponse;
   parserResponse = "";
+});
+
+describe("character-memory frontend messages", () => {
+  test("persists a sanitized rename and emits only a chat-scoped committed memory update", async () => {
+    storedFiles.set(storageKey("states/chat-1.json", "user-1"), JSON.stringify({
+      characterAppearance: { Alice: "red hair", Bob: "black hair" },
+      generated: { existing: { imageIds: ["kept"] } }
+    }));
+
+    await frontendMessageHandler({
+      type: "character_tags_update",
+      chatId: "chat-1",
+      oldName: "alice",
+      name: " Alicia (source) ",
+      tags: "blue hair, standing, open shirt, none"
+    }, "user-1");
+
+    expect(JSON.parse(storedFiles.get(storageKey("states/chat-1.json", "user-1")) || "{}")).toEqual({
+      characterAppearance: { Bob: "black hair", Alicia: "blue hair" },
+      generated: { existing: { imageIds: ["kept"] } }
+    });
+    expect(frontendMessages).toEqual([{
+      type: "character_memory_updated",
+      chatId: "chat-1",
+      characterAppearance: { Bob: "black hair", Alicia: "blue hair" }
+    }]);
+  });
+
+  test("persists Delete and emits its committed chat-scoped memory", async () => {
+    storedFiles.set(storageKey("states/chat-1.json", "user-1"), JSON.stringify({
+      characterAppearance: { Alice: "red hair", Bob: "black hair" },
+      generated: {}
+    }));
+
+    await frontendMessageHandler({
+      type: "character_tags_delete",
+      chatId: "chat-1",
+      name: "ALICE"
+    }, "user-1");
+
+    expect(frontendMessages).toEqual([{
+      type: "character_memory_updated",
+      chatId: "chat-1",
+      characterAppearance: { Bob: "black hair" }
+    }]);
+  });
+
+  test("reports validation and storage failures without replacing saved memory", async () => {
+    const original = JSON.stringify({ characterAppearance: { Alice: "red hair" }, generated: {} });
+    const path = storageKey("states/chat-1.json", "user-1");
+    storedFiles.set(path, original);
+
+    await frontendMessageHandler({
+      type: "character_tags_update",
+      chatId: "chat-1",
+      oldName: "Alice",
+      name: " ",
+      tags: "blue hair"
+    }, "user-1");
+
+    expect(storedFiles.get(path)).toBe(original);
+    expect(storageWrites).toEqual([]);
+    expect(frontendMessages).toEqual([{
+      type: "status",
+      status: "Error",
+      error: "Character name is required."
+    }]);
+
+    frontendMessages.splice(0);
+    rejectedWritePath = "states/chat-1.json";
+    await frontendMessageHandler({
+      type: "character_tags_update",
+      chatId: "chat-1",
+      oldName: "Alice",
+      name: "Alice",
+      tags: "blue hair"
+    }, "user-1");
+
+    expect(storedFiles.get(path)).toBe(original);
+    expect(frontendMessages).toEqual([{
+      type: "status",
+      status: "Error",
+      error: "Storage unavailable."
+    }]);
+  });
 });
 
 describe("primary-model context interceptor", () => {

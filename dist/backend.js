@@ -1028,10 +1028,18 @@ function upsertCharacterTag(state, oldName, nextName, nextTags) {
   const previous = normalizeCharacterName(oldName);
   const name = normalizeCharacterName(nextName);
   const tags = sanitizeMemoryTags(normalizeReferenceTags(nextTags));
-  if (previous && previous !== name)
-    deleteCharacterTag(state, previous);
-  if (name && tags)
-    state.characterAppearance[name] = tags;
+  if (!name)
+    throw new Error("Character name is required.");
+  if (!tags)
+    throw new Error("Character appearance tags must include at least one durable tag.");
+  const entries = Object.keys(state.characterAppearance);
+  const sourceKey = previous ? entries.find((candidate) => candidate.toLowerCase() === previous.toLowerCase()) : undefined;
+  const destinationCollision = entries.find((candidate) => candidate.toLowerCase() === name.toLowerCase() && candidate !== sourceKey);
+  if (destinationCollision)
+    throw new Error(`A character named "${name}" already exists.`);
+  if (sourceKey && sourceKey !== name)
+    delete state.characterAppearance[sourceKey];
+  state.characterAppearance[name] = tags;
 }
 function deleteCharacterTag(state, name) {
   const target = normalizeCharacterName(name);
@@ -1664,6 +1672,7 @@ ${unused.join(`
 }
 
 // src/backend/storage.ts
+var stateUpdateQueues = new Map;
 async function readJson(path, fallback, userId) {
   try {
     if (!await spindle.userStorage.exists(path, userId))
@@ -1692,6 +1701,35 @@ async function setConfig(patch, userId) {
 }
 async function getState(chatId, userId) {
   return readJson(`states/${chatId}.json`, { characterAppearance: {}, generated: {} }, userId);
+}
+async function getStateForUpdate(chatId, userId) {
+  const fallback = { characterAppearance: {}, generated: {} };
+  const path = `states/${chatId}.json`;
+  if (!await spindle.userStorage.exists(path, userId))
+    return fallback;
+  return { ...fallback, ...JSON.parse(await spindle.userStorage.read(path, userId)) };
+}
+async function updateState(chatId, userId, mutator) {
+  const queueKey = JSON.stringify([userId ?? null, chatId]);
+  const previous = stateUpdateQueues.get(queueKey) || Promise.resolve();
+  const operation = previous.then(async () => {
+    const state = await getStateForUpdate(chatId, userId);
+    await mutator(state);
+    await writeJson(`states/${chatId}.json`, state, userId);
+    return state;
+  });
+  const tail = operation.then(() => {
+    return;
+  }, () => {
+    return;
+  });
+  stateUpdateQueues.set(queueKey, tail);
+  try {
+    return await operation;
+  } finally {
+    if (stateUpdateQueues.get(queueKey) === tail)
+      stateUpdateQueues.delete(queueKey);
+  }
 }
 async function getParserConnections(userId) {
   try {
@@ -1764,15 +1802,16 @@ async function parseAndSelectPrompts(input) {
     throw new Error(lastParserError instanceof Error ? lastParserError.message : "Parser did not return usable prompts.");
   return { parsed, selected };
 }
-async function persistCharacterMemory(chatId, state, parsed, config, userId) {
-  updateCache(state.characterAppearance, parsed);
-  await writeJson(`states/${chatId}.json`, state, userId);
+async function persistCharacterMemory(chatId, parsed, config, userId) {
+  const committed = await updateState(chatId, userId, (state) => {
+    updateCache(state.characterAppearance, parsed);
+  });
   spindle.sendToFrontend({
     type: "character_memory_updated",
     chatId,
-    characterAppearance: state.characterAppearance
+    characterAppearance: committed.characterAppearance
   }, userId);
-  logStage(config, "character_memory_persisted", { chatId, characterCount: Object.keys(state.characterAppearance).length });
+  logStage(config, "character_memory_persisted", { chatId, characterCount: Object.keys(committed.characterAppearance).length });
 }
 function logParsedSelection(parsed, selected, paragraphs, config) {
   const scenes = parsed.scenes || [];
@@ -1897,7 +1936,7 @@ function collectImageResults(stage, config) {
   return { prompts, paragraphs, imageIds, imageUrls };
 }
 async function persistGeneration(input) {
-  const { chatId, messageId, swipeId, key, target, state, parsed, assets, config, userId } = input;
+  const { chatId, messageId, swipeId, key, target, parsed, assets, config, userId } = input;
   const record = {
     chatId,
     messageId,
@@ -1909,8 +1948,9 @@ async function persistGeneration(input) {
     rawJson: parsed,
     createdAt: new Date().toISOString()
   };
-  state.generated[key] = record;
-  await writeJson(`states/${chatId}.json`, state, userId);
+  await updateState(chatId, userId, (state) => {
+    state.generated[key] = record;
+  });
   logStage(config, "state_persisted", { key, imageCount: assets.imageIds.length, paragraphs: assets.paragraphs });
   const originalContent = String(target.content || "");
   const nextContent = renderInlaidMessage(originalContent, record, config);
@@ -1953,11 +1993,12 @@ async function generateForMessage(chatId, messageId, content, userId) {
     return;
   const swipeId = Number.isFinite(Number(target.swipe_id)) ? Number(target.swipe_id) : 0;
   const key = `${chatId}:${messageId}:${swipeId}`;
-  if (running.has(key)) {
+  const runningKey = JSON.stringify([userId ?? null, key]);
+  if (running.has(runningKey)) {
     logStage(config, "request_skipped", { reason: "already_running", key });
     return;
   }
-  running.add(key);
+  running.add(runningKey);
   try {
     const state = await getState(chatId, userId);
     if (state.generated[key]) {
@@ -1975,13 +2016,13 @@ async function generateForMessage(chatId, messageId, content, userId) {
     if (paragraphs.length === 0)
       throw new Error("No usable paragraphs found for image parsing.");
     const { parsed, selected } = await parseAndSelectPrompts({ chatId, messageId, messages, paragraphs, state, config, userId });
-    await persistCharacterMemory(chatId, state, parsed, config, userId);
+    await persistCharacterMemory(chatId, parsed, config, userId);
     logParsedSelection(parsed, selected, paragraphs, config);
     const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId);
     const assets = collectImageResults(imageStage, config);
-    await persistGeneration({ chatId, messageId, swipeId, key, target, state, parsed, assets, config, userId });
+    await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, config, userId });
   } finally {
-    running.delete(key);
+    running.delete(runningKey);
   }
 }
 
@@ -2055,22 +2096,30 @@ spindle.onFrontendMessage(async (payload, userId) => {
       const chatId = String(message.chatId || "");
       if (!chatId)
         throw new Error("Open a chat first.");
-      const state = await getState(chatId, userId);
-      upsertCharacterTag(state, message.oldName, message.name, message.tags);
-      await writeJson(`states/${chatId}.json`, state, userId);
+      const state = await updateState(chatId, userId, (current) => {
+        upsertCharacterTag(current, message.oldName, message.name, message.tags);
+      });
       logStage(config, "character_tags_update", { chatId, oldName: String(message.oldName || ""), name: String(message.name || "") });
-      await sendState(userId, chatId);
+      spindle.sendToFrontend({
+        type: "character_memory_updated",
+        chatId,
+        characterAppearance: state.characterAppearance
+      }, userId);
     } else if (message.type === "character_tags_delete") {
       const config = await getConfig(userId);
       configForError = config;
       const chatId = String(message.chatId || "");
       if (!chatId)
         throw new Error("Open a chat first.");
-      const state = await getState(chatId, userId);
-      deleteCharacterTag(state, message.name);
-      await writeJson(`states/${chatId}.json`, state, userId);
+      const state = await updateState(chatId, userId, (current) => {
+        deleteCharacterTag(current, message.name);
+      });
       logStage(config, "character_tags_delete", { chatId, name: String(message.name || "") });
-      await sendState(userId, chatId);
+      spindle.sendToFrontend({
+        type: "character_memory_updated",
+        chatId,
+        characterAppearance: state.characterAppearance
+      }, userId);
     } else if (message.type === "generate_latest") {
       const config = await getConfig(userId);
       configForError = config;
