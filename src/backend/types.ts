@@ -1,3 +1,22 @@
+export type CharacterCompositionJson = {
+  position?: unknown;
+  pose?: unknown;
+  actions?: unknown;
+  gaze?: unknown;
+};
+
+export type SharedCompositionJson = {
+  interaction?: unknown;
+  spatialRelation?: unknown;
+};
+
+export type CameraJson = {
+  framing?: unknown;
+  angle?: unknown;
+  perspective?: unknown;
+  focus?: unknown;
+};
+
 export type CharacterJson = {
   name?: unknown;
   label?: unknown;
@@ -8,7 +27,7 @@ export type CharacterJson = {
   attire?: unknown;
   expression?: unknown;
   action?: unknown;
-  composition?: unknown;
+  composition?: CharacterCompositionJson | string;
 };
 
 export type EnvironmentJson = {
@@ -20,11 +39,11 @@ export type EnvironmentJson = {
 
 export type ShotJson = {
   paragraph?: unknown;
-  camera?: unknown;
+  camera?: CameraJson | string;
   situation?: unknown;
   action?: unknown;
   characters?: CharacterJson[];
-  sharedComposition?: unknown;
+  sharedComposition?: SharedCompositionJson | string;
   supplement?: unknown;
   negative?: unknown;
 };

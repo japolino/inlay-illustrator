@@ -38,7 +38,18 @@ export function normalizeScenePayload(payload: ParsedPayload): NormalizedScene[]
 }
 
 function normalizedVisualValue(value: unknown): string {
-  return cleanString(value).replace(/\s+/g, " ").toLowerCase();
+  const normalize = (candidate: unknown): unknown => {
+    if (typeof candidate === "string") return candidate.replace(/\s+/g, " ").trim().toLowerCase();
+    if (Array.isArray(candidate)) return candidate.map(normalize);
+    if (candidate && typeof candidate === "object") {
+      return Object.fromEntries(Object.entries(candidate as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, child]) => [key, normalize(child)]));
+    }
+    return candidate ?? "";
+  };
+  const normalized = normalize(value);
+  return typeof normalized === "string" ? normalized : JSON.stringify(normalized);
 }
 
 export function exactVisualKey(entry: NormalizedScene): string {
@@ -104,7 +115,7 @@ export function selectPromptEntries(payload: ParsedPayload, paragraphs: Prepared
     distinctCandidateCount: distinct.length,
     selectedCount: prompts.length,
     selectedParagraphs: selected.map((entry) => entry.parserParagraph),
-    cameraTags: selected.map((entry) => cleanString(entry.shot.camera))
+    cameraTags: selected.map((entry) => normalizedVisualValue(entry.shot.camera))
   });
   return prompts;
 }

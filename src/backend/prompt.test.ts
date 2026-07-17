@@ -31,8 +31,8 @@ describe("ordered Anima prompt composition", () => {
       paragraph: 1,
       situation: "2girls",
       action: "holding hands, leaning together",
-      camera: "wide shot, from side;",
-      sharedComposition: "They hold hands and lean together on the sofa.",
+      camera: { framing: "wide shot", angle: "", perspective: "from side", focus: [] },
+      sharedComposition: { interaction: ["holding hands"], spatialRelation: "leaning together on the sofa" },
       characters: [{
         name: "Alice",
         label: "girl",
@@ -40,7 +40,12 @@ describe("ordered Anima prompt composition", () => {
         attire: "red dress",
         expression: "smiling",
         action: "reclining, looking at the other girl",
-        composition: "The girl on the left reclines into the sofa and looks toward the other girl."
+        composition: {
+          position: "left side of the sofa",
+          pose: "reclining into the cushions",
+          actions: [],
+          gaze: "looking toward the other girl"
+        }
       }, {
         name: "Beth",
         label: "girl",
@@ -48,7 +53,12 @@ describe("ordered Anima prompt composition", () => {
         attire: "white blouse, black skirt",
         expression: "gentle smile",
         action: "sitting upright, looking left",
-        composition: "The girl on the right sits upright and turns her gaze left."
+        composition: {
+          position: "right side of the sofa",
+          pose: "sitting upright",
+          actions: [],
+          gaze: "looking left"
+        }
       }],
       negative: "text; watermark!"
     }, config, 1, 1);
@@ -58,17 +68,17 @@ describe("ordered Anima prompt composition", () => {
       "<lora:sofa:0.8>",
       "2girls",
       "wide shot, from side",
-      "The girl on the left reclines into the sofa and looks toward the other girl",
+      "left side of the sofa, reclining into the cushions, looking toward the other girl",
       "girl, blonde hair, blue eyes, red dress, smiling",
-      "The girl on the right sits upright and turns her gaze left",
+      "right side of the sofa, sitting upright, looking left",
       "girl, black hair, green eyes, white blouse, black skirt, gentle smile",
-      "They hold hands and lean together on the sofa",
+      "holding hands, leaning together on the sofa",
       "sunken living room, rainy evening, warm lamp light, soft shadows, intimate mood, green velvet sofa, low coffee table, rainy window, bookshelf, cream rug",
       "cinematic finish"
     ].join(",\n\n"));
     expect(entry.negative).toBe("lowres, bad anatomy, extra fingers, malformed hands, text, watermark");
-    expect(renderPrompt(entry.prompt, config.promptSyntax)).not.toContain("holding hands");
-    expect(renderPrompt(entry.prompt, config.promptSyntax)).not.toContain("sitting upright,");
+    expect(renderPrompt(entry.prompt, config.promptSyntax).match(/holding hands/g)).toHaveLength(1);
+    expect(renderPrompt(entry.prompt, config.promptSyntax).match(/sitting upright/g)).toHaveLength(1);
   });
 
   test("keeps character composition and location/time when natural/shared detail is disabled", () => {
@@ -81,22 +91,27 @@ describe("ordered Anima prompt composition", () => {
     } }, {
       situation: "1girl",
       action: "reaching for another",
-      sharedComposition: "Two hands nearly touch across the gap.",
-      camera: "close-up",
+      sharedComposition: { interaction: ["reaching for another"], spatialRelation: "hands nearly touching across the gap" },
+      camera: { framing: "close-up", angle: "", perspective: "", focus: [] },
       characters: [{
         label: "girl",
         appearance: "black hair",
         action: "leaning forward",
-        composition: "The foreground girl leans across the platform edge."
+        composition: {
+          position: "foreground",
+          pose: "leaning across the platform edge",
+          actions: [],
+          gaze: ""
+        }
       }]
     }, config, 1, 1);
 
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe(
-      "1girl, close-up, The foreground girl leans across the platform edge, girl, black hair, leaning forward, reaching for another, railway platform, foggy dawn"
+      "1girl, close-up, foreground, leaning across the platform edge, girl, black hair, reaching for another, railway platform, foggy dawn"
     );
   });
 
-  test("uses character and shared action tags only when their composition prose is missing", () => {
+  test("uses legacy character and shared action tags only when atomic composition is missing", () => {
     const config = { ...DEFAULT_CONFIG, promptSyntax: "nai" as const };
     const entry = assemblePrompt({ environment: { location: "garden", timeWeather: "day" } }, {
       situation: "1girl",
@@ -157,6 +172,55 @@ describe("ordered Anima prompt composition", () => {
     expect(rendered).not.toContain("looking at viewer");
     expect(rendered.indexOf("cowboy shot")).toBeLessThan(rendered.indexOf("short golden blonde hair"));
   });
+
+  test("renders atomic scene data once and rejects camera field leakage", () => {
+    const config = { ...DEFAULT_CONFIG, promptSyntax: "comfyui" as const };
+    const entry = assemblePrompt({ environment: {
+      location: "quiet residential road",
+      timeWeather: "dusk with falling cherry blossom petals",
+      lightingMood: ["warm amber streetlamp rim light", "soft evening glow"],
+      backgroundElements: ["cherry blossom trees", "lamplit pavement"]
+    } }, {
+      situation: "1girl",
+      camera: {
+        framing: "medium shot",
+        angle: "eye level",
+        perspective: "pov",
+        focus: ["shallow depth of field", "rim light"],
+        lighting: "streetlight behind her ear"
+      } as any,
+      action: "turning, glaring",
+      sharedComposition: { interaction: [], spatialRelation: "" },
+      characters: [{
+        label: "girl",
+        appearance: "short golden blonde hair, red eyes, white pupils, fair skin, round face",
+        body: "petite, small breasts",
+        attire: "black sailor uniform, red sailor ribbon, black pleated skirt, white pantyhose, brown loafers",
+        expression: "suspicious, narrowed eyes, parted lips",
+        action: "turning around, glaring, leaning inward",
+        composition: {
+          position: "center frame",
+          pose: "leaning forward with both hands clasped behind her back",
+          actions: ["mid-turn toward the viewer"],
+          gaze: "looking directly at the viewer",
+          lighting: "golden hair rim-lit by a streetlamp"
+        } as any
+      }]
+    }, config, 1, 1);
+
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
+    expect(rendered).toBe([
+      "1girl",
+      "medium shot, eye level, pov, shallow depth of field",
+      "center frame, leaning forward with both hands clasped behind her back, mid-turn toward the viewer, looking directly at the viewer",
+      "girl, short golden blonde hair, red eyes, white pupils, fair skin, round face, petite, small breasts, black sailor uniform, red sailor ribbon, black pleated skirt, white pantyhose, brown loafers, suspicious, narrowed eyes, parted lips",
+      "quiet residential road, dusk with falling cherry blossom petals, warm amber streetlamp rim light, soft evening glow, cherry blossom trees, lamplit pavement"
+    ].join(",\n\n"));
+    expect(rendered).not.toContain("streetlight behind her ear");
+    expect(rendered).not.toContain("turning around");
+    expect(rendered).not.toContain("glaring");
+    expect(rendered.match(/mid-turn/g)).toHaveLength(1);
+  });
 });
 
 describe("prompt compatibility and normalization", () => {
@@ -207,13 +271,20 @@ describe("Anima parser contract and visual distinctness", () => {
   test("requests composition and budgeted structured environment without requesting supplement", () => {
     const instruction = parserInstruction(DEFAULT_CONFIG);
 
-    expect(instruction).toContain('"composition": "string"');
-    expect(instruction).toContain('"sharedComposition": "string"');
+    expect(instruction).toContain('"composition": {');
+    expect(instruction).toContain('"position": "string"');
+    expect(instruction).toContain('"actions": ["string"]');
+    expect(instruction).toContain('"sharedComposition": {');
+    expect(instruction).toContain('"interaction": ["string"]');
+    expect(instruction).toContain('"camera": {');
     expect(instruction).toContain('"environment": {');
     expect(instruction).toContain("exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements");
     expect(instruction).toContain("Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone");
     expect(instruction).toContain("Do not put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle");
-    expect(instruction).toContain("Always populate characters[].action with standard tags");
+    expect(instruction).toContain("Do not output legacy shot.action or characters[].action fields");
+    expect(instruction).toContain("camera.framing must be empty or exactly one of");
+    expect(instruction).toContain("A fact must have exactly one owner");
+    expect(instruction).toContain("never collapse an object into a string");
     expect(instruction).toContain("never infer romance, calm, menace, or another emotional tone from lighting alone");
     expect(instruction).toContain("Choose framing that can visibly contain the complete focal action");
     expect(instruction).not.toContain('"supplement": "string"');
@@ -222,8 +293,9 @@ describe("Anima parser contract and visual distinctness", () => {
   test("includes character/shared composition and environment fields in exact visual keys", () => {
     const shot = {
       paragraph: 1,
-      characters: [{ expression: "smile", action: "sitting", composition: "Left side" }],
-      sharedComposition: "Hands together"
+      camera: { framing: "medium shot", angle: "eye level", perspective: "from side", focus: [] },
+      characters: [{ expression: "smile", composition: { position: "left side", pose: "sitting", actions: [], gaze: "looking right" } }],
+      sharedComposition: { interaction: ["holding hands"], spatialRelation: "side by side" }
     };
     const environment = {
       location: "sofa room",
@@ -242,8 +314,21 @@ describe("Anima parser contract and visual distinctness", () => {
       },
       shots: [shot]
     }] });
+    const [differentCamera] = normalizeScenePayload({ scenes: [{
+      environment,
+      shots: [{ ...shot, camera: { ...shot.camera, framing: "close-up" } }]
+    }] });
+    const [differentComposition] = normalizeScenePayload({ scenes: [{
+      environment,
+      shots: [{
+        ...shot,
+        characters: [{ expression: "smile", composition: { position: "right side", pose: "sitting", actions: [], gaze: "looking left" } }]
+      }]
+    }] });
 
     expect(exactVisualKey(first)).not.toBe(exactVisualKey(different));
+    expect(exactVisualKey(first)).not.toBe(exactVisualKey(differentCamera));
+    expect(exactVisualKey(first)).not.toBe(exactVisualKey(differentComposition));
   });
 
   test("silently drops removed legacy cleanup configuration keys", () => {

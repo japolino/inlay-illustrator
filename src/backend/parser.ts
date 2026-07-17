@@ -59,6 +59,7 @@ function extractUsage(result: unknown): Record<string, number> {
 const FUZZY_KEYS = [
   "scenes", "place", "shots", "paragraph", "camera", "situation", "characters", "label", "age", "identity", "appearance", "body", "attire",
   "expression", "action", "composition", "sharedComposition", "environment", "location", "timeWeather", "lightingMood", "backgroundElements",
+  "framing", "angle", "perspective", "focus", "position", "pose", "actions", "gaze", "interaction", "spatialRelation",
   "negative", "name", "scene", "positive", "quote", "supplement"
 ];
 

@@ -1,6 +1,6 @@
 import type { Config, PromptPreset } from "../shared/config.js";
 import type { AssembledPrompt, CharacterJson, PromptEntry, SceneJson, ShotJson } from "./types.js";
-import { cleanArray, cleanString, csvParts, escapeRegExp, unique } from "./utils.js";
+import { asRecord, cleanArray, cleanString, csvParts, escapeRegExp, unique } from "./utils.js";
 
 export function normalizeReferenceTags(tagString: unknown): string {
   return unique(csvParts(tagString).filter((tag) => {
@@ -199,6 +199,89 @@ function structuredSnippets(value: unknown, cap: number): string[] {
     .slice(0, cap);
 }
 
+const CAMERA_FRAMING = new Set([
+  "portrait", "close-up", "medium close-up", "upper body", "medium shot", "cowboy shot", "feet out of frame",
+  "full body", "wide shot", "lower body", "head out of frame", "eyes out of frame", "body-part focus"
+]);
+const CAMERA_ANGLE = new Set(["eye level", "low angle", "high angle", "dutch angle"]);
+const CAMERA_PERSPECTIVE = new Set([
+  "straight-on", "from above", "from behind", "from below", "from side", "sideways", "three-quarter view", "pov"
+]);
+const CAMERA_FOCUS = new Set([
+  "shallow depth of field", "deep focus", "background blur", "foreground blur", "motion blur", "fisheye",
+  "wide-angle lens", "telephoto lens"
+]);
+
+type AtomicSection = { text: string; structured: boolean };
+type SharedAtomicSection = AtomicSection & { interaction: string };
+
+function hasAtomicField(record: Record<string, unknown>, fields: string[]): boolean {
+  return fields.some((field) => Object.prototype.hasOwnProperty.call(record, field));
+}
+
+function sanitizedAtomicSnippets(
+  value: unknown,
+  cap: number,
+  replacements: Map<string, string>
+): string[] {
+  return structuredSnippets(value, cap)
+    .map((snippet) => sanitizeComposition(snippet, replacements))
+    .filter(Boolean);
+}
+
+function assembleAtomicCharacterComposition(value: unknown, replacements: Map<string, string>): AtomicSection {
+  const record = asRecord(value);
+  const fields = ["position", "pose", "actions", "gaze"];
+  const structured = hasAtomicField(record, fields);
+  if (!structured) return { text: sanitizeComposition(cleanString(value), replacements), structured: false };
+  const snippets = unique([
+    ...sanitizedAtomicSnippets(record.position, 1, replacements),
+    ...sanitizedAtomicSnippets(record.pose, 1, replacements),
+    ...sanitizedAtomicSnippets(record.actions, 3, replacements),
+    ...sanitizedAtomicSnippets(record.gaze, 1, replacements)
+  ]);
+  return { text: snippets.join(", "), structured: true };
+}
+
+function assembleAtomicSharedComposition(value: unknown, replacements: Map<string, string>): SharedAtomicSection {
+  const record = asRecord(value);
+  const fields = ["interaction", "spatialRelation"];
+  const structured = hasAtomicField(record, fields);
+  if (!structured) {
+    const text = sanitizeComposition(cleanString(value), replacements);
+    return { text, interaction: "", structured: false };
+  }
+  const interactionParts = unique(sanitizedAtomicSnippets(record.interaction, 2, replacements));
+  const relationParts = unique(sanitizedAtomicSnippets(record.spatialRelation, 1, replacements));
+  return {
+    text: unique([...interactionParts, ...relationParts]).join(", "),
+    interaction: interactionParts.join(", "),
+    structured: true
+  };
+}
+
+function allowedCameraSnippets(value: unknown, cap: number, allowed: Set<string>): string[] {
+  return structuredSnippets(value, cap)
+    .map((snippet) => snippet.toLowerCase().replace(/\s+/g, " ").trim())
+    .filter((snippet) => allowed.has(snippet));
+}
+
+function assembleStructuredCamera(value: unknown): AtomicSection {
+  const record = asRecord(value);
+  const fields = ["framing", "angle", "perspective", "focus"];
+  const structured = hasAtomicField(record, fields);
+  if (!structured) return { text: unique(csvParts(cleanString(value))).join(", "), structured: false };
+  return {
+    text: unique([
+      ...allowedCameraSnippets(record.framing, 1, CAMERA_FRAMING),
+      ...allowedCameraSnippets(record.angle, 1, CAMERA_ANGLE),
+      ...allowedCameraSnippets(record.perspective, 1, CAMERA_PERSPECTIVE),
+      ...allowedCameraSnippets(record.focus, 2, CAMERA_FOCUS)
+    ]).join(", "),
+    structured: true
+  };
+}
+
 function assembleAnimaAssetPrompt(
   scene: SceneJson,
   shot: ShotJson,
@@ -231,21 +314,28 @@ function assembleAnimaPrompt(
   const maxCharacters = config.maxCharacters;
   const characters = cleanArray<CharacterJson>(shot.characters).slice(0, maxCharacters);
   const characterSections = characters.flatMap((character) => {
-    const composition = sanitizeComposition(cleanString(character.composition), replacements);
+    const composition = assembleAtomicCharacterComposition(character.composition, replacements);
     const baseTags = assembleCharacterBlock(character, config, replacements, false);
-    const uncoveredActions = stripOrReplaceNames(uncoveredActionTags(character.action, composition), replacements, true);
+    const uncoveredActions = composition.structured
+      ? ""
+      : stripOrReplaceNames(uncoveredActionTags(character.action, composition.text), replacements, true);
     const tags = unique(csvParts(baseTags, uncoveredActions)).join(", ");
-    return [composition, tags].filter(Boolean);
+    return [composition.text, tags].filter(Boolean);
   });
-  const sharedComposition = sanitizeComposition(
-    cleanString(shot.sharedComposition) || cleanString(shot.supplement),
-    replacements
-  );
-  const sharedAction = stripOrReplaceNames(
-    uncoveredActionTags(shot.action, config.supplement ? sharedComposition : ""),
-    replacements,
-    true
-  );
+  const hasSharedComposition = Boolean(cleanString(shot.sharedComposition))
+    || Object.keys(asRecord(shot.sharedComposition)).length > 0;
+  const sharedSource = hasSharedComposition
+    ? shot.sharedComposition
+    : shot.supplement;
+  const sharedComposition = assembleAtomicSharedComposition(sharedSource, replacements);
+  const sharedAction = sharedComposition.structured
+    ? (config.supplement ? "" : sharedComposition.interaction)
+    : stripOrReplaceNames(
+      uncoveredActionTags(shot.action, config.supplement ? sharedComposition.text : ""),
+      replacements,
+      true
+    );
+  const camera = assembleStructuredCamera(shot.camera);
   const environment = scene.environment || {};
   const location = structuredSnippets(environment.location, 1);
   const timeWeather = structuredSnippets(environment.timeWeather, 1);
@@ -261,9 +351,9 @@ function assembleAnimaPrompt(
   ].filter(Boolean).join(", ");
   return { sections: [
     stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
-    stripOrReplaceNames(unique(csvParts(shot.camera)).join(", "), replacements, true),
+    stripOrReplaceNames(camera.text, replacements, true),
     ...characterSections,
-    config.supplement ? sharedComposition : "",
+    config.supplement ? sharedComposition.text : "",
     sharedAction,
     environmentSection
   ].map((section) => section.trim()).filter(Boolean) };
