@@ -1808,7 +1808,7 @@ function imageUrlFromId(imageId) {
   return `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
 }
 function htmlAttr(value) {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r\n?|\n/g, "&#10;");
 }
 function renderInlayBlock(url, prompt, index, config) {
   const label = `Inlay ${index + 1}`;

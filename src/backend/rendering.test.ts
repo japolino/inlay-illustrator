@@ -69,6 +69,27 @@ describe("inlay rendering", () => {
     expect(rendered).not.toContain("```");
   });
 
+  test("keeps multiline prompts inside one raw HTML block for image and lightbox rendering", () => {
+    const rendered = renderInlaidMessage(
+      "Paragraph.",
+      {
+        imageUrls: ["/multiline.png"],
+        prompts: ["quality tags,\n\n1girl,\n\nThe girl turns toward the viewer."],
+        paragraphs: [1]
+      },
+      DEFAULT_CONFIG
+    );
+    const blockStart = rendered.indexOf('<div class="inlay-illustrator-image"');
+    const blockEnd = rendered.indexOf("</div>", blockStart) + "</div>".length;
+    const block = rendered.slice(blockStart, blockEnd);
+
+    expect(block.split("\n")).toHaveLength(1);
+    expect(block).toContain("quality tags,&#10;&#10;1girl,&#10;&#10;The girl turns toward the viewer.");
+    expect(block).toContain("data-lightbox");
+    expect(block).toContain("data-inlay-illustrator-prompt=");
+    expect(block).toContain('<pre class="inlay-illustrator-prompt" hidden>');
+  });
+
   test("encodes provider image IDs for the Lumiverse result route", () => {
     expect(imageUrlFromId("folder/id ?#value")).toBe("/api/v1/image-gen/results/folder%2Fid%20%3F%23value");
   });

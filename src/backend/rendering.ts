@@ -11,7 +11,12 @@ export function imageUrlFromId(imageId: string): string {
 }
 
 function htmlAttr(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\r\n?|\n/g, "&#10;");
 }
 
 function renderInlayBlock(url: string, prompt: string, index: number, config: Config): string {
