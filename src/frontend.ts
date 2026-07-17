@@ -5,6 +5,7 @@ import { CLEANUP_KEY, DRAWER_TAB_OPTIONS, PANEL_STYLES } from "./frontend/consta
 import type { BackendMessage, FrontendActions, ParserConnection } from "./frontend/contracts.js";
 import { routeBackendMessage } from "./frontend/message-router.js";
 import { SettingsRenderer } from "./frontend/renderer.js";
+import { installInlayLightbox } from "./frontend/lightbox.js";
 
 export function setup(ctx: SpindleFrontendContext) {
   const previousCleanup = (globalThis as Record<string, unknown>)[CLEANUP_KEY];
@@ -19,6 +20,7 @@ export function setup(ctx: SpindleFrontendContext) {
 
   const tab = ctx.ui.registerDrawerTab(DRAWER_TAB_OPTIONS);
   const removeStyle = ctx.dom.addStyle(PANEL_STYLES);
+  const removeLightbox = installInlayLightbox(ctx);
 
   function activeChatId(): string {
     try {
@@ -135,6 +137,7 @@ export function setup(ctx: SpindleFrontendContext) {
     unsubDrawer();
     unsubChatSwitched();
     renderer.destroy();
+    removeLightbox();
     removeStyle();
     tab.destroy();
     if ((globalThis as Record<string, unknown>)[CLEANUP_KEY] === cleanup) {

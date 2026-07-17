@@ -187,6 +187,12 @@ var PANEL_STYLES = `
   .inlay-subtitle{font-size:13px;font-weight:600;margin:2px 0}
   .inlay-parser-summary{font-size:12px;color:var(--lumiverse-text-muted);line-height:1.4}
   .inlay-status{padding:9px 10px;border:1px solid var(--lumiverse-border);border-radius:7px;background:var(--lumiverse-fill-subtle);font-size:12px;color:var(--lumiverse-text-muted);white-space:pre-wrap;min-height:18px}
+  .inlay-lightbox-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);gap:16px;align-items:start;min-width:0}
+  .inlay-lightbox-image{display:block;width:100%;height:auto;max-height:calc(100vh - 150px);object-fit:contain;border-radius:8px;background:#080808}
+  .inlay-lightbox-prompt-panel{display:flex;flex-direction:column;min-width:0;max-height:calc(100vh - 150px);border:1px solid var(--lumiverse-border);border-radius:8px;background:var(--lumiverse-fill-subtle);overflow:hidden}
+  .inlay-lightbox-prompt-panel h3{flex:none;margin:0;padding:12px 14px;border-bottom:1px solid var(--lumiverse-border);font-size:14px;color:var(--lumiverse-text)}
+  .inlay-lightbox-prompt{flex:1;min-height:120px;margin:0;padding:14px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--lumiverse-text)}
+  @media(max-width:800px){.inlay-lightbox-layout{grid-template-columns:1fr}.inlay-lightbox-image{max-height:55vh}.inlay-lightbox-prompt-panel{max-height:35vh}}
 `;
 
 // src/frontend/message-router.ts
@@ -700,6 +706,80 @@ class SettingsRenderer {
   }
 }
 
+// src/frontend/lightbox.ts
+var INLAY_IMAGE_SELECTOR = "img[data-inlay-illustrator-prompt]";
+var INLAY_WRAPPER_SELECTOR = '[data-inlay-illustrator="true"]';
+function resolveInlayPrompt(attributePrompt, fallbackPrompt) {
+  return (attributePrompt || fallbackPrompt || "").trim();
+}
+function findInlayImage(target) {
+  if (!(target instanceof Element))
+    return null;
+  const image = target.closest(INLAY_IMAGE_SELECTOR);
+  if (!image?.closest(INLAY_WRAPPER_SELECTOR))
+    return null;
+  return image;
+}
+function promptForImage(image) {
+  const wrapper = image.closest(INLAY_WRAPPER_SELECTOR);
+  const fallback = wrapper?.querySelector(".inlay-illustrator-prompt")?.textContent || null;
+  return resolveInlayPrompt(image.getAttribute("data-inlay-illustrator-prompt"), fallback);
+}
+function appendLightboxContent(root, image, prompt) {
+  const layout = document.createElement("div");
+  layout.className = "inlay-lightbox-layout";
+  const preview = document.createElement("img");
+  preview.className = "inlay-lightbox-image";
+  preview.src = image.currentSrc || image.src;
+  preview.alt = image.alt || "Generated illustration";
+  const panel = document.createElement("section");
+  panel.className = "inlay-lightbox-prompt-panel";
+  const heading = document.createElement("h3");
+  heading.textContent = "Generation prompt";
+  const promptText = document.createElement("pre");
+  promptText.className = "inlay-lightbox-prompt";
+  promptText.textContent = prompt || "No prompt was recorded for this image.";
+  panel.append(heading, promptText);
+  layout.append(preview, panel);
+  root.replaceChildren(layout);
+}
+function installInlayLightbox(ctx) {
+  let activeModal = null;
+  const onClick = (event) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+      return;
+    const image = findInlayImage(event.target);
+    if (!image)
+      return;
+    const prompt = promptForImage(image);
+    try {
+      activeModal?.dismiss();
+      const modal = ctx.ui.showModal({
+        title: image.alt || "Inlay illustration",
+        width: 1440,
+        maxHeight: Math.max(480, window.innerHeight - 48)
+      });
+      activeModal = modal;
+      appendLightboxContent(modal.root, image, prompt);
+      modal.onDismiss(() => {
+        if (activeModal === modal)
+          activeModal = null;
+      });
+    } catch {
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+  };
+  window.addEventListener("click", onClick, true);
+  return () => {
+    window.removeEventListener("click", onClick, true);
+    activeModal?.dismiss();
+    activeModal = null;
+  };
+}
+
 // src/frontend.ts
 function setup(ctx) {
   const previousCleanup = globalThis[CLEANUP_KEY];
@@ -713,6 +793,7 @@ function setup(ctx) {
   let drawerWasActive = false;
   const tab = ctx.ui.registerDrawerTab(DRAWER_TAB_OPTIONS);
   const removeStyle = ctx.dom.addStyle(PANEL_STYLES);
+  const removeLightbox = installInlayLightbox(ctx);
   function activeChatId() {
     try {
       return String(ctx.getActiveChat().chatId || "");
@@ -818,6 +899,7 @@ function setup(ctx) {
     unsubDrawer();
     unsubChatSwitched();
     renderer.destroy();
+    removeLightbox();
     removeStyle();
     tab.destroy();
     if (globalThis[CLEANUP_KEY] === cleanup) {
