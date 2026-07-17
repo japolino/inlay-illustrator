@@ -319,6 +319,46 @@ function dedupePromptSections(sections) {
   }
   return output;
 }
+var ACTION_STOP_WORDS = new Set(["a", "an", "at", "in", "of", "on", "the", "to", "toward", "towards", "with"]);
+function actionToken(value) {
+  const lower = value.toLowerCase();
+  if (["face", "facing", "gaze", "gazing", "look", "looking", "looks"].includes(lower))
+    return "look";
+  if (["spin", "spinning", "turn", "turning", "turns"].includes(lower))
+    return "turn";
+  if (["march", "marching", "walk", "walking", "walks"].includes(lower))
+    return "walk";
+  if (lower === "another")
+    return "other";
+  if (lower.endsWith("ing") && lower.length > 5) {
+    const stem = lower.slice(0, -3);
+    return stem.at(-1) === stem.at(-2) ? stem.slice(0, -1) : stem;
+  }
+  if (lower.endsWith("ed") && lower.length > 4)
+    return lower.slice(0, -2);
+  if (lower.endsWith("s") && lower.length > 3)
+    return lower.slice(0, -1);
+  return lower;
+}
+function actionTokens(value) {
+  return (value.toLowerCase().match(/[a-z0-9]+/g) || []).filter((token) => !ACTION_STOP_WORDS.has(token)).map(actionToken);
+}
+function tokenCovered(token, proseTokens) {
+  return proseTokens.some((candidate) => candidate === token || Math.min(candidate.length, token.length) >= 4 && (candidate.startsWith(token) || token.startsWith(candidate)));
+}
+function uncoveredActionTags(value, composition) {
+  const actions = unique(csvParts(value));
+  if (!composition)
+    return actions.join(", ");
+  const proseTokens = actionTokens(composition);
+  return actions.filter((action) => {
+    const tokens = actionTokens(action);
+    return tokens.length === 0 || !tokens.every((token) => tokenCovered(token, proseTokens));
+  }).join(", ");
+}
+function sanitizeComposition(value, replacements) {
+  return stripOrReplaceNames(value, replacements, false).replace(/\bfrom\s+[A-Z][\p{L}\p{M}-]*(?:\s+[A-Z][\p{L}\p{M}-]*)*['’]s\s+POV\b/giu, "from the viewer's POV").replace(/\s+/g, " ").trim();
+}
 function assembleCharacterBlock(character, config, replacements, includeAction) {
   return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", stripOrReplaceNames(cleanString2(character.age), replacements, true), stripOrReplaceNames(cleanString2(character.appearance), replacements, true), stripOrReplaceNames(cleanString2(character.body), replacements, true), stripOrReplaceNames(cleanString2(character.attire), replacements, true), stripOrReplaceNames(cleanString2(character.expression), replacements, true), includeAction ? stripOrReplaceNames(cleanString2(character.action), replacements, true) : "")).join(", ");
 }
@@ -344,28 +384,34 @@ function assembleAnimaPrompt(scene, shot, config, replacements) {
   const maxCharacters = config.maxCharacters;
   const characters = cleanArray(shot.characters).slice(0, maxCharacters);
   const characterSections = characters.flatMap((character) => {
-    const composition = stripOrReplaceNames(cleanString2(character.composition), replacements, false);
-    const tags = assembleCharacterBlock(character, config, replacements, !composition);
+    const composition = sanitizeComposition(cleanString2(character.composition), replacements);
+    const baseTags = assembleCharacterBlock(character, config, replacements, false);
+    const uncoveredActions = stripOrReplaceNames(uncoveredActionTags(character.action, composition), replacements, true);
+    const tags = unique(csvParts(baseTags, uncoveredActions)).join(", ");
     return [composition, tags].filter(Boolean);
   });
-  const sharedComposition = stripOrReplaceNames(cleanString2(shot.sharedComposition) || cleanString2(shot.supplement), replacements, false);
-  const sharedAction = stripOrReplaceNames(unique(csvParts(shot.action)).join(", "), replacements, true);
+  const sharedComposition = sanitizeComposition(cleanString2(shot.sharedComposition) || cleanString2(shot.supplement), replacements);
+  const sharedAction = stripOrReplaceNames(uncoveredActionTags(shot.action, config.supplement ? sharedComposition : ""), replacements, true);
   const environment = scene.environment || {};
   const location = structuredSnippets(environment.location, 1);
   const timeWeather = structuredSnippets(environment.timeWeather, 1);
   const lightingMood = config.supplement ? structuredSnippets(environment.lightingMood, 3) : [];
   const backgroundElements = config.supplement ? structuredSnippets(environment.backgroundElements, 5) : [];
   const legacyPlace = location.length === 0 ? stripOrReplaceNames(cleanString2(scene.place), replacements, true) : "";
-  return { sections: [
-    stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
-    ...characterSections,
-    config.supplement && sharedComposition ? sharedComposition : sharedAction,
+  const environmentSection = [
     ...location.map((value) => stripOrReplaceNames(value, replacements, false)),
     legacyPlace,
     ...timeWeather.map((value) => stripOrReplaceNames(value, replacements, false)),
     ...lightingMood.map((value) => stripOrReplaceNames(value, replacements, false)),
-    ...backgroundElements.map((value) => stripOrReplaceNames(value, replacements, false)),
-    stripOrReplaceNames(unique(csvParts(shot.camera)).join(", "), replacements, true)
+    ...backgroundElements.map((value) => stripOrReplaceNames(value, replacements, false))
+  ].filter(Boolean).join(", ");
+  return { sections: [
+    stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
+    stripOrReplaceNames(unique(csvParts(shot.camera)).join(", "), replacements, true),
+    ...characterSections,
+    config.supplement ? sharedComposition : "",
+    sharedAction,
+    environmentSection
   ].map((section) => section.trim()).filter(Boolean) };
 }
 function assembleDefaultPrompt(scene, shot, config, replacements) {
@@ -1239,7 +1285,8 @@ function parserInstruction(config) {
     "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
     "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
     "If the source contains too few distinct visual beats, create alternate shots of the same paragraph with genuinely different cinematography. Do not invent narrative events.",
-    "Distinct shots may reference the same paragraph. Order shots by their visual importance, not paragraph number."
+    "Distinct shots may reference the same paragraph. Order shots by their visual importance, not paragraph number.",
+    "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood."
   ].join(`
 `);
   const source = config.originalReference ? [
@@ -1322,10 +1369,11 @@ function parserInstruction(config) {
   ];
   const naturalDetail = animaIllustration ? [
     "### Natural Composition",
-    "characters[].composition is always required. Describe that character's spatial position, pose, visible action, gaze, and relationships in concise natural language.",
-    "Do not repeat a character's action tags when composition already expresses the same action; action is only a fallback for missing composition.",
+    "characters[].composition is always required. In one concise sentence, describe only that character's spatial position in frame, pose, complete visible action, direction of movement, gaze, and relationship to other visible or out-of-frame people.",
+    "Do not put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle, appearance, attire, or facial-expression adjectives in composition.",
+    "Keep characters[].action populated with concise standard tags for every important pose, motion, direction, and gaze. The renderer removes only action tags whose meaning is already clearly covered by composition.",
     config.supplement ? "Use shot.sharedComposition for concise natural-language interaction or relationship detail shared by multiple characters." : "Leave shot.sharedComposition empty. Character composition remains required.",
-    "Do not use names in composition prose. Identify people by visual position such as left girl, right boy, foreground character, or background character.",
+    "Do not use any character or persona names in composition prose, including the name of an out-of-frame POV character. Say viewer, camera, left girl, right boy, foreground character, or background character.",
     "Use concise objective visual phrases, not narration, invisible emotion, smell, sound, or internal sensation.",
     "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements.",
     "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
@@ -1367,11 +1415,12 @@ function parserInstruction(config) {
     "## Field Reference",
     animaIllustration ? "### environment - scene-level" : "### place - scene-level",
     animaIllustration ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
-    animaIllustration ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment." : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
+    animaIllustration ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment. Use only source-supported visual atmosphere; never infer romance, calm, menace, or another emotional tone from lighting alone." : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
     "### camera - shot-level",
     "Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
     "Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus.",
-    "Use camera only for perspective and framing. Do not include actions, expressions, appearance, clothing, subject counts, or place.",
+    animaIllustration ? "Use camera for perspective, framing, focus, depth of field, and lens effects such as shallow depth of field or background blur. Do not include actions, expressions, appearance, clothing, subject counts, lighting, or place." : "Use camera only for perspective and framing. Do not include actions, expressions, appearance, clothing, subject counts, or place.",
+    animaIllustration ? "Choose framing that can visibly contain the complete focal action. Do not request a close-up for full-body motion such as walking, running, spinning, kicking, or visible footwork unless the source explicitly prioritizes the face." : "",
     "### situation - shot-level",
     "Strictly use character count/composition tags such as 1girl, 2girls, 1boy, 1girl, 1boy, other, solo, group, and nsfw only when explicitly visual.",
     "The total number of people should match the visible characters being described/tagged.",
@@ -1395,7 +1444,7 @@ function parserInstruction(config) {
     "Eyes: color, shape, and visual modifiers such as heterochromia, tareme, tsurime, jitome, empty eyes, or dashed eyes. Always include when known.",
     "Skin: color and visible texture, such as dark skin, tan, red skin, metal skin, see-through body, or patchwork skin.",
     "Other: freckles, facial hair, scars, tattoos with location, symbol in eye, elf, demon, furry, androgynous, and other persistent identity traits.",
-    "Do not include names, attire, expression, pose, action, camera, place, or supplement in appearance.",
+    "Do not include names, attire, expression, pose, action, camera, place, supplement, blush, flushed cheeks, tears, sweat, or any other transient state in appearance.",
     "### body",
     "Physique, height, body shape, build, and persistent body traits. Exclude normal/default traits.",
     "Examples: muscular, toned, skinny, plump, fat, curvy, petite, shortstack, pear-shaped figure, giant, tall, short, flat chest, small breasts, medium breasts, large breasts, broad shoulders, wide hips, thick thighs.",
@@ -1409,14 +1458,15 @@ function parserInstruction(config) {
     "Do not include body traits, expressions, actions, camera, place, or names in attire.",
     "### expression",
     "Visible facial emotions and facial/eye states only: annoyed, angry, embarrassed, blush, grin, smile, crying, empty eyes, closed eyes.",
+    "Prefer the current source's explicit visible emotion over inferred genre mood. Convert irritation or anger into concrete visible tags such as annoyed, angry, furrowed brows, glaring, clenched teeth, or open mouth when supported.",
     "Do not include posture, gaze direction, clothing, body, action, camera, place, or names in expression.",
     "### action",
-    animaIllustration ? "Use shot.action only as tag fallback when sharedComposition is empty or disabled. Use characters[].action only as tag fallback when that character's composition is empty." : "Use shot.action for global or relationship action that applies to the whole shot, such as two characters holding hands or one character guiding another.",
-    animaIllustration ? "Put each character's spatial position, pose, action, gaze, and relationship in characters[].composition instead of duplicating it as action tags." : "Use characters[].action for a single character's posture, gaze, pose, interactions, and visible actions. Use multiple tags if needed.",
+    animaIllustration ? "Always populate characters[].action with standard tags for important posture, complete movement, movement direction, interaction, and gaze. Populate shot.action with standard relationship-action tags. These tags remain as reliability fallbacks when prose is incomplete." : "Use shot.action for global or relationship action that applies to the whole shot, such as two characters holding hands or one character guiding another.",
+    animaIllustration ? "Composition and action may describe the same visual beat in their respective formats. Do not add unrelated actions, but do not omit a source action merely because composition prose exists." : "Use characters[].action for a single character's posture, gaze, pose, interactions, and visible actions. Use multiple tags if needed.",
     "Posture examples: standing, sitting on chair, on back, kneeling, spread legs, all fours, squatting, on stomach, on side.",
     "Gaze examples: looking at viewer, looking away, looking at another.",
     "Interaction examples: arm hug, leaning, heads together, carrying, piggyback, holding hands.",
-    "Do not duplicate camera, place, situation counts, appearance, body, attire, or expression. Do not put the same action in multiple fields.",
+    animaIllustration ? "Do not duplicate camera, environment, situation counts, appearance, body, attire, or expression in action. Keep action tags complete even when composition covers part of the same visual beat." : "Do not duplicate camera, place, situation counts, appearance, body, attire, or expression. Do not put the same action in multiple fields.",
     "### negative - optional",
     "Only if the client explicitly specifies negative prompt tags. Never infer negative tags.",
     naturalDetail,
@@ -1427,7 +1477,7 @@ function parserInstruction(config) {
     "- appearance + body + attire must be identical for the same character across all shots unless the current message explicitly changes their present visual state.",
     "## Data Priority",
     "1. Client comments or explicit user instructions in the current message override all instructions.",
-    "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
+    "2. Current message [P#] paragraphs are authoritative for scene content, action, visible emotion, interpersonal tone, and movement direction. Never soften, romanticize, or replace those facts with an inferred atmosphere. Never restore outdated clothing, props, location, or actions from context.",
     config.characterTagContextEnabled ? "3. Character tag history is the current visual baseline for returning characters: label, age, appearance, body, and base attire." : "",
     config.characterTagContextEnabled ? "Use previous character tags as a baseline for returning characters, including base attire. Preserve specific baseline tags when not contradicted, such as short cut, white pupils, small breasts, black high school uniform, red sailor ribbon, black skirt, and white pantyhose." : "",
     config.characterTagContextEnabled ? "The current message is authoritative for the character's present visual state. It can update the baseline when it clearly changes clothing, lack of clothing, appearance, or body traits." : "",

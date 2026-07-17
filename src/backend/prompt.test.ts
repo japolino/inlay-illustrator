@@ -32,7 +32,7 @@ describe("ordered Anima prompt composition", () => {
       situation: "2girls",
       action: "holding hands, leaning together",
       camera: "wide shot, from side;",
-      sharedComposition: "Their shoulders touch as their hands meet between them.",
+      sharedComposition: "They hold hands and lean together on the sofa.",
       characters: [{
         name: "Alice",
         label: "girl",
@@ -57,22 +57,13 @@ describe("ordered Anima prompt composition", () => {
       "score_9, (detail:1.25)",
       "<lora:sofa:0.8>",
       "2girls",
+      "wide shot, from side",
       "The girl on the left reclines into the sofa and looks toward the other girl",
       "girl, blonde hair, blue eyes, red dress, smiling",
       "The girl on the right sits upright and turns her gaze left",
       "girl, black hair, green eyes, white blouse, black skirt, gentle smile",
-      "Their shoulders touch as their hands meet between them",
-      "sunken living room",
-      "rainy evening",
-      "warm lamp light",
-      "soft shadows",
-      "intimate mood",
-      "green velvet sofa",
-      "low coffee table",
-      "rainy window",
-      "bookshelf",
-      "cream rug",
-      "wide shot, from side",
+      "They hold hands and lean together on the sofa",
+      "sunken living room, rainy evening, warm lamp light, soft shadows, intimate mood, green velvet sofa, low coffee table, rainy window, bookshelf, cream rug",
       "cinematic finish"
     ].join(",\n\n"));
     expect(entry.negative).toBe("lowres, bad anatomy, extra fingers, malformed hands, text, watermark");
@@ -101,7 +92,7 @@ describe("ordered Anima prompt composition", () => {
     }, config, 1, 1);
 
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe(
-      "1girl, The foreground girl leans across the platform edge, girl, black hair, reaching for another, railway platform, foggy dawn, close-up"
+      "1girl, close-up, The foreground girl leans across the platform edge, girl, black hair, leaning forward, reaching for another, railway platform, foggy dawn"
     );
   });
 
@@ -115,7 +106,7 @@ describe("ordered Anima prompt composition", () => {
     }, config, 1, 1);
 
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe(
-      "1girl, girl, red hair, standing, looking away, waving goodbye, garden, day, portrait"
+      "1girl, portrait, girl, red hair, standing, looking away, waving goodbye, garden, day"
     );
   });
 
@@ -130,8 +121,41 @@ describe("ordered Anima prompt composition", () => {
     }, config, 1, 1);
 
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe(
-      "1girl, girl, brown hair, sitting, The lone reader is framed between towering shelves, interior, old library, from above"
+      "1girl, from above, girl, brown hair, sitting, The lone reader is framed between towering shelves, interior, old library"
     );
+  });
+
+  test("keeps uncovered action tags, prioritizes camera, compacts environment, and anonymizes POV names", () => {
+    const config = { ...DEFAULT_CONFIG, promptSyntax: "comfyui" as const };
+    const entry = assemblePrompt({ environment: {
+      location: "residential street",
+      timeWeather: "evening",
+      lightingMood: ["warm amber streetlamp light", "tense atmosphere"],
+      backgroundElements: ["streetlamps", "houses", "paved sidewalk"]
+    } }, {
+      situation: "1girl",
+      camera: "cowboy shot, low angle, pov",
+      characters: [{
+        label: "girl",
+        appearance: "short golden blonde hair, red eyes",
+        expression: "annoyed, blush",
+        action: "turning around, marching toward viewer, looking at viewer",
+        composition: "From Jay's POV, the girl spins toward the viewer and fixes her gaze on the camera."
+      }]
+    }, config, 1, 1);
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
+
+    expect(rendered).toBe([
+      "1girl",
+      "cowboy shot, low angle, pov",
+      "from the viewer's POV, the girl spins toward the viewer and fixes her gaze on the camera",
+      "girl, short golden blonde hair, red eyes, annoyed, blush, turning around, marching toward viewer",
+      "residential street, evening, warm amber streetlamp light, tense atmosphere, streetlamps, houses, paved sidewalk"
+    ].join(",\n\n"));
+    expect(rendered).not.toContain("Jay");
+    expect(rendered).toContain("turning around");
+    expect(rendered).not.toContain("looking at viewer");
+    expect(rendered.indexOf("cowboy shot")).toBeLessThan(rendered.indexOf("short golden blonde hair"));
   });
 });
 
@@ -187,6 +211,11 @@ describe("Anima parser contract and visual distinctness", () => {
     expect(instruction).toContain('"sharedComposition": "string"');
     expect(instruction).toContain('"environment": {');
     expect(instruction).toContain("exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements");
+    expect(instruction).toContain("Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone");
+    expect(instruction).toContain("Do not put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle");
+    expect(instruction).toContain("Always populate characters[].action with standard tags");
+    expect(instruction).toContain("never infer romance, calm, menace, or another emotional tone from lighting alone");
+    expect(instruction).toContain("Choose framing that can visibly contain the complete focal action");
     expect(instruction).not.toContain('"supplement": "string"');
   });
 

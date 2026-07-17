@@ -125,6 +125,53 @@ function dedupePromptSections(sections: string[]): string[] {
   return output;
 }
 
+const ACTION_STOP_WORDS = new Set(["a", "an", "at", "in", "of", "on", "the", "to", "toward", "towards", "with"]);
+
+function actionToken(value: string): string {
+  const lower = value.toLowerCase();
+  if (["face", "facing", "gaze", "gazing", "look", "looking", "looks"].includes(lower)) return "look";
+  if (["spin", "spinning", "turn", "turning", "turns"].includes(lower)) return "turn";
+  if (["march", "marching", "walk", "walking", "walks"].includes(lower)) return "walk";
+  if (lower === "another") return "other";
+  if (lower.endsWith("ing") && lower.length > 5) {
+    const stem = lower.slice(0, -3);
+    return stem.at(-1) === stem.at(-2) ? stem.slice(0, -1) : stem;
+  }
+  if (lower.endsWith("ed") && lower.length > 4) return lower.slice(0, -2);
+  if (lower.endsWith("s") && lower.length > 3) return lower.slice(0, -1);
+  return lower;
+}
+
+function actionTokens(value: string): string[] {
+  return (value.toLowerCase().match(/[a-z0-9]+/g) || [])
+    .filter((token) => !ACTION_STOP_WORDS.has(token))
+    .map(actionToken);
+}
+
+function tokenCovered(token: string, proseTokens: string[]): boolean {
+  return proseTokens.some((candidate) =>
+    candidate === token
+    || (Math.min(candidate.length, token.length) >= 4 && (candidate.startsWith(token) || token.startsWith(candidate)))
+  );
+}
+
+function uncoveredActionTags(value: unknown, composition: string): string {
+  const actions = unique(csvParts(value));
+  if (!composition) return actions.join(", ");
+  const proseTokens = actionTokens(composition);
+  return actions.filter((action) => {
+    const tokens = actionTokens(action);
+    return tokens.length === 0 || !tokens.every((token) => tokenCovered(token, proseTokens));
+  }).join(", ");
+}
+
+function sanitizeComposition(value: string, replacements: Map<string, string>): string {
+  return stripOrReplaceNames(value, replacements, false)
+    .replace(/\bfrom\s+[A-Z][\p{L}\p{M}-]*(?:\s+[A-Z][\p{L}\p{M}-]*)*['’]s\s+POV\b/giu, "from the viewer's POV")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function assembleCharacterBlock(
   character: CharacterJson,
   config: Config,
@@ -184,32 +231,41 @@ function assembleAnimaPrompt(
   const maxCharacters = config.maxCharacters;
   const characters = cleanArray<CharacterJson>(shot.characters).slice(0, maxCharacters);
   const characterSections = characters.flatMap((character) => {
-    const composition = stripOrReplaceNames(cleanString(character.composition), replacements, false);
-    const tags = assembleCharacterBlock(character, config, replacements, !composition);
+    const composition = sanitizeComposition(cleanString(character.composition), replacements);
+    const baseTags = assembleCharacterBlock(character, config, replacements, false);
+    const uncoveredActions = stripOrReplaceNames(uncoveredActionTags(character.action, composition), replacements, true);
+    const tags = unique(csvParts(baseTags, uncoveredActions)).join(", ");
     return [composition, tags].filter(Boolean);
   });
-  const sharedComposition = stripOrReplaceNames(
+  const sharedComposition = sanitizeComposition(
     cleanString(shot.sharedComposition) || cleanString(shot.supplement),
-    replacements,
-    false
+    replacements
   );
-  const sharedAction = stripOrReplaceNames(unique(csvParts(shot.action)).join(", "), replacements, true);
+  const sharedAction = stripOrReplaceNames(
+    uncoveredActionTags(shot.action, config.supplement ? sharedComposition : ""),
+    replacements,
+    true
+  );
   const environment = scene.environment || {};
   const location = structuredSnippets(environment.location, 1);
   const timeWeather = structuredSnippets(environment.timeWeather, 1);
   const lightingMood = config.supplement ? structuredSnippets(environment.lightingMood, 3) : [];
   const backgroundElements = config.supplement ? structuredSnippets(environment.backgroundElements, 5) : [];
   const legacyPlace = location.length === 0 ? stripOrReplaceNames(cleanString(scene.place), replacements, true) : "";
-  return { sections: [
-    stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
-    ...characterSections,
-    config.supplement && sharedComposition ? sharedComposition : sharedAction,
+  const environmentSection = [
     ...location.map((value) => stripOrReplaceNames(value, replacements, false)),
     legacyPlace,
     ...timeWeather.map((value) => stripOrReplaceNames(value, replacements, false)),
     ...lightingMood.map((value) => stripOrReplaceNames(value, replacements, false)),
-    ...backgroundElements.map((value) => stripOrReplaceNames(value, replacements, false)),
-    stripOrReplaceNames(unique(csvParts(shot.camera)).join(", "), replacements, true)
+    ...backgroundElements.map((value) => stripOrReplaceNames(value, replacements, false))
+  ].filter(Boolean).join(", ");
+  return { sections: [
+    stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
+    stripOrReplaceNames(unique(csvParts(shot.camera)).join(", "), replacements, true),
+    ...characterSections,
+    config.supplement ? sharedComposition : "",
+    sharedAction,
+    environmentSection
   ].map((section) => section.trim()).filter(Boolean) };
 }
 

@@ -15,7 +15,8 @@ export function parserInstruction(config: Config): string {
       "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
       "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
       "If the source contains too few distinct visual beats, create alternate shots of the same paragraph with genuinely different cinematography. Do not invent narrative events.",
-      "Distinct shots may reference the same paragraph. Order shots by their visual importance, not paragraph number."
+      "Distinct shots may reference the same paragraph. Order shots by their visual importance, not paragraph number.",
+      "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood."
     ].join("\n");
   const source = config.originalReference
     ? [
@@ -99,12 +100,13 @@ export function parserInstruction(config: Config): string {
   const naturalDetail = animaIllustration
     ? [
       "### Natural Composition",
-      "characters[].composition is always required. Describe that character's spatial position, pose, visible action, gaze, and relationships in concise natural language.",
-      "Do not repeat a character's action tags when composition already expresses the same action; action is only a fallback for missing composition.",
+      "characters[].composition is always required. In one concise sentence, describe only that character's spatial position in frame, pose, complete visible action, direction of movement, gaze, and relationship to other visible or out-of-frame people.",
+      "Do not put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle, appearance, attire, or facial-expression adjectives in composition.",
+      "Keep characters[].action populated with concise standard tags for every important pose, motion, direction, and gaze. The renderer removes only action tags whose meaning is already clearly covered by composition.",
       config.supplement
         ? "Use shot.sharedComposition for concise natural-language interaction or relationship detail shared by multiple characters."
         : "Leave shot.sharedComposition empty. Character composition remains required.",
-      "Do not use names in composition prose. Identify people by visual position such as left girl, right boy, foreground character, or background character.",
+      "Do not use any character or persona names in composition prose, including the name of an out-of-frame POV character. Say viewer, camera, left girl, right boy, foreground character, or background character.",
       "Use concise objective visual phrases, not narration, invisible emotion, smell, sound, or internal sensation.",
       "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements.",
       "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
@@ -155,12 +157,15 @@ export function parserInstruction(config: Config): string {
       ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details."
       : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
     animaIllustration
-      ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment."
+      ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment. Use only source-supported visual atmosphere; never infer romance, calm, menace, or another emotional tone from lighting alone."
       : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
     "### camera - shot-level",
     "Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
     "Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus.",
-    "Use camera only for perspective and framing. Do not include actions, expressions, appearance, clothing, subject counts, or place.",
+    animaIllustration
+      ? "Use camera for perspective, framing, focus, depth of field, and lens effects such as shallow depth of field or background blur. Do not include actions, expressions, appearance, clothing, subject counts, lighting, or place."
+      : "Use camera only for perspective and framing. Do not include actions, expressions, appearance, clothing, subject counts, or place.",
+    animaIllustration ? "Choose framing that can visibly contain the complete focal action. Do not request a close-up for full-body motion such as walking, running, spinning, kicking, or visible footwork unless the source explicitly prioritizes the face." : "",
     "### situation - shot-level",
     "Strictly use character count/composition tags such as 1girl, 2girls, 1boy, 1girl, 1boy, other, solo, group, and nsfw only when explicitly visual.",
     "The total number of people should match the visible characters being described/tagged.",
@@ -184,7 +189,7 @@ export function parserInstruction(config: Config): string {
     "Eyes: color, shape, and visual modifiers such as heterochromia, tareme, tsurime, jitome, empty eyes, or dashed eyes. Always include when known.",
     "Skin: color and visible texture, such as dark skin, tan, red skin, metal skin, see-through body, or patchwork skin.",
     "Other: freckles, facial hair, scars, tattoos with location, symbol in eye, elf, demon, furry, androgynous, and other persistent identity traits.",
-    "Do not include names, attire, expression, pose, action, camera, place, or supplement in appearance.",
+    "Do not include names, attire, expression, pose, action, camera, place, supplement, blush, flushed cheeks, tears, sweat, or any other transient state in appearance.",
     "### body",
     "Physique, height, body shape, build, and persistent body traits. Exclude normal/default traits.",
     "Examples: muscular, toned, skinny, plump, fat, curvy, petite, shortstack, pear-shaped figure, giant, tall, short, flat chest, small breasts, medium breasts, large breasts, broad shoulders, wide hips, thick thighs.",
@@ -198,18 +203,21 @@ export function parserInstruction(config: Config): string {
     "Do not include body traits, expressions, actions, camera, place, or names in attire.",
     "### expression",
     "Visible facial emotions and facial/eye states only: annoyed, angry, embarrassed, blush, grin, smile, crying, empty eyes, closed eyes.",
+    "Prefer the current source's explicit visible emotion over inferred genre mood. Convert irritation or anger into concrete visible tags such as annoyed, angry, furrowed brows, glaring, clenched teeth, or open mouth when supported.",
     "Do not include posture, gaze direction, clothing, body, action, camera, place, or names in expression.",
     "### action",
     animaIllustration
-      ? "Use shot.action only as tag fallback when sharedComposition is empty or disabled. Use characters[].action only as tag fallback when that character's composition is empty."
+      ? "Always populate characters[].action with standard tags for important posture, complete movement, movement direction, interaction, and gaze. Populate shot.action with standard relationship-action tags. These tags remain as reliability fallbacks when prose is incomplete."
       : "Use shot.action for global or relationship action that applies to the whole shot, such as two characters holding hands or one character guiding another.",
     animaIllustration
-      ? "Put each character's spatial position, pose, action, gaze, and relationship in characters[].composition instead of duplicating it as action tags."
+      ? "Composition and action may describe the same visual beat in their respective formats. Do not add unrelated actions, but do not omit a source action merely because composition prose exists."
       : "Use characters[].action for a single character's posture, gaze, pose, interactions, and visible actions. Use multiple tags if needed.",
     "Posture examples: standing, sitting on chair, on back, kneeling, spread legs, all fours, squatting, on stomach, on side.",
     "Gaze examples: looking at viewer, looking away, looking at another.",
     "Interaction examples: arm hug, leaning, heads together, carrying, piggyback, holding hands.",
-    "Do not duplicate camera, place, situation counts, appearance, body, attire, or expression. Do not put the same action in multiple fields.",
+    animaIllustration
+      ? "Do not duplicate camera, environment, situation counts, appearance, body, attire, or expression in action. Keep action tags complete even when composition covers part of the same visual beat."
+      : "Do not duplicate camera, place, situation counts, appearance, body, attire, or expression. Do not put the same action in multiple fields.",
     "### negative - optional",
     "Only if the client explicitly specifies negative prompt tags. Never infer negative tags.",
     naturalDetail,
@@ -220,7 +228,7 @@ export function parserInstruction(config: Config): string {
     "- appearance + body + attire must be identical for the same character across all shots unless the current message explicitly changes their present visual state.",
     "## Data Priority",
     "1. Client comments or explicit user instructions in the current message override all instructions.",
-    "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
+    "2. Current message [P#] paragraphs are authoritative for scene content, action, visible emotion, interpersonal tone, and movement direction. Never soften, romanticize, or replace those facts with an inferred atmosphere. Never restore outdated clothing, props, location, or actions from context.",
     config.characterTagContextEnabled ? "3. Character tag history is the current visual baseline for returning characters: label, age, appearance, body, and base attire." : "",
     config.characterTagContextEnabled ? "Use previous character tags as a baseline for returning characters, including base attire. Preserve specific baseline tags when not contradicted, such as short cut, white pupils, small breasts, black high school uniform, red sailor ribbon, black skirt, and white pantyhose." : "",
     config.characterTagContextEnabled ? "The current message is authoritative for the character's present visual state. It can update the baseline when it clearly changes clothing, lack of clothing, appearance, or body traits." : "",
