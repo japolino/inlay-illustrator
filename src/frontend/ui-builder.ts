@@ -77,7 +77,14 @@ export class UiBuilder {
     }));
   }
 
-  addSelect(parent: HTMLElement, key: keyof Config, label: string, options: SelectOption[], hint = ""): void {
+  addSelect(
+    parent: HTMLElement,
+    key: keyof Config,
+    label: string,
+    options: SelectOption[],
+    hint = "",
+    afterChange?: () => void
+  ): void {
     const target = this.row(parent, label, hint);
     this.track(this.ctx.components.mountSelect(target, {
       value: String(this.config[key] || ""),
@@ -85,7 +92,10 @@ export class UiBuilder {
       className: "inlay-select-control",
       triggerClassName: "inlay-select-trigger",
       portal: true,
-      onChange: (value) => this.patchConfig({ [key]: value } as Partial<Config>)
+      onChange: (value) => {
+        this.patchConfig({ [key]: value } as Partial<Config>);
+        afterChange?.();
+      }
     }));
   }
 

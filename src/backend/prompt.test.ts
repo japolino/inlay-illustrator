@@ -8,6 +8,7 @@ describe("ordered Anima prompt composition", () => {
   test("renders a multi-character sofa scene in exact hybrid order with ComfyUI blank lines", () => {
     const config = {
       ...DEFAULT_CONFIG,
+      mode: "experimental" as const,
       promptSyntax: "comfyui" as const,
       customPositivePrefix: "<lora:sofa:0.8>;;",
       customPositiveSuffix: "cinematic finish!",
@@ -82,7 +83,7 @@ describe("ordered Anima prompt composition", () => {
   });
 
   test("keeps character composition and location/time when natural/shared detail is disabled", () => {
-    const config = { ...DEFAULT_CONFIG, promptSyntax: "nai" as const, supplement: false };
+    const config = { ...DEFAULT_CONFIG, mode: "experimental" as const, promptSyntax: "nai" as const, supplement: false };
     const entry = assemblePrompt({ environment: {
       location: "railway platform",
       timeWeather: "foggy dawn",
@@ -112,7 +113,7 @@ describe("ordered Anima prompt composition", () => {
   });
 
   test("uses legacy character and shared action tags only when atomic composition is missing", () => {
-    const config = { ...DEFAULT_CONFIG, promptSyntax: "nai" as const };
+    const config = { ...DEFAULT_CONFIG, mode: "experimental" as const, promptSyntax: "nai" as const };
     const entry = assemblePrompt({ environment: { location: "garden", timeWeather: "day" } }, {
       situation: "1girl",
       action: "waving goodbye",
@@ -126,7 +127,7 @@ describe("ordered Anima prompt composition", () => {
   });
 
   test("accepts legacy supplement and place as runtime fallbacks", () => {
-    const config = { ...DEFAULT_CONFIG, promptSyntax: "nai" as const };
+    const config = { ...DEFAULT_CONFIG, mode: "experimental" as const, promptSyntax: "nai" as const };
     const entry = assemblePrompt({ place: "interior, old library" }, {
       situation: "1girl",
       action: "reading",
@@ -141,7 +142,7 @@ describe("ordered Anima prompt composition", () => {
   });
 
   test("keeps uncovered action tags, prioritizes camera, compacts environment, and anonymizes POV names", () => {
-    const config = { ...DEFAULT_CONFIG, promptSyntax: "comfyui" as const };
+    const config = { ...DEFAULT_CONFIG, mode: "experimental" as const, promptSyntax: "comfyui" as const };
     const entry = assemblePrompt({ environment: {
       location: "residential street",
       timeWeather: "evening",
@@ -174,7 +175,7 @@ describe("ordered Anima prompt composition", () => {
   });
 
   test("renders atomic scene data once and rejects camera field leakage", () => {
-    const config = { ...DEFAULT_CONFIG, promptSyntax: "comfyui" as const };
+    const config = { ...DEFAULT_CONFIG, mode: "experimental" as const, promptSyntax: "comfyui" as const };
     const entry = assemblePrompt({ environment: {
       location: "quiet residential road",
       timeWeather: "dusk with falling cherry blossom petals",
@@ -223,6 +224,54 @@ describe("ordered Anima prompt composition", () => {
   });
 });
 
+describe("stable Illustration rollback", () => {
+  test("uses the original place, action, and supplement parser contract", () => {
+    const instruction = parserInstruction(DEFAULT_CONFIG);
+
+    expect(instruction).toContain('"place": "string"');
+    expect(instruction).toContain('"camera": "string"');
+    expect(instruction).toContain('"action": "string"');
+    expect(instruction).toContain('"supplement": "string"');
+    expect(instruction).not.toContain('"composition": {');
+    expect(instruction).not.toContain('"environment": {');
+    expect(instruction).not.toContain("Atomic Natural Composition");
+  });
+
+  test("restores the original Anima section order, supplement placement, and ComfyUI separators", () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      promptSyntax: "comfyui" as const,
+      customPositiveSuffix: "finish!",
+      customNegative: "bad hands; lowres!"
+    };
+    const entry = assemblePrompt({ place: "exterior, residential street, amber streetlight" }, {
+      situation: "1girl",
+      action: "turning around",
+      camera: "medium close-up, from side",
+      characters: [{
+        label: "girl",
+        appearance: "short blonde hair, red eyes",
+        attire: "black sailor uniform",
+        expression: "suspicious",
+        action: "leaning inward, looking at viewer"
+      }],
+      supplement: "The girl is framed against the quiet road.",
+      negative: "text;"
+    }, config, 1, 1);
+
+    expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe([
+      "1girl",
+      "girl, short blonde hair, red eyes, black sailor uniform, suspicious",
+      "turning around, leaning inward, looking at viewer",
+      "medium close-up, from side",
+      "exterior, residential street, amber streetlight",
+      "The girl is framed against the quiet road.",
+      "finish!"
+    ].join(",\n"));
+    expect(entry.negative).toBe("bad hands; lowres!, text;");
+  });
+});
+
 describe("prompt compatibility and normalization", () => {
   test("keeps Anima assets compact and tags-only", () => {
     const config = { ...DEFAULT_CONFIG, mode: "asset" as const, promptSyntax: "nai" as const };
@@ -237,7 +286,7 @@ describe("prompt compatibility and normalization", () => {
     );
   });
 
-  test("keeps Default ordering while normalizing punctuation and preserving weight syntax", () => {
+  test("restores stable Default formatting without experimental punctuation normalization", () => {
     const config = {
       ...DEFAULT_CONFIG,
       promptStyle: "default" as const,
@@ -256,20 +305,20 @@ describe("prompt compatibility and normalization", () => {
     }, config, 1, 1);
 
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe([
-      "<lora:ink:0.75>, (quality:1.5), 1.2::sharp focus::",
-      "portrait, 1girl, standing",
-      "studio, night",
+      "<lora:ink:0.75>; (quality:1.5); 1.2::sharp focus::",
+      "portrait;, 1girl, standing!",
+      "studio; night.",
       "girl, blue hair",
-      "Centered against a tall canvas",
-      "finish"
-    ].join(",\n\n"));
-    expect(entry.negative).toBe("bad hands, lowres, text");
+      "Centered against a tall canvas.",
+      "finish?"
+    ].join(",\n"));
+    expect(entry.negative).toBe("bad hands; lowres!, text;");
   });
 });
 
 describe("Anima parser contract and visual distinctness", () => {
   test("requests composition and budgeted structured environment without requesting supplement", () => {
-    const instruction = parserInstruction(DEFAULT_CONFIG);
+    const instruction = parserInstruction({ ...DEFAULT_CONFIG, mode: "experimental" });
 
     expect(instruction).toContain('"composition": {');
     expect(instruction).toContain('"position": "string"');

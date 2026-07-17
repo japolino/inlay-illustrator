@@ -54,6 +54,8 @@ export type ParsedPayload = { scenes?: SceneJson[] };
 export type AssembledPrompt = {
   /** Ordered tag and prose sections, rendered with syntax-specific separators. */
   sections: string[];
+  /** Stable modes retain their original formatting; experimental uses normalized ordered sections. */
+  format?: "legacy" | "ordered";
 };
 
 export type PromptEntry = {

@@ -92,7 +92,7 @@ function normalizeConfig(raw) {
   return {
     ...DEFAULT_CONFIG,
     ...current,
-    mode: raw.mode === "asset" ? "asset" : "illustration",
+    mode: raw.mode === "asset" ? "asset" : raw.mode === "experimental" ? "experimental" : "illustration",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
@@ -291,14 +291,15 @@ function buildCharacterTagReference(map) {
   return lines.length ? ["## Previous Character Tags", ...lines].join(`
 `) : "";
 }
-function joinSections(sections, syntax) {
-  const clean = sections.map(normalizePromptSection).filter(Boolean);
-  return syntax === "comfyui" ? clean.join(`,
+function joinSections(sections, syntax, format) {
+  const clean = sections.map((section) => format === "ordered" ? normalizePromptSection(section) : section.trim()).filter(Boolean);
+  return syntax === "comfyui" ? clean.join(format === "ordered" ? `,
 
+` : `,
 `) : clean.join(", ");
 }
 function renderPrompt(prompt, syntax) {
-  return joinSections(prompt.sections, syntax);
+  return joinSections(prompt.sections, syntax, prompt.format || "ordered");
 }
 function normalizePromptSection(value) {
   const doubleColon = "";
@@ -318,6 +319,13 @@ function dedupePromptSections(sections) {
     output.push(section);
   }
   return output;
+}
+function removeSupplementActionDuplicates(supplement, actionTags) {
+  let next = supplement.trim();
+  for (const action of csvParts(actionTags)) {
+    next = next.replace(new RegExp(`\\b${escapeRegExp(action)}\\b`, "gi"), " ");
+  }
+  return next.replace(/\s+([,.])/g, "$1").replace(/\s+/g, " ").trim();
 }
 var ACTION_STOP_WORDS = new Set(["a", "an", "at", "in", "of", "on", "the", "to", "toward", "towards", "with"]);
 function actionToken(value) {
@@ -469,6 +477,26 @@ function assembleAnimaAssetPrompt(scene, shot, config, replacements) {
     stripOrReplaceNames(unique(csvParts(scene.place, "white background, simple background")).join(", "), replacements, true)
   ]) };
 }
+function assembleLegacyAnimaPrompt(scene, shot, config, replacements) {
+  const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
+  const characters = cleanArray(shot.characters).slice(0, maxCharacters);
+  const characterBlocks = characters.map((character) => assembleCharacterBlock(character, config, replacements, false)).filter(Boolean);
+  const sceneAction = stripOrReplaceNames(unique(csvParts(shot.action, ...characters.map((character) => character.action), config.mode === "asset" ? "looking at viewer" : "")).join(", "), replacements, true);
+  const supplement = config.supplement ? stripOrReplaceNames(removeSupplementActionDuplicates(cleanString2(shot.supplement), sceneAction), replacements, false) : "";
+  return {
+    sections: [
+      ...dedupePromptSections([
+        stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
+        ...characterBlocks,
+        sceneAction,
+        stripOrReplaceNames(unique(csvParts(shot.camera, config.mode === "asset" ? "portrait, cowboy shot" : "")).join(", "), replacements, true),
+        stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true)
+      ]),
+      supplement
+    ].filter(Boolean),
+    format: "legacy"
+  };
+}
 function assembleAnimaPrompt(scene, shot, config, replacements) {
   if (config.mode === "asset")
     return assembleAnimaAssetPrompt(scene, shot, config, replacements);
@@ -513,18 +541,18 @@ function assembleDefaultPrompt(scene, shot, config, replacements) {
   const characters = cleanArray(shot.characters).slice(0, maxCharacters);
   const characterBlocks = characters.map((character) => assembleCharacterBlock(character, config, replacements, true)).filter(Boolean);
   const supplement = config.supplement ? stripOrReplaceNames(cleanString2(shot.supplement), replacements, false) : "";
-  const sections = dedupePromptSections([
+  const tagSections = dedupePromptSections([
     stripOrReplaceNames(unique(csvParts(shot.camera, shot.situation, shot.action, config.mode === "asset" ? "portrait, cowboy shot, looking at viewer" : "")).join(", "), replacements, true),
     stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true),
-    ...characterBlocks,
-    supplement
+    ...characterBlocks
   ]);
-  return { sections };
+  const sections = config.mode === "illustration" ? [...tagSections, supplement].filter(Boolean) : dedupePromptSections([...tagSections, supplement]);
+  return { sections, format: config.mode === "illustration" ? "legacy" : "ordered" };
 }
 function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph) {
   const characters = cleanArray(shot.characters);
   const replacements = buildNameReplacementMap(characters);
-  const core = config.promptStyle === "anima" ? assembleAnimaPrompt(scene, shot, config, replacements) : assembleDefaultPrompt(scene, shot, config, replacements);
+  const core = config.mode === "experimental" ? assembleAnimaPrompt(scene, shot, config, replacements) : config.mode === "asset" && config.promptStyle === "anima" ? assembleAnimaAssetPrompt(scene, shot, config, replacements) : config.promptStyle === "anima" ? assembleLegacyAnimaPrompt(scene, shot, config, replacements) : assembleDefaultPrompt(scene, shot, config, replacements);
   const preset = activePromptPreset(config);
   const presetPrefix = stripOrReplaceNames(preset?.positivePrefix || "", replacements, true);
   const prefix = stripOrReplaceNames(config.customPositivePrefix, replacements, true);
@@ -532,9 +560,10 @@ function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph)
   const prefixes = [presetPrefix, prefix].filter(Boolean);
   return {
     prompt: {
-      sections: [...prefixes, ...core.sections, suffix].map((section) => section.trim()).filter(Boolean)
+      sections: [...prefixes, ...core.sections, suffix].map((section) => section.trim()).filter(Boolean),
+      format: core.format || "ordered"
     },
-    negative: normalizePromptSection(stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "), replacements, true)),
+    negative: (core.format || "ordered") === "ordered" ? normalizePromptSection(stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "), replacements, true)) : stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "), replacements, true),
     paragraph: originalParagraph,
     parserParagraph
   };
@@ -1378,7 +1407,7 @@ function paragraphCount(content) {
 // src/backend/instructions.ts
 function parserInstruction(config) {
   const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
-  const animaIllustration = config.mode === "illustration" && config.promptStyle === "anima";
+  const experimentalMode = config.mode === "experimental";
   const shotInstruction = config.mode === "asset" ? [
     "Asset mode: generate exactly one shot for each [P#] paragraph.",
     "Each shot must contain exactly one visible character.",
@@ -1391,7 +1420,7 @@ function parserInstruction(config) {
     "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
     "If the source contains too few distinct visual beats, create alternate shots of the same paragraph with genuinely different cinematography. Do not invent narrative events.",
     "Distinct shots may reference the same paragraph. Order shots by their visual importance, not paragraph number.",
-    "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood."
+    experimentalMode ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood." : ""
   ].join(`
 `);
   const source = config.originalReference ? [
@@ -1403,7 +1432,7 @@ function parserInstruction(config) {
     "Do not include any parenthetical, source name, creation reference, title, or alias in name or any other field."
   ].join(`
 `) : "Use names only for the JSON name field as private memory keys. Names will not be included in final prompts. If not given, make a concise stable identifier that fits the description.";
-  const schema = animaIllustration ? [
+  const schema = experimentalMode ? [
     "{",
     '  "scenes": [',
     "    {",
@@ -1483,7 +1512,7 @@ function parserInstruction(config) {
     "  ]",
     "}"
   ];
-  const naturalDetail = animaIllustration ? [
+  const naturalDetail = experimentalMode ? [
     "### Atomic Natural Composition",
     "characters[].composition is always required and must use its four atomic fields. The renderer joins them once in this exact order: position, pose, actions, gaze.",
     "composition.position is one concise spatial phrase describing where the character is in frame.",
@@ -1503,6 +1532,8 @@ function parserInstruction(config) {
     "### Natural Language Supplement",
     "In supplement, describe the image in natural language for visible details that tags cannot express well, such as detailed composition, framing, character positions, interactions, unusual vantage points, or objective atmosphere/lighting.",
     "Use concise, minimal, telegraphic sentences. Be objective, not subjective interpretation.",
+    "Unusual framing and vantage points are welcome, such as viewed through an object, reflected in a mirror, or partially obscured by foreground elements.",
+    "When describing multiple people, do not use names. Identify people by visual position such as left girl, right boy, foreground character, or background character.",
     "Do not use supplement for smell, sound, internal sensations, invisible emotions, or prose narration."
   ].join(`
 `) : "Do not include supplement text.";
@@ -1512,12 +1543,12 @@ function parserInstruction(config) {
     "## JSON Format",
     schema.join(`
 `),
-    animaIllustration ? "- negative is optional. All other fields and nested objects are required. Use empty strings or arrays inside the required objects when a field does not apply; never collapse an object into a string." : "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
+    experimentalMode ? "- negative is optional. All other fields and nested objects are required. Use empty strings or arrays inside the required objects when a field does not apply; never collapse an object into a string." : "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
     "- These are the ONLY allowed fields. Adding any unlisted field is a schema violation.",
     "## Scenes & Shots",
     "Scene = shots sharing one physical location.",
     "- Same location means same scene, multiple shots.",
-    animaIllustration ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
+    experimentalMode ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
     "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
     shotInstruction,
     "Paragraph mapping: current message uses [P#] numbering.",
@@ -1526,23 +1557,23 @@ function parserInstruction(config) {
     "- Tag ONLY the current message. Recent context is for continuity only.",
     "## Tag Rules",
     "Use common, objective, visualizable Danbooru-style English tags. Do not invent tags; use simpler well-known equivalents if unsure. Do not use metaphors for tags.",
-    animaIllustration ? "Tag fields are comma-separated tags. Atomic composition and sharedComposition values are concise comma-free natural-language phrases. Environment arrays contain one comma-free visual snippet per item." : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
+    experimentalMode ? "Tag fields are comma-separated tags. Atomic composition and sharedComposition values are concise comma-free natural-language phrases. Environment arrays contain one comma-free visual snippet per item." : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
     `Character limit: max ${maxCharacters} visible character(s) per shot. Characters outside the limit should be represented only by visible partial body parts, such as out of frame, hand, arm, or legs. Do not output their expressions or attire. Only output visible body parts and actions when needed.`,
     config.mode === "asset" ? "Asset mode requires one character in characters[] for every shot, no group shots, no narrative background beyond a simple white background." : "",
     "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for stable appearance, attire, location, and persistent actions.",
-    config.mode === "illustration" ? "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts." : "",
-    animaIllustration ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, camera, situation, sharedComposition, environment, and negative." : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
+    config.mode !== "asset" ? "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts." : "",
+    experimentalMode ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, camera, situation, sharedComposition, environment, and negative." : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
     "## Field Reference",
-    animaIllustration ? "### environment - scene-level" : "### place - scene-level",
-    animaIllustration ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
-    animaIllustration ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment. Use only source-supported visual atmosphere; never infer romance, calm, menace, or another emotional tone from lighting alone." : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
+    experimentalMode ? "### environment - scene-level" : "### place - scene-level",
+    experimentalMode ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
+    experimentalMode ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment. Use only source-supported visual atmosphere; never infer romance, calm, menace, or another emotional tone from lighting alone." : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
     "### camera - shot-level",
-    animaIllustration ? "camera.framing must be empty or exactly one of: portrait, close-up, medium close-up, upper body, medium shot, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, body-part focus." : "Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus.",
-    animaIllustration ? "camera.angle must be empty or exactly one of: eye level, low angle, high angle, dutch angle." : "Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
-    animaIllustration ? "camera.perspective must be empty or exactly one of: straight-on, from above, from behind, from below, from side, sideways, three-quarter view, pov." : "",
-    animaIllustration ? "camera.focus may contain at most two values chosen only from: shallow depth of field, deep focus, background blur, foreground blur, motion blur, fisheye, wide-angle lens, telephoto lens." : "",
-    animaIllustration ? "Do not add any other camera keys or camera values. Lighting, streetlamps, atmosphere, actions, expressions, appearance, clothing, subject counts, and place never belong in camera." : "Use camera only for perspective and framing. Do not include actions, expressions, appearance, clothing, subject counts, or place.",
-    animaIllustration ? "Choose framing that can visibly contain the complete focal action. Do not request a close-up for full-body motion such as walking, running, spinning, kicking, or visible footwork unless the source explicitly prioritizes the face." : "",
+    experimentalMode ? "camera.framing must be empty or exactly one of: portrait, close-up, medium close-up, upper body, medium shot, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, body-part focus." : "Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus.",
+    experimentalMode ? "camera.angle must be empty or exactly one of: eye level, low angle, high angle, dutch angle." : "Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
+    experimentalMode ? "camera.perspective must be empty or exactly one of: straight-on, from above, from behind, from below, from side, sideways, three-quarter view, pov." : "",
+    experimentalMode ? "camera.focus may contain at most two values chosen only from: shallow depth of field, deep focus, background blur, foreground blur, motion blur, fisheye, wide-angle lens, telephoto lens." : "",
+    experimentalMode ? "Do not add any other camera keys or camera values. Lighting, streetlamps, atmosphere, actions, expressions, appearance, clothing, subject counts, and place never belong in camera." : "Use camera only for perspective and framing. Do not include actions, expressions, appearance, clothing, subject counts, or place.",
+    experimentalMode ? "Choose framing that can visibly contain the complete focal action. Do not request a close-up for full-body motion such as walking, running, spinning, kicking, or visible footwork unless the source explicitly prioritizes the face." : "",
     "### situation - shot-level",
     "Strictly use character count/composition tags such as 1girl, 2girls, 1boy, 1girl, 1boy, other, solo, group, and nsfw only when explicitly visual.",
     "The total number of people should match the visible characters being described/tagged.",
@@ -1551,7 +1582,7 @@ function parserInstruction(config) {
     "Use girl, boy, or other regardless of age. For out-of-frame partial characters, use label plus out of frame and visible part, such as boy, out of frame, hand.",
     "### name - required",
     "Character name from the narrative. If unnamed, use a consistent identifier such as girl A, boy B, shopkeeper, guard, or stranger. Never empty; this is used for cross-message appearance tracking.",
-    "Do not put character names in label, age, appearance, body, attire, expression, action, composition, situation, camera, place, environment, sharedComposition, supplement, or negative.",
+    experimentalMode ? "Do not put character names in label, age, appearance, body, attire, expression, action, composition, situation, camera, place, environment, sharedComposition, supplement, or negative." : "Do not put character names in label, age, appearance, body, attire, expression, action, situation, camera, place, supplement, or negative.",
     "### age",
     "Visual age category only: child, aged down, mature male, mature female, aged up, or old. Based on appearance only.",
     "If characters appear late teens to early thirties, leave age blank.",
@@ -1566,7 +1597,7 @@ function parserInstruction(config) {
     "Eyes: color, shape, and visual modifiers such as heterochromia, tareme, tsurime, jitome, empty eyes, or dashed eyes. Always include when known.",
     "Skin: color and visible texture, such as dark skin, tan, red skin, metal skin, see-through body, or patchwork skin.",
     "Other: freckles, facial hair, scars, tattoos with location, symbol in eye, elf, demon, furry, androgynous, and other persistent identity traits.",
-    "Do not include names, attire, expression, pose, action, camera, place, supplement, blush, flushed cheeks, tears, sweat, or any other transient state in appearance.",
+    experimentalMode ? "Do not include names, attire, expression, pose, action, camera, place, supplement, blush, flushed cheeks, tears, sweat, or any other transient state in appearance." : "Do not include names, attire, expression, pose, action, camera, place, or supplement in appearance.",
     "### body",
     "Physique, height, body shape, build, and persistent body traits. Exclude normal/default traits.",
     "Examples: muscular, toned, skinny, plump, fat, curvy, petite, shortstack, pear-shaped figure, giant, tall, short, flat chest, small breasts, medium breasts, large breasts, broad shoulders, wide hips, thick thighs.",
@@ -1580,26 +1611,26 @@ function parserInstruction(config) {
     "Do not include body traits, expressions, actions, camera, place, or names in attire.",
     "### expression",
     "Visible facial emotions and facial/eye states only: annoyed, angry, embarrassed, blush, grin, smile, crying, empty eyes, closed eyes.",
-    "Prefer the current source's explicit visible emotion over inferred genre mood. Convert irritation or anger into concrete visible tags such as annoyed, angry, furrowed brows, glaring, clenched teeth, or open mouth when supported.",
+    experimentalMode ? "Prefer the current source's explicit visible emotion over inferred genre mood. Convert irritation or anger into concrete visible tags such as annoyed, angry, furrowed brows, glaring, clenched teeth, or open mouth when supported." : "",
     "Do not include posture, gaze direction, clothing, body, action, camera, place, or names in expression.",
-    animaIllustration ? "### Atomic action ownership" : "### action",
-    animaIllustration ? "Do not output legacy shot.action or characters[].action fields. Put each individual action only in that character's composition.actions. Put shared contact or combined action only in sharedComposition.interaction." : "Use shot.action for global or relationship action that applies to the whole shot, such as two characters holding hands or one character guiding another.",
-    animaIllustration ? "A fact must have exactly one owner. Never repeat an individual action in sharedComposition and never repeat shared contact in a character's composition." : "Use characters[].action for a single character's posture, gaze, pose, interactions, and visible actions. Use multiple tags if needed.",
+    experimentalMode ? "### Atomic action ownership" : "### action",
+    experimentalMode ? "Do not output legacy shot.action or characters[].action fields. Put each individual action only in that character's composition.actions. Put shared contact or combined action only in sharedComposition.interaction." : "Use shot.action for global or relationship action that applies to the whole shot, such as two characters holding hands or one character guiding another.",
+    experimentalMode ? "A fact must have exactly one owner. Never repeat an individual action in sharedComposition and never repeat shared contact in a character's composition." : "Use characters[].action for a single character's posture, gaze, pose, interactions, and visible actions. Use multiple tags if needed.",
     "Posture examples: standing, sitting on chair, on back, kneeling, spread legs, all fours, squatting, on stomach, on side.",
     "Gaze examples: looking at viewer, looking away, looking at another.",
     "Interaction examples: arm hug, leaning, heads together, carrying, piggyback, holding hands.",
-    animaIllustration ? "Do not duplicate camera, environment, situation counts, appearance, body, attire, or expression in composition actions." : "Do not duplicate camera, place, situation counts, appearance, body, attire, or expression. Do not put the same action in multiple fields.",
+    experimentalMode ? "Do not duplicate camera, environment, situation counts, appearance, body, attire, or expression in composition actions." : "Do not duplicate camera, place, situation counts, appearance, body, attire, or expression. Do not put the same action in multiple fields.",
     "### negative - optional",
     "Only if the client explicitly specifies negative prompt tags. Never infer negative tags.",
     naturalDetail,
     "## Repetition is Consistency",
     "- If a detail appears in one shot and persists, tag it in all subsequent shots.",
     "- If an action or attire is still in motion or still present, repeat it in later shots.",
-    config.mode === "illustration" ? "- Preserve a continuous pov only when the narrative establishes an ongoing viewpoint. Otherwise choose the strongest perspective for each visual beat." : "",
+    config.mode !== "asset" ? "- Preserve a continuous pov only when the narrative establishes an ongoing viewpoint. Otherwise choose the strongest perspective for each visual beat." : "",
     "- appearance + body + attire must be identical for the same character across all shots unless the current message explicitly changes their present visual state.",
     "## Data Priority",
     "1. Client comments or explicit user instructions in the current message override all instructions.",
-    "2. Current message [P#] paragraphs are authoritative for scene content, action, visible emotion, interpersonal tone, and movement direction. Never soften, romanticize, or replace those facts with an inferred atmosphere. Never restore outdated clothing, props, location, or actions from context.",
+    experimentalMode ? "2. Current message [P#] paragraphs are authoritative for scene content, action, visible emotion, interpersonal tone, and movement direction. Never soften, romanticize, or replace those facts with an inferred atmosphere. Never restore outdated clothing, props, location, or actions from context." : "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
     config.characterTagContextEnabled ? "3. Character tag history is the current visual baseline for returning characters: label, age, appearance, body, and base attire." : "",
     config.characterTagContextEnabled ? "Use previous character tags as a baseline for returning characters, including base attire. Preserve specific baseline tags when not contradicted, such as short cut, white pupils, small breasts, black high school uniform, red sailor ribbon, black skirt, and white pantyhose." : "",
     config.characterTagContextEnabled ? "The current message is authoritative for the character's present visual state. It can update the baseline when it clearly changes clothing, lack of clothing, appearance, or body traits." : "",
@@ -1945,7 +1976,7 @@ function validatePreprocessedTarget(value, paragraphs, config) {
 }
 async function preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId) {
   const rawTarget = formatTargetParagraphs(paragraphs);
-  if (!config.preprocessingEnabled || config.mode !== "illustration")
+  if (!config.preprocessingEnabled || config.mode === "asset")
     return rawTarget;
   try {
     const summary = await generateParserText(parserConnection, config, parserMessages(preprocessingInstruction(paragraphs, config), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), preprocessingUserRequest(rawTarget), context.override), userId);

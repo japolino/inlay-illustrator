@@ -9,7 +9,7 @@ export type Config = {
   enabled: boolean;
   autoGenerate: boolean;
   debugLogging: boolean;
-  mode: "illustration" | "asset";
+  mode: "illustration" | "experimental" | "asset";
   parserConnectionId: string | null;
   parserModel: string;
   parserParameters: Record<string, unknown>;
@@ -155,7 +155,7 @@ export function normalizeConfig(raw: RawConfig): Config {
   return {
     ...DEFAULT_CONFIG,
     ...current,
-    mode: raw.mode === "asset" ? "asset" : "illustration",
+    mode: raw.mode === "asset" ? "asset" : raw.mode === "experimental" ? "experimental" : "illustration",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),

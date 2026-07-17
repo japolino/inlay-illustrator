@@ -91,6 +91,13 @@ describe("shared configuration", () => {
     });
   });
 
+  test("keeps Experimental opt-in and defaults unknown modes to stable Illustration", () => {
+    expect(normalizeConfig({ mode: "experimental" }).mode).toBe("experimental");
+    expect(normalizeConfig({ mode: "illustration" }).mode).toBe("illustration");
+    expect(normalizeConfig({ mode: "asset" }).mode).toBe("asset");
+    expect(normalizeConfig({ mode: "unknown" as never }).mode).toBe("illustration");
+  });
+
   test("trims presets, drops malformed or duplicate IDs, and keeps only a valid active selection", () => {
     const presets = normalizePromptPresets([
       { id: " cinematic ", name: " Cinematic ", positivePrefix: " quality ", negativePrefix: " lowres " },

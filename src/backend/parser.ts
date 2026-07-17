@@ -305,7 +305,7 @@ export async function preprocessTargetParagraphs(
   userId?: string
 ): Promise<string> {
   const rawTarget = formatTargetParagraphs(paragraphs);
-  if (!config.preprocessingEnabled || config.mode !== "illustration") return rawTarget;
+  if (!config.preprocessingEnabled || config.mode === "asset") return rawTarget;
   try {
     const summary = await generateParserText(parserConnection, config, parserMessages(
       preprocessingInstruction(paragraphs, config),

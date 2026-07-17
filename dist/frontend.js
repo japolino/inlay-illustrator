@@ -92,7 +92,7 @@ function normalizeConfig(raw) {
   return {
     ...DEFAULT_CONFIG,
     ...current,
-    mode: raw.mode === "asset" ? "asset" : "illustration",
+    mode: raw.mode === "asset" ? "asset" : raw.mode === "experimental" ? "experimental" : "illustration",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
@@ -250,14 +250,15 @@ function renderDiagnosticsSection({ ui, actions }) {
 }
 
 // src/frontend/sections/generation.ts
-function renderGenerationSection({ ui, actions }) {
+function renderGenerationSection({ ui, actions, rerender }) {
   const section = ui.section("Generation", true);
   ui.addSwitch(section, "enabled", "Power");
   ui.addSwitch(section, "autoGenerate", "Auto generate");
   ui.addSelect(section, "mode", "Mode", [
     { value: "illustration", label: "Illustration" },
+    { value: "experimental", label: "Experimental (Anima)" },
     { value: "asset", label: "Asset" }
-  ]);
+  ], "Switch between the stable parser, experimental atomic Anima parser, and asset portraits.", rerender);
   ui.addNumber(section, "minImages", "Minimum images", 1, 12);
   ui.addNumber(section, "maxImages", "Maximum images", 1, 12);
   ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 8);
@@ -391,17 +392,21 @@ function createPresetId() {
 }
 function renderPromptSection({ ui, config, actions, rerender }) {
   const section = ui.section("Prompt output", false);
-  ui.addSelect(section, "promptStyle", "Prompt style", [
-    { value: "default", label: "Default" },
-    { value: "anima", label: "Anima" }
-  ]);
+  if (config.mode === "experimental") {
+    ui.addSummary(section, "Experimental mode uses the atomic Anima parser and prompt renderer.");
+  } else {
+    ui.addSelect(section, "promptStyle", "Prompt style", [
+      { value: "default", label: "Default" },
+      { value: "anima", label: "Anima" }
+    ]);
+  }
   ui.addSelect(section, "promptSyntax", "Prompt syntax", [
     { value: "nai", label: "NovelAI" },
     { value: "comfyui", label: "ComfyUI" }
   ]);
   ui.addSwitch(section, "originalReference", "Source reference");
   ui.addText(section, "originalCreationName", "Creation name");
-  ui.addSwitch(section, "supplement", "Natural/shared detail");
+  ui.addSwitch(section, "supplement", config.mode === "experimental" ? "Natural/shared detail" : "Natural supplement");
   ui.addSubtitle(section, "Prompt presets");
   const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
   const presetSelectTarget = ui.row(section, "Active preset", "Preset prefixes are inserted before the custom prompt fields below.");
@@ -610,7 +615,7 @@ class UiBuilder {
       }
     }));
   }
-  addSelect(parent, key, label, options, hint = "") {
+  addSelect(parent, key, label, options, hint = "", afterChange) {
     const target = this.row(parent, label, hint);
     this.track(this.ctx.components.mountSelect(target, {
       value: String(this.config[key] || ""),
@@ -618,7 +623,10 @@ class UiBuilder {
       className: "inlay-select-control",
       triggerClassName: "inlay-select-trigger",
       portal: true,
-      onChange: (value) => this.patchConfig({ [key]: value })
+      onChange: (value) => {
+        this.patchConfig({ [key]: value });
+        afterChange?.();
+      }
     }));
   }
   addText(parent, key, label, hint = "") {

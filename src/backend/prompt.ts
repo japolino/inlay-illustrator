@@ -84,13 +84,19 @@ export function buildCharacterTagReference(map: Record<string, string>): string 
   return lines.length ? ["## Previous Character Tags", ...lines].join("\n") : "";
 }
 
-function joinSections(sections: string[], syntax: Config["promptSyntax"]): string {
-  const clean = sections.map(normalizePromptSection).filter(Boolean);
-  return syntax === "comfyui" ? clean.join(",\n\n") : clean.join(", ");
+function joinSections(
+  sections: string[],
+  syntax: Config["promptSyntax"],
+  format: NonNullable<AssembledPrompt["format"]>
+): string {
+  const clean = sections
+    .map((section) => format === "ordered" ? normalizePromptSection(section) : section.trim())
+    .filter(Boolean);
+  return syntax === "comfyui" ? clean.join(format === "ordered" ? ",\n\n" : ",\n") : clean.join(", ");
 }
 
 export function renderPrompt(prompt: AssembledPrompt, syntax: Config["promptSyntax"]): string {
-  return joinSections(prompt.sections, syntax);
+  return joinSections(prompt.sections, syntax, prompt.format || "ordered");
 }
 
 /** Makes model- and user-provided prompt fragments safe to join without altering weight syntax. */
@@ -123,6 +129,14 @@ function dedupePromptSections(sections: string[]): string[] {
     output.push(section);
   }
   return output;
+}
+
+function removeSupplementActionDuplicates(supplement: string, actionTags: string): string {
+  let next = supplement.trim();
+  for (const action of csvParts(actionTags)) {
+    next = next.replace(new RegExp(`\\b${escapeRegExp(action)}\\b`, "gi"), " ");
+  }
+  return next.replace(/\s+([,.])/g, "$1").replace(/\s+/g, " ").trim();
 }
 
 const ACTION_STOP_WORDS = new Set(["a", "an", "at", "in", "of", "on", "the", "to", "toward", "towards", "with"]);
@@ -304,6 +318,40 @@ function assembleAnimaAssetPrompt(
   ]) };
 }
 
+function assembleLegacyAnimaPrompt(
+  scene: SceneJson,
+  shot: ShotJson,
+  config: Config,
+  replacements: Map<string, string>
+): AssembledPrompt {
+  const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
+  const characters = cleanArray<CharacterJson>(shot.characters).slice(0, maxCharacters);
+  const characterBlocks = characters
+    .map((character) => assembleCharacterBlock(character, config, replacements, false))
+    .filter(Boolean);
+  const sceneAction = stripOrReplaceNames(unique(csvParts(
+    shot.action,
+    ...characters.map((character) => character.action),
+    config.mode === "asset" ? "looking at viewer" : ""
+  )).join(", "), replacements, true);
+  const supplement = config.supplement
+    ? stripOrReplaceNames(removeSupplementActionDuplicates(cleanString(shot.supplement), sceneAction), replacements, false)
+    : "";
+  return {
+    sections: [
+      ...dedupePromptSections([
+        stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
+        ...characterBlocks,
+        sceneAction,
+        stripOrReplaceNames(unique(csvParts(shot.camera, config.mode === "asset" ? "portrait, cowboy shot" : "")).join(", "), replacements, true),
+        stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true)
+      ]),
+      supplement
+    ].filter(Boolean),
+    format: "legacy"
+  };
+}
+
 function assembleAnimaPrompt(
   scene: SceneJson,
   shot: ShotJson,
@@ -371,13 +419,15 @@ function assembleDefaultPrompt(
     .map((character) => assembleCharacterBlock(character, config, replacements, true))
     .filter(Boolean);
   const supplement = config.supplement ? stripOrReplaceNames(cleanString(shot.supplement), replacements, false) : "";
-  const sections = dedupePromptSections([
+  const tagSections = dedupePromptSections([
     stripOrReplaceNames(unique(csvParts(shot.camera, shot.situation, shot.action, config.mode === "asset" ? "portrait, cowboy shot, looking at viewer" : "")).join(", "), replacements, true),
     stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true),
-    ...characterBlocks,
-    supplement
+    ...characterBlocks
   ]);
-  return { sections };
+  const sections = config.mode === "illustration"
+    ? [...tagSections, supplement].filter(Boolean)
+    : dedupePromptSections([...tagSections, supplement]);
+  return { sections, format: config.mode === "illustration" ? "legacy" : "ordered" };
 }
 
 export function assemblePrompt(
@@ -389,9 +439,13 @@ export function assemblePrompt(
 ): PromptEntry {
   const characters = cleanArray<CharacterJson>(shot.characters);
   const replacements = buildNameReplacementMap(characters);
-  const core = config.promptStyle === "anima"
+  const core = config.mode === "experimental"
     ? assembleAnimaPrompt(scene, shot, config, replacements)
-    : assembleDefaultPrompt(scene, shot, config, replacements);
+    : config.mode === "asset" && config.promptStyle === "anima"
+      ? assembleAnimaAssetPrompt(scene, shot, config, replacements)
+      : config.promptStyle === "anima"
+        ? assembleLegacyAnimaPrompt(scene, shot, config, replacements)
+        : assembleDefaultPrompt(scene, shot, config, replacements);
   const preset = activePromptPreset(config);
   const presetPrefix = stripOrReplaceNames(preset?.positivePrefix || "", replacements, true);
   const prefix = stripOrReplaceNames(config.customPositivePrefix, replacements, true);
@@ -399,13 +453,20 @@ export function assemblePrompt(
   const prefixes = [presetPrefix, prefix].filter(Boolean);
   return {
     prompt: {
-      sections: [...prefixes, ...core.sections, suffix].map((section) => section.trim()).filter(Boolean)
+      sections: [...prefixes, ...core.sections, suffix].map((section) => section.trim()).filter(Boolean),
+      format: core.format || "ordered"
     },
-    negative: normalizePromptSection(stripOrReplaceNames(
-      unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "),
-      replacements,
-      true
-    )),
+    negative: (core.format || "ordered") === "ordered"
+      ? normalizePromptSection(stripOrReplaceNames(
+        unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "),
+        replacements,
+        true
+      ))
+      : stripOrReplaceNames(
+        unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "),
+        replacements,
+        true
+      ),
     paragraph: originalParagraph,
     parserParagraph
   };
