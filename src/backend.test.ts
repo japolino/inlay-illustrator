@@ -151,6 +151,23 @@ describe("character-memory frontend messages", () => {
   });
 });
 
+describe("configuration frontend messages", () => {
+  test("acknowledges a saved field without sending a full panel state", async () => {
+    await frontendMessageHandler({
+      type: "set_config",
+      chatId: "chat-1",
+      patch: { customParserInstructions: "keep typing" }
+    }, "user-1");
+
+    expect(frontendMessages).toHaveLength(1);
+    expect(frontendMessages[0]).toMatchObject({
+      type: "config_updated",
+      chatId: "chat-1",
+      config: { customParserInstructions: "keep typing" }
+    });
+  });
+});
+
 describe("primary-model context interceptor", () => {
   test("runs for every generation flow and preserves non-content message data", async () => {
     const inlay = '<!-- inlay_illustrator -->\n<div data-inlay-illustrator="true"><img src="/generated.png" data-inlay-illustrator-prompt="secret"><pre class="inlay-illustrator-prompt" hidden>secret</pre></div>';

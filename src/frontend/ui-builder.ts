@@ -19,6 +19,7 @@ export class UiBuilder {
     private readonly sections: HTMLElement,
     private readonly config: Config,
     private readonly patchConfig: (patch: Partial<Config>) => void,
+    private readonly expandedSections: Map<string, boolean>,
     private readonly track: (component: MountedComponent) => void
   ) {}
 
@@ -26,7 +27,11 @@ export class UiBuilder {
     const host = document.createElement("div");
     host.className = "inlay-section-host";
     this.sections.append(host);
-    const component = this.ctx.components.mountCollapsibleSection(host, { title, defaultExpanded });
+    const component = this.ctx.components.mountCollapsibleSection(host, {
+      title,
+      defaultExpanded: this.expandedSections.get(title) ?? defaultExpanded,
+      onToggle: (expanded) => this.expandedSections.set(title, expanded)
+    });
     this.track(component);
     component.body.classList.add("inlay-section-body");
     return component.body;

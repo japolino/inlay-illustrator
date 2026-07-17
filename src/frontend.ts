@@ -95,6 +95,9 @@ export function setup(ctx: SpindleFrontendContext) {
 
   const unsub = ctx.onBackendMessage((payload: unknown) => {
     routeBackendMessage(payload as BackendMessage, activeChatId, {
+      replaceConfig: (next) => {
+        config = next;
+      },
       replaceState: (next) => {
         config = next.config;
         parserConnections = next.parserConnections;

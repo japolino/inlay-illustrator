@@ -1860,6 +1860,7 @@ ${unused.join(`
 
 // src/backend/storage.ts
 var stateUpdateQueues = new Map;
+var configUpdateQueues = new Map;
 async function readJson(path, fallback, userId) {
   try {
     if (!await spindle.userStorage.exists(path, userId))
@@ -1882,9 +1883,25 @@ async function getConfig(userId) {
   return normalizeConfig(await readJson("config.json", DEFAULT_CONFIG, userId));
 }
 async function setConfig(patch, userId) {
-  const next = normalizeConfig({ ...await getConfig(userId), ...patch });
-  await writeJson("config.json", next, userId);
-  return next;
+  const queueKey = userId ?? "";
+  const previous = configUpdateQueues.get(queueKey) || Promise.resolve();
+  const operation = previous.then(async () => {
+    const next = normalizeConfig({ ...await getConfig(userId), ...patch });
+    await writeJson("config.json", next, userId);
+    return next;
+  });
+  const tail = operation.then(() => {
+    return;
+  }, () => {
+    return;
+  });
+  configUpdateQueues.set(queueKey, tail);
+  try {
+    return await operation;
+  } finally {
+    if (configUpdateQueues.get(queueKey) === tail)
+      configUpdateQueues.delete(queueKey);
+  }
 }
 async function getState(chatId, userId) {
   return readJson(`states/${chatId}.json`, { characterAppearance: {}, generated: {} }, userId);
@@ -2289,7 +2306,11 @@ spindle.onFrontendMessage(async (payload, userId) => {
       const next = await setConfig(message.patch || {}, userId);
       configForError = next;
       logStage(next, "frontend_set_config", { patchKeys: keysOf(message.patch) });
-      await sendState(userId, String(message.chatId || ""));
+      spindle.sendToFrontend({
+        type: "config_updated",
+        chatId: String(message.chatId || ""),
+        config: next
+      }, userId);
     } else if (message.type === "character_tags_update") {
       const config = await getConfig(userId);
       configForError = config;

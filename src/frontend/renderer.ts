@@ -5,6 +5,7 @@ import { UiBuilder } from "./ui-builder.js";
 
 export class SettingsRenderer {
   private mountedComponents: MountedComponent[] = [];
+  private readonly expandedSections = new Map<string, boolean>();
 
   constructor(
     private readonly ctx: SpindleFrontendContext,
@@ -26,6 +27,7 @@ export class SettingsRenderer {
       sections,
       snapshot.config,
       this.actions.patchConfig,
+      this.expandedSections,
       (component) => this.mountedComponents.push(component)
     );
     renderSettingsSections({

@@ -6,6 +6,7 @@ declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 type StateMutator = (state: State) => void | Promise<void>;
 
 const stateUpdateQueues = new Map<string, Promise<void>>();
+const configUpdateQueues = new Map<string, Promise<void>>();
 
 async function readJson<T>(path: string, fallback: T, userId?: string): Promise<T> {
   try {
@@ -28,9 +29,21 @@ export async function getConfig(userId?: string): Promise<Config> {
 }
 
 export async function setConfig(patch: Partial<Config>, userId?: string): Promise<Config> {
-  const next = normalizeConfig({ ...(await getConfig(userId)), ...patch });
-  await writeJson("config.json", next, userId);
-  return next;
+  const queueKey = userId ?? "";
+  const previous = configUpdateQueues.get(queueKey) || Promise.resolve();
+  const operation = previous.then(async () => {
+    const next = normalizeConfig({ ...(await getConfig(userId)), ...patch });
+    await writeJson("config.json", next, userId);
+    return next;
+  });
+  const tail = operation.then(() => undefined, () => undefined);
+  configUpdateQueues.set(queueKey, tail);
+
+  try {
+    return await operation;
+  } finally {
+    if (configUpdateQueues.get(queueKey) === tail) configUpdateQueues.delete(queueKey);
+  }
 }
 
 export async function getState(chatId: string, userId?: string): Promise<State> {

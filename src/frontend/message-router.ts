@@ -10,6 +10,7 @@ export type BackendState = {
 
 export type BackendMessageActions = {
   replaceState(state: BackendState): void;
+  replaceConfig(config: Config): void;
   replaceCharacterMemory(characterAppearance: Record<string, string>, status: string): void;
   updateStatus(status: string): void;
   refreshParserConnections(): void;
@@ -21,6 +22,12 @@ export function routeBackendMessage(
   getActiveChatId: () => string,
   actions: BackendMessageActions
 ): void {
+  if (message.type === "config_updated" && message.config) {
+    if (message.chatId && message.chatId !== getActiveChatId()) return;
+    actions.replaceConfig({ ...DEFAULT_CONFIG, ...message.config });
+    return;
+  }
+
   if (message.type === "state" && message.config) {
     if (message.chatId && message.chatId !== getActiveChatId()) return;
     const parserConnections = message.parserConnections || [];

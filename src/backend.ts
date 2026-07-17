@@ -86,7 +86,11 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       const next = await setConfig((message.patch || {}) as Partial<Config>, userId);
       configForError = next;
       logStage(next, "frontend_set_config", { patchKeys: keysOf(message.patch) });
-      await sendState(userId, String(message.chatId || ""));
+      spindle.sendToFrontend({
+        type: "config_updated",
+        chatId: String(message.chatId || ""),
+        config: next
+      }, userId);
     } else if (message.type === "character_tags_update") {
       const config = await getConfig(userId);
       configForError = config;

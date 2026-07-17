@@ -191,6 +191,12 @@ var PANEL_STYLES = `
 
 // src/frontend/message-router.ts
 function routeBackendMessage(message, getActiveChatId, actions) {
+  if (message.type === "config_updated" && message.config) {
+    if (message.chatId && message.chatId !== getActiveChatId())
+      return;
+    actions.replaceConfig({ ...DEFAULT_CONFIG, ...message.config });
+    return;
+  }
   if (message.type === "state" && message.config) {
     if (message.chatId && message.chatId !== getActiveChatId())
       return;
@@ -537,19 +543,25 @@ class UiBuilder {
   sections;
   config;
   patchConfig;
+  expandedSections;
   track;
-  constructor(ctx, sections, config, patchConfig, track) {
+  constructor(ctx, sections, config, patchConfig, expandedSections, track) {
     this.ctx = ctx;
     this.sections = sections;
     this.config = config;
     this.patchConfig = patchConfig;
+    this.expandedSections = expandedSections;
     this.track = track;
   }
   section(title, defaultExpanded) {
     const host = document.createElement("div");
     host.className = "inlay-section-host";
     this.sections.append(host);
-    const component = this.ctx.components.mountCollapsibleSection(host, { title, defaultExpanded });
+    const component = this.ctx.components.mountCollapsibleSection(host, {
+      title,
+      defaultExpanded: this.expandedSections.get(title) ?? defaultExpanded,
+      onToggle: (expanded) => this.expandedSections.set(title, expanded)
+    });
     this.track(component);
     component.body.classList.add("inlay-section-body");
     return component.body;
@@ -654,6 +666,7 @@ class SettingsRenderer {
   getSnapshot;
   actions;
   mountedComponents = [];
+  expandedSections = new Map;
   constructor(ctx, root, getSnapshot, actions) {
     this.ctx = ctx;
     this.root = root;
@@ -667,7 +680,7 @@ class SettingsRenderer {
     const statusNode = this.root.querySelector(".inlay-status");
     const snapshot = this.getSnapshot();
     statusNode.textContent = snapshot.status;
-    const ui = new UiBuilder(this.ctx, sections, snapshot.config, this.actions.patchConfig, (component) => this.mountedComponents.push(component));
+    const ui = new UiBuilder(this.ctx, sections, snapshot.config, this.actions.patchConfig, this.expandedSections, (component) => this.mountedComponents.push(component));
     renderSettingsSections({
       ui,
       config: snapshot.config,
@@ -763,6 +776,9 @@ function setup(ctx) {
   }
   const unsub = ctx.onBackendMessage((payload) => {
     routeBackendMessage(payload, activeChatId, {
+      replaceConfig: (next) => {
+        config = next;
+      },
       replaceState: (next) => {
         config = next.config;
         parserConnections = next.parserConnections;

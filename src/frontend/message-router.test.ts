@@ -7,6 +7,7 @@ import {
 } from "./message-router.js";
 
 let states: BackendState[];
+let configs: typeof DEFAULT_CONFIG[];
 let memories: Array<{ characterAppearance: Record<string, string>; status: string }>;
 let statuses: string[];
 let refreshes: number;
@@ -15,11 +16,13 @@ let actions: BackendMessageActions;
 
 beforeEach(() => {
   states = [];
+  configs = [];
   memories = [];
   statuses = [];
   refreshes = 0;
   defaultsApplied = 0;
   actions = {
+    replaceConfig: (config) => configs.push(config),
     replaceState: (state) => states.push(state),
     replaceCharacterMemory: (characterAppearance, status) => {
       memories.push({ characterAppearance, status });
@@ -31,6 +34,18 @@ beforeEach(() => {
 });
 
 describe("frontend backend-message routing", () => {
+  test("applies config acknowledgements without replacing or rerendering panel state", () => {
+    routeBackendMessage({
+      type: "config_updated",
+      chatId: "chat-1",
+      config: { ...DEFAULT_CONFIG, customParserInstructions: "keep typing" }
+    }, () => "chat-1", actions);
+
+    expect(configs).toEqual([{ ...DEFAULT_CONFIG, customParserInstructions: "keep typing" }]);
+    expect(states).toEqual([]);
+    expect(defaultsApplied).toBe(0);
+  });
+
   test("replaces state, fills missing defaults, and keeps available parser connections", () => {
     routeBackendMessage({
       type: "state",

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import type { Config } from "../shared/config.js";
 import { updateCache, upsertCharacterTag } from "./memory.js";
-import { updateState } from "./storage.js";
+import { setConfig, updateState } from "./storage.js";
 import type { State } from "./types.js";
 
 type Deferred<T> = {
@@ -46,6 +47,12 @@ class MemoryUserStorage {
 
   seedRawState(chatId: string, userId: string | undefined, contents: string): void {
     this.files.set(this.key(`states/${chatId}.json`, userId), contents);
+  }
+
+  storedConfig(userId?: string): Config {
+    const contents = this.files.get(this.key("config.json", userId));
+    if (contents === undefined) throw new Error(`No config stored for ${userId || "default"}.`);
+    return JSON.parse(contents) as Config;
   }
 
   storedState(chatId: string, userId?: string): State {
@@ -272,5 +279,23 @@ describe("serialized state updates", () => {
     await expect(recovered).resolves.toMatchObject({ characterAppearance: { Bob: "black hair" } });
     expect(storage.storedState("chat-1", "user-1").characterAppearance).toEqual({ Bob: "black hair" });
     expect(storage.writeCalls).toHaveLength(1);
+  });
+});
+
+describe("serialized configuration updates", () => {
+  test("keeps the latest value when rapid field changes overlap", async () => {
+    const firstWrite = storage.gateNextWrite();
+    const first = setConfig({ customParserInstructions: "a" }, "user-1");
+    await firstWrite.entered.promise;
+
+    const second = setConfig({ customParserInstructions: "ab" }, "user-1");
+    await flushAsyncWork();
+    expect(storage.writeCalls).toHaveLength(1);
+
+    firstWrite.release.resolve(undefined);
+    await Promise.all([first, second]);
+
+    expect(storage.storedConfig("user-1").customParserInstructions).toBe("ab");
+    expect(storage.writeCalls).toHaveLength(2);
   });
 });
