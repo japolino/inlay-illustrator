@@ -11,7 +11,6 @@ Lumiverse extension for persistent, context-aware character image generation.
 - Asset mode for focused character images
 - Anima-style and ComfyUI-friendly prompt output
 - Optional activated-lorebook context with macro resolution, compact first-pass references, and full-context retry
-- Optional Danbooru tag cleanup
 
 ## Install from source
 

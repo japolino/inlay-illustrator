@@ -34,7 +34,6 @@ export type BackendMessage = {
   characterAppearance?: Record<string, string>;
   status?: string;
   error?: string;
-  result?: unknown;
   record?: { imageUrls?: string[] };
 };
 

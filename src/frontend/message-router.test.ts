@@ -107,12 +107,4 @@ describe("frontend backend-message routing", () => {
       "Ready\n0 image(s) generated."
     ]);
   });
-
-  test("formats and caps Danbooru diagnostic responses", () => {
-    routeBackendMessage({ type: "danbooru_test", result: { value: "x".repeat(1200) } }, () => "", actions);
-
-    expect(statuses).toHaveLength(1);
-    expect(statuses[0]).toStartWith("Danbooru endpoint responded.\n{");
-    expect(statuses[0].length).toBe("Danbooru endpoint responded.\n".length + 1000);
-  });
 });

@@ -58,7 +58,8 @@ function extractUsage(result: unknown): Record<string, number> {
 
 const FUZZY_KEYS = [
   "scenes", "place", "shots", "paragraph", "camera", "situation", "characters", "label", "age", "identity", "appearance", "body", "attire",
-  "expression", "action", "negative", "name", "scene", "positive", "quote", "supplement"
+  "expression", "action", "composition", "sharedComposition", "environment", "location", "timeWeather", "lightingMood", "backgroundElements",
+  "negative", "name", "scene", "positive", "quote", "supplement"
 ];
 
 function levenshtein(a: string, b: string): number {

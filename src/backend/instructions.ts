@@ -2,6 +2,7 @@ import type { Config } from "../shared/config.js";
 
 export function parserInstruction(config: Config): string {
   const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
+  const animaIllustration = config.mode === "illustration" && config.promptStyle === "anima";
   const shotInstruction = config.mode === "asset"
     ? [
       "Asset mode: generate exactly one shot for each [P#] paragraph.",
@@ -26,58 +27,110 @@ export function parserInstruction(config: Config): string {
       "Do not include any parenthetical, source name, creation reference, title, or alias in name or any other field."
     ].join("\n")
     : "Use names only for the JSON name field as private memory keys. Names will not be included in final prompts. If not given, make a concise stable identifier that fits the description.";
-  const supplement = config.supplement
+  const schema = animaIllustration ? [
+    "{",
+    '  "scenes": [',
+    "    {",
+    '      "environment": {',
+    '        "location": "string",',
+    '        "timeWeather": "string",',
+    '        "lightingMood": ["string"],',
+    '        "backgroundElements": ["string"]',
+    "      },",
+    '      "shots": [',
+    "        {",
+    '          "paragraph": 0,',
+    '          "camera": "string",',
+    '          "situation": "string",',
+    '          "action": "string",',
+    '          "characters": [',
+    "            {",
+    '              "name": "string",',
+    '              "label": "string",',
+    '              "age": "string",',
+    '              "identity": "string",',
+    '              "appearance": "string",',
+    '              "body": "string",',
+    '              "attire": "string",',
+    '              "expression": "string",',
+    '              "action": "string",',
+    '              "composition": "string"',
+    "            }",
+    "          ],",
+    '          "sharedComposition": "string",',
+    '          "negative": "string"',
+    "        }",
+    "      ]",
+    "    }",
+    "  ]",
+    "}"
+  ] : [
+    "{",
+    '  "scenes": [',
+    "    {",
+    '      "place": "string",',
+    '      "shots": [',
+    "        {",
+    '          "paragraph": 0,',
+    '          "camera": "string",',
+    '          "situation": "string",',
+    '          "action": "string",',
+    '          "characters": [',
+    "            {",
+    '              "name": "string",',
+    '              "label": "string",',
+    '              "age": "string",',
+    '              "identity": "string",',
+    '              "appearance": "string",',
+    '              "body": "string",',
+    '              "attire": "string",',
+    '              "expression": "string",',
+    '              "action": "string"',
+    "            }",
+    "          ],",
+    '          "supplement": "string",',
+    '          "negative": "string"',
+    "        }",
+    "      ]",
+    "    }",
+    "  ]",
+    "}"
+  ];
+  const naturalDetail = animaIllustration
     ? [
-      "### Natural Language Supplement",
-      "In supplement, describe the image in natural language for visible details that tags cannot express well, such as detailed composition, framing, character positions, interactions, unusual vantage points, or objective atmosphere/lighting.",
-      "Use concise, minimal, telegraphic sentences. Be objective, not subjective interpretation.",
-      "Unusual framing and vantage points are welcome, such as viewed through an object, reflected in a mirror, or partially obscured by foreground elements.",
-      "When describing multiple people, do not use names. Identify people by visual position such as left girl, right boy, foreground character, or background character.",
-      "Do not use supplement for smell, sound, internal sensations, invisible emotions, or prose narration."
+      "### Natural Composition",
+      "characters[].composition is always required. Describe that character's spatial position, pose, visible action, gaze, and relationships in concise natural language.",
+      "Do not repeat a character's action tags when composition already expresses the same action; action is only a fallback for missing composition.",
+      config.supplement
+        ? "Use shot.sharedComposition for concise natural-language interaction or relationship detail shared by multiple characters."
+        : "Leave shot.sharedComposition empty. Character composition remains required.",
+      "Do not use names in composition prose. Identify people by visual position such as left girl, right boy, foreground character, or background character.",
+      "Use concise objective visual phrases, not narration, invisible emotion, smell, sound, or internal sensation.",
+      "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements.",
+      "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
+      config.supplement
+        ? "Populate lightingMood and backgroundElements within the target budget."
+        : "Leave lightingMood and backgroundElements empty. Still populate location and timeWeather."
     ].join("\n")
-    : "Do not include supplement text.";
+    : config.supplement
+      ? [
+        "### Natural Language Supplement",
+        "In supplement, describe the image in natural language for visible details that tags cannot express well, such as detailed composition, framing, character positions, interactions, unusual vantage points, or objective atmosphere/lighting.",
+        "Use concise, minimal, telegraphic sentences. Be objective, not subjective interpretation.",
+        "Do not use supplement for smell, sound, internal sensations, invisible emotions, or prose narration."
+      ].join("\n")
+      : "Do not include supplement text.";
   return [
     "# Image Tagging System",
     "Tag the current message's paragraphs as Danbooru-style English image prompts. Output a single JSON object.",
     "## JSON Format",
-    [
-      "{",
-      '  "scenes": [',
-      "    {",
-      '      "place": "string",',
-      '      "shots": [',
-      "        {",
-      '          "paragraph": 0,',
-      '          "camera": "string",',
-      '          "situation": "string",',
-      '          "action": "string",',
-      '          "characters": [',
-      "            {",
-      '              "name": "string",',
-      '              "label": "string",',
-      '              "age": "string",',
-      '              "identity": "string",',
-      '              "appearance": "string",',
-      '              "body": "string",',
-      '              "attire": "string",',
-      '              "expression": "string",',
-      '              "action": "string"',
-      "            }",
-      "          ],",
-      '          "supplement": "string",',
-      '          "negative": "string"',
-      "        }",
-      "      ]",
-      "    }",
-      "  ]",
-      "}"
-    ].join("\n"),
+    schema.join("\n"),
     "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
     "- These are the ONLY allowed fields. Adding any unlisted field is a schema violation.",
     "## Scenes & Shots",
     "Scene = shots sharing one physical location.",
     "- Same location means same scene, multiple shots.",
-    "- Location change means a new scene with its own place.",
+    animaIllustration ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
     "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
     shotInstruction,
     "Paragraph mapping: current message uses [P#] numbering.",
@@ -86,16 +139,24 @@ export function parserInstruction(config: Config): string {
     "- Tag ONLY the current message. Recent context is for continuity only.",
     "## Tag Rules",
     "Use common, objective, visualizable Danbooru-style English tags. Do not invent tags; use simpler well-known equivalents if unsure. Do not use metaphors for tags.",
-    "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
+    animaIllustration
+      ? "Tag fields are comma-separated tags. composition and sharedComposition are concise natural language. Environment arrays contain one comma-free visual snippet per item."
+      : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
     `Character limit: max ${maxCharacters} visible character(s) per shot. Characters outside the limit should be represented only by visible partial body parts, such as out of frame, hand, arm, or legs. Do not output their expressions or attire. Only output visible body parts and actions when needed.`,
     config.mode === "asset" ? "Asset mode requires one character in characters[] for every shot, no group shots, no narrative background beyond a simple white background." : "",
     "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for stable appearance, attire, location, and persistent actions.",
     config.mode === "illustration" ? "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts." : "",
-    "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
+    animaIllustration
+      ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, action, composition, camera, situation, sharedComposition, environment, and negative."
+      : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
     "## Field Reference",
-    "### place - scene-level",
-    "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
-    "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
+    animaIllustration ? "### environment - scene-level" : "### place - scene-level",
+    animaIllustration
+      ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details."
+      : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
+    animaIllustration
+      ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment."
+      : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
     "### camera - shot-level",
     "Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
     "Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus.",
@@ -108,7 +169,7 @@ export function parserInstruction(config: Config): string {
     "Use girl, boy, or other regardless of age. For out-of-frame partial characters, use label plus out of frame and visible part, such as boy, out of frame, hand.",
     "### name - required",
     "Character name from the narrative. If unnamed, use a consistent identifier such as girl A, boy B, shopkeeper, guard, or stranger. Never empty; this is used for cross-message appearance tracking.",
-    "Do not put character names in label, age, appearance, body, attire, expression, action, situation, camera, place, supplement, or negative.",
+    "Do not put character names in label, age, appearance, body, attire, expression, action, composition, situation, camera, place, environment, sharedComposition, supplement, or negative.",
     "### age",
     "Visual age category only: child, aged down, mature male, mature female, aged up, or old. Based on appearance only.",
     "If characters appear late teens to early thirties, leave age blank.",
@@ -139,15 +200,19 @@ export function parserInstruction(config: Config): string {
     "Visible facial emotions and facial/eye states only: annoyed, angry, embarrassed, blush, grin, smile, crying, empty eyes, closed eyes.",
     "Do not include posture, gaze direction, clothing, body, action, camera, place, or names in expression.",
     "### action",
-    "Use shot.action for global or relationship action that applies to the whole shot, such as two characters holding hands or one character guiding another.",
-    "Use characters[].action for a single character's posture, gaze, pose, interactions, and visible actions. Use multiple tags if needed.",
+    animaIllustration
+      ? "Use shot.action only as tag fallback when sharedComposition is empty or disabled. Use characters[].action only as tag fallback when that character's composition is empty."
+      : "Use shot.action for global or relationship action that applies to the whole shot, such as two characters holding hands or one character guiding another.",
+    animaIllustration
+      ? "Put each character's spatial position, pose, action, gaze, and relationship in characters[].composition instead of duplicating it as action tags."
+      : "Use characters[].action for a single character's posture, gaze, pose, interactions, and visible actions. Use multiple tags if needed.",
     "Posture examples: standing, sitting on chair, on back, kneeling, spread legs, all fours, squatting, on stomach, on side.",
     "Gaze examples: looking at viewer, looking away, looking at another.",
     "Interaction examples: arm hug, leaning, heads together, carrying, piggyback, holding hands.",
     "Do not duplicate camera, place, situation counts, appearance, body, attire, or expression. Do not put the same action in multiple fields.",
     "### negative - optional",
     "Only if the client explicitly specifies negative prompt tags. Never infer negative tags.",
-    supplement,
+    naturalDetail,
     "## Repetition is Consistency",
     "- If a detail appears in one shot and persists, tag it in all subsequent shots.",
     "- If an action or attire is still in motion or still present, repeat it in later shots.",

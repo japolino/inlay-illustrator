@@ -1,15 +1,12 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import type { InterceptorResultDTO, LlmMessageDTO } from "lumiverse-spindle-types";
 
-const cleanupRequests: Array<{ tags: string[] }> = [];
 const parserRequests: Array<{ messages: Array<{ role: string; content: string }> }> = [];
-type CleanupResponse = { status?: number; statusText?: string; body?: unknown };
 type PromptInterceptor = (
   messages: LlmMessageDTO[],
   context: unknown
 ) => Promise<LlmMessageDTO[] | InterceptorResultDTO>;
 type FrontendMessageHandler = (payload: unknown, userId?: string) => Promise<void>;
-let cleanupHandler: (request: { tags: string[] }) => CleanupResponse | Promise<CleanupResponse>;
 let parserResponse = "";
 let promptInterceptor: PromptInterceptor;
 let frontendMessageHandler: FrontendMessageHandler;
@@ -21,13 +18,6 @@ let rejectedWritePath = "";
 
 function storageKey(path: string, userId?: string): string {
   return JSON.stringify([userId ?? null, path]);
-}
-
-function defaultCleanupResponse(): CleanupResponse {
-  return {
-    status: 200,
-    body: JSON.stringify({ suggestions: { garden: [{ tag: "outdoors", score: 0.95 }] } })
-  };
 }
 
 beforeAll(async () => {
@@ -57,11 +47,6 @@ beforeAll(async () => {
     sendToFrontend: (message: unknown) => {
       frontendMessages.push(message);
     },
-    cors: async (_endpoint: string, request: { body: string }) => {
-      const parsed = JSON.parse(request.body) as { tags: string[] };
-      cleanupRequests.push(parsed);
-      return cleanupHandler(parsed);
-    },
     generate: {
       raw: async (request: { messages: Array<{ role: string; content: string }> }) => {
         parserRequests.push(request);
@@ -72,15 +57,12 @@ beforeAll(async () => {
   };
   helpers = (await import("./backend")).__testables;
 });
-
 beforeEach(() => {
-  cleanupRequests.splice(0);
   parserRequests.splice(0);
   storedFiles.clear();
   storageWrites.splice(0);
   frontendMessages.splice(0);
   rejectedWritePath = "";
-  cleanupHandler = defaultCleanupResponse;
   parserResponse = "";
 });
 
@@ -234,28 +216,6 @@ describe("primary-model context interceptor", () => {
   });
 });
 
-function promptWithSupplement(danbooruCleanup: boolean) {
-  const config = {
-    ...helpers.DEFAULT_CONFIG,
-    promptStyle: "default" as const,
-    promptSyntax: "nai" as const,
-    customPositivePrefix: "quality",
-    customPositiveSuffix: "masterpiece",
-    danbooruCleanup,
-    danbooruEndpoint: "http://cleanup.test/validate"
-  };
-  return {
-    config,
-    prompt: helpers.assemblePrompt({ place: "garden" }, {
-      situation: "1girl",
-      camera: "upper body",
-      action: "smiling",
-      characters: [{ label: "girl", appearance: "blonde hair" }],
-      supplement: "A cinematic composition places her among softly lit flowers."
-    }, config, 1, 1).prompt
-  };
-}
-
 function promptWithPreset() {
   const config = {
     ...helpers.DEFAULT_CONFIG,
@@ -283,201 +243,6 @@ function promptWithPreset() {
     }, config, 1, 1)
   };
 }
-
-describe("Danbooru cleanup", () => {
-  test("sends only tags to cleanup and appends the supplement verbatim", async () => {
-    const { config, prompt } = promptWithSupplement(true);
-
-    const finalPrompt = await helpers.cleanupPrompt(prompt, config);
-
-    expect(cleanupRequests).toEqual([{
-      tags: ["quality", "upper body", "1girl", "smiling", "garden", "girl", "blonde hair", "masterpiece"]
-    }]);
-    expect(finalPrompt).toBe(
-      "quality, upper body, 1girl, smiling, outdoors, girl, blonde hair, A cinematic composition places her among softly lit flowers., masterpiece"
-    );
-  });
-
-  test("keeps the existing prompt unchanged when cleanup is disabled", async () => {
-    const { config, prompt } = promptWithSupplement(false);
-
-    const finalPrompt = await helpers.cleanupPrompt(prompt, config);
-
-    expect(cleanupRequests).toEqual([]);
-    expect(finalPrompt).toBe(helpers.renderPrompt(prompt, config.promptSyntax));
-  });
-
-  test("splits large cleanup lists into ordered batches of at most 16 tags", async () => {
-    const tags = Array.from({ length: 35 }, (_, index) => `tag ${index + 1}`);
-    const config = { ...helpers.DEFAULT_CONFIG, danbooruCleanup: true, danbooruEndpoint: "http://cleanup.test/validate" };
-    cleanupHandler = () => ({ status: 200, body: JSON.stringify({ valid: [] }) });
-
-    await helpers.cleanupPrompt({ tagSections: [tags.join(", ")], supplement: "", supplementAfterTagSections: 1 }, config);
-
-    expect(cleanupRequests.map((request) => request.tags)).toEqual([
-      tags.slice(0, 16),
-      tags.slice(16, 32),
-      tags.slice(32)
-    ]);
-    expect(cleanupRequests.every((request) => request.tags.length <= 16)).toBe(true);
-  });
-
-  test("merges candidate validation and suggestions returned by different batches", async () => {
-    const tags = [...Array.from({ length: 15 }, (_, index) => `tag ${index + 1}`), "exterior"];
-    const config = {
-      ...helpers.DEFAULT_CONFIG,
-      promptSyntax: "nai" as const,
-      danbooruCleanup: true,
-      danbooruEndpoint: "http://cleanup.test/validate"
-    };
-    cleanupHandler = ({ tags: batch }) => batch[0] === "tag 1"
-      ? {
-          status: 200,
-          body: JSON.stringify({ suggestions: { "tag 1": [{ tag: "first suggestion", score: 0.91 }] } })
-        }
-      : {
-          status: 200,
-          body: JSON.stringify({
-            data: {
-              valid: ["outdoors"],
-              suggestions: { exterior: [{ tag: "second suggestion", score: 0.93 }] }
-            }
-          })
-        };
-
-    const finalPrompt = await helpers.cleanupPrompt({
-      tagSections: [tags.join(", ")],
-      supplement: "",
-      supplementAfterTagSections: 1
-    }, config);
-
-    expect(cleanupRequests.map((request) => request.tags)).toEqual([tags, ["outdoors"]]);
-    expect(finalPrompt).toStartWith("first suggestion, tag 2");
-    expect(finalPrompt).toEndWith("tag 15, outdoors");
-    expect(finalPrompt).not.toContain("tag 1,");
-    expect(finalPrompt).not.toContain("exterior");
-    expect(finalPrompt).not.toContain("second suggestion");
-  });
-
-  test("keeps valid originals and replaces invalid tags with only the best confident suggestion", async () => {
-    const config = {
-      ...helpers.DEFAULT_CONFIG,
-      promptSyntax: "nai" as const,
-      danbooruCleanup: true,
-      danbooruEndpoint: "http://cleanup.test/validate"
-    };
-    cleanupHandler = () => ({
-      status: 200,
-      body: JSON.stringify({
-        valid: ["valid original"],
-        suggestions: {
-          "valid original": [{ tag: "unwanted replacement", score: 0.99 }],
-          "replace me": [
-            { tag: "weaker replacement", score: 0.89 },
-            { tag: "best replacement", score: 0.96 }
-          ],
-          "low confidence": [{ tag: "uncertain replacement", score: 0.879 }]
-        }
-      })
-    });
-
-    const finalPrompt = await helpers.cleanupPrompt({
-      tagSections: ["valid original, replace me, low confidence, unmatched"],
-      supplement: "",
-      supplementAfterTagSections: 1
-    }, config);
-
-    expect(finalPrompt).toBe("valid original, best replacement, low confidence, unmatched");
-  });
-
-  test("uses the most specific validated descriptor plus validated hair length regardless of word order", async () => {
-    const config = {
-      ...helpers.DEFAULT_CONFIG,
-      promptSyntax: "nai" as const,
-      danbooruCleanup: true,
-      danbooruEndpoint: "http://cleanup.test/validate"
-    };
-    cleanupHandler = () => ({
-      status: 200,
-      body: JSON.stringify({ valid: ["golden blonde hair", "blonde hair", "short hair"] })
-    });
-
-    const finalPrompt = await helpers.cleanupPrompt({
-      tagSections: ["golden blonde short hair, short golden blonde hair"],
-      supplement: "",
-      supplementAfterTagSections: 1
-    }, config);
-
-    expect(cleanupRequests).toEqual([{ tags: [
-      "golden blonde short hair", "golden blonde hair", "blonde hair", "short hair", "short golden blonde hair"
-    ] }]);
-    expect(finalPrompt).toBe("golden blonde hair, short hair");
-  });
-
-  test("replaces the reported compound samples and globally deduplicates their validated tags", async () => {
-    const config = {
-      ...helpers.DEFAULT_CONFIG,
-      promptSyntax: "nai" as const,
-      danbooruCleanup: true,
-      danbooruEndpoint: "http://cleanup.test/validate"
-    };
-    cleanupHandler = () => ({
-      status: 200,
-      body: JSON.stringify({ valid: ["red eyes", "blonde hair", "short hair"] })
-    });
-
-    const finalPrompt = await helpers.cleanupPrompt({
-      tagSections: ["red eyes, brilliant red eyes", "golden blonde short hair"],
-      supplement: "",
-      supplementAfterTagSections: 2
-    }, config);
-
-    expect(finalPrompt).toBe("red eyes, blonde hair, short hair");
-    expect(finalPrompt).not.toContain("brilliant red eyes");
-    expect(finalPrompt).not.toContain("golden blonde short hair");
-  });
-
-  test("waits for each cleanup batch before submitting the next", async () => {
-    const first = deferred<CleanupResponse>();
-    const second = deferred<CleanupResponse>();
-    const tags = Array.from({ length: 17 }, (_, index) => `tag ${index + 1}`);
-    const config = { ...helpers.DEFAULT_CONFIG, danbooruCleanup: true, danbooruEndpoint: "http://cleanup.test/validate" };
-    cleanupHandler = ({ tags: batch }) => batch[0] === "tag 1" ? first.promise : second.promise;
-
-    const completed = helpers.cleanupPrompt({ tagSections: [tags.join(", ")], supplement: "", supplementAfterTagSections: 1 }, config);
-    expect(cleanupRequests).toEqual([{ tags: tags.slice(0, 16) }]);
-
-    first.resolve({ status: 200, body: JSON.stringify({ valid: [] }) });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(cleanupRequests).toEqual([{ tags: tags.slice(0, 16) }, { tags: tags.slice(16) }]);
-
-    second.resolve({ status: 200, body: JSON.stringify({ valid: [] }) });
-    await expect(completed).resolves.toBe(tags.join(", "));
-  });
-
-  test("discards partial cleanup results and returns the original prompt when a batch fails", async () => {
-    const tags = Array.from({ length: 33 }, (_, index) => `tag ${index + 1}`);
-    const prompt = { tagSections: [tags.join(", ")], supplement: "", supplementAfterTagSections: 1 };
-    const config = {
-      ...helpers.DEFAULT_CONFIG,
-      promptSyntax: "nai" as const,
-      danbooruCleanup: true,
-      danbooruEndpoint: "http://cleanup.test/validate"
-    };
-    cleanupHandler = ({ tags: batch }) => batch[0] === "tag 17"
-      ? { status: 502, statusText: "Bad Gateway", body: "proxy disconnected" }
-      : {
-          status: 200,
-          body: JSON.stringify({ suggestions: { "tag 1": [{ tag: "partial result", score: 0.99 }] } })
-        };
-
-    const finalPrompt = await helpers.cleanupPrompt(prompt, config);
-
-    expect(cleanupRequests.map((request) => request.tags)).toEqual([tags.slice(0, 16), tags.slice(16, 32)]);
-    expect(finalPrompt).toBe(helpers.renderPrompt(prompt, config.promptSyntax));
-    expect(finalPrompt).not.toContain("partial result");
-  });
-});
 
 describe("prompt presets", () => {
   test("places active preset prefixes before custom and generated prompt fields", () => {

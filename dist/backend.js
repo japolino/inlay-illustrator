@@ -31,8 +31,6 @@ var DEFAULT_CONFIG = {
   originalReference: false,
   originalCreationName: "",
   supplement: true,
-  danbooruCleanup: false,
-  danbooruEndpoint: "http://127.0.0.1:8000/tools/validate_tags",
   ignoredTags: "",
   customPositivePrefix: "",
   customPositiveSuffix: "",
@@ -77,6 +75,12 @@ function normalizePromptPresets(value) {
 }
 function normalizeConfig(raw) {
   const imageGeneration = raw.imageGeneration || {};
+  const {
+    danbooruCleanup: _legacyDanbooruCleanup,
+    danbooruEndpoint: _legacyDanbooruEndpoint,
+    imageGeneration: _legacyImageGeneration,
+    ...current
+  } = raw;
   const includeMin = clampInt(raw.includeMinMessages, 0, 32, DEFAULT_CONFIG.includeMinMessages);
   const includeMax = clampInt(raw.includeMaxMessages, 0, 32, DEFAULT_CONFIG.includeMaxMessages);
   const minImages = clampInt(raw.minImages, 1, 12, DEFAULT_CONFIG.minImages);
@@ -87,7 +91,7 @@ function normalizeConfig(raw) {
   const imageParameters = cleanParameters(raw.imageParameters);
   return {
     ...DEFAULT_CONFIG,
-    ...raw,
+    ...current,
     mode: raw.mode === "asset" ? "asset" : "illustration",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
@@ -122,22 +126,48 @@ function normalizeConfig(raw) {
   };
 }
 
-// src/backend/logging.ts
-function logStage(config, stage, details, level = "info") {
-  if (!config?.debugLogging && level !== "error")
-    return;
-  const suffix = details ? ` ${JSON.stringify(details, (_key, value) => {
-    if (typeof value === "string" && value.length > 300)
-      return `${value.slice(0, 300)}...(${value.length} chars)`;
-    return value;
-  })}` : "";
-  const message = `[Inlay:${stage}]${suffix}`;
-  if (level === "warn")
-    spindle.log.warn(message);
-  else if (level === "error")
-    spindle.log.error(message);
-  else
-    spindle.log.info(message);
+// src/backend/constants.ts
+var EXTENSION_ID = "inlay_illustrator";
+var MARKER = "<!-- inlay_illustrator -->";
+
+// src/backend/inlay-content.ts
+var MARKER_PATTERN = String.raw`<!--\s*inlay_illustrator\s*-->`;
+var CURRENT_DIV_PATTERN = String.raw`<div\b(?=[^>]*[\t\n\f\r ]data-inlay-illustrator\s*=\s*(?:"true"|'true'|true(?=[\s>])))[^>]*>[\s\S]*?<\/div\s*>`;
+var MARKDOWN_IMAGE_PATTERN = String.raw`!\[[^\]\r\n]*\]\([^\r\n]*\)`;
+var HTML_IMAGE_PATTERN = String.raw`<img\b[^>]*>`;
+var LEGACY_DETAILS_PATTERN = String.raw`<details\b[^>]*>\s*<summary\b[^>]*>\s*Prompt\b[\s\S]*?<\/details\s*>`;
+function ownedBlock(pattern) {
+  return new RegExp(`${pattern}(?:(?:[ \\t]*\\r?\\n){2})?`, "gi");
+}
+var LEGACY_BLOCK = ownedBlock(`${MARKER_PATTERN}\\s*(?:(?:${MARKDOWN_IMAGE_PATTERN}|${HTML_IMAGE_PATTERN})\\s*)?${LEGACY_DETAILS_PATTERN}`);
+var CURRENT_BLOCK = ownedBlock(`(?:${MARKER_PATTERN}\\s*)?${CURRENT_DIV_PATTERN}`);
+var MARKER_IMAGE_BLOCK = ownedBlock(`${MARKER_PATTERN}\\s*(?:${MARKDOWN_IMAGE_PATTERN}|${HTML_IMAGE_PATTERN})`);
+var PROMPT_PRE_BLOCK = ownedBlock(String.raw`<pre\b(?=[^>]*[\t\n\f\r ]class\s*=\s*(?:"(?:[^"]*[\t\n\f\r ])?inlay-illustrator-prompt(?:[\t\n\f\r ][^"]*)?"|'(?:[^']*[\t\n\f\r ])?inlay-illustrator-prompt(?:[\t\n\f\r ][^']*)?'|inlay-illustrator-prompt(?=[\s>])))[^>]*>[\s\S]*?<\/pre\s*>`);
+var ORPHAN_MARKER = ownedBlock(MARKER_PATTERN);
+var PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-prompt(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
+function stripInlayContent(content) {
+  return content.replace(LEGACY_BLOCK, "").replace(CURRENT_BLOCK, "").replace(MARKER_IMAGE_BLOCK, "").replace(PROMPT_PRE_BLOCK, "").replace(ORPHAN_MARKER, "").replace(PROMPT_ATTRIBUTE, "");
+}
+function stripInlayFromMessages(messages) {
+  return messages.map((message) => {
+    if (message.role !== "assistant")
+      return message;
+    if (typeof message.content === "string") {
+      const content2 = stripInlayContent(message.content);
+      return content2 === message.content ? message : { ...message, content: content2 };
+    }
+    let changed = false;
+    const content = message.content.map((part) => {
+      if (part.type !== "text")
+        return part;
+      const text = stripInlayContent(part.text);
+      if (text === part.text)
+        return part;
+      changed = true;
+      return { ...part, text };
+    });
+    return changed ? { ...message, content } : message;
+  });
 }
 
 // src/backend/utils.ts
@@ -183,26 +213,6 @@ function unique(parts) {
 }
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-function parseCorsJson(response, label) {
-  const wrapper = asRecord(response);
-  if ("body" in wrapper || "status" in wrapper || "statusText" in wrapper) {
-    const { status, statusText, body } = wrapper;
-    if (typeof status === "number" && (status < 200 || status >= 300)) {
-      throw new Error(`${label} returned HTTP ${status}${statusText ? ` ${statusText}` : ""}`);
-    }
-    if (typeof body === "string") {
-      try {
-        return JSON.parse(body);
-      } catch {
-        throw new Error(`${label} returned invalid JSON`);
-      }
-    }
-    if (body && typeof body === "object")
-      return body;
-    throw new Error(`${label} returned an empty response body`);
-  }
-  return response;
 }
 
 // src/backend/prompt.ts
@@ -282,17 +292,17 @@ function buildCharacterTagReference(map) {
 `) : "";
 }
 function joinSections(sections, syntax) {
-  const clean = sections.map((section) => section.trim()).filter(Boolean);
+  const clean = sections.map(normalizePromptSection).filter(Boolean);
   return syntax === "comfyui" ? clean.join(`,
+
 `) : clean.join(", ");
 }
 function renderPrompt(prompt, syntax) {
-  const supplementIndex = Math.min(Math.max(prompt.supplementAfterTagSections, 0), prompt.tagSections.length);
-  return joinSections([
-    ...prompt.tagSections.slice(0, supplementIndex),
-    prompt.supplement,
-    ...prompt.tagSections.slice(supplementIndex)
-  ], syntax);
+  return joinSections(prompt.sections, syntax);
+}
+function normalizePromptSection(value) {
+  const doubleColon = "";
+  return value.replace(/::/g, doubleColon).replace(/;/g, ",").replace(/\s*,(?:\s*,)+\s*/g, ", ").replace(/^\s*,+\s*/, "").replace(/\s+/g, " ").replace(/\s*,\s*/g, ", ").replace(/[.!?]+(?=\s*,)/g, "").replace(/[\s.,;:!?]+$/g, "").replace(new RegExp(doubleColon, "g"), "::").trim();
 }
 function activePromptPreset(config) {
   return config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
@@ -309,42 +319,67 @@ function dedupePromptSections(sections) {
   }
   return output;
 }
-function removeSupplementActionDuplicates(supplement, actionTags) {
-  let next = supplement.trim();
-  for (const action of csvParts(actionTags)) {
-    next = next.replace(new RegExp(`\\b${escapeRegExp(action)}\\b`, "gi"), " ");
-  }
-  return next.replace(/\s+([,.])/g, "$1").replace(/\s+/g, " ").trim();
-}
 function assembleCharacterBlock(character, config, replacements, includeAction) {
   return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", stripOrReplaceNames(cleanString2(character.age), replacements, true), stripOrReplaceNames(cleanString2(character.appearance), replacements, true), stripOrReplaceNames(cleanString2(character.body), replacements, true), stripOrReplaceNames(cleanString2(character.attire), replacements, true), stripOrReplaceNames(cleanString2(character.expression), replacements, true), includeAction ? stripOrReplaceNames(cleanString2(character.action), replacements, true) : "")).join(", ");
 }
-function assembleAnimaPrompt(scene, shot, config, replacements) {
-  const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
-  const characters = cleanArray(shot.characters).slice(0, maxCharacters);
-  const characterBlocks = characters.map((character) => assembleCharacterBlock(character, config, replacements, false)).filter(Boolean);
-  const sceneAction = stripOrReplaceNames(unique(csvParts(shot.action, ...characters.map((character) => character.action), config.mode === "asset" ? "looking at viewer" : "")).join(", "), replacements, true);
-  const supplement = config.supplement ? stripOrReplaceNames(removeSupplementActionDuplicates(cleanString2(shot.supplement), sceneAction), replacements, false) : "";
-  const tagSections = dedupePromptSections([
+function structuredSnippets(value, cap) {
+  const values = Array.isArray(value) ? value : [value];
+  return values.flatMap((entry) => csvParts(entry)).map((entry) => cleanString2(entry)).filter(Boolean).slice(0, cap);
+}
+function assembleAnimaAssetPrompt(scene, shot, config, replacements) {
+  const character = cleanArray(shot.characters)[0];
+  const characterBlock = character ? assembleCharacterBlock(character, config, replacements, false) : "";
+  const action = stripOrReplaceNames(unique(csvParts(shot.action, character?.action, "looking at viewer")).join(", "), replacements, true);
+  return { sections: dedupePromptSections([
     stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
-    ...characterBlocks,
-    sceneAction,
-    stripOrReplaceNames(unique(csvParts(shot.camera, config.mode === "asset" ? "portrait, cowboy shot" : "")).join(", "), replacements, true),
-    stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true)
-  ]);
-  return { tagSections, supplement, supplementAfterTagSections: tagSections.length };
+    characterBlock,
+    action,
+    stripOrReplaceNames(unique(csvParts(shot.camera, "portrait, cowboy shot")).join(", "), replacements, true),
+    stripOrReplaceNames(unique(csvParts(scene.place, "white background, simple background")).join(", "), replacements, true)
+  ]) };
+}
+function assembleAnimaPrompt(scene, shot, config, replacements) {
+  if (config.mode === "asset")
+    return assembleAnimaAssetPrompt(scene, shot, config, replacements);
+  const maxCharacters = config.maxCharacters;
+  const characters = cleanArray(shot.characters).slice(0, maxCharacters);
+  const characterSections = characters.flatMap((character) => {
+    const composition = stripOrReplaceNames(cleanString2(character.composition), replacements, false);
+    const tags = assembleCharacterBlock(character, config, replacements, !composition);
+    return [composition, tags].filter(Boolean);
+  });
+  const sharedComposition = stripOrReplaceNames(cleanString2(shot.sharedComposition) || cleanString2(shot.supplement), replacements, false);
+  const sharedAction = stripOrReplaceNames(unique(csvParts(shot.action)).join(", "), replacements, true);
+  const environment = scene.environment || {};
+  const location = structuredSnippets(environment.location, 1);
+  const timeWeather = structuredSnippets(environment.timeWeather, 1);
+  const lightingMood = config.supplement ? structuredSnippets(environment.lightingMood, 3) : [];
+  const backgroundElements = config.supplement ? structuredSnippets(environment.backgroundElements, 5) : [];
+  const legacyPlace = location.length === 0 ? stripOrReplaceNames(cleanString2(scene.place), replacements, true) : "";
+  return { sections: [
+    stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
+    ...characterSections,
+    config.supplement && sharedComposition ? sharedComposition : sharedAction,
+    ...location.map((value) => stripOrReplaceNames(value, replacements, false)),
+    legacyPlace,
+    ...timeWeather.map((value) => stripOrReplaceNames(value, replacements, false)),
+    ...lightingMood.map((value) => stripOrReplaceNames(value, replacements, false)),
+    ...backgroundElements.map((value) => stripOrReplaceNames(value, replacements, false)),
+    stripOrReplaceNames(unique(csvParts(shot.camera)).join(", "), replacements, true)
+  ].map((section) => section.trim()).filter(Boolean) };
 }
 function assembleDefaultPrompt(scene, shot, config, replacements) {
   const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
   const characters = cleanArray(shot.characters).slice(0, maxCharacters);
   const characterBlocks = characters.map((character) => assembleCharacterBlock(character, config, replacements, true)).filter(Boolean);
   const supplement = config.supplement ? stripOrReplaceNames(cleanString2(shot.supplement), replacements, false) : "";
-  const tagSections = dedupePromptSections([
+  const sections = dedupePromptSections([
     stripOrReplaceNames(unique(csvParts(shot.camera, shot.situation, shot.action, config.mode === "asset" ? "portrait, cowboy shot, looking at viewer" : "")).join(", "), replacements, true),
     stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true),
-    ...characterBlocks
+    ...characterBlocks,
+    supplement
   ]);
-  return { tagSections, supplement, supplementAfterTagSections: tagSections.length };
+  return { sections };
 }
 function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph) {
   const characters = cleanArray(shot.characters);
@@ -357,203 +392,12 @@ function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph)
   const prefixes = [presetPrefix, prefix].filter(Boolean);
   return {
     prompt: {
-      tagSections: [...prefixes, ...core.tagSections, suffix].map((section) => section.trim()).filter(Boolean),
-      supplement: core.supplement,
-      supplementAfterTagSections: prefixes.length + core.supplementAfterTagSections
+      sections: [...prefixes, ...core.sections, suffix].map((section) => section.trim()).filter(Boolean)
     },
-    negative: stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "), replacements, true),
+    negative: normalizePromptSection(stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "), replacements, true)),
     paragraph: originalParagraph,
     parserParagraph
   };
-}
-
-// src/backend/cleanup.ts
-var DANBOORU_CLEANUP_BATCH_SIZE = 16;
-function descriptorCandidates(words, suffix, original) {
-  const candidates = [];
-  for (let index = 0;index < words.length; index += 1) {
-    const candidate = `${words.slice(index).join(" ")} ${suffix}`.trim();
-    if (candidate.toLowerCase() !== original.toLowerCase())
-      candidates.push(candidate);
-  }
-  return unique(candidates);
-}
-function localCandidateGroups(tag) {
-  const lower = tag.toLowerCase();
-  const groups = [];
-  if (lower === "exterior")
-    groups.push(["outdoors"]);
-  if (lower === "smug smirk")
-    groups.push(["smirk"], ["smug"]);
-  if (lower.includes("pleated mini skirt"))
-    groups.push(["pleated skirt"], ["miniskirt"]);
-  if (lower === "revealing dark purple dress")
-    groups.push(["purple dress"], ["revealing clothes"]);
-  const hair = lower.match(/\b(.+?)\s+hair\b/);
-  if (hair) {
-    const words = hair[1].trim().split(/\s+/);
-    const length = words.find((word) => word === "long" || word === "short" || word === "medium");
-    const descriptors = words.filter((word) => word !== length);
-    const descriptorGroup = descriptorCandidates(descriptors, "hair", lower);
-    if (descriptorGroup.length)
-      groups.push(descriptorGroup);
-    if (length && `${length} hair` !== lower)
-      groups.push([`${length} hair`]);
-  }
-  const eyes = lower.match(/\b(.+?)\s+(?:irises|eyes)\b/);
-  if (eyes && !lower.includes("pupils")) {
-    const descriptorGroup = descriptorCandidates(eyes[1].trim().split(/\s+/), "eyes", lower);
-    if (descriptorGroup.length)
-      groups.push(descriptorGroup);
-  }
-  return groups.map((group) => unique(group));
-}
-function localCandidates(tag) {
-  return localCandidateGroups(tag).flat();
-}
-function bestSuggestion(suggestions) {
-  let best;
-  for (const suggestion of suggestions) {
-    if (!suggestion.tag || typeof suggestion.score !== "number")
-      continue;
-    if (!best || suggestion.score > (best.score || 0))
-      best = suggestion;
-  }
-  return best;
-}
-async function cleanupPrompt(prompt, config) {
-  const endpoint = config.danbooruEndpoint.trim();
-  if (!config.danbooruCleanup || !endpoint) {
-    logStage(config, "danbooru_cleanup_skipped", { enabled: config.danbooruCleanup, endpointConfigured: Boolean(endpoint) });
-    return renderPrompt(prompt, config.promptSyntax);
-  }
-  const sectionTags = prompt.tagSections.map((section) => csvParts(section));
-  const tags = sectionTags.flat();
-  const requestTags = unique(tags.flatMap((tag) => [tag, ...localCandidates(tag)]));
-  const batches = [];
-  for (let start = 0;start < requestTags.length; start += DANBOORU_CLEANUP_BATCH_SIZE) {
-    batches.push(requestTags.slice(start, start + DANBOORU_CLEANUP_BATCH_SIZE));
-  }
-  const cleanupStartedAt = Date.now();
-  logStage(config, "danbooru_cleanup_start", {
-    endpoint,
-    tagCount: tags.length,
-    requestTagCount: requestTags.length,
-    batchCount: batches.length
-  });
-  try {
-    const valid = [];
-    const suggestions = {};
-    for (const [index, batch] of batches.entries()) {
-      const batchNumber = index + 1;
-      const batchStartedAt = Date.now();
-      logStage(config, "danbooru_cleanup_batch_start", { batchNumber, batchCount: batches.length, tagCount: batch.length });
-      try {
-        const response = parseCorsJson(await spindle.cors(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ tags: batch })
-        }), `Danbooru cleanup batch ${batchNumber}/${batches.length}`);
-        valid.push(...response.valid || response.data?.valid || []);
-        const batchSuggestions = response.suggestions || response.data?.suggestions || {};
-        for (const [tag, entries] of Object.entries(batchSuggestions)) {
-          const key = tag.toLowerCase();
-          suggestions[key] = [...suggestions[key] || [], ...entries];
-        }
-        logStage(config, "danbooru_cleanup_batch_done", {
-          batchNumber,
-          batchCount: batches.length,
-          tagCount: batch.length,
-          elapsedMs: Date.now() - batchStartedAt
-        });
-      } catch (error) {
-        logStage(config, "danbooru_cleanup_batch_failed", {
-          batchNumber,
-          batchCount: batches.length,
-          tagCount: batch.length,
-          elapsedMs: Date.now() - batchStartedAt,
-          error: error instanceof Error ? error.message : String(error)
-        }, "warn");
-        throw error;
-      }
-    }
-    const validKeys = new Set(valid.map((tag) => tag.toLowerCase()));
-    const replacementsFor = (tag) => {
-      const key = tag.toLowerCase();
-      if (validKeys.has(key))
-        return [tag];
-      const decomposed = localCandidateGroups(tag).map((group) => group.find((candidate) => validKeys.has(candidate.toLowerCase()))).filter((candidate) => Boolean(candidate));
-      if (decomposed.length > 0)
-        return unique(decomposed);
-      const best = bestSuggestion(suggestions[key] || []);
-      if (best?.tag && (best.score || 0) >= 0.88)
-        return [best.tag];
-      return [tag];
-    };
-    const seen = new Set;
-    const cleanedSections = sectionTags.map((section) => unique(section.flatMap(replacementsFor)).filter((tag) => {
-      const key = tag.toLowerCase();
-      if (seen.has(key))
-        return false;
-      seen.add(key);
-      return true;
-    }).join(", "));
-    const cleaned = renderPrompt({ ...prompt, tagSections: cleanedSections }, config.promptSyntax);
-    logStage(config, "danbooru_cleanup_done", {
-      beforeTagCount: tags.length,
-      afterTagCount: cleanedSections.flatMap((section) => csvParts(section)).length,
-      batchCount: batches.length,
-      elapsedMs: Date.now() - cleanupStartedAt
-    });
-    return cleaned;
-  } catch (error) {
-    spindle.log.warn(`Danbooru cleanup skipped: ${error instanceof Error ? error.message : String(error)}`);
-    return renderPrompt(prompt, config.promptSyntax);
-  }
-}
-
-// src/backend/constants.ts
-var EXTENSION_ID = "inlay_illustrator";
-var MARKER = "<!-- inlay_illustrator -->";
-
-// src/backend/inlay-content.ts
-var MARKER_PATTERN = String.raw`<!--\s*inlay_illustrator\s*-->`;
-var CURRENT_DIV_PATTERN = String.raw`<div\b(?=[^>]*[\t\n\f\r ]data-inlay-illustrator\s*=\s*(?:"true"|'true'|true(?=[\s>])))[^>]*>[\s\S]*?<\/div\s*>`;
-var MARKDOWN_IMAGE_PATTERN = String.raw`!\[[^\]\r\n]*\]\([^\r\n]*\)`;
-var HTML_IMAGE_PATTERN = String.raw`<img\b[^>]*>`;
-var LEGACY_DETAILS_PATTERN = String.raw`<details\b[^>]*>\s*<summary\b[^>]*>\s*Prompt\b[\s\S]*?<\/details\s*>`;
-function ownedBlock(pattern) {
-  return new RegExp(`${pattern}(?:(?:[ \\t]*\\r?\\n){2})?`, "gi");
-}
-var LEGACY_BLOCK = ownedBlock(`${MARKER_PATTERN}\\s*(?:(?:${MARKDOWN_IMAGE_PATTERN}|${HTML_IMAGE_PATTERN})\\s*)?${LEGACY_DETAILS_PATTERN}`);
-var CURRENT_BLOCK = ownedBlock(`(?:${MARKER_PATTERN}\\s*)?${CURRENT_DIV_PATTERN}`);
-var MARKER_IMAGE_BLOCK = ownedBlock(`${MARKER_PATTERN}\\s*(?:${MARKDOWN_IMAGE_PATTERN}|${HTML_IMAGE_PATTERN})`);
-var PROMPT_PRE_BLOCK = ownedBlock(String.raw`<pre\b(?=[^>]*[\t\n\f\r ]class\s*=\s*(?:"(?:[^"]*[\t\n\f\r ])?inlay-illustrator-prompt(?:[\t\n\f\r ][^"]*)?"|'(?:[^']*[\t\n\f\r ])?inlay-illustrator-prompt(?:[\t\n\f\r ][^']*)?'|inlay-illustrator-prompt(?=[\s>])))[^>]*>[\s\S]*?<\/pre\s*>`);
-var ORPHAN_MARKER = ownedBlock(MARKER_PATTERN);
-var PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-prompt(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
-function stripInlayContent(content) {
-  return content.replace(LEGACY_BLOCK, "").replace(CURRENT_BLOCK, "").replace(MARKER_IMAGE_BLOCK, "").replace(PROMPT_PRE_BLOCK, "").replace(ORPHAN_MARKER, "").replace(PROMPT_ATTRIBUTE, "");
-}
-function stripInlayFromMessages(messages) {
-  return messages.map((message) => {
-    if (message.role !== "assistant")
-      return message;
-    if (typeof message.content === "string") {
-      const content2 = stripInlayContent(message.content);
-      return content2 === message.content ? message : { ...message, content: content2 };
-    }
-    let changed = false;
-    const content = message.content.map((part) => {
-      if (part.type !== "text")
-        return part;
-      const text = stripInlayContent(part.text);
-      if (text === part.text)
-        return part;
-      changed = true;
-      return { ...part, text };
-    });
-    return changed ? { ...message, content } : message;
-  });
 }
 
 // src/backend/context.ts
@@ -954,6 +798,24 @@ Use these as a baseline for returning characters (including their base attire). 
   };
 }
 
+// src/backend/logging.ts
+function logStage(config, stage, details, level = "info") {
+  if (!config?.debugLogging && level !== "error")
+    return;
+  const suffix = details ? ` ${JSON.stringify(details, (_key, value) => {
+    if (typeof value === "string" && value.length > 300)
+      return `${value.slice(0, 300)}...(${value.length} chars)`;
+    return value;
+  })}` : "";
+  const message = `[Inlay:${stage}]${suffix}`;
+  if (level === "warn")
+    spindle.log.warn(message);
+  else if (level === "error")
+    spindle.log.error(message);
+  else
+    spindle.log.info(message);
+}
+
 // src/backend/images.ts
 async function resolveImageConnection(config, userId) {
   logStage(config, "image_connection_resolve_start", { configuredConnectionId: config.imageConnectionId });
@@ -1148,6 +1010,7 @@ function normalizedVisualValue(value) {
   return cleanString2(value).replace(/\s+/g, " ").toLowerCase();
 }
 function exactVisualKey(entry) {
+  const environment = entry.scene.environment || {};
   return JSON.stringify({
     paragraph: entry.parserParagraph,
     camera: normalizedVisualValue(entry.shot.camera),
@@ -1156,9 +1019,16 @@ function exactVisualKey(entry) {
     shotAction: normalizedVisualValue(entry.shot.action),
     characters: cleanArray(entry.shot.characters).map((character) => ({
       expression: normalizedVisualValue(character.expression),
-      action: normalizedVisualValue(character.action)
+      action: normalizedVisualValue(character.action),
+      composition: normalizedVisualValue(character.composition)
     })),
-    composition: normalizedVisualValue(entry.shot.supplement)
+    sharedComposition: normalizedVisualValue(entry.shot.sharedComposition || entry.shot.supplement),
+    environment: {
+      location: normalizedVisualValue(environment.location),
+      timeWeather: normalizedVisualValue(environment.timeWeather),
+      lightingMood: cleanArray(environment.lightingMood).map(normalizedVisualValue),
+      backgroundElements: cleanArray(environment.backgroundElements).map(normalizedVisualValue)
+    }
   });
 }
 function selectPromptEntries(payload, paragraphs, config) {
@@ -1357,6 +1227,7 @@ function paragraphCount(content) {
 // src/backend/instructions.ts
 function parserInstruction(config) {
   const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
+  const animaIllustration = config.mode === "illustration" && config.promptStyle === "anima";
   const shotInstruction = config.mode === "asset" ? [
     "Asset mode: generate exactly one shot for each [P#] paragraph.",
     "Each shot must contain exactly one visible character.",
@@ -1380,12 +1251,90 @@ function parserInstruction(config) {
     "Do not include any parenthetical, source name, creation reference, title, or alias in name or any other field."
   ].join(`
 `) : "Use names only for the JSON name field as private memory keys. Names will not be included in final prompts. If not given, make a concise stable identifier that fits the description.";
-  const supplement = config.supplement ? [
+  const schema = animaIllustration ? [
+    "{",
+    '  "scenes": [',
+    "    {",
+    '      "environment": {',
+    '        "location": "string",',
+    '        "timeWeather": "string",',
+    '        "lightingMood": ["string"],',
+    '        "backgroundElements": ["string"]',
+    "      },",
+    '      "shots": [',
+    "        {",
+    '          "paragraph": 0,',
+    '          "camera": "string",',
+    '          "situation": "string",',
+    '          "action": "string",',
+    '          "characters": [',
+    "            {",
+    '              "name": "string",',
+    '              "label": "string",',
+    '              "age": "string",',
+    '              "identity": "string",',
+    '              "appearance": "string",',
+    '              "body": "string",',
+    '              "attire": "string",',
+    '              "expression": "string",',
+    '              "action": "string",',
+    '              "composition": "string"',
+    "            }",
+    "          ],",
+    '          "sharedComposition": "string",',
+    '          "negative": "string"',
+    "        }",
+    "      ]",
+    "    }",
+    "  ]",
+    "}"
+  ] : [
+    "{",
+    '  "scenes": [',
+    "    {",
+    '      "place": "string",',
+    '      "shots": [',
+    "        {",
+    '          "paragraph": 0,',
+    '          "camera": "string",',
+    '          "situation": "string",',
+    '          "action": "string",',
+    '          "characters": [',
+    "            {",
+    '              "name": "string",',
+    '              "label": "string",',
+    '              "age": "string",',
+    '              "identity": "string",',
+    '              "appearance": "string",',
+    '              "body": "string",',
+    '              "attire": "string",',
+    '              "expression": "string",',
+    '              "action": "string"',
+    "            }",
+    "          ],",
+    '          "supplement": "string",',
+    '          "negative": "string"',
+    "        }",
+    "      ]",
+    "    }",
+    "  ]",
+    "}"
+  ];
+  const naturalDetail = animaIllustration ? [
+    "### Natural Composition",
+    "characters[].composition is always required. Describe that character's spatial position, pose, visible action, gaze, and relationships in concise natural language.",
+    "Do not repeat a character's action tags when composition already expresses the same action; action is only a fallback for missing composition.",
+    config.supplement ? "Use shot.sharedComposition for concise natural-language interaction or relationship detail shared by multiple characters." : "Leave shot.sharedComposition empty. Character composition remains required.",
+    "Do not use names in composition prose. Identify people by visual position such as left girl, right boy, foreground character, or background character.",
+    "Use concise objective visual phrases, not narration, invisible emotion, smell, sound, or internal sensation.",
+    "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements.",
+    "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
+    config.supplement ? "Populate lightingMood and backgroundElements within the target budget." : "Leave lightingMood and backgroundElements empty. Still populate location and timeWeather."
+  ].join(`
+`) : config.supplement ? [
     "### Natural Language Supplement",
     "In supplement, describe the image in natural language for visible details that tags cannot express well, such as detailed composition, framing, character positions, interactions, unusual vantage points, or objective atmosphere/lighting.",
     "Use concise, minimal, telegraphic sentences. Be objective, not subjective interpretation.",
-    "Unusual framing and vantage points are welcome, such as viewed through an object, reflected in a mirror, or partially obscured by foreground elements.",
-    "When describing multiple people, do not use names. Identify people by visual position such as left girl, right boy, foreground character, or background character.",
     "Do not use supplement for smell, sound, internal sensations, invisible emotions, or prose narration."
   ].join(`
 `) : "Do not include supplement text.";
@@ -1393,45 +1342,14 @@ function parserInstruction(config) {
     "# Image Tagging System",
     "Tag the current message's paragraphs as Danbooru-style English image prompts. Output a single JSON object.",
     "## JSON Format",
-    [
-      "{",
-      '  "scenes": [',
-      "    {",
-      '      "place": "string",',
-      '      "shots": [',
-      "        {",
-      '          "paragraph": 0,',
-      '          "camera": "string",',
-      '          "situation": "string",',
-      '          "action": "string",',
-      '          "characters": [',
-      "            {",
-      '              "name": "string",',
-      '              "label": "string",',
-      '              "age": "string",',
-      '              "identity": "string",',
-      '              "appearance": "string",',
-      '              "body": "string",',
-      '              "attire": "string",',
-      '              "expression": "string",',
-      '              "action": "string"',
-      "            }",
-      "          ],",
-      '          "supplement": "string",',
-      '          "negative": "string"',
-      "        }",
-      "      ]",
-      "    }",
-      "  ]",
-      "}"
-    ].join(`
+    schema.join(`
 `),
     "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
     "- These are the ONLY allowed fields. Adding any unlisted field is a schema violation.",
     "## Scenes & Shots",
     "Scene = shots sharing one physical location.",
     "- Same location means same scene, multiple shots.",
-    "- Location change means a new scene with its own place.",
+    animaIllustration ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
     "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
     shotInstruction,
     "Paragraph mapping: current message uses [P#] numbering.",
@@ -1440,16 +1358,16 @@ function parserInstruction(config) {
     "- Tag ONLY the current message. Recent context is for continuity only.",
     "## Tag Rules",
     "Use common, objective, visualizable Danbooru-style English tags. Do not invent tags; use simpler well-known equivalents if unsure. Do not use metaphors for tags.",
-    "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
+    animaIllustration ? "Tag fields are comma-separated tags. composition and sharedComposition are concise natural language. Environment arrays contain one comma-free visual snippet per item." : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
     `Character limit: max ${maxCharacters} visible character(s) per shot. Characters outside the limit should be represented only by visible partial body parts, such as out of frame, hand, arm, or legs. Do not output their expressions or attire. Only output visible body parts and actions when needed.`,
     config.mode === "asset" ? "Asset mode requires one character in characters[] for every shot, no group shots, no narrative background beyond a simple white background." : "",
     "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for stable appearance, attire, location, and persistent actions.",
     config.mode === "illustration" ? "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts." : "",
-    "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
+    animaIllustration ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, action, composition, camera, situation, sharedComposition, environment, and negative." : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
     "## Field Reference",
-    "### place - scene-level",
-    "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
-    "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
+    animaIllustration ? "### environment - scene-level" : "### place - scene-level",
+    animaIllustration ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
+    animaIllustration ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment." : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
     "### camera - shot-level",
     "Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
     "Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus.",
@@ -1462,7 +1380,7 @@ function parserInstruction(config) {
     "Use girl, boy, or other regardless of age. For out-of-frame partial characters, use label plus out of frame and visible part, such as boy, out of frame, hand.",
     "### name - required",
     "Character name from the narrative. If unnamed, use a consistent identifier such as girl A, boy B, shopkeeper, guard, or stranger. Never empty; this is used for cross-message appearance tracking.",
-    "Do not put character names in label, age, appearance, body, attire, expression, action, situation, camera, place, supplement, or negative.",
+    "Do not put character names in label, age, appearance, body, attire, expression, action, composition, situation, camera, place, environment, sharedComposition, supplement, or negative.",
     "### age",
     "Visual age category only: child, aged down, mature male, mature female, aged up, or old. Based on appearance only.",
     "If characters appear late teens to early thirties, leave age blank.",
@@ -1493,15 +1411,15 @@ function parserInstruction(config) {
     "Visible facial emotions and facial/eye states only: annoyed, angry, embarrassed, blush, grin, smile, crying, empty eyes, closed eyes.",
     "Do not include posture, gaze direction, clothing, body, action, camera, place, or names in expression.",
     "### action",
-    "Use shot.action for global or relationship action that applies to the whole shot, such as two characters holding hands or one character guiding another.",
-    "Use characters[].action for a single character's posture, gaze, pose, interactions, and visible actions. Use multiple tags if needed.",
+    animaIllustration ? "Use shot.action only as tag fallback when sharedComposition is empty or disabled. Use characters[].action only as tag fallback when that character's composition is empty." : "Use shot.action for global or relationship action that applies to the whole shot, such as two characters holding hands or one character guiding another.",
+    animaIllustration ? "Put each character's spatial position, pose, action, gaze, and relationship in characters[].composition instead of duplicating it as action tags." : "Use characters[].action for a single character's posture, gaze, pose, interactions, and visible actions. Use multiple tags if needed.",
     "Posture examples: standing, sitting on chair, on back, kneeling, spread legs, all fours, squatting, on stomach, on side.",
     "Gaze examples: looking at viewer, looking away, looking at another.",
     "Interaction examples: arm hug, leaning, heads together, carrying, piggyback, holding hands.",
     "Do not duplicate camera, place, situation counts, appearance, body, attire, or expression. Do not put the same action in multiple fields.",
     "### negative - optional",
     "Only if the client explicitly specifies negative prompt tags. Never infer negative tags.",
-    supplement,
+    naturalDetail,
     "## Repetition is Consistency",
     "- If a detail appears in one shot and persists, tag it in all subsequent shots.",
     "- If an action or attire is still in motion or still present, repeat it in later shots.",
@@ -1601,6 +1519,13 @@ var FUZZY_KEYS = [
   "attire",
   "expression",
   "action",
+  "composition",
+  "sharedComposition",
+  "environment",
+  "location",
+  "timeWeather",
+  "lightingMood",
+  "backgroundElements",
   "negative",
   "name",
   "scene",
@@ -2121,7 +2046,7 @@ async function prepareAndDispatchImages(chatId, selected, config, userId) {
   return prepareAndDispatchImageJobs(selected, eagerComfyQueueing, async (entry, index) => {
     const jobStartedAt = Date.now();
     logStage(config, "image_generation_preparation_job_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
-    const prompt = await cleanupPrompt(entry.prompt, config);
+    const prompt = renderPrompt(entry.prompt, config.promptSyntax);
     const parameters = await buildImageParameters(config, imageConnection, prompt, entry.negative || "");
     const job = {
       index,
@@ -2307,7 +2232,6 @@ var __testables = {
   DEFAULT_CONFIG,
   activePromptPreset,
   assemblePrompt,
-  cleanupPrompt,
   continuityReference,
   exactVisualKey,
   formatTargetParagraphs,
@@ -2409,16 +2333,6 @@ spindle.onFrontendMessage(async (payload, userId) => {
         throw new Error("No assistant message found.");
       spindle.sendToFrontend({ type: "status", status: "Generating..." }, userId);
       await generateForMessage(chatId, target.id, target.content, userId);
-    } else if (message.type === "test_danbooru") {
-      const config = await getConfig(userId);
-      configForError = config;
-      logStage(config, "danbooru_test_start", { endpoint: config.danbooruEndpoint });
-      const result = parseCorsJson(await spindle.cors(config.danbooruEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ tags: ["1girl", "blonde hair", "red eyes"] })
-      }), "Danbooru test");
-      spindle.sendToFrontend({ type: "danbooru_test", ok: true, result }, userId);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

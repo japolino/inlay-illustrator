@@ -1,5 +1,4 @@
 import { DEFAULT_CONFIG, normalizeConfig, type Config } from "./shared/config.js";
-import { cleanupPrompt } from "./backend/cleanup.js";
 import { isOwnMessage } from "./backend/context.js";
 import { generateForMessage } from "./backend/generation.js";
 import { prepareAndDispatchImageJobs } from "./backend/images.js";
@@ -20,8 +19,7 @@ import {
 import { activePromptPreset, assemblePrompt, renderPrompt } from "./backend/prompt.js";
 import { exactVisualKey, selectPromptEntries } from "./backend/scenes.js";
 import { getConfig, sendState, setConfig, updateState } from "./backend/storage.js";
-import type { DanbooruPayload } from "./backend/types.js";
-import { keysOf, parseCorsJson } from "./backend/utils.js";
+import { keysOf } from "./backend/utils.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
@@ -30,7 +28,6 @@ export const __testables = {
   DEFAULT_CONFIG,
   activePromptPreset,
   assemblePrompt,
-  cleanupPrompt,
   continuityReference,
   exactVisualKey,
   formatTargetParagraphs,
@@ -129,16 +126,6 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       if (!target) throw new Error("No assistant message found.");
       spindle.sendToFrontend({ type: "status", status: "Generating..." }, userId);
       await generateForMessage(chatId, target.id, target.content, userId);
-    } else if (message.type === "test_danbooru") {
-      const config = await getConfig(userId);
-      configForError = config;
-      logStage(config, "danbooru_test_start", { endpoint: config.danbooruEndpoint });
-      const result = parseCorsJson<DanbooruPayload>(await spindle.cors(config.danbooruEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ tags: ["1girl", "blonde hair", "red eyes"] })
-      }), "Danbooru test");
-      spindle.sendToFrontend({ type: "danbooru_test", ok: true, result }, userId);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

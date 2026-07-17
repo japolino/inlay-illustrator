@@ -42,6 +42,7 @@ function normalizedVisualValue(value: unknown): string {
 }
 
 export function exactVisualKey(entry: NormalizedScene): string {
+  const environment = entry.scene.environment || {};
   return JSON.stringify({
     paragraph: entry.parserParagraph,
     camera: normalizedVisualValue(entry.shot.camera),
@@ -50,9 +51,16 @@ export function exactVisualKey(entry: NormalizedScene): string {
     shotAction: normalizedVisualValue(entry.shot.action),
     characters: cleanArray<CharacterJson>(entry.shot.characters).map((character) => ({
       expression: normalizedVisualValue(character.expression),
-      action: normalizedVisualValue(character.action)
+      action: normalizedVisualValue(character.action),
+      composition: normalizedVisualValue(character.composition)
     })),
-    composition: normalizedVisualValue(entry.shot.supplement)
+    sharedComposition: normalizedVisualValue(entry.shot.sharedComposition || entry.shot.supplement),
+    environment: {
+      location: normalizedVisualValue(environment.location),
+      timeWeather: normalizedVisualValue(environment.timeWeather),
+      lightingMood: cleanArray<unknown>(environment.lightingMood).map(normalizedVisualValue),
+      backgroundElements: cleanArray<unknown>(environment.backgroundElements).map(normalizedVisualValue)
+    }
   });
 }
 

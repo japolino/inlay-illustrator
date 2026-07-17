@@ -8,6 +8,14 @@ export type CharacterJson = {
   attire?: unknown;
   expression?: unknown;
   action?: unknown;
+  composition?: unknown;
+};
+
+export type EnvironmentJson = {
+  location?: unknown;
+  timeWeather?: unknown;
+  lightingMood?: unknown;
+  backgroundElements?: unknown;
 };
 
 export type ShotJson = {
@@ -16,20 +24,17 @@ export type ShotJson = {
   situation?: unknown;
   action?: unknown;
   characters?: CharacterJson[];
+  sharedComposition?: unknown;
   supplement?: unknown;
   negative?: unknown;
 };
 
-export type SceneJson = ShotJson & { place?: unknown; shots?: ShotJson[] };
+export type SceneJson = ShotJson & { place?: unknown; environment?: EnvironmentJson; shots?: ShotJson[] };
 export type ParsedPayload = { scenes?: SceneJson[] };
 
 export type AssembledPrompt = {
-  /** Tag-only sections, kept separate so tag cleanup never sees prose. */
-  tagSections: string[];
-  /** Natural-language prose appended at its original point in the prompt. */
-  supplement: string;
-  /** Number of tag sections that occur before the supplement. */
-  supplementAfterTagSections: number;
+  /** Ordered tag and prose sections, rendered with syntax-specific separators. */
+  sections: string[];
 };
 
 export type PromptEntry = {
@@ -111,16 +116,6 @@ export type ParserGenerationRequest = {
   parameters?: Record<string, unknown>;
   reasoning: { source: "off" };
   userId?: string;
-};
-
-export type DanbooruSuggestion = { tag?: string; score?: number };
-export type DanbooruPayload = {
-  valid?: string[];
-  suggestions?: Record<string, DanbooruSuggestion[]>;
-  data?: {
-    valid?: string[];
-    suggestions?: Record<string, DanbooruSuggestion[]>;
-  };
 };
 
 export type GeneratedRecord = {

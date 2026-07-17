@@ -18,7 +18,7 @@ export function renderPromptSection({ ui, config, actions, rerender }: SectionCo
   ]);
   ui.addSwitch(section, "originalReference", "Source reference");
   ui.addText(section, "originalCreationName", "Creation name");
-  ui.addSwitch(section, "supplement", "Natural supplement");
+  ui.addSwitch(section, "supplement", "Natural/shared detail");
   ui.addSubtitle(section, "Prompt presets");
 
   const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;

@@ -37,8 +37,6 @@ export type Config = {
   originalReference: boolean;
   originalCreationName: string;
   supplement: boolean;
-  danbooruCleanup: boolean;
-  danbooruEndpoint: string;
   ignoredTags: string;
   customPositivePrefix: string;
   customPositiveSuffix: string;
@@ -48,6 +46,9 @@ export type Config = {
 };
 
 export type RawConfig = Partial<Config> & {
+  /** Removed settings retained only so legacy persisted records can be ignored. */
+  danbooruCleanup?: unknown;
+  danbooruEndpoint?: unknown;
   imageGeneration?: {
     promptParserConnectionId?: string | null;
     promptParserModel?: string;
@@ -90,8 +91,6 @@ export const DEFAULT_CONFIG: Config = {
   originalReference: false,
   originalCreationName: "",
   supplement: true,
-  danbooruCleanup: false,
-  danbooruEndpoint: "http://127.0.0.1:8000/tools/validate_tags",
   ignoredTags: "",
   customPositivePrefix: "",
   customPositiveSuffix: "",
@@ -139,6 +138,12 @@ export function normalizePromptPresets(value: unknown): PromptPreset[] {
 
 export function normalizeConfig(raw: RawConfig): Config {
   const imageGeneration = raw.imageGeneration || {};
+  const {
+    danbooruCleanup: _legacyDanbooruCleanup,
+    danbooruEndpoint: _legacyDanbooruEndpoint,
+    imageGeneration: _legacyImageGeneration,
+    ...current
+  } = raw;
   const includeMin = clampInt(raw.includeMinMessages, 0, 32, DEFAULT_CONFIG.includeMinMessages);
   const includeMax = clampInt(raw.includeMaxMessages, 0, 32, DEFAULT_CONFIG.includeMaxMessages);
   const minImages = clampInt(raw.minImages, 1, 12, DEFAULT_CONFIG.minImages);
@@ -149,7 +154,7 @@ export function normalizeConfig(raw: RawConfig): Config {
   const imageParameters = cleanParameters(raw.imageParameters);
   return {
     ...DEFAULT_CONFIG,
-    ...raw,
+    ...current,
     mode: raw.mode === "asset" ? "asset" : "illustration",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),

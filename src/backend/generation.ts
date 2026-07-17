@@ -1,5 +1,4 @@
 import type { Config } from "../shared/config.js";
-import { cleanupPrompt } from "./cleanup.js";
 import { buildLorebookContextSnapshot, buildParserContext, isOwnMessage, type LorebookContextSnapshot } from "./context.js";
 import { buildImageParameters, prepareAndDispatchImageJobs, resolveImageConnection } from "./images.js";
 import { logStage } from "./logging.js";
@@ -192,7 +191,7 @@ async function prepareAndDispatchImages(
   return prepareAndDispatchImageJobs(selected, eagerComfyQueueing, async (entry, index) => {
     const jobStartedAt = Date.now();
     logStage(config, "image_generation_preparation_job_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
-    const prompt = await cleanupPrompt(entry.prompt, config);
+    const prompt = renderPrompt(entry.prompt, config.promptSyntax);
     const parameters = await buildImageParameters(config, imageConnection, prompt, entry.negative || "");
     const job: PreparedImageJob = {
       index,

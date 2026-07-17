@@ -54,10 +54,4 @@ export function routeBackendMessage(
     actions.updateStatus(status);
     return;
   }
-
-  if (message.type === "danbooru_test") {
-    actions.updateStatus(
-      `Danbooru endpoint responded.\n${JSON.stringify(message.result, null, 2).slice(0, 1000)}`
-    );
-  }
 }

@@ -5,8 +5,8 @@
   "author": "japolino",
   "github": "https://github.com/japolino/inlay-illustrator",
   "homepage": "https://github.com/japolino/inlay-illustrator",
-  "description": "Persistent character image generation with dynamic visual memory, context-aware prompt parsing, inline chat images, asset mode, Anima/ComfyUI prompt output, and optional tag cleanup.",
-  "permissions": ["generation", "interceptor", "image_gen", "chat_mutation", "images", "cors_proxy", "chats", "characters", "personas", "world_books"],
+  "description": "Persistent character image generation with dynamic visual memory, context-aware prompt parsing, inline chat images, asset mode, and Anima/ComfyUI prompt output.",
+  "permissions": ["generation", "interceptor", "image_gen", "chat_mutation", "images", "chats", "characters", "personas", "world_books"],
   "entry_backend": "dist/backend.js",
   "entry_frontend": "dist/frontend.js",
   "minimum_lumiverse_version": "0.1.0"

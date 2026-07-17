@@ -31,8 +31,6 @@ var DEFAULT_CONFIG = {
   originalReference: false,
   originalCreationName: "",
   supplement: true,
-  danbooruCleanup: false,
-  danbooruEndpoint: "http://127.0.0.1:8000/tools/validate_tags",
   ignoredTags: "",
   customPositivePrefix: "",
   customPositiveSuffix: "",
@@ -77,6 +75,12 @@ function normalizePromptPresets(value) {
 }
 function normalizeConfig(raw) {
   const imageGeneration = raw.imageGeneration || {};
+  const {
+    danbooruCleanup: _legacyDanbooruCleanup,
+    danbooruEndpoint: _legacyDanbooruEndpoint,
+    imageGeneration: _legacyImageGeneration,
+    ...current
+  } = raw;
   const includeMin = clampInt(raw.includeMinMessages, 0, 32, DEFAULT_CONFIG.includeMinMessages);
   const includeMax = clampInt(raw.includeMaxMessages, 0, 32, DEFAULT_CONFIG.includeMaxMessages);
   const minImages = clampInt(raw.minImages, 1, 12, DEFAULT_CONFIG.minImages);
@@ -87,7 +91,7 @@ function normalizeConfig(raw) {
   const imageParameters = cleanParameters(raw.imageParameters);
   return {
     ...DEFAULT_CONFIG,
-    ...raw,
+    ...current,
     mode: raw.mode === "asset" ? "asset" : "illustration",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
@@ -161,7 +165,7 @@ var DRAWER_TAB_OPTIONS = {
   shortName: "Inlay",
   headerTitle: "Inlay Illustrator",
   description: "Generate Inlay-style illustration batches from completed messages.",
-  keywords: ["image", "illustration", "danbooru", "anima"],
+  keywords: ["image", "illustration", "anima"],
   iconSvg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M21 16l-5-5L5 19"/></svg>'
 };
 var PANEL_STYLES = `
@@ -216,10 +220,6 @@ ${message.record.imageUrls.length} image(s) generated.`;
     }
     actions.updateStatus(status);
     return;
-  }
-  if (message.type === "danbooru_test") {
-    actions.updateStatus(`Danbooru endpoint responded.
-${JSON.stringify(message.result, null, 2).slice(0, 1000)}`);
   }
 }
 
@@ -326,21 +326,12 @@ function renderMemorySection({ ui, characterAppearance, actions }) {
 }
 
 // src/frontend/sections/output.ts
-function renderOutputSection({ ui, actions }) {
-  const section = ui.section("Image output and cleanup", false);
+function renderOutputSection({ ui }) {
+  const section = ui.section("Image output", false);
   ui.addNumber(section, "inlayImageWidth", "Illustration width", 120, 2400);
   ui.addNumber(section, "assetImageWidth", "Asset width", 120, 2400);
   ui.addNumber(section, "inlayImageMaxHeightVh", "Maximum height", 10, 100, "Viewport height percentage.");
-  ui.addSwitch(section, "danbooruCleanup", "Danbooru cleanup");
-  ui.addText(section, "danbooruEndpoint", "Danbooru endpoint");
   ui.addTextarea(section, "ignoredTags", "Ignored tags", "Separate tags with commas or semicolons.");
-  ui.addActions(section, [{
-    label: "Test endpoint",
-    onClick: () => {
-      actions.updateStatus("Testing Danbooru endpoint...");
-      actions.sendToBackend({ type: "test_danbooru" });
-    }
-  }]);
 }
 
 // src/frontend/sections/parser.ts
@@ -398,7 +389,7 @@ function renderPromptSection({ ui, config, actions, rerender }) {
   ]);
   ui.addSwitch(section, "originalReference", "Source reference");
   ui.addText(section, "originalCreationName", "Creation name");
-  ui.addSwitch(section, "supplement", "Natural supplement");
+  ui.addSwitch(section, "supplement", "Natural/shared detail");
   ui.addSubtitle(section, "Prompt presets");
   const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
   const presetSelectTarget = ui.row(section, "Active preset", "Preset prefixes are inserted before the custom prompt fields below.");

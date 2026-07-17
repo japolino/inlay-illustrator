@@ -1,9 +1,3 @@
-type CorsTextResponse = {
-  status?: number;
-  statusText?: string;
-  body?: unknown;
-};
-
 export function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
@@ -48,24 +42,4 @@ export function unique(parts: string[]): string[] {
 
 export function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-export function parseCorsJson<T>(response: unknown, label: string): T {
-  const wrapper = asRecord(response);
-  if ("body" in wrapper || "status" in wrapper || "statusText" in wrapper) {
-    const { status, statusText, body } = wrapper as CorsTextResponse;
-    if (typeof status === "number" && (status < 200 || status >= 300)) {
-      throw new Error(`${label} returned HTTP ${status}${statusText ? ` ${statusText}` : ""}`);
-    }
-    if (typeof body === "string") {
-      try {
-        return JSON.parse(body) as T;
-      } catch {
-        throw new Error(`${label} returned invalid JSON`);
-      }
-    }
-    if (body && typeof body === "object") return body as T;
-    throw new Error(`${label} returned an empty response body`);
-  }
-  return response as T;
 }
