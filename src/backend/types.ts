@@ -52,6 +52,8 @@ export type ChatMessage = {
 
 export type ParserContext = {
   systemContext: string;
+  /** Stable references safe for the visual-beat preprocessing call. Lorebook prose is intentionally excluded. */
+  preprocessingSystemContext?: string;
   recentContext: string;
   override: string;
   diagnostics: Record<string, unknown>;

@@ -1,4 +1,5 @@
 import type { Config } from "../shared/config.js";
+import type { ActivatedWorldInfoEntryDTO, WorldBookEntryDTO, WorldBookSourceDTO } from "lumiverse-spindle-types";
 import { EXTENSION_ID } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
 import { buildCharacterTagReference } from "./prompt.js";
@@ -6,6 +7,47 @@ import type { ChatMessage, ParserContext } from "./types.js";
 import { asRecord, cleanString, compactBlock, unique } from "./utils.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
+
+const MAX_ACTIVATED_LOREBOOK_ENTRIES = 24;
+const COMPACT_LOREBOOK_LENGTH = 4000;
+const FULL_LOREBOOK_LENGTH = 8000;
+
+const TARGET_STOP_WORDS = new Set([
+  "about", "after", "again", "against", "also", "because", "before", "being", "between", "could", "does", "from", "have",
+  "into", "just", "more", "other", "over", "said", "same", "should", "than", "that", "their", "them", "then", "there", "these",
+  "they", "this", "through", "under", "very", "were", "what", "when", "where", "which", "while", "with", "would", "your"
+]);
+
+const CHARACTER_VISUAL_PATTERN = /\b(?:appearance|attire|body|build|clothes?|clothing|coat|dress|eyes?|face|facial|freckles|hair|horns?|jacket|pants|robe|scar|shirt|shoes?|skin|skirt|species|suit|tail|tattoo|uniform|wears?|wearing|wings?)\b/i;
+const SCENE_VISUAL_PATTERN = /\b(?:architecture|background|castle|city|clouds?|forest|interior|exterior|lamp|light|lighting|moonlight|night|palace|rain|room|snow|street|sunlight|temple|weather|weapon|window)\b/i;
+
+type ResolvedLorebookEntry = {
+  index: number;
+  id: string;
+  title: string;
+  keys: string[];
+  content: string;
+  priority: number;
+  source: "keyword" | "vector";
+  score?: number;
+  bookSource?: WorldBookSourceDTO;
+};
+
+export type LorebookContextSnapshot = {
+  compact: string;
+  full: string;
+  compacted: boolean;
+  hasCharacterVisualReference: boolean;
+  diagnostics: Record<string, unknown>;
+};
+
+export const EMPTY_LOREBOOK_CONTEXT: LorebookContextSnapshot = {
+  compact: "",
+  full: "",
+  compacted: false,
+  hasCharacterVisualReference: false,
+  diagnostics: { lorebookEntries: 0 }
+};
 
 export function isOwnMessage(message: { content?: string; metadata?: Record<string, unknown> }): boolean {
   return Boolean(message.metadata?.extension === EXTENSION_ID);
@@ -37,6 +79,220 @@ function collectExtraInstructionStrings(root: unknown): string[] {
   return unique(values.filter(Boolean)).map((value) => compactBlock(value, 2000));
 }
 
+function normalizedTerms(value: string): string[] {
+  return unique((value.toLowerCase().match(/[a-z0-9][a-z0-9_-]{2,}/g) || [])
+    .map((term) => term.replace(/[_-]+/g, " "))
+    .filter((term) => !TARGET_STOP_WORDS.has(term)));
+}
+
+function normalizeSearchText(value: string): string {
+  return value.toLowerCase().replace(/[_-]+/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").replace(/\s+/g, " ").trim();
+}
+
+function includesTerm(value: string, term: string): boolean {
+  const clean = normalizeSearchText(term);
+  const source = normalizeSearchText(value);
+  return clean.length >= 2 && ` ${source} `.includes(` ${clean} `);
+}
+
+function splitLorebookSegments(content: string): string[] {
+  const paragraphs = content.replace(/\r\n/g, "\n").split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+  const segments: string[] = [];
+  for (const paragraph of paragraphs) {
+    if (paragraph.length <= 500) {
+      segments.push(paragraph);
+      continue;
+    }
+    const sentences = paragraph.split(/(?<=[.!?])\s+|\n+/).map((part) => part.trim()).filter(Boolean);
+    if (sentences.length <= 1) {
+      for (let offset = 0; offset < paragraph.length; offset += 500) segments.push(paragraph.slice(offset, offset + 500).trim());
+    } else {
+      segments.push(...sentences);
+    }
+  }
+  return segments;
+}
+
+function targetOverlap(value: string, targetTerms: string[]): number {
+  return targetTerms.reduce((count, term) => count + (includesTerm(value, term) ? 1 : 0), 0);
+}
+
+function entryRelevance(entry: ResolvedLorebookEntry, target: string, targetTerms: string[]): number {
+  const directKeyMatches = entry.keys.filter((key) => includesTerm(target, key)).length;
+  const titleMatch = entry.title && includesTerm(target, entry.title) ? 1 : 0;
+  const sourceWeight = entry.source === "keyword" ? 15 : Math.max(0, 15 - Math.max(0, Number(entry.score || 0)) * 10);
+  const scopeWeight: Record<WorldBookSourceDTO, number> = { character: 12, chat: 8, persona: 4, global: 0 };
+  const priorityWeight = Math.max(-20, Math.min(20, entry.priority / 5));
+  return directKeyMatches * 100 + titleMatch * 50 + sourceWeight + (entry.bookSource ? scopeWeight[entry.bookSource] : 0)
+    + priorityWeight + Math.min(10, targetOverlap(entry.content, targetTerms));
+}
+
+function compactEntryContent(entry: ResolvedLorebookEntry, targetTerms: string[], maxLength: number): string {
+  const segments = splitLorebookSegments(entry.content);
+  if (segments.length === 0) return "";
+  const ranked = segments.map((segment, index) => {
+    const keyMatches = entry.keys.reduce((count, key) => count + (includesTerm(segment, key) ? 1 : 0), 0);
+    const overlap = targetOverlap(segment, targetTerms);
+    const visual = CHARACTER_VISUAL_PATTERN.test(segment) ? 8 : SCENE_VISUAL_PATTERN.test(segment) ? 4 : 0;
+    return { segment, index, score: keyMatches * 8 + Math.min(8, overlap) + visual + (index === 0 ? 1 : 0) };
+  }).sort((left, right) => right.score - left.score || left.index - right.index);
+
+  const selected: Array<{ segment: string; index: number }> = [];
+  let length = 0;
+  for (const candidate of ranked) {
+    const separator = selected.length ? 2 : 0;
+    if (selected.length && length + separator + candidate.segment.length > maxLength) continue;
+    const segment = selected.length === 0 && candidate.segment.length > maxLength
+      ? truncateLorebookText(candidate.segment, maxLength)
+      : candidate.segment;
+    selected.push({ segment, index: candidate.index });
+    length += separator + segment.length;
+    if (length >= maxLength) break;
+  }
+  return selected.sort((left, right) => left.index - right.index).map(({ segment }) => segment).join("\n\n");
+}
+
+function lorebookHeader(entry: ResolvedLorebookEntry): string {
+  const title = entry.title || entry.keys.join(", ") || `Entry ${entry.id}`;
+  const keys = entry.keys.length ? `Keys: ${entry.keys.join(", ")}` : "";
+  return [`### ${title}`, keys].filter(Boolean).join("\n");
+}
+
+function truncateLorebookText(value: string, maxLength: number): string {
+  if (value.length <= maxLength) return value;
+  const marker = "\n...[truncated]";
+  if (maxLength <= marker.length) return value.slice(0, maxLength);
+  return `${value.slice(0, maxLength - marker.length).trimEnd()}${marker}`;
+}
+
+function appendLorebookRows(rows: string[], maxLength: number): { block: string; count: number } {
+  if (rows.length === 0) return { block: "", count: 0 };
+  const prefix = "## Lorebook";
+  const selected: string[] = [];
+  let length = prefix.length;
+  for (const row of rows) {
+    const remaining = maxLength - length - 2;
+    if (remaining <= 80) break;
+    const next = truncateLorebookText(row, remaining);
+    selected.push(next);
+    length += next.length + 2;
+    if (next.length < row.length) break;
+  }
+  return { block: [prefix, ...selected].join("\n\n"), count: selected.length };
+}
+
+function renderLorebookBlocks(entries: ResolvedLorebookEntry[], target: string): Pick<LorebookContextSnapshot, "compact" | "full" | "hasCharacterVisualReference"> & { compactEntries: number; fullEntries: number } {
+  const targetTerms = normalizedTerms(target);
+  const ranked = [...entries].sort((left, right) =>
+    entryRelevance(right, target, targetTerms) - entryRelevance(left, target, targetTerms) || left.index - right.index
+  );
+  const fairEntryLimit = Math.max(360, Math.min(1200, Math.floor(3600 / Math.max(1, Math.min(ranked.length, 8)))));
+  const compactRows = ranked.map((entry) => {
+    const content = compactEntryContent(entry, targetTerms, fairEntryLimit);
+    return { row: [lorebookHeader(entry), content].filter(Boolean).join("\n"), content };
+  });
+  const fullRows = ranked.map((entry) => [lorebookHeader(entry), entry.content].filter(Boolean).join("\n"));
+  const compactRendered = appendLorebookRows(compactRows.map(({ row }) => row), COMPACT_LOREBOOK_LENGTH);
+  const fullRendered = appendLorebookRows(fullRows, FULL_LOREBOOK_LENGTH);
+  return {
+    compact: compactRendered.block,
+    full: fullRendered.block,
+    hasCharacterVisualReference: compactRows.slice(0, compactRendered.count).some(({ content }) => CHARACTER_VISUAL_PATTERN.test(content)),
+    compactEntries: compactRendered.count,
+    fullEntries: fullRendered.count
+  };
+}
+
+function activatedEntryRelevance(entry: ActivatedWorldInfoEntryDTO, target: string, index: number): number {
+  const directKeyMatches = (entry.keys || []).filter((key) => includesTerm(target, key)).length;
+  const titleMatch = entry.comment && includesTerm(target, entry.comment) ? 1 : 0;
+  const sourceWeight = entry.source === "keyword" ? 15 : Math.max(0, 15 - Math.max(0, Number(entry.score || 0)) * 10);
+  const scopeWeight: Record<WorldBookSourceDTO, number> = { character: 12, chat: 8, persona: 4, global: 0 };
+  return directKeyMatches * 100 + titleMatch * 50 + sourceWeight + (entry.bookSource ? scopeWeight[entry.bookSource] : 0) - index / 1000;
+}
+
+async function resolveLorebookContent(content: string, chatId: string, userId?: string): Promise<{ content: string; resolved: boolean; diagnostics: number }> {
+  if (!content || typeof spindle.macros?.resolve !== "function") return { content, resolved: false, diagnostics: 0 };
+  try {
+    const result = await spindle.macros.resolve(content, { chatId, userId, commit: false });
+    return { content: cleanString(result.text) || content, resolved: true, diagnostics: Array.isArray(result.diagnostics) ? result.diagnostics.length : 0 };
+  } catch {
+    return { content, resolved: false, diagnostics: 0 };
+  }
+}
+
+export async function buildLorebookContextSnapshot(
+  chatId: string,
+  target: string,
+  config: Pick<Config, "includeLorebook">,
+  userId?: string
+): Promise<LorebookContextSnapshot> {
+  if (!config.includeLorebook) return EMPTY_LOREBOOK_CONTEXT;
+  try {
+    const allActivated = await spindle.world_books.getActivated(chatId, userId);
+    const activated = allActivated.map((entry, index) => ({ entry, index }))
+      .sort((left, right) => activatedEntryRelevance(right.entry, target, right.index) - activatedEntryRelevance(left.entry, target, left.index))
+      .slice(0, MAX_ACTIVATED_LOREBOOK_ENTRIES)
+      .map(({ entry }) => entry);
+    let resolvedCount = 0;
+    let macroDiagnostics = 0;
+    let fetchFailures = 0;
+    const fetched = await Promise.all(activated.map(async (activatedEntry: ActivatedWorldInfoEntryDTO, index): Promise<ResolvedLorebookEntry | null> => {
+      let full: WorldBookEntryDTO | null = null;
+      try {
+        full = await spindle.world_books.entries.get(activatedEntry.id, userId);
+      } catch {
+        full = null;
+      }
+      if (!full) fetchFailures += 1;
+      const rawContent = cleanString(full?.content);
+      const resolved = await resolveLorebookContent(rawContent, chatId, userId);
+      if (resolved.resolved) resolvedCount += 1;
+      macroDiagnostics += resolved.diagnostics;
+      const title = cleanString(activatedEntry.comment) || cleanString(full?.comment);
+      const keys = unique([...(activatedEntry.keys || []), ...(full?.key || [])].map((key) => cleanString(key)).filter(Boolean));
+      const content = resolved.content || [title, keys.length ? `Keys: ${keys.join(", ")}` : ""].filter(Boolean).join("\n");
+      if (!content) return null;
+      return {
+        index,
+        id: activatedEntry.id,
+        title,
+        keys,
+        content,
+        priority: Number(full?.priority || 0),
+        source: activatedEntry.source,
+        score: activatedEntry.score,
+        bookSource: activatedEntry.bookSource
+      };
+    }));
+    const entries = fetched.filter((entry): entry is ResolvedLorebookEntry => Boolean(entry));
+    const rendered = renderLorebookBlocks(entries, target);
+    return {
+      compact: rendered.compact,
+      full: rendered.full,
+      compacted: rendered.compact.length < rendered.full.length || rendered.compactEntries < entries.length,
+      hasCharacterVisualReference: rendered.hasCharacterVisualReference,
+      diagnostics: {
+        lorebookEntries: entries.length,
+        lorebookActivated: allActivated.length,
+        lorebookSelected: activated.length,
+        lorebookCompactEntries: rendered.compactEntries,
+        lorebookFullEntries: rendered.fullEntries,
+        lorebookCompactLength: rendered.compact.length,
+        lorebookFullLength: rendered.full.length,
+        lorebookMacroResolved: resolvedCount,
+        lorebookMacroDiagnostics: macroDiagnostics,
+        lorebookFetchFailures: fetchFailures
+      }
+    };
+  } catch (error) {
+    return {
+      ...EMPTY_LOREBOOK_CONTEXT,
+      diagnostics: { lorebookEntries: 0, lorebookError: error instanceof Error ? error.message : String(error) }
+    };
+  }
+}
+
 export function formatRecentContext(messages: ChatMessage[], targetIndex: number, includeCount: number): string {
   if (includeCount <= 0) return "";
   const previous = messages
@@ -62,12 +318,19 @@ export async function buildParserContext(
   cache: Record<string, string>,
   config: Config,
   attempt: number,
-  userId?: string
+  userId?: string,
+  lorebookSnapshot?: LorebookContextSnapshot
 ): Promise<ParserContext> {
   const blocks: string[] = [];
+  const preprocessingBlocks: string[] = [];
   const overrides: string[] = [];
   const diagnostics: Record<string, unknown> = { attempt, includeCount: includeCountForAttempt(config, attempt) };
   let chat: Record<string, unknown> | null = null;
+  const pushBlock = (block: string, includeInPreprocessing = true): void => {
+    if (!block) return;
+    blocks.push(block);
+    if (includeInPreprocessing) preprocessingBlocks.push(block);
+  };
 
   if (config.includeCharacterInfo || config.includeLorebook || config.userInstructionsEnabled) {
     try {
@@ -87,7 +350,7 @@ export async function buildParserContext(
         namedField("Title", record.title),
         namedField("Description", record.description)
       ]) : "";
-      if (block) blocks.push(block);
+      pushBlock(block);
       overrides.push(...collectExtraInstructionStrings(record.metadata));
       diagnostics.userInfo = Boolean(block);
     } catch (error) {
@@ -109,7 +372,7 @@ export async function buildParserContext(
         namedField("Post-history instructions", record.post_history_instructions),
         Array.isArray(record.tags) && record.tags.length ? `Tags: ${record.tags.join(", ")}` : ""
       ], 6000);
-      if (block) blocks.push(block);
+      pushBlock(block);
       overrides.push(...collectExtraInstructionStrings(record.extensions));
       diagnostics.characterInfo = Boolean(block);
     } catch (error) {
@@ -118,34 +381,17 @@ export async function buildParserContext(
   }
 
   if (config.includeLorebook) {
-    try {
-      const activated = await spindle.world_books.getActivated(chatId, userId) as unknown[];
-      const rows: string[] = [];
-      for (const entry of activated.slice(0, 24)) {
-        const record = asRecord(entry);
-        let content = "";
-        try {
-          const full = await spindle.world_books.entries.get(String(record.id || ""), userId) as unknown;
-          content = cleanString(asRecord(full).content);
-        } catch {
-          content = "";
-        }
-        const title = cleanString(record.comment) || (Array.isArray(record.keys) ? record.keys.join(", ") : "");
-        const summary = content || [title, Array.isArray(record.keys) && record.keys.length ? `Keys: ${record.keys.join(", ")}` : ""].filter(Boolean).join("\n");
-        if (summary) rows.push(title ? `### ${title}\n${summary}` : summary);
-      }
-      const block = rows.length ? compactBlock(["## Lorebook", ...rows].join("\n\n"), 8000) : "";
-      if (block) blocks.push(block);
-      diagnostics.lorebookEntries = rows.length;
-    } catch (error) {
-      diagnostics.lorebookError = error instanceof Error ? error.message : String(error);
-    }
+    const target = messages[targetIndex]?.content || "";
+    const snapshot = lorebookSnapshot || await buildLorebookContextSnapshot(chatId, target, config, userId);
+    const block = attempt === 0 ? snapshot.compact : snapshot.full;
+    pushBlock(block, false);
+    Object.assign(diagnostics, snapshot.diagnostics, { lorebookMode: attempt === 0 ? "compact" : "full" });
   }
 
   if (config.characterTagContextEnabled) {
     const characterReference = buildCharacterTagReference(cache);
     if (characterReference) {
-      blocks.push(`${characterReference}\nUse these as a baseline for returning characters (including their base attire). The current message always wins over this reference.`);
+      pushBlock(`${characterReference}\nUse these as a baseline for returning characters (including their base attire). The current message always wins over this reference.`);
     }
     diagnostics.cacheCharacters = Object.keys(cache).length;
   }
@@ -153,6 +399,7 @@ export async function buildParserContext(
   if (config.userInstructionsEnabled) overrides.unshift(config.customParserInstructions);
   return {
     systemContext: blocks.filter(Boolean).join("\n\n"),
+    preprocessingSystemContext: preprocessingBlocks.filter(Boolean).join("\n\n"),
     recentContext: formatRecentContext(messages, targetIndex, includeCountForAttempt(config, attempt)),
     override: unique(overrides.map((value) => cleanString(value)).filter(Boolean)).join("\n\n"),
     diagnostics

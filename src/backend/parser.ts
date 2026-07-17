@@ -2,7 +2,7 @@ import type { Config } from "../shared/config.js";
 import { parserInstruction } from "./instructions.js";
 import { logStage } from "./logging.js";
 import type { ParsedPayload, ParserConnection, ParserContext, ParserGenerationRequest, PreparedParagraph, SceneJson } from "./types.js";
-import { cleanString, compactBlock, keysOf } from "./utils.js";
+import { asRecord, cleanString, compactBlock, keysOf } from "./utils.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
@@ -44,6 +44,16 @@ function extractText(result: unknown): string {
     }
   }
   return "";
+}
+
+function extractUsage(result: unknown): Record<string, number> {
+  const usage = asRecord(asRecord(result).usage);
+  const output: Record<string, number> = {};
+  for (const key of ["prompt_tokens", "completion_tokens", "total_tokens"]) {
+    const value = Number(usage[key]);
+    if (Number.isFinite(value)) output[key] = value;
+  }
+  return output;
 }
 
 const FUZZY_KEYS = [
@@ -190,7 +200,7 @@ async function generateParserText(
       messageCount: messages.length,
       messageLengths: messages.map((message) => message.content.length)
     });
-    const text = extractText(await spindle.generate.raw({
+    const result = await spindle.generate.raw({
       type: "raw",
       provider: connection.provider,
       model: config.parserModel || connection.model,
@@ -199,8 +209,10 @@ async function generateParserText(
       parameters: config.parserParameters,
       reasoning: { source: "off" },
       userId
-    } as ParserGenerationRequest));
-    logStage(config, "parser_llm_done", { outputLength: text.length });
+    } as ParserGenerationRequest);
+    const text = extractText(result);
+    const usage = extractUsage(result);
+    logStage(config, "parser_llm_done", { outputLength: text.length, ...(Object.keys(usage).length ? { usage } : {}) });
     return text;
   } catch (error) {
     logStage(config, "parser_llm_error", { error: error instanceof Error ? error.message : String(error) }, "error");
@@ -295,7 +307,7 @@ export async function preprocessTargetParagraphs(
   try {
     const summary = await generateParserText(parserConnection, config, parserMessages(
       preprocessingInstruction(paragraphs, config),
-      continuityReference(context.systemContext, context.recentContext),
+      continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext),
       preprocessingUserRequest(rawTarget),
       context.override
     ), userId);

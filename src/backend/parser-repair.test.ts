@@ -7,6 +7,7 @@ type RawRequest = { messages: ParserGenerationRequest["messages"] };
 
 const requests: RawRequest[] = [];
 const responses: unknown[] = [];
+const infoLogs: string[] = [];
 const connection = { id: "parser", name: "Parser", provider: "openai", model: "base-model" };
 const config = {
   ...DEFAULT_CONFIG,
@@ -20,6 +21,7 @@ const messages: ParserGenerationRequest["messages"] = [{ role: "user", content: 
 beforeEach(() => {
   requests.splice(0);
   responses.splice(0);
+  infoLogs.splice(0);
   (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle = {
     generate: {
       raw: async (request: RawRequest) => {
@@ -27,7 +29,7 @@ beforeEach(() => {
         return responses.shift();
       }
     },
-    log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    log: { info: (message: string) => infoLogs.push(message), warn: () => undefined, error: () => undefined }
   };
 });
 
@@ -89,5 +91,19 @@ describe("parser JSON recovery", () => {
 
     await expect(parsePayloadWithRepair(connection, config, messages)).rejects.toThrow("Parser did not return usable JSON scenes.");
     expect(requests).toHaveLength(2);
+  });
+
+  test("logs numeric parser usage without logging response content", async () => {
+    responses.push({
+      content: '{"scenes":[]}',
+      usage: { prompt_tokens: 321, completion_tokens: 45, total_tokens: 366 }
+    });
+
+    await parsePayloadWithRepair(connection, { ...config, debugLogging: true }, messages);
+
+    const completionLog = infoLogs.find((message) => message.includes("parser_llm_done")) || "";
+    expect(completionLog).toContain('"prompt_tokens":321');
+    expect(completionLog).toContain('"total_tokens":366');
+    expect(completionLog).not.toContain('{"scenes":[]}');
   });
 });

@@ -1,6 +1,6 @@
 import type { Config } from "../shared/config.js";
 import { cleanupPrompt } from "./cleanup.js";
-import { buildParserContext, isOwnMessage } from "./context.js";
+import { buildLorebookContextSnapshot, buildParserContext, isOwnMessage, type LorebookContextSnapshot } from "./context.js";
 import { buildImageParameters, prepareAndDispatchImageJobs, resolveImageConnection } from "./images.js";
 import { logStage } from "./logging.js";
 import { updateCache } from "./memory.js";
@@ -28,7 +28,7 @@ import type {
   PromptEntry,
   State
 } from "./types.js";
-import { cleanArray, keysOf } from "./utils.js";
+import { cleanArray, cleanString, keysOf } from "./utils.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
@@ -61,6 +61,14 @@ type PersistStageInput = {
 
 const running = new Set<string>();
 
+export function compactLorebookNeedsFullRetry(payload: ParsedPayload, snapshot: LorebookContextSnapshot): boolean {
+  if (!snapshot.compacted || !snapshot.hasCharacterVisualReference) return false;
+  const characters = normalizeScenePayload(payload).flatMap(({ shot }) => cleanArray<CharacterJson>(shot.characters));
+  if (characters.length === 0) return false;
+  return !characters.some((character) => [character.identity, character.appearance, character.body, character.attire]
+    .some((value) => cleanString(value)));
+}
+
 async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSelection> {
   const { chatId, messageId, messages, paragraphs, state, config, userId } = input;
   const parserConnection = await resolveParserConnection(config, userId);
@@ -68,10 +76,16 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
   let parsed: ParsedPayload | null = null;
   let selected: PromptEntry[] = [];
   let lastParserError: unknown = null;
+  const lorebookSnapshot = await buildLorebookContextSnapshot(
+    chatId,
+    paragraphs.map((paragraph) => paragraph.text).join("\n\n"),
+    config,
+    userId
+  );
 
   for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
     try {
-      const context = await buildParserContext(chatId, messages, targetIndex, state.characterAppearance, config, attempt, userId);
+      const context = await buildParserContext(chatId, messages, targetIndex, state.characterAppearance, config, attempt, userId, lorebookSnapshot);
       const targetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
       const instruction = parserInstruction(config);
       const referenceContext = continuityReference(context.systemContext, context.recentContext);
@@ -99,6 +113,9 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
       );
       selected = selectPromptEntries(parsed, paragraphs, config);
       if (selected.length === 0) throw new Error("No usable prompts were parsed.");
+      if (attempt === 0 && config.parserRetries > 0 && compactLorebookNeedsFullRetry(parsed, lorebookSnapshot)) {
+        throw new Error("Compact lorebook context did not produce durable character tags; retrying with full lorebook context.");
+      }
       break;
     } catch (error) {
       lastParserError = error;

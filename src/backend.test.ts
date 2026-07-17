@@ -552,6 +552,31 @@ describe("illustration parser construction", () => {
     expect(instruction).toContain("Camera/composition");
   });
 
+  test("keeps lorebook prose out of the optional preprocessing request", async () => {
+    const config = { ...helpers.DEFAULT_CONFIG, preprocessingEnabled: true, minImages: 1, maxImages: 2 };
+    parserResponse = [
+      "[Appearance: woman: black hair, red coat]",
+      "[P2]: Visual beat: train entering station; Camera/composition: low wide shot"
+    ].join("\n");
+
+    await helpers.preprocessTargetParagraphs(
+      { id: "parser", name: "Parser", provider: "openai", model: "model" },
+      config,
+      paragraphs,
+      {
+        systemContext: "BASELINE CONTEXT\n\nSECRET LOREBOOK PROSE",
+        preprocessingSystemContext: "BASELINE CONTEXT",
+        recentContext: "",
+        override: "",
+        diagnostics: {}
+      }
+    );
+
+    const contextMessage = parserRequests[0].messages.find((message) => message.role === "system" && message.content.includes("Continuity Reference"));
+    expect(contextMessage?.content).toContain("BASELINE CONTEXT");
+    expect(contextMessage?.content).not.toContain("SECRET LOREBOOK PROSE");
+  });
+
   test("accepts a valid selected subset and rejects missing, malformed, duplicate, unknown, or camera-less markers", () => {
     const config = { ...helpers.DEFAULT_CONFIG, minImages: 2, maxImages: 3 };
     const valid = [
