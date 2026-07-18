@@ -14,6 +14,8 @@ type SelectOption = {
 };
 
 export class UiBuilder {
+  private sectionSequence = 0;
+
   constructor(
     private readonly ctx: SpindleFrontendContext,
     private readonly sections: HTMLElement,
@@ -24,17 +26,42 @@ export class UiBuilder {
   ) {}
 
   section(title: string, defaultExpanded: boolean): HTMLElement {
-    const host = document.createElement("div");
+    const host = document.createElement("section");
     host.className = "inlay-section-host";
-    this.sections.append(host);
-    const component = this.ctx.components.mountCollapsibleSection(host, {
-      title,
-      defaultExpanded: this.expandedSections.get(title) ?? defaultExpanded,
-      onToggle: (expanded) => this.expandedSections.set(title, expanded)
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "inlay-section-toggle";
+
+    const label = document.createElement("span");
+    label.textContent = title;
+    const chevron = document.createElement("span");
+    chevron.className = "inlay-section-chevron";
+    chevron.setAttribute("aria-hidden", "true");
+    chevron.textContent = "›";
+    toggle.append(label, chevron);
+
+    const body = document.createElement("div");
+    body.className = "inlay-section-body";
+    body.id = `inlay-section-body-${++this.sectionSequence}`;
+    toggle.setAttribute("aria-controls", body.id);
+
+    let expanded = this.expandedSections.get(title) ?? defaultExpanded;
+    const applyState = (): void => {
+      body.hidden = !expanded;
+      toggle.setAttribute("aria-expanded", String(expanded));
+      host.setAttribute("data-expanded", String(expanded));
+    };
+    toggle.addEventListener("click", () => {
+      expanded = !expanded;
+      this.expandedSections.set(title, expanded);
+      applyState();
     });
-    this.track(component);
-    component.body.classList.add("inlay-section-body");
-    return component.body;
+    applyState();
+
+    host.append(toggle, body);
+    this.sections.append(host);
+    return body;
   }
 
   row(parent: HTMLElement, label: string, hint = ""): HTMLElement {

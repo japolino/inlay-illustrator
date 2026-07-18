@@ -171,8 +171,15 @@ var DRAWER_TAB_OPTIONS = {
 var PANEL_STYLES = `
   .inlay-panel{width:100%;padding:12px;color:var(--lumiverse-text);display:flex;flex-direction:column;gap:10px;min-width:0;max-width:100%;box-sizing:border-box}
   .inlay-sections,.inlay-section-host,.inlay-section-body,.inlay-row,.inlay-control{min-width:0;max-width:100%;box-sizing:border-box}
-  .inlay-section-host{width:100%;contain:inline-size;overflow-x:clip;overflow-y:visible}
-  .inlay-section-body{display:flex;flex-direction:column;gap:10px;padding:4px 0}
+  .inlay-sections{display:flex;flex-direction:column;gap:8px}
+  .inlay-section-host{width:100%;contain:inline-size;overflow:hidden;border:1px solid var(--lumiverse-border);border-radius:8px;background:var(--lumiverse-fill-subtle)}
+  .inlay-section-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:10px 12px;border:0;background:transparent;color:var(--lumiverse-text);font:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
+  .inlay-section-toggle:hover{background:var(--lumiverse-fill-hover)}
+  .inlay-section-toggle:focus-visible{outline:2px solid var(--lumiverse-primary);outline-offset:-2px}
+  .inlay-section-chevron{flex:none;font-size:20px;line-height:1;transform:rotate(0deg);transition:transform .15s ease}
+  .inlay-section-host[data-expanded="true"] .inlay-section-chevron{transform:rotate(90deg)}
+  .inlay-section-body{display:flex;flex-direction:column;gap:10px;padding:4px 12px 12px}
+  .inlay-section-body[hidden]{display:none}
   .inlay-row{display:grid;grid-template-columns:minmax(116px,.9fr) minmax(0,1.1fr);align-items:center;gap:8px;font-size:13px}
   .inlay-row>*{min-width:0;max-width:100%;box-sizing:border-box}
   .inlay-row label{color:var(--lumiverse-text-muted)}
@@ -556,6 +563,7 @@ class UiBuilder {
   patchConfig;
   expandedSections;
   track;
+  sectionSequence = 0;
   constructor(ctx, sections, config, patchConfig, expandedSections, track) {
     this.ctx = ctx;
     this.sections = sections;
@@ -565,17 +573,37 @@ class UiBuilder {
     this.track = track;
   }
   section(title, defaultExpanded) {
-    const host = document.createElement("div");
+    const host = document.createElement("section");
     host.className = "inlay-section-host";
-    this.sections.append(host);
-    const component = this.ctx.components.mountCollapsibleSection(host, {
-      title,
-      defaultExpanded: this.expandedSections.get(title) ?? defaultExpanded,
-      onToggle: (expanded) => this.expandedSections.set(title, expanded)
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "inlay-section-toggle";
+    const label = document.createElement("span");
+    label.textContent = title;
+    const chevron = document.createElement("span");
+    chevron.className = "inlay-section-chevron";
+    chevron.setAttribute("aria-hidden", "true");
+    chevron.textContent = "›";
+    toggle.append(label, chevron);
+    const body = document.createElement("div");
+    body.className = "inlay-section-body";
+    body.id = `inlay-section-body-${++this.sectionSequence}`;
+    toggle.setAttribute("aria-controls", body.id);
+    let expanded = this.expandedSections.get(title) ?? defaultExpanded;
+    const applyState = () => {
+      body.hidden = !expanded;
+      toggle.setAttribute("aria-expanded", String(expanded));
+      host.setAttribute("data-expanded", String(expanded));
+    };
+    toggle.addEventListener("click", () => {
+      expanded = !expanded;
+      this.expandedSections.set(title, expanded);
+      applyState();
     });
-    this.track(component);
-    component.body.classList.add("inlay-section-body");
-    return component.body;
+    applyState();
+    host.append(toggle, body);
+    this.sections.append(host);
+    return body;
   }
   row(parent, label, hint = "") {
     const wrapper = document.createElement("div");
