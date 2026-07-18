@@ -119,8 +119,15 @@ export function selectPromptEntries(
     seenVisuals.add(key);
     return true;
   });
+  const seenParagraphs = new Set<number>();
+  const uniqueParagraphs = distinct.filter((entry) => {
+    const sourceParagraph = paragraphMap.get(entry.parserParagraph)?.originalIndex ?? entry.parserParagraph;
+    if (seenParagraphs.has(sourceParagraph)) return false;
+    seenParagraphs.add(sourceParagraph);
+    return true;
+  });
   const limit = config.maxImages;
-  const selected = distinct
+  const selected = uniqueParagraphs
     .slice(0, limit)
     .map((entry, modelPriority) => ({ entry, modelPriority }))
     .sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority)
@@ -152,6 +159,7 @@ export function selectPromptEntries(
     candidateCount: normalized.length,
     validCandidateCount: valid.length,
     distinctCandidateCount: distinct.length,
+    uniqueParagraphCandidateCount: uniqueParagraphs.length,
     selectedCount: prompts.length,
     selectedParagraphs: selected.map((entry) => entry.parserParagraph),
     perspectives: prompts.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource })),

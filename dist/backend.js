@@ -1558,17 +1558,31 @@ async function prepareAndDispatchImageJobs(inputs, eager, prepare, generate) {
     });
     requests.push(request);
     if (!eager)
-      serialRequest = request;
+      serialRequest = request.then(() => {
+        return;
+      }, () => {
+        return;
+      });
   }
   const settled = await Promise.allSettled(requests);
-  if (hasPreparationFailure)
-    throw preparationFailure;
-  const failure = settled.find((result) => result.status === "rejected");
-  if (failure?.status === "rejected")
-    throw failure.reason;
+  const successfulJobs = [];
+  const successfulResults = [];
+  for (const [index, result] of settled.entries()) {
+    if (result.status !== "fulfilled")
+      continue;
+    successfulJobs.push(jobs[index]);
+    successfulResults.push(result.value);
+  }
+  if (successfulResults.length === 0) {
+    if (hasPreparationFailure)
+      throw preparationFailure;
+    const failure = settled.find((result) => result.status === "rejected");
+    if (failure?.status === "rejected")
+      throw failure.reason;
+  }
   return {
-    jobs,
-    results: settled.map((result) => result.value)
+    jobs: successfulJobs,
+    results: successfulResults
   };
 }
 
@@ -1671,8 +1685,16 @@ function selectPromptEntries(payload, paragraphs, config, creativeConcepts = new
     seenVisuals.add(key);
     return true;
   });
+  const seenParagraphs = new Set;
+  const uniqueParagraphs = distinct.filter((entry) => {
+    const sourceParagraph = paragraphMap.get(entry.parserParagraph)?.originalIndex ?? entry.parserParagraph;
+    if (seenParagraphs.has(sourceParagraph))
+      return false;
+    seenParagraphs.add(sourceParagraph);
+    return true;
+  });
   const limit = config.maxImages;
-  const selected = distinct.slice(0, limit).map((entry, modelPriority) => ({ entry, modelPriority })).sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority).map(({ entry }) => entry);
+  const selected = uniqueParagraphs.slice(0, limit).map((entry, modelPriority) => ({ entry, modelPriority })).sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority).map(({ entry }) => entry);
   const maxAdaptiveCreative = selected.length > 1 ? Math.ceil(selected.length / 2) : 1;
   const safeCreativeConcepts = new Map([...creativeConcepts].filter(([, concept]) => isIdentitySafeCreativeConcept(concept)));
   const adaptiveCreativeAllowed = new Set(config.adaptiveMode ? selected.filter((entry) => cleanString2(entry.shot.perspectiveMode).toLowerCase() === "creative" && safeCreativeConcepts.has(entry.parserParagraph)).sort((left, right) => (safeCreativeConcepts.get(right.parserParagraph)?.score || 0) - (safeCreativeConcepts.get(left.parserParagraph)?.score || 0)).slice(0, maxAdaptiveCreative) : []);
@@ -1693,6 +1715,7 @@ function selectPromptEntries(payload, paragraphs, config, creativeConcepts = new
     candidateCount: normalized.length,
     validCandidateCount: valid.length,
     distinctCandidateCount: distinct.length,
+    uniqueParagraphCandidateCount: uniqueParagraphs.length,
     selectedCount: prompts.length,
     selectedParagraphs: selected.map((entry) => entry.parserParagraph),
     perspectives: prompts.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource })),
@@ -1859,8 +1882,8 @@ function parserInstruction(config) {
     `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
     "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
     fixedStatic ? "Keep the visual-novel framing fixed across Static shots. Distinguish additional shots through source-supported changes in primary character, expression, simple pose, or background instead of dramatic cinematography." : "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
-    fixedStatic ? "If the source contains too few distinct stable visual beats, use another faithful expression or simple resting pose from the same paragraph. Do not invent narrative events or switch to action-centric framing." : "If the source contains too few distinct visual beats, create alternate shots of the same paragraph with genuinely different cinematography. Do not invent narrative events.",
-    "Distinct shots may reference the same paragraph. Order shots by their visual importance, not paragraph number.",
+    fixedStatic ? "If the source contains too few distinct stable paragraphs, return fewer shots. Do not repeat a paragraph, invent narrative events, or switch to action-centric framing." : "If the source contains too few distinct visual paragraphs, return fewer shots. Do not repeat a paragraph or invent narrative events.",
+    "Every shot must reference a different source paragraph. Never return two shots for the same paragraph. Order shots by their visual importance, not paragraph number.",
     structuredAnima ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood." : ""
   ].join(`
 `);

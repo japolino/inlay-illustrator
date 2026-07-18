@@ -238,15 +238,28 @@ export async function prepareAndDispatchImageJobs<TInput, TResult>(
     const request = eager || requests.length === 0 ? invoke() : serialRequest.then(invoke);
     void request.catch(() => undefined);
     requests.push(request);
-    if (!eager) serialRequest = request;
+    // A failed request must not prevent later serial jobs from being attempted.
+    if (!eager) serialRequest = request.then(() => undefined, () => undefined);
   }
 
   const settled = await Promise.allSettled(requests);
-  if (hasPreparationFailure) throw preparationFailure;
-  const failure = settled.find((result) => result.status === "rejected");
-  if (failure?.status === "rejected") throw failure.reason;
+  const successfulJobs: PreparedImageJob[] = [];
+  const successfulResults: TResult[] = [];
+  for (const [index, result] of settled.entries()) {
+    if (result.status !== "fulfilled") continue;
+    successfulJobs.push(jobs[index]);
+    successfulResults.push(result.value);
+  }
+
+  // Preserve partial batches. Only fail the generation when no submitted image
+  // succeeded, matching the original inlay behavior.
+  if (successfulResults.length === 0) {
+    if (hasPreparationFailure) throw preparationFailure;
+    const failure = settled.find((result) => result.status === "rejected");
+    if (failure?.status === "rejected") throw failure.reason;
+  }
   return {
-    jobs,
-    results: settled.map((result) => (result as PromiseFulfilledResult<TResult>).value)
+    jobs: successfulJobs,
+    results: successfulResults
   };
 }

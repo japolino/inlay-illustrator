@@ -317,7 +317,8 @@ describe("illustration parser construction", () => {
 
     expect(guidance).toContain("most visually consequential");
     expect(guidance).toContain("at least two of these dimensions");
-    expect(guidance).toContain("alternate shots of the same paragraph");
+    expect(guidance).toContain("Every shot must reference a different source paragraph");
+    expect(guidance).toContain("Never return two shots for the same paragraph");
     expect(guidance).toContain("stable appearance, attire, location, and persistent actions");
     expect(guidance).toContain("Continuity does not require repeating camera angle");
     expect(guidance).toContain("compare all Dynamic camera objects as a camera ledger");
@@ -350,7 +351,7 @@ describe("illustration parser construction", () => {
     expect(guidance).toContain("2-3 concrete backgroundElements");
     expect(guidance).toContain("override any batch-wide request for cinematography variation");
     expect(guidance).toContain("Keep the visual-novel framing fixed across Static shots");
-    expect(guidance).not.toContain("alternate shots of the same paragraph with genuinely different cinematography");
+    expect(guidance).toContain("return fewer shots");
   });
 
   test("asks preprocessing for significant visual beats and a camera/composition note", () => {
@@ -424,7 +425,7 @@ describe("illustration parser construction", () => {
 });
 
 describe("illustration candidate selection", () => {
-  test("keeps distinct same-paragraph shots, collapses exact duplicates, ignores invalid references, and caps before paragraph sorting", () => {
+  test("keeps only the first model-priority shot per paragraph, ignores invalid references, and caps before paragraph sorting", () => {
     const paragraphs = [
       { parserIndex: 1, originalIndex: 10, text: "First" },
       { parserIndex: 2, originalIndex: 20, text: "Second" },
@@ -447,12 +448,12 @@ describe("illustration candidate selection", () => {
 
     const selected = helpers.selectPromptEntries(payload, paragraphs, config);
 
-    expect(selected.map((entry) => entry.parserParagraph)).toEqual([1, 3, 3]);
-    expect(selected.map((entry) => entry.paragraph)).toEqual([10, 30, 30]);
+    expect(selected.map((entry) => entry.parserParagraph)).toEqual([1, 2, 3]);
+    expect(selected.map((entry) => entry.paragraph)).toEqual([10, 20, 30]);
     expect(selected.map((entry) => helpers.renderPrompt(entry.prompt, config.promptSyntax))).toEqual([
       expect.stringContaining("close-up, from side"),
-      expect.stringContaining("from below, wide shot"),
-      expect.stringContaining("from above, full body")
+      expect.stringContaining("straight-on"),
+      expect.stringContaining("from below, wide shot")
     ]);
   });
 
@@ -660,7 +661,7 @@ describe("image preparation and generation pipeline", () => {
     await expect(completed).resolves.toEqual({ jobs: imageJobs, results: ["first", "second", "third"] });
   });
 
-  test("waits for every eagerly submitted job before propagating a failure", async () => {
+  test("waits for every eagerly submitted job and preserves successful siblings", async () => {
     const generations = imageJobs.map(() => deferred<string>());
     const submitted: number[] = [];
     const failure = new Error("first job failed");
@@ -669,7 +670,7 @@ describe("image preparation and generation pipeline", () => {
       return generations[job.index].promise;
     });
     let settled = false;
-    void completed.catch(() => { settled = true; });
+    void completed.then(() => { settled = true; });
 
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(submitted).toEqual([0, 1, 2]);
@@ -679,10 +680,13 @@ describe("image preparation and generation pipeline", () => {
     expect(settled).toBe(false);
     generations[2].resolve("third");
 
-    await expect(completed).rejects.toBe(failure);
+    await expect(completed).resolves.toEqual({
+      jobs: [imageJobs[1], imageJobs[2]],
+      results: ["second", "third"]
+    });
   });
 
-  test("waits for submitted generation before propagating a later preparation failure", async () => {
+  test("preserves a submitted success after a later preparation failure", async () => {
     const generation = deferred<string>();
     const preparationFailure = new Error("second cleanup failed");
     const completed = helpers.prepareAndDispatchImageJobs([0, 1], true, (index) => {
@@ -690,12 +694,38 @@ describe("image preparation and generation pipeline", () => {
       return imageJobs[index];
     }, () => generation.promise);
     let settled = false;
-    void completed.catch(() => { settled = true; });
+    void completed.then(() => { settled = true; });
 
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(settled).toBe(false);
     generation.resolve("first");
 
-    await expect(completed).rejects.toBe(preparationFailure);
+    await expect(completed).resolves.toEqual({ jobs: [imageJobs[0]], results: ["first"] });
+  });
+
+  test("continues serial providers after a failed image and preserves later successes", async () => {
+    const submitted: number[] = [];
+    const failure = new Error("second job failed");
+
+    const completed = helpers.prepareAndDispatchImageJobs([0, 1, 2], false, (index) => imageJobs[index], async (job) => {
+      submitted.push(job.index);
+      if (job.index === 1) throw failure;
+      return `image-${job.index}`;
+    });
+
+    await expect(completed).resolves.toEqual({
+      jobs: [imageJobs[0], imageJobs[2]],
+      results: ["image-0", "image-2"]
+    });
+    expect(submitted).toEqual([0, 1, 2]);
+  });
+
+  test("still rejects when every submitted image fails", async () => {
+    const firstFailure = new Error("first job failed");
+    const completed = helpers.prepareAndDispatchImageJobs([0, 1], true, (index) => imageJobs[index], async (job) => {
+      throw job.index === 0 ? firstFailure : new Error("second job failed");
+    });
+
+    await expect(completed).rejects.toBe(firstFailure);
   });
 });
