@@ -304,6 +304,18 @@ function assembleAtomicCharacterComposition(value: unknown, replacements: Map<st
   return { text: snippets.join(", "), structured: true };
 }
 
+function assembleStaticCharacterComposition(value: unknown, replacements: Map<string, string>): AtomicSection {
+  const gaze = sanitizedAtomicSnippets(asRecord(value).gaze, 1, replacements);
+  return {
+    text: unique([
+      "slightly forward from the background",
+      "holding a simple stable pose",
+      ...gaze
+    ]).join(", "),
+    structured: true
+  };
+}
+
 function assembleAtomicSharedComposition(value: unknown, replacements: Map<string, string>): SharedAtomicSection {
   const record = asRecord(value);
   const fields = ["interaction", "spatialRelation"];
@@ -352,7 +364,9 @@ function assembleAnimaPrompt(
 ): AssembledPrompt {
   const characters = cleanArray<CharacterJson>(shot.characters).slice(0, config.maxCharacters);
   const characterSections = characters.flatMap((character) => {
-    const composition = assembleAtomicCharacterComposition(character.composition, replacements);
+    const composition = perspectiveMode === "static"
+      ? assembleStaticCharacterComposition(character.composition, replacements)
+      : assembleAtomicCharacterComposition(character.composition, replacements);
     const scope = perspectiveMode === "creative"
       ? sanitizeComposition(cleanString(character.renderScope), replacements)
       : "";
@@ -377,7 +391,9 @@ function assembleAnimaPrompt(
       replacements,
       true
     );
-  const camera = assembleStructuredCamera(shot.camera);
+  const camera = perspectiveMode === "static"
+    ? { text: "medium shot, eye level, straight-on, deep focus", structured: true }
+    : assembleStructuredCamera(shot.camera);
   const environment = scene.environment || {};
   const location = structuredSnippets(environment.location, 1);
   const timeWeather = structuredSnippets(environment.timeWeather, 1);
@@ -394,8 +410,8 @@ function assembleAnimaPrompt(
   return { sections: [
     stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
     ...characterSections,
-    config.supplement ? sharedComposition.text : "",
-    sharedAction,
+    config.supplement && perspectiveMode !== "static" ? sharedComposition.text : "",
+    perspectiveMode === "static" ? "" : sharedAction,
     environmentSection,
     stripOrReplaceNames(camera.text, replacements, true)
   ].map((section) => section.trim()).filter(Boolean) };

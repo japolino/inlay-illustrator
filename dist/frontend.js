@@ -284,7 +284,7 @@ function renderGenerationSection({ ui, config, actions, rerender }) {
     { value: "creative", label: "Creative" },
     { value: "static", label: "Static" },
     { value: "dynamic", label: "Dynamic" }
-  ], config.adaptiveMode, config.adaptiveMode ? "Selected independently by the parser for each image." : "Creative isolates a visual detail, Static favors stable portrait-like beats, and Dynamic follows scene action.");
+  ], config.adaptiveMode, config.adaptiveMode ? "Selected independently by the parser for each image." : "Creative isolates a visual detail, Static uses fixed visual-novel framing and simple poses, and Dynamic follows scene action.");
   ui.addNumber(section, "minImages", "Minimum images", 1, 12);
   ui.addNumber(section, "maxImages", "Maximum images", 1, 12);
   ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 8);

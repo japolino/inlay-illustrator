@@ -3,11 +3,16 @@ import type { Config } from "../shared/config.js";
 export function parserInstruction(config: Config): string {
   const maxCharacters = config.maxCharacters;
   const structuredAnima = config.promptStyle === "anima";
+  const fixedStatic = !config.adaptiveMode && config.perspectiveMode === "static";
   const shotInstruction = [
     `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
     "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
-    "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
-    "If the source contains too few distinct visual beats, create alternate shots of the same paragraph with genuinely different cinematography. Do not invent narrative events.",
+    fixedStatic
+      ? "Keep the visual-novel framing fixed across Static shots. Distinguish additional shots through source-supported changes in primary character, expression, simple pose, or background instead of dramatic cinematography."
+      : "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
+    fixedStatic
+      ? "If the source contains too few distinct stable visual beats, use another faithful expression or simple resting pose from the same paragraph. Do not invent narrative events or switch to action-centric framing."
+      : "If the source contains too few distinct visual beats, create alternate shots of the same paragraph with genuinely different cinematography. Do not invent narrative events.",
     "Distinct shots may reference the same paragraph. Order shots by their visual importance, not paragraph number.",
     structuredAnima
       ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood."
@@ -21,7 +26,10 @@ export function parserInstruction(config: Config): string {
     "Creative isolates a meaningful visual anchor from the paragraph instead of automatically showing the complete scene. The anchor may be any partial character detail, object, reflection, silhouette, environmental detail, foreground fragment, or unusual spatial relationship; it is not limited to hands or people.",
     "Creative must remain concrete and source-supported. Use renderScope to state what is actually in frame. Put only traits genuinely visible in that crop or occlusion into visibleTags. Never copy a complete character baseline into visibleTags when most of it is off-frame.",
     "Dynamic follows the current scene's visible action, movement, interaction, and strongest cinematic viewpoint.",
-    "Static chooses a safer stable portrait-like visual beat with a clearly readable subject, limited motion, limited occlusion, and conventional framing, while remaining faithful to the paragraph.",
+    "Static uses a visual-novel composition: a clearly readable scene background with one primary character slightly forward on a shallow foreground plane. Include additional characters only when the source cannot be represented faithfully without them; keep them on the same shallow plane.",
+    "Static is fixed to a conventional medium shot at eye level, straight-on, with deep focus so the background remains readable. Do not use close-ups, wide shots, body-part crops, POV, high or low angles, dutch angles, dramatic lenses, motion blur, foreground occlusion, or action-centric framing.",
+    "For Static character composition, use slightly forward from the background as the position, holding a simple stable pose as the pose, an empty actions array, and a source-supported gaze or an empty gaze. Do not depict running, lunging, spinning, falling, fighting, reaching, or another mid-action pose.",
+    "These Static framing and pose constraints override any batch-wide request for cinematography variation whenever perspectiveMode is static.",
     "perspectiveMode, renderScope, and visibleTags are shot-only rendering decisions. They never alter or replace the complete appearance, body, and attire memory fields."
   ].join("\n");
   const source = config.originalReference
@@ -165,7 +173,9 @@ export function parserInstruction(config: Config): string {
     "Scene = shots sharing one physical location.",
     "- Same location means same scene, multiple shots.",
     structuredAnima ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
-    "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
+    fixedStatic
+      ? "Shot = one distinct stable visual-novel moment: a readable background plus a foreground character, simple pose, and visible expression. Shots are independent, so repeat tags if the scene has not changed."
+      : "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
     shotInstruction,
     "Paragraph mapping: current message uses [P#] numbering.",
     "- Each shot's paragraph must reference an existing [P#].",

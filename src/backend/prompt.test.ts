@@ -276,6 +276,65 @@ describe("perspective selection and projection", () => {
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toContain("blue hair");
   });
 
+  test("locks Static Anima prompts to a simple foreground pose and readable visual-novel background", () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      adaptiveMode: false,
+      perspectiveMode: "static" as const,
+      promptSyntax: "comfyui" as const
+    };
+    const entry = assemblePrompt({
+      environment: {
+        location: "school courtyard",
+        timeWeather: "sunny afternoon",
+        lightingMood: ["soft daylight"],
+        backgroundElements: ["school windows", "flower beds"]
+      }
+    }, {
+      perspectiveMode: "dynamic",
+      situation: "1girl",
+      camera: {
+        framing: "close-up",
+        angle: "dutch angle",
+        perspective: "pov",
+        focus: ["motion blur"]
+      },
+      action: "running, reaching",
+      characters: [{
+        label: "girl",
+        appearance: "long black hair, blue eyes",
+        attire: "blue school uniform",
+        expression: "gentle smile",
+        action: "running, reaching",
+        composition: {
+          position: "far background",
+          pose: "lunging forward",
+          actions: ["reaching toward the viewer"],
+          gaze: "looking toward the viewer"
+        }
+      }],
+      sharedComposition: {
+        interaction: ["grabbing the viewer's hand"],
+        spatialRelation: "rushing into the foreground"
+      }
+    }, config, 1, 1);
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
+
+    expect(rendered).toContain([
+      "slightly forward from the background",
+      "holding a simple stable pose",
+      "looking toward the viewer"
+    ].join(", "));
+    expect(rendered).toContain("school courtyard, sunny afternoon, soft daylight, school windows, flower beds");
+    expect(rendered).toEndWith("medium shot, eye level, straight-on, deep focus");
+    expect(rendered).not.toContain("running");
+    expect(rendered).not.toContain("reaching");
+    expect(rendered).not.toContain("lunging");
+    expect(rendered).not.toContain("grabbing");
+    expect(rendered).not.toContain("dutch angle");
+    expect(rendered).not.toContain("motion blur");
+  });
+
   test("falls back to Dynamic when an adaptive parser omits or misspells its choice", () => {
     const config = { ...DEFAULT_CONFIG, adaptiveMode: true };
     const entry = assemblePrompt({}, { perspectiveMode: "cinematic", situation: "1girl" }, config, 1, 1);

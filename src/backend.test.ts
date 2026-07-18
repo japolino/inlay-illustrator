@@ -327,6 +327,23 @@ describe("illustration parser construction", () => {
     );
   });
 
+  test("defines Static as fixed visual-novel framing with simple stable poses", () => {
+    const guidance = helpers.parserInstruction({
+      ...helpers.DEFAULT_CONFIG,
+      adaptiveMode: false,
+      perspectiveMode: "static"
+    });
+
+    expect(guidance).toContain("Static uses a visual-novel composition");
+    expect(guidance).toContain("one primary character slightly forward on a shallow foreground plane");
+    expect(guidance).toContain("medium shot at eye level, straight-on, with deep focus");
+    expect(guidance).toContain("holding a simple stable pose as the pose");
+    expect(guidance).toContain("an empty actions array");
+    expect(guidance).toContain("override any batch-wide request for cinematography variation");
+    expect(guidance).toContain("Keep the visual-novel framing fixed across Static shots");
+    expect(guidance).not.toContain("alternate shots of the same paragraph with genuinely different cinematography");
+  });
+
   test("asks preprocessing for significant visual beats and a camera/composition note", () => {
     const instruction = helpers.preprocessingInstruction(paragraphs, { ...helpers.DEFAULT_CONFIG, minImages: 3, maxImages: 4 });
 
