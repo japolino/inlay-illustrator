@@ -13,7 +13,7 @@ import {
   preprocessTargetParagraphs,
   resolveParserConnection
 } from "./parser.js";
-import { renderPrompt } from "./prompt.js";
+import { renderNegativeWithCurrentSelection, renderPrompt, renderPromptWithCurrentAffixes } from "./prompt.js";
 import { imageUrlFromId, renderInlaidMessage } from "./rendering.js";
 import { normalizeScenePayload, selectPromptEntries } from "./scenes.js";
 import { getConfig, getState, updateState } from "./storage.js";
@@ -40,6 +40,9 @@ type ImageAssets = {
   perspectiveModes: PerspectiveMode[];
   perspectiveSources: Array<"adaptive" | "manual">;
   imageParameters: Array<Record<string, unknown>>;
+  corePrompts: string[];
+  shotNegatives: string[];
+  promptFormats: Array<"legacy" | "ordered">;
   paragraphs: number[];
   imageIds: string[];
   imageUrls: string[];
@@ -257,12 +260,17 @@ async function prepareAndDispatchImages(
     const jobStartedAt = Date.now();
     logStage(config, "image_generation_preparation_job_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
     const prompt = renderPrompt(entry.prompt, config.promptSyntax);
+    const corePrompt = renderPrompt(entry.corePrompt, config.promptSyntax);
+    const promptFormat = entry.corePrompt.format || "ordered";
     const parameters = await buildImageParameters(config, imageConnection, prompt, entry.negative || "");
     const job: PreparedImageJob = {
       index,
       total: selected.length,
       prompt,
       negative: entry.negative || "",
+      corePrompt,
+      shotNegative: entry.shotNegative,
+      promptFormat,
       paragraph: entry.paragraph,
       perspectiveMode: entry.perspectiveMode,
       perspectiveSource: entry.perspectiveSource,
@@ -335,6 +343,9 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
   const perspectiveModes = stage.jobs.map((job) => job.perspectiveMode || config.perspectiveMode);
   const perspectiveSources = stage.jobs.map((job) => job.perspectiveSource || "manual");
   const imageParameters = stage.jobs.map((job) => job.parameters);
+  const corePrompts = stage.jobs.map((job) => job.corePrompt || "");
+  const shotNegatives = stage.jobs.map((job) => job.shotNegative || "");
+  const promptFormats = stage.jobs.map((job) => job.promptFormat || "ordered");
   const paragraphs = stage.jobs.map((job) => job.paragraph);
   for (const [index, result] of stage.results.entries()) {
     if (result.imageId) imageIds.push(result.imageId);
@@ -349,7 +360,19 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
       model: result.model || null
     });
   }
-  return { prompts, negativePrompts, perspectiveModes, perspectiveSources, imageParameters, paragraphs, imageIds, imageUrls };
+  return {
+    prompts,
+    negativePrompts,
+    perspectiveModes,
+    perspectiveSources,
+    imageParameters,
+    corePrompts,
+    shotNegatives,
+    promptFormats,
+    paragraphs,
+    imageIds,
+    imageUrls
+  };
 }
 
 async function persistGeneration(input: PersistStageInput): Promise<GeneratedRecord> {
@@ -363,6 +386,9 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
     perspectiveModes: assets.perspectiveModes,
     perspectiveSources: assets.perspectiveSources,
     imageParameters: assets.imageParameters,
+    corePrompts: assets.corePrompts,
+    shotNegatives: assets.shotNegatives,
+    promptFormats: assets.promptFormats,
     paragraphs: assets.paragraphs,
     imageIds: assets.imageIds,
     imageUrls: assets.imageUrls,
@@ -399,6 +425,9 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
 type ImageReplacement = {
   prompt: string;
   negative: string;
+  corePrompt: string;
+  shotNegative: string;
+  promptFormat: "legacy" | "ordered";
   paragraph: number;
   perspectiveMode: PromptEntry["perspectiveMode"];
   perspectiveSource: PromptEntry["perspectiveSource"];
@@ -427,6 +456,9 @@ async function commitImageReplacement(
       perspectiveModes: replaceAt(record.perspectiveModes, located.index, replacement.perspectiveMode, "dynamic"),
       perspectiveSources: replaceAt(record.perspectiveSources, located.index, replacement.perspectiveSource, "manual"),
       imageParameters: replaceAt(record.imageParameters, located.index, replacement.parameters, {}),
+      corePrompts: replaceAt(record.corePrompts, located.index, replacement.corePrompt, ""),
+      shotNegatives: replaceAt(record.shotNegatives, located.index, replacement.shotNegative, ""),
+      promptFormats: replaceAt(record.promptFormats, located.index, replacement.promptFormat, "ordered"),
       paragraphs: replaceAt(record.paragraphs, located.index, replacement.paragraph, 1),
       imageIds: replaceAt(record.imageIds, located.index, replacement.imageId, ""),
       imageUrls: replaceAt(record.imageUrls, located.index, replacement.imageUrl, "")
@@ -468,12 +500,18 @@ export async function rerunStoredImage(
     let replacement: ImageReplacement;
 
     if (!rerunSidecar) {
-      const prompt = located.record.prompts[located.index] || "";
+      const corePrompt = located.record.corePrompts?.[located.index] || "";
+      const promptFormat = located.record.promptFormats?.[located.index]
+        || (config.promptStyle === "default" ? "legacy" : "ordered");
+      const prompt = corePrompt
+        ? renderPromptWithCurrentAffixes(corePrompt, promptFormat, config)
+        : located.record.prompts[located.index] || "";
       if (!prompt) throw new Error("The selected image has no stored prompt to reroll.");
-      const negative = located.record.negativePrompts?.[located.index] || "";
+      const shotNegative = located.record.shotNegatives?.[located.index] || "";
+      const negative = renderNegativeWithCurrentSelection(shotNegative, promptFormat, config);
       const originalParameters = located.record.imageParameters?.[located.index]
         || await buildImageParameters(config, imageConnection, prompt, negative);
-      const parameters = rerollImageParameters(originalParameters, imageConnection);
+      const parameters = rerollImageParameters(originalParameters, imageConnection, prompt, negative);
       const result = await spindle.imageGen.generate({
         connection_id: config.imageConnectionId || undefined,
         prompt,
@@ -489,6 +527,9 @@ export async function rerunStoredImage(
       replacement = {
         prompt,
         negative,
+        corePrompt,
+        shotNegative,
+        promptFormat,
         paragraph: located.record.paragraphs[located.index] || 1,
         perspectiveMode: located.record.perspectiveModes?.[located.index] || "dynamic",
         perspectiveSource: located.record.perspectiveSources?.[located.index] || "manual",
@@ -528,6 +569,9 @@ export async function rerunStoredImage(
       replacement = {
         prompt: job.prompt,
         negative: job.negative,
+        corePrompt: job.corePrompt || renderPrompt(entry.corePrompt, singleConfig.promptSyntax),
+        shotNegative: job.shotNegative || entry.shotNegative,
+        promptFormat: job.promptFormat || entry.corePrompt.format || "ordered",
         paragraph: originalParagraph,
         perspectiveMode: entry.perspectiveMode,
         perspectiveSource: entry.perspectiveSource,

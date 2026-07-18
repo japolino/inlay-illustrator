@@ -99,6 +99,32 @@ export function renderPrompt(prompt: AssembledPrompt, syntax: Config["promptSynt
   return joinSections(prompt.sections, syntax, prompt.format || "ordered");
 }
 
+export function renderPromptWithCurrentAffixes(
+  corePrompt: string,
+  format: NonNullable<AssembledPrompt["format"]>,
+  config: Config
+): string {
+  const preset = activePromptPreset(config);
+  const clean = (value: string): string => format === "ordered" ? normalizePromptSection(value) : value.trim();
+  const separator = config.promptSyntax === "comfyui" ? (format === "ordered" ? ",\n\n" : ",\n") : ", ";
+  return [
+    clean(preset?.positivePrefix || ""),
+    clean(config.customPositivePrefix),
+    corePrompt.trim(),
+    clean(config.customPositiveSuffix)
+  ].filter(Boolean).join(separator);
+}
+
+export function renderNegativeWithCurrentSelection(
+  shotNegative: string,
+  format: NonNullable<AssembledPrompt["format"]>,
+  config: Config
+): string {
+  const preset = activePromptPreset(config);
+  const negative = unique(csvParts(preset?.negativePrefix, config.customNegative, shotNegative)).join(", ");
+  return format === "ordered" ? normalizePromptSection(negative) : negative.trim();
+}
+
 /** Makes model- and user-provided prompt fragments safe to join without altering weight syntax. */
 export function normalizePromptSection(value: string): string {
   const doubleColon = "\uE000";
@@ -419,19 +445,24 @@ export function assemblePrompt(
   const prefix = stripOrReplaceNames(config.customPositivePrefix, replacements, true);
   const suffix = stripOrReplaceNames(config.customPositiveSuffix, replacements, true);
   const prefixes = [presetPrefix, prefix].filter(Boolean);
+  const format = core.format || "ordered";
+  const corePrompt: AssembledPrompt = { sections: [...core.sections], format };
+  const shotNegative = stripOrReplaceNames(unique(csvParts(shot.negative)).join(", "), replacements, true);
   return {
     prompt: {
       sections: [...prefixes, ...core.sections, suffix].map((section) => section.trim()).filter(Boolean),
-      format: core.format || "ordered"
+      format
     },
-    negative: (core.format || "ordered") === "ordered"
+    corePrompt,
+    shotNegative,
+    negative: format === "ordered"
       ? normalizePromptSection(stripOrReplaceNames(
-        unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "),
+        unique(csvParts(preset?.negativePrefix, config.customNegative, shotNegative)).join(", "),
         replacements,
         true
       ))
       : stripOrReplaceNames(
-        unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "),
+        unique(csvParts(preset?.negativePrefix, config.customNegative, shotNegative)).join(", "),
         replacements,
         true
       ),

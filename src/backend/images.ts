@@ -76,10 +76,12 @@ function freshSeed(previous: unknown[]): number {
   return seed;
 }
 
-/** Clones an exact provider request and changes only its configured seed inputs. */
+/** Clones a provider request, refreshes its selected prompt layers, and changes its seed inputs. */
 export function rerollImageParameters(
   parameters: Record<string, unknown>,
-  connection: ImageConnection | null
+  connection: ImageConnection | null,
+  prompt?: string,
+  negative?: string
 ): Record<string, unknown> {
   const cloned = JSON.parse(JSON.stringify(parameters)) as Record<string, unknown>;
   const workflow = cloned.workflow;
@@ -89,7 +91,8 @@ export function rerollImageParameters(
   }
 
   const comfy = readComfyConfig(connection?.metadata);
-  const seedMappings = (comfy?.field_mappings || []).filter((mapping) => mapping.mappedAs === "seed");
+  const mappings = comfy?.field_mappings || [];
+  const seedMappings = mappings.filter((mapping) => mapping.mappedAs === "seed");
   const priorSeeds: unknown[] = [cloned.seed];
   for (const mapping of seedMappings) {
     const node = (workflow as Record<string, { inputs?: Record<string, unknown> }>)[mapping.nodeId];
@@ -105,6 +108,14 @@ export function rerollImageParameters(
   }
   const seed = freshSeed(priorSeeds);
   cloned.seed = seed;
+  for (const mapping of mappings) {
+    const value = mapping.mappedAs === "positive_prompt" ? prompt
+      : mapping.mappedAs === "negative_prompt" ? negative
+        : undefined;
+    if (value === undefined) continue;
+    const node = (workflow as Record<string, { inputs?: Record<string, unknown> }>)[mapping.nodeId];
+    if (node?.inputs && typeof node.inputs === "object") node.inputs[mapping.fieldName] = value;
+  }
   if (seedMappings.length > 0) {
     for (const mapping of seedMappings) {
       const node = (workflow as Record<string, { inputs?: Record<string, unknown> }>)[mapping.nodeId];

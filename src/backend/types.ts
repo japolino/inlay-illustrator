@@ -67,6 +67,8 @@ export type AssembledPrompt = {
 
 export type PromptEntry = {
   prompt: AssembledPrompt;
+  corePrompt: AssembledPrompt;
+  shotNegative: string;
   negative: string;
   paragraph: number;
   parserParagraph: number;
@@ -128,6 +130,9 @@ export type PreparedImageJob = {
   total: number;
   prompt: string;
   negative: string;
+  corePrompt?: string;
+  shotNegative?: string;
+  promptFormat?: NonNullable<AssembledPrompt["format"]>;
   paragraph: number;
   perspectiveMode?: PerspectiveMode;
   perspectiveSource?: "adaptive" | "manual";
@@ -160,6 +165,11 @@ export type GeneratedRecord = {
   perspectiveSources: Array<"adaptive" | "manual">;
   /** Exact provider parameters used per image, retained for reproducible rerolls. */
   imageParameters?: Array<Record<string, unknown>>;
+  /** Generated prompt layer without user-selectable prefixes or suffixes. */
+  corePrompts?: string[];
+  /** Parser-provided negative layer without user-selectable preset/custom negatives. */
+  shotNegatives?: string[];
+  promptFormats?: Array<NonNullable<AssembledPrompt["format"]>>;
   paragraphs: number[];
   imageIds: string[];
   imageUrls: string[];

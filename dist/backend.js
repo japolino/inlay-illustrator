@@ -303,6 +303,25 @@ function joinSections(sections, syntax, format) {
 function renderPrompt(prompt, syntax) {
   return joinSections(prompt.sections, syntax, prompt.format || "ordered");
 }
+function renderPromptWithCurrentAffixes(corePrompt, format, config) {
+  const preset = activePromptPreset(config);
+  const clean = (value) => format === "ordered" ? normalizePromptSection(value) : value.trim();
+  const separator = config.promptSyntax === "comfyui" ? format === "ordered" ? `,
+
+` : `,
+` : ", ";
+  return [
+    clean(preset?.positivePrefix || ""),
+    clean(config.customPositivePrefix),
+    corePrompt.trim(),
+    clean(config.customPositiveSuffix)
+  ].filter(Boolean).join(separator);
+}
+function renderNegativeWithCurrentSelection(shotNegative, format, config) {
+  const preset = activePromptPreset(config);
+  const negative = unique(csvParts(preset?.negativePrefix, config.customNegative, shotNegative)).join(", ");
+  return format === "ordered" ? normalizePromptSection(negative) : negative.trim();
+}
 function normalizePromptSection(value) {
   const doubleColon = "";
   return value.replace(/::/g, doubleColon).replace(/;/g, ",").replace(/\s*,(?:\s*,)+\s*/g, ", ").replace(/^\s*,+\s*/, "").replace(/\s+/g, " ").replace(/\s*,\s*/g, ", ").replace(/[.!?]+(?=\s*,)/g, "").replace(/[\s.,;:!?]+$/g, "").replace(new RegExp(doubleColon, "g"), "::").trim();
@@ -533,12 +552,17 @@ function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph)
   const prefix = stripOrReplaceNames(config.customPositivePrefix, replacements, true);
   const suffix = stripOrReplaceNames(config.customPositiveSuffix, replacements, true);
   const prefixes = [presetPrefix, prefix].filter(Boolean);
+  const format = core.format || "ordered";
+  const corePrompt = { sections: [...core.sections], format };
+  const shotNegative = stripOrReplaceNames(unique(csvParts(shot.negative)).join(", "), replacements, true);
   return {
     prompt: {
       sections: [...prefixes, ...core.sections, suffix].map((section) => section.trim()).filter(Boolean),
-      format: core.format || "ordered"
+      format
     },
-    negative: (core.format || "ordered") === "ordered" ? normalizePromptSection(stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "), replacements, true)) : stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "), replacements, true),
+    corePrompt,
+    shotNegative,
+    negative: format === "ordered" ? normalizePromptSection(stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shotNegative)).join(", "), replacements, true)) : stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shotNegative)).join(", "), replacements, true),
     paragraph: originalParagraph,
     parserParagraph,
     perspectiveMode: perspective.mode,
@@ -1028,7 +1052,7 @@ function freshSeed(previous) {
     seed = (seed + 1) % 2147483647;
   return seed;
 }
-function rerollImageParameters(parameters, connection) {
+function rerollImageParameters(parameters, connection, prompt, negative) {
   const cloned = JSON.parse(JSON.stringify(parameters));
   const workflow = cloned.workflow;
   if (!workflow || typeof workflow !== "object" || Array.isArray(workflow)) {
@@ -1036,7 +1060,8 @@ function rerollImageParameters(parameters, connection) {
     return cloned;
   }
   const comfy = readComfyConfig(connection?.metadata);
-  const seedMappings = (comfy?.field_mappings || []).filter((mapping) => mapping.mappedAs === "seed");
+  const mappings = comfy?.field_mappings || [];
+  const seedMappings = mappings.filter((mapping) => mapping.mappedAs === "seed");
   const priorSeeds = [cloned.seed];
   for (const mapping of seedMappings) {
     const node = workflow[mapping.nodeId];
@@ -1054,6 +1079,14 @@ function rerollImageParameters(parameters, connection) {
   }
   const seed = freshSeed(priorSeeds);
   cloned.seed = seed;
+  for (const mapping of mappings) {
+    const value = mapping.mappedAs === "positive_prompt" ? prompt : mapping.mappedAs === "negative_prompt" ? negative : undefined;
+    if (value === undefined)
+      continue;
+    const node = workflow[mapping.nodeId];
+    if (node?.inputs && typeof node.inputs === "object")
+      node.inputs[mapping.fieldName] = value;
+  }
   if (seedMappings.length > 0) {
     for (const mapping of seedMappings) {
       const node = workflow[mapping.nodeId];
@@ -2358,12 +2391,17 @@ async function prepareAndDispatchImages(chatId, selected, config, userId) {
     const jobStartedAt = Date.now();
     logStage(config, "image_generation_preparation_job_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
     const prompt = renderPrompt(entry.prompt, config.promptSyntax);
+    const corePrompt = renderPrompt(entry.corePrompt, config.promptSyntax);
+    const promptFormat = entry.corePrompt.format || "ordered";
     const parameters = await buildImageParameters(config, imageConnection, prompt, entry.negative || "");
     const job = {
       index,
       total: selected.length,
       prompt,
       negative: entry.negative || "",
+      corePrompt,
+      shotNegative: entry.shotNegative,
+      promptFormat,
       paragraph: entry.paragraph,
       perspectiveMode: entry.perspectiveMode,
       perspectiveSource: entry.perspectiveSource,
@@ -2435,6 +2473,9 @@ function collectImageResults(stage, config) {
   const perspectiveModes = stage.jobs.map((job) => job.perspectiveMode || config.perspectiveMode);
   const perspectiveSources = stage.jobs.map((job) => job.perspectiveSource || "manual");
   const imageParameters = stage.jobs.map((job) => job.parameters);
+  const corePrompts = stage.jobs.map((job) => job.corePrompt || "");
+  const shotNegatives = stage.jobs.map((job) => job.shotNegative || "");
+  const promptFormats = stage.jobs.map((job) => job.promptFormat || "ordered");
   const paragraphs = stage.jobs.map((job) => job.paragraph);
   for (const [index, result] of stage.results.entries()) {
     if (result.imageId)
@@ -2451,7 +2492,19 @@ function collectImageResults(stage, config) {
       model: result.model || null
     });
   }
-  return { prompts, negativePrompts, perspectiveModes, perspectiveSources, imageParameters, paragraphs, imageIds, imageUrls };
+  return {
+    prompts,
+    negativePrompts,
+    perspectiveModes,
+    perspectiveSources,
+    imageParameters,
+    corePrompts,
+    shotNegatives,
+    promptFormats,
+    paragraphs,
+    imageIds,
+    imageUrls
+  };
 }
 async function persistGeneration(input) {
   const { chatId, messageId, swipeId, key, target, parsed, assets, config, userId } = input;
@@ -2464,6 +2517,9 @@ async function persistGeneration(input) {
     perspectiveModes: assets.perspectiveModes,
     perspectiveSources: assets.perspectiveSources,
     imageParameters: assets.imageParameters,
+    corePrompts: assets.corePrompts,
+    shotNegatives: assets.shotNegatives,
+    promptFormats: assets.promptFormats,
     paragraphs: assets.paragraphs,
     imageIds: assets.imageIds,
     imageUrls: assets.imageUrls,
@@ -2511,6 +2567,9 @@ async function commitImageReplacement(request, replacement, config, userId) {
       perspectiveModes: replaceAt(record2.perspectiveModes, located.index, replacement.perspectiveMode, "dynamic"),
       perspectiveSources: replaceAt(record2.perspectiveSources, located.index, replacement.perspectiveSource, "manual"),
       imageParameters: replaceAt(record2.imageParameters, located.index, replacement.parameters, {}),
+      corePrompts: replaceAt(record2.corePrompts, located.index, replacement.corePrompt, ""),
+      shotNegatives: replaceAt(record2.shotNegatives, located.index, replacement.shotNegative, ""),
+      promptFormats: replaceAt(record2.promptFormats, located.index, replacement.promptFormat, "ordered"),
       paragraphs: replaceAt(record2.paragraphs, located.index, replacement.paragraph, 1),
       imageIds: replaceAt(record2.imageIds, located.index, replacement.imageId, ""),
       imageUrls: replaceAt(record2.imageUrls, located.index, replacement.imageUrl, "")
@@ -2555,12 +2614,15 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
     const imageConnection = await resolveImageConnection(config, userId);
     let replacement;
     if (!rerunSidecar) {
-      const prompt = located.record.prompts[located.index] || "";
+      const corePrompt = located.record.corePrompts?.[located.index] || "";
+      const promptFormat = located.record.promptFormats?.[located.index] || (config.promptStyle === "default" ? "legacy" : "ordered");
+      const prompt = corePrompt ? renderPromptWithCurrentAffixes(corePrompt, promptFormat, config) : located.record.prompts[located.index] || "";
       if (!prompt)
         throw new Error("The selected image has no stored prompt to reroll.");
-      const negative = located.record.negativePrompts?.[located.index] || "";
+      const shotNegative = located.record.shotNegatives?.[located.index] || "";
+      const negative = renderNegativeWithCurrentSelection(shotNegative, promptFormat, config);
       const originalParameters = located.record.imageParameters?.[located.index] || await buildImageParameters(config, imageConnection, prompt, negative);
-      const parameters = rerollImageParameters(originalParameters, imageConnection);
+      const parameters = rerollImageParameters(originalParameters, imageConnection, prompt, negative);
       const result = await spindle.imageGen.generate({
         connection_id: config.imageConnectionId || undefined,
         prompt,
@@ -2577,6 +2639,9 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
       replacement = {
         prompt,
         negative,
+        corePrompt,
+        shotNegative,
+        promptFormat,
         paragraph: located.record.paragraphs[located.index] || 1,
         perspectiveMode: located.record.perspectiveModes?.[located.index] || "dynamic",
         perspectiveSource: located.record.perspectiveSources?.[located.index] || "manual",
@@ -2620,6 +2685,9 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
       replacement = {
         prompt: job.prompt,
         negative: job.negative,
+        corePrompt: job.corePrompt || renderPrompt(entry.corePrompt, singleConfig.promptSyntax),
+        shotNegative: job.shotNegative || entry.shotNegative,
+        promptFormat: job.promptFormat || entry.corePrompt.format || "ordered",
         paragraph: originalParagraph,
         perspectiveMode: entry.perspectiveMode,
         perspectiveSource: entry.perspectiveSource,

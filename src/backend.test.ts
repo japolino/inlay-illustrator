@@ -462,14 +462,15 @@ const imageJobs = [
 ];
 
 describe("image preparation and generation pipeline", () => {
-  test("clones exact ComfyUI parameters and changes only mapped seed inputs for rerolls", () => {
+  test("clones ComfyUI parameters, updates selected prompt mappings, and changes mapped seed inputs", () => {
     const originalRandom = Math.random;
     Math.random = () => 41 / 2147483647;
     try {
       const parameters = {
         workflow: {
           "3": { inputs: { seed: 41, cfg: 7 } },
-          "7": { inputs: { text: "exact positive prompt" } }
+          "7": { inputs: { text: "old positive prefix, sustained scene prompt" } },
+          "8": { inputs: { text: "old negative" } }
         },
         workflowFormat: "api_prompt"
       };
@@ -481,15 +482,21 @@ describe("image preparation and generation pipeline", () => {
         metadata: {
           comfyui: {
             workflow_api_json: parameters.workflow,
-            field_mappings: [{ nodeId: "3", fieldName: "seed", mappedAs: "seed" }]
+            field_mappings: [
+              { nodeId: "3", fieldName: "seed", mappedAs: "seed" },
+              { nodeId: "7", fieldName: "text", mappedAs: "positive_prompt" },
+              { nodeId: "8", fieldName: "text", mappedAs: "negative_prompt" }
+            ]
           }
         }
-      });
+      }, "new positive prefix, sustained scene prompt", "new negative");
 
       expect(rerolled).not.toBe(parameters);
       expect(rerolled.seed).toBe(42);
       expect((rerolled.workflow as any)["3"].inputs).toEqual({ seed: 42, cfg: 7 });
-      expect((rerolled.workflow as any)["7"].inputs.text).toBe("exact positive prompt");
+      expect((rerolled.workflow as any)["7"].inputs.text).toBe("new positive prefix, sustained scene prompt");
+      expect((rerolled.workflow as any)["8"].inputs.text).toBe("new negative");
+      expect(parameters.workflow["7"].inputs.text).toBe("old positive prefix, sustained scene prompt");
       expect(parameters.workflow["3"].inputs.seed).toBe(41);
     } finally {
       Math.random = originalRandom;

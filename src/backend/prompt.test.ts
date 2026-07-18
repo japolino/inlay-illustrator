@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_CONFIG, normalizeConfig } from "../shared/config.js";
 import { parserInstruction } from "./instructions.js";
-import { assemblePrompt, renderPrompt } from "./prompt.js";
+import {
+  assemblePrompt,
+  renderNegativeWithCurrentSelection,
+  renderPrompt,
+  renderPromptWithCurrentAffixes
+} from "./prompt.js";
 import { exactVisualKey, normalizeScenePayload } from "./scenes.js";
 
 describe("ordered Anima prompt composition", () => {
@@ -77,6 +82,17 @@ describe("ordered Anima prompt composition", () => {
       "cinematic finish"
     ].join(",\n\n"));
     expect(entry.negative).toBe("lowres, bad anatomy, extra fingers, malformed hands, text, watermark");
+    expect(renderPrompt(entry.corePrompt, config.promptSyntax)).toBe([
+      "2girls",
+      "left side of the sofa, reclining into the cushions, looking toward the other girl",
+      "girl, blonde hair, blue eyes, red dress, smiling",
+      "right side of the sofa, sitting upright, looking left",
+      "girl, black hair, green eyes, white blouse, black skirt, gentle smile",
+      "holding hands, leaning together on the sofa",
+      "sunken living room, rainy evening, warm lamp light, soft shadows, intimate mood, green velvet sofa, low coffee table, rainy window, bookshelf, cream rug",
+      "wide shot, from side"
+    ].join(",\n\n"));
+    expect(entry.shotNegative).toBe("text; watermark!");
     expect(renderPrompt(entry.prompt, config.promptSyntax).match(/holding hands/g)).toHaveLength(1);
     expect(renderPrompt(entry.prompt, config.promptSyntax).match(/sitting upright/g)).toHaveLength(1);
   });
@@ -268,6 +284,34 @@ describe("perspective selection and projection", () => {
 });
 
 describe("prompt compatibility and normalization", () => {
+  test("reapplies current preset layers around an unchanged generated prompt for rerolls", () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      promptSyntax: "comfyui" as const,
+      customPositivePrefix: "current custom; prefix",
+      customPositiveSuffix: "current suffix!",
+      customNegative: "current custom negative;",
+      promptPresets: [{
+        id: "current",
+        name: "Current",
+        positivePrefix: "current preset; quality",
+        negativePrefix: "current preset negative;"
+      }],
+      activePromptPresetId: "current"
+    };
+    const core = "1girl,\n\ncenter frame, turning toward the viewer,\n\ngirl, blonde hair";
+
+    expect(renderPromptWithCurrentAffixes(core, "ordered", config)).toBe([
+      "current preset, quality",
+      "current custom, prefix",
+      core,
+      "current suffix"
+    ].join(",\n\n"));
+    expect(renderNegativeWithCurrentSelection("text, watermark", "ordered", config)).toBe(
+      "current preset negative, current custom negative, text, watermark"
+    );
+  });
+
   test("restores stable Default formatting without experimental punctuation normalization", () => {
     const config = {
       ...DEFAULT_CONFIG,
