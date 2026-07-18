@@ -5,6 +5,7 @@ import {
   parseCreativeConcepts
 } from "./creative.js";
 import { parserInstruction } from "./instructions.js";
+import { auditDynamicCameraDiversity, cameraRepairInstruction, mergeDynamicCameraRepair } from "./camera-diversity.js";
 import { logStage } from "./logging.js";
 import { normalizeScenePayload, recoverSceneParagraphs } from "./scenes.js";
 import type { CreativeConcept, ParsedPayload, ParserConnection, ParserContext, ParserGenerationRequest, PreparedParagraph, SceneJson, ShotJson } from "./types.js";
@@ -528,5 +529,49 @@ export async function parsePayloadWithRepair(
     }
     logStage(config, "json_parse_done", { repair: true });
     return parsed;
+  }
+}
+
+export async function repairDynamicCameraDiversity(
+  parserConnection: ParserConnection,
+  config: Config,
+  payload: ParsedPayload,
+  targetSource: string,
+  userId?: string
+): Promise<ParsedPayload> {
+  const audit = auditDynamicCameraDiversity(payload, config);
+  logStage(config, "camera_diversity_audit", audit);
+  if (audit.exactCollisions.length === 0) return payload;
+  try {
+    const raw = await generateParserText(parserConnection, config, [
+      { role: "system", content: cameraRepairInstruction(audit) },
+      {
+        role: "user",
+        content: [
+          "## Current Numbered Paragraph Source",
+          targetSource,
+          "## Valid Illustration JSON",
+          JSON.stringify(payload)
+        ].join("\n\n")
+      }
+    ], userId);
+    if (!raw.trim()) throw new Error("empty camera repair response");
+    const repaired = parseJson(raw);
+    const merged = mergeDynamicCameraRepair(payload, repaired, config, audit);
+    if (!merged) throw new Error("camera repair did not safely reduce exact collisions");
+    const repairedAudit = auditDynamicCameraDiversity(merged, config);
+    logStage(config, "camera_diversity_repaired", {
+      before: audit.signatures,
+      after: repairedAudit.signatures,
+      remainingExactCollisions: repairedAudit.exactCollisions.length,
+      pairRepetitions: repairedAudit.pairRepetitions
+    });
+    return merged;
+  } catch (error) {
+    logStage(config, "camera_diversity_repair_fallback", {
+      reason: error instanceof Error ? error.message : String(error),
+      preservedSignatures: audit.signatures
+    }, "warn");
+    return payload;
   }
 }

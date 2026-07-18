@@ -1,4 +1,10 @@
 import type { Config, PerspectiveMode, PromptPreset } from "../shared/config.js";
+import {
+  CAMERA_ANGLE_VALUES,
+  CAMERA_FOCUS_VALUES,
+  CAMERA_FRAMING_VALUES,
+  CAMERA_PERSPECTIVE_VALUES
+} from "./camera-diversity.js";
 import type { AssembledPrompt, CharacterJson, CreativeConcept, PromptEntry, SceneJson, ShotJson } from "./types.js";
 import { asRecord, cleanArray, cleanString, csvParts, escapeRegExp, unique } from "./utils.js";
 
@@ -260,18 +266,10 @@ function structuredSnippets(value: unknown, cap: number): string[] {
     .slice(0, cap);
 }
 
-const CAMERA_FRAMING = new Set([
-  "portrait", "close-up", "medium close-up", "upper body", "medium shot", "cowboy shot", "feet out of frame",
-  "full body", "wide shot", "lower body", "head out of frame", "eyes out of frame", "body-part focus"
-]);
-const CAMERA_ANGLE = new Set(["eye level", "low angle", "high angle", "dutch angle"]);
-const CAMERA_PERSPECTIVE = new Set([
-  "straight-on", "from above", "from behind", "from below", "from side", "sideways", "three-quarter view", "pov"
-]);
-const CAMERA_FOCUS = new Set([
-  "shallow depth of field", "deep focus", "background blur", "foreground blur", "motion blur", "fisheye",
-  "wide-angle lens", "telephoto lens"
-]);
+const CAMERA_FRAMING = new Set<string>(CAMERA_FRAMING_VALUES);
+const CAMERA_ANGLE = new Set<string>(CAMERA_ANGLE_VALUES);
+const CAMERA_PERSPECTIVE = new Set<string>(CAMERA_PERSPECTIVE_VALUES);
+const CAMERA_FOCUS = new Set<string>(CAMERA_FOCUS_VALUES);
 
 type AtomicSection = { text: string; structured: boolean };
 type SharedAtomicSection = AtomicSection & { interaction: string };

@@ -19,12 +19,14 @@ import {
   parserMessages,
   parserUserRequest,
   preprocessTargetParagraphs,
+  repairDynamicCameraDiversity,
   resolveParserConnection
 } from "./parser.js";
 import { renderNegativeWithCurrentSelection, renderPrompt, renderPromptWithCurrentAffixes } from "./prompt.js";
 import { imageUrlFromId, renderInlaidMessage } from "./rendering.js";
 import { normalizeScenePayload, selectPromptEntries } from "./scenes.js";
 import { getConfig, getState, updateState } from "./storage.js";
+import { tryAcquireRuntimeLock } from "./runtime-lock.js";
 import type {
   CharacterJson,
   ChatMessage,
@@ -83,9 +85,6 @@ type PersistStageInput = {
   config: Config;
   userId?: string;
 };
-
-const running = new Set<string>();
-const imageActions = new Set<string>();
 
 export type StoredImageActionRequest = {
   chatId: string;
@@ -237,6 +236,7 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
         parserMessages(instruction, referenceContext, userRequest, context.override),
         userId
       );
+      parsed = await repairDynamicCameraDiversity(parserConnection, config, parsed, targetSource, userId);
       selected = selectPromptEntries(parsed, paragraphs, config, conceptSelections || new Map(), conceptCandidates);
       if (!config.adaptiveMode && config.perspectiveMode === "creative" && (conceptSelections?.size || 0) > 0) {
         selected = selected.filter((entry) => Boolean(entry.creativeConcept));
@@ -570,8 +570,8 @@ export async function rerunStoredImage(
   if (!request.chatId) throw new Error("Open the image's chat first.");
   const actionKey = JSON.stringify([userId ?? null, request.chatId, request.messageId ?? null, request.swipeId ?? null,
     request.imageIndex ?? null, request.imageId ?? request.imageUrl ?? null]);
-  if (imageActions.has(actionKey)) throw new Error("That image is already being regenerated.");
-  imageActions.add(actionKey);
+  const releaseAction = tryAcquireRuntimeLock("image-action", actionKey);
+  if (!releaseAction) throw new Error("That image is already being regenerated.");
   try {
     const config = await getConfig(userId);
     const initialState = await getState(request.chatId, userId);
@@ -685,7 +685,7 @@ export async function rerunStoredImage(
     });
     return committed;
   } finally {
-    imageActions.delete(actionKey);
+    releaseAction();
   }
 }
 
@@ -708,11 +708,11 @@ export async function generateForMessage(chatId: string, messageId: string, cont
   const swipeId = Number.isFinite(Number(target.swipe_id)) ? Number(target.swipe_id) : 0;
   const key = `${chatId}:${messageId}:${swipeId}`;
   const runningKey = JSON.stringify([userId ?? null, key]);
-  if (running.has(runningKey)) {
+  const releaseGeneration = tryAcquireRuntimeLock("generation", runningKey);
+  if (!releaseGeneration) {
     logStage(config, "request_skipped", { reason: "already_running", key });
     return;
   }
-  running.add(runningKey);
   try {
     const state = await getState(chatId, userId);
     if (state.generated[key]) {
@@ -736,6 +736,6 @@ export async function generateForMessage(chatId: string, messageId: string, cont
     const assets = collectImageResults(imageStage, config);
     await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, config, userId });
   } finally {
-    running.delete(runningKey);
+    releaseGeneration();
   }
 }

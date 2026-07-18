@@ -320,6 +320,7 @@ describe("illustration parser construction", () => {
     expect(guidance).toContain("alternate shots of the same paragraph");
     expect(guidance).toContain("stable appearance, attire, location, and persistent actions");
     expect(guidance).toContain("Continuity does not require repeating camera angle");
+    expect(guidance).toContain("compare all Dynamic camera objects as a camera ledger");
     expect(guidance).toContain("continuous pov only when the narrative establishes");
     expect(guidance).toContain("Set perspectiveMode to exactly dynamic");
     expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, adaptiveMode: true })).toContain(

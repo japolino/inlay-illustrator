@@ -217,6 +217,177 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// src/backend/camera-diversity.ts
+var CAMERA_FRAMING_VALUES = [
+  "portrait",
+  "close-up",
+  "medium close-up",
+  "upper body",
+  "medium shot",
+  "cowboy shot",
+  "feet out of frame",
+  "full body",
+  "wide shot",
+  "lower body",
+  "head out of frame",
+  "eyes out of frame",
+  "body-part focus"
+];
+var CAMERA_ANGLE_VALUES = ["eye level", "low angle", "high angle", "dutch angle"];
+var CAMERA_PERSPECTIVE_VALUES = [
+  "straight-on",
+  "from above",
+  "from behind",
+  "from below",
+  "from side",
+  "sideways",
+  "three-quarter view",
+  "pov"
+];
+var CAMERA_FOCUS_VALUES = [
+  "shallow depth of field",
+  "deep focus",
+  "background blur",
+  "foreground blur",
+  "motion blur",
+  "fisheye",
+  "wide-angle lens",
+  "telephoto lens"
+];
+var CAMERA_FRAMING = new Set(CAMERA_FRAMING_VALUES);
+var CAMERA_ANGLE = new Set(CAMERA_ANGLE_VALUES);
+var CAMERA_PERSPECTIVE = new Set(CAMERA_PERSPECTIVE_VALUES);
+var CAMERA_FOCUS = new Set(CAMERA_FOCUS_VALUES);
+function orderedShots(payload) {
+  const output = [];
+  for (const scene of Array.isArray(payload.scenes) ? payload.scenes : []) {
+    const shots = Array.isArray(scene.shots) ? scene.shots : [scene];
+    for (const shot of shots) {
+      const paragraph = Number(shot.paragraph ?? scene.paragraph);
+      output.push({ shot, paragraph: Number.isFinite(paragraph) ? paragraph : 0, index: output.length });
+    }
+  }
+  return output;
+}
+function effectivePerspective(shot, config) {
+  if (!config.adaptiveMode)
+    return config.perspectiveMode;
+  const requested = cleanString2(shot.perspectiveMode).toLowerCase();
+  return requested === "creative" || requested === "static" || requested === "dynamic" ? requested : "dynamic";
+}
+function normalizedCamera(camera) {
+  const record = asRecord(camera);
+  return {
+    framing: cleanString2(record.framing).toLowerCase(),
+    angle: cleanString2(record.angle).toLowerCase(),
+    perspective: cleanString2(record.perspective).toLowerCase()
+  };
+}
+function fullSignature(camera) {
+  return [camera.framing, camera.angle, camera.perspective].join(" | ");
+}
+function pairSignature(camera) {
+  return camera.angle && camera.perspective ? `${camera.angle} | ${camera.perspective}` : "";
+}
+function auditDynamicCameraDiversity(payload, config) {
+  if (config.promptStyle !== "anima") {
+    return { dynamicShotCount: 0, signatures: [], exactCollisions: [], pairRepetitions: [] };
+  }
+  const dynamic = orderedShots(payload).filter(({ shot }) => effectivePerspective(shot, config) === "dynamic");
+  const signatures = [];
+  const exactCollisions = [];
+  const seenFull = new Map;
+  const seenPairs = new Map;
+  for (const entry of dynamic) {
+    const camera = normalizedCamera(entry.shot.camera);
+    const signature = fullSignature(camera);
+    const populated = [camera.framing, camera.angle, camera.perspective].filter(Boolean).length;
+    signatures.push({ index: entry.index, paragraph: entry.paragraph, signature });
+    if (populated >= 2) {
+      const first = seenFull.get(signature);
+      if (first) {
+        exactCollisions.push({
+          signature,
+          firstIndex: first.index,
+          duplicateIndex: entry.index,
+          firstParagraph: first.paragraph,
+          duplicateParagraph: entry.paragraph
+        });
+      } else {
+        seenFull.set(signature, entry);
+      }
+    }
+    const pair = pairSignature(camera);
+    if (pair)
+      seenPairs.set(pair, [...seenPairs.get(pair) || [], entry]);
+  }
+  const pairRepetitions = [...seenPairs.entries()].filter(([, entries]) => entries.length > 1).map(([signature, entries]) => ({
+    signature,
+    indexes: entries.map((entry) => entry.index),
+    paragraphs: entries.map((entry) => entry.paragraph)
+  }));
+  return { dynamicShotCount: dynamic.length, signatures, exactCollisions, pairRepetitions };
+}
+function stringValues(value) {
+  return (Array.isArray(value) ? value : [value]).map(cleanString2).map((entry) => entry.toLowerCase()).filter(Boolean);
+}
+function validCamera(camera) {
+  const record = asRecord(camera);
+  if (Object.keys(record).some((key) => !["framing", "angle", "perspective", "focus"].includes(key)))
+    return false;
+  const framing = stringValues(record.framing);
+  const angle = stringValues(record.angle);
+  const perspective = stringValues(record.perspective);
+  const focus = stringValues(record.focus);
+  return framing.length <= 1 && angle.length <= 1 && perspective.length <= 1 && focus.length <= 2 && framing.every((value) => CAMERA_FRAMING.has(value)) && angle.every((value) => CAMERA_ANGLE.has(value)) && perspective.every((value) => CAMERA_PERSPECTIVE.has(value)) && focus.every((value) => CAMERA_FOCUS.has(value));
+}
+function clonePayload(payload) {
+  return JSON.parse(JSON.stringify(payload));
+}
+function mergeDynamicCameraRepair(original, repaired, config, audit = auditDynamicCameraDiversity(original, config)) {
+  if (audit.exactCollisions.length === 0)
+    return original;
+  const originalShots = orderedShots(original);
+  const repairedShots = orderedShots(repaired);
+  if (originalShots.length !== repairedShots.length)
+    return null;
+  if (originalShots.some((entry, index) => entry.paragraph !== repairedShots[index]?.paragraph))
+    return null;
+  const replacementIndexes = new Set(audit.exactCollisions.map((collision) => collision.duplicateIndex));
+  const replacementCameras = new Map;
+  for (const index of replacementIndexes) {
+    const candidate = repairedShots[index]?.shot.camera;
+    if (!validCamera(candidate))
+      return null;
+    replacementCameras.set(index, candidate);
+  }
+  const merged = clonePayload(original);
+  for (const entry of orderedShots(merged)) {
+    const replacement = replacementCameras.get(entry.index);
+    if (replacement)
+      entry.shot.camera = replacement;
+  }
+  return auditDynamicCameraDiversity(merged, config).exactCollisions.length < audit.exactCollisions.length ? merged : null;
+}
+function cameraRepairInstruction(audit) {
+  const collisions = audit.exactCollisions.map((collision) => `shot ${collision.duplicateIndex + 1} (P${collision.duplicateParagraph}) repeats shot ${collision.firstIndex + 1} (P${collision.firstParagraph}): ${collision.signature}`);
+  return [
+    "Repair only the repeated Dynamic camera objects in this valid illustration JSON. Return one raw JSON object and no other text.",
+    "Keep scene order, shot order, paragraph references, perspectiveMode, characters, composition, action, environment, and every non-camera value unchanged.",
+    "For each listed later duplicate, choose a source-faithful camera that contains its complete focal action and avoids the repeated framing + angle + perspective tuple.",
+    "Do not force an extreme or unsuitable angle merely for variety. Sharing one camera value is allowed. Sharing angle + perspective is allowed when framing genuinely differs.",
+    "If the numbered source explicitly establishes a continuous camera or POV, preserve that camera instead of manufacturing variation.",
+    `framing: ${CAMERA_FRAMING_VALUES.join(", ")}`,
+    `angle: ${CAMERA_ANGLE_VALUES.join(", ")}`,
+    `perspective: ${CAMERA_PERSPECTIVE_VALUES.join(", ")}`,
+    `focus (maximum two): ${CAMERA_FOCUS_VALUES.join(", ")}`,
+    `Repeated Dynamic cameras:
+- ${collisions.join(`
+- `)}`
+  ].join(`
+`);
+}
+
 // src/backend/prompt.ts
 function normalizeReferenceTags(tagString) {
   return unique(csvParts(tagString).filter((tag) => {
@@ -400,42 +571,10 @@ function structuredSnippets(value, cap) {
   const values = Array.isArray(value) ? value : [value];
   return values.flatMap((entry) => csvParts(entry)).map((entry) => cleanString2(entry)).filter(Boolean).slice(0, cap);
 }
-var CAMERA_FRAMING = new Set([
-  "portrait",
-  "close-up",
-  "medium close-up",
-  "upper body",
-  "medium shot",
-  "cowboy shot",
-  "feet out of frame",
-  "full body",
-  "wide shot",
-  "lower body",
-  "head out of frame",
-  "eyes out of frame",
-  "body-part focus"
-]);
-var CAMERA_ANGLE = new Set(["eye level", "low angle", "high angle", "dutch angle"]);
-var CAMERA_PERSPECTIVE = new Set([
-  "straight-on",
-  "from above",
-  "from behind",
-  "from below",
-  "from side",
-  "sideways",
-  "three-quarter view",
-  "pov"
-]);
-var CAMERA_FOCUS = new Set([
-  "shallow depth of field",
-  "deep focus",
-  "background blur",
-  "foreground blur",
-  "motion blur",
-  "fisheye",
-  "wide-angle lens",
-  "telephoto lens"
-]);
+var CAMERA_FRAMING2 = new Set(CAMERA_FRAMING_VALUES);
+var CAMERA_ANGLE2 = new Set(CAMERA_ANGLE_VALUES);
+var CAMERA_PERSPECTIVE2 = new Set(CAMERA_PERSPECTIVE_VALUES);
+var CAMERA_FOCUS2 = new Set(CAMERA_FOCUS_VALUES);
 function hasAtomicField(record, fields) {
   return fields.some((field) => Object.prototype.hasOwnProperty.call(record, field));
 }
@@ -497,10 +636,10 @@ function assembleStructuredCamera(value) {
     return { text: unique(csvParts(cleanString2(value))).join(", "), structured: false };
   return {
     text: unique([
-      ...allowedCameraSnippets(record.framing, 1, CAMERA_FRAMING),
-      ...allowedCameraSnippets(record.angle, 1, CAMERA_ANGLE),
-      ...allowedCameraSnippets(record.perspective, 1, CAMERA_PERSPECTIVE),
-      ...allowedCameraSnippets(record.focus, 2, CAMERA_FOCUS)
+      ...allowedCameraSnippets(record.framing, 1, CAMERA_FRAMING2),
+      ...allowedCameraSnippets(record.angle, 1, CAMERA_ANGLE2),
+      ...allowedCameraSnippets(record.perspective, 1, CAMERA_PERSPECTIVE2),
+      ...allowedCameraSnippets(record.focus, 2, CAMERA_FOCUS2)
     ]).join(", "),
     structured: true
   };
@@ -1889,6 +2028,7 @@ function parserInstruction(config) {
     `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it. For every character object, keep the complete known baseline in appearance, body, and attire even when Creative shows only a partial crop. visibleTags is the separate visible-only rendering projection.`,
     "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for stable appearance, attire, location, and persistent actions.",
     "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts.",
+    "Before returning the batch, compare all Dynamic camera objects as a camera ledger. Do not repeat the same framing + angle + perspective tuple across Dynamic shots unless the current numbered source explicitly establishes a continuous camera or POV. Sharing one camera value is allowed, and sharing angle + perspective is allowed when framing genuinely differs.",
     perspectiveInstruction,
     structuredAnima ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, camera, situation, sharedComposition, environment, and negative." : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
     "## Field Reference",
@@ -2502,6 +2642,48 @@ async function parsePayloadWithRepair(parserConnection, config, messages, userId
     return parsed;
   }
 }
+async function repairDynamicCameraDiversity(parserConnection, config, payload, targetSource, userId) {
+  const audit = auditDynamicCameraDiversity(payload, config);
+  logStage(config, "camera_diversity_audit", audit);
+  if (audit.exactCollisions.length === 0)
+    return payload;
+  try {
+    const raw = await generateParserText(parserConnection, config, [
+      { role: "system", content: cameraRepairInstruction(audit) },
+      {
+        role: "user",
+        content: [
+          "## Current Numbered Paragraph Source",
+          targetSource,
+          "## Valid Illustration JSON",
+          JSON.stringify(payload)
+        ].join(`
+
+`)
+      }
+    ], userId);
+    if (!raw.trim())
+      throw new Error("empty camera repair response");
+    const repaired = parseJson(raw);
+    const merged = mergeDynamicCameraRepair(payload, repaired, config, audit);
+    if (!merged)
+      throw new Error("camera repair did not safely reduce exact collisions");
+    const repairedAudit = auditDynamicCameraDiversity(merged, config);
+    logStage(config, "camera_diversity_repaired", {
+      before: audit.signatures,
+      after: repairedAudit.signatures,
+      remainingExactCollisions: repairedAudit.exactCollisions.length,
+      pairRepetitions: repairedAudit.pairRepetitions
+    });
+    return merged;
+  } catch (error) {
+    logStage(config, "camera_diversity_repair_fallback", {
+      reason: error instanceof Error ? error.message : String(error),
+      preservedSignatures: audit.signatures
+    }, "warn");
+    return payload;
+  }
+}
 
 // src/backend/rendering.ts
 function imageUrlFromId(imageId) {
@@ -2661,9 +2843,34 @@ async function sendState(userId, chatId) {
   }, userId);
 }
 
+// src/backend/runtime-lock.ts
+var REGISTRY_KEY = Symbol.for("inlay-illustrator.runtime-locks");
+var globalRegistry = globalThis;
+function registry() {
+  const existing = globalRegistry[REGISTRY_KEY];
+  if (existing && typeof existing === "object" && existing.locks instanceof Set) {
+    return existing;
+  }
+  const created = { locks: new Set };
+  globalRegistry[REGISTRY_KEY] = created;
+  return created;
+}
+function tryAcquireRuntimeLock(scope, key) {
+  const lockKey = `${scope}:${key}`;
+  const locks = registry().locks;
+  if (locks.has(lockKey))
+    return null;
+  locks.add(lockKey);
+  let released = false;
+  return () => {
+    if (released)
+      return;
+    released = true;
+    locks.delete(lockKey);
+  };
+}
+
 // src/backend/generation.ts
-var running = new Set;
-var imageActions = new Set;
 function generatedRecord(value) {
   if (!value || typeof value !== "object")
     return null;
@@ -2775,6 +2982,7 @@ async function parseAndSelectPrompts(input) {
         contextDiagnostics: context.diagnostics
       });
       parsed = await parsePayloadWithRepair(parserConnection, config, parserMessages(instruction, referenceContext, userRequest, context.override), userId);
+      parsed = await repairDynamicCameraDiversity(parserConnection, config, parsed, targetSource, userId);
       selected = selectPromptEntries(parsed, paragraphs, config, conceptSelections || new Map, conceptCandidates);
       if (!config.adaptiveMode && config.perspectiveMode === "creative" && (conceptSelections?.size || 0) > 0) {
         selected = selected.filter((entry) => Boolean(entry.creativeConcept));
@@ -3068,9 +3276,9 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
     request.imageIndex ?? null,
     request.imageId ?? request.imageUrl ?? null
   ]);
-  if (imageActions.has(actionKey))
+  const releaseAction = tryAcquireRuntimeLock("image-action", actionKey);
+  if (!releaseAction)
     throw new Error("That image is already being regenerated.");
-  imageActions.add(actionKey);
   try {
     const config = await getConfig(userId);
     const initialState = await getState(request.chatId, userId);
@@ -3179,7 +3387,7 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
     });
     return committed;
   } finally {
-    imageActions.delete(actionKey);
+    releaseAction();
   }
 }
 async function generateForMessage(chatId, messageId, content, userId) {
@@ -3202,11 +3410,11 @@ async function generateForMessage(chatId, messageId, content, userId) {
   const swipeId = Number.isFinite(Number(target.swipe_id)) ? Number(target.swipe_id) : 0;
   const key = `${chatId}:${messageId}:${swipeId}`;
   const runningKey = JSON.stringify([userId ?? null, key]);
-  if (running.has(runningKey)) {
+  const releaseGeneration = tryAcquireRuntimeLock("generation", runningKey);
+  if (!releaseGeneration) {
     logStage(config, "request_skipped", { reason: "already_running", key });
     return;
   }
-  running.add(runningKey);
   try {
     const state = await getState(chatId, userId);
     if (state.generated[key]) {
@@ -3230,7 +3438,7 @@ async function generateForMessage(chatId, messageId, content, userId) {
     const assets = collectImageResults(imageStage, config);
     await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, config, userId });
   } finally {
-    running.delete(runningKey);
+    releaseGeneration();
   }
 }
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { DEFAULT_CONFIG } from "../shared/config.js";
-import { generateCreativeConcepts, parsePayloadWithRepair } from "./parser.js";
+import { generateCreativeConcepts, parsePayloadWithRepair, repairDynamicCameraDiversity } from "./parser.js";
 import type { ParserGenerationRequest } from "./types.js";
 
 type RawRequest = { messages: ParserGenerationRequest["messages"] };
@@ -266,6 +266,49 @@ describe("Creative ideation sidecar stage", () => {
     );
 
     expect(concepts).toEqual([]);
+    expect(requests).toHaveLength(1);
+  });
+});
+
+describe("camera diversity repair stage", () => {
+  test("repairs exact Dynamic camera collisions with one targeted call", async () => {
+    const duplicatePayload = {
+      scenes: [{ shots: [
+        { paragraph: 1, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level", perspective: "three-quarter view", focus: [] }, action: "first" },
+        { paragraph: 2, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level", perspective: "three-quarter view", focus: [] }, action: "second" }
+      ] }]
+    };
+    const repairedPayload = structuredClone(duplicatePayload);
+    const repairedShots = repairedPayload.scenes[0].shots;
+    repairedShots[0].action = "must not leak";
+    repairedShots[1].camera = { framing: "medium shot", angle: "eye level", perspective: "straight-on", focus: [] };
+    responses.push({ content: JSON.stringify(repairedPayload) });
+
+    const repaired = await repairDynamicCameraDiversity(
+      connection,
+      { ...config, adaptiveMode: true },
+      duplicatePayload,
+      "[P1]\nFirst beat.\n\n[P2]\nSecond beat."
+    );
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].messages[0].content).toContain("Repair only the repeated Dynamic camera objects");
+    expect(repaired.scenes?.[0].shots?.[0].action).toBe("first");
+    expect(repaired.scenes?.[0].shots?.[1].camera).toEqual(repairedShots[1].camera);
+  });
+
+  test("fails open when the targeted repair provider errors", async () => {
+    const original = {
+      scenes: [{ shots: [
+        { paragraph: 1, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level", perspective: "straight-on" } },
+        { paragraph: 2, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level", perspective: "straight-on" } }
+      ] }]
+    };
+    responses.push(Promise.reject(new Error("proxy timeout")));
+
+    const repaired = await repairDynamicCameraDiversity(connection, { ...config, adaptiveMode: true }, original, "[P1]\nOne\n\n[P2]\nTwo");
+
+    expect(repaired).toBe(original);
     expect(requests).toHaveLength(1);
   });
 });

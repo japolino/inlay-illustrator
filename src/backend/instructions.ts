@@ -200,6 +200,7 @@ export function parserInstruction(config: Config): string {
     `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it. For every character object, keep the complete known baseline in appearance, body, and attire even when Creative shows only a partial crop. visibleTags is the separate visible-only rendering projection.`,
     "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for stable appearance, attire, location, and persistent actions.",
     "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts.",
+    "Before returning the batch, compare all Dynamic camera objects as a camera ledger. Do not repeat the same framing + angle + perspective tuple across Dynamic shots unless the current numbered source explicitly establishes a continuous camera or POV. Sharing one camera value is allowed, and sharing angle + perspective is allowed when framing genuinely differs.",
     perspectiveInstruction,
     structuredAnima
       ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, camera, situation, sharedComposition, environment, and negative."
