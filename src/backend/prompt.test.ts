@@ -308,7 +308,7 @@ describe("perspective selection and projection", () => {
         action: "running, reaching",
         composition: {
           position: "far background",
-          pose: "lunging forward",
+          pose: "standing upright with arms relaxed at sides",
           actions: ["reaching toward the viewer"],
           gaze: "looking toward the viewer"
         }
@@ -322,17 +322,66 @@ describe("perspective selection and projection", () => {
 
     expect(rendered).toContain([
       "slightly forward from the background",
-      "holding a simple stable pose",
+      "standing upright with arms relaxed at sides",
       "looking toward the viewer"
     ].join(", "));
     expect(rendered).toContain("school courtyard, sunny afternoon, soft daylight, school windows, flower beds");
     expect(rendered).toEndWith("medium shot, eye level, straight-on, deep focus");
     expect(rendered).not.toContain("running");
     expect(rendered).not.toContain("reaching");
-    expect(rendered).not.toContain("lunging");
     expect(rendered).not.toContain("grabbing");
     expect(rendered).not.toContain("dutch angle");
     expect(rendered).not.toContain("motion blur");
+
+    const fallback = assemblePrompt({
+      environment: {
+        location: "school courtyard",
+        timeWeather: "sunny afternoon",
+        backgroundElements: ["school windows", "flower beds"]
+      }
+    }, {
+      situation: "1girl",
+      characters: [{ label: "girl", appearance: "black hair", composition: { pose: "" } }]
+    }, config, 1, 1);
+    expect(renderPrompt(fallback.prompt, config.promptSyntax)).toContain(
+      "slightly forward from the background, standing upright with arms relaxed at sides"
+    );
+    const legacyAmbiguousPose = assemblePrompt({
+      environment: {
+        location: "school courtyard",
+        timeWeather: "sunny afternoon",
+        backgroundElements: ["school windows", "flower beds"]
+      }
+    }, {
+      situation: "1girl",
+      characters: [{
+        label: "girl",
+        appearance: "black hair",
+        composition: { pose: "holding a simple stable pose", actions: [] }
+      }]
+    }, config, 1, 1);
+    const legacyAmbiguousPrompt = renderPrompt(legacyAmbiguousPose.prompt, config.promptSyntax);
+    expect(legacyAmbiguousPrompt).toContain("standing upright with arms relaxed at sides");
+    expect(legacyAmbiguousPrompt).not.toContain("holding a simple stable pose");
+
+    const noNaturalDetail = assemblePrompt({
+      environment: {
+        location: "school courtyard",
+        timeWeather: "sunny afternoon",
+        lightingMood: ["soft daylight"],
+        backgroundElements: ["school windows", "flower beds"]
+      }
+    }, {
+      situation: "1girl",
+      characters: [{
+        label: "girl",
+        appearance: "black hair",
+        composition: { pose: "standing upright with arms relaxed at sides", actions: [] }
+      }]
+    }, { ...config, supplement: false }, 1, 1);
+    const noNaturalDetailPrompt = renderPrompt(noNaturalDetail.prompt, config.promptSyntax);
+    expect(noNaturalDetailPrompt).toContain("school courtyard, sunny afternoon, school windows, flower beds");
+    expect(noNaturalDetailPrompt).not.toContain("soft daylight");
   });
 
   test("falls back to Dynamic when an adaptive parser omits or misspells its choice", () => {

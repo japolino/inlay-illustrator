@@ -93,6 +93,64 @@ describe("parser JSON recovery", () => {
     expect(requests).toHaveLength(2);
   });
 
+  test("repairs valid but incomplete Static scenes before returning them", async () => {
+    const staticConfig = { ...config, perspectiveMode: "static" as const };
+    responses.push(
+      { content: JSON.stringify({ scenes: [{
+        environment: { location: "indoor", timeWeather: "", lightingMood: ["soft lighting"], backgroundElements: [] },
+        shots: [{
+          paragraph: 1,
+          perspectiveMode: "static",
+          characters: [{ name: "Mira", composition: { position: "foreground", pose: "holding a simple stable pose", actions: [], gaze: "looking at viewer" } }]
+        }]
+      }] }) },
+      { content: JSON.stringify({ scenes: [{
+        environment: {
+          location: "school classroom",
+          timeWeather: "afternoon",
+          lightingMood: ["soft window light"],
+          backgroundElements: ["rows of wooden desks", "tall classroom windows"]
+        },
+        shots: [{
+          paragraph: 1,
+          perspectiveMode: "static",
+          characters: [{
+            name: "Mira",
+            composition: {
+              position: "slightly forward from the background",
+              pose: "standing upright with arms relaxed at sides",
+              actions: [],
+              gaze: "looking at viewer"
+            }
+          }]
+        }]
+      }] }) }
+    );
+
+    const parsed = await parsePayloadWithRepair(connection, staticConfig, messages);
+
+    expect(requests).toHaveLength(2);
+    expect(requests[1].messages[0].content).toContain("Static shot satisfies the listed semantic requirements");
+    expect(requests[1].messages[0].content).toContain("specific physical environment.location");
+    expect(requests[1].messages[0].content).toContain("2-3 concrete environment.backgroundElements");
+    expect(requests[1].messages[0].content).toContain("concrete resting composition.pose");
+    expect(parsed.scenes?.[0].environment?.location).toBe("school classroom");
+  });
+
+  test("rejects a Static semantic repair that remains incomplete", async () => {
+    const staticConfig = { ...config, perspectiveMode: "static" as const };
+    const incomplete = JSON.stringify({ scenes: [{
+      environment: { location: "indoor", backgroundElements: [] },
+      shots: [{ paragraph: 1, characters: [{ composition: { pose: "", actions: [] } }] }]
+    }] });
+    responses.push({ content: incomplete }, { content: incomplete });
+
+    await expect(parsePayloadWithRepair(connection, staticConfig, messages)).rejects.toThrow(
+      "Parser did not return a complete Static scene"
+    );
+    expect(requests).toHaveLength(2);
+  });
+
   test("logs numeric parser usage without logging response content", async () => {
     responses.push({
       content: '{"scenes":[]}',

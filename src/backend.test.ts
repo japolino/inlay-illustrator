@@ -337,8 +337,10 @@ describe("illustration parser construction", () => {
     expect(guidance).toContain("Static uses a visual-novel composition");
     expect(guidance).toContain("one primary character slightly forward on a shallow foreground plane");
     expect(guidance).toContain("medium shot at eye level, straight-on, with deep focus");
-    expect(guidance).toContain("holding a simple stable pose as the pose");
+    expect(guidance).toContain("a concrete source-supported resting body arrangement as the pose");
     expect(guidance).toContain("an empty actions array");
+    expect(guidance).toContain("standing upright with arms relaxed at sides");
+    expect(guidance).toContain("2-3 concrete backgroundElements");
     expect(guidance).toContain("override any batch-wide request for cinematography variation");
     expect(guidance).toContain("Keep the visual-novel framing fixed across Static shots");
     expect(guidance).not.toContain("alternate shots of the same paragraph with genuinely different cinematography");

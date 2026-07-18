@@ -1,7 +1,7 @@
 import type { Config } from "../shared/config.js";
 import { parserInstruction } from "./instructions.js";
 import { logStage } from "./logging.js";
-import type { ParsedPayload, ParserConnection, ParserContext, ParserGenerationRequest, PreparedParagraph, SceneJson } from "./types.js";
+import type { ParsedPayload, ParserConnection, ParserContext, ParserGenerationRequest, PreparedParagraph, SceneJson, ShotJson } from "./types.js";
 import { asRecord, cleanString, compactBlock, keysOf } from "./utils.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
@@ -170,6 +170,73 @@ function parseJson(text: string): ParsedPayload {
   if (collectedGroups.length > 0) return { scenes: collectedGroups };
   if (collectedShots.length > 0) return { scenes: collectedShots };
   throw new Error("Parser did not return usable JSON scenes.");
+}
+
+function staticShot(shot: ShotJson, config: Config): boolean {
+  if (!config.adaptiveMode) return config.perspectiveMode === "static";
+  return cleanString(shot.perspectiveMode).toLowerCase() === "static";
+}
+
+const GENERIC_LOCATION_WORDS = new Set([
+  "background", "inside", "interior", "indoor", "indoors", "outside", "exterior", "outdoor", "outdoors", "room"
+]);
+
+function isSpecificLocation(value: unknown): boolean {
+  const words = cleanString(value).toLowerCase().match(/[a-z]+/g) || [];
+  return words.some((word) => !GENERIC_LOCATION_WORDS.has(word));
+}
+
+function isConcreteStaticPose(value: unknown): boolean {
+  const pose = cleanString(value);
+  return Boolean(pose) && !/\bpos(?:e|es|ed|ing)\b/i.test(pose);
+}
+
+function staticPayloadIssues(payload: ParsedPayload, config: Config): string[] {
+  if (config.promptStyle !== "anima") return [];
+  const issues: string[] = [];
+  const scenes = Array.isArray(payload.scenes) ? payload.scenes : [];
+  scenes.forEach((scene, sceneIndex) => {
+    const shots = Array.isArray(scene.shots) ? scene.shots : [scene];
+    const staticShots = shots.filter((shot) => staticShot(shot, config));
+    if (staticShots.length === 0) return;
+    const environment = asRecord(scene.environment);
+    if (!isSpecificLocation(environment.location)) issues.push(`scene ${sceneIndex + 1} needs a specific physical environment.location`);
+    const backgroundElements = Array.isArray(environment.backgroundElements)
+      ? environment.backgroundElements.map(cleanString).filter(Boolean)
+      : [];
+    if (backgroundElements.length < 2 || backgroundElements.length > 3) {
+      issues.push(`scene ${sceneIndex + 1} needs 2-3 concrete environment.backgroundElements`);
+    }
+    staticShots.forEach((shot, shotIndex) => {
+      const characters = Array.isArray(shot.characters) ? shot.characters : [];
+      if (characters.length === 0) {
+        issues.push(`scene ${sceneIndex + 1} Static shot ${shotIndex + 1} needs a primary character`);
+      }
+      characters.forEach((character, characterIndex) => {
+        const composition = asRecord(character.composition);
+        if (!isConcreteStaticPose(composition.pose)) {
+          issues.push(`scene ${sceneIndex + 1} Static shot ${shotIndex + 1} character ${characterIndex + 1} needs a concrete resting composition.pose`);
+        }
+        const actions = Array.isArray(composition.actions)
+          ? composition.actions.map(cleanString).filter(Boolean)
+          : cleanString(composition.actions) ? [cleanString(composition.actions)] : [];
+        if (actions.length > 0) {
+          issues.push(`scene ${sceneIndex + 1} Static shot ${shotIndex + 1} character ${characterIndex + 1} must have an empty composition.actions array`);
+        }
+      });
+    });
+  });
+  return issues;
+}
+
+function staticRepairInstruction(issues: string[]): string {
+  return [
+    "Repair this valid JSON so every Static shot satisfies the listed semantic requirements. Return only valid JSON and preserve all source facts, character baselines, expressions, and scene meaning.",
+    "For every Static character, composition.pose must directly describe one concrete source-supported resting body arrangement, composition.actions must be an empty array, and gaze may remain source-supported or empty.",
+    "For every scene containing a Static shot, environment.location must name a specific physical setting rather than indoor/outdoor, and environment.backgroundElements must contain 2-3 concrete visible setting details.",
+    "Do not use abstract pose language such as simple pose, stable pose, holding a pose, or posing.",
+    `Problems to repair:\n- ${issues.join("\n- ")}`
+  ].join("\n");
 }
 
 export async function resolveParserConnection(config: Config, userId?: string): Promise<ParserConnection> {
@@ -346,18 +413,28 @@ export async function parsePayloadWithRepair(
   userId?: string
 ): Promise<ParsedPayload> {
   const raw = await generateParserText(parserConnection, config, messages, userId);
+  let repairSystem = "Repair malformed JSON. Return only valid JSON.";
   try {
     logStage(config, "json_parse_start", { rawLength: raw.length, repair: false });
     const parsed = parseJson(raw);
+    const issues = staticPayloadIssues(parsed, config);
+    if (issues.length > 0) {
+      repairSystem = staticRepairInstruction(issues);
+      throw new Error("Static payload is incomplete.");
+    }
     logStage(config, "json_parse_done", { repair: false });
     return parsed;
   } catch {
     logStage(config, "json_parse_failed", { rawLength: raw.length, repairWillRun: true }, "warn");
     const repaired = await generateParserText(parserConnection, config, [
-      { role: "system", content: "Repair malformed JSON. Return only valid JSON." },
+      { role: "system", content: repairSystem },
       { role: "user", content: raw }
     ], userId);
     const parsed = parseJson(repaired);
+    const remainingIssues = staticPayloadIssues(parsed, config);
+    if (remainingIssues.length > 0) {
+      throw new Error(`Parser did not return a complete Static scene: ${remainingIssues.join("; ")}`);
+    }
     logStage(config, "json_parse_done", { repair: true });
     return parsed;
   }

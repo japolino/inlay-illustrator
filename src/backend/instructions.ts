@@ -4,6 +4,7 @@ export function parserInstruction(config: Config): string {
   const maxCharacters = config.maxCharacters;
   const structuredAnima = config.promptStyle === "anima";
   const fixedStatic = !config.adaptiveMode && config.perspectiveMode === "static";
+  const staticBackgroundPossible = fixedStatic || config.adaptiveMode;
   const shotInstruction = [
     `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
     "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
@@ -28,7 +29,9 @@ export function parserInstruction(config: Config): string {
     "Dynamic follows the current scene's visible action, movement, interaction, and strongest cinematic viewpoint.",
     "Static uses a visual-novel composition: a clearly readable scene background with one primary character slightly forward on a shallow foreground plane. Include additional characters only when the source cannot be represented faithfully without them; keep them on the same shallow plane.",
     "Static is fixed to a conventional medium shot at eye level, straight-on, with deep focus so the background remains readable. Do not use close-ups, wide shots, body-part crops, POV, high or low angles, dutch angles, dramatic lenses, motion blur, foreground occlusion, or action-centric framing.",
-    "For Static character composition, use slightly forward from the background as the position, holding a simple stable pose as the pose, an empty actions array, and a source-supported gaze or an empty gaze. Do not depict running, lunging, spinning, falling, fighting, reaching, or another mid-action pose.",
+    "For Static character composition, use slightly forward from the background as the position, a concrete source-supported resting body arrangement as the pose, an empty actions array, and a source-supported gaze or an empty gaze.",
+    "A Static pose must state the visible body arrangement directly, such as standing upright with arms relaxed at sides or seated upright with hands resting in lap. Never write abstract meta-phrases such as simple pose, stable pose, holding a pose, or posing. Do not depict a mid-action pose.",
+    "Every scene containing a Static shot must provide a specific physical location and 2-3 concrete backgroundElements so the setting is visibly readable; generic labels such as indoor or outdoor are not sufficient locations.",
     "These Static framing and pose constraints override any batch-wide request for cinematography variation whenever perspectiveMode is static.",
     "perspectiveMode, renderScope, and visibleTags are shot-only rendering decisions. They never alter or replace the complete appearance, body, and attire memory fields."
   ].join("\n");
@@ -147,7 +150,9 @@ export function parserInstruction(config: Config): string {
       "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
       config.supplement
         ? "Populate lightingMood and backgroundElements within the target budget."
-        : "Leave lightingMood and backgroundElements empty. Still populate location and timeWeather."
+        : staticBackgroundPossible
+          ? "Leave lightingMood empty. Populate 2-3 backgroundElements for every scene containing a Static shot, and leave backgroundElements empty for scenes without a Static shot. Still populate location and timeWeather."
+          : "Leave lightingMood and backgroundElements empty. Still populate location and timeWeather."
     ].join("\n")
     : config.supplement
       ? [
@@ -196,7 +201,7 @@ export function parserInstruction(config: Config): string {
     "## Field Reference",
     structuredAnima ? "### environment - scene-level" : "### place - scene-level",
     structuredAnima
-      ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details."
+      ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details. Static scenes require a specific physical location and 2-3 backgroundElements."
       : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
     structuredAnima
       ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment. Use only source-supported visual atmosphere; never infer romance, calm, menace, or another emotional tone from lighting alone."

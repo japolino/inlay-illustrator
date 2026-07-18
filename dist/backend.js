@@ -457,11 +457,14 @@ function assembleAtomicCharacterComposition(value, replacements) {
   return { text: snippets.join(", "), structured: true };
 }
 function assembleStaticCharacterComposition(value, replacements) {
-  const gaze = sanitizedAtomicSnippets(asRecord(value).gaze, 1, replacements);
+  const composition = asRecord(value);
+  const pose = sanitizedAtomicSnippets(composition.pose, 1, replacements);
+  const gaze = sanitizedAtomicSnippets(composition.gaze, 1, replacements);
+  const concretePose = pose[0] && !/\bpos(?:e|es|ed|ing)\b/i.test(pose[0]) ? pose[0] : "standing upright with arms relaxed at sides";
   return {
     text: unique([
       "slightly forward from the background",
-      "holding a simple stable pose",
+      concretePose,
       ...gaze
     ]).join(", "),
     structured: true
@@ -522,7 +525,7 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode)
   const location = structuredSnippets(environment.location, 1);
   const timeWeather = structuredSnippets(environment.timeWeather, 1);
   const lightingMood = config.supplement ? structuredSnippets(environment.lightingMood, 3) : [];
-  const backgroundElements = config.supplement ? structuredSnippets(environment.backgroundElements, 5) : [];
+  const backgroundElements = config.supplement || perspectiveMode === "static" ? structuredSnippets(environment.backgroundElements, 5) : [];
   const legacyPlace = location.length === 0 ? stripOrReplaceNames(cleanString2(scene.place), replacements, true) : "";
   const environmentSection = [
     ...location.map((value) => stripOrReplaceNames(value, replacements, false)),
@@ -1474,6 +1477,7 @@ function parserInstruction(config) {
   const maxCharacters = config.maxCharacters;
   const structuredAnima = config.promptStyle === "anima";
   const fixedStatic = !config.adaptiveMode && config.perspectiveMode === "static";
+  const staticBackgroundPossible = fixedStatic || config.adaptiveMode;
   const shotInstruction = [
     `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
     "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
@@ -1491,7 +1495,9 @@ function parserInstruction(config) {
     "Dynamic follows the current scene's visible action, movement, interaction, and strongest cinematic viewpoint.",
     "Static uses a visual-novel composition: a clearly readable scene background with one primary character slightly forward on a shallow foreground plane. Include additional characters only when the source cannot be represented faithfully without them; keep them on the same shallow plane.",
     "Static is fixed to a conventional medium shot at eye level, straight-on, with deep focus so the background remains readable. Do not use close-ups, wide shots, body-part crops, POV, high or low angles, dutch angles, dramatic lenses, motion blur, foreground occlusion, or action-centric framing.",
-    "For Static character composition, use slightly forward from the background as the position, holding a simple stable pose as the pose, an empty actions array, and a source-supported gaze or an empty gaze. Do not depict running, lunging, spinning, falling, fighting, reaching, or another mid-action pose.",
+    "For Static character composition, use slightly forward from the background as the position, a concrete source-supported resting body arrangement as the pose, an empty actions array, and a source-supported gaze or an empty gaze.",
+    "A Static pose must state the visible body arrangement directly, such as standing upright with arms relaxed at sides or seated upright with hands resting in lap. Never write abstract meta-phrases such as simple pose, stable pose, holding a pose, or posing. Do not depict a mid-action pose.",
+    "Every scene containing a Static shot must provide a specific physical location and 2-3 concrete backgroundElements so the setting is visibly readable; generic labels such as indoor or outdoor are not sufficient locations.",
     "These Static framing and pose constraints override any batch-wide request for cinematography variation whenever perspectiveMode is static.",
     "perspectiveMode, renderScope, and visibleTags are shot-only rendering decisions. They never alter or replace the complete appearance, body, and attire memory fields."
   ].join(`
@@ -1605,7 +1611,7 @@ function parserInstruction(config) {
     "Use concise objective visual phrases, not narration, invisible emotion, smell, sound, or internal sensation.",
     "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements.",
     "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
-    config.supplement ? "Populate lightingMood and backgroundElements within the target budget." : "Leave lightingMood and backgroundElements empty. Still populate location and timeWeather."
+    config.supplement ? "Populate lightingMood and backgroundElements within the target budget." : staticBackgroundPossible ? "Leave lightingMood empty. Populate 2-3 backgroundElements for every scene containing a Static shot, and leave backgroundElements empty for scenes without a Static shot. Still populate location and timeWeather." : "Leave lightingMood and backgroundElements empty. Still populate location and timeWeather."
   ].join(`
 `) : config.supplement ? [
     "### Natural Language Supplement",
@@ -1645,7 +1651,7 @@ function parserInstruction(config) {
     structuredAnima ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, camera, situation, sharedComposition, environment, and negative." : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
     "## Field Reference",
     structuredAnima ? "### environment - scene-level" : "### place - scene-level",
-    structuredAnima ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
+    structuredAnima ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details. Static scenes require a specific physical location and 2-3 backgroundElements." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
     structuredAnima ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment. Use only source-supported visual atmosphere; never infer romance, calm, menace, or another emotional tone from lighting alone." : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
     "### camera - shot-level",
     structuredAnima ? "camera.framing must be empty or exactly one of: portrait, close-up, medium close-up, upper body, medium shot, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, body-part focus." : "Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus.",
@@ -1939,6 +1945,79 @@ function parseJson(text) {
     return { scenes: collectedShots };
   throw new Error("Parser did not return usable JSON scenes.");
 }
+function staticShot(shot, config) {
+  if (!config.adaptiveMode)
+    return config.perspectiveMode === "static";
+  return cleanString2(shot.perspectiveMode).toLowerCase() === "static";
+}
+var GENERIC_LOCATION_WORDS = new Set([
+  "background",
+  "inside",
+  "interior",
+  "indoor",
+  "indoors",
+  "outside",
+  "exterior",
+  "outdoor",
+  "outdoors",
+  "room"
+]);
+function isSpecificLocation(value) {
+  const words = cleanString2(value).toLowerCase().match(/[a-z]+/g) || [];
+  return words.some((word) => !GENERIC_LOCATION_WORDS.has(word));
+}
+function isConcreteStaticPose(value) {
+  const pose = cleanString2(value);
+  return Boolean(pose) && !/\bpos(?:e|es|ed|ing)\b/i.test(pose);
+}
+function staticPayloadIssues(payload, config) {
+  if (config.promptStyle !== "anima")
+    return [];
+  const issues = [];
+  const scenes = Array.isArray(payload.scenes) ? payload.scenes : [];
+  scenes.forEach((scene, sceneIndex) => {
+    const shots = Array.isArray(scene.shots) ? scene.shots : [scene];
+    const staticShots = shots.filter((shot) => staticShot(shot, config));
+    if (staticShots.length === 0)
+      return;
+    const environment = asRecord(scene.environment);
+    if (!isSpecificLocation(environment.location))
+      issues.push(`scene ${sceneIndex + 1} needs a specific physical environment.location`);
+    const backgroundElements = Array.isArray(environment.backgroundElements) ? environment.backgroundElements.map(cleanString2).filter(Boolean) : [];
+    if (backgroundElements.length < 2 || backgroundElements.length > 3) {
+      issues.push(`scene ${sceneIndex + 1} needs 2-3 concrete environment.backgroundElements`);
+    }
+    staticShots.forEach((shot, shotIndex) => {
+      const characters = Array.isArray(shot.characters) ? shot.characters : [];
+      if (characters.length === 0) {
+        issues.push(`scene ${sceneIndex + 1} Static shot ${shotIndex + 1} needs a primary character`);
+      }
+      characters.forEach((character, characterIndex) => {
+        const composition = asRecord(character.composition);
+        if (!isConcreteStaticPose(composition.pose)) {
+          issues.push(`scene ${sceneIndex + 1} Static shot ${shotIndex + 1} character ${characterIndex + 1} needs a concrete resting composition.pose`);
+        }
+        const actions = Array.isArray(composition.actions) ? composition.actions.map(cleanString2).filter(Boolean) : cleanString2(composition.actions) ? [cleanString2(composition.actions)] : [];
+        if (actions.length > 0) {
+          issues.push(`scene ${sceneIndex + 1} Static shot ${shotIndex + 1} character ${characterIndex + 1} must have an empty composition.actions array`);
+        }
+      });
+    });
+  });
+  return issues;
+}
+function staticRepairInstruction(issues) {
+  return [
+    "Repair this valid JSON so every Static shot satisfies the listed semantic requirements. Return only valid JSON and preserve all source facts, character baselines, expressions, and scene meaning.",
+    "For every Static character, composition.pose must directly describe one concrete source-supported resting body arrangement, composition.actions must be an empty array, and gaze may remain source-supported or empty.",
+    "For every scene containing a Static shot, environment.location must name a specific physical setting rather than indoor/outdoor, and environment.backgroundElements must contain 2-3 concrete visible setting details.",
+    "Do not use abstract pose language such as simple pose, stable pose, holding a pose, or posing.",
+    `Problems to repair:
+- ${issues.join(`
+- `)}`
+  ].join(`
+`);
+}
 async function resolveParserConnection(config, userId) {
   logStage(config, "parser_connection_resolve_start", { configuredConnectionId: config.parserConnectionId, modelOverride: Boolean(config.parserModel) });
   if (!config.parserConnectionId)
@@ -2084,18 +2163,28 @@ async function preprocessTargetParagraphs(parserConnection, config, paragraphs, 
 }
 async function parsePayloadWithRepair(parserConnection, config, messages, userId) {
   const raw = await generateParserText(parserConnection, config, messages, userId);
+  let repairSystem = "Repair malformed JSON. Return only valid JSON.";
   try {
     logStage(config, "json_parse_start", { rawLength: raw.length, repair: false });
     const parsed = parseJson(raw);
+    const issues = staticPayloadIssues(parsed, config);
+    if (issues.length > 0) {
+      repairSystem = staticRepairInstruction(issues);
+      throw new Error("Static payload is incomplete.");
+    }
     logStage(config, "json_parse_done", { repair: false });
     return parsed;
   } catch {
     logStage(config, "json_parse_failed", { rawLength: raw.length, repairWillRun: true }, "warn");
     const repaired = await generateParserText(parserConnection, config, [
-      { role: "system", content: "Repair malformed JSON. Return only valid JSON." },
+      { role: "system", content: repairSystem },
       { role: "user", content: raw }
     ], userId);
     const parsed = parseJson(repaired);
+    const remainingIssues = staticPayloadIssues(parsed, config);
+    if (remainingIssues.length > 0) {
+      throw new Error(`Parser did not return a complete Static scene: ${remainingIssues.join("; ")}`);
+    }
     logStage(config, "json_parse_done", { repair: true });
     return parsed;
   }

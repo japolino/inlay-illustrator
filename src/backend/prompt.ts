@@ -305,11 +305,16 @@ function assembleAtomicCharacterComposition(value: unknown, replacements: Map<st
 }
 
 function assembleStaticCharacterComposition(value: unknown, replacements: Map<string, string>): AtomicSection {
-  const gaze = sanitizedAtomicSnippets(asRecord(value).gaze, 1, replacements);
+  const composition = asRecord(value);
+  const pose = sanitizedAtomicSnippets(composition.pose, 1, replacements);
+  const gaze = sanitizedAtomicSnippets(composition.gaze, 1, replacements);
+  const concretePose = pose[0] && !/\bpos(?:e|es|ed|ing)\b/i.test(pose[0])
+    ? pose[0]
+    : "standing upright with arms relaxed at sides";
   return {
     text: unique([
       "slightly forward from the background",
-      "holding a simple stable pose",
+      concretePose,
       ...gaze
     ]).join(", "),
     structured: true
@@ -398,7 +403,9 @@ function assembleAnimaPrompt(
   const location = structuredSnippets(environment.location, 1);
   const timeWeather = structuredSnippets(environment.timeWeather, 1);
   const lightingMood = config.supplement ? structuredSnippets(environment.lightingMood, 3) : [];
-  const backgroundElements = config.supplement ? structuredSnippets(environment.backgroundElements, 5) : [];
+  const backgroundElements = config.supplement || perspectiveMode === "static"
+    ? structuredSnippets(environment.backgroundElements, 5)
+    : [];
   const legacyPlace = location.length === 0 ? stripOrReplaceNames(cleanString(scene.place), replacements, true) : "";
   const environmentSection = [
     ...location.map((value) => stripOrReplaceNames(value, replacements, false)),
