@@ -3,7 +3,8 @@ var DEFAULT_CONFIG = {
   enabled: true,
   autoGenerate: true,
   debugLogging: true,
-  mode: "illustration",
+  adaptiveMode: false,
+  perspectiveMode: "dynamic",
   parserConnectionId: null,
   parserModel: "",
   parserParameters: {},
@@ -18,7 +19,6 @@ var DEFAULT_CONFIG = {
   parserRetries: 1,
   preprocessingEnabled: false,
   inlayImageWidth: 640,
-  assetImageWidth: 400,
   inlayImageMaxHeightVh: 70,
   promptStyle: "anima",
   promptSyntax: "comfyui",
@@ -78,6 +78,8 @@ function normalizeConfig(raw) {
   const {
     danbooruCleanup: _legacyDanbooruCleanup,
     danbooruEndpoint: _legacyDanbooruEndpoint,
+    mode: _legacyMode,
+    assetImageWidth: _legacyAssetImageWidth,
     imageGeneration: _legacyImageGeneration,
     ...current
   } = raw;
@@ -92,7 +94,8 @@ function normalizeConfig(raw) {
   return {
     ...DEFAULT_CONFIG,
     ...current,
-    mode: raw.mode === "asset" ? "asset" : raw.mode === "experimental" ? "experimental" : "illustration",
+    adaptiveMode: raw.adaptiveMode === true,
+    perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" ? raw.perspectiveMode : raw.mode === "asset" ? "static" : "dynamic",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
@@ -107,7 +110,6 @@ function normalizeConfig(raw) {
     parserRetries: clampInt(raw.parserRetries, 0, 5, DEFAULT_CONFIG.parserRetries),
     preprocessingEnabled: raw.preprocessingEnabled === true,
     inlayImageWidth: clampInt(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
-    assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
     promptStyle: raw.promptStyle === "default" ? "default" : "anima",
     promptSyntax: raw.promptSyntax === "nai" ? "nai" : "comfyui",
@@ -186,6 +188,12 @@ var PANEL_STYLES = `
   .inlay-select-control,.inlay-select-trigger,.inlay-native-select{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
   .inlay-row input,.inlay-row textarea,.inlay-row select{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:7px 9px;font:inherit}
   .inlay-row textarea{min-height:76px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
+  .inlay-range-choice{display:flex;flex-direction:column;gap:4px;width:100%}
+  .inlay-range-choice input[type="range"]{padding:0;border:0;background:transparent;accent-color:var(--lumiverse-accent)}
+  .inlay-range-choice input[type="range"]:disabled{opacity:.55}
+  .inlay-range-labels{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;color:var(--lumiverse-text-muted);font-size:11px;text-align:center}
+  .inlay-range-labels span:first-child{text-align:left}.inlay-range-labels span:last-child{text-align:right}
+  .inlay-range-labels .is-active{color:var(--lumiverse-text);font-weight:600}
   .inlay-hint{grid-column:2;color:var(--lumiverse-text-muted);font-size:12px;line-height:1.35}
   .inlay-actions{display:flex;flex-wrap:wrap;gap:8px}
   .inlay-actions button{border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:8px 10px;cursor:pointer;font:inherit}
@@ -196,9 +204,14 @@ var PANEL_STYLES = `
   .inlay-status{padding:9px 10px;border:1px solid var(--lumiverse-border);border-radius:7px;background:var(--lumiverse-fill-subtle);font-size:12px;color:var(--lumiverse-text-muted);white-space:pre-wrap;min-height:18px}
   .inlay-lightbox-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);gap:16px;align-items:start;min-width:0}
   .inlay-lightbox-image{display:block;width:100%;height:auto;max-height:calc(100vh - 150px);object-fit:contain;border-radius:8px;background:#080808}
-  .inlay-lightbox-prompt-panel{display:flex;flex-direction:column;min-width:0;max-height:calc(100vh - 150px);border:1px solid var(--lumiverse-border);border-radius:8px;background:var(--lumiverse-fill-subtle);overflow:hidden}
+  .inlay-lightbox-prompt-panel{display:flex;flex-direction:column;min-width:0;max-height:calc(100vh - 150px);border:1px solid var(--lumiverse-border);border-radius:8px;background:var(--lumiverse-fill-subtle);overflow:auto}
   .inlay-lightbox-prompt-panel h3{flex:none;margin:0;padding:12px 14px;border-bottom:1px solid var(--lumiverse-border);font-size:14px;color:var(--lumiverse-text)}
-  .inlay-lightbox-prompt{flex:1;min-height:120px;margin:0;padding:14px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--lumiverse-text)}
+  .inlay-lightbox-meta{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0}
+  .inlay-lightbox-meta span{padding:4px 8px;border:1px solid var(--lumiverse-border);border-radius:999px;background:var(--lumiverse-fill);font-size:11px;color:var(--lumiverse-text-muted)}
+  .inlay-lightbox-prompt-block{min-width:0;padding:12px 14px 0}
+  .inlay-lightbox-prompt-block:last-child{padding-bottom:14px}
+  .inlay-lightbox-prompt-block h4{margin:0 0 6px;font-size:12px;color:var(--lumiverse-text-muted)}
+  .inlay-lightbox-prompt{min-height:80px;margin:0;padding:10px;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--lumiverse-text)}
   @media(max-width:800px){.inlay-lightbox-layout{grid-template-columns:1fr}.inlay-lightbox-image{max-height:55vh}.inlay-lightbox-prompt-panel{max-height:35vh}}
 `;
 
@@ -257,15 +270,16 @@ function renderDiagnosticsSection({ ui, actions }) {
 }
 
 // src/frontend/sections/generation.ts
-function renderGenerationSection({ ui, actions, rerender }) {
+function renderGenerationSection({ ui, config, actions, rerender }) {
   const section = ui.section("Generation", true);
   ui.addSwitch(section, "enabled", "Power");
   ui.addSwitch(section, "autoGenerate", "Auto generate");
-  ui.addSelect(section, "mode", "Mode", [
-    { value: "illustration", label: "Illustration" },
-    { value: "experimental", label: "Experimental (Anima)" },
-    { value: "asset", label: "Asset" }
-  ], "Switch between the stable parser, experimental atomic Anima parser, and asset portraits.", rerender);
+  ui.addSwitch(section, "adaptiveMode", "Adaptive Mode", "Let the parser choose the strongest perspective for each image.", rerender);
+  ui.addRangeChoice(section, "perspectiveMode", "Perspective", [
+    { value: "creative", label: "Creative" },
+    { value: "static", label: "Static" },
+    { value: "dynamic", label: "Dynamic" }
+  ], config.adaptiveMode, config.adaptiveMode ? "Selected independently by the parser for each image." : "Creative isolates a visual detail, Static favors stable portrait-like beats, and Dynamic follows scene action.");
   ui.addNumber(section, "minImages", "Minimum images", 1, 12);
   ui.addNumber(section, "maxImages", "Maximum images", 1, 12);
   ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 8);
@@ -349,7 +363,6 @@ function renderMemorySection({ ui, characterAppearance, actions }) {
 function renderOutputSection({ ui }) {
   const section = ui.section("Image output", false);
   ui.addNumber(section, "inlayImageWidth", "Illustration width", 120, 2400);
-  ui.addNumber(section, "assetImageWidth", "Asset width", 120, 2400);
   ui.addNumber(section, "inlayImageMaxHeightVh", "Maximum height", 10, 100, "Viewport height percentage.");
   ui.addTextarea(section, "ignoredTags", "Ignored tags", "Separate tags with commas or semicolons.");
 }
@@ -399,21 +412,17 @@ function createPresetId() {
 }
 function renderPromptSection({ ui, config, actions, rerender }) {
   const section = ui.section("Prompt output", false);
-  if (config.mode === "experimental") {
-    ui.addSummary(section, "Experimental mode uses the atomic Anima parser and prompt renderer.");
-  } else {
-    ui.addSelect(section, "promptStyle", "Prompt style", [
-      { value: "default", label: "Default" },
-      { value: "anima", label: "Anima" }
-    ]);
-  }
+  ui.addSelect(section, "promptStyle", "Prompt style", [
+    { value: "default", label: "Default" },
+    { value: "anima", label: "Anima" }
+  ], "", rerender);
   ui.addSelect(section, "promptSyntax", "Prompt syntax", [
     { value: "nai", label: "NovelAI" },
     { value: "comfyui", label: "ComfyUI" }
   ]);
   ui.addSwitch(section, "originalReference", "Source reference");
   ui.addText(section, "originalCreationName", "Creation name");
-  ui.addSwitch(section, "supplement", config.mode === "experimental" ? "Natural/shared detail" : "Natural supplement");
+  ui.addSwitch(section, "supplement", config.promptStyle === "anima" ? "Natural/shared detail" : "Natural supplement");
   ui.addSubtitle(section, "Prompt presets");
   const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
   const presetSelectTarget = ui.row(section, "Active preset", "Preset prefixes are inserted before the custom prompt fields below.");
@@ -622,13 +631,51 @@ class UiBuilder {
     parent.append(wrapper);
     return target;
   }
-  addSwitch(parent, key, label, hint = "") {
+  addSwitch(parent, key, label, hint = "", afterChange) {
     const target = this.row(parent, label, hint);
     this.track(this.ctx.components.mountSwitch(target, {
       checked: Boolean(this.config[key]),
       ariaLabel: label,
-      onChange: (checked) => this.patchConfig({ [key]: checked })
+      onChange: (checked) => {
+        this.patchConfig({ [key]: checked });
+        afterChange?.();
+      }
     }));
+  }
+  addRangeChoice(parent, key, label, choices, disabled = false, hint = "") {
+    const target = this.row(parent, label, hint);
+    const wrapper = document.createElement("div");
+    wrapper.className = "inlay-range-choice";
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = "0";
+    input.max = String(Math.max(0, choices.length - 1));
+    input.step = "1";
+    input.disabled = disabled;
+    input.setAttribute("aria-label", label);
+    const selectedIndex = Math.max(0, choices.findIndex((choice) => choice.value === String(this.config[key])));
+    input.value = String(selectedIndex);
+    const labels = document.createElement("div");
+    labels.className = "inlay-range-labels";
+    const labelNodes = choices.map((choice) => {
+      const node = document.createElement("span");
+      node.textContent = choice.label;
+      labels.append(node);
+      return node;
+    });
+    const update = () => {
+      const index = Number(input.value);
+      labelNodes.forEach((node, candidate) => node.classList.toggle("is-active", candidate === index));
+    };
+    input.addEventListener("input", update);
+    input.addEventListener("change", () => {
+      const choice = choices[Number(input.value)];
+      if (choice)
+        this.patchConfig({ [key]: choice.value });
+    });
+    update();
+    wrapper.append(input, labels);
+    target.append(wrapper);
   }
   addNumber(parent, key, label, min, max, hint = "") {
     const target = this.row(parent, label, hint);
@@ -743,10 +790,23 @@ class SettingsRenderer {
 }
 
 // src/frontend/lightbox.ts
-var INLAY_IMAGE_SELECTOR = "img[data-inlay-illustrator-prompt]";
+var INLAY_IMAGE_SELECTOR = '[data-inlay-illustrator="true"] img';
 var INLAY_WRAPPER_SELECTOR = '[data-inlay-illustrator="true"]';
+function disableNativeInlayLightboxes(root) {
+  root.querySelectorAll(`${INLAY_WRAPPER_SELECTOR} img[data-lightbox]`).forEach((image) => image.removeAttribute("data-lightbox"));
+}
 function resolveInlayPrompt(attributePrompt, fallbackPrompt) {
   return (attributePrompt || fallbackPrompt || "").trim();
+}
+function resolveInlayDetails(attributePrompt, fallbackPrompt, attributeNegative, fallbackNegative, perspectiveMode, perspectiveSource) {
+  const normalizedMode = perspectiveMode?.trim().toLowerCase();
+  const normalizedSource = perspectiveSource?.trim().toLowerCase();
+  return {
+    prompt: resolveInlayPrompt(attributePrompt, fallbackPrompt),
+    negativePrompt: resolveInlayPrompt(attributeNegative, fallbackNegative),
+    perspectiveMode: normalizedMode === "creative" || normalizedMode === "static" || normalizedMode === "dynamic" ? normalizedMode : null,
+    perspectiveSource: normalizedSource === "adaptive" || normalizedSource === "manual" ? normalizedSource : null
+  };
 }
 function findInlayImage(target) {
   if (!(target instanceof Element))
@@ -756,12 +816,24 @@ function findInlayImage(target) {
     return null;
   return image;
 }
-function promptForImage(image) {
+function detailsForImage(image) {
   const wrapper = image.closest(INLAY_WRAPPER_SELECTOR);
   const fallback = wrapper?.querySelector(".inlay-illustrator-prompt")?.textContent || null;
-  return resolveInlayPrompt(image.getAttribute("data-inlay-illustrator-prompt"), fallback);
+  const fallbackNegative = wrapper?.querySelector(".inlay-illustrator-negative-prompt")?.textContent || null;
+  return resolveInlayDetails(image.getAttribute("data-inlay-illustrator-prompt"), fallback, image.getAttribute("data-inlay-illustrator-negative-prompt"), fallbackNegative, image.getAttribute("data-inlay-illustrator-perspective"), image.getAttribute("data-inlay-illustrator-perspective-source"));
 }
-function appendLightboxContent(root, image, prompt) {
+function promptBlock(label, value, fallback) {
+  const block = document.createElement("section");
+  block.className = "inlay-lightbox-prompt-block";
+  const heading = document.createElement("h4");
+  heading.textContent = label;
+  const content = document.createElement("pre");
+  content.className = "inlay-lightbox-prompt";
+  content.textContent = value || fallback;
+  block.append(heading, content);
+  return block;
+}
+function appendLightboxContent(root, image, details) {
   const layout = document.createElement("div");
   layout.className = "inlay-lightbox-layout";
   const preview = document.createElement("img");
@@ -771,23 +843,39 @@ function appendLightboxContent(root, image, prompt) {
   const panel = document.createElement("section");
   panel.className = "inlay-lightbox-prompt-panel";
   const heading = document.createElement("h3");
-  heading.textContent = "Generation prompt";
-  const promptText = document.createElement("pre");
-  promptText.className = "inlay-lightbox-prompt";
-  promptText.textContent = prompt || "No prompt was recorded for this image.";
-  panel.append(heading, promptText);
+  heading.textContent = "Generation details";
+  panel.append(heading);
+  if (details.perspectiveMode || details.perspectiveSource) {
+    const metadata = document.createElement("div");
+    metadata.className = "inlay-lightbox-meta";
+    if (details.perspectiveMode) {
+      const mode = document.createElement("span");
+      mode.textContent = `Perspective: ${details.perspectiveMode[0].toUpperCase()}${details.perspectiveMode.slice(1)}`;
+      metadata.append(mode);
+    }
+    if (details.perspectiveSource) {
+      const source = document.createElement("span");
+      source.textContent = `Selection: ${details.perspectiveSource === "adaptive" ? "Adaptive" : "Manual"}`;
+      metadata.append(source);
+    }
+    panel.append(metadata);
+  }
+  panel.append(promptBlock("Positive prompt", details.prompt, "No prompt was recorded for this image."), promptBlock("Negative prompt", details.negativePrompt, "No negative prompt was recorded for this image."));
   layout.append(preview, panel);
   root.replaceChildren(layout);
 }
 function installInlayLightbox(ctx) {
   let activeModal = null;
+  disableNativeInlayLightboxes(document);
+  const observer = new MutationObserver(() => disableNativeInlayLightboxes(document));
+  observer.observe(document.documentElement, { childList: true, subtree: true });
   const onClick = (event) => {
     if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
       return;
-    const image = findInlayImage(event.target);
+    const image = event.composedPath().map((target) => findInlayImage(target ?? null)).find((candidate) => Boolean(candidate)) || findInlayImage(event.target);
     if (!image)
       return;
-    const prompt = promptForImage(image);
+    const details = detailsForImage(image);
     try {
       activeModal?.dismiss();
       const modal = ctx.ui.showModal({
@@ -796,7 +884,7 @@ function installInlayLightbox(ctx) {
         maxHeight: Math.max(480, window.innerHeight - 48)
       });
       activeModal = modal;
-      appendLightboxContent(modal.root, image, prompt);
+      appendLightboxContent(modal.root, image, details);
       modal.onDismiss(() => {
         if (activeModal === modal)
           activeModal = null;
@@ -810,6 +898,7 @@ function installInlayLightbox(ctx) {
   };
   window.addEventListener("click", onClick, true);
   return () => {
+    observer.disconnect();
     window.removeEventListener("click", onClick, true);
     activeModal?.dismiss();
     activeModal = null;

@@ -56,6 +56,7 @@ export function exactVisualKey(entry: NormalizedScene): string {
   const environment = entry.scene.environment || {};
   return JSON.stringify({
     paragraph: entry.parserParagraph,
+    perspectiveMode: normalizedVisualValue(entry.shot.perspectiveMode),
     camera: normalizedVisualValue(entry.shot.camera),
     situation: normalizedVisualValue(entry.shot.situation),
     sceneAction: normalizedVisualValue(entry.scene.action),
@@ -63,7 +64,9 @@ export function exactVisualKey(entry: NormalizedScene): string {
     characters: cleanArray<CharacterJson>(entry.shot.characters).map((character) => ({
       expression: normalizedVisualValue(character.expression),
       action: normalizedVisualValue(character.action),
-      composition: normalizedVisualValue(character.composition)
+      composition: normalizedVisualValue(character.composition),
+      renderScope: normalizedVisualValue(character.renderScope),
+      visibleTags: normalizedVisualValue(character.visibleTags)
     })),
     sharedComposition: normalizedVisualValue(entry.shot.sharedComposition || entry.shot.supplement),
     environment: {
@@ -79,24 +82,14 @@ export function selectPromptEntries(payload: ParsedPayload, paragraphs: Prepared
   const normalized = normalizeScenePayload(payload);
   const paragraphMap = new Map(paragraphs.map((paragraph) => [paragraph.parserIndex, paragraph]));
   const valid = normalized.filter((entry) => paragraphMap.has(entry.parserParagraph));
-  let distinct: NormalizedScene[];
-  if (config.mode === "asset") {
-    const seenParagraphs = new Set<number>();
-    distinct = valid.filter((entry) => {
-      if (seenParagraphs.has(entry.parserParagraph)) return false;
-      seenParagraphs.add(entry.parserParagraph);
-      return true;
-    });
-  } else {
-    const seenVisuals = new Set<string>();
-    distinct = valid.filter((entry) => {
-      const key = exactVisualKey(entry);
-      if (seenVisuals.has(key)) return false;
-      seenVisuals.add(key);
-      return true;
-    });
-  }
-  const limit = config.mode === "asset" ? paragraphs.length : config.maxImages;
+  const seenVisuals = new Set<string>();
+  const distinct = valid.filter((entry) => {
+    const key = exactVisualKey(entry);
+    if (seenVisuals.has(key)) return false;
+    seenVisuals.add(key);
+    return true;
+  });
+  const limit = config.maxImages;
   const selected = distinct
     .slice(0, limit)
     .map((entry, modelPriority) => ({ entry, modelPriority }))
@@ -115,6 +108,7 @@ export function selectPromptEntries(payload: ParsedPayload, paragraphs: Prepared
     distinctCandidateCount: distinct.length,
     selectedCount: prompts.length,
     selectedParagraphs: selected.map((entry) => entry.parserParagraph),
+    perspectives: prompts.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource })),
     cameraTags: selected.map((entry) => normalizedVisualValue(entry.shot.camera))
   });
   return prompts;

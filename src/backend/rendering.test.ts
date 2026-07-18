@@ -29,7 +29,7 @@ describe("inlay rendering", () => {
     expect(rendered.split(MARKER)).toHaveLength(4);
   });
 
-  test("clamps invalid paragraph targets and applies mode-specific dimensions", () => {
+  test("clamps invalid paragraph targets and applies configured dimensions", () => {
     const rendered = renderInlaidMessage(
       "First.\n\nSecond.",
       {
@@ -39,8 +39,7 @@ describe("inlay rendering", () => {
       },
       {
         ...DEFAULT_CONFIG,
-        mode: "asset",
-        assetImageWidth: 812,
+        inlayImageWidth: 812,
         inlayImageMaxHeightVh: 63
       }
     );
@@ -75,6 +74,9 @@ describe("inlay rendering", () => {
       {
         imageUrls: ["/multiline.png"],
         prompts: ["quality tags,\n\n1girl,\n\nThe girl turns toward the viewer."],
+        negativePrompts: ["lowres, bad anatomy"],
+        perspectiveModes: ["creative"],
+        perspectiveSources: ["adaptive"],
         paragraphs: [1]
       },
       DEFAULT_CONFIG
@@ -85,9 +87,13 @@ describe("inlay rendering", () => {
 
     expect(block.split("\n")).toHaveLength(1);
     expect(block).toContain("quality tags,&#10;&#10;1girl,&#10;&#10;The girl turns toward the viewer.");
-    expect(block).toContain("data-lightbox");
+    expect(block).not.toContain("data-lightbox");
     expect(block).toContain("data-inlay-illustrator-prompt=");
+    expect(block).toContain('data-inlay-illustrator-negative-prompt="lowres, bad anatomy"');
+    expect(block).toContain('data-inlay-illustrator-perspective="creative"');
+    expect(block).toContain('data-inlay-illustrator-perspective-source="adaptive"');
     expect(block).toContain('<pre class="inlay-illustrator-prompt" hidden>');
+    expect(block).toContain('<pre class="inlay-illustrator-negative-prompt" hidden>lowres, bad anatomy</pre>');
   });
 
   test("encodes provider image IDs for the Lumiverse result route", () => {

@@ -1,4 +1,4 @@
-import type { Config } from "../shared/config.js";
+import type { Config, PerspectiveMode } from "../shared/config.js";
 import { buildLorebookContextSnapshot, buildParserContext, isOwnMessage, type LorebookContextSnapshot } from "./context.js";
 import { buildImageParameters, prepareAndDispatchImageJobs, resolveImageConnection } from "./images.js";
 import { logStage } from "./logging.js";
@@ -34,7 +34,15 @@ declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 type ImageGenerationResult = Awaited<ReturnType<typeof spindle.imageGen.generate>>;
 type ParsedSelection = { parsed: ParsedPayload; selected: PromptEntry[] };
 type PreparedImageStage = { jobs: PreparedImageJob[]; results: ImageGenerationResult[] };
-type ImageAssets = { prompts: string[]; paragraphs: number[]; imageIds: string[]; imageUrls: string[] };
+type ImageAssets = {
+  prompts: string[];
+  negativePrompts: string[];
+  perspectiveModes: PerspectiveMode[];
+  perspectiveSources: Array<"adaptive" | "manual">;
+  paragraphs: number[];
+  imageIds: string[];
+  imageUrls: string[];
+};
 
 type ParseStageInput = {
   chatId: string;
@@ -99,8 +107,9 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
         cacheCharacters: Object.keys(state.characterAppearance).length,
         promptStyle: config.promptStyle,
         promptSyntax: config.promptSyntax,
-        mode: config.mode,
-        maxCharacters: config.mode === "asset" ? 1 : config.maxCharacters,
+        adaptiveMode: config.adaptiveMode,
+        perspectiveMode: config.perspectiveMode,
+        maxCharacters: config.maxCharacters,
         preprocessingEnabled: config.preprocessingEnabled,
         contextDiagnostics: context.diagnostics
       });
@@ -169,7 +178,8 @@ function logParsedSelection(
     parserParagraphs: selected.map((entry) => entry.parserParagraph),
     originalParagraphs: selected.map((entry) => entry.paragraph),
     promptLengths: selected.map((entry) => renderPrompt(entry.prompt, config.promptSyntax).length),
-    negativeLengths: selected.map((entry) => entry.negative.length)
+    negativeLengths: selected.map((entry) => entry.negative.length),
+    perspectives: selected.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource }))
   });
 }
 
@@ -199,6 +209,8 @@ async function prepareAndDispatchImages(
       prompt,
       negative: entry.negative || "",
       paragraph: entry.paragraph,
+      perspectiveMode: entry.perspectiveMode,
+      perspectiveSource: entry.perspectiveSource,
       parameters
     };
     logStage(config, "image_generation_prepared", {
@@ -264,6 +276,9 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
   const imageIds: string[] = [];
   const imageUrls: string[] = [];
   const prompts = stage.jobs.map((job) => job.prompt);
+  const negativePrompts = stage.jobs.map((job) => job.negative);
+  const perspectiveModes = stage.jobs.map((job) => job.perspectiveMode || config.perspectiveMode);
+  const perspectiveSources = stage.jobs.map((job) => job.perspectiveSource || "manual");
   const paragraphs = stage.jobs.map((job) => job.paragraph);
   for (const [index, result] of stage.results.entries()) {
     if (result.imageId) imageIds.push(result.imageId);
@@ -278,7 +293,7 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
       model: result.model || null
     });
   }
-  return { prompts, paragraphs, imageIds, imageUrls };
+  return { prompts, negativePrompts, perspectiveModes, perspectiveSources, paragraphs, imageIds, imageUrls };
 }
 
 async function persistGeneration(input: PersistStageInput): Promise<GeneratedRecord> {
@@ -288,6 +303,9 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
     messageId,
     swipeId,
     prompts: assets.prompts,
+    negativePrompts: assets.negativePrompts,
+    perspectiveModes: assets.perspectiveModes,
+    perspectiveSources: assets.perspectiveSources,
     paragraphs: assets.paragraphs,
     imageIds: assets.imageIds,
     imageUrls: assets.imageUrls,

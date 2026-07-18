@@ -8,7 +8,6 @@ describe("ordered Anima prompt composition", () => {
   test("renders a multi-character sofa scene in exact hybrid order with ComfyUI blank lines", () => {
     const config = {
       ...DEFAULT_CONFIG,
-      mode: "experimental" as const,
       promptSyntax: "comfyui" as const,
       customPositivePrefix: "<lora:sofa:0.8>;;",
       customPositiveSuffix: "cinematic finish!",
@@ -68,13 +67,13 @@ describe("ordered Anima prompt composition", () => {
       "score_9, (detail:1.25)",
       "<lora:sofa:0.8>",
       "2girls",
-      "wide shot, from side",
       "left side of the sofa, reclining into the cushions, looking toward the other girl",
       "girl, blonde hair, blue eyes, red dress, smiling",
       "right side of the sofa, sitting upright, looking left",
       "girl, black hair, green eyes, white blouse, black skirt, gentle smile",
       "holding hands, leaning together on the sofa",
       "sunken living room, rainy evening, warm lamp light, soft shadows, intimate mood, green velvet sofa, low coffee table, rainy window, bookshelf, cream rug",
+      "wide shot, from side",
       "cinematic finish"
     ].join(",\n\n"));
     expect(entry.negative).toBe("lowres, bad anatomy, extra fingers, malformed hands, text, watermark");
@@ -83,7 +82,7 @@ describe("ordered Anima prompt composition", () => {
   });
 
   test("keeps character composition and location/time when natural/shared detail is disabled", () => {
-    const config = { ...DEFAULT_CONFIG, mode: "experimental" as const, promptSyntax: "nai" as const, supplement: false };
+    const config = { ...DEFAULT_CONFIG, promptSyntax: "nai" as const, supplement: false };
     const entry = assemblePrompt({ environment: {
       location: "railway platform",
       timeWeather: "foggy dawn",
@@ -108,12 +107,12 @@ describe("ordered Anima prompt composition", () => {
     }, config, 1, 1);
 
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe(
-      "1girl, close-up, foreground, leaning across the platform edge, girl, black hair, reaching for another, railway platform, foggy dawn"
+      "1girl, foreground, leaning across the platform edge, girl, black hair, reaching for another, railway platform, foggy dawn, close-up"
     );
   });
 
   test("uses legacy character and shared action tags only when atomic composition is missing", () => {
-    const config = { ...DEFAULT_CONFIG, mode: "experimental" as const, promptSyntax: "nai" as const };
+    const config = { ...DEFAULT_CONFIG, promptSyntax: "nai" as const };
     const entry = assemblePrompt({ environment: { location: "garden", timeWeather: "day" } }, {
       situation: "1girl",
       action: "waving goodbye",
@@ -122,12 +121,12 @@ describe("ordered Anima prompt composition", () => {
     }, config, 1, 1);
 
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe(
-      "1girl, portrait, girl, red hair, standing, looking away, waving goodbye, garden, day"
+      "1girl, girl, red hair, standing, looking away, waving goodbye, garden, day, portrait"
     );
   });
 
   test("accepts legacy supplement and place as runtime fallbacks", () => {
-    const config = { ...DEFAULT_CONFIG, mode: "experimental" as const, promptSyntax: "nai" as const };
+    const config = { ...DEFAULT_CONFIG, promptSyntax: "nai" as const };
     const entry = assemblePrompt({ place: "interior, old library" }, {
       situation: "1girl",
       action: "reading",
@@ -137,12 +136,12 @@ describe("ordered Anima prompt composition", () => {
     }, config, 1, 1);
 
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe(
-      "1girl, from above, girl, brown hair, sitting, The lone reader is framed between towering shelves, interior, old library"
+      "1girl, girl, brown hair, sitting, The lone reader is framed between towering shelves, interior, old library, from above"
     );
   });
 
   test("keeps uncovered action tags, prioritizes camera, compacts environment, and anonymizes POV names", () => {
-    const config = { ...DEFAULT_CONFIG, mode: "experimental" as const, promptSyntax: "comfyui" as const };
+    const config = { ...DEFAULT_CONFIG, promptSyntax: "comfyui" as const };
     const entry = assemblePrompt({ environment: {
       location: "residential street",
       timeWeather: "evening",
@@ -163,19 +162,19 @@ describe("ordered Anima prompt composition", () => {
 
     expect(rendered).toBe([
       "1girl",
-      "cowboy shot, low angle, pov",
       "from the viewer's POV, the girl spins toward the viewer and fixes her gaze on the camera",
       "girl, short golden blonde hair, red eyes, annoyed, blush, turning around, marching toward viewer",
-      "residential street, evening, warm amber streetlamp light, tense atmosphere, streetlamps, houses, paved sidewalk"
+      "residential street, evening, warm amber streetlamp light, tense atmosphere, streetlamps, houses, paved sidewalk",
+      "cowboy shot, low angle, pov"
     ].join(",\n\n"));
     expect(rendered).not.toContain("Jay");
     expect(rendered).toContain("turning around");
     expect(rendered).not.toContain("looking at viewer");
-    expect(rendered.indexOf("cowboy shot")).toBeLessThan(rendered.indexOf("short golden blonde hair"));
+    expect(rendered.indexOf("cowboy shot")).toBeGreaterThan(rendered.indexOf("short golden blonde hair"));
   });
 
   test("renders atomic scene data once and rejects camera field leakage", () => {
-    const config = { ...DEFAULT_CONFIG, mode: "experimental" as const, promptSyntax: "comfyui" as const };
+    const config = { ...DEFAULT_CONFIG, promptSyntax: "comfyui" as const };
     const entry = assemblePrompt({ environment: {
       location: "quiet residential road",
       timeWeather: "dusk with falling cherry blossom petals",
@@ -212,10 +211,10 @@ describe("ordered Anima prompt composition", () => {
     const rendered = renderPrompt(entry.prompt, config.promptSyntax);
     expect(rendered).toBe([
       "1girl",
-      "medium shot, eye level, pov, shallow depth of field",
       "center frame, leaning forward with both hands clasped behind her back, mid-turn toward the viewer, looking directly at the viewer",
       "girl, short golden blonde hair, red eyes, white pupils, fair skin, round face, petite, small breasts, black sailor uniform, red sailor ribbon, black pleated skirt, white pantyhose, brown loafers, suspicious, narrowed eyes, parted lips",
-      "quiet residential road, dusk with falling cherry blossom petals, warm amber streetlamp rim light, soft evening glow, cherry blossom trees, lamplit pavement"
+      "quiet residential road, dusk with falling cherry blossom petals, warm amber streetlamp rim light, soft evening glow, cherry blossom trees, lamplit pavement",
+      "medium shot, eye level, pov, shallow depth of field"
     ].join(",\n\n"));
     expect(rendered).not.toContain("streetlight behind her ear");
     expect(rendered).not.toContain("turning around");
@@ -224,68 +223,51 @@ describe("ordered Anima prompt composition", () => {
   });
 });
 
-describe("stable Illustration rollback", () => {
-  test("uses the original place, action, and supplement parser contract", () => {
-    const instruction = parserInstruction(DEFAULT_CONFIG);
+describe("perspective selection and projection", () => {
+  test("uses the parser's per-shot choice in Adaptive Mode and projects only Creative visible tags", () => {
+    const config = { ...DEFAULT_CONFIG, adaptiveMode: true, promptSyntax: "nai" as const };
+    const entry = assemblePrompt({ environment: { location: "train carriage", timeWeather: "night" } }, {
+      paragraph: 1,
+      perspectiveMode: "creative",
+      situation: "1girl",
+      camera: { framing: "body-part focus", angle: "", perspective: "", focus: ["shallow depth of field"] },
+      characters: [{
+        name: "Mira",
+        label: "girl",
+        appearance: "long silver hair, blue eyes, fair skin",
+        body: "tall, curvy",
+        attire: "red coat, black skirt, leather boots",
+        expression: "smile",
+        renderScope: "close view of her red sleeve brushing the window",
+        visibleTags: "girl, red sleeve, fingertips, window reflection",
+        composition: { position: "foreground", pose: "", actions: ["touching the glass"], gaze: "" }
+      }]
+    }, config, 1, 1);
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
 
-    expect(instruction).toContain('"place": "string"');
-    expect(instruction).toContain('"camera": "string"');
-    expect(instruction).toContain('"action": "string"');
-    expect(instruction).toContain('"supplement": "string"');
-    expect(instruction).not.toContain('"composition": {');
-    expect(instruction).not.toContain('"environment": {');
-    expect(instruction).not.toContain("Atomic Natural Composition");
+    expect(entry).toMatchObject({ perspectiveMode: "creative", perspectiveSource: "adaptive" });
+    expect(rendered).toContain("red sleeve, fingertips, window reflection");
+    expect(rendered).not.toContain("long silver hair");
+    expect(rendered).not.toContain("blue eyes");
+    expect(rendered).not.toContain("black skirt");
+    expect(rendered).not.toContain("leather boots");
   });
 
-  test("restores the original Anima section order, supplement placement, and ComfyUI separators", () => {
-    const config = {
-      ...DEFAULT_CONFIG,
-      promptSyntax: "comfyui" as const,
-      customPositiveSuffix: "finish!",
-      customNegative: "bad hands; lowres!"
-    };
-    const entry = assemblePrompt({ place: "exterior, residential street, amber streetlight" }, {
-      situation: "1girl",
-      action: "turning around",
-      camera: "medium close-up, from side",
-      characters: [{
-        label: "girl",
-        appearance: "short blonde hair, red eyes",
-        attire: "black sailor uniform",
-        expression: "suspicious",
-        action: "leaning inward, looking at viewer"
-      }],
-      supplement: "The girl is framed against the quiet road.",
-      negative: "text;"
-    }, config, 1, 1);
+  test("manual perspective overrides an incompatible parser value", () => {
+    const config = { ...DEFAULT_CONFIG, adaptiveMode: false, perspectiveMode: "static" as const };
+    const entry = assemblePrompt({}, { perspectiveMode: "creative", situation: "1girl", characters: [{ label: "girl", appearance: "blue hair" }] }, config, 1, 1);
+    expect(entry).toMatchObject({ perspectiveMode: "static", perspectiveSource: "manual" });
+    expect(renderPrompt(entry.prompt, config.promptSyntax)).toContain("blue hair");
+  });
 
-    expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe([
-      "1girl",
-      "girl, short blonde hair, red eyes, black sailor uniform, suspicious",
-      "turning around, leaning inward, looking at viewer",
-      "medium close-up, from side",
-      "exterior, residential street, amber streetlight",
-      "The girl is framed against the quiet road.",
-      "finish!"
-    ].join(",\n"));
-    expect(entry.negative).toBe("bad hands; lowres!, text;");
+  test("falls back to Dynamic when an adaptive parser omits or misspells its choice", () => {
+    const config = { ...DEFAULT_CONFIG, adaptiveMode: true };
+    const entry = assemblePrompt({}, { perspectiveMode: "cinematic", situation: "1girl" }, config, 1, 1);
+    expect(entry).toMatchObject({ perspectiveMode: "dynamic", perspectiveSource: "adaptive" });
   });
 });
 
 describe("prompt compatibility and normalization", () => {
-  test("keeps Anima assets compact and tags-only", () => {
-    const config = { ...DEFAULT_CONFIG, mode: "asset" as const, promptSyntax: "nai" as const };
-    const entry = assemblePrompt({ place: "bedroom" }, {
-      situation: "1girl",
-      supplement: "This prose must not render.",
-      characters: [{ label: "girl", appearance: "silver hair", action: "standing" }]
-    }, config, 1, 1);
-
-    expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe(
-      "1girl, girl, silver hair, standing, looking at viewer, portrait, cowboy shot, bedroom, white background, simple background"
-    );
-  });
-
   test("restores stable Default formatting without experimental punctuation normalization", () => {
     const config = {
       ...DEFAULT_CONFIG,
@@ -300,7 +282,7 @@ describe("prompt compatibility and normalization", () => {
       situation: "1girl",
       action: "standing!",
       characters: [{ label: "girl", appearance: "blue hair" }],
-      supplement: "Centered against a tall canvas.",
+      supplement: "Centered against a tall canvas; soft rim light!",
       negative: "text;"
     }, config, 1, 1);
 
@@ -309,16 +291,30 @@ describe("prompt compatibility and normalization", () => {
       "portrait;, 1girl, standing!",
       "studio; night.",
       "girl, blue hair",
-      "Centered against a tall canvas.",
+      "Centered against a tall canvas, soft rim light",
       "finish?"
     ].join(",\n"));
     expect(entry.negative).toBe("bad hands; lowres!, text;");
+  });
+
+  test("normalizes supplement punctuation for NovelAI without changing surrounding legacy tags", () => {
+    const config = { ...DEFAULT_CONFIG, promptStyle: "default" as const, promptSyntax: "nai" as const };
+    const entry = assemblePrompt({ place: "studio; night." }, {
+      situation: "1girl",
+      characters: [{ label: "girl", appearance: "blue hair" }],
+      supplement: "Seen through a mirror;;; framed by flowers?"
+    }, config, 1, 1);
+
+    expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe(
+      "1girl, studio; night., girl, blue hair, Seen through a mirror, framed by flowers"
+    );
+    expect(parserInstruction(config)).toContain("Separate supplement phrases with commas, never semicolons");
   });
 });
 
 describe("Anima parser contract and visual distinctness", () => {
   test("requests composition and budgeted structured environment without requesting supplement", () => {
-    const instruction = parserInstruction({ ...DEFAULT_CONFIG, mode: "experimental" });
+    const instruction = parserInstruction(DEFAULT_CONFIG);
 
     expect(instruction).toContain('"composition": {');
     expect(instruction).toContain('"position": "string"');
@@ -327,6 +323,9 @@ describe("Anima parser contract and visual distinctness", () => {
     expect(instruction).toContain('"interaction": ["string"]');
     expect(instruction).toContain('"camera": {');
     expect(instruction).toContain('"environment": {');
+    expect(instruction).toContain('"perspectiveMode": "creative | static | dynamic"');
+    expect(instruction).toContain('"renderScope": "string"');
+    expect(instruction).toContain('"visibleTags": "string"');
     expect(instruction).toContain("exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements");
     expect(instruction).toContain("Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone");
     expect(instruction).toContain("Do not put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle");
@@ -335,7 +334,7 @@ describe("Anima parser contract and visual distinctness", () => {
     expect(instruction).toContain("A fact must have exactly one owner");
     expect(instruction).toContain("never collapse an object into a string");
     expect(instruction).toContain("never infer romance, calm, menace, or another emotional tone from lighting alone");
-    expect(instruction).toContain("Choose framing that can visibly contain the complete focal action");
+    expect(instruction).toContain("unless Creative deliberately isolates a smaller visual anchor");
     expect(instruction).not.toContain('"supplement": "string"');
   });
 
@@ -374,10 +373,24 @@ describe("Anima parser contract and visual distinctness", () => {
         characters: [{ expression: "smile", composition: { position: "right side", pose: "sitting", actions: [], gaze: "looking left" } }]
       }]
     }] });
+    const [differentProjection] = normalizeScenePayload({ scenes: [{
+      environment,
+      shots: [{
+        ...shot,
+        perspectiveMode: "creative",
+        characters: [{
+          expression: "smile",
+          composition: { position: "left side", pose: "sitting", actions: [], gaze: "looking right" },
+          renderScope: "only the window reflection",
+          visibleTags: "blue eyes, window reflection"
+        }]
+      }]
+    }] });
 
     expect(exactVisualKey(first)).not.toBe(exactVisualKey(different));
     expect(exactVisualKey(first)).not.toBe(exactVisualKey(differentCamera));
     expect(exactVisualKey(first)).not.toBe(exactVisualKey(differentComposition));
+    expect(exactVisualKey(first)).not.toBe(exactVisualKey(differentProjection));
   });
 
   test("silently drops removed legacy cleanup configuration keys", () => {

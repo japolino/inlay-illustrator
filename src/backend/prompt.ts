@@ -1,4 +1,4 @@
-import type { Config, PromptPreset } from "../shared/config.js";
+import type { Config, PerspectiveMode, PromptPreset } from "../shared/config.js";
 import type { AssembledPrompt, CharacterJson, PromptEntry, SceneJson, ShotJson } from "./types.js";
 import { asRecord, cleanArray, cleanString, csvParts, escapeRegExp, unique } from "./utils.js";
 
@@ -115,6 +115,10 @@ export function normalizePromptSection(value: string): string {
     .trim();
 }
 
+function normalizeSupplement(value: string): string {
+  return normalizePromptSection(value);
+}
+
 export function activePromptPreset(config: Config): PromptPreset | null {
   return config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
 }
@@ -190,8 +194,14 @@ function assembleCharacterBlock(
   character: CharacterJson,
   config: Config,
   replacements: Map<string, string>,
-  includeAction: boolean
+  includeAction: boolean,
+  perspectiveMode: PerspectiveMode
 ): string {
+  if (perspectiveMode === "creative") {
+    return unique(csvParts(
+      stripOrReplaceNames(cleanString(character.visibleTags), replacements, true)
+    )).join(", ");
+  }
   return unique(csvParts(
     stripOrReplaceNames(cleanString(character.label), replacements, true),
     shouldIncludeCharacterNames(config) ? displayName(cleanString(character.name), config) : "",
@@ -202,6 +212,17 @@ function assembleCharacterBlock(
     stripOrReplaceNames(cleanString(character.expression), replacements, true),
     includeAction ? stripOrReplaceNames(cleanString(character.action), replacements, true) : ""
   )).join(", ");
+}
+
+export function resolveShotPerspective(
+  shot: ShotJson,
+  config: Config
+): { mode: PerspectiveMode; source: "adaptive" | "manual" } {
+  if (!config.adaptiveMode) return { mode: config.perspectiveMode, source: "manual" };
+  const candidate = cleanString(shot.perspectiveMode).toLowerCase();
+  return candidate === "creative" || candidate === "static" || candidate === "dynamic"
+    ? { mode: candidate, source: "adaptive" }
+    : { mode: "dynamic", source: "adaptive" };
 }
 
 function structuredSnippets(value: unknown, cap: number): string[] {
@@ -296,79 +317,26 @@ function assembleStructuredCamera(value: unknown): AtomicSection {
   };
 }
 
-function assembleAnimaAssetPrompt(
-  scene: SceneJson,
-  shot: ShotJson,
-  config: Config,
-  replacements: Map<string, string>
-): AssembledPrompt {
-  const character = cleanArray<CharacterJson>(shot.characters)[0];
-  const characterBlock = character ? assembleCharacterBlock(character, config, replacements, false) : "";
-  const action = stripOrReplaceNames(unique(csvParts(
-    shot.action,
-    character?.action,
-    "looking at viewer"
-  )).join(", "), replacements, true);
-  return { sections: dedupePromptSections([
-    stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
-    characterBlock,
-    action,
-    stripOrReplaceNames(unique(csvParts(shot.camera, "portrait, cowboy shot")).join(", "), replacements, true),
-    stripOrReplaceNames(unique(csvParts(scene.place, "white background, simple background")).join(", "), replacements, true)
-  ]) };
-}
-
-function assembleLegacyAnimaPrompt(
-  scene: SceneJson,
-  shot: ShotJson,
-  config: Config,
-  replacements: Map<string, string>
-): AssembledPrompt {
-  const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
-  const characters = cleanArray<CharacterJson>(shot.characters).slice(0, maxCharacters);
-  const characterBlocks = characters
-    .map((character) => assembleCharacterBlock(character, config, replacements, false))
-    .filter(Boolean);
-  const sceneAction = stripOrReplaceNames(unique(csvParts(
-    shot.action,
-    ...characters.map((character) => character.action),
-    config.mode === "asset" ? "looking at viewer" : ""
-  )).join(", "), replacements, true);
-  const supplement = config.supplement
-    ? stripOrReplaceNames(removeSupplementActionDuplicates(cleanString(shot.supplement), sceneAction), replacements, false)
-    : "";
-  return {
-    sections: [
-      ...dedupePromptSections([
-        stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
-        ...characterBlocks,
-        sceneAction,
-        stripOrReplaceNames(unique(csvParts(shot.camera, config.mode === "asset" ? "portrait, cowboy shot" : "")).join(", "), replacements, true),
-        stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true)
-      ]),
-      supplement
-    ].filter(Boolean),
-    format: "legacy"
-  };
-}
-
 function assembleAnimaPrompt(
   scene: SceneJson,
   shot: ShotJson,
   config: Config,
-  replacements: Map<string, string>
+  replacements: Map<string, string>,
+  perspectiveMode: PerspectiveMode
 ): AssembledPrompt {
-  if (config.mode === "asset") return assembleAnimaAssetPrompt(scene, shot, config, replacements);
-  const maxCharacters = config.maxCharacters;
-  const characters = cleanArray<CharacterJson>(shot.characters).slice(0, maxCharacters);
+  const characters = cleanArray<CharacterJson>(shot.characters).slice(0, config.maxCharacters);
   const characterSections = characters.flatMap((character) => {
     const composition = assembleAtomicCharacterComposition(character.composition, replacements);
-    const baseTags = assembleCharacterBlock(character, config, replacements, false);
+    const scope = perspectiveMode === "creative"
+      ? sanitizeComposition(cleanString(character.renderScope), replacements)
+      : "";
+    const compositionText = unique([scope, composition.text].filter(Boolean)).join(", ");
+    const baseTags = assembleCharacterBlock(character, config, replacements, false, perspectiveMode);
     const uncoveredActions = composition.structured
       ? ""
-      : stripOrReplaceNames(uncoveredActionTags(character.action, composition.text), replacements, true);
+      : stripOrReplaceNames(uncoveredActionTags(character.action, compositionText), replacements, true);
     const tags = unique(csvParts(baseTags, uncoveredActions)).join(", ");
-    return [composition.text, tags].filter(Boolean);
+    return [compositionText, tags].filter(Boolean);
   });
   const hasSharedComposition = Boolean(cleanString(shot.sharedComposition))
     || Object.keys(asRecord(shot.sharedComposition)).length > 0;
@@ -399,11 +367,11 @@ function assembleAnimaPrompt(
   ].filter(Boolean).join(", ");
   return { sections: [
     stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
-    stripOrReplaceNames(camera.text, replacements, true),
     ...characterSections,
     config.supplement ? sharedComposition.text : "",
     sharedAction,
-    environmentSection
+    environmentSection,
+    stripOrReplaceNames(camera.text, replacements, true)
   ].map((section) => section.trim()).filter(Boolean) };
 }
 
@@ -411,23 +379,26 @@ function assembleDefaultPrompt(
   scene: SceneJson,
   shot: ShotJson,
   config: Config,
-  replacements: Map<string, string>
+  replacements: Map<string, string>,
+  perspectiveMode: PerspectiveMode
 ): AssembledPrompt {
-  const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
-  const characters = cleanArray<CharacterJson>(shot.characters).slice(0, maxCharacters);
+  const characters = cleanArray<CharacterJson>(shot.characters).slice(0, config.maxCharacters);
+  const creativeScopes = perspectiveMode === "creative"
+    ? characters.map((character) => sanitizeComposition(cleanString(character.renderScope), replacements)).filter(Boolean)
+    : [];
   const characterBlocks = characters
-    .map((character) => assembleCharacterBlock(character, config, replacements, true))
+    .map((character) => assembleCharacterBlock(character, config, replacements, true, perspectiveMode))
     .filter(Boolean);
-  const supplement = config.supplement ? stripOrReplaceNames(cleanString(shot.supplement), replacements, false) : "";
+  const supplement = config.supplement
+    ? normalizeSupplement(stripOrReplaceNames(cleanString(shot.supplement), replacements, false))
+    : "";
   const tagSections = dedupePromptSections([
-    stripOrReplaceNames(unique(csvParts(shot.camera, shot.situation, shot.action, config.mode === "asset" ? "portrait, cowboy shot, looking at viewer" : "")).join(", "), replacements, true),
-    stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true),
+    stripOrReplaceNames(unique(csvParts(shot.camera, shot.situation, shot.action)).join(", "), replacements, true),
+    stripOrReplaceNames(unique(csvParts(scene.place)).join(", "), replacements, true),
+    ...creativeScopes,
     ...characterBlocks
   ]);
-  const sections = config.mode === "illustration"
-    ? [...tagSections, supplement].filter(Boolean)
-    : dedupePromptSections([...tagSections, supplement]);
-  return { sections, format: config.mode === "illustration" ? "legacy" : "ordered" };
+  return { sections: [...tagSections, supplement].filter(Boolean), format: "legacy" };
 }
 
 export function assemblePrompt(
@@ -439,13 +410,10 @@ export function assemblePrompt(
 ): PromptEntry {
   const characters = cleanArray<CharacterJson>(shot.characters);
   const replacements = buildNameReplacementMap(characters);
-  const core = config.mode === "experimental"
-    ? assembleAnimaPrompt(scene, shot, config, replacements)
-    : config.mode === "asset" && config.promptStyle === "anima"
-      ? assembleAnimaAssetPrompt(scene, shot, config, replacements)
-      : config.promptStyle === "anima"
-        ? assembleLegacyAnimaPrompt(scene, shot, config, replacements)
-        : assembleDefaultPrompt(scene, shot, config, replacements);
+  const perspective = resolveShotPerspective(shot, config);
+  const core = config.promptStyle === "anima"
+    ? assembleAnimaPrompt(scene, shot, config, replacements, perspective.mode)
+    : assembleDefaultPrompt(scene, shot, config, replacements, perspective.mode);
   const preset = activePromptPreset(config);
   const presetPrefix = stripOrReplaceNames(preset?.positivePrefix || "", replacements, true);
   const prefix = stripOrReplaceNames(config.customPositivePrefix, replacements, true);
@@ -468,6 +436,8 @@ export function assemblePrompt(
         true
       ),
     paragraph: originalParagraph,
-    parserParagraph
+    parserParagraph,
+    perspectiveMode: perspective.mode,
+    perspectiveSource: perspective.source
   };
 }

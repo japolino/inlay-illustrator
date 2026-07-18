@@ -1,14 +1,23 @@
 import type { SectionContext } from "./section-context.js";
 
-export function renderGenerationSection({ ui, actions, rerender }: SectionContext): void {
+export function renderGenerationSection({ ui, config, actions, rerender }: SectionContext): void {
   const section = ui.section("Generation", true);
   ui.addSwitch(section, "enabled", "Power");
   ui.addSwitch(section, "autoGenerate", "Auto generate");
-  ui.addSelect(section, "mode", "Mode", [
-    { value: "illustration", label: "Illustration" },
-    { value: "experimental", label: "Experimental (Anima)" },
-    { value: "asset", label: "Asset" }
-  ], "Switch between the stable parser, experimental atomic Anima parser, and asset portraits.", rerender);
+  ui.addSwitch(
+    section,
+    "adaptiveMode",
+    "Adaptive Mode",
+    "Let the parser choose the strongest perspective for each image.",
+    rerender
+  );
+  ui.addRangeChoice(section, "perspectiveMode", "Perspective", [
+    { value: "creative", label: "Creative" },
+    { value: "static", label: "Static" },
+    { value: "dynamic", label: "Dynamic" }
+  ], config.adaptiveMode, config.adaptiveMode
+    ? "Selected independently by the parser for each image."
+    : "Creative isolates a visual detail, Static favors stable portrait-like beats, and Dynamic follows scene action.");
   ui.addNumber(section, "minImages", "Minimum images", 1, 12);
   ui.addNumber(section, "maxImages", "Maximum images", 1, 12);
   ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 8);

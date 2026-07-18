@@ -1,3 +1,5 @@
+import type { PerspectiveMode } from "../shared/config.js";
+
 export type CharacterCompositionJson = {
   position?: unknown;
   pose?: unknown;
@@ -28,6 +30,10 @@ export type CharacterJson = {
   expression?: unknown;
   action?: unknown;
   composition?: CharacterCompositionJson | string;
+  /** Shot-only framing note. Never persisted into character memory. */
+  renderScope?: unknown;
+  /** Shot-only Creative projection containing only traits actually visible in frame. */
+  visibleTags?: unknown;
 };
 
 export type EnvironmentJson = {
@@ -39,6 +45,7 @@ export type EnvironmentJson = {
 
 export type ShotJson = {
   paragraph?: unknown;
+  perspectiveMode?: unknown;
   camera?: CameraJson | string;
   situation?: unknown;
   action?: unknown;
@@ -54,7 +61,7 @@ export type ParsedPayload = { scenes?: SceneJson[] };
 export type AssembledPrompt = {
   /** Ordered tag and prose sections, rendered with syntax-specific separators. */
   sections: string[];
-  /** Stable modes retain their original formatting; experimental uses normalized ordered sections. */
+  /** Default prompt style keeps legacy formatting; Anima uses normalized ordered sections. */
   format?: "legacy" | "ordered";
 };
 
@@ -63,6 +70,8 @@ export type PromptEntry = {
   negative: string;
   paragraph: number;
   parserParagraph: number;
+  perspectiveMode: PerspectiveMode;
+  perspectiveSource: "adaptive" | "manual";
 };
 
 export type PreparedParagraph = { parserIndex: number; originalIndex: number; text: string };
@@ -120,6 +129,8 @@ export type PreparedImageJob = {
   prompt: string;
   negative: string;
   paragraph: number;
+  perspectiveMode?: PerspectiveMode;
+  perspectiveSource?: "adaptive" | "manual";
   parameters: Record<string, unknown>;
 };
 
@@ -144,6 +155,9 @@ export type GeneratedRecord = {
   messageId: string;
   swipeId: number;
   prompts: string[];
+  negativePrompts: string[];
+  perspectiveModes: PerspectiveMode[];
+  perspectiveSources: Array<"adaptive" | "manual">;
   paragraphs: number[];
   imageIds: string[];
   imageUrls: string[];

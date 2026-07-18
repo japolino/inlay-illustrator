@@ -3,7 +3,8 @@ var DEFAULT_CONFIG = {
   enabled: true,
   autoGenerate: true,
   debugLogging: true,
-  mode: "illustration",
+  adaptiveMode: false,
+  perspectiveMode: "dynamic",
   parserConnectionId: null,
   parserModel: "",
   parserParameters: {},
@@ -18,7 +19,6 @@ var DEFAULT_CONFIG = {
   parserRetries: 1,
   preprocessingEnabled: false,
   inlayImageWidth: 640,
-  assetImageWidth: 400,
   inlayImageMaxHeightVh: 70,
   promptStyle: "anima",
   promptSyntax: "comfyui",
@@ -78,6 +78,8 @@ function normalizeConfig(raw) {
   const {
     danbooruCleanup: _legacyDanbooruCleanup,
     danbooruEndpoint: _legacyDanbooruEndpoint,
+    mode: _legacyMode,
+    assetImageWidth: _legacyAssetImageWidth,
     imageGeneration: _legacyImageGeneration,
     ...current
   } = raw;
@@ -92,7 +94,8 @@ function normalizeConfig(raw) {
   return {
     ...DEFAULT_CONFIG,
     ...current,
-    mode: raw.mode === "asset" ? "asset" : raw.mode === "experimental" ? "experimental" : "illustration",
+    adaptiveMode: raw.adaptiveMode === true,
+    perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" ? raw.perspectiveMode : raw.mode === "asset" ? "static" : "dynamic",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
@@ -107,7 +110,6 @@ function normalizeConfig(raw) {
     parserRetries: clampInt(raw.parserRetries, 0, 5, DEFAULT_CONFIG.parserRetries),
     preprocessingEnabled: raw.preprocessingEnabled === true,
     inlayImageWidth: clampInt(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
-    assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
     promptStyle: raw.promptStyle === "default" ? "default" : "anima",
     promptSyntax: raw.promptSyntax === "nai" ? "nai" : "comfyui",
@@ -142,9 +144,9 @@ function ownedBlock(pattern) {
 var LEGACY_BLOCK = ownedBlock(`${MARKER_PATTERN}\\s*(?:(?:${MARKDOWN_IMAGE_PATTERN}|${HTML_IMAGE_PATTERN})\\s*)?${LEGACY_DETAILS_PATTERN}`);
 var CURRENT_BLOCK = ownedBlock(`(?:${MARKER_PATTERN}\\s*)?${CURRENT_DIV_PATTERN}`);
 var MARKER_IMAGE_BLOCK = ownedBlock(`${MARKER_PATTERN}\\s*(?:${MARKDOWN_IMAGE_PATTERN}|${HTML_IMAGE_PATTERN})`);
-var PROMPT_PRE_BLOCK = ownedBlock(String.raw`<pre\b(?=[^>]*[\t\n\f\r ]class\s*=\s*(?:"(?:[^"]*[\t\n\f\r ])?inlay-illustrator-prompt(?:[\t\n\f\r ][^"]*)?"|'(?:[^']*[\t\n\f\r ])?inlay-illustrator-prompt(?:[\t\n\f\r ][^']*)?'|inlay-illustrator-prompt(?=[\s>])))[^>]*>[\s\S]*?<\/pre\s*>`);
+var PROMPT_PRE_BLOCK = ownedBlock(String.raw`<pre\b(?=[^>]*[\t\n\f\r ]class\s*=\s*(?:"(?:[^"]*[\t\n\f\r ])?inlay-illustrator-(?:negative-)?prompt(?:[\t\n\f\r ][^"]*)?"|'(?:[^']*[\t\n\f\r ])?inlay-illustrator-(?:negative-)?prompt(?:[\t\n\f\r ][^']*)?'|inlay-illustrator-(?:negative-)?prompt(?=[\s>])))[^>]*>[\s\S]*?<\/pre\s*>`);
 var ORPHAN_MARKER = ownedBlock(MARKER_PATTERN);
-var PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-prompt(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
+var PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-(?:negative-prompt|perspective-source|perspective|prompt)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
 function stripInlayContent(content) {
   return content.replace(LEGACY_BLOCK, "").replace(CURRENT_BLOCK, "").replace(MARKER_IMAGE_BLOCK, "").replace(PROMPT_PRE_BLOCK, "").replace(ORPHAN_MARKER, "").replace(PROMPT_ATTRIBUTE, "");
 }
@@ -305,6 +307,9 @@ function normalizePromptSection(value) {
   const doubleColon = "";
   return value.replace(/::/g, doubleColon).replace(/;/g, ",").replace(/\s*,(?:\s*,)+\s*/g, ", ").replace(/^\s*,+\s*/, "").replace(/\s+/g, " ").replace(/\s*,\s*/g, ", ").replace(/[.!?]+(?=\s*,)/g, "").replace(/[\s.,;:!?]+$/g, "").replace(new RegExp(doubleColon, "g"), "::").trim();
 }
+function normalizeSupplement(value) {
+  return normalizePromptSection(value);
+}
 function activePromptPreset(config) {
   return config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
 }
@@ -319,13 +324,6 @@ function dedupePromptSections(sections) {
     output.push(section);
   }
   return output;
-}
-function removeSupplementActionDuplicates(supplement, actionTags) {
-  let next = supplement.trim();
-  for (const action of csvParts(actionTags)) {
-    next = next.replace(new RegExp(`\\b${escapeRegExp(action)}\\b`, "gi"), " ");
-  }
-  return next.replace(/\s+([,.])/g, "$1").replace(/\s+/g, " ").trim();
 }
 var ACTION_STOP_WORDS = new Set(["a", "an", "at", "in", "of", "on", "the", "to", "toward", "towards", "with"]);
 function actionToken(value) {
@@ -367,8 +365,17 @@ function uncoveredActionTags(value, composition) {
 function sanitizeComposition(value, replacements) {
   return stripOrReplaceNames(value, replacements, false).replace(/\bfrom\s+[A-Z][\p{L}\p{M}-]*(?:\s+[A-Z][\p{L}\p{M}-]*)*['’]s\s+POV\b/giu, "from the viewer's POV").replace(/\s+/g, " ").trim();
 }
-function assembleCharacterBlock(character, config, replacements, includeAction) {
+function assembleCharacterBlock(character, config, replacements, includeAction, perspectiveMode) {
+  if (perspectiveMode === "creative") {
+    return unique(csvParts(stripOrReplaceNames(cleanString2(character.visibleTags), replacements, true))).join(", ");
+  }
   return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", stripOrReplaceNames(cleanString2(character.age), replacements, true), stripOrReplaceNames(cleanString2(character.appearance), replacements, true), stripOrReplaceNames(cleanString2(character.body), replacements, true), stripOrReplaceNames(cleanString2(character.attire), replacements, true), stripOrReplaceNames(cleanString2(character.expression), replacements, true), includeAction ? stripOrReplaceNames(cleanString2(character.action), replacements, true) : "")).join(", ");
+}
+function resolveShotPerspective(shot, config) {
+  if (!config.adaptiveMode)
+    return { mode: config.perspectiveMode, source: "manual" };
+  const candidate = cleanString2(shot.perspectiveMode).toLowerCase();
+  return candidate === "creative" || candidate === "static" || candidate === "dynamic" ? { mode: candidate, source: "adaptive" } : { mode: "dynamic", source: "adaptive" };
 }
 function structuredSnippets(value, cap) {
   const values = Array.isArray(value) ? value : [value];
@@ -465,49 +472,16 @@ function assembleStructuredCamera(value) {
     structured: true
   };
 }
-function assembleAnimaAssetPrompt(scene, shot, config, replacements) {
-  const character = cleanArray(shot.characters)[0];
-  const characterBlock = character ? assembleCharacterBlock(character, config, replacements, false) : "";
-  const action = stripOrReplaceNames(unique(csvParts(shot.action, character?.action, "looking at viewer")).join(", "), replacements, true);
-  return { sections: dedupePromptSections([
-    stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
-    characterBlock,
-    action,
-    stripOrReplaceNames(unique(csvParts(shot.camera, "portrait, cowboy shot")).join(", "), replacements, true),
-    stripOrReplaceNames(unique(csvParts(scene.place, "white background, simple background")).join(", "), replacements, true)
-  ]) };
-}
-function assembleLegacyAnimaPrompt(scene, shot, config, replacements) {
-  const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
-  const characters = cleanArray(shot.characters).slice(0, maxCharacters);
-  const characterBlocks = characters.map((character) => assembleCharacterBlock(character, config, replacements, false)).filter(Boolean);
-  const sceneAction = stripOrReplaceNames(unique(csvParts(shot.action, ...characters.map((character) => character.action), config.mode === "asset" ? "looking at viewer" : "")).join(", "), replacements, true);
-  const supplement = config.supplement ? stripOrReplaceNames(removeSupplementActionDuplicates(cleanString2(shot.supplement), sceneAction), replacements, false) : "";
-  return {
-    sections: [
-      ...dedupePromptSections([
-        stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
-        ...characterBlocks,
-        sceneAction,
-        stripOrReplaceNames(unique(csvParts(shot.camera, config.mode === "asset" ? "portrait, cowboy shot" : "")).join(", "), replacements, true),
-        stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true)
-      ]),
-      supplement
-    ].filter(Boolean),
-    format: "legacy"
-  };
-}
-function assembleAnimaPrompt(scene, shot, config, replacements) {
-  if (config.mode === "asset")
-    return assembleAnimaAssetPrompt(scene, shot, config, replacements);
-  const maxCharacters = config.maxCharacters;
-  const characters = cleanArray(shot.characters).slice(0, maxCharacters);
+function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode) {
+  const characters = cleanArray(shot.characters).slice(0, config.maxCharacters);
   const characterSections = characters.flatMap((character) => {
     const composition = assembleAtomicCharacterComposition(character.composition, replacements);
-    const baseTags = assembleCharacterBlock(character, config, replacements, false);
-    const uncoveredActions = composition.structured ? "" : stripOrReplaceNames(uncoveredActionTags(character.action, composition.text), replacements, true);
+    const scope = perspectiveMode === "creative" ? sanitizeComposition(cleanString2(character.renderScope), replacements) : "";
+    const compositionText = unique([scope, composition.text].filter(Boolean)).join(", ");
+    const baseTags = assembleCharacterBlock(character, config, replacements, false, perspectiveMode);
+    const uncoveredActions = composition.structured ? "" : stripOrReplaceNames(uncoveredActionTags(character.action, compositionText), replacements, true);
     const tags = unique(csvParts(baseTags, uncoveredActions)).join(", ");
-    return [composition.text, tags].filter(Boolean);
+    return [compositionText, tags].filter(Boolean);
   });
   const hasSharedComposition = Boolean(cleanString2(shot.sharedComposition)) || Object.keys(asRecord(shot.sharedComposition)).length > 0;
   const sharedSource = hasSharedComposition ? shot.sharedComposition : shot.supplement;
@@ -529,30 +503,31 @@ function assembleAnimaPrompt(scene, shot, config, replacements) {
   ].filter(Boolean).join(", ");
   return { sections: [
     stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
-    stripOrReplaceNames(camera.text, replacements, true),
     ...characterSections,
     config.supplement ? sharedComposition.text : "",
     sharedAction,
-    environmentSection
+    environmentSection,
+    stripOrReplaceNames(camera.text, replacements, true)
   ].map((section) => section.trim()).filter(Boolean) };
 }
-function assembleDefaultPrompt(scene, shot, config, replacements) {
-  const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
-  const characters = cleanArray(shot.characters).slice(0, maxCharacters);
-  const characterBlocks = characters.map((character) => assembleCharacterBlock(character, config, replacements, true)).filter(Boolean);
-  const supplement = config.supplement ? stripOrReplaceNames(cleanString2(shot.supplement), replacements, false) : "";
+function assembleDefaultPrompt(scene, shot, config, replacements, perspectiveMode) {
+  const characters = cleanArray(shot.characters).slice(0, config.maxCharacters);
+  const creativeScopes = perspectiveMode === "creative" ? characters.map((character) => sanitizeComposition(cleanString2(character.renderScope), replacements)).filter(Boolean) : [];
+  const characterBlocks = characters.map((character) => assembleCharacterBlock(character, config, replacements, true, perspectiveMode)).filter(Boolean);
+  const supplement = config.supplement ? normalizeSupplement(stripOrReplaceNames(cleanString2(shot.supplement), replacements, false)) : "";
   const tagSections = dedupePromptSections([
-    stripOrReplaceNames(unique(csvParts(shot.camera, shot.situation, shot.action, config.mode === "asset" ? "portrait, cowboy shot, looking at viewer" : "")).join(", "), replacements, true),
-    stripOrReplaceNames(unique(csvParts(scene.place, config.mode === "asset" ? "white background, simple background" : "")).join(", "), replacements, true),
+    stripOrReplaceNames(unique(csvParts(shot.camera, shot.situation, shot.action)).join(", "), replacements, true),
+    stripOrReplaceNames(unique(csvParts(scene.place)).join(", "), replacements, true),
+    ...creativeScopes,
     ...characterBlocks
   ]);
-  const sections = config.mode === "illustration" ? [...tagSections, supplement].filter(Boolean) : dedupePromptSections([...tagSections, supplement]);
-  return { sections, format: config.mode === "illustration" ? "legacy" : "ordered" };
+  return { sections: [...tagSections, supplement].filter(Boolean), format: "legacy" };
 }
 function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph) {
   const characters = cleanArray(shot.characters);
   const replacements = buildNameReplacementMap(characters);
-  const core = config.mode === "experimental" ? assembleAnimaPrompt(scene, shot, config, replacements) : config.mode === "asset" && config.promptStyle === "anima" ? assembleAnimaAssetPrompt(scene, shot, config, replacements) : config.promptStyle === "anima" ? assembleLegacyAnimaPrompt(scene, shot, config, replacements) : assembleDefaultPrompt(scene, shot, config, replacements);
+  const perspective = resolveShotPerspective(shot, config);
+  const core = config.promptStyle === "anima" ? assembleAnimaPrompt(scene, shot, config, replacements, perspective.mode) : assembleDefaultPrompt(scene, shot, config, replacements, perspective.mode);
   const preset = activePromptPreset(config);
   const presetPrefix = stripOrReplaceNames(preset?.positivePrefix || "", replacements, true);
   const prefix = stripOrReplaceNames(config.customPositivePrefix, replacements, true);
@@ -565,7 +540,9 @@ function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph)
     },
     negative: (core.format || "ordered") === "ordered" ? normalizePromptSection(stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "), replacements, true)) : stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shot.negative)).join(", "), replacements, true),
     paragraph: originalParagraph,
-    parserParagraph
+    parserParagraph,
+    perspectiveMode: perspective.mode,
+    perspectiveSource: perspective.source
   };
 }
 
@@ -1193,6 +1170,7 @@ function exactVisualKey(entry) {
   const environment = entry.scene.environment || {};
   return JSON.stringify({
     paragraph: entry.parserParagraph,
+    perspectiveMode: normalizedVisualValue(entry.shot.perspectiveMode),
     camera: normalizedVisualValue(entry.shot.camera),
     situation: normalizedVisualValue(entry.shot.situation),
     sceneAction: normalizedVisualValue(entry.scene.action),
@@ -1200,7 +1178,9 @@ function exactVisualKey(entry) {
     characters: cleanArray(entry.shot.characters).map((character) => ({
       expression: normalizedVisualValue(character.expression),
       action: normalizedVisualValue(character.action),
-      composition: normalizedVisualValue(character.composition)
+      composition: normalizedVisualValue(character.composition),
+      renderScope: normalizedVisualValue(character.renderScope),
+      visibleTags: normalizedVisualValue(character.visibleTags)
     })),
     sharedComposition: normalizedVisualValue(entry.shot.sharedComposition || entry.shot.supplement),
     environment: {
@@ -1215,26 +1195,15 @@ function selectPromptEntries(payload, paragraphs, config) {
   const normalized = normalizeScenePayload(payload);
   const paragraphMap = new Map(paragraphs.map((paragraph) => [paragraph.parserIndex, paragraph]));
   const valid = normalized.filter((entry) => paragraphMap.has(entry.parserParagraph));
-  let distinct;
-  if (config.mode === "asset") {
-    const seenParagraphs = new Set;
-    distinct = valid.filter((entry) => {
-      if (seenParagraphs.has(entry.parserParagraph))
-        return false;
-      seenParagraphs.add(entry.parserParagraph);
-      return true;
-    });
-  } else {
-    const seenVisuals = new Set;
-    distinct = valid.filter((entry) => {
-      const key = exactVisualKey(entry);
-      if (seenVisuals.has(key))
-        return false;
-      seenVisuals.add(key);
-      return true;
-    });
-  }
-  const limit = config.mode === "asset" ? paragraphs.length : config.maxImages;
+  const seenVisuals = new Set;
+  const distinct = valid.filter((entry) => {
+    const key = exactVisualKey(entry);
+    if (seenVisuals.has(key))
+      return false;
+    seenVisuals.add(key);
+    return true;
+  });
+  const limit = config.maxImages;
   const selected = distinct.slice(0, limit).map((entry, modelPriority) => ({ entry, modelPriority })).sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority).map(({ entry }) => entry);
   const prompts = [];
   for (const entry of selected) {
@@ -1251,6 +1220,7 @@ function selectPromptEntries(payload, paragraphs, config) {
     distinctCandidateCount: distinct.length,
     selectedCount: prompts.length,
     selectedParagraphs: selected.map((entry) => entry.parserParagraph),
+    perspectives: prompts.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource })),
     cameraTags: selected.map((entry) => normalizedVisualValue(entry.shot.camera))
   });
   return prompts;
@@ -1406,21 +1376,25 @@ function paragraphCount(content) {
 
 // src/backend/instructions.ts
 function parserInstruction(config) {
-  const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
-  const experimentalMode = config.mode === "experimental";
-  const shotInstruction = config.mode === "asset" ? [
-    "Asset mode: generate exactly one shot for each [P#] paragraph.",
-    "Each shot must contain exactly one visible character.",
-    "Force place to include white background, simple background.",
-    "Favor clean reusable character portrait tags over narrative scene illustration tags."
-  ].join(`
-`) : [
+  const maxCharacters = config.maxCharacters;
+  const structuredAnima = config.promptStyle === "anima";
+  const shotInstruction = [
     `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
     "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
     "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
     "If the source contains too few distinct visual beats, create alternate shots of the same paragraph with genuinely different cinematography. Do not invent narrative events.",
     "Distinct shots may reference the same paragraph. Order shots by their visual importance, not paragraph number.",
-    experimentalMode ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood." : ""
+    structuredAnima ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood." : ""
+  ].join(`
+`);
+  const perspectiveInstruction = [
+    "### Perspective mode - required per shot",
+    config.adaptiveMode ? "Choose perspectiveMode independently for every shot before filling any other shot field. It must be exactly creative, static, or dynamic." : `Set perspectiveMode to exactly ${config.perspectiveMode} for every shot.`,
+    "Creative isolates a meaningful visual anchor from the paragraph instead of automatically showing the complete scene. The anchor may be any partial character detail, object, reflection, silhouette, environmental detail, foreground fragment, or unusual spatial relationship; it is not limited to hands or people.",
+    "Creative must remain concrete and source-supported. Use renderScope to state what is actually in frame. Put only traits genuinely visible in that crop or occlusion into visibleTags. Never copy a complete character baseline into visibleTags when most of it is off-frame.",
+    "Dynamic follows the current scene's visible action, movement, interaction, and strongest cinematic viewpoint.",
+    "Static chooses a safer stable portrait-like visual beat with a clearly readable subject, limited motion, limited occlusion, and conventional framing, while remaining faithful to the paragraph.",
+    "perspectiveMode, renderScope, and visibleTags are shot-only rendering decisions. They never alter or replace the complete appearance, body, and attire memory fields."
   ].join(`
 `);
   const source = config.originalReference ? [
@@ -1432,7 +1406,7 @@ function parserInstruction(config) {
     "Do not include any parenthetical, source name, creation reference, title, or alias in name or any other field."
   ].join(`
 `) : "Use names only for the JSON name field as private memory keys. Names will not be included in final prompts. If not given, make a concise stable identifier that fits the description.";
-  const schema = experimentalMode ? [
+  const schema = structuredAnima ? [
     "{",
     '  "scenes": [',
     "    {",
@@ -1445,6 +1419,7 @@ function parserInstruction(config) {
     '      "shots": [',
     "        {",
     '          "paragraph": 0,',
+    '          "perspectiveMode": "creative | static | dynamic",',
     '          "camera": {',
     '            "framing": "string",',
     '            "angle": "string",',
@@ -1462,6 +1437,8 @@ function parserInstruction(config) {
     '              "body": "string",',
     '              "attire": "string",',
     '              "expression": "string",',
+    '              "renderScope": "string",',
+    '              "visibleTags": "string",',
     '              "composition": {',
     '                "position": "string",',
     '                "pose": "string",',
@@ -1488,6 +1465,7 @@ function parserInstruction(config) {
     '      "shots": [',
     "        {",
     '          "paragraph": 0,',
+    '          "perspectiveMode": "creative | static | dynamic",',
     '          "camera": "string",',
     '          "situation": "string",',
     '          "action": "string",',
@@ -1501,6 +1479,8 @@ function parserInstruction(config) {
     '              "body": "string",',
     '              "attire": "string",',
     '              "expression": "string",',
+    '              "renderScope": "string",',
+    '              "visibleTags": "string",',
     '              "action": "string"',
     "            }",
     "          ],",
@@ -1512,7 +1492,7 @@ function parserInstruction(config) {
     "  ]",
     "}"
   ];
-  const naturalDetail = experimentalMode ? [
+  const naturalDetail = structuredAnima ? [
     "### Atomic Natural Composition",
     "characters[].composition is always required and must use its four atomic fields. The renderer joins them once in this exact order: position, pose, actions, gaze.",
     "composition.position is one concise spatial phrase describing where the character is in frame.",
@@ -1532,6 +1512,7 @@ function parserInstruction(config) {
     "### Natural Language Supplement",
     "In supplement, describe the image in natural language for visible details that tags cannot express well, such as detailed composition, framing, character positions, interactions, unusual vantage points, or objective atmosphere/lighting.",
     "Use concise, minimal, telegraphic sentences. Be objective, not subjective interpretation.",
+    "Separate supplement phrases with commas, never semicolons. Do not end supplement with sentence punctuation.",
     "Unusual framing and vantage points are welcome, such as viewed through an object, reflected in a mirror, or partially obscured by foreground elements.",
     "When describing multiple people, do not use names. Identify people by visual position such as left girl, right boy, foreground character, or background character.",
     "Do not use supplement for smell, sound, internal sensations, invisible emotions, or prose narration."
@@ -1543,12 +1524,12 @@ function parserInstruction(config) {
     "## JSON Format",
     schema.join(`
 `),
-    experimentalMode ? "- negative is optional. All other fields and nested objects are required. Use empty strings or arrays inside the required objects when a field does not apply; never collapse an object into a string." : "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
+    structuredAnima ? "- negative is optional. All other fields and nested objects are required. Use empty strings or arrays inside the required objects when a field does not apply; never collapse an object into a string." : "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
     "- These are the ONLY allowed fields. Adding any unlisted field is a schema violation.",
     "## Scenes & Shots",
     "Scene = shots sharing one physical location.",
     "- Same location means same scene, multiple shots.",
-    experimentalMode ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
+    structuredAnima ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
     "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
     shotInstruction,
     "Paragraph mapping: current message uses [P#] numbering.",
@@ -1557,23 +1538,23 @@ function parserInstruction(config) {
     "- Tag ONLY the current message. Recent context is for continuity only.",
     "## Tag Rules",
     "Use common, objective, visualizable Danbooru-style English tags. Do not invent tags; use simpler well-known equivalents if unsure. Do not use metaphors for tags.",
-    experimentalMode ? "Tag fields are comma-separated tags. Atomic composition and sharedComposition values are concise comma-free natural-language phrases. Environment arrays contain one comma-free visual snippet per item." : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
-    `Character limit: max ${maxCharacters} visible character(s) per shot. Characters outside the limit should be represented only by visible partial body parts, such as out of frame, hand, arm, or legs. Do not output their expressions or attire. Only output visible body parts and actions when needed.`,
-    config.mode === "asset" ? "Asset mode requires one character in characters[] for every shot, no group shots, no narrative background beyond a simple white background." : "",
+    structuredAnima ? "Tag fields are comma-separated tags. Atomic composition and sharedComposition values are concise comma-free natural-language phrases. Environment arrays contain one comma-free visual snippet per item." : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
+    `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it. For every character object, keep the complete known baseline in appearance, body, and attire even when Creative shows only a partial crop. visibleTags is the separate visible-only rendering projection.`,
     "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for stable appearance, attire, location, and persistent actions.",
-    config.mode !== "asset" ? "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts." : "",
-    experimentalMode ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, camera, situation, sharedComposition, environment, and negative." : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
+    "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts.",
+    perspectiveInstruction,
+    structuredAnima ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, camera, situation, sharedComposition, environment, and negative." : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
     "## Field Reference",
-    experimentalMode ? "### environment - scene-level" : "### place - scene-level",
-    experimentalMode ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
-    experimentalMode ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment. Use only source-supported visual atmosphere; never infer romance, calm, menace, or another emotional tone from lighting alone." : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
+    structuredAnima ? "### environment - scene-level" : "### place - scene-level",
+    structuredAnima ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
+    structuredAnima ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment. Use only source-supported visual atmosphere; never infer romance, calm, menace, or another emotional tone from lighting alone." : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
     "### camera - shot-level",
-    experimentalMode ? "camera.framing must be empty or exactly one of: portrait, close-up, medium close-up, upper body, medium shot, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, body-part focus." : "Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus.",
-    experimentalMode ? "camera.angle must be empty or exactly one of: eye level, low angle, high angle, dutch angle." : "Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
-    experimentalMode ? "camera.perspective must be empty or exactly one of: straight-on, from above, from behind, from below, from side, sideways, three-quarter view, pov." : "",
-    experimentalMode ? "camera.focus may contain at most two values chosen only from: shallow depth of field, deep focus, background blur, foreground blur, motion blur, fisheye, wide-angle lens, telephoto lens." : "",
-    experimentalMode ? "Do not add any other camera keys or camera values. Lighting, streetlamps, atmosphere, actions, expressions, appearance, clothing, subject counts, and place never belong in camera." : "Use camera only for perspective and framing. Do not include actions, expressions, appearance, clothing, subject counts, or place.",
-    experimentalMode ? "Choose framing that can visibly contain the complete focal action. Do not request a close-up for full-body motion such as walking, running, spinning, kicking, or visible footwork unless the source explicitly prioritizes the face." : "",
+    structuredAnima ? "camera.framing must be empty or exactly one of: portrait, close-up, medium close-up, upper body, medium shot, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, body-part focus." : "Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus.",
+    structuredAnima ? "camera.angle must be empty or exactly one of: eye level, low angle, high angle, dutch angle." : "Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
+    structuredAnima ? "camera.perspective must be empty or exactly one of: straight-on, from above, from behind, from below, from side, sideways, three-quarter view, pov." : "",
+    structuredAnima ? "camera.focus may contain at most two values chosen only from: shallow depth of field, deep focus, background blur, foreground blur, motion blur, fisheye, wide-angle lens, telephoto lens." : "",
+    structuredAnima ? "Do not add any other camera keys or camera values. Lighting, streetlamps, atmosphere, actions, expressions, appearance, clothing, subject counts, and place never belong in camera." : "Use camera only for perspective and framing. Do not include actions, expressions, appearance, clothing, subject counts, or place.",
+    structuredAnima ? "Choose framing that can visibly contain the complete focal action unless Creative deliberately isolates a smaller visual anchor." : "",
     "### situation - shot-level",
     "Strictly use character count/composition tags such as 1girl, 2girls, 1boy, 1girl, 1boy, other, solo, group, and nsfw only when explicitly visual.",
     "The total number of people should match the visible characters being described/tagged.",
@@ -1582,7 +1563,7 @@ function parserInstruction(config) {
     "Use girl, boy, or other regardless of age. For out-of-frame partial characters, use label plus out of frame and visible part, such as boy, out of frame, hand.",
     "### name - required",
     "Character name from the narrative. If unnamed, use a consistent identifier such as girl A, boy B, shopkeeper, guard, or stranger. Never empty; this is used for cross-message appearance tracking.",
-    experimentalMode ? "Do not put character names in label, age, appearance, body, attire, expression, action, composition, situation, camera, place, environment, sharedComposition, supplement, or negative." : "Do not put character names in label, age, appearance, body, attire, expression, action, situation, camera, place, supplement, or negative.",
+    structuredAnima ? "Do not put character names in label, age, appearance, body, attire, expression, action, composition, situation, camera, place, environment, sharedComposition, supplement, or negative." : "Do not put character names in label, age, appearance, body, attire, expression, action, situation, camera, place, supplement, or negative.",
     "### age",
     "Visual age category only: child, aged down, mature male, mature female, aged up, or old. Based on appearance only.",
     "If characters appear late teens to early thirties, leave age blank.",
@@ -1597,7 +1578,7 @@ function parserInstruction(config) {
     "Eyes: color, shape, and visual modifiers such as heterochromia, tareme, tsurime, jitome, empty eyes, or dashed eyes. Always include when known.",
     "Skin: color and visible texture, such as dark skin, tan, red skin, metal skin, see-through body, or patchwork skin.",
     "Other: freckles, facial hair, scars, tattoos with location, symbol in eye, elf, demon, furry, androgynous, and other persistent identity traits.",
-    experimentalMode ? "Do not include names, attire, expression, pose, action, camera, place, supplement, blush, flushed cheeks, tears, sweat, or any other transient state in appearance." : "Do not include names, attire, expression, pose, action, camera, place, or supplement in appearance.",
+    structuredAnima ? "Do not include names, attire, expression, pose, action, camera, place, supplement, blush, flushed cheeks, tears, sweat, or any other transient state in appearance." : "Do not include names, attire, expression, pose, action, camera, place, or supplement in appearance.",
     "### body",
     "Physique, height, body shape, build, and persistent body traits. Exclude normal/default traits.",
     "Examples: muscular, toned, skinny, plump, fat, curvy, petite, shortstack, pear-shaped figure, giant, tall, short, flat chest, small breasts, medium breasts, large breasts, broad shoulders, wide hips, thick thighs.",
@@ -1611,26 +1592,26 @@ function parserInstruction(config) {
     "Do not include body traits, expressions, actions, camera, place, or names in attire.",
     "### expression",
     "Visible facial emotions and facial/eye states only: annoyed, angry, embarrassed, blush, grin, smile, crying, empty eyes, closed eyes.",
-    experimentalMode ? "Prefer the current source's explicit visible emotion over inferred genre mood. Convert irritation or anger into concrete visible tags such as annoyed, angry, furrowed brows, glaring, clenched teeth, or open mouth when supported." : "",
+    structuredAnima ? "Prefer the current source's explicit visible emotion over inferred genre mood. Convert irritation or anger into concrete visible tags such as annoyed, angry, furrowed brows, glaring, clenched teeth, or open mouth when supported." : "",
     "Do not include posture, gaze direction, clothing, body, action, camera, place, or names in expression.",
-    experimentalMode ? "### Atomic action ownership" : "### action",
-    experimentalMode ? "Do not output legacy shot.action or characters[].action fields. Put each individual action only in that character's composition.actions. Put shared contact or combined action only in sharedComposition.interaction." : "Use shot.action for global or relationship action that applies to the whole shot, such as two characters holding hands or one character guiding another.",
-    experimentalMode ? "A fact must have exactly one owner. Never repeat an individual action in sharedComposition and never repeat shared contact in a character's composition." : "Use characters[].action for a single character's posture, gaze, pose, interactions, and visible actions. Use multiple tags if needed.",
+    structuredAnima ? "### Atomic action ownership" : "### action",
+    structuredAnima ? "Do not output legacy shot.action or characters[].action fields. Put each individual action only in that character's composition.actions. Put shared contact or combined action only in sharedComposition.interaction." : "Use shot.action for global or relationship action that applies to the whole shot, such as two characters holding hands or one character guiding another.",
+    structuredAnima ? "A fact must have exactly one owner. Never repeat an individual action in sharedComposition and never repeat shared contact in a character's composition." : "Use characters[].action for a single character's posture, gaze, pose, interactions, and visible actions. Use multiple tags if needed.",
     "Posture examples: standing, sitting on chair, on back, kneeling, spread legs, all fours, squatting, on stomach, on side.",
     "Gaze examples: looking at viewer, looking away, looking at another.",
     "Interaction examples: arm hug, leaning, heads together, carrying, piggyback, holding hands.",
-    experimentalMode ? "Do not duplicate camera, environment, situation counts, appearance, body, attire, or expression in composition actions." : "Do not duplicate camera, place, situation counts, appearance, body, attire, or expression. Do not put the same action in multiple fields.",
+    structuredAnima ? "Do not duplicate camera, environment, situation counts, appearance, body, attire, or expression in composition actions." : "Do not duplicate camera, place, situation counts, appearance, body, attire, or expression. Do not put the same action in multiple fields.",
     "### negative - optional",
     "Only if the client explicitly specifies negative prompt tags. Never infer negative tags.",
     naturalDetail,
     "## Repetition is Consistency",
     "- If a detail appears in one shot and persists, tag it in all subsequent shots.",
     "- If an action or attire is still in motion or still present, repeat it in later shots.",
-    config.mode !== "asset" ? "- Preserve a continuous pov only when the narrative establishes an ongoing viewpoint. Otherwise choose the strongest perspective for each visual beat." : "",
+    "- Preserve a continuous pov only when the narrative establishes an ongoing viewpoint. Otherwise choose the strongest perspective for each visual beat.",
     "- appearance + body + attire must be identical for the same character across all shots unless the current message explicitly changes their present visual state.",
     "## Data Priority",
     "1. Client comments or explicit user instructions in the current message override all instructions.",
-    experimentalMode ? "2. Current message [P#] paragraphs are authoritative for scene content, action, visible emotion, interpersonal tone, and movement direction. Never soften, romanticize, or replace those facts with an inferred atmosphere. Never restore outdated clothing, props, location, or actions from context." : "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
+    structuredAnima ? "2. Current message [P#] paragraphs are authoritative for scene content, action, visible emotion, interpersonal tone, and movement direction. Never soften, romanticize, or replace those facts with an inferred atmosphere. Never restore outdated clothing, props, location, or actions from context." : "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
     config.characterTagContextEnabled ? "3. Character tag history is the current visual baseline for returning characters: label, age, appearance, body, and base attire." : "",
     config.characterTagContextEnabled ? "Use previous character tags as a baseline for returning characters, including base attire. Preserve specific baseline tags when not contradicted, such as short cut, white pupils, small breasts, black high school uniform, red sailor ribbon, black skirt, and white pantyhose." : "",
     config.characterTagContextEnabled ? "The current message is authoritative for the character's present visual state. It can update the baseline when it clearly changes clothing, lack of clothing, appearance, or body traits." : "",
@@ -1744,7 +1725,10 @@ var FUZZY_KEYS = [
   "scene",
   "positive",
   "quote",
-  "supplement"
+  "supplement",
+  "perspectiveMode",
+  "renderScope",
+  "visibleTags"
 ];
 function levenshtein(a, b) {
   let previous = Array.from({ length: b.length + 1 }, (_value, index) => index);
@@ -1921,11 +1905,13 @@ function parserMessages(stableInstruction, referenceContext, userRequest, overri
 function preprocessingInstruction(paragraphs, config) {
   const minimum = Math.min(config.minImages, paragraphs.length);
   const maximum = Math.min(config.maxImages, paragraphs.length);
+  const perspectiveGuidance = config.adaptiveMode ? "Select varied candidates that give the main parser strong options for Creative, Static, or Dynamic treatment." : config.perspectiveMode === "creative" ? "Favor concrete but easily overlooked visual anchors: partial subjects, objects, reflections, silhouettes, foreground fragments, environmental details, or unusual spatial relationships." : config.perspectiveMode === "static" ? "Favor stable clearly readable beats with conventional framing, limited motion, and limited occlusion." : "Favor significant visible action, movement, interaction, and cinematic changes.";
   return [
     "# Illustration Visual-Beat Editor",
     "Select and summarize the strongest visual beats from the current numbered assistant paragraphs.",
     `Select between ${minimum} and ${maximum} unique paragraphs.`,
     "Choose paragraphs with the most significant visual changes, actions, interactions, location changes, or emotional beats across the whole source. Do not favor early paragraphs by default.",
+    perspectiveGuidance,
     "Output plain text only. The first line must have exactly this form:",
     "[Appearance: character name1: current visual baseline tags, character name2: current visual baseline tags]",
     "Then output one line per selected paragraph in exactly this form:",
@@ -1976,7 +1962,7 @@ function validatePreprocessedTarget(value, paragraphs, config) {
 }
 async function preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId) {
   const rawTarget = formatTargetParagraphs(paragraphs);
-  if (!config.preprocessingEnabled || config.mode === "asset")
+  if (!config.preprocessingEnabled)
     return rawTarget;
   try {
     const summary = await generateParserText(parserConnection, config, parserMessages(preprocessingInstruction(paragraphs, config), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), preprocessingUserRequest(rawTarget), context.override), userId);
@@ -2023,15 +2009,16 @@ function imageUrlFromId(imageId) {
 function htmlAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r\n?|\n/g, "&#10;");
 }
-function renderInlayBlock(url, prompt, index, config) {
+function renderInlayBlock(url, prompt, negativePrompt, perspectiveMode, perspectiveSource, index, config) {
   const label = `Inlay ${index + 1}`;
-  const configuredWidth = config.mode === "asset" ? config.assetImageWidth : config.inlayImageWidth;
-  const fallbackWidth = config.mode === "asset" ? DEFAULT_CONFIG.assetImageWidth : DEFAULT_CONFIG.inlayImageWidth;
-  const width = clampInt2(configuredWidth, 120, 2400, fallbackWidth);
+  const width = clampInt2(config.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth);
   const maxHeight = clampInt2(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
   const safePrompt = prompt.replace(/```/g, "'''");
+  const safeNegative = negativePrompt.replace(/```/g, "'''");
+  const modeAttribute = perspectiveMode ? ` data-inlay-illustrator-perspective="${htmlAttr(perspectiveMode)}"` : "";
+  const sourceAttribute = perspectiveSource ? ` data-inlay-illustrator-perspective-source="${htmlAttr(perspectiveSource)}"` : "";
   return `${MARKER}
-<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-lightbox data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre></div>`;
+<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" data-inlay-illustrator-negative-prompt="${htmlAttr(safeNegative)}"${modeAttribute}${sourceAttribute} style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre><pre class="inlay-illustrator-negative-prompt" hidden>${htmlAttr(safeNegative)}</pre></div>`;
 }
 function renderInlaidMessage(original, record, config) {
   const cleanOriginal = stripInlayContent(original);
@@ -2040,7 +2027,7 @@ function renderInlaidMessage(original, record, config) {
   record.imageUrls.forEach((url, index) => {
     const paragraph2 = clampInt2(record.paragraphs[index], 1, count, Math.min(index + 1, count));
     const existing = blocks.get(paragraph2) || [];
-    existing.push(renderInlayBlock(url, record.prompts[index] || "", index, config));
+    existing.push(renderInlayBlock(url, record.prompts[index] || "", record.negativePrompts?.[index] || "", record.perspectiveModes?.[index], record.perspectiveSources?.[index], index, config));
     blocks.set(paragraph2, existing);
   });
   const tokens = cleanOriginal.trimEnd().split(/(\r?\n\s*\r?\n)/);
@@ -2209,8 +2196,9 @@ async function parseAndSelectPrompts(input) {
         cacheCharacters: Object.keys(state.characterAppearance).length,
         promptStyle: config.promptStyle,
         promptSyntax: config.promptSyntax,
-        mode: config.mode,
-        maxCharacters: config.mode === "asset" ? 1 : config.maxCharacters,
+        adaptiveMode: config.adaptiveMode,
+        perspectiveMode: config.perspectiveMode,
+        maxCharacters: config.maxCharacters,
         preprocessingEnabled: config.preprocessingEnabled,
         contextDiagnostics: context.diagnostics
       });
@@ -2260,7 +2248,8 @@ function logParsedSelection(parsed, selected, paragraphs, config) {
     parserParagraphs: selected.map((entry) => entry.parserParagraph),
     originalParagraphs: selected.map((entry) => entry.paragraph),
     promptLengths: selected.map((entry) => renderPrompt(entry.prompt, config.promptSyntax).length),
-    negativeLengths: selected.map((entry) => entry.negative.length)
+    negativeLengths: selected.map((entry) => entry.negative.length),
+    perspectives: selected.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource }))
   });
 }
 async function prepareAndDispatchImages(chatId, selected, config, userId) {
@@ -2284,6 +2273,8 @@ async function prepareAndDispatchImages(chatId, selected, config, userId) {
       prompt,
       negative: entry.negative || "",
       paragraph: entry.paragraph,
+      perspectiveMode: entry.perspectiveMode,
+      perspectiveSource: entry.perspectiveSource,
       parameters
     };
     logStage(config, "image_generation_prepared", {
@@ -2348,6 +2339,9 @@ function collectImageResults(stage, config) {
   const imageIds = [];
   const imageUrls = [];
   const prompts = stage.jobs.map((job) => job.prompt);
+  const negativePrompts = stage.jobs.map((job) => job.negative);
+  const perspectiveModes = stage.jobs.map((job) => job.perspectiveMode || config.perspectiveMode);
+  const perspectiveSources = stage.jobs.map((job) => job.perspectiveSource || "manual");
   const paragraphs = stage.jobs.map((job) => job.paragraph);
   for (const [index, result] of stage.results.entries()) {
     if (result.imageId)
@@ -2364,7 +2358,7 @@ function collectImageResults(stage, config) {
       model: result.model || null
     });
   }
-  return { prompts, paragraphs, imageIds, imageUrls };
+  return { prompts, negativePrompts, perspectiveModes, perspectiveSources, paragraphs, imageIds, imageUrls };
 }
 async function persistGeneration(input) {
   const { chatId, messageId, swipeId, key, target, parsed, assets, config, userId } = input;
@@ -2373,6 +2367,9 @@ async function persistGeneration(input) {
     messageId,
     swipeId,
     prompts: assets.prompts,
+    negativePrompts: assets.negativePrompts,
+    perspectiveModes: assets.perspectiveModes,
+    perspectiveSources: assets.perspectiveSources,
     paragraphs: assets.paragraphs,
     imageIds: assets.imageIds,
     imageUrls: assets.imageUrls,

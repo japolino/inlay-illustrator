@@ -1,25 +1,29 @@
 import type { Config } from "../shared/config.js";
 
 export function parserInstruction(config: Config): string {
-  const maxCharacters = config.mode === "asset" ? 1 : config.maxCharacters;
-  const experimentalMode = config.mode === "experimental";
-  const shotInstruction = config.mode === "asset"
-    ? [
-      "Asset mode: generate exactly one shot for each [P#] paragraph.",
-      "Each shot must contain exactly one visible character.",
-      "Force place to include white background, simple background.",
-      "Favor clean reusable character portrait tags over narrative scene illustration tags."
-    ].join("\n")
-    : [
-      `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
-      "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
-      "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
-      "If the source contains too few distinct visual beats, create alternate shots of the same paragraph with genuinely different cinematography. Do not invent narrative events.",
-      "Distinct shots may reference the same paragraph. Order shots by their visual importance, not paragraph number.",
-      experimentalMode
-        ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood."
-        : ""
-    ].join("\n");
+  const maxCharacters = config.maxCharacters;
+  const structuredAnima = config.promptStyle === "anima";
+  const shotInstruction = [
+    `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
+    "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
+    "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
+    "If the source contains too few distinct visual beats, create alternate shots of the same paragraph with genuinely different cinematography. Do not invent narrative events.",
+    "Distinct shots may reference the same paragraph. Order shots by their visual importance, not paragraph number.",
+    structuredAnima
+      ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood."
+      : ""
+  ].join("\n");
+  const perspectiveInstruction = [
+    "### Perspective mode - required per shot",
+    config.adaptiveMode
+      ? "Choose perspectiveMode independently for every shot before filling any other shot field. It must be exactly creative, static, or dynamic."
+      : `Set perspectiveMode to exactly ${config.perspectiveMode} for every shot.`,
+    "Creative isolates a meaningful visual anchor from the paragraph instead of automatically showing the complete scene. The anchor may be any partial character detail, object, reflection, silhouette, environmental detail, foreground fragment, or unusual spatial relationship; it is not limited to hands or people.",
+    "Creative must remain concrete and source-supported. Use renderScope to state what is actually in frame. Put only traits genuinely visible in that crop or occlusion into visibleTags. Never copy a complete character baseline into visibleTags when most of it is off-frame.",
+    "Dynamic follows the current scene's visible action, movement, interaction, and strongest cinematic viewpoint.",
+    "Static chooses a safer stable portrait-like visual beat with a clearly readable subject, limited motion, limited occlusion, and conventional framing, while remaining faithful to the paragraph.",
+    "perspectiveMode, renderScope, and visibleTags are shot-only rendering decisions. They never alter or replace the complete appearance, body, and attire memory fields."
+  ].join("\n");
   const source = config.originalReference
     ? [
       "Original Creation Tag:",
@@ -30,7 +34,7 @@ export function parserInstruction(config: Config): string {
       "Do not include any parenthetical, source name, creation reference, title, or alias in name or any other field."
     ].join("\n")
     : "Use names only for the JSON name field as private memory keys. Names will not be included in final prompts. If not given, make a concise stable identifier that fits the description.";
-  const schema = experimentalMode ? [
+  const schema = structuredAnima ? [
     "{",
     '  "scenes": [',
     "    {",
@@ -43,6 +47,7 @@ export function parserInstruction(config: Config): string {
     '      "shots": [',
     "        {",
     '          "paragraph": 0,',
+    '          "perspectiveMode": "creative | static | dynamic",',
     '          "camera": {',
     '            "framing": "string",',
     '            "angle": "string",',
@@ -60,6 +65,8 @@ export function parserInstruction(config: Config): string {
     '              "body": "string",',
     '              "attire": "string",',
     '              "expression": "string",',
+    '              "renderScope": "string",',
+    '              "visibleTags": "string",',
     '              "composition": {',
     '                "position": "string",',
     '                "pose": "string",',
@@ -86,6 +93,7 @@ export function parserInstruction(config: Config): string {
     '      "shots": [',
     "        {",
     '          "paragraph": 0,',
+    '          "perspectiveMode": "creative | static | dynamic",',
     '          "camera": "string",',
     '          "situation": "string",',
     '          "action": "string",',
@@ -99,6 +107,8 @@ export function parserInstruction(config: Config): string {
     '              "body": "string",',
     '              "attire": "string",',
     '              "expression": "string",',
+    '              "renderScope": "string",',
+    '              "visibleTags": "string",',
     '              "action": "string"',
     "            }",
     "          ],",
@@ -110,7 +120,7 @@ export function parserInstruction(config: Config): string {
     "  ]",
     "}"
   ];
-  const naturalDetail = experimentalMode
+  const naturalDetail = structuredAnima
     ? [
       "### Atomic Natural Composition",
       "characters[].composition is always required and must use its four atomic fields. The renderer joins them once in this exact order: position, pose, actions, gaze.",
@@ -136,6 +146,7 @@ export function parserInstruction(config: Config): string {
         "### Natural Language Supplement",
         "In supplement, describe the image in natural language for visible details that tags cannot express well, such as detailed composition, framing, character positions, interactions, unusual vantage points, or objective atmosphere/lighting.",
         "Use concise, minimal, telegraphic sentences. Be objective, not subjective interpretation.",
+        "Separate supplement phrases with commas, never semicolons. Do not end supplement with sentence punctuation.",
         "Unusual framing and vantage points are welcome, such as viewed through an object, reflected in a mirror, or partially obscured by foreground elements.",
         "When describing multiple people, do not use names. Identify people by visual position such as left girl, right boy, foreground character, or background character.",
         "Do not use supplement for smell, sound, internal sensations, invisible emotions, or prose narration."
@@ -146,14 +157,14 @@ export function parserInstruction(config: Config): string {
     "Tag the current message's paragraphs as Danbooru-style English image prompts. Output a single JSON object.",
     "## JSON Format",
     schema.join("\n"),
-    experimentalMode
+    structuredAnima
       ? "- negative is optional. All other fields and nested objects are required. Use empty strings or arrays inside the required objects when a field does not apply; never collapse an object into a string."
       : "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
     "- These are the ONLY allowed fields. Adding any unlisted field is a schema violation.",
     "## Scenes & Shots",
     "Scene = shots sharing one physical location.",
     "- Same location means same scene, multiple shots.",
-    experimentalMode ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
+    structuredAnima ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
     "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
     shotInstruction,
     "Paragraph mapping: current message uses [P#] numbering.",
@@ -162,37 +173,37 @@ export function parserInstruction(config: Config): string {
     "- Tag ONLY the current message. Recent context is for continuity only.",
     "## Tag Rules",
     "Use common, objective, visualizable Danbooru-style English tags. Do not invent tags; use simpler well-known equivalents if unsure. Do not use metaphors for tags.",
-    experimentalMode
+    structuredAnima
       ? "Tag fields are comma-separated tags. Atomic composition and sharedComposition values are concise comma-free natural-language phrases. Environment arrays contain one comma-free visual snippet per item."
       : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
-    `Character limit: max ${maxCharacters} visible character(s) per shot. Characters outside the limit should be represented only by visible partial body parts, such as out of frame, hand, arm, or legs. Do not output their expressions or attire. Only output visible body parts and actions when needed.`,
-    config.mode === "asset" ? "Asset mode requires one character in characters[] for every shot, no group shots, no narrative background beyond a simple white background." : "",
+    `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it. For every character object, keep the complete known baseline in appearance, body, and attire even when Creative shows only a partial crop. visibleTags is the separate visible-only rendering projection.`,
     "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for stable appearance, attire, location, and persistent actions.",
-    config.mode !== "asset" ? "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts." : "",
-    experimentalMode
+    "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts.",
+    perspectiveInstruction,
+    structuredAnima
       ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, camera, situation, sharedComposition, environment, and negative."
       : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
     "## Field Reference",
-    experimentalMode ? "### environment - scene-level" : "### place - scene-level",
-    experimentalMode
+    structuredAnima ? "### environment - scene-level" : "### place - scene-level",
+    structuredAnima
       ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details."
       : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
-    experimentalMode
+    structuredAnima
       ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment. Use only source-supported visual atmosphere; never infer romance, calm, menace, or another emotional tone from lighting alone."
       : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
     "### camera - shot-level",
-    experimentalMode
+    structuredAnima
       ? "camera.framing must be empty or exactly one of: portrait, close-up, medium close-up, upper body, medium shot, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, body-part focus."
       : "Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus.",
-    experimentalMode
+    structuredAnima
       ? "camera.angle must be empty or exactly one of: eye level, low angle, high angle, dutch angle."
       : "Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
-    experimentalMode ? "camera.perspective must be empty or exactly one of: straight-on, from above, from behind, from below, from side, sideways, three-quarter view, pov." : "",
-    experimentalMode ? "camera.focus may contain at most two values chosen only from: shallow depth of field, deep focus, background blur, foreground blur, motion blur, fisheye, wide-angle lens, telephoto lens." : "",
-    experimentalMode
+    structuredAnima ? "camera.perspective must be empty or exactly one of: straight-on, from above, from behind, from below, from side, sideways, three-quarter view, pov." : "",
+    structuredAnima ? "camera.focus may contain at most two values chosen only from: shallow depth of field, deep focus, background blur, foreground blur, motion blur, fisheye, wide-angle lens, telephoto lens." : "",
+    structuredAnima
       ? "Do not add any other camera keys or camera values. Lighting, streetlamps, atmosphere, actions, expressions, appearance, clothing, subject counts, and place never belong in camera."
       : "Use camera only for perspective and framing. Do not include actions, expressions, appearance, clothing, subject counts, or place.",
-    experimentalMode ? "Choose framing that can visibly contain the complete focal action. Do not request a close-up for full-body motion such as walking, running, spinning, kicking, or visible footwork unless the source explicitly prioritizes the face." : "",
+    structuredAnima ? "Choose framing that can visibly contain the complete focal action unless Creative deliberately isolates a smaller visual anchor." : "",
     "### situation - shot-level",
     "Strictly use character count/composition tags such as 1girl, 2girls, 1boy, 1girl, 1boy, other, solo, group, and nsfw only when explicitly visual.",
     "The total number of people should match the visible characters being described/tagged.",
@@ -201,7 +212,7 @@ export function parserInstruction(config: Config): string {
     "Use girl, boy, or other regardless of age. For out-of-frame partial characters, use label plus out of frame and visible part, such as boy, out of frame, hand.",
     "### name - required",
     "Character name from the narrative. If unnamed, use a consistent identifier such as girl A, boy B, shopkeeper, guard, or stranger. Never empty; this is used for cross-message appearance tracking.",
-    experimentalMode
+    structuredAnima
       ? "Do not put character names in label, age, appearance, body, attire, expression, action, composition, situation, camera, place, environment, sharedComposition, supplement, or negative."
       : "Do not put character names in label, age, appearance, body, attire, expression, action, situation, camera, place, supplement, or negative.",
     "### age",
@@ -218,7 +229,7 @@ export function parserInstruction(config: Config): string {
     "Eyes: color, shape, and visual modifiers such as heterochromia, tareme, tsurime, jitome, empty eyes, or dashed eyes. Always include when known.",
     "Skin: color and visible texture, such as dark skin, tan, red skin, metal skin, see-through body, or patchwork skin.",
     "Other: freckles, facial hair, scars, tattoos with location, symbol in eye, elf, demon, furry, androgynous, and other persistent identity traits.",
-    experimentalMode
+    structuredAnima
       ? "Do not include names, attire, expression, pose, action, camera, place, supplement, blush, flushed cheeks, tears, sweat, or any other transient state in appearance."
       : "Do not include names, attire, expression, pose, action, camera, place, or supplement in appearance.",
     "### body",
@@ -234,19 +245,19 @@ export function parserInstruction(config: Config): string {
     "Do not include body traits, expressions, actions, camera, place, or names in attire.",
     "### expression",
     "Visible facial emotions and facial/eye states only: annoyed, angry, embarrassed, blush, grin, smile, crying, empty eyes, closed eyes.",
-    experimentalMode ? "Prefer the current source's explicit visible emotion over inferred genre mood. Convert irritation or anger into concrete visible tags such as annoyed, angry, furrowed brows, glaring, clenched teeth, or open mouth when supported." : "",
+    structuredAnima ? "Prefer the current source's explicit visible emotion over inferred genre mood. Convert irritation or anger into concrete visible tags such as annoyed, angry, furrowed brows, glaring, clenched teeth, or open mouth when supported." : "",
     "Do not include posture, gaze direction, clothing, body, action, camera, place, or names in expression.",
-    experimentalMode ? "### Atomic action ownership" : "### action",
-    experimentalMode
+    structuredAnima ? "### Atomic action ownership" : "### action",
+    structuredAnima
       ? "Do not output legacy shot.action or characters[].action fields. Put each individual action only in that character's composition.actions. Put shared contact or combined action only in sharedComposition.interaction."
       : "Use shot.action for global or relationship action that applies to the whole shot, such as two characters holding hands or one character guiding another.",
-    experimentalMode
+    structuredAnima
       ? "A fact must have exactly one owner. Never repeat an individual action in sharedComposition and never repeat shared contact in a character's composition."
       : "Use characters[].action for a single character's posture, gaze, pose, interactions, and visible actions. Use multiple tags if needed.",
     "Posture examples: standing, sitting on chair, on back, kneeling, spread legs, all fours, squatting, on stomach, on side.",
     "Gaze examples: looking at viewer, looking away, looking at another.",
     "Interaction examples: arm hug, leaning, heads together, carrying, piggyback, holding hands.",
-    experimentalMode
+    structuredAnima
       ? "Do not duplicate camera, environment, situation counts, appearance, body, attire, or expression in composition actions."
       : "Do not duplicate camera, place, situation counts, appearance, body, attire, or expression. Do not put the same action in multiple fields.",
     "### negative - optional",
@@ -255,11 +266,11 @@ export function parserInstruction(config: Config): string {
     "## Repetition is Consistency",
     "- If a detail appears in one shot and persists, tag it in all subsequent shots.",
     "- If an action or attire is still in motion or still present, repeat it in later shots.",
-    config.mode !== "asset" ? "- Preserve a continuous pov only when the narrative establishes an ongoing viewpoint. Otherwise choose the strongest perspective for each visual beat." : "",
+    "- Preserve a continuous pov only when the narrative establishes an ongoing viewpoint. Otherwise choose the strongest perspective for each visual beat.",
     "- appearance + body + attire must be identical for the same character across all shots unless the current message explicitly changes their present visual state.",
     "## Data Priority",
     "1. Client comments or explicit user instructions in the current message override all instructions.",
-    experimentalMode
+    structuredAnima
       ? "2. Current message [P#] paragraphs are authoritative for scene content, action, visible emotion, interpersonal tone, and movement direction. Never soften, romanticize, or replace those facts with an inferred atmosphere. Never restore outdated clothing, props, location, or actions from context."
       : "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
     config.characterTagContextEnabled ? "3. Character tag history is the current visual baseline for returning characters: label, age, appearance, body, and base attire." : "",

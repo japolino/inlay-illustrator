@@ -60,7 +60,7 @@ const FUZZY_KEYS = [
   "scenes", "place", "shots", "paragraph", "camera", "situation", "characters", "label", "age", "identity", "appearance", "body", "attire",
   "expression", "action", "composition", "sharedComposition", "environment", "location", "timeWeather", "lightingMood", "backgroundElements",
   "framing", "angle", "perspective", "focus", "position", "pose", "actions", "gaze", "interaction", "spatialRelation",
-  "negative", "name", "scene", "positive", "quote", "supplement"
+  "negative", "name", "scene", "positive", "quote", "supplement", "perspectiveMode", "renderScope", "visibleTags"
 ];
 
 function levenshtein(a: string, b: string): number {
@@ -244,11 +244,19 @@ export function parserMessages(
 export function preprocessingInstruction(paragraphs: PreparedParagraph[], config: Config): string {
   const minimum = Math.min(config.minImages, paragraphs.length);
   const maximum = Math.min(config.maxImages, paragraphs.length);
+  const perspectiveGuidance = config.adaptiveMode
+    ? "Select varied candidates that give the main parser strong options for Creative, Static, or Dynamic treatment."
+    : config.perspectiveMode === "creative"
+      ? "Favor concrete but easily overlooked visual anchors: partial subjects, objects, reflections, silhouettes, foreground fragments, environmental details, or unusual spatial relationships."
+      : config.perspectiveMode === "static"
+        ? "Favor stable clearly readable beats with conventional framing, limited motion, and limited occlusion."
+        : "Favor significant visible action, movement, interaction, and cinematic changes.";
   return [
     "# Illustration Visual-Beat Editor",
     "Select and summarize the strongest visual beats from the current numbered assistant paragraphs.",
     `Select between ${minimum} and ${maximum} unique paragraphs.`,
     "Choose paragraphs with the most significant visual changes, actions, interactions, location changes, or emotional beats across the whole source. Do not favor early paragraphs by default.",
+    perspectiveGuidance,
     "Output plain text only. The first line must have exactly this form:",
     "[Appearance: character name1: current visual baseline tags, character name2: current visual baseline tags]",
     "Then output one line per selected paragraph in exactly this form:",
@@ -305,7 +313,7 @@ export async function preprocessTargetParagraphs(
   userId?: string
 ): Promise<string> {
   const rawTarget = formatTargetParagraphs(paragraphs);
-  if (!config.preprocessingEnabled || config.mode === "asset") return rawTarget;
+  if (!config.preprocessingEnabled) return rawTarget;
   try {
     const summary = await generateParserText(parserConnection, config, parserMessages(
       preprocessingInstruction(paragraphs, config),

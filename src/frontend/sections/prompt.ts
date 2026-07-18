@@ -8,21 +8,17 @@ function createPresetId(): string {
 
 export function renderPromptSection({ ui, config, actions, rerender }: SectionContext): void {
   const section = ui.section("Prompt output", false);
-  if (config.mode === "experimental") {
-    ui.addSummary(section, "Experimental mode uses the atomic Anima parser and prompt renderer.");
-  } else {
-    ui.addSelect(section, "promptStyle", "Prompt style", [
-      { value: "default", label: "Default" },
-      { value: "anima", label: "Anima" }
-    ]);
-  }
+  ui.addSelect(section, "promptStyle", "Prompt style", [
+    { value: "default", label: "Default" },
+    { value: "anima", label: "Anima" }
+  ], "", rerender);
   ui.addSelect(section, "promptSyntax", "Prompt syntax", [
     { value: "nai", label: "NovelAI" },
     { value: "comfyui", label: "ComfyUI" }
   ]);
   ui.addSwitch(section, "originalReference", "Source reference");
   ui.addText(section, "originalCreationName", "Creation name");
-  ui.addSwitch(section, "supplement", config.mode === "experimental" ? "Natural/shared detail" : "Natural supplement");
+  ui.addSwitch(section, "supplement", config.promptStyle === "anima" ? "Natural/shared detail" : "Natural supplement");
   ui.addSubtitle(section, "Prompt presets");
 
   const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;

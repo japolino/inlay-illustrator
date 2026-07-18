@@ -13,6 +13,8 @@ type SelectOption = {
   label: string;
 };
 
+type RangeChoice = SelectOption;
+
 export class UiBuilder {
   private sectionSequence = 0;
 
@@ -82,13 +84,59 @@ export class UiBuilder {
     return target;
   }
 
-  addSwitch(parent: HTMLElement, key: keyof Config, label: string, hint = ""): void {
+  addSwitch(parent: HTMLElement, key: keyof Config, label: string, hint = "", afterChange?: () => void): void {
     const target = this.row(parent, label, hint);
     this.track(this.ctx.components.mountSwitch(target, {
       checked: Boolean(this.config[key]),
       ariaLabel: label,
-      onChange: (checked) => this.patchConfig({ [key]: checked } as Partial<Config>)
+      onChange: (checked) => {
+        this.patchConfig({ [key]: checked } as Partial<Config>);
+        afterChange?.();
+      }
     }));
+  }
+
+  addRangeChoice(
+    parent: HTMLElement,
+    key: keyof Config,
+    label: string,
+    choices: RangeChoice[],
+    disabled = false,
+    hint = ""
+  ): void {
+    const target = this.row(parent, label, hint);
+    const wrapper = document.createElement("div");
+    wrapper.className = "inlay-range-choice";
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = "0";
+    input.max = String(Math.max(0, choices.length - 1));
+    input.step = "1";
+    input.disabled = disabled;
+    input.setAttribute("aria-label", label);
+    const selectedIndex = Math.max(0, choices.findIndex((choice) => choice.value === String(this.config[key])));
+    input.value = String(selectedIndex);
+
+    const labels = document.createElement("div");
+    labels.className = "inlay-range-labels";
+    const labelNodes = choices.map((choice) => {
+      const node = document.createElement("span");
+      node.textContent = choice.label;
+      labels.append(node);
+      return node;
+    });
+    const update = (): void => {
+      const index = Number(input.value);
+      labelNodes.forEach((node, candidate) => node.classList.toggle("is-active", candidate === index));
+    };
+    input.addEventListener("input", update);
+    input.addEventListener("change", () => {
+      const choice = choices[Number(input.value)];
+      if (choice) this.patchConfig({ [key]: choice.value } as Partial<Config>);
+    });
+    update();
+    wrapper.append(input, labels);
+    target.append(wrapper);
   }
 
   addNumber(parent: HTMLElement, key: keyof Config, label: string, min: number, max: number, hint = ""): void {

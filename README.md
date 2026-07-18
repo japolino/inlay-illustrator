@@ -8,9 +8,11 @@ Lumiverse extension for persistent, context-aware character image generation.
 - Dynamic visual memory for returning characters, including base attire
 - Image prompts generated from current and recent chat context
 - Inline illustration batches attached to chat messages
-- Asset mode for focused character images
-- Anima-style and ComfyUI-friendly prompt output
-- Opt-in Experimental mode for atomic Anima composition, structured environments, and constrained camera fields
+- Manual Creative, Static, or Dynamic perspective selection
+- Optional Adaptive Mode that selects a perspective independently for each illustration
+- Creative visible-only tag projection without modifying persistent character memory
+- Atomic Anima composition, structured environments, and ComfyUI-friendly prompt output
+- Image lightbox with positive prompt, final negative prompt, and perspective metadata
 - Optional activated-lorebook context with macro resolution, compact first-pass references, and full-context retry
 
 ## Install from source

@@ -58,6 +58,26 @@ describe("character memory", () => {
     });
   });
 
+  test("keeps full baseline memory independent from Creative render scope and visible tags", () => {
+    const cache: Record<string, string> = {};
+    updateCache(cache, { scenes: [{ shots: [{
+      paragraph: 1,
+      perspectiveMode: "creative",
+      characters: [{
+        name: "Mira",
+        label: "girl",
+        appearance: "long silver hair, blue eyes",
+        body: "tall",
+        attire: "red coat, black boots",
+        renderScope: "only her sleeve and fingertips in frame",
+        visibleTags: "red sleeve, fingertips"
+      }]
+    }] }] });
+
+    expect(cache.Mira).toBe("girl, long silver hair, blue eyes, tall, red coat, black boots");
+    expect(cache.Mira).not.toContain("fingertips");
+  });
+
   test("renames entries case-insensitively, sanitizes edited tags, and preserves unrelated memory", () => {
     const current = state({ Alice: "red hair", Bob: "black hair" });
 

@@ -21,10 +21,10 @@ const MARKER_IMAGE_BLOCK = ownedBlock(
   `${MARKER_PATTERN}\\s*(?:${MARKDOWN_IMAGE_PATTERN}|${HTML_IMAGE_PATTERN})`
 );
 const PROMPT_PRE_BLOCK = ownedBlock(
-  String.raw`<pre\b(?=[^>]*[\t\n\f\r ]class\s*=\s*(?:"(?:[^"]*[\t\n\f\r ])?inlay-illustrator-prompt(?:[\t\n\f\r ][^"]*)?"|'(?:[^']*[\t\n\f\r ])?inlay-illustrator-prompt(?:[\t\n\f\r ][^']*)?'|inlay-illustrator-prompt(?=[\s>])))[^>]*>[\s\S]*?<\/pre\s*>`
+  String.raw`<pre\b(?=[^>]*[\t\n\f\r ]class\s*=\s*(?:"(?:[^"]*[\t\n\f\r ])?inlay-illustrator-(?:negative-)?prompt(?:[\t\n\f\r ][^"]*)?"|'(?:[^']*[\t\n\f\r ])?inlay-illustrator-(?:negative-)?prompt(?:[\t\n\f\r ][^']*)?'|inlay-illustrator-(?:negative-)?prompt(?=[\s>])))[^>]*>[\s\S]*?<\/pre\s*>`
 );
 const ORPHAN_MARKER = ownedBlock(MARKER_PATTERN);
-const PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-prompt(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
+const PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-(?:negative-prompt|perspective-source|perspective|prompt)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
 
 /**
  * Removes only presentation markup owned by Inlay Illustrator.

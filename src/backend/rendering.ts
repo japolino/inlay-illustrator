@@ -1,10 +1,17 @@
-import { DEFAULT_CONFIG, type Config } from "../shared/config.js";
+import { DEFAULT_CONFIG, type Config, type PerspectiveMode } from "../shared/config.js";
 import { MARKER } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
 import { paragraphCount } from "./paragraphs.js";
 import { clampInt } from "./utils.js";
 
-type InlayRecord = { imageUrls: string[]; prompts: string[]; paragraphs: number[] };
+type InlayRecord = {
+  imageUrls: string[];
+  prompts: string[];
+  negativePrompts?: string[];
+  perspectiveModes?: PerspectiveMode[];
+  perspectiveSources?: Array<"adaptive" | "manual">;
+  paragraphs: number[];
+};
 
 export function imageUrlFromId(imageId: string): string {
   return `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
@@ -19,14 +26,23 @@ function htmlAttr(value: string): string {
     .replace(/\r\n?|\n/g, "&#10;");
 }
 
-function renderInlayBlock(url: string, prompt: string, index: number, config: Config): string {
+function renderInlayBlock(
+  url: string,
+  prompt: string,
+  negativePrompt: string,
+  perspectiveMode: PerspectiveMode | undefined,
+  perspectiveSource: "adaptive" | "manual" | undefined,
+  index: number,
+  config: Config
+): string {
   const label = `Inlay ${index + 1}`;
-  const configuredWidth = config.mode === "asset" ? config.assetImageWidth : config.inlayImageWidth;
-  const fallbackWidth = config.mode === "asset" ? DEFAULT_CONFIG.assetImageWidth : DEFAULT_CONFIG.inlayImageWidth;
-  const width = clampInt(configuredWidth, 120, 2400, fallbackWidth);
+  const width = clampInt(config.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth);
   const maxHeight = clampInt(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
   const safePrompt = prompt.replace(/```/g, "'''");
-  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-lightbox data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre></div>`;
+  const safeNegative = negativePrompt.replace(/```/g, "'''");
+  const modeAttribute = perspectiveMode ? ` data-inlay-illustrator-perspective="${htmlAttr(perspectiveMode)}"` : "";
+  const sourceAttribute = perspectiveSource ? ` data-inlay-illustrator-perspective-source="${htmlAttr(perspectiveSource)}"` : "";
+  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" data-inlay-illustrator-negative-prompt="${htmlAttr(safeNegative)}"${modeAttribute}${sourceAttribute} style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre><pre class="inlay-illustrator-negative-prompt" hidden>${htmlAttr(safeNegative)}</pre></div>`;
 }
 
 export function renderInlaidMessage(original: string, record: InlayRecord, config: Config): string {
@@ -36,7 +52,15 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
   record.imageUrls.forEach((url, index) => {
     const paragraph = clampInt(record.paragraphs[index], 1, count, Math.min(index + 1, count));
     const existing = blocks.get(paragraph) || [];
-    existing.push(renderInlayBlock(url, record.prompts[index] || "", index, config));
+    existing.push(renderInlayBlock(
+      url,
+      record.prompts[index] || "",
+      record.negativePrompts?.[index] || "",
+      record.perspectiveModes?.[index],
+      record.perspectiveSources?.[index],
+      index,
+      config
+    ));
     blocks.set(paragraph, existing);
   });
 

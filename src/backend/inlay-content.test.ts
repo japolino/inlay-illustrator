@@ -42,7 +42,7 @@ describe("Inlay content sanitization", () => {
   });
 
   test("scrubs orphan prompt metadata while preserving the image", () => {
-    const input = '<img src="/kept.png" data-inlay-illustrator-prompt="secret" alt="kept"><pre class="note inlay-illustrator-prompt" hidden>secret</pre>';
+    const input = '<img src="/kept.png" data-inlay-illustrator-prompt="secret" data-inlay-illustrator-negative-prompt="negative" data-inlay-illustrator-perspective="creative" data-inlay-illustrator-perspective-source="adaptive" alt="kept"><pre class="note inlay-illustrator-prompt" hidden>secret</pre><pre class="inlay-illustrator-negative-prompt" hidden>negative</pre>';
 
     expect(stripInlayContent(input)).toBe('<img src="/kept.png" alt="kept">');
   });

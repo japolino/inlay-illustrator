@@ -321,8 +321,10 @@ describe("illustration parser construction", () => {
     expect(guidance).toContain("stable appearance, attire, location, and persistent actions");
     expect(guidance).toContain("Continuity does not require repeating camera angle");
     expect(guidance).toContain("continuous pov only when the narrative establishes");
-    expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, mode: "asset" })).not.toContain("at least two of these dimensions");
-    expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, mode: "asset" })).not.toContain("Vary those deliberately");
+    expect(guidance).toContain("Set perspectiveMode to exactly dynamic");
+    expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, adaptiveMode: true })).toContain(
+      "Choose perspectiveMode independently for every shot"
+    );
   });
 
   test("asks preprocessing for significant visual beats and a camera/composition note", () => {
