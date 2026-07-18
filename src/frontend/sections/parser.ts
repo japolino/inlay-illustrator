@@ -48,6 +48,12 @@ export function renderParserSection({ ui, config, parserConnections, actions }: 
   ui.addSwitch(section, "includeUserInfo", "User info");
   ui.addSwitch(section, "includeCharacterInfo", "Character info");
   ui.addSwitch(section, "includeLorebook", "Lorebook");
+  ui.addSwitch(
+    section,
+    "previousVisualStateEnabled",
+    "Previous visual state",
+    "Reuse the prior generated turn's character and environment tags when the current text does not replace them."
+  );
   ui.addSwitch(section, "userInstructionsEnabled", "User instructions");
   ui.addTextarea(section, "customParserInstructions", "Parser override");
 }

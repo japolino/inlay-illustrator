@@ -27,6 +27,10 @@ export type CharacterJson = {
   appearance?: unknown;
   body?: unknown;
   attire?: unknown;
+  /** True when attire was plausibly inferred for this scene instead of sourced from durable character facts. */
+  attireInferred?: unknown;
+  /** Stable visual fields explicitly changed by the current numbered source. */
+  visualChanges?: unknown;
   expression?: unknown;
   action?: unknown;
   composition?: CharacterCompositionJson | string;
@@ -55,7 +59,13 @@ export type ShotJson = {
   negative?: unknown;
 };
 
-export type SceneJson = ShotJson & { place?: unknown; environment?: EnvironmentJson; shots?: ShotJson[] };
+export type SceneJson = ShotJson & {
+  place?: unknown;
+  environment?: EnvironmentJson;
+  /** Environment fields explicitly changed by the current numbered source. */
+  environmentChanges?: unknown;
+  shots?: ShotJson[];
+};
 export type ParsedPayload = { scenes?: SceneJson[] };
 
 export type CreativeConcept = {
@@ -149,6 +159,7 @@ export type PreparedImageJob = {
   shotNegative?: string;
   promptFormat?: NonNullable<AssembledPrompt["format"]>;
   paragraph: number;
+  parserParagraph?: number;
   perspectiveMode?: PerspectiveMode;
   perspectiveSource?: "adaptive" | "manual";
   creativeConcept?: CreativeConcept;
@@ -159,6 +170,29 @@ export type PreparedImageJob = {
 export type State = {
   characterAppearance: Record<string, string>;
   generated: Record<string, unknown>;
+  previousVisualState?: PreviousVisualState;
+};
+
+export type PreviousVisualCharacter = {
+  name: string;
+  label: string;
+  age: string;
+  appearance: string;
+  body: string;
+  attire: string;
+  attireInferred: boolean;
+};
+
+export type PreviousVisualState = {
+  characters: PreviousVisualCharacter[];
+  environment: {
+    location: string;
+    timeWeather: string;
+    lightingMood: string[];
+    backgroundElements: string[];
+  };
+  place: string;
+  updatedAt: string;
 };
 
 export type ParserGenerationRequest = {

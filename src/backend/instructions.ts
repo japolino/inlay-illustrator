@@ -60,6 +60,7 @@ export function parserInstruction(config: Config): string {
     '        "lightingMood": ["string"],',
     '        "backgroundElements": ["string"]',
     "      },",
+    '      "environmentChanges": ["location | timeWeather | lightingMood | backgroundElements"],',
     '      "shots": [',
     "        {",
     '          "paragraph": 0,',
@@ -80,6 +81,8 @@ export function parserInstruction(config: Config): string {
     '              "appearance": "string",',
     '              "body": "string",',
     '              "attire": "string",',
+    '              "attireInferred": false,',
+    '              "visualChanges": ["age | appearance | body | attire"],',
     '              "expression": "string",',
     '              "renderScope": "string",',
     '              "visibleTags": "string",',
@@ -106,6 +109,7 @@ export function parserInstruction(config: Config): string {
     '  "scenes": [',
     "    {",
     '      "place": "string",',
+    '      "environmentChanges": ["place"],',
     '      "shots": [',
     "        {",
     '          "paragraph": 0,',
@@ -122,6 +126,8 @@ export function parserInstruction(config: Config): string {
     '              "appearance": "string",',
     '              "body": "string",',
     '              "attire": "string",',
+    '              "attireInferred": false,',
+    '              "visualChanges": ["age | appearance | body | attire"],',
     '              "expression": "string",',
     '              "renderScope": "string",',
     '              "visibleTags": "string",',
@@ -154,6 +160,7 @@ export function parserInstruction(config: Config): string {
       "Use concise objective visual phrases, not narration, invisible emotion, smell, sound, or internal sensation.",
       "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements.",
       "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
+      "When the current source does not establish a new environment detail, copy the corresponding location, timeWeather, lightingMood, or backgroundElements from Previous Visual State exactly. If neither current source nor previous state establishes time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time.",
       config.supplement
         ? "Populate lightingMood and backgroundElements within the target budget."
         : staticBackgroundPossible
@@ -193,7 +200,8 @@ export function parserInstruction(config: Config): string {
     "- Never invent paragraph numbers outside the visible range.",
     "- Tag ONLY the current message. Recent context is for continuity only.",
     "## Tag Rules",
-    "Use common, objective, visualizable Danbooru-style English tags. Do not invent tags; use simpler well-known equivalents if unsure. Do not use metaphors for tags.",
+    "Use common, objective, visualizable Danbooru-style English tags. Never fabricate tag vocabulary; use simpler well-known equivalents if unsure. Conservative scene inference is allowed only where this contract explicitly permits it. Do not use metaphors for tags.",
+    "Never output placeholder tags or phrases such as unknown, unspecified, not specified, unmentioned, undetermined, default clothing, or unspecified time. Leave genuinely nonvisual fields empty instead.",
     structuredAnima
       ? "Tag fields are comma-separated tags. Atomic composition and sharedComposition values are concise comma-free natural-language phrases. Environment arrays contain one comma-free visual snippet per item."
       : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
@@ -206,6 +214,11 @@ export function parserInstruction(config: Config): string {
       ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, camera, situation, sharedComposition, environment, and negative."
       : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
     "## Field Reference",
+    "### visual continuity change markers",
+    "When Previous Visual State exists, characters[].visualChanges must list only age, appearance, body, or attire fields explicitly changed by the current numbered source. An empty list means copy those prior fields exactly. Do not mark a field changed merely because you rephrased its tags.",
+    structuredAnima
+      ? "environmentChanges must list only location, timeWeather, lightingMood, or backgroundElements explicitly changed by the current numbered source. An empty list means copy the prior environment exactly. A location change normally also changes backgroundElements."
+      : "environmentChanges contains place only when the current numbered source explicitly changes the setting. Otherwise leave it empty and copy the prior place.",
     structuredAnima ? "### environment - scene-level" : "### place - scene-level",
     structuredAnima
       ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details. Static scenes require a specific physical location and 2-3 backgroundElements."
@@ -264,6 +277,8 @@ export function parserInstruction(config: Config): string {
     "Disassemble uniforms into individual items. Always include color details using color names. Do not use vague color traits like colorful or gradient unless the text clearly describes them.",
     "Examples: white loose button-up shirt, black silk dress, side slit, sleeveless, long sleeves, oversized, gray tight jeans, pleated mini skirt, white ankle socks, bare feet, red baseball cap, small blue gem necklace, open shirt, torn clothes, unzipped, midriff.",
     "Use no shirt, no pants, bare feet, or similar absence tags when visually relevant.",
+    "If a visible character has no established attire in the current source, previous visual state, or durable baseline, choose one conservative visually coherent outfit supported by their role and setting. Set attireInferred to true. Copy attireInferred from previous visual state when retaining that inferred outfit; otherwise set it to false.",
+    "Inferred attire is scene continuity only and must not become durable character memory.",
     "Do not include body traits, expressions, actions, camera, place, or names in attire.",
     "### expression",
     "Visible facial emotions and facial/eye states only: annoyed, angry, embarrassed, blush, grin, smile, crying, empty eyes, closed eyes.",
@@ -295,7 +310,8 @@ export function parserInstruction(config: Config): string {
     structuredAnima
       ? "2. Current message [P#] paragraphs are authoritative for scene content, action, visible emotion, interpersonal tone, and movement direction. Never soften, romanticize, or replace those facts with an inferred atmosphere. Never restore outdated clothing, props, location, or actions from context."
       : "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
-    config.characterTagContextEnabled ? "3. Character tag history is the current visual baseline for returning characters: label, age, appearance, body, and base attire." : "",
+    config.previousVisualStateEnabled ? "3. Previous Visual State is the immediate visual continuity layer. Copy unchanged character and environment values exactly; it never overrides an explicit current-source change." : "",
+    config.characterTagContextEnabled ? `${config.previousVisualStateEnabled ? "4" : "3"}. Character tag history is the durable visual baseline for returning characters: label, age, appearance, body, and explicit base attire.` : "",
     config.characterTagContextEnabled ? "Use previous character tags as a baseline for returning characters, including base attire. Preserve specific baseline tags when not contradicted, such as short cut, white pupils, small breasts, black high school uniform, red sailor ribbon, black skirt, and white pantyhose." : "",
     config.characterTagContextEnabled ? "The current message is authoritative for the character's present visual state. It can update the baseline when it clearly changes clothing, lack of clothing, appearance, or body traits." : "",
     "## Weights",

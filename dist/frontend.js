@@ -26,6 +26,7 @@ var DEFAULT_CONFIG = {
   includeCharacterInfo: true,
   includeLorebook: false,
   characterTagContextEnabled: true,
+  previousVisualStateEnabled: true,
   userInstructionsEnabled: true,
   customParserInstructions: "",
   originalReference: false,
@@ -117,6 +118,7 @@ function normalizeConfig(raw) {
     includeCharacterInfo: raw.includeCharacterInfo !== false,
     includeLorebook: raw.includeLorebook === true,
     characterTagContextEnabled: raw.characterTagContextEnabled !== false,
+    previousVisualStateEnabled: raw.previousVisualStateEnabled !== false,
     userInstructionsEnabled: raw.userInstructionsEnabled !== false,
     customParserInstructions: cleanString(raw.customParserInstructions),
     ignoredTags: cleanString(raw.ignoredTags),
@@ -405,6 +407,7 @@ function renderParserSection({ ui, config, parserConnections, actions }) {
   ui.addSwitch(section, "includeUserInfo", "User info");
   ui.addSwitch(section, "includeCharacterInfo", "Character info");
   ui.addSwitch(section, "includeLorebook", "Lorebook");
+  ui.addSwitch(section, "previousVisualStateEnabled", "Previous visual state", "Reuse the prior generated turn's character and environment tags when the current text does not replace them.");
   ui.addSwitch(section, "userInstructionsEnabled", "User instructions");
   ui.addTextarea(section, "customParserInstructions", "Parser override");
 }

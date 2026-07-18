@@ -58,6 +58,24 @@ describe("character memory", () => {
     });
   });
 
+  test("does not persist inferred attire or placeholder tags into durable character memory", () => {
+    const cache: Record<string, string> = {};
+
+    updateCache(cache, { scenes: [{ shots: [{
+      paragraph: 1,
+      characters: [{
+        name: "Jay",
+        label: "boy",
+        appearance: "straight black hair, unknown eye color",
+        body: "slim",
+        attire: "black school uniform",
+        attireInferred: true
+      }]
+    }] }] });
+
+    expect(cache.Jay).toBe("boy, straight black hair, slim");
+  });
+
   test("keeps full baseline memory independent from Creative render scope and visible tags", () => {
     const cache: Record<string, string> = {};
     updateCache(cache, { scenes: [{ shots: [{

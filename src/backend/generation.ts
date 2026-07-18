@@ -36,9 +36,11 @@ import type {
   PreparedImageJob,
   PreparedParagraph,
   PromptEntry,
+  PreviousVisualState,
   State
 } from "./types.js";
 import { cleanArray, cleanString, keysOf } from "./utils.js";
+import { applyPreviousVisualState, buildPreviousVisualState } from "./visual-state.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
@@ -82,6 +84,7 @@ type PersistStageInput = {
   target: ChatMessage;
   parsed: ParsedPayload;
   assets: ImageAssets;
+  visualState: PreviousVisualState | null;
   config: Config;
   userId?: string;
 };
@@ -169,7 +172,17 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
 
   for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
     try {
-      const context = await buildParserContext(chatId, messages, targetIndex, state.characterAppearance, config, attempt, userId, lorebookSnapshot);
+      const context = await buildParserContext(
+        chatId,
+        messages,
+        targetIndex,
+        state.characterAppearance,
+        config,
+        attempt,
+        userId,
+        lorebookSnapshot,
+        config.previousVisualStateEnabled ? state.previousVisualState : undefined
+      );
       if (creativePipeline && conceptSelections === null) {
         if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
           const previousConcepts = conceptCandidates
@@ -235,6 +248,10 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
         config,
         parserMessages(instruction, referenceContext, userRequest, context.override),
         userId
+      );
+      parsed = applyPreviousVisualState(
+        parsed,
+        config.previousVisualStateEnabled ? state.previousVisualState : undefined
       );
       parsed = await repairDynamicCameraDiversity(parserConnection, config, parsed, targetSource, userId);
       selected = selectPromptEntries(parsed, paragraphs, config, conceptSelections || new Map(), conceptCandidates);
@@ -335,6 +352,7 @@ async function prepareAndDispatchImages(
       shotNegative: entry.shotNegative,
       promptFormat,
       paragraph: entry.paragraph,
+      parserParagraph: entry.parserParagraph,
       perspectiveMode: entry.perspectiveMode,
       perspectiveSource: entry.perspectiveSource,
       creativeConcept: entry.creativeConcept,
@@ -447,7 +465,7 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
 }
 
 async function persistGeneration(input: PersistStageInput): Promise<GeneratedRecord> {
-  const { chatId, messageId, swipeId, key, target, parsed, assets, config, userId } = input;
+  const { chatId, messageId, swipeId, key, target, parsed, assets, visualState, config, userId } = input;
   const record: GeneratedRecord = {
     chatId,
     messageId,
@@ -471,6 +489,8 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
   };
   await updateState(chatId, userId, (state) => {
     state.generated[key] = record;
+    if (visualState) state.previousVisualState = visualState;
+    else delete state.previousVisualState;
   });
   logStage(config, "state_persisted", { key, imageCount: assets.imageIds.length, paragraphs: assets.paragraphs });
   const originalContent = String(target.content || "");
@@ -628,7 +648,13 @@ export async function rerunStoredImage(
       const sourceParagraph = prepareParagraphs(String(target.content || ""), config)
         .find((paragraph) => paragraph.originalIndex === originalParagraph);
       if (!sourceParagraph) throw new Error("The source paragraph for this image no longer exists.");
-      const singleConfig: Config = { ...config, minImages: 1, maxImages: 1, preprocessingEnabled: false };
+      const singleConfig: Config = {
+        ...config,
+        minImages: 1,
+        maxImages: 1,
+        preprocessingEnabled: false,
+        previousVisualStateEnabled: false
+      };
       const paragraphs: PreparedParagraph[] = [{ ...sourceParagraph, parserIndex: 1 }];
       const storedCandidates = rebaseCreativeConcepts(
         located.record.creativeConceptCandidates?.[located.index] || [],
@@ -734,7 +760,11 @@ export async function generateForMessage(chatId: string, messageId: string, cont
     logParsedSelection(parsed, selected, paragraphs, config);
     const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId);
     const assets = collectImageResults(imageStage, config);
-    await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, config, userId });
+    const visualState = buildPreviousVisualState(
+      parsed,
+      imageStage.jobs.map((job) => job.parserParagraph).filter((paragraph): paragraph is number => Number.isFinite(paragraph))
+    );
+    await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, visualState, config, userId });
   } finally {
     releaseGeneration();
   }

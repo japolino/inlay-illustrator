@@ -14,11 +14,14 @@ const TRANSIENT_ATTIRE_MEMORY_TERMS = [
   "torn clothes", "open shirt", "shirt lift", "panty pull", "clothes pull", "undressing"
 ];
 
+const PLACEHOLDER_TERM = /\b(?:unknown|unspecified|not specified|not stated|unmentioned|undetermined|n\/?a)\b/i;
+
 export function sanitizeMemoryTags(tags: string): string {
   return normalizeReferenceTags(csvParts(tags)
     .filter((tag) => {
       const normalized = tag.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
       if (!normalized) return false;
+      if (PLACEHOLDER_TERM.test(normalized)) return false;
       if (TRANSIENT_ATTIRE_MEMORY_TERMS.some((term) => normalized === term || normalized.includes(term))) return false;
       return !VOLATILE_MEMORY_TERMS.some((term) => normalized === term || normalized.includes(term));
     })
@@ -26,12 +29,13 @@ export function sanitizeMemoryTags(tags: string): string {
 }
 
 function baselineCharacterTags(character: CharacterJson): string {
+  const attireInferred = character.attireInferred === true || String(character.attireInferred).toLowerCase() === "true";
   return sanitizeMemoryTags(unique(csvParts(
     character.label,
     character.age,
     character.appearance,
     character.body,
-    character.attire
+    attireInferred ? "" : character.attire
   )).join(", "));
 }
 

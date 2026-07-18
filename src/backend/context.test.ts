@@ -58,6 +58,26 @@ describe("recent parser context", () => {
     expect(context).not.toContain("<pre");
     expect(context).not.toContain("secret prompt");
   });
+
+  test("includes the greeting on the first post-greeting turn even with zero minimum context", () => {
+    const messages: ChatMessage[] = [
+      { id: "greeting", role: "assistant", content: "Late afternoon sunlight crosses the school clubroom." },
+      { id: "user", role: "user", content: "I sit beside the desk." },
+      { id: "target", role: "assistant", content: "She closes the book." }
+    ];
+
+    expect(formatRecentContext(messages, 2, 0)).toContain("Late afternoon sunlight");
+  });
+
+  test("keeps zero context truly empty after the first post-greeting turn", () => {
+    const messages: ChatMessage[] = [
+      { id: "greeting", role: "assistant", content: "Late afternoon in the clubroom." },
+      { id: "earlier", role: "assistant", content: "She opens a book." },
+      { id: "target", role: "assistant", content: "She closes the book." }
+    ];
+
+    expect(formatRecentContext(messages, 2, 0)).toBe("");
+  });
 });
 
 describe("activated lorebook parser context", () => {
@@ -128,6 +148,63 @@ describe("activated lorebook parser context", () => {
     expect(first.preprocessingSystemContext).not.toContain("COMPACT ENTRY");
     expect(retry.systemContext).toContain("FULL ENTRY");
     expect(activationCalls).toBe(0);
+  });
+
+  test("adds previous visual state to parser and preprocessing context only when enabled", async () => {
+    const previousVisualState = {
+      characters: [{
+        name: "Jay",
+        label: "boy",
+        age: "",
+        appearance: "short black hair, brown eyes",
+        body: "slim",
+        attire: "black school uniform",
+        attireInferred: true
+      }],
+      environment: {
+        location: "school clubroom",
+        timeWeather: "late afternoon",
+        lightingMood: ["warm window light"],
+        backgroundElements: ["desks", "bookshelves"]
+      },
+      place: "",
+      updatedAt: "2026-07-18T00:00:00.000Z"
+    };
+    const messages: ChatMessage[] = [{ id: "target", role: "assistant", content: "Current target." }];
+    const enabled = await buildParserContext(
+      "chat-1",
+      messages,
+      0,
+      {},
+      { ...DEFAULT_CONFIG, includeUserInfo: false, includeCharacterInfo: false, userInstructionsEnabled: false },
+      0,
+      "user-1",
+      undefined,
+      previousVisualState
+    );
+    const disabled = await buildParserContext(
+      "chat-1",
+      messages,
+      0,
+      {},
+      {
+        ...DEFAULT_CONFIG,
+        previousVisualStateEnabled: false,
+        includeUserInfo: false,
+        includeCharacterInfo: false,
+        userInstructionsEnabled: false
+      },
+      0,
+      "user-1",
+      undefined,
+      previousVisualState
+    );
+
+    expect(enabled.systemContext).toContain("## Previous Visual State");
+    expect(enabled.systemContext).toContain("late afternoon");
+    expect(enabled.preprocessingSystemContext).toContain("black school uniform");
+    expect(enabled.diagnostics.previousVisualState).toBe(true);
+    expect(disabled.systemContext).not.toContain("Previous Visual State");
   });
 
   test("selects a directly relevant entry before applying the 24-entry fetch limit", async () => {

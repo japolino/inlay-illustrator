@@ -34,6 +34,7 @@ export type Config = {
   includeCharacterInfo: boolean;
   includeLorebook: boolean;
   characterTagContextEnabled: boolean;
+  previousVisualStateEnabled: boolean;
   userInstructionsEnabled: boolean;
   customParserInstructions: string;
   originalReference: boolean;
@@ -90,6 +91,7 @@ export const DEFAULT_CONFIG: Config = {
   includeCharacterInfo: true,
   includeLorebook: false,
   characterTagContextEnabled: true,
+  previousVisualStateEnabled: true,
   userInstructionsEnabled: true,
   customParserInstructions: "",
   originalReference: false,
@@ -186,6 +188,7 @@ export function normalizeConfig(raw: RawConfig): Config {
     includeCharacterInfo: raw.includeCharacterInfo !== false,
     includeLorebook: raw.includeLorebook === true,
     characterTagContextEnabled: raw.characterTagContextEnabled !== false,
+    previousVisualStateEnabled: raw.previousVisualStateEnabled !== false,
     userInstructionsEnabled: raw.userInstructionsEnabled !== false,
     customParserInstructions: cleanString(raw.customParserInstructions),
     ignoredTags: cleanString(raw.ignoredTags),

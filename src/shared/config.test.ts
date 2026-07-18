@@ -103,6 +103,11 @@ describe("shared configuration", () => {
     expect("assetImageWidth" in migrated).toBe(false);
   });
 
+  test("enables previous visual state by default and preserves an explicit opt-out", () => {
+    expect(normalizeConfig({}).previousVisualStateEnabled).toBe(true);
+    expect(normalizeConfig({ previousVisualStateEnabled: false }).previousVisualStateEnabled).toBe(false);
+  });
+
   test("trims presets, drops malformed or duplicate IDs, and keeps only a valid active selection", () => {
     const presets = normalizePromptPresets([
       { id: " cinematic ", name: " Cinematic ", positivePrefix: " quality ", negativePrefix: " lowres " },

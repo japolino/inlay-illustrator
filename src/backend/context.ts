@@ -3,8 +3,9 @@ import type { ActivatedWorldInfoEntryDTO, WorldBookEntryDTO, WorldBookSourceDTO 
 import { EXTENSION_ID } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
 import { buildCharacterTagReference } from "./prompt.js";
-import type { ChatMessage, ParserContext } from "./types.js";
+import type { ChatMessage, ParserContext, PreviousVisualState } from "./types.js";
 import { asRecord, cleanString, compactBlock, unique } from "./utils.js";
+import { formatPreviousVisualState } from "./visual-state.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
@@ -294,14 +295,16 @@ export async function buildLorebookContextSnapshot(
 }
 
 export function formatRecentContext(messages: ChatMessage[], targetIndex: number, includeCount: number): string {
-  if (includeCount <= 0) return "";
   const previous = messages
     .slice(0, Math.max(0, targetIndex))
     .filter((message) => message.role === "assistant" && !isOwnMessage(message))
     .map((message) => ({ ...message, content: stripInlayContent(message.content) }))
-    .filter((message) => message.content.trim())
-    .slice(-includeCount);
-  return compactBlock(previous.map((message) => `${message.role}: ${message.content}`).join("\n\n"), 8000);
+    .filter((message) => message.content.trim());
+  // The sole prior assistant message is the greeting on the first post-greeting
+  // turn. Include it even when Minimum context is zero so initial scene facts
+  // are available without making later zero-context calls history-dependent.
+  const selected = includeCount > 0 ? previous.slice(-includeCount) : previous.length === 1 ? previous : [];
+  return compactBlock(selected.map((message) => `${message.role}: ${message.content}`).join("\n\n"), 8000);
 }
 
 function includeCountForAttempt(config: Config, attempt: number): number {
@@ -319,7 +322,8 @@ export async function buildParserContext(
   config: Config,
   attempt: number,
   userId?: string,
-  lorebookSnapshot?: LorebookContextSnapshot
+  lorebookSnapshot?: LorebookContextSnapshot,
+  previousVisualState?: PreviousVisualState
 ): Promise<ParserContext> {
   const blocks: string[] = [];
   const preprocessingBlocks: string[] = [];
@@ -394,6 +398,12 @@ export async function buildParserContext(
       pushBlock(`${characterReference}\nUse these as a baseline for returning characters (including their base attire). The current message always wins over this reference.`);
     }
     diagnostics.cacheCharacters = Object.keys(cache).length;
+  }
+
+  if (config.previousVisualStateEnabled && previousVisualState) {
+    const visualStateReference = formatPreviousVisualState(previousVisualState);
+    pushBlock(visualStateReference);
+    diagnostics.previousVisualState = Boolean(visualStateReference);
   }
 
   if (config.userInstructionsEnabled) overrides.unshift(config.customParserInstructions);

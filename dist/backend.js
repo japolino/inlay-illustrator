@@ -26,6 +26,7 @@ var DEFAULT_CONFIG = {
   includeCharacterInfo: true,
   includeLorebook: false,
   characterTagContextEnabled: true,
+  previousVisualStateEnabled: true,
   userInstructionsEnabled: true,
   customParserInstructions: "",
   originalReference: false,
@@ -117,6 +118,7 @@ function normalizeConfig(raw) {
     includeCharacterInfo: raw.includeCharacterInfo !== false,
     includeLorebook: raw.includeLorebook === true,
     characterTagContextEnabled: raw.characterTagContextEnabled !== false,
+    previousVisualStateEnabled: raw.previousVisualStateEnabled !== false,
     userInstructionsEnabled: raw.userInstructionsEnabled !== false,
     customParserInstructions: cleanString(raw.customParserInstructions),
     ignoredTags: cleanString(raw.ignoredTags),
@@ -738,6 +740,534 @@ function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph,
   };
 }
 
+// src/backend/creative.ts
+function stableHash(value) {
+  let hash = 2166136261;
+  for (let index = 0;index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+function parseJsonObject(value) {
+  const clean = value.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+  const candidates = [clean];
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  if (start >= 0 && end > start)
+    candidates.push(clean.slice(start, end + 1));
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+        return parsed;
+    } catch {}
+  }
+  return null;
+}
+function cleanCueList(value) {
+  if (!Array.isArray(value))
+    return [];
+  return [...new Set(value.map(cleanString2).filter(Boolean))].slice(0, 6);
+}
+var CREATIVE_SUBJECT_TYPES = new Set([
+  "object",
+  "environment",
+  "shadow",
+  "silhouette",
+  "reflection",
+  "fragment",
+  "spatial"
+]);
+var IDENTITY_BEARING_CUE = /\b(?:face|facial|cheek|chin|jaw|mouth|lip|lips|eye|eyes|iris|pupil|pupils|eyebrow|eyebrows|eyelash|eyelashes|hair|hairstyle|bangs|braid|ponytail|blonde|brunette|uniform|outfit|clothing|clothes|costume|dress|shirt|blouse|sweater|hoodie|coat|jacket|sleeve|collar|ribbon|tie|skirt|shorts|pants|trousers|stockings|pantyhose|sock|socks|shoe|shoes|boot|boots)\b/i;
+function isIdentitySafeCreativeConcept(concept) {
+  if (!concept.subjectType || !CREATIVE_SUBJECT_TYPES.has(concept.subjectType))
+    return false;
+  return !IDENTITY_BEARING_CUE.test([
+    concept.anchor,
+    concept.concept,
+    concept.renderScope,
+    concept.camera,
+    ...concept.visibleCues
+  ].join(" "));
+}
+function parseCreativeConcepts(value, paragraphs, config) {
+  const parsed = parseJsonObject(value);
+  const rawCandidates = Array.isArray(parsed?.candidates) ? parsed.candidates : [];
+  const validParagraphs = new Set(paragraphs.map((paragraph) => paragraph.parserIndex));
+  const perParagraph = new Map;
+  const seenIds = new Set;
+  const concepts = [];
+  for (const raw of rawCandidates) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw))
+      continue;
+    const candidate = raw;
+    const paragraph = Number(String(candidate.paragraph ?? "").match(/\d+/)?.[0]);
+    const subjectType = cleanString2(candidate.subjectType).toLowerCase();
+    const anchor = cleanString2(candidate.anchor);
+    const concept = cleanString2(candidate.concept);
+    const renderScope = cleanString2(candidate.renderScope);
+    const camera = cleanString2(candidate.camera);
+    const visibleCues = cleanCueList(candidate.visibleCues);
+    const scoreValue = Number(candidate.score);
+    if (!validParagraphs.has(paragraph) || !subjectType || !CREATIVE_SUBJECT_TYPES.has(subjectType) || !anchor || !concept || !renderScope || !camera || visibleCues.length === 0)
+      continue;
+    if (!Number.isFinite(scoreValue))
+      continue;
+    const score = Math.max(0, Math.min(100, Math.round(scoreValue)));
+    const id = `creative-${stableHash([paragraph, subjectType, anchor, concept, renderScope, camera].join("|"))}`;
+    const parsedConcept = {
+      id,
+      paragraph,
+      subjectType,
+      anchor,
+      concept,
+      renderScope,
+      camera,
+      visibleCues,
+      score
+    };
+    if (!isIdentitySafeCreativeConcept(parsedConcept))
+      continue;
+    if (seenIds.has(id))
+      continue;
+    const count = perParagraph.get(paragraph) || 0;
+    if (count >= 4)
+      continue;
+    seenIds.add(id);
+    perParagraph.set(paragraph, count + 1);
+    concepts.push(parsedConcept);
+  }
+  const finalCounts = new Map;
+  const paragraphScores = new Map;
+  concepts.forEach((concept) => finalCounts.set(concept.paragraph, (finalCounts.get(concept.paragraph) || 0) + 1));
+  concepts.forEach((concept) => paragraphScores.set(concept.paragraph, Math.max(paragraphScores.get(concept.paragraph) || 0, concept.score)));
+  const eligibleParagraphs = [...new Set(concepts.map((concept) => concept.paragraph))].filter((paragraph) => (finalCounts.get(paragraph) || 0) >= 2).sort((left, right) => (paragraphScores.get(right) || 0) - (paragraphScores.get(left) || 0) || left - right).slice(0, Math.max(1, config.maxImages));
+  const allowed = new Set(eligibleParagraphs);
+  return concepts.filter((concept) => allowed.has(concept.paragraph));
+}
+function hasUnusedCreativeConcepts(candidates, usedIds) {
+  const used = new Set(usedIds);
+  return candidates.some((candidate) => isIdentitySafeCreativeConcept(candidate) && !used.has(candidate.id));
+}
+function chooseCreativeConcepts(candidates, usedIds = [], random = Math.random) {
+  const used = new Set(usedIds);
+  const grouped = new Map;
+  for (const candidate of candidates) {
+    if (!isIdentitySafeCreativeConcept(candidate) || used.has(candidate.id))
+      continue;
+    const group = grouped.get(candidate.paragraph) || [];
+    group.push(candidate);
+    grouped.set(candidate.paragraph, group);
+  }
+  const selected = new Map;
+  for (const [paragraph, group] of grouped) {
+    const sorted = [...group].sort((left, right) => right.score - left.score || left.id.localeCompare(right.id));
+    const bestScore = sorted[0]?.score ?? 0;
+    const shortlist = sorted.filter((candidate) => candidate.score >= Math.max(50, bestScore - 20)).slice(0, 3);
+    const pool = shortlist.length > 0 ? shortlist : sorted.slice(0, 1);
+    if (pool.length === 0)
+      continue;
+    const floor = Math.min(...pool.map((candidate) => candidate.score)) - 5;
+    const weights = pool.map((candidate) => Math.max(1, candidate.score - floor));
+    const total = weights.reduce((sum, weight) => sum + weight, 0);
+    let cursor = Math.min(0.999999, Math.max(0, random())) * total;
+    let choice = pool[pool.length - 1];
+    for (let index = 0;index < pool.length; index += 1) {
+      cursor -= weights[index];
+      if (cursor < 0) {
+        choice = pool[index];
+        break;
+      }
+    }
+    selected.set(paragraph, choice);
+  }
+  return selected;
+}
+function creativeIdeationInstruction(config, previousConcepts = []) {
+  return [
+    "# Creative Illustration Concept Ideator",
+    "Extract literal visual cues from the numbered source and propose genuinely different Creative compositions before the prompt parser runs.",
+    config.adaptiveMode ? `Screen up to ${Math.max(1, config.maxImages)} paragraph numbers for optional identity-safe Creative alternatives, then generate exactly four candidates for each. These candidates must not decide or bias the later Adaptive mode choice.` : `Choose up to ${Math.max(1, config.maxImages)} visually strong paragraph numbers and generate exactly four candidates for each chosen paragraph.`,
+    "Candidates for the same paragraph must differ in focal anchor and at least one of crop scale, subject inclusion, depth, occlusion, or viewpoint.",
+    "Creative must not focus on recognizable identity-bearing character features. Never use a face, facial feature, hair, hairstyle, or recognizable clothing as the anchor or a visible cue.",
+    "Allowed subjectType values are object, environment, shadow, silhouette, reflection, fragment, or spatial. Reflections and fragments must remain non-identifying; generic hands, fingers, feet, gestures, and fully unreadable silhouettes are allowed.",
+    "Prefer overlooked but meaningful anchors: a source-supported object, environmental detail, shadow, unreadable silhouette, non-identifying fragment, foreground layer, aftermath, or unusual spatial relationship.",
+    "If a paragraph has no faithful identity-safe anchor, return no Creative candidate for it. Do not weaken this rule merely to fill the requested count.",
+    "Do not merely restate the paragraph's complete main action.",
+    "Separate literal cues from metaphors and internal narration. Never render a simile literally and never invent an object, body part, action, or setting detail.",
+    "renderScope is binding: state exactly what is inside the frame and what is cropped or occluded. visibleCues contains only traits and elements actually visible inside that scope.",
+    "Score each candidate from 0-100 for source fidelity, focal specificity, visual clarity, ANIMA promptability, and difference from an obvious Dynamic full-action shot.",
+    previousConcepts.length > 0 ? `Avoid repeating these previously used concepts:
+- ${previousConcepts.map(cleanString2).filter(Boolean).join(`
+- `)}` : "",
+    "Return raw JSON only with this exact shape:",
+    '{"candidates":[{"paragraph":1,"subjectType":"object","anchor":"short anchor label","concept":"concise visible composition","renderScope":"exact contents of frame and crop","camera":"concise framing and viewpoint","visibleCues":["visible cue"],"score":85}]}',
+    "No markdown, commentary, character-memory dump, or fields outside the schema."
+  ].filter(Boolean).join(`
+
+`);
+}
+function creativeIdeationRequest(targetSource) {
+  return [
+    "Generate the Creative concept slate from this current numbered source:",
+    targetSource
+  ].join(`
+
+`);
+}
+function creativeConceptConstraint(concepts, adaptive) {
+  if (concepts.size === 0)
+    return "";
+  const lines = [...concepts.values()].sort((left, right) => left.paragraph - right.paragraph).map((concept) => [
+    `[P${concept.paragraph}] concept ID: ${concept.id}`,
+    `Anchor: ${concept.anchor}`,
+    `Binding render scope: ${concept.renderScope}`,
+    `Camera intent: ${concept.camera}`,
+    `Visible cues only: ${concept.visibleCues.join(", ")}`,
+    `Creative suitability: ${concept.score}/100`
+  ].join(`
+`));
+  return [
+    adaptive ? "## Optional Creative Candidates" : "## Selected Creative Concepts",
+    adaptive ? "First choose perspectiveMode independently from the paragraph itself. Creative is permitted only for paragraphs listed below, and the listed candidate becomes binding only after Creative is chosen. Otherwise ignore it and choose Static or Dynamic normally. Do not choose Creative merely because a candidate or score is present." : "Use only the listed paragraphs for Creative shots. Each listed concept is binding and must control renderScope, visibleTags, camera, and subject inclusion.",
+    "Creative may show only identity-safe objects, environments, shadows, unreadable silhouettes, spatial details, or non-identifying fragments. It must not show a recognizable face, hair, or outfit.",
+    "When a binding render scope exists, do not expand it with the character's complete pose, full action, off-frame attire, or unrelated memory traits.",
+    ...lines
+  ].join(`
+
+`);
+}
+function rebaseCreativeConcepts(candidates, paragraph) {
+  return candidates.map((candidate) => ({ ...candidate, paragraph }));
+}
+
+// src/backend/logging.ts
+function logStage(config, stage, details, level = "info") {
+  if (!config?.debugLogging && level !== "error")
+    return;
+  const suffix = details ? ` ${JSON.stringify(details, (_key, value) => {
+    if (typeof value === "string" && value.length > 300)
+      return `${value.slice(0, 300)}...(${value.length} chars)`;
+    return value;
+  })}` : "";
+  const message = `[Inlay:${stage}]${suffix}`;
+  if (level === "warn")
+    spindle.log.warn(message);
+  else if (level === "error")
+    spindle.log.error(message);
+  else
+    spindle.log.info(message);
+}
+
+// src/backend/scenes.ts
+function parseParagraphNumber(value) {
+  const match = String(value ?? "").match(/\d+/);
+  if (!match)
+    return null;
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function recoverSceneParagraphs(payload, fallbackParagraph) {
+  const scenes = cleanArray(payload.scenes).map((rawScene) => {
+    const sceneParagraph = parseParagraphNumber(rawScene.paragraph) || fallbackParagraph;
+    const shots = cleanArray(rawScene.shots);
+    if (shots.length > 0) {
+      return {
+        ...rawScene,
+        shots: shots.map((shot) => parseParagraphNumber(shot.paragraph) || !sceneParagraph ? shot : { ...shot, paragraph: sceneParagraph })
+      };
+    }
+    return parseParagraphNumber(rawScene.paragraph) || !sceneParagraph ? rawScene : { ...rawScene, paragraph: sceneParagraph };
+  });
+  return { ...payload, scenes };
+}
+function normalizeScenePayload(payload) {
+  const normalized = [];
+  for (const rawScene of cleanArray(payload.scenes)) {
+    const parentPlace = cleanString2(rawScene.place);
+    const shots = cleanArray(rawScene.shots);
+    if (shots.length > 0) {
+      for (const rawShot of shots) {
+        const parserParagraph2 = parseParagraphNumber(rawShot.paragraph);
+        if (!parserParagraph2)
+          continue;
+        const shot2 = { ...rawShot, paragraph: parserParagraph2 };
+        const scene2 = { ...rawScene, place: parentPlace, shots: [shot2] };
+        normalized.push({ scene: scene2, shot: shot2, parserParagraph: parserParagraph2 });
+      }
+      continue;
+    }
+    const parserParagraph = parseParagraphNumber(rawScene.paragraph);
+    if (!parserParagraph)
+      continue;
+    const situation = cleanString2(rawScene.situation) || parentPlace;
+    const shot = { ...rawScene, paragraph: parserParagraph, situation };
+    const scene = { place: parentPlace, shots: [shot] };
+    normalized.push({ scene, shot, parserParagraph });
+  }
+  return normalized;
+}
+function normalizedVisualValue(value) {
+  const normalize = (candidate) => {
+    if (typeof candidate === "string")
+      return candidate.replace(/\s+/g, " ").trim().toLowerCase();
+    if (Array.isArray(candidate))
+      return candidate.map(normalize);
+    if (candidate && typeof candidate === "object") {
+      return Object.fromEntries(Object.entries(candidate).sort(([left], [right]) => left.localeCompare(right)).map(([key, child]) => [key, normalize(child)]));
+    }
+    return candidate ?? "";
+  };
+  const normalized = normalize(value);
+  return typeof normalized === "string" ? normalized : JSON.stringify(normalized);
+}
+function exactVisualKey(entry) {
+  const environment = entry.scene.environment || {};
+  return JSON.stringify({
+    paragraph: entry.parserParagraph,
+    perspectiveMode: normalizedVisualValue(entry.shot.perspectiveMode),
+    camera: normalizedVisualValue(entry.shot.camera),
+    situation: normalizedVisualValue(entry.shot.situation),
+    sceneAction: normalizedVisualValue(entry.scene.action),
+    shotAction: normalizedVisualValue(entry.shot.action),
+    characters: cleanArray(entry.shot.characters).map((character) => ({
+      expression: normalizedVisualValue(character.expression),
+      action: normalizedVisualValue(character.action),
+      composition: normalizedVisualValue(character.composition),
+      renderScope: normalizedVisualValue(character.renderScope),
+      visibleTags: normalizedVisualValue(character.visibleTags)
+    })),
+    sharedComposition: normalizedVisualValue(entry.shot.sharedComposition || entry.shot.supplement),
+    environment: {
+      location: normalizedVisualValue(environment.location),
+      timeWeather: normalizedVisualValue(environment.timeWeather),
+      lightingMood: cleanArray(environment.lightingMood).map(normalizedVisualValue),
+      backgroundElements: cleanArray(environment.backgroundElements).map(normalizedVisualValue)
+    }
+  });
+}
+function selectPromptEntries(payload, paragraphs, config, creativeConcepts = new Map, creativeCandidates = []) {
+  const normalized = normalizeScenePayload(payload);
+  const paragraphMap = new Map(paragraphs.map((paragraph) => [paragraph.parserIndex, paragraph]));
+  const valid = normalized.filter((entry) => paragraphMap.has(entry.parserParagraph));
+  const seenVisuals = new Set;
+  const distinct = valid.filter((entry) => {
+    const key = exactVisualKey(entry);
+    if (seenVisuals.has(key))
+      return false;
+    seenVisuals.add(key);
+    return true;
+  });
+  const seenParagraphs = new Set;
+  const uniqueParagraphs = distinct.filter((entry) => {
+    const sourceParagraph = paragraphMap.get(entry.parserParagraph)?.originalIndex ?? entry.parserParagraph;
+    if (seenParagraphs.has(sourceParagraph))
+      return false;
+    seenParagraphs.add(sourceParagraph);
+    return true;
+  });
+  const limit = config.maxImages;
+  const selected = uniqueParagraphs.slice(0, limit).map((entry, modelPriority) => ({ entry, modelPriority })).sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority).map(({ entry }) => entry);
+  const maxAdaptiveCreative = selected.length > 1 ? Math.ceil(selected.length / 2) : 1;
+  const safeCreativeConcepts = new Map([...creativeConcepts].filter(([, concept]) => isIdentitySafeCreativeConcept(concept)));
+  const adaptiveCreativeAllowed = new Set(config.adaptiveMode ? selected.filter((entry) => cleanString2(entry.shot.perspectiveMode).toLowerCase() === "creative" && safeCreativeConcepts.has(entry.parserParagraph)).sort((left, right) => (safeCreativeConcepts.get(right.parserParagraph)?.score || 0) - (safeCreativeConcepts.get(left.parserParagraph)?.score || 0)).slice(0, maxAdaptiveCreative) : []);
+  const prompts = [];
+  for (const entry of selected) {
+    const paragraph = paragraphMap.get(entry.parserParagraph);
+    if (!paragraph)
+      continue;
+    const concept = safeCreativeConcepts.get(entry.parserParagraph);
+    const requestedPerspective = cleanString2(entry.shot.perspectiveMode).toLowerCase();
+    const shot = config.adaptiveMode && requestedPerspective === "creative" && (!concept || !adaptiveCreativeAllowed.has(entry)) ? { ...entry.shot, perspectiveMode: "dynamic" } : entry.shot;
+    const prompt = assemblePrompt(entry.scene, shot, config, entry.parserParagraph, paragraph.originalIndex, concept);
+    prompt.creativeCandidates = creativeCandidates.filter((candidate) => candidate.paragraph === entry.parserParagraph);
+    if (renderPrompt(prompt.prompt, config.promptSyntax))
+      prompts.push(prompt);
+  }
+  logStage(config, "illustration_candidates_selected", {
+    candidateCount: normalized.length,
+    validCandidateCount: valid.length,
+    distinctCandidateCount: distinct.length,
+    uniqueParagraphCandidateCount: uniqueParagraphs.length,
+    selectedCount: prompts.length,
+    selectedParagraphs: selected.map((entry) => entry.parserParagraph),
+    perspectives: prompts.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource })),
+    cameraTags: selected.map((entry) => normalizedVisualValue(entry.shot.camera))
+  });
+  return prompts;
+}
+
+// src/backend/visual-state.ts
+var PLACEHOLDER_TERM = /\b(?:unknown|unspecified|not specified|not stated|unmentioned|undetermined|n\/?a|default clothing)\b/i;
+function cleanTagField(value) {
+  return unique(csvParts(value).map((tag) => cleanString2(tag)).filter((tag) => tag && !PLACEHOLDER_TERM.test(tag))).join(", ");
+}
+function cleanAtomicField(value) {
+  const cleaned = cleanString2(value);
+  return cleaned && !PLACEHOLDER_TERM.test(cleaned) ? cleaned : "";
+}
+function cleanAtomicList(value) {
+  return unique(cleanArray(Array.isArray(value) ? value : value === undefined ? [] : [value]).flatMap((entry) => csvParts(entry)).map((entry) => cleanString2(entry)).filter((entry) => entry && !PLACEHOLDER_TERM.test(entry)));
+}
+function inferred(value) {
+  return value === true || cleanString2(value).toLowerCase() === "true";
+}
+function changeSet(value, allowed) {
+  const permitted = new Set(allowed);
+  return new Set(cleanArray(Array.isArray(value) ? value : value === undefined ? [] : [value]).flatMap((entry) => csvParts(entry)).map((entry) => cleanString2(entry)).filter((entry) => permitted.has(entry)));
+}
+function cleanEnvironment(value) {
+  return {
+    location: cleanAtomicField(value?.location),
+    timeWeather: cleanAtomicField(value?.timeWeather),
+    lightingMood: cleanAtomicList(value?.lightingMood),
+    backgroundElements: cleanAtomicList(value?.backgroundElements)
+  };
+}
+function mergeEnvironment(current, previous, changed = new Set) {
+  if (!previous)
+    return current;
+  if (changed.has("location"))
+    changed.add("backgroundElements");
+  const select = (key, currentValue, previousValue) => {
+    const hasCurrent = Array.isArray(currentValue) ? currentValue.length > 0 : Boolean(currentValue);
+    const hasPrevious = Array.isArray(previousValue) ? previousValue.length > 0 : Boolean(previousValue);
+    if (changed.has(key))
+      return hasCurrent ? currentValue : previousValue;
+    return hasPrevious ? previousValue : currentValue;
+  };
+  return {
+    location: select("location", current.location, cleanAtomicField(previous.location)),
+    timeWeather: select("timeWeather", current.timeWeather, cleanAtomicField(previous.timeWeather)),
+    lightingMood: select("lightingMood", current.lightingMood, cleanAtomicList(previous.lightingMood)),
+    backgroundElements: select("backgroundElements", current.backgroundElements, cleanAtomicList(previous.backgroundElements))
+  };
+}
+function visualCharacter(character) {
+  const name = normalizeCharacterName(character.name);
+  if (!name)
+    return null;
+  return {
+    name,
+    label: cleanTagField(character.label),
+    age: cleanTagField(character.age),
+    appearance: cleanTagField(character.appearance),
+    body: cleanTagField(character.body),
+    attire: cleanTagField(character.attire),
+    attireInferred: inferred(character.attireInferred)
+  };
+}
+function inheritCharacter(raw, previousCharacters) {
+  const current = visualCharacter(raw);
+  const name = current?.name || normalizeCharacterName(raw.name);
+  const previous = name ? previousCharacters.get(name.toLowerCase()) : undefined;
+  const currentAttire = cleanTagField(raw.attire);
+  const changes = changeSet(raw.visualChanges, ["age", "appearance", "body", "attire"]);
+  const stableField = (key, currentValue, previousValue = "") => {
+    if (!previousValue)
+      return currentValue;
+    if (changes.has(key))
+      return currentValue || previousValue;
+    return previousValue;
+  };
+  const next = {
+    ...raw,
+    label: previous?.label || cleanTagField(raw.label),
+    age: stableField("age", cleanTagField(raw.age), previous?.age),
+    appearance: stableField("appearance", cleanTagField(raw.appearance), previous?.appearance),
+    body: stableField("body", cleanTagField(raw.body), previous?.body),
+    attire: stableField("attire", currentAttire, previous?.attire),
+    attireInferred: !previous ? inferred(raw.attireInferred) : changes.has("attire") && currentAttire ? inferred(raw.attireInferred) : previous.attireInferred
+  };
+  const remembered = visualCharacter(next);
+  if (remembered)
+    previousCharacters.set(remembered.name.toLowerCase(), remembered);
+  return next;
+}
+function inheritShot(raw, previousCharacters) {
+  return {
+    ...raw,
+    characters: cleanArray(raw.characters).map((character) => inheritCharacter(character, previousCharacters))
+  };
+}
+function applyPreviousVisualState(payload, previous) {
+  const previousCharacters = new Map(cleanArray(previous?.characters).map((character) => [normalizeCharacterName(character.name).toLowerCase(), character]).filter(([name]) => Boolean(name)));
+  let carriedEnvironment = previous ? cleanEnvironment(previous.environment) : undefined;
+  let carriedPlace = previous ? cleanAtomicField(previous.place) : "";
+  const scenes = cleanArray(payload.scenes).map((rawScene) => {
+    const environmentChanges = changeSet(rawScene.environmentChanges, ["location", "timeWeather", "lightingMood", "backgroundElements", "place"]);
+    const environment = mergeEnvironment(cleanEnvironment(rawScene.environment), carriedEnvironment, environmentChanges);
+    carriedEnvironment = environment;
+    const currentPlace = cleanTagField(rawScene.place);
+    const place = carriedPlace && !environmentChanges.has("place") ? carriedPlace : currentPlace || carriedPlace;
+    carriedPlace = place;
+    const shots = cleanArray(rawScene.shots);
+    if (shots.length > 0) {
+      return {
+        ...rawScene,
+        place,
+        environment,
+        shots: shots.map((shot) => inheritShot(shot, previousCharacters))
+      };
+    }
+    return {
+      ...inheritShot(rawScene, previousCharacters),
+      place,
+      environment
+    };
+  });
+  return { ...payload, scenes };
+}
+function buildPreviousVisualState(payload, selectedParserParagraphs) {
+  const selected = new Set(selectedParserParagraphs);
+  const ordered = normalizeScenePayload(payload).filter((entry) => selected.size === 0 || selected.has(entry.parserParagraph)).sort((left, right) => left.parserParagraph - right.parserParagraph);
+  if (ordered.length === 0)
+    return null;
+  const characters = new Map;
+  let environment = cleanEnvironment(undefined);
+  let place = "";
+  for (const entry of ordered) {
+    environment = cleanEnvironment(entry.scene.environment);
+    place = cleanTagField(entry.scene.place);
+    for (const character of cleanArray(entry.shot.characters)) {
+      const visual = visualCharacter(character);
+      if (visual)
+        characters.set(visual.name.toLowerCase(), visual);
+    }
+  }
+  const hasEnvironment = Boolean(environment.location || environment.timeWeather || environment.lightingMood.length || environment.backgroundElements.length || place);
+  if (characters.size === 0 && !hasEnvironment)
+    return null;
+  return {
+    characters: [...characters.values()],
+    environment,
+    place,
+    updatedAt: new Date().toISOString()
+  };
+}
+function formatPreviousVisualState(previous) {
+  const reference = {
+    characters: cleanArray(previous.characters).map((character) => ({
+      name: normalizeCharacterName(character.name),
+      label: cleanTagField(character.label),
+      age: cleanTagField(character.age),
+      appearance: cleanTagField(character.appearance),
+      body: cleanTagField(character.body),
+      attire: cleanTagField(character.attire),
+      attireInferred: character.attireInferred === true
+    })).filter((character) => character.name),
+    environment: cleanEnvironment(previous.environment),
+    place: cleanTagField(previous.place)
+  };
+  return compactBlock([
+    "## Previous Visual State",
+    "This is the immediately previous generated turn, not a new narrative source. Copy its character and environment values exactly when the current numbered source does not explicitly replace them. Current source changes always win. Never copy camera, pose, action, or expression from prior state.",
+    JSON.stringify(reference)
+  ].join(`
+`), 5000);
+}
+
 // src/backend/context.ts
 var MAX_ACTIVATED_LOREBOOK_ENTRIES = 24;
 var COMPACT_LOREBOOK_LENGTH = 4000;
@@ -1031,10 +1561,9 @@ async function buildLorebookContextSnapshot(chatId, target, config, userId) {
   }
 }
 function formatRecentContext(messages, targetIndex, includeCount) {
-  if (includeCount <= 0)
-    return "";
-  const previous = messages.slice(0, Math.max(0, targetIndex)).filter((message) => message.role === "assistant" && !isOwnMessage(message)).map((message) => ({ ...message, content: stripInlayContent(message.content) })).filter((message) => message.content.trim()).slice(-includeCount);
-  return compactBlock(previous.map((message) => `${message.role}: ${message.content}`).join(`
+  const previous = messages.slice(0, Math.max(0, targetIndex)).filter((message) => message.role === "assistant" && !isOwnMessage(message)).map((message) => ({ ...message, content: stripInlayContent(message.content) })).filter((message) => message.content.trim());
+  const selected = includeCount > 0 ? previous.slice(-includeCount) : previous.length === 1 ? previous : [];
+  return compactBlock(selected.map((message) => `${message.role}: ${message.content}`).join(`
 
 `), 8000);
 }
@@ -1046,7 +1575,7 @@ function includeCountForAttempt(config, attempt) {
   const step = Math.ceil((config.includeMaxMessages - config.includeMinMessages) / config.parserRetries);
   return Math.min(config.includeMaxMessages, config.includeMinMessages + step * attempt);
 }
-async function buildParserContext(chatId, messages, targetIndex, cache, config, attempt, userId, lorebookSnapshot) {
+async function buildParserContext(chatId, messages, targetIndex, cache, config, attempt, userId, lorebookSnapshot, previousVisualState) {
   const blocks = [];
   const preprocessingBlocks = [];
   const overrides = [];
@@ -1119,6 +1648,11 @@ Use these as a baseline for returning characters (including their base attire). 
     }
     diagnostics.cacheCharacters = Object.keys(cache).length;
   }
+  if (config.previousVisualStateEnabled && previousVisualState) {
+    const visualStateReference = formatPreviousVisualState(previousVisualState);
+    pushBlock(visualStateReference);
+    diagnostics.previousVisualState = Boolean(visualStateReference);
+  }
   if (config.userInstructionsEnabled)
     overrides.unshift(config.customParserInstructions);
   return {
@@ -1134,226 +1668,6 @@ Use these as a baseline for returning characters (including their base attire). 
 `),
     diagnostics
   };
-}
-
-// src/backend/creative.ts
-function stableHash(value) {
-  let hash = 2166136261;
-  for (let index = 0;index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(36);
-}
-function parseJsonObject(value) {
-  const clean = value.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
-  const candidates = [clean];
-  const start = clean.indexOf("{");
-  const end = clean.lastIndexOf("}");
-  if (start >= 0 && end > start)
-    candidates.push(clean.slice(start, end + 1));
-  for (const candidate of candidates) {
-    try {
-      const parsed = JSON.parse(candidate);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
-        return parsed;
-    } catch {}
-  }
-  return null;
-}
-function cleanCueList(value) {
-  if (!Array.isArray(value))
-    return [];
-  return [...new Set(value.map(cleanString2).filter(Boolean))].slice(0, 6);
-}
-var CREATIVE_SUBJECT_TYPES = new Set([
-  "object",
-  "environment",
-  "shadow",
-  "silhouette",
-  "reflection",
-  "fragment",
-  "spatial"
-]);
-var IDENTITY_BEARING_CUE = /\b(?:face|facial|cheek|chin|jaw|mouth|lip|lips|eye|eyes|iris|pupil|pupils|eyebrow|eyebrows|eyelash|eyelashes|hair|hairstyle|bangs|braid|ponytail|blonde|brunette|uniform|outfit|clothing|clothes|costume|dress|shirt|blouse|sweater|hoodie|coat|jacket|sleeve|collar|ribbon|tie|skirt|shorts|pants|trousers|stockings|pantyhose|sock|socks|shoe|shoes|boot|boots)\b/i;
-function isIdentitySafeCreativeConcept(concept) {
-  if (!concept.subjectType || !CREATIVE_SUBJECT_TYPES.has(concept.subjectType))
-    return false;
-  return !IDENTITY_BEARING_CUE.test([
-    concept.anchor,
-    concept.concept,
-    concept.renderScope,
-    concept.camera,
-    ...concept.visibleCues
-  ].join(" "));
-}
-function parseCreativeConcepts(value, paragraphs, config) {
-  const parsed = parseJsonObject(value);
-  const rawCandidates = Array.isArray(parsed?.candidates) ? parsed.candidates : [];
-  const validParagraphs = new Set(paragraphs.map((paragraph) => paragraph.parserIndex));
-  const perParagraph = new Map;
-  const seenIds = new Set;
-  const concepts = [];
-  for (const raw of rawCandidates) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw))
-      continue;
-    const candidate = raw;
-    const paragraph = Number(String(candidate.paragraph ?? "").match(/\d+/)?.[0]);
-    const subjectType = cleanString2(candidate.subjectType).toLowerCase();
-    const anchor = cleanString2(candidate.anchor);
-    const concept = cleanString2(candidate.concept);
-    const renderScope = cleanString2(candidate.renderScope);
-    const camera = cleanString2(candidate.camera);
-    const visibleCues = cleanCueList(candidate.visibleCues);
-    const scoreValue = Number(candidate.score);
-    if (!validParagraphs.has(paragraph) || !subjectType || !CREATIVE_SUBJECT_TYPES.has(subjectType) || !anchor || !concept || !renderScope || !camera || visibleCues.length === 0)
-      continue;
-    if (!Number.isFinite(scoreValue))
-      continue;
-    const score = Math.max(0, Math.min(100, Math.round(scoreValue)));
-    const id = `creative-${stableHash([paragraph, subjectType, anchor, concept, renderScope, camera].join("|"))}`;
-    const parsedConcept = {
-      id,
-      paragraph,
-      subjectType,
-      anchor,
-      concept,
-      renderScope,
-      camera,
-      visibleCues,
-      score
-    };
-    if (!isIdentitySafeCreativeConcept(parsedConcept))
-      continue;
-    if (seenIds.has(id))
-      continue;
-    const count = perParagraph.get(paragraph) || 0;
-    if (count >= 4)
-      continue;
-    seenIds.add(id);
-    perParagraph.set(paragraph, count + 1);
-    concepts.push(parsedConcept);
-  }
-  const finalCounts = new Map;
-  const paragraphScores = new Map;
-  concepts.forEach((concept) => finalCounts.set(concept.paragraph, (finalCounts.get(concept.paragraph) || 0) + 1));
-  concepts.forEach((concept) => paragraphScores.set(concept.paragraph, Math.max(paragraphScores.get(concept.paragraph) || 0, concept.score)));
-  const eligibleParagraphs = [...new Set(concepts.map((concept) => concept.paragraph))].filter((paragraph) => (finalCounts.get(paragraph) || 0) >= 2).sort((left, right) => (paragraphScores.get(right) || 0) - (paragraphScores.get(left) || 0) || left - right).slice(0, Math.max(1, config.maxImages));
-  const allowed = new Set(eligibleParagraphs);
-  return concepts.filter((concept) => allowed.has(concept.paragraph));
-}
-function hasUnusedCreativeConcepts(candidates, usedIds) {
-  const used = new Set(usedIds);
-  return candidates.some((candidate) => isIdentitySafeCreativeConcept(candidate) && !used.has(candidate.id));
-}
-function chooseCreativeConcepts(candidates, usedIds = [], random = Math.random) {
-  const used = new Set(usedIds);
-  const grouped = new Map;
-  for (const candidate of candidates) {
-    if (!isIdentitySafeCreativeConcept(candidate) || used.has(candidate.id))
-      continue;
-    const group = grouped.get(candidate.paragraph) || [];
-    group.push(candidate);
-    grouped.set(candidate.paragraph, group);
-  }
-  const selected = new Map;
-  for (const [paragraph, group] of grouped) {
-    const sorted = [...group].sort((left, right) => right.score - left.score || left.id.localeCompare(right.id));
-    const bestScore = sorted[0]?.score ?? 0;
-    const shortlist = sorted.filter((candidate) => candidate.score >= Math.max(50, bestScore - 20)).slice(0, 3);
-    const pool = shortlist.length > 0 ? shortlist : sorted.slice(0, 1);
-    if (pool.length === 0)
-      continue;
-    const floor = Math.min(...pool.map((candidate) => candidate.score)) - 5;
-    const weights = pool.map((candidate) => Math.max(1, candidate.score - floor));
-    const total = weights.reduce((sum, weight) => sum + weight, 0);
-    let cursor = Math.min(0.999999, Math.max(0, random())) * total;
-    let choice = pool[pool.length - 1];
-    for (let index = 0;index < pool.length; index += 1) {
-      cursor -= weights[index];
-      if (cursor < 0) {
-        choice = pool[index];
-        break;
-      }
-    }
-    selected.set(paragraph, choice);
-  }
-  return selected;
-}
-function creativeIdeationInstruction(config, previousConcepts = []) {
-  return [
-    "# Creative Illustration Concept Ideator",
-    "Extract literal visual cues from the numbered source and propose genuinely different Creative compositions before the prompt parser runs.",
-    config.adaptiveMode ? `Screen up to ${Math.max(1, config.maxImages)} paragraph numbers for optional identity-safe Creative alternatives, then generate exactly four candidates for each. These candidates must not decide or bias the later Adaptive mode choice.` : `Choose up to ${Math.max(1, config.maxImages)} visually strong paragraph numbers and generate exactly four candidates for each chosen paragraph.`,
-    "Candidates for the same paragraph must differ in focal anchor and at least one of crop scale, subject inclusion, depth, occlusion, or viewpoint.",
-    "Creative must not focus on recognizable identity-bearing character features. Never use a face, facial feature, hair, hairstyle, or recognizable clothing as the anchor or a visible cue.",
-    "Allowed subjectType values are object, environment, shadow, silhouette, reflection, fragment, or spatial. Reflections and fragments must remain non-identifying; generic hands, fingers, feet, gestures, and fully unreadable silhouettes are allowed.",
-    "Prefer overlooked but meaningful anchors: a source-supported object, environmental detail, shadow, unreadable silhouette, non-identifying fragment, foreground layer, aftermath, or unusual spatial relationship.",
-    "If a paragraph has no faithful identity-safe anchor, return no Creative candidate for it. Do not weaken this rule merely to fill the requested count.",
-    "Do not merely restate the paragraph's complete main action.",
-    "Separate literal cues from metaphors and internal narration. Never render a simile literally and never invent an object, body part, action, or setting detail.",
-    "renderScope is binding: state exactly what is inside the frame and what is cropped or occluded. visibleCues contains only traits and elements actually visible inside that scope.",
-    "Score each candidate from 0-100 for source fidelity, focal specificity, visual clarity, ANIMA promptability, and difference from an obvious Dynamic full-action shot.",
-    previousConcepts.length > 0 ? `Avoid repeating these previously used concepts:
-- ${previousConcepts.map(cleanString2).filter(Boolean).join(`
-- `)}` : "",
-    "Return raw JSON only with this exact shape:",
-    '{"candidates":[{"paragraph":1,"subjectType":"object","anchor":"short anchor label","concept":"concise visible composition","renderScope":"exact contents of frame and crop","camera":"concise framing and viewpoint","visibleCues":["visible cue"],"score":85}]}',
-    "No markdown, commentary, character-memory dump, or fields outside the schema."
-  ].filter(Boolean).join(`
-
-`);
-}
-function creativeIdeationRequest(targetSource) {
-  return [
-    "Generate the Creative concept slate from this current numbered source:",
-    targetSource
-  ].join(`
-
-`);
-}
-function creativeConceptConstraint(concepts, adaptive) {
-  if (concepts.size === 0)
-    return "";
-  const lines = [...concepts.values()].sort((left, right) => left.paragraph - right.paragraph).map((concept) => [
-    `[P${concept.paragraph}] concept ID: ${concept.id}`,
-    `Anchor: ${concept.anchor}`,
-    `Binding render scope: ${concept.renderScope}`,
-    `Camera intent: ${concept.camera}`,
-    `Visible cues only: ${concept.visibleCues.join(", ")}`,
-    `Creative suitability: ${concept.score}/100`
-  ].join(`
-`));
-  return [
-    adaptive ? "## Optional Creative Candidates" : "## Selected Creative Concepts",
-    adaptive ? "First choose perspectiveMode independently from the paragraph itself. Creative is permitted only for paragraphs listed below, and the listed candidate becomes binding only after Creative is chosen. Otherwise ignore it and choose Static or Dynamic normally. Do not choose Creative merely because a candidate or score is present." : "Use only the listed paragraphs for Creative shots. Each listed concept is binding and must control renderScope, visibleTags, camera, and subject inclusion.",
-    "Creative may show only identity-safe objects, environments, shadows, unreadable silhouettes, spatial details, or non-identifying fragments. It must not show a recognizable face, hair, or outfit.",
-    "When a binding render scope exists, do not expand it with the character's complete pose, full action, off-frame attire, or unrelated memory traits.",
-    ...lines
-  ].join(`
-
-`);
-}
-function rebaseCreativeConcepts(candidates, paragraph) {
-  return candidates.map((candidate) => ({ ...candidate, paragraph }));
-}
-
-// src/backend/logging.ts
-function logStage(config, stage, details, level = "info") {
-  if (!config?.debugLogging && level !== "error")
-    return;
-  const suffix = details ? ` ${JSON.stringify(details, (_key, value) => {
-    if (typeof value === "string" && value.length > 300)
-      return `${value.slice(0, 300)}...(${value.length} chars)`;
-    return value;
-  })}` : "";
-  const message = `[Inlay:${stage}]${suffix}`;
-  if (level === "warn")
-    spindle.log.warn(message);
-  else if (level === "error")
-    spindle.log.error(message);
-  else
-    spindle.log.info(message);
 }
 
 // src/backend/images.ts
@@ -1586,144 +1900,6 @@ async function prepareAndDispatchImageJobs(inputs, eager, prepare, generate) {
   };
 }
 
-// src/backend/scenes.ts
-function parseParagraphNumber(value) {
-  const match = String(value ?? "").match(/\d+/);
-  if (!match)
-    return null;
-  const parsed = Number(match[0]);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-function recoverSceneParagraphs(payload, fallbackParagraph) {
-  const scenes = cleanArray(payload.scenes).map((rawScene) => {
-    const sceneParagraph = parseParagraphNumber(rawScene.paragraph) || fallbackParagraph;
-    const shots = cleanArray(rawScene.shots);
-    if (shots.length > 0) {
-      return {
-        ...rawScene,
-        shots: shots.map((shot) => parseParagraphNumber(shot.paragraph) || !sceneParagraph ? shot : { ...shot, paragraph: sceneParagraph })
-      };
-    }
-    return parseParagraphNumber(rawScene.paragraph) || !sceneParagraph ? rawScene : { ...rawScene, paragraph: sceneParagraph };
-  });
-  return { ...payload, scenes };
-}
-function normalizeScenePayload(payload) {
-  const normalized = [];
-  for (const rawScene of cleanArray(payload.scenes)) {
-    const parentPlace = cleanString2(rawScene.place);
-    const shots = cleanArray(rawScene.shots);
-    if (shots.length > 0) {
-      for (const rawShot of shots) {
-        const parserParagraph2 = parseParagraphNumber(rawShot.paragraph);
-        if (!parserParagraph2)
-          continue;
-        const shot2 = { ...rawShot, paragraph: parserParagraph2 };
-        const scene2 = { ...rawScene, place: parentPlace, shots: [shot2] };
-        normalized.push({ scene: scene2, shot: shot2, parserParagraph: parserParagraph2 });
-      }
-      continue;
-    }
-    const parserParagraph = parseParagraphNumber(rawScene.paragraph);
-    if (!parserParagraph)
-      continue;
-    const situation = cleanString2(rawScene.situation) || parentPlace;
-    const shot = { ...rawScene, paragraph: parserParagraph, situation };
-    const scene = { place: parentPlace, shots: [shot] };
-    normalized.push({ scene, shot, parserParagraph });
-  }
-  return normalized;
-}
-function normalizedVisualValue(value) {
-  const normalize = (candidate) => {
-    if (typeof candidate === "string")
-      return candidate.replace(/\s+/g, " ").trim().toLowerCase();
-    if (Array.isArray(candidate))
-      return candidate.map(normalize);
-    if (candidate && typeof candidate === "object") {
-      return Object.fromEntries(Object.entries(candidate).sort(([left], [right]) => left.localeCompare(right)).map(([key, child]) => [key, normalize(child)]));
-    }
-    return candidate ?? "";
-  };
-  const normalized = normalize(value);
-  return typeof normalized === "string" ? normalized : JSON.stringify(normalized);
-}
-function exactVisualKey(entry) {
-  const environment = entry.scene.environment || {};
-  return JSON.stringify({
-    paragraph: entry.parserParagraph,
-    perspectiveMode: normalizedVisualValue(entry.shot.perspectiveMode),
-    camera: normalizedVisualValue(entry.shot.camera),
-    situation: normalizedVisualValue(entry.shot.situation),
-    sceneAction: normalizedVisualValue(entry.scene.action),
-    shotAction: normalizedVisualValue(entry.shot.action),
-    characters: cleanArray(entry.shot.characters).map((character) => ({
-      expression: normalizedVisualValue(character.expression),
-      action: normalizedVisualValue(character.action),
-      composition: normalizedVisualValue(character.composition),
-      renderScope: normalizedVisualValue(character.renderScope),
-      visibleTags: normalizedVisualValue(character.visibleTags)
-    })),
-    sharedComposition: normalizedVisualValue(entry.shot.sharedComposition || entry.shot.supplement),
-    environment: {
-      location: normalizedVisualValue(environment.location),
-      timeWeather: normalizedVisualValue(environment.timeWeather),
-      lightingMood: cleanArray(environment.lightingMood).map(normalizedVisualValue),
-      backgroundElements: cleanArray(environment.backgroundElements).map(normalizedVisualValue)
-    }
-  });
-}
-function selectPromptEntries(payload, paragraphs, config, creativeConcepts = new Map, creativeCandidates = []) {
-  const normalized = normalizeScenePayload(payload);
-  const paragraphMap = new Map(paragraphs.map((paragraph) => [paragraph.parserIndex, paragraph]));
-  const valid = normalized.filter((entry) => paragraphMap.has(entry.parserParagraph));
-  const seenVisuals = new Set;
-  const distinct = valid.filter((entry) => {
-    const key = exactVisualKey(entry);
-    if (seenVisuals.has(key))
-      return false;
-    seenVisuals.add(key);
-    return true;
-  });
-  const seenParagraphs = new Set;
-  const uniqueParagraphs = distinct.filter((entry) => {
-    const sourceParagraph = paragraphMap.get(entry.parserParagraph)?.originalIndex ?? entry.parserParagraph;
-    if (seenParagraphs.has(sourceParagraph))
-      return false;
-    seenParagraphs.add(sourceParagraph);
-    return true;
-  });
-  const limit = config.maxImages;
-  const selected = uniqueParagraphs.slice(0, limit).map((entry, modelPriority) => ({ entry, modelPriority })).sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority).map(({ entry }) => entry);
-  const maxAdaptiveCreative = selected.length > 1 ? Math.ceil(selected.length / 2) : 1;
-  const safeCreativeConcepts = new Map([...creativeConcepts].filter(([, concept]) => isIdentitySafeCreativeConcept(concept)));
-  const adaptiveCreativeAllowed = new Set(config.adaptiveMode ? selected.filter((entry) => cleanString2(entry.shot.perspectiveMode).toLowerCase() === "creative" && safeCreativeConcepts.has(entry.parserParagraph)).sort((left, right) => (safeCreativeConcepts.get(right.parserParagraph)?.score || 0) - (safeCreativeConcepts.get(left.parserParagraph)?.score || 0)).slice(0, maxAdaptiveCreative) : []);
-  const prompts = [];
-  for (const entry of selected) {
-    const paragraph = paragraphMap.get(entry.parserParagraph);
-    if (!paragraph)
-      continue;
-    const concept = safeCreativeConcepts.get(entry.parserParagraph);
-    const requestedPerspective = cleanString2(entry.shot.perspectiveMode).toLowerCase();
-    const shot = config.adaptiveMode && requestedPerspective === "creative" && (!concept || !adaptiveCreativeAllowed.has(entry)) ? { ...entry.shot, perspectiveMode: "dynamic" } : entry.shot;
-    const prompt = assemblePrompt(entry.scene, shot, config, entry.parserParagraph, paragraph.originalIndex, concept);
-    prompt.creativeCandidates = creativeCandidates.filter((candidate) => candidate.paragraph === entry.parserParagraph);
-    if (renderPrompt(prompt.prompt, config.promptSyntax))
-      prompts.push(prompt);
-  }
-  logStage(config, "illustration_candidates_selected", {
-    candidateCount: normalized.length,
-    validCandidateCount: valid.length,
-    distinctCandidateCount: distinct.length,
-    uniqueParagraphCandidateCount: uniqueParagraphs.length,
-    selectedCount: prompts.length,
-    selectedParagraphs: selected.map((entry) => entry.parserParagraph),
-    perspectives: prompts.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource })),
-    cameraTags: selected.map((entry) => normalizedVisualValue(entry.shot.camera))
-  });
-  return prompts;
-}
-
 // src/backend/memory.ts
 var VOLATILE_MEMORY_TERMS = [
   "sitting",
@@ -1769,10 +1945,13 @@ var TRANSIENT_ATTIRE_MEMORY_TERMS = [
   "clothes pull",
   "undressing"
 ];
+var PLACEHOLDER_TERM2 = /\b(?:unknown|unspecified|not specified|not stated|unmentioned|undetermined|n\/?a)\b/i;
 function sanitizeMemoryTags(tags) {
   return normalizeReferenceTags(csvParts(tags).filter((tag) => {
     const normalized = tag.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
     if (!normalized)
+      return false;
+    if (PLACEHOLDER_TERM2.test(normalized))
       return false;
     if (TRANSIENT_ATTIRE_MEMORY_TERMS.some((term) => normalized === term || normalized.includes(term)))
       return false;
@@ -1780,7 +1959,8 @@ function sanitizeMemoryTags(tags) {
   }).join(", "));
 }
 function baselineCharacterTags(character) {
-  return sanitizeMemoryTags(unique(csvParts(character.label, character.age, character.appearance, character.body, character.attire)).join(", "));
+  const attireInferred = character.attireInferred === true || String(character.attireInferred).toLowerCase() === "true";
+  return sanitizeMemoryTags(unique(csvParts(character.label, character.age, character.appearance, character.body, attireInferred ? "" : character.attire)).join(", "));
 }
 function updateCache(cache, payload) {
   for (const { shot } of normalizeScenePayload(payload)) {
@@ -1924,6 +2104,7 @@ function parserInstruction(config) {
     '        "lightingMood": ["string"],',
     '        "backgroundElements": ["string"]',
     "      },",
+    '      "environmentChanges": ["location | timeWeather | lightingMood | backgroundElements"],',
     '      "shots": [',
     "        {",
     '          "paragraph": 0,',
@@ -1944,6 +2125,8 @@ function parserInstruction(config) {
     '              "appearance": "string",',
     '              "body": "string",',
     '              "attire": "string",',
+    '              "attireInferred": false,',
+    '              "visualChanges": ["age | appearance | body | attire"],',
     '              "expression": "string",',
     '              "renderScope": "string",',
     '              "visibleTags": "string",',
@@ -1970,6 +2153,7 @@ function parserInstruction(config) {
     '  "scenes": [',
     "    {",
     '      "place": "string",',
+    '      "environmentChanges": ["place"],',
     '      "shots": [',
     "        {",
     '          "paragraph": 0,',
@@ -1986,6 +2170,8 @@ function parserInstruction(config) {
     '              "appearance": "string",',
     '              "body": "string",',
     '              "attire": "string",',
+    '              "attireInferred": false,',
+    '              "visualChanges": ["age | appearance | body | attire"],',
     '              "expression": "string",',
     '              "renderScope": "string",',
     '              "visibleTags": "string",',
@@ -2015,6 +2201,7 @@ function parserInstruction(config) {
     "Use concise objective visual phrases, not narration, invisible emotion, smell, sound, or internal sensation.",
     "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements.",
     "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
+    "When the current source does not establish a new environment detail, copy the corresponding location, timeWeather, lightingMood, or backgroundElements from Previous Visual State exactly. If neither current source nor previous state establishes time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time.",
     config.supplement ? "Populate lightingMood and backgroundElements within the target budget." : staticBackgroundPossible ? "Leave lightingMood empty. Populate 2-3 backgroundElements for every scene containing a Static shot, and leave backgroundElements empty for scenes without a Static shot. Still populate location and timeWeather." : "Leave lightingMood and backgroundElements empty. Still populate location and timeWeather."
   ].join(`
 `) : config.supplement ? [
@@ -2046,7 +2233,8 @@ function parserInstruction(config) {
     "- Never invent paragraph numbers outside the visible range.",
     "- Tag ONLY the current message. Recent context is for continuity only.",
     "## Tag Rules",
-    "Use common, objective, visualizable Danbooru-style English tags. Do not invent tags; use simpler well-known equivalents if unsure. Do not use metaphors for tags.",
+    "Use common, objective, visualizable Danbooru-style English tags. Never fabricate tag vocabulary; use simpler well-known equivalents if unsure. Conservative scene inference is allowed only where this contract explicitly permits it. Do not use metaphors for tags.",
+    "Never output placeholder tags or phrases such as unknown, unspecified, not specified, unmentioned, undetermined, default clothing, or unspecified time. Leave genuinely nonvisual fields empty instead.",
     structuredAnima ? "Tag fields are comma-separated tags. Atomic composition and sharedComposition values are concise comma-free natural-language phrases. Environment arrays contain one comma-free visual snippet per item." : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
     `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it. For every character object, keep the complete known baseline in appearance, body, and attire even when Creative shows only a partial crop. visibleTags is the separate visible-only rendering projection.`,
     "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for stable appearance, attire, location, and persistent actions.",
@@ -2055,6 +2243,9 @@ function parserInstruction(config) {
     perspectiveInstruction,
     structuredAnima ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, camera, situation, sharedComposition, environment, and negative." : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
     "## Field Reference",
+    "### visual continuity change markers",
+    "When Previous Visual State exists, characters[].visualChanges must list only age, appearance, body, or attire fields explicitly changed by the current numbered source. An empty list means copy those prior fields exactly. Do not mark a field changed merely because you rephrased its tags.",
+    structuredAnima ? "environmentChanges must list only location, timeWeather, lightingMood, or backgroundElements explicitly changed by the current numbered source. An empty list means copy the prior environment exactly. A location change normally also changes backgroundElements." : "environmentChanges contains place only when the current numbered source explicitly changes the setting. Otherwise leave it empty and copy the prior place.",
     structuredAnima ? "### environment - scene-level" : "### place - scene-level",
     structuredAnima ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details. Static scenes require a specific physical location and 2-3 backgroundElements." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
     structuredAnima ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment. Use only source-supported visual atmosphere; never infer romance, calm, menace, or another emotional tone from lighting alone." : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
@@ -2099,6 +2290,8 @@ function parserInstruction(config) {
     "Disassemble uniforms into individual items. Always include color details using color names. Do not use vague color traits like colorful or gradient unless the text clearly describes them.",
     "Examples: white loose button-up shirt, black silk dress, side slit, sleeveless, long sleeves, oversized, gray tight jeans, pleated mini skirt, white ankle socks, bare feet, red baseball cap, small blue gem necklace, open shirt, torn clothes, unzipped, midriff.",
     "Use no shirt, no pants, bare feet, or similar absence tags when visually relevant.",
+    "If a visible character has no established attire in the current source, previous visual state, or durable baseline, choose one conservative visually coherent outfit supported by their role and setting. Set attireInferred to true. Copy attireInferred from previous visual state when retaining that inferred outfit; otherwise set it to false.",
+    "Inferred attire is scene continuity only and must not become durable character memory.",
     "Do not include body traits, expressions, actions, camera, place, or names in attire.",
     "### expression",
     "Visible facial emotions and facial/eye states only: annoyed, angry, embarrassed, blush, grin, smile, crying, empty eyes, closed eyes.",
@@ -2122,7 +2315,8 @@ function parserInstruction(config) {
     "## Data Priority",
     "1. Client comments or explicit user instructions in the current message override all instructions.",
     structuredAnima ? "2. Current message [P#] paragraphs are authoritative for scene content, action, visible emotion, interpersonal tone, and movement direction. Never soften, romanticize, or replace those facts with an inferred atmosphere. Never restore outdated clothing, props, location, or actions from context." : "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
-    config.characterTagContextEnabled ? "3. Character tag history is the current visual baseline for returning characters: label, age, appearance, body, and base attire." : "",
+    config.previousVisualStateEnabled ? "3. Previous Visual State is the immediate visual continuity layer. Copy unchanged character and environment values exactly; it never overrides an explicit current-source change." : "",
+    config.characterTagContextEnabled ? `${config.previousVisualStateEnabled ? "4" : "3"}. Character tag history is the durable visual baseline for returning characters: label, age, appearance, body, and explicit base attire.` : "",
     config.characterTagContextEnabled ? "Use previous character tags as a baseline for returning characters, including base attire. Preserve specific baseline tags when not contradicted, such as short cut, white pupils, small breasts, black high school uniform, red sailor ribbon, black skirt, and white pantyhose." : "",
     config.characterTagContextEnabled ? "The current message is authoritative for the character's present visual state. It can update the baseline when it clearly changes clothing, lack of clothing, appearance, or body traits." : "",
     "## Weights",
@@ -2158,7 +2352,7 @@ ${recentContext.trim()}` : ""
     return "";
   return [
     "# Continuity Reference Only",
-    "Use this reference only to fill missing stable appearance, attire, location, and persistent-action details.",
+    "Use this reference only to fill missing stable appearance, attire, location, still-current time/weather, lighting, background, and persistent-action details.",
     "The current numbered source is authoritative. Never restore outdated scene facts or copy an earlier camera angle or composition merely for continuity.",
     ...references
   ].join(`
@@ -2201,6 +2395,7 @@ function extractUsage(result) {
 var FUZZY_KEYS = [
   "scenes",
   "place",
+  "environmentChanges",
   "shots",
   "paragraph",
   "camera",
@@ -2212,6 +2407,8 @@ var FUZZY_KEYS = [
   "appearance",
   "body",
   "attire",
+  "attireInferred",
+  "visualChanges",
   "expression",
   "action",
   "composition",
@@ -2960,7 +3157,7 @@ async function parseAndSelectPrompts(input) {
 `), config, userId);
   for (let attempt = 0;attempt <= config.parserRetries; attempt += 1) {
     try {
-      const context = await buildParserContext(chatId, messages, targetIndex, state.characterAppearance, config, attempt, userId, lorebookSnapshot);
+      const context = await buildParserContext(chatId, messages, targetIndex, state.characterAppearance, config, attempt, userId, lorebookSnapshot, config.previousVisualStateEnabled ? state.previousVisualState : undefined);
       if (creativePipeline && conceptSelections === null) {
         if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
           const previousConcepts = conceptCandidates.filter((concept) => usedConceptIds.has(concept.id)).map((concept) => concept.concept);
@@ -3005,6 +3202,7 @@ async function parseAndSelectPrompts(input) {
         contextDiagnostics: context.diagnostics
       });
       parsed = await parsePayloadWithRepair(parserConnection, config, parserMessages(instruction, referenceContext, userRequest, context.override), userId);
+      parsed = applyPreviousVisualState(parsed, config.previousVisualStateEnabled ? state.previousVisualState : undefined);
       parsed = await repairDynamicCameraDiversity(parserConnection, config, parsed, targetSource, userId);
       selected = selectPromptEntries(parsed, paragraphs, config, conceptSelections || new Map, conceptCandidates);
       if (!config.adaptiveMode && config.perspectiveMode === "creative" && (conceptSelections?.size || 0) > 0) {
@@ -3084,6 +3282,7 @@ async function prepareAndDispatchImages(chatId, selected, config, userId) {
       shotNegative: entry.shotNegative,
       promptFormat,
       paragraph: entry.paragraph,
+      parserParagraph: entry.parserParagraph,
       perspectiveMode: entry.perspectiveMode,
       perspectiveSource: entry.perspectiveSource,
       creativeConcept: entry.creativeConcept,
@@ -3196,7 +3395,7 @@ function collectImageResults(stage, config) {
   };
 }
 async function persistGeneration(input) {
-  const { chatId, messageId, swipeId, key, target, parsed, assets, config, userId } = input;
+  const { chatId, messageId, swipeId, key, target, parsed, assets, visualState, config, userId } = input;
   const record = {
     chatId,
     messageId,
@@ -3220,6 +3419,10 @@ async function persistGeneration(input) {
   };
   await updateState(chatId, userId, (state) => {
     state.generated[key] = record;
+    if (visualState)
+      state.previousVisualState = visualState;
+    else
+      delete state.previousVisualState;
   });
   logStage(config, "state_persisted", { key, imageCount: assets.imageIds.length, paragraphs: assets.paragraphs });
   const originalContent = String(target.content || "");
@@ -3356,7 +3559,13 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
       const sourceParagraph = prepareParagraphs(String(target.content || ""), config).find((paragraph) => paragraph.originalIndex === originalParagraph);
       if (!sourceParagraph)
         throw new Error("The source paragraph for this image no longer exists.");
-      const singleConfig = { ...config, minImages: 1, maxImages: 1, preprocessingEnabled: false };
+      const singleConfig = {
+        ...config,
+        minImages: 1,
+        maxImages: 1,
+        preprocessingEnabled: false,
+        previousVisualStateEnabled: false
+      };
       const paragraphs = [{ ...sourceParagraph, parserIndex: 1 }];
       const storedCandidates = rebaseCreativeConcepts(located.record.creativeConceptCandidates?.[located.index] || [], 1);
       const previousConceptHistory = located.record.creativeConceptHistory?.[located.index] || [];
@@ -3459,7 +3668,8 @@ async function generateForMessage(chatId, messageId, content, userId) {
     logParsedSelection(parsed, selected, paragraphs, config);
     const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId);
     const assets = collectImageResults(imageStage, config);
-    await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, config, userId });
+    const visualState = buildPreviousVisualState(parsed, imageStage.jobs.map((job) => job.parserParagraph).filter((paragraph) => Number.isFinite(paragraph)));
+    await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, visualState, config, userId });
   } finally {
     releaseGeneration();
   }

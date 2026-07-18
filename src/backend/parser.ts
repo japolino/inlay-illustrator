@@ -27,7 +27,7 @@ export function continuityReference(systemContext: string, recentContext: string
   if (references.length === 0) return "";
   return [
     "# Continuity Reference Only",
-    "Use this reference only to fill missing stable appearance, attire, location, and persistent-action details.",
+    "Use this reference only to fill missing stable appearance, attire, location, still-current time/weather, lighting, background, and persistent-action details.",
     "The current numbered source is authoritative. Never restore outdated scene facts or copy an earlier camera angle or composition merely for continuity.",
     ...references
   ].join("\n\n");
@@ -65,7 +65,7 @@ function extractUsage(result: unknown): Record<string, number> {
 }
 
 const FUZZY_KEYS = [
-  "scenes", "place", "shots", "paragraph", "camera", "situation", "characters", "label", "age", "identity", "appearance", "body", "attire",
+  "scenes", "place", "environmentChanges", "shots", "paragraph", "camera", "situation", "characters", "label", "age", "identity", "appearance", "body", "attire", "attireInferred", "visualChanges",
   "expression", "action", "composition", "sharedComposition", "environment", "location", "timeWeather", "lightingMood", "backgroundElements",
   "framing", "angle", "perspective", "focus", "position", "pose", "actions", "gaze", "interaction", "spatialRelation",
   "negative", "name", "scene", "positive", "quote", "supplement", "perspectiveMode", "renderScope", "visibleTags"
