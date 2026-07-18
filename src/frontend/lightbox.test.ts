@@ -23,12 +23,14 @@ describe("Inlay prompt lightbox", () => {
       " negative ",
       "legacy negative",
       "Creative",
-      "Adaptive"
+      "Adaptive",
+      "Eye gap: one red eye framed between two fingers"
     )).toEqual({
       prompt: "positive",
       negativePrompt: "negative",
       perspectiveMode: "creative",
-      perspectiveSource: "adaptive"
+      perspectiveSource: "adaptive",
+      creativeConcept: "Eye gap: one red eye framed between two fingers"
     });
   });
 
@@ -37,7 +39,8 @@ describe("Inlay prompt lightbox", () => {
       prompt: "legacy positive",
       negativePrompt: "",
       perspectiveMode: null,
-      perspectiveSource: null
+      perspectiveSource: null,
+      creativeConcept: ""
     });
   });
 

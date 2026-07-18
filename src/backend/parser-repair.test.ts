@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { DEFAULT_CONFIG } from "../shared/config.js";
-import { parsePayloadWithRepair } from "./parser.js";
+import { generateCreativeConcepts, parsePayloadWithRepair } from "./parser.js";
 import type { ParserGenerationRequest } from "./types.js";
 
 type RawRequest = { messages: ParserGenerationRequest["messages"] };
@@ -163,5 +163,45 @@ describe("parser JSON recovery", () => {
     expect(completionLog).toContain('"prompt_tokens":321');
     expect(completionLog).toContain('"total_tokens":366');
     expect(completionLog).not.toContain('{"scenes":[]}');
+  });
+});
+
+describe("Creative ideation sidecar stage", () => {
+  const paragraphs = [{ parserIndex: 1, originalIndex: 1, text: "She peers through her fingers." }];
+  const context = { systemContext: "", recentContext: "", override: "", diagnostics: {} };
+
+  test("generates and validates a compact candidate slate in one batch call", async () => {
+    responses.push({ content: JSON.stringify({ candidates: [
+      { paragraph: 1, anchor: "eye gap", concept: "one eye framed by fingers", renderScope: "one red eye and two fingers", camera: "extreme close-up", visibleCues: ["red eye", "fingers"], score: 95 },
+      { paragraph: 1, anchor: "rooted feet", concept: "feet fixed against the floor", renderScope: "lower legs and planted feet", camera: "low body-part focus", visibleCues: ["white pantyhose", "shoes"], score: 84 }
+    ] }) });
+
+    const concepts = await generateCreativeConcepts(
+      connection,
+      { ...config, perspectiveMode: "creative" },
+      paragraphs,
+      "[P1]\nShe peers through her fingers.",
+      context
+    );
+
+    expect(concepts).toHaveLength(2);
+    expect(requests).toHaveLength(1);
+    expect(requests[0].messages[0].content).toContain("Creative Illustration Concept Ideator");
+    expect(requests[0].messages.at(-1)?.content).toContain("[P1]");
+  });
+
+  test("falls back without blocking generation when ideation output is invalid", async () => {
+    responses.push({ content: "not a concept slate" });
+
+    const concepts = await generateCreativeConcepts(
+      connection,
+      { ...config, perspectiveMode: "creative" },
+      paragraphs,
+      "[P1]\nShe peers through her fingers.",
+      context
+    );
+
+    expect(concepts).toEqual([]);
+    expect(requests).toHaveLength(1);
   });
 });

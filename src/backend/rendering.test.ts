@@ -3,6 +3,17 @@ import { DEFAULT_CONFIG } from "../shared/config.js";
 import { MARKER } from "./constants.js";
 import { imageUrlFromId, renderInlaidMessage } from "./rendering.js";
 
+const creativeConcept = {
+  id: "creative-eye-gap",
+  paragraph: 1,
+  anchor: "Eye gap",
+  concept: "one red eye framed between two fingers",
+  renderScope: "one eye visible through a narrow finger gap",
+  camera: "extreme close-up",
+  visibleCues: ["red eye", "fingers"],
+  score: 92
+};
+
 describe("inlay rendering", () => {
   test("places images before their target paragraphs and preserves image order within a paragraph", () => {
     const rendered = renderInlaidMessage(
@@ -81,6 +92,7 @@ describe("inlay rendering", () => {
         negativePrompts: ["lowres, bad anatomy"],
         perspectiveModes: ["creative"],
         perspectiveSources: ["adaptive"],
+        creativeConcepts: [creativeConcept],
         paragraphs: [1]
       },
       DEFAULT_CONFIG
@@ -96,6 +108,7 @@ describe("inlay rendering", () => {
     expect(block).toContain('data-inlay-illustrator-negative-prompt="lowres, bad anatomy"');
     expect(block).toContain('data-inlay-illustrator-perspective="creative"');
     expect(block).toContain('data-inlay-illustrator-perspective-source="adaptive"');
+    expect(block).toContain('data-inlay-illustrator-concept="Eye gap: one red eye framed between two fingers"');
     expect(block).toContain('data-inlay-illustrator-image-id="image-1"');
     expect(block).toContain('data-inlay-illustrator-chat-id="chat-1"');
     expect(block).toContain('data-inlay-illustrator-message-id="message-1"');

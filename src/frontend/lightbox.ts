@@ -13,6 +13,7 @@ export type InlayGenerationDetails = {
   negativePrompt: string;
   perspectiveMode: "creative" | "static" | "dynamic" | null;
   perspectiveSource: "adaptive" | "manual" | null;
+  creativeConcept: string;
 };
 
 export type InlayActionTarget = {
@@ -37,7 +38,8 @@ export function resolveInlayDetails(
   attributeNegative: string | null,
   fallbackNegative: string | null,
   perspectiveMode: string | null,
-  perspectiveSource: string | null
+  perspectiveSource: string | null,
+  creativeConcept: string | null = null
 ): InlayGenerationDetails {
   const normalizedMode = perspectiveMode?.trim().toLowerCase();
   const normalizedSource = perspectiveSource?.trim().toLowerCase();
@@ -47,7 +49,8 @@ export function resolveInlayDetails(
     perspectiveMode: normalizedMode === "creative" || normalizedMode === "static" || normalizedMode === "dynamic"
       ? normalizedMode
       : null,
-    perspectiveSource: normalizedSource === "adaptive" || normalizedSource === "manual" ? normalizedSource : null
+    perspectiveSource: normalizedSource === "adaptive" || normalizedSource === "manual" ? normalizedSource : null,
+    creativeConcept: (creativeConcept || "").trim()
   };
 }
 
@@ -68,7 +71,8 @@ function detailsForImage(image: HTMLImageElement): InlayGenerationDetails {
     image.getAttribute("data-inlay-illustrator-negative-prompt"),
     fallbackNegative,
     image.getAttribute("data-inlay-illustrator-perspective"),
-    image.getAttribute("data-inlay-illustrator-perspective-source")
+    image.getAttribute("data-inlay-illustrator-perspective-source"),
+    image.getAttribute("data-inlay-illustrator-concept")
   );
 }
 
@@ -145,6 +149,9 @@ function appendLightboxContent(
       metadata.append(source);
     }
     panel.append(metadata);
+  }
+  if (details.creativeConcept) {
+    panel.append(promptBlock("Creative concept", details.creativeConcept, ""));
   }
   panel.append(
     promptBlock("Positive prompt", details.prompt, "No prompt was recorded for this image."),

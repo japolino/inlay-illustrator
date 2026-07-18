@@ -58,6 +58,17 @@ export type ShotJson = {
 export type SceneJson = ShotJson & { place?: unknown; environment?: EnvironmentJson; shots?: ShotJson[] };
 export type ParsedPayload = { scenes?: SceneJson[] };
 
+export type CreativeConcept = {
+  id: string;
+  paragraph: number;
+  anchor: string;
+  concept: string;
+  renderScope: string;
+  camera: string;
+  visibleCues: string[];
+  score: number;
+};
+
 export type AssembledPrompt = {
   /** Ordered tag and prose sections, rendered with syntax-specific separators. */
   sections: string[];
@@ -74,6 +85,8 @@ export type PromptEntry = {
   parserParagraph: number;
   perspectiveMode: PerspectiveMode;
   perspectiveSource: "adaptive" | "manual";
+  creativeConcept?: CreativeConcept;
+  creativeCandidates?: CreativeConcept[];
 };
 
 export type PreparedParagraph = { parserIndex: number; originalIndex: number; text: string };
@@ -136,6 +149,8 @@ export type PreparedImageJob = {
   paragraph: number;
   perspectiveMode?: PerspectiveMode;
   perspectiveSource?: "adaptive" | "manual";
+  creativeConcept?: CreativeConcept;
+  creativeCandidates?: CreativeConcept[];
   parameters: Record<string, unknown>;
 };
 
@@ -170,6 +185,12 @@ export type GeneratedRecord = {
   /** Parser-provided negative layer without user-selectable preset/custom negatives. */
   shotNegatives?: string[];
   promptFormats?: Array<NonNullable<AssembledPrompt["format"]>>;
+  /** Selected Creative concept per image, or null when the image did not use Creative. */
+  creativeConcepts?: Array<CreativeConcept | null>;
+  /** Candidate slate retained per image for conceptually varied sidecar reruns. */
+  creativeConceptCandidates?: CreativeConcept[][];
+  /** IDs of Creative concepts already used for each image slot. */
+  creativeConceptHistory?: string[][];
   paragraphs: number[];
   imageIds: string[];
   imageUrls: string[];

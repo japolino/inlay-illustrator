@@ -1,11 +1,19 @@
 import type { Config, PerspectiveMode } from "../shared/config.js";
 import { buildLorebookContextSnapshot, buildParserContext, isOwnMessage, type LorebookContextSnapshot } from "./context.js";
+import {
+  chooseCreativeConcepts,
+  creativeConceptConstraint,
+  hasUnusedCreativeConcepts,
+  rebaseCreativeConcepts
+} from "./creative.js";
 import { buildImageParameters, prepareAndDispatchImageJobs, rerollImageParameters, resolveImageConnection } from "./images.js";
 import { logStage } from "./logging.js";
 import { updateCache } from "./memory.js";
 import { ignoredTagNames, paragraphCount, prepareParagraphs } from "./paragraphs.js";
 import {
   continuityReference,
+  formatTargetParagraphs,
+  generateCreativeConcepts,
   parsePayloadWithRepair,
   parserInstruction,
   parserMessages,
@@ -20,6 +28,7 @@ import { getConfig, getState, updateState } from "./storage.js";
 import type {
   CharacterJson,
   ChatMessage,
+  CreativeConcept,
   GeneratedRecord,
   ParsedPayload,
   PreparedImageJob,
@@ -43,6 +52,9 @@ type ImageAssets = {
   corePrompts: string[];
   shotNegatives: string[];
   promptFormats: Array<"legacy" | "ordered">;
+  creativeConcepts: Array<CreativeConcept | null>;
+  creativeConceptCandidates: CreativeConcept[][];
+  creativeConceptHistory: string[][];
   paragraphs: number[];
   imageIds: string[];
   imageUrls: string[];
@@ -55,6 +67,8 @@ type ParseStageInput = {
   paragraphs: PreparedParagraph[];
   state: State;
   config: Config;
+  creativeCandidates?: CreativeConcept[];
+  usedCreativeConceptIds?: string[];
   userId?: string;
 };
 
@@ -141,6 +155,12 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
   let parsed: ParsedPayload | null = null;
   let selected: PromptEntry[] = [];
   let lastParserError: unknown = null;
+  let conceptCandidates = [...(input.creativeCandidates || [])];
+  let conceptSelections: Map<number, CreativeConcept> | null = null;
+  let ideationAttempted = false;
+  let creativeTargetSource: string | null = null;
+  const usedConceptIds = new Set(input.usedCreativeConceptIds || []);
+  const creativePipeline = config.perspectiveMode === "creative" || config.adaptiveMode;
   const lorebookSnapshot = await buildLorebookContextSnapshot(
     chatId,
     paragraphs.map((paragraph) => paragraph.text).join("\n\n"),
@@ -151,10 +171,50 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
   for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
     try {
       const context = await buildParserContext(chatId, messages, targetIndex, state.characterAppearance, config, attempt, userId, lorebookSnapshot);
-      const targetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
+      if (creativePipeline && conceptSelections === null) {
+        if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
+          const previousConcepts = conceptCandidates
+            .filter((concept) => usedConceptIds.has(concept.id))
+            .map((concept) => concept.concept);
+          conceptCandidates = await generateCreativeConcepts(
+            parserConnection,
+            config,
+            paragraphs,
+            formatTargetParagraphs(paragraphs),
+            context,
+            previousConcepts,
+            userId
+          );
+          ideationAttempted = true;
+        }
+        conceptSelections = chooseCreativeConcepts(conceptCandidates, usedConceptIds);
+        if (conceptSelections.size === 0 && conceptCandidates.length > 0) {
+          conceptSelections = chooseCreativeConcepts(conceptCandidates);
+        }
+      }
+      if (creativePipeline && creativeTargetSource === null) {
+        const candidateParagraphs = new Set(conceptCandidates.map((concept) => concept.paragraph));
+        if (config.preprocessingEnabled && candidateParagraphs.size > 0) {
+          creativeTargetSource = formatTargetParagraphs(
+            paragraphs.filter((paragraph) => candidateParagraphs.has(paragraph.parserIndex))
+          );
+          logStage(config, "creative_preprocessing_done", {
+            candidateCount: conceptCandidates.length,
+            selectedParagraphs: [...candidateParagraphs].sort((left, right) => left - right)
+          });
+        } else {
+          creativeTargetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
+        }
+      }
+      const targetSource = creativePipeline
+        ? creativeTargetSource || formatTargetParagraphs(paragraphs)
+        : await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
       const instruction = parserInstruction(config);
       const referenceContext = continuityReference(context.systemContext, context.recentContext);
-      const userRequest = parserUserRequest(targetSource);
+      const userRequest = parserUserRequest(
+        targetSource,
+        creativeConceptConstraint(conceptSelections || new Map(), config.adaptiveMode)
+      );
       logStage(config, "parser_prompt_built", {
         attempt,
         instructionLength: instruction.length,
@@ -177,7 +237,10 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
         parserMessages(instruction, referenceContext, userRequest, context.override),
         userId
       );
-      selected = selectPromptEntries(parsed, paragraphs, config);
+      selected = selectPromptEntries(parsed, paragraphs, config, conceptSelections || new Map(), conceptCandidates);
+      if (!config.adaptiveMode && config.perspectiveMode === "creative" && (conceptSelections?.size || 0) > 0) {
+        selected = selected.filter((entry) => Boolean(entry.creativeConcept));
+      }
       if (selected.length === 0) throw new Error("No usable prompts were parsed.");
       if (attempt === 0 && config.parserRetries > 0 && compactLorebookNeedsFullRetry(parsed, lorebookSnapshot)) {
         throw new Error("Compact lorebook context did not produce durable character tags; retrying with full lorebook context.");
@@ -274,6 +337,8 @@ async function prepareAndDispatchImages(
       paragraph: entry.paragraph,
       perspectiveMode: entry.perspectiveMode,
       perspectiveSource: entry.perspectiveSource,
+      creativeConcept: entry.creativeConcept,
+      creativeCandidates: entry.creativeCandidates,
       parameters
     };
     logStage(config, "image_generation_prepared", {
@@ -346,6 +411,9 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
   const corePrompts = stage.jobs.map((job) => job.corePrompt || "");
   const shotNegatives = stage.jobs.map((job) => job.shotNegative || "");
   const promptFormats = stage.jobs.map((job) => job.promptFormat || "ordered");
+  const creativeConcepts = stage.jobs.map((job) => job.creativeConcept || null);
+  const creativeConceptCandidates = stage.jobs.map((job) => job.creativeCandidates || []);
+  const creativeConceptHistory = stage.jobs.map((job) => job.creativeConcept ? [job.creativeConcept.id] : []);
   const paragraphs = stage.jobs.map((job) => job.paragraph);
   for (const [index, result] of stage.results.entries()) {
     if (result.imageId) imageIds.push(result.imageId);
@@ -369,6 +437,9 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
     corePrompts,
     shotNegatives,
     promptFormats,
+    creativeConcepts,
+    creativeConceptCandidates,
+    creativeConceptHistory,
     paragraphs,
     imageIds,
     imageUrls
@@ -389,6 +460,9 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
     corePrompts: assets.corePrompts,
     shotNegatives: assets.shotNegatives,
     promptFormats: assets.promptFormats,
+    creativeConcepts: assets.creativeConcepts,
+    creativeConceptCandidates: assets.creativeConceptCandidates,
+    creativeConceptHistory: assets.creativeConceptHistory,
     paragraphs: assets.paragraphs,
     imageIds: assets.imageIds,
     imageUrls: assets.imageUrls,
@@ -431,6 +505,9 @@ type ImageReplacement = {
   paragraph: number;
   perspectiveMode: PromptEntry["perspectiveMode"];
   perspectiveSource: PromptEntry["perspectiveSource"];
+  creativeConcept: CreativeConcept | null;
+  creativeCandidates: CreativeConcept[];
+  creativeConceptHistory: string[];
   parameters: Record<string, unknown>;
   imageId: string;
   imageUrl: string;
@@ -459,6 +536,9 @@ async function commitImageReplacement(
       corePrompts: replaceAt(record.corePrompts, located.index, replacement.corePrompt, ""),
       shotNegatives: replaceAt(record.shotNegatives, located.index, replacement.shotNegative, ""),
       promptFormats: replaceAt(record.promptFormats, located.index, replacement.promptFormat, "ordered"),
+      creativeConcepts: replaceAt(record.creativeConcepts, located.index, replacement.creativeConcept, null),
+      creativeConceptCandidates: replaceAt(record.creativeConceptCandidates, located.index, replacement.creativeCandidates, []),
+      creativeConceptHistory: replaceAt(record.creativeConceptHistory, located.index, replacement.creativeConceptHistory, []),
       paragraphs: replaceAt(record.paragraphs, located.index, replacement.paragraph, 1),
       imageIds: replaceAt(record.imageIds, located.index, replacement.imageId, ""),
       imageUrls: replaceAt(record.imageUrls, located.index, replacement.imageUrl, "")
@@ -533,6 +613,9 @@ export async function rerunStoredImage(
         paragraph: located.record.paragraphs[located.index] || 1,
         perspectiveMode: located.record.perspectiveModes?.[located.index] || "dynamic",
         perspectiveSource: located.record.perspectiveSources?.[located.index] || "manual",
+        creativeConcept: located.record.creativeConcepts?.[located.index] || null,
+        creativeCandidates: located.record.creativeConceptCandidates?.[located.index] || [],
+        creativeConceptHistory: located.record.creativeConceptHistory?.[located.index] || [],
         parameters,
         imageId,
         imageUrl
@@ -547,6 +630,11 @@ export async function rerunStoredImage(
       if (!sourceParagraph) throw new Error("The source paragraph for this image no longer exists.");
       const singleConfig: Config = { ...config, minImages: 1, maxImages: 1, preprocessingEnabled: false };
       const paragraphs: PreparedParagraph[] = [{ ...sourceParagraph, parserIndex: 1 }];
+      const storedCandidates = rebaseCreativeConcepts(
+        located.record.creativeConceptCandidates?.[located.index] || [],
+        1
+      );
+      const previousConceptHistory = located.record.creativeConceptHistory?.[located.index] || [];
       const selection = await parseAndSelectPrompts({
         chatId: request.chatId,
         messageId: located.record.messageId,
@@ -554,6 +642,8 @@ export async function rerunStoredImage(
         paragraphs,
         state: initialState,
         config: singleConfig,
+        creativeCandidates: storedCandidates,
+        usedCreativeConceptIds: previousConceptHistory,
         userId
       });
       const entry = selection.selected[0];
@@ -575,6 +665,11 @@ export async function rerunStoredImage(
         paragraph: originalParagraph,
         perspectiveMode: entry.perspectiveMode,
         perspectiveSource: entry.perspectiveSource,
+        creativeConcept: entry.creativeConcept || null,
+        creativeCandidates: entry.creativeCandidates || storedCandidates,
+        creativeConceptHistory: entry.creativeConcept
+          ? [...new Set([...previousConceptHistory, entry.creativeConcept.id])]
+          : previousConceptHistory,
         parameters: job.parameters,
         imageId,
         imageUrl

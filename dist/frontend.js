@@ -279,12 +279,12 @@ function renderGenerationSection({ ui, config, actions, rerender }) {
   const section = ui.section("Generation", true);
   ui.addSwitch(section, "enabled", "Power");
   ui.addSwitch(section, "autoGenerate", "Auto generate");
-  ui.addSwitch(section, "adaptiveMode", "Adaptive Mode", "Let the parser choose the strongest perspective for each image.", rerender);
+  ui.addSwitch(section, "adaptiveMode", "Adaptive Mode", "Let the parser choose the strongest perspective for each image, including Creative concept exploration when appropriate.", rerender);
   ui.addRangeChoice(section, "perspectiveMode", "Perspective", [
     { value: "creative", label: "Creative" },
     { value: "static", label: "Static" },
     { value: "dynamic", label: "Dynamic" }
-  ], config.adaptiveMode, config.adaptiveMode ? "Selected independently by the parser for each image." : "Creative isolates a visual detail, Static uses fixed visual-novel framing and simple poses, and Dynamic follows scene action.");
+  ], config.adaptiveMode, config.adaptiveMode ? "Selected independently by the parser for each image." : "Creative explores several visual concepts before selecting one and may take slightly longer; Static uses fixed visual-novel framing; Dynamic follows scene action.");
   ui.addNumber(section, "minImages", "Minimum images", 1, 12);
   ui.addNumber(section, "maxImages", "Maximum images", 1, 12);
   ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 8);
@@ -803,14 +803,15 @@ function disableNativeInlayLightboxes(root) {
 function resolveInlayPrompt(attributePrompt, fallbackPrompt) {
   return (attributePrompt || fallbackPrompt || "").trim();
 }
-function resolveInlayDetails(attributePrompt, fallbackPrompt, attributeNegative, fallbackNegative, perspectiveMode, perspectiveSource) {
+function resolveInlayDetails(attributePrompt, fallbackPrompt, attributeNegative, fallbackNegative, perspectiveMode, perspectiveSource, creativeConcept = null) {
   const normalizedMode = perspectiveMode?.trim().toLowerCase();
   const normalizedSource = perspectiveSource?.trim().toLowerCase();
   return {
     prompt: resolveInlayPrompt(attributePrompt, fallbackPrompt),
     negativePrompt: resolveInlayPrompt(attributeNegative, fallbackNegative),
     perspectiveMode: normalizedMode === "creative" || normalizedMode === "static" || normalizedMode === "dynamic" ? normalizedMode : null,
-    perspectiveSource: normalizedSource === "adaptive" || normalizedSource === "manual" ? normalizedSource : null
+    perspectiveSource: normalizedSource === "adaptive" || normalizedSource === "manual" ? normalizedSource : null,
+    creativeConcept: (creativeConcept || "").trim()
   };
 }
 function findInlayImage(target) {
@@ -825,7 +826,7 @@ function detailsForImage(image) {
   const wrapper = image.closest(INLAY_WRAPPER_SELECTOR);
   const fallback = wrapper?.querySelector(".inlay-illustrator-prompt")?.textContent || null;
   const fallbackNegative = wrapper?.querySelector(".inlay-illustrator-negative-prompt")?.textContent || null;
-  return resolveInlayDetails(image.getAttribute("data-inlay-illustrator-prompt"), fallback, image.getAttribute("data-inlay-illustrator-negative-prompt"), fallbackNegative, image.getAttribute("data-inlay-illustrator-perspective"), image.getAttribute("data-inlay-illustrator-perspective-source"));
+  return resolveInlayDetails(image.getAttribute("data-inlay-illustrator-prompt"), fallback, image.getAttribute("data-inlay-illustrator-negative-prompt"), fallbackNegative, image.getAttribute("data-inlay-illustrator-perspective"), image.getAttribute("data-inlay-illustrator-perspective-source"), image.getAttribute("data-inlay-illustrator-concept"));
 }
 function optionalInteger(value) {
   if (value === null || value.trim() === "")
@@ -891,6 +892,9 @@ function appendLightboxContent(root, image, details, onAction) {
       metadata.append(source);
     }
     panel.append(metadata);
+  }
+  if (details.creativeConcept) {
+    panel.append(promptBlock("Creative concept", details.creativeConcept, ""));
   }
   panel.append(promptBlock("Positive prompt", details.prompt, "No prompt was recorded for this image."), promptBlock("Negative prompt", details.negativePrompt, "No negative prompt was recorded for this image."));
   const actions = document.createElement("div");

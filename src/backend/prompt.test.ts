@@ -267,6 +267,61 @@ describe("perspective selection and projection", () => {
     expect(rendered).not.toContain("blue eyes");
     expect(rendered).not.toContain("black skirt");
     expect(rendered).not.toContain("leather boots");
+    expect(rendered).not.toContain("touching the glass");
+  });
+
+  test("makes a selected Creative concept authoritative over the parser's complete composition", () => {
+    const config = { ...DEFAULT_CONFIG, perspectiveMode: "creative" as const, promptSyntax: "nai" as const };
+    const selectedConcept = {
+      id: "creative-eye-gap",
+      paragraph: 1,
+      anchor: "eye gap",
+      concept: "one red eye framed between two fingers",
+      renderScope: "only one red eye visible through a narrow finger gap",
+      camera: "extreme close-up",
+      visibleCues: ["red eye", "fingers"],
+      score: 94
+    };
+    const entry = assemblePrompt({
+      environment: {
+        location: "classroom",
+        timeWeather: "afternoon",
+        backgroundElements: ["desks", "chalkboard"]
+      }
+    }, {
+      paragraph: 1,
+      situation: "1girl",
+      characters: [{
+        label: "girl",
+        renderScope: "face and both hands filling the frame",
+        visibleTags: "red eye, white pupil, fingers, black sailor uniform, red ribbon",
+        composition: {
+          position: "center frame",
+          pose: "standing upright",
+          actions: ["covering her entire face with both hands"],
+          gaze: "looking at viewer"
+        }
+      }, {
+        label: "boy",
+        renderScope: "the second character standing behind her",
+        visibleTags: "boy, black hair, school uniform",
+        composition: { position: "background", pose: "standing", actions: [], gaze: "looking forward" }
+      }],
+      sharedComposition: { interaction: ["standing together"], spatialRelation: "side by side" }
+    }, config, 1, 1, selectedConcept);
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
+
+    expect(entry.creativeConcept).toEqual(selectedConcept);
+    expect(rendered).toContain(selectedConcept.renderScope);
+    expect(rendered).toContain(selectedConcept.camera);
+    expect(rendered).toContain("red eye, fingers");
+    expect(rendered).not.toContain("face and both hands filling the frame");
+    expect(rendered).not.toContain("standing upright");
+    expect(rendered).not.toContain("covering her entire face");
+    expect(rendered).not.toContain("black sailor uniform");
+    expect(rendered).not.toContain("second character");
+    expect(rendered).not.toContain("classroom");
+    expect(rendered).not.toContain("standing together");
   });
 
   test("manual perspective overrides an incompatible parser value", () => {

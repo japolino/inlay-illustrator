@@ -1,5 +1,5 @@
 import type { Config, PerspectiveMode, PromptPreset } from "../shared/config.js";
-import type { AssembledPrompt, CharacterJson, PromptEntry, SceneJson, ShotJson } from "./types.js";
+import type { AssembledPrompt, CharacterJson, CreativeConcept, PromptEntry, SceneJson, ShotJson } from "./types.js";
 import { asRecord, cleanArray, cleanString, csvParts, escapeRegExp, unique } from "./utils.js";
 
 export function normalizeReferenceTags(tagString: unknown): string {
@@ -365,18 +365,29 @@ function assembleAnimaPrompt(
   shot: ShotJson,
   config: Config,
   replacements: Map<string, string>,
-  perspectiveMode: PerspectiveMode
+  perspectiveMode: PerspectiveMode,
+  creativeConcept?: CreativeConcept
 ): AssembledPrompt {
-  const characters = cleanArray<CharacterJson>(shot.characters).slice(0, config.maxCharacters);
-  const characterSections = characters.flatMap((character) => {
+  const allCharacters = cleanArray<CharacterJson>(shot.characters).slice(0, config.maxCharacters);
+  const bindingCreative = perspectiveMode === "creative" && Boolean(creativeConcept);
+  const characters = bindingCreative ? allCharacters.slice(0, 1) : allCharacters;
+  const conceptScope = perspectiveMode === "creative"
+    ? sanitizeComposition(cleanString(creativeConcept?.renderScope), replacements)
+    : "";
+  const characterSections = characters.flatMap((character, index) => {
     const composition = perspectiveMode === "static"
       ? assembleStaticCharacterComposition(character.composition, replacements)
       : assembleAtomicCharacterComposition(character.composition, replacements);
     const scope = perspectiveMode === "creative"
-      ? sanitizeComposition(cleanString(character.renderScope), replacements)
+      ? (index === 0 && conceptScope) || sanitizeComposition(cleanString(character.renderScope), replacements)
       : "";
-    const compositionText = unique([scope, composition.text].filter(Boolean)).join(", ");
-    const baseTags = assembleCharacterBlock(character, config, replacements, false, perspectiveMode);
+    const compositionText = perspectiveMode === "creative" && scope
+      ? scope
+      : composition.text;
+    const conceptTags = perspectiveMode === "creative" && index === 0
+      ? stripOrReplaceNames(unique(csvParts(creativeConcept?.visibleCues)).join(", "), replacements, true)
+      : "";
+    const baseTags = conceptTags || assembleCharacterBlock(character, config, replacements, false, perspectiveMode);
     const uncoveredActions = composition.structured
       ? ""
       : stripOrReplaceNames(uncoveredActionTags(character.action, compositionText), replacements, true);
@@ -398,6 +409,8 @@ function assembleAnimaPrompt(
     );
   const camera = perspectiveMode === "static"
     ? { text: "medium shot, eye level, straight-on, deep focus", structured: true }
+    : perspectiveMode === "creative" && cleanString(creativeConcept?.camera)
+      ? { text: cleanString(creativeConcept?.camera), structured: false }
     : assembleStructuredCamera(shot.camera);
   const environment = scene.environment || {};
   const location = structuredSnippets(environment.location, 1);
@@ -416,10 +429,11 @@ function assembleAnimaPrompt(
   ].filter(Boolean).join(", ");
   return { sections: [
     stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
+    perspectiveMode === "creative" && characters.length === 0 ? conceptScope : "",
     ...characterSections,
-    config.supplement && perspectiveMode !== "static" ? sharedComposition.text : "",
-    perspectiveMode === "static" ? "" : sharedAction,
-    environmentSection,
+    config.supplement && perspectiveMode !== "static" && !bindingCreative ? sharedComposition.text : "",
+    perspectiveMode === "static" || bindingCreative ? "" : sharedAction,
+    bindingCreative ? "" : environmentSection,
     stripOrReplaceNames(camera.text, replacements, true)
   ].map((section) => section.trim()).filter(Boolean) };
 }
@@ -429,21 +443,40 @@ function assembleDefaultPrompt(
   shot: ShotJson,
   config: Config,
   replacements: Map<string, string>,
-  perspectiveMode: PerspectiveMode
+  perspectiveMode: PerspectiveMode,
+  creativeConcept?: CreativeConcept
 ): AssembledPrompt {
-  const characters = cleanArray<CharacterJson>(shot.characters).slice(0, config.maxCharacters);
+  const allCharacters = cleanArray<CharacterJson>(shot.characters).slice(0, config.maxCharacters);
+  const bindingCreative = perspectiveMode === "creative" && Boolean(creativeConcept);
+  const characters = bindingCreative ? allCharacters.slice(0, 1) : allCharacters;
+  const selectedScope = perspectiveMode === "creative"
+    ? sanitizeComposition(cleanString(creativeConcept?.renderScope), replacements)
+    : "";
   const creativeScopes = perspectiveMode === "creative"
-    ? characters.map((character) => sanitizeComposition(cleanString(character.renderScope), replacements)).filter(Boolean)
+    ? selectedScope
+      ? [selectedScope]
+      : unique(characters.map((character) => sanitizeComposition(cleanString(character.renderScope), replacements)).filter(Boolean))
     : [];
   const characterBlocks = characters
-    .map((character) => assembleCharacterBlock(character, config, replacements, true, perspectiveMode))
+    .map((character, index) => {
+      const conceptTags = perspectiveMode === "creative" && index === 0
+        ? stripOrReplaceNames(unique(csvParts(creativeConcept?.visibleCues)).join(", "), replacements, true)
+        : "";
+      return conceptTags || assembleCharacterBlock(character, config, replacements, true, perspectiveMode);
+    })
     .filter(Boolean);
-  const supplement = config.supplement
+  const supplement = config.supplement && !(perspectiveMode === "creative" && creativeScopes.length > 0)
     ? normalizeSupplement(stripOrReplaceNames(cleanString(shot.supplement), replacements, false))
     : "";
   const tagSections = dedupePromptSections([
-    stripOrReplaceNames(unique(csvParts(shot.camera, shot.situation, shot.action)).join(", "), replacements, true),
-    stripOrReplaceNames(unique(csvParts(scene.place)).join(", "), replacements, true),
+    stripOrReplaceNames(unique(csvParts(
+      perspectiveMode === "creative" && cleanString(creativeConcept?.camera)
+        ? creativeConcept?.camera
+        : shot.camera,
+      shot.situation,
+      perspectiveMode === "creative" && creativeScopes.length > 0 ? "" : shot.action
+    )).join(", "), replacements, true),
+    bindingCreative ? "" : stripOrReplaceNames(unique(csvParts(scene.place)).join(", "), replacements, true),
     ...creativeScopes,
     ...characterBlocks
   ]);
@@ -455,14 +488,15 @@ export function assemblePrompt(
   shot: ShotJson,
   config: Config,
   parserParagraph: number,
-  originalParagraph: number
+  originalParagraph: number,
+  creativeConcept?: CreativeConcept
 ): PromptEntry {
   const characters = cleanArray<CharacterJson>(shot.characters);
   const replacements = buildNameReplacementMap(characters);
   const perspective = resolveShotPerspective(shot, config);
   const core = config.promptStyle === "anima"
-    ? assembleAnimaPrompt(scene, shot, config, replacements, perspective.mode)
-    : assembleDefaultPrompt(scene, shot, config, replacements, perspective.mode);
+    ? assembleAnimaPrompt(scene, shot, config, replacements, perspective.mode, creativeConcept)
+    : assembleDefaultPrompt(scene, shot, config, replacements, perspective.mode, creativeConcept);
   const preset = activePromptPreset(config);
   const presetPrefix = stripOrReplaceNames(preset?.positivePrefix || "", replacements, true);
   const prefix = stripOrReplaceNames(config.customPositivePrefix, replacements, true);
@@ -492,6 +526,7 @@ export function assemblePrompt(
     paragraph: originalParagraph,
     parserParagraph,
     perspectiveMode: perspective.mode,
-    perspectiveSource: perspective.source
+    perspectiveSource: perspective.source,
+    creativeConcept: perspective.mode === "creative" ? creativeConcept : undefined
   };
 }

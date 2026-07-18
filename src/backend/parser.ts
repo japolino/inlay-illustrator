@@ -1,7 +1,12 @@
 import type { Config } from "../shared/config.js";
+import {
+  creativeIdeationInstruction,
+  creativeIdeationRequest,
+  parseCreativeConcepts
+} from "./creative.js";
 import { parserInstruction } from "./instructions.js";
 import { logStage } from "./logging.js";
-import type { ParsedPayload, ParserConnection, ParserContext, ParserGenerationRequest, PreparedParagraph, SceneJson, ShotJson } from "./types.js";
+import type { CreativeConcept, ParsedPayload, ParserConnection, ParserContext, ParserGenerationRequest, PreparedParagraph, SceneJson, ShotJson } from "./types.js";
 import { asRecord, cleanString, compactBlock, keysOf } from "./utils.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
@@ -26,12 +31,13 @@ export function continuityReference(systemContext: string, recentContext: string
   ].join("\n\n");
 }
 
-export function parserUserRequest(targetSource: string): string {
+export function parserUserRequest(targetSource: string, creativeConstraint = ""): string {
   return [
     "Create the requested image-prompt batch from the current numbered paragraph source below.",
     "Use only its narrative events. Return one raw JSON object with a top-level scenes array and no other text.",
     "## Current Numbered Paragraph Source",
-    targetSource
+    targetSource,
+    creativeConstraint
   ].join("\n\n");
 }
 
@@ -286,6 +292,46 @@ async function generateParserText(
   } catch (error) {
     logStage(config, "parser_llm_error", { error: error instanceof Error ? error.message : String(error) }, "error");
     throw new Error(`Parser generation failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+export async function generateCreativeConcepts(
+  parserConnection: ParserConnection,
+  config: Config,
+  paragraphs: PreparedParagraph[],
+  targetSource: string,
+  context: ParserContext,
+  previousConcepts: string[] = [],
+  userId?: string
+): Promise<CreativeConcept[]> {
+  try {
+    logStage(config, "creative_ideation_start", {
+      paragraphCount: paragraphs.length,
+      previousConceptCount: previousConcepts.length,
+      adaptiveMode: config.adaptiveMode
+    });
+    const raw = await generateParserText(parserConnection, config, parserMessages(
+      creativeIdeationInstruction(config, previousConcepts),
+      continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext),
+      creativeIdeationRequest(targetSource),
+      context.override
+    ), userId);
+    const concepts = parseCreativeConcepts(raw, paragraphs, config);
+    if (concepts.length === 0) {
+      logStage(config, "creative_ideation_fallback", { reason: "invalid_or_empty_slate", outputLength: raw.length }, "warn");
+      return [];
+    }
+    logStage(config, "creative_ideation_done", {
+      candidateCount: concepts.length,
+      paragraphCount: new Set(concepts.map((concept) => concept.paragraph)).size,
+      scores: concepts.map((concept) => concept.score)
+    });
+    return concepts;
+  } catch (error) {
+    logStage(config, "creative_ideation_fallback", {
+      reason: error instanceof Error ? error.message : String(error)
+    }, "warn");
+    return [];
   }
 }
 

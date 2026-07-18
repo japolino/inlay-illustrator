@@ -26,6 +26,7 @@ export function parserInstruction(config: Config): string {
       : `Set perspectiveMode to exactly ${config.perspectiveMode} for every shot.`,
     "Creative isolates a meaningful visual anchor from the paragraph instead of automatically showing the complete scene. The anchor may be any partial character detail, object, reflection, silhouette, environmental detail, foreground fragment, or unusual spatial relationship; it is not limited to hands or people.",
     "Creative must remain concrete and source-supported. Use renderScope to state what is actually in frame. Put only traits genuinely visible in that crop or occlusion into visibleTags. Never copy a complete character baseline into visibleTags when most of it is off-frame.",
+    "When the request includes a Selected Creative Concept, it is binding. Copy its render scope faithfully, use its camera intent, and do not broaden it back into the complete character pose or paragraph action.",
     "Dynamic follows the current scene's visible action, movement, interaction, and strongest cinematic viewpoint.",
     "Static uses a visual-novel composition: a clearly readable scene background with one primary character slightly forward on a shallow foreground plane. Include additional characters only when the source cannot be represented faithfully without them; keep them on the same shallow plane.",
     "Static is fixed to a conventional medium shot at eye level, straight-on, with deep focus so the background remains readable. Do not use close-ups, wide shots, body-part crops, POV, high or low angles, dutch angles, dramatic lenses, motion blur, foreground occlusion, or action-centric framing.",
@@ -135,6 +136,7 @@ export function parserInstruction(config: Config): string {
     ? [
       "### Atomic Natural Composition",
       "characters[].composition is always required and must use its four atomic fields. The renderer joins them once in this exact order: position, pose, actions, gaze.",
+      "For Creative, still populate composition for structured memory and validation, but renderScope is authoritative and replaces composition in the rendered prompt when present.",
       "composition.position is one concise spatial phrase describing where the character is in frame.",
       "composition.pose is one concise phrase describing the character's static body pose.",
       "composition.actions contains 0-3 concise phrases covering every visible action and movement direction exactly once. Use present visual phrasing such as mid-turn toward the viewer, not mixed completed and ongoing tenses.",

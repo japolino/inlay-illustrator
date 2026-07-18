@@ -146,7 +146,7 @@ var CURRENT_BLOCK = ownedBlock(`(?:${MARKER_PATTERN}\\s*)?${CURRENT_DIV_PATTERN}
 var MARKER_IMAGE_BLOCK = ownedBlock(`${MARKER_PATTERN}\\s*(?:${MARKDOWN_IMAGE_PATTERN}|${HTML_IMAGE_PATTERN})`);
 var PROMPT_PRE_BLOCK = ownedBlock(String.raw`<pre\b(?=[^>]*[\t\n\f\r ]class\s*=\s*(?:"(?:[^"]*[\t\n\f\r ])?inlay-illustrator-(?:negative-)?prompt(?:[\t\n\f\r ][^"]*)?"|'(?:[^']*[\t\n\f\r ])?inlay-illustrator-(?:negative-)?prompt(?:[\t\n\f\r ][^']*)?'|inlay-illustrator-(?:negative-)?prompt(?=[\s>])))[^>]*>[\s\S]*?<\/pre\s*>`);
 var ORPHAN_MARKER = ownedBlock(MARKER_PATTERN);
-var PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-(?:negative-prompt|perspective-source|image-index|image-id|message-id|swipe-id|chat-id|perspective|prompt)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
+var PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-(?:negative-prompt|perspective-source|concept|image-index|image-id|message-id|swipe-id|chat-id|perspective|prompt)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
 function stripInlayContent(content) {
   return content.replace(LEGACY_BLOCK, "").replace(CURRENT_BLOCK, "").replace(MARKER_IMAGE_BLOCK, "").replace(PROMPT_PRE_BLOCK, "").replace(ORPHAN_MARKER, "").replace(PROMPT_ATTRIBUTE, "");
 }
@@ -505,13 +505,17 @@ function assembleStructuredCamera(value) {
     structured: true
   };
 }
-function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode) {
-  const characters = cleanArray(shot.characters).slice(0, config.maxCharacters);
-  const characterSections = characters.flatMap((character) => {
+function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode, creativeConcept) {
+  const allCharacters = cleanArray(shot.characters).slice(0, config.maxCharacters);
+  const bindingCreative = perspectiveMode === "creative" && Boolean(creativeConcept);
+  const characters = bindingCreative ? allCharacters.slice(0, 1) : allCharacters;
+  const conceptScope = perspectiveMode === "creative" ? sanitizeComposition(cleanString2(creativeConcept?.renderScope), replacements) : "";
+  const characterSections = characters.flatMap((character, index) => {
     const composition = perspectiveMode === "static" ? assembleStaticCharacterComposition(character.composition, replacements) : assembleAtomicCharacterComposition(character.composition, replacements);
-    const scope = perspectiveMode === "creative" ? sanitizeComposition(cleanString2(character.renderScope), replacements) : "";
-    const compositionText = unique([scope, composition.text].filter(Boolean)).join(", ");
-    const baseTags = assembleCharacterBlock(character, config, replacements, false, perspectiveMode);
+    const scope = perspectiveMode === "creative" ? index === 0 && conceptScope || sanitizeComposition(cleanString2(character.renderScope), replacements) : "";
+    const compositionText = perspectiveMode === "creative" && scope ? scope : composition.text;
+    const conceptTags = perspectiveMode === "creative" && index === 0 ? stripOrReplaceNames(unique(csvParts(creativeConcept?.visibleCues)).join(", "), replacements, true) : "";
+    const baseTags = conceptTags || assembleCharacterBlock(character, config, replacements, false, perspectiveMode);
     const uncoveredActions = composition.structured ? "" : stripOrReplaceNames(uncoveredActionTags(character.action, compositionText), replacements, true);
     const tags = unique(csvParts(baseTags, uncoveredActions)).join(", ");
     return [compositionText, tags].filter(Boolean);
@@ -520,7 +524,7 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode)
   const sharedSource = hasSharedComposition ? shot.sharedComposition : shot.supplement;
   const sharedComposition = assembleAtomicSharedComposition(sharedSource, replacements);
   const sharedAction = sharedComposition.structured ? config.supplement ? "" : sharedComposition.interaction : stripOrReplaceNames(uncoveredActionTags(shot.action, config.supplement ? sharedComposition.text : ""), replacements, true);
-  const camera = perspectiveMode === "static" ? { text: "medium shot, eye level, straight-on, deep focus", structured: true } : assembleStructuredCamera(shot.camera);
+  const camera = perspectiveMode === "static" ? { text: "medium shot, eye level, straight-on, deep focus", structured: true } : perspectiveMode === "creative" && cleanString2(creativeConcept?.camera) ? { text: cleanString2(creativeConcept?.camera), structured: false } : assembleStructuredCamera(shot.camera);
   const environment = scene.environment || {};
   const location = structuredSnippets(environment.location, 1);
   const timeWeather = structuredSnippets(environment.timeWeather, 1);
@@ -536,31 +540,38 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode)
   ].filter(Boolean).join(", ");
   return { sections: [
     stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
+    perspectiveMode === "creative" && characters.length === 0 ? conceptScope : "",
     ...characterSections,
-    config.supplement && perspectiveMode !== "static" ? sharedComposition.text : "",
-    perspectiveMode === "static" ? "" : sharedAction,
-    environmentSection,
+    config.supplement && perspectiveMode !== "static" && !bindingCreative ? sharedComposition.text : "",
+    perspectiveMode === "static" || bindingCreative ? "" : sharedAction,
+    bindingCreative ? "" : environmentSection,
     stripOrReplaceNames(camera.text, replacements, true)
   ].map((section) => section.trim()).filter(Boolean) };
 }
-function assembleDefaultPrompt(scene, shot, config, replacements, perspectiveMode) {
-  const characters = cleanArray(shot.characters).slice(0, config.maxCharacters);
-  const creativeScopes = perspectiveMode === "creative" ? characters.map((character) => sanitizeComposition(cleanString2(character.renderScope), replacements)).filter(Boolean) : [];
-  const characterBlocks = characters.map((character) => assembleCharacterBlock(character, config, replacements, true, perspectiveMode)).filter(Boolean);
-  const supplement = config.supplement ? normalizeSupplement(stripOrReplaceNames(cleanString2(shot.supplement), replacements, false)) : "";
+function assembleDefaultPrompt(scene, shot, config, replacements, perspectiveMode, creativeConcept) {
+  const allCharacters = cleanArray(shot.characters).slice(0, config.maxCharacters);
+  const bindingCreative = perspectiveMode === "creative" && Boolean(creativeConcept);
+  const characters = bindingCreative ? allCharacters.slice(0, 1) : allCharacters;
+  const selectedScope = perspectiveMode === "creative" ? sanitizeComposition(cleanString2(creativeConcept?.renderScope), replacements) : "";
+  const creativeScopes = perspectiveMode === "creative" ? selectedScope ? [selectedScope] : unique(characters.map((character) => sanitizeComposition(cleanString2(character.renderScope), replacements)).filter(Boolean)) : [];
+  const characterBlocks = characters.map((character, index) => {
+    const conceptTags = perspectiveMode === "creative" && index === 0 ? stripOrReplaceNames(unique(csvParts(creativeConcept?.visibleCues)).join(", "), replacements, true) : "";
+    return conceptTags || assembleCharacterBlock(character, config, replacements, true, perspectiveMode);
+  }).filter(Boolean);
+  const supplement = config.supplement && !(perspectiveMode === "creative" && creativeScopes.length > 0) ? normalizeSupplement(stripOrReplaceNames(cleanString2(shot.supplement), replacements, false)) : "";
   const tagSections = dedupePromptSections([
-    stripOrReplaceNames(unique(csvParts(shot.camera, shot.situation, shot.action)).join(", "), replacements, true),
-    stripOrReplaceNames(unique(csvParts(scene.place)).join(", "), replacements, true),
+    stripOrReplaceNames(unique(csvParts(perspectiveMode === "creative" && cleanString2(creativeConcept?.camera) ? creativeConcept?.camera : shot.camera, shot.situation, perspectiveMode === "creative" && creativeScopes.length > 0 ? "" : shot.action)).join(", "), replacements, true),
+    bindingCreative ? "" : stripOrReplaceNames(unique(csvParts(scene.place)).join(", "), replacements, true),
     ...creativeScopes,
     ...characterBlocks
   ]);
   return { sections: [...tagSections, supplement].filter(Boolean), format: "legacy" };
 }
-function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph) {
+function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph, creativeConcept) {
   const characters = cleanArray(shot.characters);
   const replacements = buildNameReplacementMap(characters);
   const perspective = resolveShotPerspective(shot, config);
-  const core = config.promptStyle === "anima" ? assembleAnimaPrompt(scene, shot, config, replacements, perspective.mode) : assembleDefaultPrompt(scene, shot, config, replacements, perspective.mode);
+  const core = config.promptStyle === "anima" ? assembleAnimaPrompt(scene, shot, config, replacements, perspective.mode, creativeConcept) : assembleDefaultPrompt(scene, shot, config, replacements, perspective.mode, creativeConcept);
   const preset = activePromptPreset(config);
   const presetPrefix = stripOrReplaceNames(preset?.positivePrefix || "", replacements, true);
   const prefix = stripOrReplaceNames(config.customPositivePrefix, replacements, true);
@@ -580,7 +591,8 @@ function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph)
     paragraph: originalParagraph,
     parserParagraph,
     perspectiveMode: perspective.mode,
-    perspectiveSource: perspective.source
+    perspectiveSource: perspective.source,
+    creativeConcept: perspective.mode === "creative" ? creativeConcept : undefined
   };
 }
 
@@ -982,6 +994,178 @@ Use these as a baseline for returning characters (including their base attire). 
   };
 }
 
+// src/backend/creative.ts
+function stableHash(value) {
+  let hash = 2166136261;
+  for (let index = 0;index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+function parseJsonObject(value) {
+  const clean = value.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+  const candidates = [clean];
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  if (start >= 0 && end > start)
+    candidates.push(clean.slice(start, end + 1));
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+        return parsed;
+    } catch {}
+  }
+  return null;
+}
+function cleanCueList(value) {
+  if (!Array.isArray(value))
+    return [];
+  return [...new Set(value.map(cleanString2).filter(Boolean))].slice(0, 6);
+}
+function parseCreativeConcepts(value, paragraphs, config) {
+  const parsed = parseJsonObject(value);
+  const rawCandidates = Array.isArray(parsed?.candidates) ? parsed.candidates : [];
+  const validParagraphs = new Set(paragraphs.map((paragraph) => paragraph.parserIndex));
+  const perParagraph = new Map;
+  const seenIds = new Set;
+  const concepts = [];
+  for (const raw of rawCandidates) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw))
+      continue;
+    const candidate = raw;
+    const paragraph = Number(String(candidate.paragraph ?? "").match(/\d+/)?.[0]);
+    const anchor = cleanString2(candidate.anchor);
+    const concept = cleanString2(candidate.concept);
+    const renderScope = cleanString2(candidate.renderScope);
+    const camera = cleanString2(candidate.camera);
+    const visibleCues = cleanCueList(candidate.visibleCues);
+    const scoreValue = Number(candidate.score);
+    if (!validParagraphs.has(paragraph) || !anchor || !concept || !renderScope || !camera || visibleCues.length === 0)
+      continue;
+    if (!Number.isFinite(scoreValue))
+      continue;
+    const score = Math.max(0, Math.min(100, Math.round(scoreValue)));
+    const id = `creative-${stableHash([paragraph, anchor, concept, renderScope, camera].join("|"))}`;
+    if (seenIds.has(id))
+      continue;
+    const count = perParagraph.get(paragraph) || 0;
+    if (count >= 4)
+      continue;
+    seenIds.add(id);
+    perParagraph.set(paragraph, count + 1);
+    concepts.push({
+      id,
+      paragraph,
+      anchor,
+      concept,
+      renderScope,
+      camera,
+      visibleCues,
+      score
+    });
+  }
+  const finalCounts = new Map;
+  const paragraphScores = new Map;
+  concepts.forEach((concept) => finalCounts.set(concept.paragraph, (finalCounts.get(concept.paragraph) || 0) + 1));
+  concepts.forEach((concept) => paragraphScores.set(concept.paragraph, Math.max(paragraphScores.get(concept.paragraph) || 0, concept.score)));
+  const eligibleParagraphs = [...new Set(concepts.map((concept) => concept.paragraph))].filter((paragraph) => (finalCounts.get(paragraph) || 0) >= 2).sort((left, right) => (paragraphScores.get(right) || 0) - (paragraphScores.get(left) || 0) || left - right).slice(0, Math.max(1, config.maxImages));
+  const allowed = new Set(eligibleParagraphs);
+  return concepts.filter((concept) => allowed.has(concept.paragraph));
+}
+function hasUnusedCreativeConcepts(candidates, usedIds) {
+  const used = new Set(usedIds);
+  return candidates.some((candidate) => !used.has(candidate.id));
+}
+function chooseCreativeConcepts(candidates, usedIds = [], random = Math.random) {
+  const used = new Set(usedIds);
+  const grouped = new Map;
+  for (const candidate of candidates) {
+    if (used.has(candidate.id))
+      continue;
+    const group = grouped.get(candidate.paragraph) || [];
+    group.push(candidate);
+    grouped.set(candidate.paragraph, group);
+  }
+  const selected = new Map;
+  for (const [paragraph, group] of grouped) {
+    const sorted = [...group].sort((left, right) => right.score - left.score || left.id.localeCompare(right.id));
+    const bestScore = sorted[0]?.score ?? 0;
+    const shortlist = sorted.filter((candidate) => candidate.score >= Math.max(50, bestScore - 20)).slice(0, 3);
+    const pool = shortlist.length > 0 ? shortlist : sorted.slice(0, 1);
+    if (pool.length === 0)
+      continue;
+    const floor = Math.min(...pool.map((candidate) => candidate.score)) - 5;
+    const weights = pool.map((candidate) => Math.max(1, candidate.score - floor));
+    const total = weights.reduce((sum, weight) => sum + weight, 0);
+    let cursor = Math.min(0.999999, Math.max(0, random())) * total;
+    let choice = pool[pool.length - 1];
+    for (let index = 0;index < pool.length; index += 1) {
+      cursor -= weights[index];
+      if (cursor < 0) {
+        choice = pool[index];
+        break;
+      }
+    }
+    selected.set(paragraph, choice);
+  }
+  return selected;
+}
+function creativeIdeationInstruction(config, previousConcepts = []) {
+  return [
+    "# Creative Illustration Concept Ideator",
+    "Extract literal visual cues from the numbered source and propose genuinely different Creative compositions before the prompt parser runs.",
+    config.adaptiveMode ? `Choose up to ${Math.max(1, config.maxImages)} paragraph numbers with strong overall illustration potential across Creative, Static, or Dynamic treatment, then generate exactly four Creative candidates for each so their scores can inform Adaptive selection.` : `Choose up to ${Math.max(1, config.maxImages)} visually strong paragraph numbers and generate exactly four candidates for each chosen paragraph.`,
+    "Candidates for the same paragraph must differ in focal anchor and at least one of crop scale, subject inclusion, depth, occlusion, or viewpoint.",
+    "Prefer overlooked but meaningful anchors: a single visible feature, partial subject, object, reflection, silhouette, environmental fragment, foreground layer, or unusual spatial relationship.",
+    "Do not merely restate the paragraph's complete main action. A face-and-upper-body close-up is not a narrow Creative crop when a smaller source-supported anchor exists.",
+    "Separate literal cues from metaphors and internal narration. Never render a simile literally and never invent an object, body part, action, or setting detail.",
+    "renderScope is binding: state exactly what is inside the frame and what is cropped or occluded. visibleCues contains only traits and elements actually visible inside that scope.",
+    "Score each candidate from 0-100 for source fidelity, focal specificity, visual clarity, ANIMA promptability, and difference from an obvious Dynamic full-action shot.",
+    previousConcepts.length > 0 ? `Avoid repeating these previously used concepts:
+- ${previousConcepts.map(cleanString2).filter(Boolean).join(`
+- `)}` : "",
+    "Return raw JSON only with this exact shape:",
+    '{"candidates":[{"paragraph":1,"anchor":"short anchor label","concept":"concise visible composition","renderScope":"exact contents of frame and crop","camera":"concise framing and viewpoint","visibleCues":["visible cue"],"score":85}]}',
+    "No markdown, commentary, character-memory dump, or fields outside the schema."
+  ].filter(Boolean).join(`
+
+`);
+}
+function creativeIdeationRequest(targetSource) {
+  return [
+    "Generate the Creative concept slate from this current numbered source:",
+    targetSource
+  ].join(`
+
+`);
+}
+function creativeConceptConstraint(concepts, adaptive) {
+  if (concepts.size === 0)
+    return "";
+  const lines = [...concepts.values()].sort((left, right) => left.paragraph - right.paragraph).map((concept) => [
+    `[P${concept.paragraph}] concept ID: ${concept.id}`,
+    `Anchor: ${concept.anchor}`,
+    `Binding render scope: ${concept.renderScope}`,
+    `Camera intent: ${concept.camera}`,
+    `Visible cues only: ${concept.visibleCues.join(", ")}`,
+    `Creative suitability: ${concept.score}/100`
+  ].join(`
+`));
+  return [
+    "## Selected Creative Concepts",
+    adaptive ? "Creative is permitted only for paragraphs listed below. If perspectiveMode is creative, follow that paragraph's selected concept exactly. Otherwise choose Static or Dynamic normally. Let the Creative suitability score inform whether Creative is appropriate." : "Use only the listed paragraphs for Creative shots. Each listed concept is binding and must control renderScope, visibleTags, camera, and subject inclusion.",
+    "When a binding render scope exists, do not expand it with the character's complete pose, full action, off-frame attire, or unrelated memory traits.",
+    ...lines
+  ].join(`
+
+`);
+}
+function rebaseCreativeConcepts(candidates, paragraph) {
+  return candidates.map((candidate) => ({ ...candidate, paragraph }));
+}
+
 // src/backend/logging.ts
 function logStage(config, stage, details, level = "info") {
   if (!config?.debugLogging && level !== "error")
@@ -1289,7 +1473,7 @@ function exactVisualKey(entry) {
     }
   });
 }
-function selectPromptEntries(payload, paragraphs, config) {
+function selectPromptEntries(payload, paragraphs, config, creativeConcepts = new Map, creativeCandidates = []) {
   const normalized = normalizeScenePayload(payload);
   const paragraphMap = new Map(paragraphs.map((paragraph) => [paragraph.parserIndex, paragraph]));
   const valid = normalized.filter((entry) => paragraphMap.has(entry.parserParagraph));
@@ -1308,7 +1492,9 @@ function selectPromptEntries(payload, paragraphs, config) {
     const paragraph = paragraphMap.get(entry.parserParagraph);
     if (!paragraph)
       continue;
-    const prompt = assemblePrompt(entry.scene, entry.shot, config, entry.parserParagraph, paragraph.originalIndex);
+    const concept = creativeConcepts.get(entry.parserParagraph);
+    const prompt = assemblePrompt(entry.scene, entry.shot, config, entry.parserParagraph, paragraph.originalIndex, concept);
+    prompt.creativeCandidates = creativeCandidates.filter((candidate) => candidate.paragraph === entry.parserParagraph);
     if (renderPrompt(prompt.prompt, config.promptSyntax))
       prompts.push(prompt);
   }
@@ -1492,6 +1678,7 @@ function parserInstruction(config) {
     config.adaptiveMode ? "Choose perspectiveMode independently for every shot before filling any other shot field. It must be exactly creative, static, or dynamic." : `Set perspectiveMode to exactly ${config.perspectiveMode} for every shot.`,
     "Creative isolates a meaningful visual anchor from the paragraph instead of automatically showing the complete scene. The anchor may be any partial character detail, object, reflection, silhouette, environmental detail, foreground fragment, or unusual spatial relationship; it is not limited to hands or people.",
     "Creative must remain concrete and source-supported. Use renderScope to state what is actually in frame. Put only traits genuinely visible in that crop or occlusion into visibleTags. Never copy a complete character baseline into visibleTags when most of it is off-frame.",
+    "When the request includes a Selected Creative Concept, it is binding. Copy its render scope faithfully, use its camera intent, and do not broaden it back into the complete character pose or paragraph action.",
     "Dynamic follows the current scene's visible action, movement, interaction, and strongest cinematic viewpoint.",
     "Static uses a visual-novel composition: a clearly readable scene background with one primary character slightly forward on a shallow foreground plane. Include additional characters only when the source cannot be represented faithfully without them; keep them on the same shallow plane.",
     "Static is fixed to a conventional medium shot at eye level, straight-on, with deep focus so the background remains readable. Do not use close-ups, wide shots, body-part crops, POV, high or low angles, dutch angles, dramatic lenses, motion blur, foreground occlusion, or action-centric framing.",
@@ -1600,6 +1787,7 @@ function parserInstruction(config) {
   const naturalDetail = structuredAnima ? [
     "### Atomic Natural Composition",
     "characters[].composition is always required and must use its four atomic fields. The renderer joins them once in this exact order: position, pose, actions, gaze.",
+    "For Creative, still populate composition for structured memory and validation, but renderScope is authoritative and replaces composition in the rendered prompt when present.",
     "composition.position is one concise spatial phrase describing where the character is in frame.",
     "composition.pose is one concise phrase describing the character's static body pose.",
     "composition.actions contains 0-3 concise phrases covering every visible action and movement direction exactly once. Use present visual phrasing such as mid-turn toward the viewer, not mixed completed and ongoing tenses.",
@@ -1760,12 +1948,13 @@ ${recentContext.trim()}` : ""
 
 `);
 }
-function parserUserRequest(targetSource) {
+function parserUserRequest(targetSource, creativeConstraint = "") {
   return [
     "Create the requested image-prompt batch from the current numbered paragraph source below.",
     "Use only its narrative events. Return one raw JSON object with a top-level scenes array and no other text.",
     "## Current Numbered Paragraph Source",
-    targetSource
+    targetSource,
+    creativeConstraint
   ].join(`
 
 `);
@@ -2063,6 +2252,32 @@ async function generateParserText(connection, config, messages, userId) {
     throw new Error(`Parser generation failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
+async function generateCreativeConcepts(parserConnection, config, paragraphs, targetSource, context, previousConcepts = [], userId) {
+  try {
+    logStage(config, "creative_ideation_start", {
+      paragraphCount: paragraphs.length,
+      previousConceptCount: previousConcepts.length,
+      adaptiveMode: config.adaptiveMode
+    });
+    const raw = await generateParserText(parserConnection, config, parserMessages(creativeIdeationInstruction(config, previousConcepts), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), creativeIdeationRequest(targetSource), context.override), userId);
+    const concepts = parseCreativeConcepts(raw, paragraphs, config);
+    if (concepts.length === 0) {
+      logStage(config, "creative_ideation_fallback", { reason: "invalid_or_empty_slate", outputLength: raw.length }, "warn");
+      return [];
+    }
+    logStage(config, "creative_ideation_done", {
+      candidateCount: concepts.length,
+      paragraphCount: new Set(concepts.map((concept) => concept.paragraph)).size,
+      scores: concepts.map((concept) => concept.score)
+    });
+    return concepts;
+  } catch (error) {
+    logStage(config, "creative_ideation_fallback", {
+      reason: error instanceof Error ? error.message : String(error)
+    }, "warn");
+    return [];
+  }
+}
 function parserMessages(stableInstruction, referenceContext, userRequest, override) {
   const messages = [{ role: "system", content: stableInstruction.trim() }];
   if (referenceContext.trim())
@@ -2197,7 +2412,7 @@ function imageUrlFromId(imageId) {
 function htmlAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r\n?|\n/g, "&#10;");
 }
-function renderInlayBlock(url, prompt, negativePrompt, perspectiveMode, perspectiveSource, imageId, chatId, messageId, swipeId, index, config) {
+function renderInlayBlock(url, prompt, negativePrompt, perspectiveMode, perspectiveSource, creativeConcept, imageId, chatId, messageId, swipeId, index, config) {
   const label = `Inlay ${index + 1}`;
   const width = clampInt2(config.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth);
   const maxHeight = clampInt2(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
@@ -2205,8 +2420,9 @@ function renderInlayBlock(url, prompt, negativePrompt, perspectiveMode, perspect
   const safeNegative = negativePrompt.replace(/```/g, "'''");
   const modeAttribute = perspectiveMode ? ` data-inlay-illustrator-perspective="${htmlAttr(perspectiveMode)}"` : "";
   const sourceAttribute = perspectiveSource ? ` data-inlay-illustrator-perspective-source="${htmlAttr(perspectiveSource)}"` : "";
+  const conceptAttribute = creativeConcept ? ` data-inlay-illustrator-concept="${htmlAttr(`${creativeConcept.anchor}: ${creativeConcept.concept}`)}"` : "";
   return `${MARKER}
-<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" data-inlay-illustrator-negative-prompt="${htmlAttr(safeNegative)}"${modeAttribute}${sourceAttribute} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre><pre class="inlay-illustrator-negative-prompt" hidden>${htmlAttr(safeNegative)}</pre></div>`;
+<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" data-inlay-illustrator-negative-prompt="${htmlAttr(safeNegative)}"${modeAttribute}${sourceAttribute}${conceptAttribute} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre><pre class="inlay-illustrator-negative-prompt" hidden>${htmlAttr(safeNegative)}</pre></div>`;
 }
 function renderInlaidMessage(original, record, config) {
   const cleanOriginal = stripInlayContent(original);
@@ -2215,7 +2431,7 @@ function renderInlaidMessage(original, record, config) {
   record.imageUrls.forEach((url, index) => {
     const paragraph2 = clampInt2(record.paragraphs[index], 1, count, Math.min(index + 1, count));
     const existing = blocks.get(paragraph2) || [];
-    existing.push(renderInlayBlock(url, record.prompts[index] || "", record.negativePrompts?.[index] || "", record.perspectiveModes?.[index], record.perspectiveSources?.[index], record.imageIds?.[index] || "", record.chatId || "", record.messageId || "", record.swipeId || 0, index, config));
+    existing.push(renderInlayBlock(url, record.prompts[index] || "", record.negativePrompts?.[index] || "", record.perspectiveModes?.[index], record.perspectiveSources?.[index], record.creativeConcepts?.[index], record.imageIds?.[index] || "", record.chatId || "", record.messageId || "", record.swipeId || 0, index, config));
     blocks.set(paragraph2, existing);
   });
   const tokens = cleanOriginal.trimEnd().split(/(\r?\n\s*\r?\n)/);
@@ -2405,16 +2621,45 @@ async function parseAndSelectPrompts(input) {
   let parsed = null;
   let selected = [];
   let lastParserError = null;
+  let conceptCandidates = [...input.creativeCandidates || []];
+  let conceptSelections = null;
+  let ideationAttempted = false;
+  let creativeTargetSource = null;
+  const usedConceptIds = new Set(input.usedCreativeConceptIds || []);
+  const creativePipeline = config.perspectiveMode === "creative" || config.adaptiveMode;
   const lorebookSnapshot = await buildLorebookContextSnapshot(chatId, paragraphs.map((paragraph) => paragraph.text).join(`
 
 `), config, userId);
   for (let attempt = 0;attempt <= config.parserRetries; attempt += 1) {
     try {
       const context = await buildParserContext(chatId, messages, targetIndex, state.characterAppearance, config, attempt, userId, lorebookSnapshot);
-      const targetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
+      if (creativePipeline && conceptSelections === null) {
+        if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
+          const previousConcepts = conceptCandidates.filter((concept) => usedConceptIds.has(concept.id)).map((concept) => concept.concept);
+          conceptCandidates = await generateCreativeConcepts(parserConnection, config, paragraphs, formatTargetParagraphs(paragraphs), context, previousConcepts, userId);
+          ideationAttempted = true;
+        }
+        conceptSelections = chooseCreativeConcepts(conceptCandidates, usedConceptIds);
+        if (conceptSelections.size === 0 && conceptCandidates.length > 0) {
+          conceptSelections = chooseCreativeConcepts(conceptCandidates);
+        }
+      }
+      if (creativePipeline && creativeTargetSource === null) {
+        const candidateParagraphs = new Set(conceptCandidates.map((concept) => concept.paragraph));
+        if (config.preprocessingEnabled && candidateParagraphs.size > 0) {
+          creativeTargetSource = formatTargetParagraphs(paragraphs.filter((paragraph) => candidateParagraphs.has(paragraph.parserIndex)));
+          logStage(config, "creative_preprocessing_done", {
+            candidateCount: conceptCandidates.length,
+            selectedParagraphs: [...candidateParagraphs].sort((left, right) => left - right)
+          });
+        } else {
+          creativeTargetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
+        }
+      }
+      const targetSource = creativePipeline ? creativeTargetSource || formatTargetParagraphs(paragraphs) : await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
       const instruction = parserInstruction(config);
       const referenceContext = continuityReference(context.systemContext, context.recentContext);
-      const userRequest = parserUserRequest(targetSource);
+      const userRequest = parserUserRequest(targetSource, creativeConceptConstraint(conceptSelections || new Map, config.adaptiveMode));
       logStage(config, "parser_prompt_built", {
         attempt,
         instructionLength: instruction.length,
@@ -2432,7 +2677,10 @@ async function parseAndSelectPrompts(input) {
         contextDiagnostics: context.diagnostics
       });
       parsed = await parsePayloadWithRepair(parserConnection, config, parserMessages(instruction, referenceContext, userRequest, context.override), userId);
-      selected = selectPromptEntries(parsed, paragraphs, config);
+      selected = selectPromptEntries(parsed, paragraphs, config, conceptSelections || new Map, conceptCandidates);
+      if (!config.adaptiveMode && config.perspectiveMode === "creative" && (conceptSelections?.size || 0) > 0) {
+        selected = selected.filter((entry) => Boolean(entry.creativeConcept));
+      }
       if (selected.length === 0)
         throw new Error("No usable prompts were parsed.");
       if (attempt === 0 && config.parserRetries > 0 && compactLorebookNeedsFullRetry(parsed, lorebookSnapshot)) {
@@ -2509,6 +2757,8 @@ async function prepareAndDispatchImages(chatId, selected, config, userId) {
       paragraph: entry.paragraph,
       perspectiveMode: entry.perspectiveMode,
       perspectiveSource: entry.perspectiveSource,
+      creativeConcept: entry.creativeConcept,
+      creativeCandidates: entry.creativeCandidates,
       parameters
     };
     logStage(config, "image_generation_prepared", {
@@ -2580,6 +2830,9 @@ function collectImageResults(stage, config) {
   const corePrompts = stage.jobs.map((job) => job.corePrompt || "");
   const shotNegatives = stage.jobs.map((job) => job.shotNegative || "");
   const promptFormats = stage.jobs.map((job) => job.promptFormat || "ordered");
+  const creativeConcepts = stage.jobs.map((job) => job.creativeConcept || null);
+  const creativeConceptCandidates = stage.jobs.map((job) => job.creativeCandidates || []);
+  const creativeConceptHistory = stage.jobs.map((job) => job.creativeConcept ? [job.creativeConcept.id] : []);
   const paragraphs = stage.jobs.map((job) => job.paragraph);
   for (const [index, result] of stage.results.entries()) {
     if (result.imageId)
@@ -2605,6 +2858,9 @@ function collectImageResults(stage, config) {
     corePrompts,
     shotNegatives,
     promptFormats,
+    creativeConcepts,
+    creativeConceptCandidates,
+    creativeConceptHistory,
     paragraphs,
     imageIds,
     imageUrls
@@ -2624,6 +2880,9 @@ async function persistGeneration(input) {
     corePrompts: assets.corePrompts,
     shotNegatives: assets.shotNegatives,
     promptFormats: assets.promptFormats,
+    creativeConcepts: assets.creativeConcepts,
+    creativeConceptCandidates: assets.creativeConceptCandidates,
+    creativeConceptHistory: assets.creativeConceptHistory,
     paragraphs: assets.paragraphs,
     imageIds: assets.imageIds,
     imageUrls: assets.imageUrls,
@@ -2674,6 +2933,9 @@ async function commitImageReplacement(request, replacement, config, userId) {
       corePrompts: replaceAt(record2.corePrompts, located.index, replacement.corePrompt, ""),
       shotNegatives: replaceAt(record2.shotNegatives, located.index, replacement.shotNegative, ""),
       promptFormats: replaceAt(record2.promptFormats, located.index, replacement.promptFormat, "ordered"),
+      creativeConcepts: replaceAt(record2.creativeConcepts, located.index, replacement.creativeConcept, null),
+      creativeConceptCandidates: replaceAt(record2.creativeConceptCandidates, located.index, replacement.creativeCandidates, []),
+      creativeConceptHistory: replaceAt(record2.creativeConceptHistory, located.index, replacement.creativeConceptHistory, []),
       paragraphs: replaceAt(record2.paragraphs, located.index, replacement.paragraph, 1),
       imageIds: replaceAt(record2.imageIds, located.index, replacement.imageId, ""),
       imageUrls: replaceAt(record2.imageUrls, located.index, replacement.imageUrl, "")
@@ -2749,6 +3011,9 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
         paragraph: located.record.paragraphs[located.index] || 1,
         perspectiveMode: located.record.perspectiveModes?.[located.index] || "dynamic",
         perspectiveSource: located.record.perspectiveSources?.[located.index] || "manual",
+        creativeConcept: located.record.creativeConcepts?.[located.index] || null,
+        creativeCandidates: located.record.creativeConceptCandidates?.[located.index] || [],
+        creativeConceptHistory: located.record.creativeConceptHistory?.[located.index] || [],
         parameters,
         imageId,
         imageUrl
@@ -2764,6 +3029,8 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
         throw new Error("The source paragraph for this image no longer exists.");
       const singleConfig = { ...config, minImages: 1, maxImages: 1, preprocessingEnabled: false };
       const paragraphs = [{ ...sourceParagraph, parserIndex: 1 }];
+      const storedCandidates = rebaseCreativeConcepts(located.record.creativeConceptCandidates?.[located.index] || [], 1);
+      const previousConceptHistory = located.record.creativeConceptHistory?.[located.index] || [];
       const selection = await parseAndSelectPrompts({
         chatId: request.chatId,
         messageId: located.record.messageId,
@@ -2771,6 +3038,8 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
         paragraphs,
         state: initialState,
         config: singleConfig,
+        creativeCandidates: storedCandidates,
+        usedCreativeConceptIds: previousConceptHistory,
         userId
       });
       const entry = selection.selected[0];
@@ -2795,6 +3064,9 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
         paragraph: originalParagraph,
         perspectiveMode: entry.perspectiveMode,
         perspectiveSource: entry.perspectiveSource,
+        creativeConcept: entry.creativeConcept || null,
+        creativeCandidates: entry.creativeCandidates || storedCandidates,
+        creativeConceptHistory: entry.creativeConcept ? [...new Set([...previousConceptHistory, entry.creativeConcept.id])] : previousConceptHistory,
         parameters: job.parameters,
         imageId,
         imageUrl

@@ -1,7 +1,7 @@
 import type { Config } from "../shared/config.js";
 import { logStage } from "./logging.js";
 import { assemblePrompt, renderPrompt } from "./prompt.js";
-import type { CharacterJson, NormalizedScene, ParsedPayload, PreparedParagraph, PromptEntry, SceneJson, ShotJson } from "./types.js";
+import type { CharacterJson, CreativeConcept, NormalizedScene, ParsedPayload, PreparedParagraph, PromptEntry, SceneJson, ShotJson } from "./types.js";
 import { cleanArray, cleanString } from "./utils.js";
 
 function parseParagraphNumber(value: unknown): number | null {
@@ -78,7 +78,13 @@ export function exactVisualKey(entry: NormalizedScene): string {
   });
 }
 
-export function selectPromptEntries(payload: ParsedPayload, paragraphs: PreparedParagraph[], config: Config): PromptEntry[] {
+export function selectPromptEntries(
+  payload: ParsedPayload,
+  paragraphs: PreparedParagraph[],
+  config: Config,
+  creativeConcepts: Map<number, CreativeConcept> = new Map(),
+  creativeCandidates: CreativeConcept[] = []
+): PromptEntry[] {
   const normalized = normalizeScenePayload(payload);
   const paragraphMap = new Map(paragraphs.map((paragraph) => [paragraph.parserIndex, paragraph]));
   const valid = normalized.filter((entry) => paragraphMap.has(entry.parserParagraph));
@@ -99,7 +105,9 @@ export function selectPromptEntries(payload: ParsedPayload, paragraphs: Prepared
   for (const entry of selected) {
     const paragraph = paragraphMap.get(entry.parserParagraph);
     if (!paragraph) continue;
-    const prompt = assemblePrompt(entry.scene, entry.shot, config, entry.parserParagraph, paragraph.originalIndex);
+    const concept = creativeConcepts.get(entry.parserParagraph);
+    const prompt = assemblePrompt(entry.scene, entry.shot, config, entry.parserParagraph, paragraph.originalIndex, concept);
+    prompt.creativeCandidates = creativeCandidates.filter((candidate) => candidate.paragraph === entry.parserParagraph);
     if (renderPrompt(prompt.prompt, config.promptSyntax)) prompts.push(prompt);
   }
   logStage(config, "illustration_candidates_selected", {
