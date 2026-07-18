@@ -251,7 +251,7 @@ function currentParagraphReferences(messages: ParserGenerationRequest["messages"
   if (!request) return [];
   const source = request.content
     .split("## Current Numbered Paragraph Source", 2)[1]
-    ?.split("## Selected Creative Concepts", 1)[0] || "";
+    ?.split(/## (?:Selected Creative Concepts|Optional Creative Candidates)/i, 1)[0] || "";
   return [...new Set([...source.matchAll(/\[P(\d+)\]/gi)].map((match) => Number(match[1])).filter(Number.isFinite))];
 }
 

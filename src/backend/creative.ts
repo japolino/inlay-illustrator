@@ -33,6 +33,23 @@ function cleanCueList(value: unknown): string[] {
   return [...new Set(value.map(cleanString).filter(Boolean))].slice(0, 6);
 }
 
+const CREATIVE_SUBJECT_TYPES = new Set([
+  "object", "environment", "shadow", "silhouette", "reflection", "fragment", "spatial"
+]);
+
+const IDENTITY_BEARING_CUE = /\b(?:face|facial|cheek|chin|jaw|mouth|lip|lips|eye|eyes|iris|pupil|pupils|eyebrow|eyebrows|eyelash|eyelashes|hair|hairstyle|bangs|braid|ponytail|blonde|brunette|uniform|outfit|clothing|clothes|costume|dress|shirt|blouse|sweater|hoodie|coat|jacket|sleeve|collar|ribbon|tie|skirt|shorts|pants|trousers|stockings|pantyhose|sock|socks|shoe|shoes|boot|boots)\b/i;
+
+export function isIdentitySafeCreativeConcept(concept: CreativeConcept): boolean {
+  if (!concept.subjectType || !CREATIVE_SUBJECT_TYPES.has(concept.subjectType)) return false;
+  return !IDENTITY_BEARING_CUE.test([
+    concept.anchor,
+    concept.concept,
+    concept.renderScope,
+    concept.camera,
+    ...concept.visibleCues
+  ].join(" "));
+}
+
 export function parseCreativeConcepts(
   value: string,
   paragraphs: PreparedParagraph[],
@@ -48,31 +65,36 @@ export function parseCreativeConcepts(
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
     const candidate = raw as Record<string, unknown>;
     const paragraph = Number(String(candidate.paragraph ?? "").match(/\d+/)?.[0]);
+    const subjectType = cleanString(candidate.subjectType).toLowerCase() as CreativeConcept["subjectType"];
     const anchor = cleanString(candidate.anchor);
     const concept = cleanString(candidate.concept);
     const renderScope = cleanString(candidate.renderScope);
     const camera = cleanString(candidate.camera);
     const visibleCues = cleanCueList(candidate.visibleCues);
     const scoreValue = Number(candidate.score);
-    if (!validParagraphs.has(paragraph) || !anchor || !concept || !renderScope || !camera || visibleCues.length === 0) continue;
+    if (!validParagraphs.has(paragraph) || !subjectType || !CREATIVE_SUBJECT_TYPES.has(subjectType)
+      || !anchor || !concept || !renderScope || !camera || visibleCues.length === 0) continue;
     if (!Number.isFinite(scoreValue)) continue;
     const score = Math.max(0, Math.min(100, Math.round(scoreValue)));
-    const id = `creative-${stableHash([paragraph, anchor, concept, renderScope, camera].join("|"))}`;
-    if (seenIds.has(id)) continue;
-    const count = perParagraph.get(paragraph) || 0;
-    if (count >= 4) continue;
-    seenIds.add(id);
-    perParagraph.set(paragraph, count + 1);
-    concepts.push({
+    const id = `creative-${stableHash([paragraph, subjectType, anchor, concept, renderScope, camera].join("|"))}`;
+    const parsedConcept: CreativeConcept = {
       id,
       paragraph,
+      subjectType,
       anchor,
       concept,
       renderScope,
       camera,
       visibleCues,
       score
-    });
+    };
+    if (!isIdentitySafeCreativeConcept(parsedConcept)) continue;
+    if (seenIds.has(id)) continue;
+    const count = perParagraph.get(paragraph) || 0;
+    if (count >= 4) continue;
+    seenIds.add(id);
+    perParagraph.set(paragraph, count + 1);
+    concepts.push(parsedConcept);
   }
   const finalCounts = new Map<number, number>();
   const paragraphScores = new Map<number, number>();
@@ -91,7 +113,7 @@ export function parseCreativeConcepts(
 
 export function hasUnusedCreativeConcepts(candidates: CreativeConcept[], usedIds: Iterable<string>): boolean {
   const used = new Set(usedIds);
-  return candidates.some((candidate) => !used.has(candidate.id));
+  return candidates.some((candidate) => isIdentitySafeCreativeConcept(candidate) && !used.has(candidate.id));
 }
 
 export function chooseCreativeConcepts(
@@ -102,7 +124,7 @@ export function chooseCreativeConcepts(
   const used = new Set(usedIds);
   const grouped = new Map<number, CreativeConcept[]>();
   for (const candidate of candidates) {
-    if (used.has(candidate.id)) continue;
+    if (!isIdentitySafeCreativeConcept(candidate) || used.has(candidate.id)) continue;
     const group = grouped.get(candidate.paragraph) || [];
     group.push(candidate);
     grouped.set(candidate.paragraph, group);
@@ -136,11 +158,14 @@ export function creativeIdeationInstruction(config: Config, previousConcepts: st
     "# Creative Illustration Concept Ideator",
     "Extract literal visual cues from the numbered source and propose genuinely different Creative compositions before the prompt parser runs.",
     config.adaptiveMode
-      ? `Choose up to ${Math.max(1, config.maxImages)} paragraph numbers with strong overall illustration potential across Creative, Static, or Dynamic treatment, then generate exactly four Creative candidates for each so their scores can inform Adaptive selection.`
+      ? `Screen up to ${Math.max(1, config.maxImages)} paragraph numbers for optional identity-safe Creative alternatives, then generate exactly four candidates for each. These candidates must not decide or bias the later Adaptive mode choice.`
       : `Choose up to ${Math.max(1, config.maxImages)} visually strong paragraph numbers and generate exactly four candidates for each chosen paragraph.`,
     "Candidates for the same paragraph must differ in focal anchor and at least one of crop scale, subject inclusion, depth, occlusion, or viewpoint.",
-    "Prefer overlooked but meaningful anchors: a single visible feature, partial subject, object, reflection, silhouette, environmental fragment, foreground layer, or unusual spatial relationship.",
-    "Do not merely restate the paragraph's complete main action. A face-and-upper-body close-up is not a narrow Creative crop when a smaller source-supported anchor exists.",
+    "Creative must not focus on recognizable identity-bearing character features. Never use a face, facial feature, hair, hairstyle, or recognizable clothing as the anchor or a visible cue.",
+    "Allowed subjectType values are object, environment, shadow, silhouette, reflection, fragment, or spatial. Reflections and fragments must remain non-identifying; generic hands, fingers, feet, gestures, and fully unreadable silhouettes are allowed.",
+    "Prefer overlooked but meaningful anchors: a source-supported object, environmental detail, shadow, unreadable silhouette, non-identifying fragment, foreground layer, aftermath, or unusual spatial relationship.",
+    "If a paragraph has no faithful identity-safe anchor, return no Creative candidate for it. Do not weaken this rule merely to fill the requested count.",
+    "Do not merely restate the paragraph's complete main action.",
     "Separate literal cues from metaphors and internal narration. Never render a simile literally and never invent an object, body part, action, or setting detail.",
     "renderScope is binding: state exactly what is inside the frame and what is cropped or occluded. visibleCues contains only traits and elements actually visible inside that scope.",
     "Score each candidate from 0-100 for source fidelity, focal specificity, visual clarity, ANIMA promptability, and difference from an obvious Dynamic full-action shot.",
@@ -148,7 +173,7 @@ export function creativeIdeationInstruction(config: Config, previousConcepts: st
       ? `Avoid repeating these previously used concepts:\n- ${previousConcepts.map(cleanString).filter(Boolean).join("\n- ")}`
       : "",
     "Return raw JSON only with this exact shape:",
-    '{"candidates":[{"paragraph":1,"anchor":"short anchor label","concept":"concise visible composition","renderScope":"exact contents of frame and crop","camera":"concise framing and viewpoint","visibleCues":["visible cue"],"score":85}]}',
+    '{"candidates":[{"paragraph":1,"subjectType":"object","anchor":"short anchor label","concept":"concise visible composition","renderScope":"exact contents of frame and crop","camera":"concise framing and viewpoint","visibleCues":["visible cue"],"score":85}]}',
     "No markdown, commentary, character-memory dump, or fields outside the schema."
   ].filter(Boolean).join("\n\n");
 }
@@ -176,10 +201,11 @@ export function creativeConceptConstraint(
       `Creative suitability: ${concept.score}/100`
     ].join("\n"));
   return [
-    "## Selected Creative Concepts",
+    adaptive ? "## Optional Creative Candidates" : "## Selected Creative Concepts",
     adaptive
-      ? "Creative is permitted only for paragraphs listed below. If perspectiveMode is creative, follow that paragraph's selected concept exactly. Otherwise choose Static or Dynamic normally. Let the Creative suitability score inform whether Creative is appropriate."
+      ? "First choose perspectiveMode independently from the paragraph itself. Creative is permitted only for paragraphs listed below, and the listed candidate becomes binding only after Creative is chosen. Otherwise ignore it and choose Static or Dynamic normally. Do not choose Creative merely because a candidate or score is present."
       : "Use only the listed paragraphs for Creative shots. Each listed concept is binding and must control renderScope, visibleTags, camera, and subject inclusion.",
+    "Creative may show only identity-safe objects, environments, shadows, unreadable silhouettes, spatial details, or non-identifying fragments. It must not show a recognizable face, hair, or outfit.",
     "When a binding render scope exists, do not expand it with the character's complete pose, full action, off-frame attire, or unrelated memory traits.",
     ...lines
   ].join("\n\n");

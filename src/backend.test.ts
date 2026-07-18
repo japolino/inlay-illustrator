@@ -325,6 +325,12 @@ describe("illustration parser construction", () => {
     expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, adaptiveMode: true })).toContain(
       "Choose perspectiveMode independently for every shot"
     );
+    expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, adaptiveMode: true })).toContain(
+      "do not choose Creative for every shot"
+    );
+    expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, adaptiveMode: true })).toContain(
+      "must not focus on a recognizable face"
+    );
   });
 
   test("defines Static as fixed visual-novel framing with simple stable poses", () => {
@@ -447,6 +453,59 @@ describe("illustration candidate selection", () => {
       expect.stringContaining("from below, wide shot"),
       expect.stringContaining("from above, full body")
     ]);
+  });
+
+  test("demotes Adaptive Creative shots without an identity-safe concept", () => {
+    const paragraphs = [{ parserIndex: 1, originalIndex: 4, text: "She waits beside the window." }];
+    const payload = { scenes: [{ place: "classroom", shots: [{
+      paragraph: 1,
+      perspectiveMode: "creative",
+      situation: "1girl, solo",
+      camera: "close-up",
+      characters: [{
+        label: "girl",
+        appearance: "short blonde hair, red eyes",
+        attire: "black sailor uniform, red ribbon",
+        visibleTags: "blonde hair, red sleeve"
+      }]
+    }] }] };
+    const config = { ...helpers.DEFAULT_CONFIG, adaptiveMode: true, promptStyle: "default" as const, promptSyntax: "nai" as const };
+
+    const selected = helpers.selectPromptEntries(payload, paragraphs, config);
+
+    expect(selected[0]).toMatchObject({ perspectiveMode: "dynamic", perspectiveSource: "adaptive" });
+    expect(helpers.renderPrompt(selected[0].prompt, config.promptSyntax)).toContain("short blonde hair, red eyes");
+    expect(helpers.renderPrompt(selected[0].prompt, config.promptSyntax)).toContain("black sailor uniform, red ribbon");
+  });
+
+  test("caps Adaptive Creative shots so a multi-image batch cannot be entirely Creative", () => {
+    const paragraphs = [
+      { parserIndex: 1, originalIndex: 1, text: "A key rests on the desk." },
+      { parserIndex: 2, originalIndex: 2, text: "Its shadow crosses the wall." }
+    ];
+    const payload = { scenes: [{ place: "classroom", shots: [
+      { paragraph: 1, perspectiveMode: "creative", situation: "1girl, solo", characters: [{ appearance: "short blonde hair" }] },
+      { paragraph: 2, perspectiveMode: "creative", situation: "1girl, solo", characters: [{ appearance: "short blonde hair" }] }
+    ] }] };
+    const concept = (paragraph: number, score: number) => ({
+      id: `creative-${paragraph}`,
+      paragraph,
+      subjectType: "object" as const,
+      anchor: `object ${paragraph}`,
+      concept: `object detail ${paragraph}`,
+      renderScope: `object ${paragraph} and empty surface`,
+      camera: "tight detail shot",
+      visibleCues: [`object ${paragraph}`],
+      score
+    });
+    const config = { ...helpers.DEFAULT_CONFIG, adaptiveMode: true, promptStyle: "default" as const, promptSyntax: "nai" as const };
+
+    const selected = helpers.selectPromptEntries(payload, paragraphs, config, new Map([
+      [1, concept(1, 90)],
+      [2, concept(2, 70)]
+    ]));
+
+    expect(selected.map((entry) => entry.perspectiveMode)).toEqual(["creative", "dynamic"]);
   });
 });
 

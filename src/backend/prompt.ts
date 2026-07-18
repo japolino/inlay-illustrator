@@ -360,6 +360,10 @@ function assembleStructuredCamera(value: unknown): AtomicSection {
   };
 }
 
+function identitySafeCreativeSituation(value: unknown): string {
+  return unique(csvParts(value).filter((tag) => !/^(?:\d+(?:girl|boy|other)s?|solo|group)$/i.test(tag.trim()))).join(", ");
+}
+
 function assembleAnimaPrompt(
   scene: SceneJson,
   shot: ShotJson,
@@ -428,7 +432,11 @@ function assembleAnimaPrompt(
     ...backgroundElements.map((value) => stripOrReplaceNames(value, replacements, false))
   ].filter(Boolean).join(", ");
   return { sections: [
-    stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
+    stripOrReplaceNames(
+      bindingCreative ? identitySafeCreativeSituation(shot.situation) : unique(csvParts(shot.situation)).join(", "),
+      replacements,
+      true
+    ),
     perspectiveMode === "creative" && characters.length === 0 ? conceptScope : "",
     ...characterSections,
     config.supplement && perspectiveMode !== "static" && !bindingCreative ? sharedComposition.text : "",
@@ -473,7 +481,7 @@ function assembleDefaultPrompt(
       perspectiveMode === "creative" && cleanString(creativeConcept?.camera)
         ? creativeConcept?.camera
         : shot.camera,
-      shot.situation,
+      bindingCreative ? identitySafeCreativeSituation(shot.situation) : shot.situation,
       perspectiveMode === "creative" && creativeScopes.length > 0 ? "" : shot.action
     )).join(", "), replacements, true),
     bindingCreative ? "" : stripOrReplaceNames(unique(csvParts(scene.place)).join(", "), replacements, true),

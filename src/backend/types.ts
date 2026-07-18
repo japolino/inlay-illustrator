@@ -61,6 +61,8 @@ export type ParsedPayload = { scenes?: SceneJson[] };
 export type CreativeConcept = {
   id: string;
   paragraph: number;
+  /** Identity-safe focal category. Missing only on legacy persisted concepts. */
+  subjectType?: "object" | "environment" | "shadow" | "silhouette" | "reflection" | "fragment" | "spatial";
   anchor: string;
   concept: string;
   renderScope: string;

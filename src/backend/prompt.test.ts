@@ -273,13 +273,14 @@ describe("perspective selection and projection", () => {
   test("makes a selected Creative concept authoritative over the parser's complete composition", () => {
     const config = { ...DEFAULT_CONFIG, perspectiveMode: "creative" as const, promptSyntax: "nai" as const };
     const selectedConcept = {
-      id: "creative-eye-gap",
+      id: "creative-finger-shadow",
       paragraph: 1,
-      anchor: "eye gap",
-      concept: "one red eye framed between two fingers",
-      renderScope: "only one red eye visible through a narrow finger gap",
-      camera: "extreme close-up",
-      visibleCues: ["red eye", "fingers"],
+      subjectType: "shadow" as const,
+      anchor: "finger shadow",
+      concept: "interlaced finger shadows cross an empty desk",
+      renderScope: "only interlaced finger shadows and the empty desk surface",
+      camera: "tight oblique detail",
+      visibleCues: ["interlaced shadows", "desk surface"],
       score: 94
     };
     const entry = assemblePrompt({
@@ -314,7 +315,8 @@ describe("perspective selection and projection", () => {
     expect(entry.creativeConcept).toEqual(selectedConcept);
     expect(rendered).toContain(selectedConcept.renderScope);
     expect(rendered).toContain(selectedConcept.camera);
-    expect(rendered).toContain("red eye, fingers");
+    expect(rendered).toContain("interlaced shadows, desk surface");
+    expect(rendered).not.toContain("1girl");
     expect(rendered).not.toContain("face and both hands filling the frame");
     expect(rendered).not.toContain("standing upright");
     expect(rendered).not.toContain("covering her entire face");

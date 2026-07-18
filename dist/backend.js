@@ -505,6 +505,9 @@ function assembleStructuredCamera(value) {
     structured: true
   };
 }
+function identitySafeCreativeSituation(value) {
+  return unique(csvParts(value).filter((tag) => !/^(?:\d+(?:girl|boy|other)s?|solo|group)$/i.test(tag.trim()))).join(", ");
+}
 function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode, creativeConcept) {
   const allCharacters = cleanArray(shot.characters).slice(0, config.maxCharacters);
   const bindingCreative = perspectiveMode === "creative" && Boolean(creativeConcept);
@@ -539,7 +542,7 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode,
     ...backgroundElements.map((value) => stripOrReplaceNames(value, replacements, false))
   ].filter(Boolean).join(", ");
   return { sections: [
-    stripOrReplaceNames(unique(csvParts(shot.situation)).join(", "), replacements, true),
+    stripOrReplaceNames(bindingCreative ? identitySafeCreativeSituation(shot.situation) : unique(csvParts(shot.situation)).join(", "), replacements, true),
     perspectiveMode === "creative" && characters.length === 0 ? conceptScope : "",
     ...characterSections,
     config.supplement && perspectiveMode !== "static" && !bindingCreative ? sharedComposition.text : "",
@@ -560,7 +563,7 @@ function assembleDefaultPrompt(scene, shot, config, replacements, perspectiveMod
   }).filter(Boolean);
   const supplement = config.supplement && !(perspectiveMode === "creative" && creativeScopes.length > 0) ? normalizeSupplement(stripOrReplaceNames(cleanString2(shot.supplement), replacements, false)) : "";
   const tagSections = dedupePromptSections([
-    stripOrReplaceNames(unique(csvParts(perspectiveMode === "creative" && cleanString2(creativeConcept?.camera) ? creativeConcept?.camera : shot.camera, shot.situation, perspectiveMode === "creative" && creativeScopes.length > 0 ? "" : shot.action)).join(", "), replacements, true),
+    stripOrReplaceNames(unique(csvParts(perspectiveMode === "creative" && cleanString2(creativeConcept?.camera) ? creativeConcept?.camera : shot.camera, bindingCreative ? identitySafeCreativeSituation(shot.situation) : shot.situation, perspectiveMode === "creative" && creativeScopes.length > 0 ? "" : shot.action)).join(", "), replacements, true),
     bindingCreative ? "" : stripOrReplaceNames(unique(csvParts(scene.place)).join(", "), replacements, true),
     ...creativeScopes,
     ...characterBlocks
@@ -1024,6 +1027,27 @@ function cleanCueList(value) {
     return [];
   return [...new Set(value.map(cleanString2).filter(Boolean))].slice(0, 6);
 }
+var CREATIVE_SUBJECT_TYPES = new Set([
+  "object",
+  "environment",
+  "shadow",
+  "silhouette",
+  "reflection",
+  "fragment",
+  "spatial"
+]);
+var IDENTITY_BEARING_CUE = /\b(?:face|facial|cheek|chin|jaw|mouth|lip|lips|eye|eyes|iris|pupil|pupils|eyebrow|eyebrows|eyelash|eyelashes|hair|hairstyle|bangs|braid|ponytail|blonde|brunette|uniform|outfit|clothing|clothes|costume|dress|shirt|blouse|sweater|hoodie|coat|jacket|sleeve|collar|ribbon|tie|skirt|shorts|pants|trousers|stockings|pantyhose|sock|socks|shoe|shoes|boot|boots)\b/i;
+function isIdentitySafeCreativeConcept(concept) {
+  if (!concept.subjectType || !CREATIVE_SUBJECT_TYPES.has(concept.subjectType))
+    return false;
+  return !IDENTITY_BEARING_CUE.test([
+    concept.anchor,
+    concept.concept,
+    concept.renderScope,
+    concept.camera,
+    ...concept.visibleCues
+  ].join(" "));
+}
 function parseCreativeConcepts(value, paragraphs, config) {
   const parsed = parseJsonObject(value);
   const rawCandidates = Array.isArray(parsed?.candidates) ? parsed.candidates : [];
@@ -1036,18 +1060,32 @@ function parseCreativeConcepts(value, paragraphs, config) {
       continue;
     const candidate = raw;
     const paragraph = Number(String(candidate.paragraph ?? "").match(/\d+/)?.[0]);
+    const subjectType = cleanString2(candidate.subjectType).toLowerCase();
     const anchor = cleanString2(candidate.anchor);
     const concept = cleanString2(candidate.concept);
     const renderScope = cleanString2(candidate.renderScope);
     const camera = cleanString2(candidate.camera);
     const visibleCues = cleanCueList(candidate.visibleCues);
     const scoreValue = Number(candidate.score);
-    if (!validParagraphs.has(paragraph) || !anchor || !concept || !renderScope || !camera || visibleCues.length === 0)
+    if (!validParagraphs.has(paragraph) || !subjectType || !CREATIVE_SUBJECT_TYPES.has(subjectType) || !anchor || !concept || !renderScope || !camera || visibleCues.length === 0)
       continue;
     if (!Number.isFinite(scoreValue))
       continue;
     const score = Math.max(0, Math.min(100, Math.round(scoreValue)));
-    const id = `creative-${stableHash([paragraph, anchor, concept, renderScope, camera].join("|"))}`;
+    const id = `creative-${stableHash([paragraph, subjectType, anchor, concept, renderScope, camera].join("|"))}`;
+    const parsedConcept = {
+      id,
+      paragraph,
+      subjectType,
+      anchor,
+      concept,
+      renderScope,
+      camera,
+      visibleCues,
+      score
+    };
+    if (!isIdentitySafeCreativeConcept(parsedConcept))
+      continue;
     if (seenIds.has(id))
       continue;
     const count = perParagraph.get(paragraph) || 0;
@@ -1055,16 +1093,7 @@ function parseCreativeConcepts(value, paragraphs, config) {
       continue;
     seenIds.add(id);
     perParagraph.set(paragraph, count + 1);
-    concepts.push({
-      id,
-      paragraph,
-      anchor,
-      concept,
-      renderScope,
-      camera,
-      visibleCues,
-      score
-    });
+    concepts.push(parsedConcept);
   }
   const finalCounts = new Map;
   const paragraphScores = new Map;
@@ -1076,13 +1105,13 @@ function parseCreativeConcepts(value, paragraphs, config) {
 }
 function hasUnusedCreativeConcepts(candidates, usedIds) {
   const used = new Set(usedIds);
-  return candidates.some((candidate) => !used.has(candidate.id));
+  return candidates.some((candidate) => isIdentitySafeCreativeConcept(candidate) && !used.has(candidate.id));
 }
 function chooseCreativeConcepts(candidates, usedIds = [], random = Math.random) {
   const used = new Set(usedIds);
   const grouped = new Map;
   for (const candidate of candidates) {
-    if (used.has(candidate.id))
+    if (!isIdentitySafeCreativeConcept(candidate) || used.has(candidate.id))
       continue;
     const group = grouped.get(candidate.paragraph) || [];
     group.push(candidate);
@@ -1116,10 +1145,13 @@ function creativeIdeationInstruction(config, previousConcepts = []) {
   return [
     "# Creative Illustration Concept Ideator",
     "Extract literal visual cues from the numbered source and propose genuinely different Creative compositions before the prompt parser runs.",
-    config.adaptiveMode ? `Choose up to ${Math.max(1, config.maxImages)} paragraph numbers with strong overall illustration potential across Creative, Static, or Dynamic treatment, then generate exactly four Creative candidates for each so their scores can inform Adaptive selection.` : `Choose up to ${Math.max(1, config.maxImages)} visually strong paragraph numbers and generate exactly four candidates for each chosen paragraph.`,
+    config.adaptiveMode ? `Screen up to ${Math.max(1, config.maxImages)} paragraph numbers for optional identity-safe Creative alternatives, then generate exactly four candidates for each. These candidates must not decide or bias the later Adaptive mode choice.` : `Choose up to ${Math.max(1, config.maxImages)} visually strong paragraph numbers and generate exactly four candidates for each chosen paragraph.`,
     "Candidates for the same paragraph must differ in focal anchor and at least one of crop scale, subject inclusion, depth, occlusion, or viewpoint.",
-    "Prefer overlooked but meaningful anchors: a single visible feature, partial subject, object, reflection, silhouette, environmental fragment, foreground layer, or unusual spatial relationship.",
-    "Do not merely restate the paragraph's complete main action. A face-and-upper-body close-up is not a narrow Creative crop when a smaller source-supported anchor exists.",
+    "Creative must not focus on recognizable identity-bearing character features. Never use a face, facial feature, hair, hairstyle, or recognizable clothing as the anchor or a visible cue.",
+    "Allowed subjectType values are object, environment, shadow, silhouette, reflection, fragment, or spatial. Reflections and fragments must remain non-identifying; generic hands, fingers, feet, gestures, and fully unreadable silhouettes are allowed.",
+    "Prefer overlooked but meaningful anchors: a source-supported object, environmental detail, shadow, unreadable silhouette, non-identifying fragment, foreground layer, aftermath, or unusual spatial relationship.",
+    "If a paragraph has no faithful identity-safe anchor, return no Creative candidate for it. Do not weaken this rule merely to fill the requested count.",
+    "Do not merely restate the paragraph's complete main action.",
     "Separate literal cues from metaphors and internal narration. Never render a simile literally and never invent an object, body part, action, or setting detail.",
     "renderScope is binding: state exactly what is inside the frame and what is cropped or occluded. visibleCues contains only traits and elements actually visible inside that scope.",
     "Score each candidate from 0-100 for source fidelity, focal specificity, visual clarity, ANIMA promptability, and difference from an obvious Dynamic full-action shot.",
@@ -1127,7 +1159,7 @@ function creativeIdeationInstruction(config, previousConcepts = []) {
 - ${previousConcepts.map(cleanString2).filter(Boolean).join(`
 - `)}` : "",
     "Return raw JSON only with this exact shape:",
-    '{"candidates":[{"paragraph":1,"anchor":"short anchor label","concept":"concise visible composition","renderScope":"exact contents of frame and crop","camera":"concise framing and viewpoint","visibleCues":["visible cue"],"score":85}]}',
+    '{"candidates":[{"paragraph":1,"subjectType":"object","anchor":"short anchor label","concept":"concise visible composition","renderScope":"exact contents of frame and crop","camera":"concise framing and viewpoint","visibleCues":["visible cue"],"score":85}]}',
     "No markdown, commentary, character-memory dump, or fields outside the schema."
   ].filter(Boolean).join(`
 
@@ -1154,8 +1186,9 @@ function creativeConceptConstraint(concepts, adaptive) {
   ].join(`
 `));
   return [
-    "## Selected Creative Concepts",
-    adaptive ? "Creative is permitted only for paragraphs listed below. If perspectiveMode is creative, follow that paragraph's selected concept exactly. Otherwise choose Static or Dynamic normally. Let the Creative suitability score inform whether Creative is appropriate." : "Use only the listed paragraphs for Creative shots. Each listed concept is binding and must control renderScope, visibleTags, camera, and subject inclusion.",
+    adaptive ? "## Optional Creative Candidates" : "## Selected Creative Concepts",
+    adaptive ? "First choose perspectiveMode independently from the paragraph itself. Creative is permitted only for paragraphs listed below, and the listed candidate becomes binding only after Creative is chosen. Otherwise ignore it and choose Static or Dynamic normally. Do not choose Creative merely because a candidate or score is present." : "Use only the listed paragraphs for Creative shots. Each listed concept is binding and must control renderScope, visibleTags, camera, and subject inclusion.",
+    "Creative may show only identity-safe objects, environments, shadows, unreadable silhouettes, spatial details, or non-identifying fragments. It must not show a recognizable face, hair, or outfit.",
     "When a binding render scope exists, do not expand it with the character's complete pose, full action, off-frame attire, or unrelated memory traits.",
     ...lines
   ].join(`
@@ -1501,13 +1534,18 @@ function selectPromptEntries(payload, paragraphs, config, creativeConcepts = new
   });
   const limit = config.maxImages;
   const selected = distinct.slice(0, limit).map((entry, modelPriority) => ({ entry, modelPriority })).sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority).map(({ entry }) => entry);
+  const maxAdaptiveCreative = selected.length > 1 ? Math.ceil(selected.length / 2) : 1;
+  const safeCreativeConcepts = new Map([...creativeConcepts].filter(([, concept]) => isIdentitySafeCreativeConcept(concept)));
+  const adaptiveCreativeAllowed = new Set(config.adaptiveMode ? selected.filter((entry) => cleanString2(entry.shot.perspectiveMode).toLowerCase() === "creative" && safeCreativeConcepts.has(entry.parserParagraph)).sort((left, right) => (safeCreativeConcepts.get(right.parserParagraph)?.score || 0) - (safeCreativeConcepts.get(left.parserParagraph)?.score || 0)).slice(0, maxAdaptiveCreative) : []);
   const prompts = [];
   for (const entry of selected) {
     const paragraph = paragraphMap.get(entry.parserParagraph);
     if (!paragraph)
       continue;
-    const concept = creativeConcepts.get(entry.parserParagraph);
-    const prompt = assemblePrompt(entry.scene, entry.shot, config, entry.parserParagraph, paragraph.originalIndex, concept);
+    const concept = safeCreativeConcepts.get(entry.parserParagraph);
+    const requestedPerspective = cleanString2(entry.shot.perspectiveMode).toLowerCase();
+    const shot = config.adaptiveMode && requestedPerspective === "creative" && (!concept || !adaptiveCreativeAllowed.has(entry)) ? { ...entry.shot, perspectiveMode: "dynamic" } : entry.shot;
+    const prompt = assemblePrompt(entry.scene, shot, config, entry.parserParagraph, paragraph.originalIndex, concept);
     prompt.creativeCandidates = creativeCandidates.filter((candidate) => candidate.paragraph === entry.parserParagraph);
     if (renderPrompt(prompt.prompt, config.promptSyntax))
       prompts.push(prompt);
@@ -1690,9 +1728,11 @@ function parserInstruction(config) {
   const perspectiveInstruction = [
     "### Perspective mode - required per shot",
     config.adaptiveMode ? "Choose perspectiveMode independently for every shot before filling any other shot field. It must be exactly creative, static, or dynamic." : `Set perspectiveMode to exactly ${config.perspectiveMode} for every shot.`,
-    "Creative isolates a meaningful visual anchor from the paragraph instead of automatically showing the complete scene. The anchor may be any partial character detail, object, reflection, silhouette, environmental detail, foreground fragment, or unusual spatial relationship; it is not limited to hands or people.",
-    "Creative must remain concrete and source-supported. Use renderScope to state what is actually in frame. Put only traits genuinely visible in that crop or occlusion into visibleTags. Never copy a complete character baseline into visibleTags when most of it is off-frame.",
-    "When the request includes a Selected Creative Concept, it is binding. Copy its render scope faithfully, use its camera intent, and do not broaden it back into the complete character pose or paragraph action.",
+    config.adaptiveMode ? "For batches with two or more shots, do not choose Creative for every shot. Include at least one Static or Dynamic shot, and choose each mode from the paragraph rather than from the availability of an optional concept." : "",
+    "Creative isolates a meaningful identity-safe visual anchor from the paragraph instead of showing the complete scene. Use a source-supported object, environment, shadow, unreadable silhouette, foreground layer, aftermath, unusual spatial relationship, or non-identifying body fragment.",
+    "Creative must not focus on a recognizable face, facial feature, hair, hairstyle, outfit, or clothing detail. If the paragraph has no faithful identity-safe anchor, use Static or Dynamic in Adaptive mode.",
+    "Creative must remain concrete and source-supported. Use renderScope to state what is actually in frame. visibleTags must describe only the identity-safe anchor and must not contain character-memory traits.",
+    "After Creative is chosen, its supplied Creative candidate is binding. Copy its render scope faithfully, use its camera intent, and do not broaden it back into a recognizable character or the complete paragraph action.",
     "Dynamic follows the current scene's visible action, movement, interaction, and strongest cinematic viewpoint.",
     "Static uses a visual-novel composition: a clearly readable scene background with one primary character slightly forward on a shallow foreground plane. Include additional characters only when the source cannot be represented faithfully without them; keep them on the same shallow plane.",
     "Static is fixed to a conventional medium shot at eye level, straight-on, with deep focus so the background remains readable. Do not use close-ups, wide shots, body-part crops, POV, high or low angles, dutch angles, dramatic lenses, motion blur, foreground occlusion, or action-centric framing.",
@@ -2225,7 +2265,7 @@ function currentParagraphReferences(messages) {
   const request = messages.find((message) => message.role === "user" && message.content.includes("## Current Numbered Paragraph Source"));
   if (!request)
     return [];
-  const source = request.content.split("## Current Numbered Paragraph Source", 2)[1]?.split("## Selected Creative Concepts", 1)[0] || "";
+  const source = request.content.split("## Current Numbered Paragraph Source", 2)[1]?.split(/## (?:Selected Creative Concepts|Optional Creative Candidates)/i, 1)[0] || "";
   return [...new Set([...source.matchAll(/\[P(\d+)\]/gi)].map((match) => Number(match[1])).filter(Number.isFinite))];
 }
 function structuralPayloadIssues(payload, allowedParagraphs) {

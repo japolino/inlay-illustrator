@@ -1,4 +1,5 @@
 import type { Config } from "../shared/config.js";
+import { isIdentitySafeCreativeConcept } from "./creative.js";
 import { logStage } from "./logging.js";
 import { assemblePrompt, renderPrompt } from "./prompt.js";
 import type { CharacterJson, CreativeConcept, NormalizedScene, ParsedPayload, PreparedParagraph, PromptEntry, SceneJson, ShotJson } from "./types.js";
@@ -124,12 +125,26 @@ export function selectPromptEntries(
     .map((entry, modelPriority) => ({ entry, modelPriority }))
     .sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority)
     .map(({ entry }) => entry);
+  const maxAdaptiveCreative = selected.length > 1 ? Math.ceil(selected.length / 2) : 1;
+  const safeCreativeConcepts = new Map([...creativeConcepts].filter(([, concept]) => isIdentitySafeCreativeConcept(concept)));
+  const adaptiveCreativeAllowed = new Set(config.adaptiveMode
+    ? selected
+      .filter((entry) => cleanString(entry.shot.perspectiveMode).toLowerCase() === "creative" && safeCreativeConcepts.has(entry.parserParagraph))
+      .sort((left, right) => (safeCreativeConcepts.get(right.parserParagraph)?.score || 0)
+        - (safeCreativeConcepts.get(left.parserParagraph)?.score || 0))
+      .slice(0, maxAdaptiveCreative)
+    : []);
   const prompts: PromptEntry[] = [];
   for (const entry of selected) {
     const paragraph = paragraphMap.get(entry.parserParagraph);
     if (!paragraph) continue;
-    const concept = creativeConcepts.get(entry.parserParagraph);
-    const prompt = assemblePrompt(entry.scene, entry.shot, config, entry.parserParagraph, paragraph.originalIndex, concept);
+    const concept = safeCreativeConcepts.get(entry.parserParagraph);
+    const requestedPerspective = cleanString(entry.shot.perspectiveMode).toLowerCase();
+    const shot = config.adaptiveMode && requestedPerspective === "creative"
+      && (!concept || !adaptiveCreativeAllowed.has(entry))
+      ? { ...entry.shot, perspectiveMode: "dynamic" }
+      : entry.shot;
+    const prompt = assemblePrompt(entry.scene, shot, config, entry.parserParagraph, paragraph.originalIndex, concept);
     prompt.creativeCandidates = creativeCandidates.filter((candidate) => candidate.paragraph === entry.parserParagraph);
     if (renderPrompt(prompt.prompt, config.promptSyntax)) prompts.push(prompt);
   }

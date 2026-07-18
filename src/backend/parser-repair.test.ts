@@ -236,8 +236,8 @@ describe("Creative ideation sidecar stage", () => {
 
   test("generates and validates a compact candidate slate in one batch call", async () => {
     responses.push({ content: JSON.stringify({ candidates: [
-      { paragraph: 1, anchor: "eye gap", concept: "one eye framed by fingers", renderScope: "one red eye and two fingers", camera: "extreme close-up", visibleCues: ["red eye", "fingers"], score: 95 },
-      { paragraph: 1, anchor: "rooted feet", concept: "feet fixed against the floor", renderScope: "lower legs and planted feet", camera: "low body-part focus", visibleCues: ["white pantyhose", "shoes"], score: 84 }
+      { paragraph: 1, subjectType: "shadow", anchor: "finger shadow", concept: "interlaced finger shadows cross the wall", renderScope: "shadow geometry and blank wall", camera: "tight oblique detail", visibleCues: ["interlaced shadows", "wall"], score: 95 },
+      { paragraph: 1, subjectType: "fragment", anchor: "fingertips", concept: "fingertips hover at the edge of frame", renderScope: "fingertips and empty negative space", camera: "macro side detail", visibleCues: ["fingertips", "negative space"], score: 84 }
     ] }) });
 
     const concepts = await generateCreativeConcepts(
