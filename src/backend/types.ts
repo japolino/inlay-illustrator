@@ -170,7 +170,21 @@ export type PreparedImageJob = {
 export type State = {
   characterAppearance: Record<string, string>;
   generated: Record<string, unknown>;
+  /** Compact lookup for records stored outside the continuity-state document. */
+  generatedImageIndex?: Record<string, { key: string; index: number }>;
   previousVisualState?: PreviousVisualState;
+};
+
+export type GeneratedRecordReference = {
+  storageVersion: 2;
+  recordPath: string;
+  chatId: string;
+  messageId: string;
+  swipeId: number;
+  paragraphs: number[];
+  imageIds: string[];
+  imageUrls: string[];
+  createdAt: string;
 };
 
 export type PreviousVisualCharacter = {
@@ -204,6 +218,7 @@ export type ParserGenerationRequest = {
   parameters?: Record<string, unknown>;
   reasoning: { source: "off" };
   userId?: string;
+  signal?: AbortSignal;
 };
 
 export type GeneratedRecord = {

@@ -181,12 +181,28 @@ function appendLightboxContent(
 export function installInlayLightbox(ctx: SpindleFrontendContext): () => void {
   let activeModal: ModalHandle | null = null;
   let activeRequest: { id: string; modal: ModalHandle; controls: LightboxControls } | null = null;
+  let activeDetailsRequest: { id: string; modal: ModalHandle; render: (details: InlayGenerationDetails) => void } | null = null;
   disableNativeInlayLightboxes(document);
   const observer = new MutationObserver(() => disableNativeInlayLightboxes(document));
   observer.observe(document.documentElement, { childList: true, subtree: true });
   const unsubscribeResults = ctx.onBackendMessage((payload: unknown) => {
     if (!payload || typeof payload !== "object") return;
     const result = payload as Record<string, unknown>;
+    if (result.type === "inlay_image_details_result" && String(result.requestId || "") === activeDetailsRequest?.id) {
+      if (result.ok === true) {
+        activeDetailsRequest.render(resolveInlayDetails(
+          typeof result.prompt === "string" ? result.prompt : null,
+          null,
+          typeof result.negativePrompt === "string" ? result.negativePrompt : null,
+          null,
+          typeof result.perspectiveMode === "string" ? result.perspectiveMode : null,
+          typeof result.perspectiveSource === "string" ? result.perspectiveSource : null,
+          typeof result.creativeConcept === "string" ? result.creativeConcept : null
+        ));
+      }
+      activeDetailsRequest = null;
+      return;
+    }
     if (result.type !== "inlay_image_action_result" || String(result.requestId || "") !== activeRequest?.id) return;
     if (result.ok === true) {
       activeRequest.controls.status.textContent = "Image replaced. Reopening will show its updated details.";
@@ -216,7 +232,7 @@ export function installInlayLightbox(ctx: SpindleFrontendContext): () => void {
         maxHeight: Math.max(480, window.innerHeight - 48)
       });
       activeModal = modal;
-      appendLightboxContent(modal.root, image, details, (operation, controls) => {
+      const render = (nextDetails: InlayGenerationDetails): void => appendLightboxContent(modal.root, image, nextDetails, (operation, controls) => {
         let chatId = actionTarget.chatId || "";
         if (!chatId) {
           try {
@@ -242,9 +258,28 @@ export function installInlayLightbox(ctx: SpindleFrontendContext): () => void {
           chatId
         });
       });
+      render(details);
+      if (!details.prompt && (actionTarget.imageId || actionTarget.messageId)) {
+        let chatId = actionTarget.chatId || "";
+        if (!chatId) {
+          try {
+            chatId = String(ctx.getActiveChat().chatId || "");
+          } catch {
+            chatId = "";
+          }
+        }
+        if (chatId) {
+          const requestId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : `inlay-details-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          activeDetailsRequest = { id: requestId, modal, render };
+          ctx.sendToBackend({ type: "get_inlay_image_details", requestId, ...actionTarget, chatId });
+        }
+      }
       modal.onDismiss(() => {
         if (activeModal === modal) activeModal = null;
         if (activeRequest?.modal === modal) activeRequest = null;
+        if (activeDetailsRequest?.modal === modal) activeDetailsRequest = null;
       });
     } catch {
       return;

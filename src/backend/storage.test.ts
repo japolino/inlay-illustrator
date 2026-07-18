@@ -1,8 +1,16 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { Config } from "../shared/config.js";
 import { updateCache, upsertCharacterTag } from "./memory.js";
-import { setConfig, updateState } from "./storage.js";
-import type { State } from "./types.js";
+import {
+  isGeneratedRecordReference,
+  loadGeneratedRecord,
+  migrateLegacyGeneratedRecords,
+  rebuildGeneratedImageIndex,
+  setConfig,
+  storeGeneratedRecord,
+  updateState
+} from "./storage.js";
+import type { GeneratedRecord, State } from "./types.js";
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -297,5 +305,50 @@ describe("serialized configuration updates", () => {
 
     expect(storage.storedConfig("user-1").customParserInstructions).toBe("ab");
     expect(storage.writeCalls).toHaveLength(2);
+  });
+});
+
+describe("compact generated-record storage", () => {
+  function record(): GeneratedRecord {
+    const parameters = {
+      seed: 42,
+      workflow: { "1": { class_type: "Text", inputs: { text: "prompt" } } }
+    };
+    return {
+      chatId: "chat-1",
+      messageId: "message-1",
+      swipeId: 0,
+      prompts: ["positive", "positive two"],
+      negativePrompts: ["negative", "negative two"],
+      perspectiveModes: ["dynamic", "static"],
+      perspectiveSources: ["manual", "adaptive"],
+      imageParameters: [structuredClone(parameters), structuredClone(parameters)],
+      paragraphs: [1, 2],
+      imageIds: ["image-1", "image-2"],
+      imageUrls: ["/one", "/two"],
+      rawJson: { scenes: [] },
+      createdAt: "2026-07-18T00:00:00.000Z"
+    };
+  }
+
+  test("stores one deduplicated workflow and hydrates exact reroll parameters", async () => {
+    const original = record();
+    const reference = await storeGeneratedRecord("chat-1", "chat-1:message-1:0", original, "user-1");
+    expect(isGeneratedRecordReference(reference)).toBe(true);
+    const workflowFiles = [...storage.files.keys()].filter((key) => key.includes("workflows/"));
+    expect(workflowFiles).toHaveLength(1);
+
+    const hydrated = await loadGeneratedRecord(reference, "user-1");
+    expect(hydrated?.imageParameters).toEqual(original.imageParameters);
+  });
+
+  test("migrates legacy records into compact references and builds direct image indexes", async () => {
+    const state: State = { characterAppearance: {}, generated: { legacy: record() } };
+    await migrateLegacyGeneratedRecords("chat-1", state, "user-1");
+    rebuildGeneratedImageIndex(state);
+
+    expect(isGeneratedRecordReference(state.generated.legacy)).toBe(true);
+    expect(state.generatedImageIndex?.["id:image-2"]).toEqual({ key: "legacy", index: 1 });
+    expect((state.generated.legacy as Record<string, unknown>).prompts).toBeUndefined();
   });
 });

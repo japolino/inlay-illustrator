@@ -67,7 +67,7 @@ export type RawConfig = Partial<Config> & {
 export const DEFAULT_CONFIG: Config = {
   enabled: true,
   autoGenerate: true,
-  debugLogging: true,
+  debugLogging: false,
   adaptiveMode: false,
   perspectiveMode: "dynamic",
   parserConnectionId: null,

@@ -33,6 +33,7 @@ const PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-(?:negative-prompt|perspecti
  * model/parser context or as the clean source for a fresh render.
  */
 export function stripInlayContent(content: string): string {
+  if (!content.includes("inlay-illustrator") && !content.includes("inlay_illustrator")) return content;
   return content
     .replace(LEGACY_BLOCK, "")
     .replace(CURRENT_BLOCK, "")

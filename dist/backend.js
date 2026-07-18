@@ -2,7 +2,7 @@
 var DEFAULT_CONFIG = {
   enabled: true,
   autoGenerate: true,
-  debugLogging: true,
+  debugLogging: false,
   adaptiveMode: false,
   perspectiveMode: "dynamic",
   parserConnectionId: null,
@@ -150,6 +150,8 @@ var PROMPT_PRE_BLOCK = ownedBlock(String.raw`<pre\b(?=[^>]*[\t\n\f\r ]class\s*=\
 var ORPHAN_MARKER = ownedBlock(MARKER_PATTERN);
 var PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-(?:negative-prompt|perspective-source|concept|image-index|image-id|message-id|swipe-id|chat-id|perspective|prompt)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
 function stripInlayContent(content) {
+  if (!content.includes("inlay-illustrator") && !content.includes("inlay_illustrator"))
+    return content;
   return content.replace(LEGACY_BLOCK, "").replace(CURRENT_BLOCK, "").replace(MARKER_IMAGE_BLOCK, "").replace(PROMPT_PRE_BLOCK, "").replace(ORPHAN_MARKER, "").replace(PROMPT_ATTRIBUTE, "");
 }
 function stripInlayFromMessages(messages) {
@@ -346,6 +348,49 @@ function validCamera(camera) {
 function clonePayload(payload) {
   return JSON.parse(JSON.stringify(payload));
 }
+var SAFE_FRAMING_ALTERNATIVES = [
+  "close-up",
+  "portrait",
+  "medium close-up",
+  "upper body",
+  "medium shot",
+  "cowboy shot",
+  "full body",
+  "wide shot"
+];
+function repairDynamicCameraDiversityLocally(payload, config, audit = auditDynamicCameraDiversity(payload, config)) {
+  if (audit.exactCollisions.length === 0)
+    return payload;
+  const repaired = clonePayload(payload);
+  const shots = orderedShots(repaired);
+  const used = new Set(audit.signatures.map((entry) => entry.signature));
+  for (const collision of audit.exactCollisions) {
+    const entry = shots[collision.duplicateIndex];
+    const camera = asRecord(entry?.shot.camera);
+    const angle = cleanString2(camera.angle).toLowerCase();
+    const perspective = cleanString2(camera.perspective).toLowerCase();
+    if (!entry || !angle || !perspective)
+      return null;
+    const currentFraming = cleanString2(camera.framing).toLowerCase();
+    const currentIndex = SAFE_FRAMING_ALTERNATIVES.indexOf(currentFraming);
+    if (currentIndex < 0)
+      return null;
+    const candidates = [...SAFE_FRAMING_ALTERNATIVES].sort((left, right) => {
+      const leftDistance = Math.abs(SAFE_FRAMING_ALTERNATIVES.indexOf(left) - currentIndex);
+      const rightDistance = Math.abs(SAFE_FRAMING_ALTERNATIVES.indexOf(right) - currentIndex);
+      return leftDistance - rightDistance;
+    });
+    const framing = candidates.find((candidate) => candidate !== currentFraming && !used.has(`${candidate} | ${angle} | ${perspective}`));
+    if (!framing)
+      return null;
+    const replacement = { ...camera, framing };
+    if (!validCamera(replacement))
+      return null;
+    entry.shot.camera = replacement;
+    used.add(`${framing} | ${angle} | ${perspective}`);
+  }
+  return auditDynamicCameraDiversity(repaired, config).exactCollisions.length === 0 ? repaired : null;
+}
 function mergeDynamicCameraRepair(original, repaired, config, audit = auditDynamicCameraDiversity(original, config)) {
   if (audit.exactCollisions.length === 0)
     return original;
@@ -473,8 +518,16 @@ function joinSections(sections, syntax, format) {
 ` : `,
 `) : clean.join(", ");
 }
+var renderedPromptCache = new WeakMap;
 function renderPrompt(prompt, syntax) {
-  return joinSections(prompt.sections, syntax, prompt.format || "ordered");
+  const cached = renderedPromptCache.get(prompt)?.[syntax];
+  if (cached !== undefined)
+    return cached;
+  const rendered = joinSections(prompt.sections, syntax, prompt.format || "ordered");
+  const entries = renderedPromptCache.get(prompt) || {};
+  entries[syntax] = rendered;
+  renderedPromptCache.set(prompt, entries);
+  return rendered;
 }
 function renderPromptWithCurrentAffixes(corePrompt, format, config) {
   const preset = activePromptPreset(config);
@@ -1325,6 +1378,30 @@ var EMPTY_LOREBOOK_CONTEXT = {
   hasCharacterVisualReference: false,
   diagnostics: { lorebookEntries: 0 }
 };
+async function loadParserContextSources(chatId, config, userId) {
+  const diagnostics = {};
+  const needsChat = config.includeCharacterInfo || config.includeLorebook || config.userInstructionsEnabled;
+  const needsPersona = config.includeUserInfo || config.userInstructionsEnabled;
+  const [chatResult, personaResult] = await Promise.allSettled([
+    needsChat ? spindle.chats.get(chatId, userId) : Promise.resolve(null),
+    needsPersona ? spindle.personas.getActive(userId) : Promise.resolve(null)
+  ]);
+  const chat = chatResult.status === "fulfilled" && chatResult.value ? asRecord(chatResult.value) : null;
+  const persona = personaResult.status === "fulfilled" && personaResult.value ? asRecord(personaResult.value) : null;
+  if (chatResult.status === "rejected")
+    diagnostics.chatLookupError = chatResult.reason instanceof Error ? chatResult.reason.message : String(chatResult.reason);
+  if (personaResult.status === "rejected")
+    diagnostics.userInfoError = personaResult.reason instanceof Error ? personaResult.reason.message : String(personaResult.reason);
+  let character = null;
+  if (config.includeCharacterInfo && chat?.character_id) {
+    try {
+      character = asRecord(await spindle.characters.get(String(chat.character_id), userId));
+    } catch (error) {
+      diagnostics.characterInfoError = error instanceof Error ? error.message : String(error);
+    }
+  }
+  return { chat, persona, character, diagnostics };
+}
 function isOwnMessage(message) {
   return Boolean(message.metadata?.extension === EXTENSION_ID);
 }
@@ -1561,7 +1638,16 @@ async function buildLorebookContextSnapshot(chatId, target, config, userId) {
   }
 }
 function formatRecentContext(messages, targetIndex, includeCount) {
-  const previous = messages.slice(0, Math.max(0, targetIndex)).filter((message) => message.role === "assistant" && !isOwnMessage(message)).map((message) => ({ ...message, content: stripInlayContent(message.content) })).filter((message) => message.content.trim());
+  const previous = [];
+  const limit = includeCount > 0 ? includeCount : 2;
+  for (let index = Math.min(targetIndex, messages.length) - 1;index >= 0 && previous.length < limit; index -= 1) {
+    const message = messages[index];
+    if (message.role !== "assistant" || isOwnMessage(message))
+      continue;
+    const content = stripInlayContent(message.content);
+    if (content.trim())
+      previous.unshift({ ...message, content });
+  }
   const selected = includeCount > 0 ? previous.slice(-includeCount) : previous.length === 1 ? previous : [];
   return compactBlock(selected.map((message) => `${message.role}: ${message.content}`).join(`
 
@@ -1575,12 +1661,14 @@ function includeCountForAttempt(config, attempt) {
   const step = Math.ceil((config.includeMaxMessages - config.includeMinMessages) / config.parserRetries);
   return Math.min(config.includeMaxMessages, config.includeMinMessages + step * attempt);
 }
-async function buildParserContext(chatId, messages, targetIndex, cache, config, attempt, userId, lorebookSnapshot, previousVisualState) {
+async function buildParserContext(chatId, messages, targetIndex, cache, config, attempt, userId, lorebookSnapshot, previousVisualState, preparedSources) {
   const blocks = [];
   const preprocessingBlocks = [];
   const overrides = [];
   const diagnostics = { attempt, includeCount: includeCountForAttempt(config, attempt) };
-  let chat = null;
+  const sources = preparedSources || await loadParserContextSources(chatId, config, userId);
+  const chat = sources.chat;
+  Object.assign(diagnostics, sources.diagnostics);
   const pushBlock = (block, includeInPreprocessing = true) => {
     if (!block)
       return;
@@ -1588,18 +1676,11 @@ async function buildParserContext(chatId, messages, targetIndex, cache, config, 
     if (includeInPreprocessing)
       preprocessingBlocks.push(block);
   };
-  if (config.includeCharacterInfo || config.includeLorebook || config.userInstructionsEnabled) {
-    try {
-      chat = await spindle.chats.get(chatId, userId);
-      overrides.push(...collectExtraInstructionStrings(chat?.metadata));
-    } catch (error) {
-      diagnostics.chatLookupError = error instanceof Error ? error.message : String(error);
-    }
-  }
+  if (chat)
+    overrides.push(...collectExtraInstructionStrings(chat.metadata));
   if (config.includeUserInfo || config.userInstructionsEnabled) {
-    try {
-      const persona = await spindle.personas.getActive(userId);
-      const record = asRecord(persona);
+    if (sources.persona) {
+      const record = sources.persona;
       const block = config.includeUserInfo ? formatInfoBlock("{{user}} Info", [
         namedField("Name", record.name),
         namedField("Title", record.title),
@@ -1608,14 +1689,11 @@ async function buildParserContext(chatId, messages, targetIndex, cache, config, 
       pushBlock(block);
       overrides.push(...collectExtraInstructionStrings(record.metadata));
       diagnostics.userInfo = Boolean(block);
-    } catch (error) {
-      diagnostics.userInfoError = error instanceof Error ? error.message : String(error);
     }
   }
   if (config.includeCharacterInfo && chat?.character_id) {
-    try {
-      const character = await spindle.characters.get(String(chat.character_id), userId);
-      const record = asRecord(character);
+    if (sources.character) {
+      const record = sources.character;
       const block = formatInfoBlock("{{char}} Info", [
         namedField("Name", record.name),
         namedField("Description", record.description),
@@ -1629,8 +1707,6 @@ async function buildParserContext(chatId, messages, targetIndex, cache, config, 
       pushBlock(block);
       overrides.push(...collectExtraInstructionStrings(record.extensions));
       diagnostics.characterInfo = Boolean(block);
-    } catch (error) {
-      diagnostics.characterInfoError = error instanceof Error ? error.message : String(error);
     }
   }
   if (config.includeLorebook) {
@@ -1671,8 +1747,21 @@ Use these as a baseline for returning characters (including their base attire). 
 }
 
 // src/backend/images.ts
+var imageConnectionCache = new Map;
+function cacheImageConnection(key, connection) {
+  if (imageConnectionCache.size >= 32) {
+    const oldest = imageConnectionCache.keys().next().value;
+    if (typeof oldest === "string")
+      imageConnectionCache.delete(oldest);
+  }
+  imageConnectionCache.set(key, { expiresAt: Date.now() + 5000, connection });
+}
 async function resolveImageConnection(config, userId) {
   logStage(config, "image_connection_resolve_start", { configuredConnectionId: config.imageConnectionId });
+  const cacheKey = JSON.stringify([userId ?? null, config.imageConnectionId || "(default)"]);
+  const cached = imageConnectionCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now())
+    return cached.connection;
   if (config.imageConnectionId) {
     const configured = await spindle.imageGen.getConnection(config.imageConnectionId, userId);
     if (configured) {
@@ -1683,6 +1772,7 @@ async function resolveImageConnection(config, userId) {
         model: configured.model,
         source: "configured"
       });
+      cacheImageConnection(cacheKey, configured);
       return configured;
     }
     logStage(config, "image_connection_missing", { configuredConnectionId: config.imageConnectionId }, "warn");
@@ -1696,6 +1786,7 @@ async function resolveImageConnection(config, userId) {
     model: fallback.model,
     source: fallback.is_default ? "default" : "first_available"
   } : { source: "none", availableConnections: 0 }, fallback ? "info" : "warn");
+  cacheImageConnection(cacheKey, fallback);
   return fallback;
 }
 function readComfyConfig(metadata) {
@@ -1718,8 +1809,18 @@ function stringParam(value) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 function patchComfyWorkflow(workflow, mappings, values) {
-  const patched = JSON.parse(JSON.stringify(workflow));
+  const source = workflow;
+  const patched = { ...source };
+  const clonedNodes = new Set;
   for (const mapping of mappings) {
+    const originalNode = source[mapping.nodeId];
+    if (originalNode && !clonedNodes.has(mapping.nodeId)) {
+      patched[mapping.nodeId] = {
+        ...originalNode,
+        inputs: originalNode.inputs && typeof originalNode.inputs === "object" ? { ...originalNode.inputs } : originalNode.inputs
+      };
+      clonedNodes.add(mapping.nodeId);
+    }
     const node = patched[mapping.nodeId];
     if (!node || !node.inputs || typeof node.inputs !== "object")
       continue;
@@ -2020,16 +2121,37 @@ function splitParagraphBlocks(content) {
 `));
   return blocks;
 }
-function stripIgnoredTags(text, config) {
-  let output = text;
-  for (const tag of ignoredTagNames(config)) {
+var ignoredPatternCache = new Map;
+function ignoredTagPatterns(config) {
+  const key = String(config.ignoredTags || "");
+  const cached = ignoredPatternCache.get(key);
+  if (cached)
+    return cached;
+  const patterns = ignoredTagNames(config).map((tag) => {
     const name = escapeRegExp(tag);
-    output = output.replace(new RegExp(`<${name}\\b[^>]*>[\\s\\S]*?<\\/${name}>`, "gi"), "").replace(new RegExp(`<\\/?${name}\\b[^>]*>`, "gi"), "").replace(new RegExp(`^\\s*\\[${name}\\b[^\\]]*\\]\\s*$`, "gim"), "");
+    return {
+      paired: new RegExp(`<${name}\\b[^>]*>[\\s\\S]*?<\\/${name}>`, "gi"),
+      element: new RegExp(`<\\/?${name}\\b[^>]*>`, "gi"),
+      bracket: new RegExp(`^\\s*\\[${name}\\b[^\\]]*\\]\\s*$`, "gim")
+    };
+  });
+  if (ignoredPatternCache.size >= 32) {
+    const oldest = ignoredPatternCache.keys().next().value;
+    if (typeof oldest === "string")
+      ignoredPatternCache.delete(oldest);
+  }
+  ignoredPatternCache.set(key, patterns);
+  return patterns;
+}
+function stripIgnoredTags(text, patterns) {
+  let output = text;
+  for (const pattern of patterns) {
+    output = output.replace(pattern.paired, "").replace(pattern.element, "").replace(pattern.bracket, "");
   }
   return output;
 }
-function cleanParagraphText(text, config) {
-  const stripped = stripIgnoredTags(text, config).replace(/CARDDATA:.*$/gim, "").replace(/<Update Log\b[\s\S]*?<\/Update Log>/gi, "").replace(/<Choice\b[\s\S]*?<\/Choice>/gi, "");
+function cleanParagraphText(text, patterns) {
+  const stripped = stripIgnoredTags(text, patterns).replace(/CARDDATA:.*$/gim, "").replace(/<Update Log\b[\s\S]*?<\/Update Log>/gi, "").replace(/<Choice\b[\s\S]*?<\/Choice>/gi, "");
   return stripped.split(/\r?\n/).filter((line) => {
     const trimmed = line.trim();
     if (!trimmed)
@@ -2041,8 +2163,9 @@ function cleanParagraphText(text, config) {
 function prepareParagraphs(content, config) {
   const paragraphs = [];
   const originalBlocks = splitParagraphBlocks(stripInlayContent(content));
+  const patterns = ignoredTagPatterns(config);
   for (const [index, block] of originalBlocks.entries()) {
-    const cleaned = cleanParagraphText(block, config);
+    const cleaned = cleanParagraphText(block, patterns);
     if (cleaned)
       paragraphs.push({ parserIndex: paragraphs.length + 1, originalIndex: index + 1, text: cleaned });
   }
@@ -2336,6 +2459,15 @@ function parserInstruction(config) {
 }
 
 // src/backend/parser.ts
+var parserConnectionCache = new Map;
+function cacheParserConnection(key, connection) {
+  if (parserConnectionCache.size >= 32) {
+    const oldest = parserConnectionCache.keys().next().value;
+    if (typeof oldest === "string")
+      parserConnectionCache.delete(oldest);
+  }
+  parserConnectionCache.set(key, { expiresAt: Date.now() + 5000, connection });
+}
 function formatTargetParagraphs(paragraphs) {
   return paragraphs.map((paragraph) => `[P${paragraph.parserIndex}]
 ${paragraph.text}`).join(`
@@ -2385,12 +2517,34 @@ function extractText(result) {
 function extractUsage(result) {
   const usage = asRecord(asRecord(result).usage);
   const output = {};
-  for (const key of ["prompt_tokens", "completion_tokens", "total_tokens"]) {
+  for (const key of [
+    "prompt_tokens",
+    "completion_tokens",
+    "total_tokens",
+    "total_cached_tokens",
+    "prompt_cache_hit_tokens",
+    "prompt_cache_miss_tokens",
+    "cache_write_tokens"
+  ]) {
     const value = Number(usage[key]);
     if (Number.isFinite(value))
       output[key] = value;
   }
+  const promptDetails = asRecord(usage.prompt_tokens_details);
+  for (const key of ["cached_tokens", "cache_write_tokens"]) {
+    const value = Number(promptDetails[key]);
+    if (Number.isFinite(value))
+      output[key] = value;
+  }
   return output;
+}
+function extractFinishReason(result) {
+  const object = asRecord(result);
+  if (typeof object.finish_reason === "string")
+    return object.finish_reason;
+  const choices = Array.isArray(object.choices) ? object.choices : [];
+  const first = asRecord(choices[0]);
+  return typeof first.finish_reason === "string" ? first.finish_reason : "";
 }
 var FUZZY_KEYS = [
   "scenes",
@@ -2652,6 +2806,10 @@ async function resolveParserConnection(config, userId) {
   logStage(config, "parser_connection_resolve_start", { configuredConnectionId: config.parserConnectionId, modelOverride: Boolean(config.parserModel) });
   if (!config.parserConnectionId)
     throw new Error("Select a parser connection before generating.");
+  const cacheKey = JSON.stringify([userId ?? null, config.parserConnectionId]);
+  const cached = parserConnectionCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now())
+    return cached.connection;
   const connection = await spindle.connections.get(config.parserConnectionId, userId);
   if (!connection)
     throw new Error("Parser connection not found.");
@@ -2662,34 +2820,96 @@ async function resolveParserConnection(config, userId) {
     connectionModel: connection.model,
     effectiveModel: config.parserModel || connection.model
   });
-  return { id: connection.id, name: connection.name, provider: connection.provider, model: connection.model };
+  const resolved = { id: connection.id, name: connection.name, provider: connection.provider, model: connection.model };
+  cacheParserConnection(cacheKey, resolved);
+  return resolved;
 }
-async function generateParserText(connection, config, messages, userId) {
+var unsupportedStructuredOutput = new Set;
+function parserStageParameters(connection, config, stage, structured = stage !== "preprocess") {
+  const parameters = { ...config.parserParameters };
+  if (parameters.max_tokens === undefined && parameters.max_completion_tokens === undefined) {
+    const budgets = {
+      main: Math.min(7000, 1800 + Math.max(1, config.maxImages) * 900),
+      ideation: Math.min(5000, 1200 + Math.max(1, config.maxImages) * 700),
+      preprocess: 2400,
+      repair: Math.min(6000, 1600 + Math.max(1, config.maxImages) * 800),
+      camera: 1800
+    };
+    parameters.max_tokens = budgets[stage];
+  }
+  const capabilityKey = JSON.stringify([connection.provider, config.parserModel || connection.model]);
+  const providerModel = `${connection.provider} ${config.parserModel || connection.model}`.toLowerCase();
+  const canRequestJson = /openai|gpt-|gemini|deepseek/.test(providerModel);
+  const injectedStructuredOutput = structured && canRequestJson && parameters.response_format === undefined && !unsupportedStructuredOutput.has(capabilityKey);
+  if (injectedStructuredOutput)
+    parameters.response_format = { type: "json_object" };
+  return { parameters, injectedStructuredOutput };
+}
+async function generateParserText(connection, config, messages, userId, stage = "main") {
+  const startedAt = Date.now();
+  const selected = parserStageParameters(connection, config, stage);
+  const run = async (parameters) => {
+    const controller = new AbortController;
+    const timeout = setTimeout(() => controller.abort(), 180000);
+    try {
+      return await spindle.generate.raw({
+        type: "raw",
+        provider: connection.provider,
+        model: config.parserModel || connection.model,
+        connection_id: connection.id,
+        messages,
+        parameters,
+        reasoning: { source: "off" },
+        userId,
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
   try {
     logStage(config, "parser_llm_start", {
       provider: connection.provider,
       model: config.parserModel || connection.model,
       connectionId: connection.id,
-      parameterKeys: keysOf(config.parserParameters),
+      stage,
+      parameterKeys: keysOf(selected.parameters),
       messageCount: messages.length,
       messageLengths: messages.map((message) => message.content.length)
     });
-    const result = await spindle.generate.raw({
-      type: "raw",
-      provider: connection.provider,
-      model: config.parserModel || connection.model,
-      connection_id: connection.id,
-      messages,
-      parameters: config.parserParameters,
-      reasoning: { source: "off" },
-      userId
-    });
+    let result;
+    try {
+      result = await run(selected.parameters);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (!selected.injectedStructuredOutput || !/\b400\b|invalid.*(?:response|argument|format)|response_format/i.test(reason))
+        throw error;
+      const capabilityKey = JSON.stringify([connection.provider, config.parserModel || connection.model]);
+      unsupportedStructuredOutput.add(capabilityKey);
+      const fallbackParameters = { ...selected.parameters };
+      delete fallbackParameters.response_format;
+      logStage(config, "parser_structured_output_fallback", { stage, reason }, "warn");
+      result = await run(fallbackParameters);
+    }
     const text = extractText(result);
     const usage = extractUsage(result);
-    logStage(config, "parser_llm_done", { outputLength: text.length, ...Object.keys(usage).length ? { usage } : {} });
+    const finishReason = extractFinishReason(result);
+    logStage(config, "parser_llm_done", {
+      stage,
+      outputLength: text.length,
+      elapsedMs: Date.now() - startedAt,
+      ...finishReason ? { finishReason } : {},
+      ...Object.keys(usage).length ? { usage } : {}
+    });
+    if (finishReason === "length" && !text.trim())
+      throw new Error("Parser response was truncated before producing JSON.");
     return text;
   } catch (error) {
-    logStage(config, "parser_llm_error", { error: error instanceof Error ? error.message : String(error) }, "error");
+    logStage(config, "parser_llm_error", {
+      stage,
+      elapsedMs: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : String(error)
+    }, "error");
     throw new Error(`Parser generation failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -2700,7 +2920,7 @@ async function generateCreativeConcepts(parserConnection, config, paragraphs, ta
       previousConceptCount: previousConcepts.length,
       adaptiveMode: config.adaptiveMode
     });
-    const raw = await generateParserText(parserConnection, config, parserMessages(creativeIdeationInstruction(config, previousConcepts), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), creativeIdeationRequest(targetSource), context.override), userId);
+    const raw = await generateParserText(parserConnection, config, parserMessages(creativeIdeationInstruction(config, previousConcepts), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), creativeIdeationRequest(targetSource), context.override), userId, "ideation");
     const concepts = parseCreativeConcepts(raw, paragraphs, config);
     if (concepts.length === 0) {
       logStage(config, "creative_ideation_fallback", { reason: "invalid_or_empty_slate", outputLength: raw.length }, "warn");
@@ -2799,7 +3019,7 @@ async function preprocessTargetParagraphs(parserConnection, config, paragraphs, 
   if (!config.preprocessingEnabled)
     return rawTarget;
   try {
-    const summary = await generateParserText(parserConnection, config, parserMessages(preprocessingInstruction(paragraphs, config), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), preprocessingUserRequest(rawTarget), context.override), userId);
+    const summary = await generateParserText(parserConnection, config, parserMessages(preprocessingInstruction(paragraphs, config), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), preprocessingUserRequest(rawTarget), context.override), userId, "preprocess");
     const selection = validatePreprocessedTarget(summary, paragraphs, config);
     if (selection) {
       logStage(config, "preprocessing_done", {
@@ -2846,7 +3066,7 @@ async function parsePayloadWithRepair(parserConnection, config, messages, userId
     const repaired = await generateParserText(parserConnection, config, [
       { role: "system", content: repairSystem },
       { role: "user", content: repairInput }
-    ], userId);
+    ], userId, "repair");
     if (!repaired.trim())
       throw new Error("Parser returned an empty repair response.");
     const parsed = recoverSceneParagraphs(parseJson(repaired), fallbackParagraph);
@@ -2867,6 +3087,16 @@ async function repairDynamicCameraDiversity(parserConnection, config, payload, t
   logStage(config, "camera_diversity_audit", audit);
   if (audit.exactCollisions.length === 0)
     return payload;
+  const local = repairDynamicCameraDiversityLocally(payload, config, audit);
+  if (local) {
+    logStage(config, "camera_diversity_repaired", {
+      method: "local",
+      before: audit.signatures,
+      after: auditDynamicCameraDiversity(local, config).signatures,
+      remainingExactCollisions: 0
+    });
+    return local;
+  }
   try {
     const raw = await generateParserText(parserConnection, config, [
       { role: "system", content: cameraRepairInstruction(audit) },
@@ -2881,7 +3111,7 @@ async function repairDynamicCameraDiversity(parserConnection, config, payload, t
 
 `)
       }
-    ], userId);
+    ], userId, "camera");
     if (!raw.trim())
       throw new Error("empty camera repair response");
     const repaired = parseJson(raw);
@@ -2912,17 +3142,12 @@ function imageUrlFromId(imageId) {
 function htmlAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r\n?|\n/g, "&#10;");
 }
-function renderInlayBlock(url, prompt, negativePrompt, perspectiveMode, perspectiveSource, creativeConcept, imageId, chatId, messageId, swipeId, index, config) {
+function renderInlayBlock(url, _prompt, _negativePrompt, _perspectiveMode, _perspectiveSource, _creativeConcept, imageId, chatId, messageId, swipeId, index, config) {
   const label = `Inlay ${index + 1}`;
   const width = clampInt2(config.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth);
   const maxHeight = clampInt2(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
-  const safePrompt = prompt.replace(/```/g, "'''");
-  const safeNegative = negativePrompt.replace(/```/g, "'''");
-  const modeAttribute = perspectiveMode ? ` data-inlay-illustrator-perspective="${htmlAttr(perspectiveMode)}"` : "";
-  const sourceAttribute = perspectiveSource ? ` data-inlay-illustrator-perspective-source="${htmlAttr(perspectiveSource)}"` : "";
-  const conceptAttribute = creativeConcept ? ` data-inlay-illustrator-concept="${htmlAttr(`${creativeConcept.anchor}: ${creativeConcept.concept}`)}"` : "";
   return `${MARKER}
-<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" data-inlay-illustrator-negative-prompt="${htmlAttr(safeNegative)}"${modeAttribute}${sourceAttribute}${conceptAttribute} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre><pre class="inlay-illustrator-negative-prompt" hidden>${htmlAttr(safeNegative)}</pre></div>`;
+<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
 }
 function renderInlaidMessage(original, record, config) {
   const cleanOriginal = stripInlayContent(original);
@@ -2967,21 +3192,30 @@ var stateUpdateQueues = new Map;
 var configUpdateQueues = new Map;
 async function readJson(path, fallback, userId) {
   try {
+    if (typeof spindle.userStorage.getJson === "function") {
+      const value2 = await spindle.userStorage.getJson(path, { fallback, userId });
+      return value2 && typeof value2 === "object" && fallback && typeof fallback === "object" ? { ...fallback, ...value2 } : value2 ?? fallback;
+    }
     if (!await spindle.userStorage.exists(path, userId))
       return fallback;
     const text = await spindle.userStorage.read(path, userId);
-    return { ...fallback, ...JSON.parse(text) };
+    const value = JSON.parse(text);
+    return value && typeof value === "object" && fallback && typeof fallback === "object" ? { ...fallback, ...value } : value ?? fallback;
   } catch {
     return fallback;
   }
 }
 async function writeJson(path, value, userId) {
+  if (typeof spindle.userStorage.setJson === "function") {
+    await spindle.userStorage.setJson(path, value, { indent: 0, userId });
+    return;
+  }
   const slash = path.lastIndexOf("/");
   if (slash > 0)
     await spindle.userStorage.mkdir(path.slice(0, slash), userId).catch(() => {
       return;
     });
-  await spindle.userStorage.write(path, JSON.stringify(value, null, 2), userId);
+  await spindle.userStorage.write(path, JSON.stringify(value), userId);
 }
 async function getConfig(userId) {
   return normalizeConfig(await readJson("config.json", DEFAULT_CONFIG, userId));
@@ -3013,9 +3247,154 @@ async function getState(chatId, userId) {
 async function getStateForUpdate(chatId, userId) {
   const fallback = { characterAppearance: {}, generated: {} };
   const path = `states/${chatId}.json`;
+  if (typeof spindle.userStorage.getJson === "function") {
+    const value = await spindle.userStorage.getJson(path, { fallback, userId });
+    return { ...fallback, ...value };
+  }
   if (!await spindle.userStorage.exists(path, userId))
     return fallback;
   return { ...fallback, ...JSON.parse(await spindle.userStorage.read(path, userId)) };
+}
+function safePathPart(value) {
+  return encodeURIComponent(value).replace(/%/g, "_");
+}
+function recordPath(chatId, key) {
+  return `records/${safePathPart(chatId)}/${safePathPart(key)}.json`;
+}
+function workflowPath(hash) {
+  return `workflows/${hash}.json`;
+}
+async function contentHash(value) {
+  const bytes = new TextEncoder().encode(value);
+  if (globalThis.crypto?.subtle) {
+    const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(digest)].map((entry) => entry.toString(16).padStart(2, "0")).join("");
+  }
+  let left = 2166136261;
+  let right = 2246822519;
+  for (const byte of bytes) {
+    left = Math.imul(left ^ byte, 16777619);
+    right = Math.imul(right ^ byte, 3266489917);
+  }
+  return `${(left >>> 0).toString(16).padStart(8, "0")}${(right >>> 0).toString(16).padStart(8, "0")}`;
+}
+var WORKFLOW_REFERENCE_KEY = "__inlayIllustratorWorkflowRef";
+var storedWorkflowWrites = new Map;
+async function ensureWorkflowStored(hash, workflow, userId) {
+  const cacheKey = JSON.stringify([userId ?? null, hash]);
+  const existing = storedWorkflowWrites.get(cacheKey);
+  if (existing)
+    return existing;
+  const operation = (async () => {
+    const path = workflowPath(hash);
+    if (!await spindle.userStorage.exists(path, userId))
+      await writeJson(path, workflow, userId);
+  })();
+  if (storedWorkflowWrites.size >= 64) {
+    const oldest = storedWorkflowWrites.keys().next().value;
+    if (typeof oldest === "string")
+      storedWorkflowWrites.delete(oldest);
+  }
+  storedWorkflowWrites.set(cacheKey, operation);
+  try {
+    await operation;
+  } catch (error) {
+    if (storedWorkflowWrites.get(cacheKey) === operation)
+      storedWorkflowWrites.delete(cacheKey);
+    throw error;
+  }
+}
+async function compactParameters(parameters, userId) {
+  const workflow = parameters.workflow;
+  if (!workflow || typeof workflow !== "object")
+    return parameters;
+  const serialized = JSON.stringify(workflow);
+  const hash = await contentHash(serialized);
+  await ensureWorkflowStored(hash, workflow, userId);
+  const compact = { ...parameters };
+  compact.workflow = { [WORKFLOW_REFERENCE_KEY]: hash };
+  return compact;
+}
+async function hydrateParameters(parameters, userId) {
+  const workflow = parameters.workflow;
+  if (!workflow || typeof workflow !== "object" || Array.isArray(workflow))
+    return parameters;
+  const hash = workflow[WORKFLOW_REFERENCE_KEY];
+  if (typeof hash !== "string" || !hash)
+    return parameters;
+  const hydrated = await readJson(workflowPath(hash), {}, userId);
+  if (Object.keys(hydrated).length === 0)
+    throw new Error(`Stored ComfyUI workflow ${hash} is unavailable.`);
+  return { ...parameters, workflow: hydrated };
+}
+function isGeneratedRecordReference(value) {
+  if (!value || typeof value !== "object")
+    return false;
+  const record = value;
+  return record.storageVersion === 2 && typeof record.recordPath === "string" && typeof record.messageId === "string";
+}
+function generatedRecordReference(record, path) {
+  return {
+    storageVersion: 2,
+    recordPath: path,
+    chatId: record.chatId,
+    messageId: record.messageId,
+    swipeId: record.swipeId,
+    paragraphs: record.paragraphs,
+    imageIds: record.imageIds,
+    imageUrls: record.imageUrls,
+    createdAt: record.createdAt
+  };
+}
+async function storeGeneratedRecord(chatId, key, record, userId) {
+  const path = recordPath(chatId, key);
+  const imageParameters = record.imageParameters ? await Promise.all(record.imageParameters.map((parameters) => compactParameters(parameters, userId))) : undefined;
+  await writeJson(path, { ...record, imageParameters }, userId);
+  return generatedRecordReference(record, path);
+}
+async function loadGeneratedRecord(value, userId, hydrateWorkflows = true) {
+  let record = value;
+  if (isGeneratedRecordReference(value)) {
+    record = await readJson(value.recordPath, null, userId);
+  }
+  if (!record || typeof record !== "object")
+    return null;
+  const candidate = record;
+  if (!Array.isArray(candidate.prompts) || !Array.isArray(candidate.paragraphs) || !Array.isArray(candidate.imageUrls) || typeof candidate.messageId !== "string")
+    return null;
+  if (hydrateWorkflows && candidate.imageParameters) {
+    candidate.imageParameters = await Promise.all(candidate.imageParameters.map((parameters) => hydrateParameters(parameters, userId)));
+  }
+  return candidate;
+}
+async function migrateLegacyGeneratedRecords(chatId, state, userId) {
+  for (const [key, value] of Object.entries(state.generated)) {
+    if (isGeneratedRecordReference(value) || !value || typeof value !== "object")
+      continue;
+    const candidate = value;
+    if (typeof candidate.messageId !== "string" || !Array.isArray(candidate.prompts) || !Array.isArray(candidate.paragraphs) || !Array.isArray(candidate.imageUrls))
+      continue;
+    state.generated[key] = await storeGeneratedRecord(chatId, key, candidate, userId);
+  }
+}
+function rebuildGeneratedImageIndex(state) {
+  const index = {};
+  for (const [key, value] of Object.entries(state.generated)) {
+    if (!value || typeof value !== "object")
+      continue;
+    const record = value;
+    const ids = Array.isArray(record.imageIds) ? record.imageIds : [];
+    const urls = Array.isArray(record.imageUrls) ? record.imageUrls : [];
+    ids.forEach((id, imageIndex) => {
+      if (id)
+        index[`id:${id}`] = { key, index: imageIndex };
+    });
+    urls.forEach((url, imageIndex) => {
+      if (url)
+        index[`url:${url}`] = { key, index: imageIndex };
+    });
+  }
+  state.generatedImageIndex = index;
 }
 async function updateState(chatId, userId, mutator) {
   const queueKey = JSON.stringify([userId ?? null, chatId]);
@@ -3052,11 +3431,11 @@ async function getParserConnections(userId) {
     return [];
   }
 }
-async function sendState(userId, chatId) {
+async function sendState(userId, chatId, preparedConfig) {
   const state = chatId ? await getState(chatId, userId) : null;
   spindle.sendToFrontend({
     type: "state",
-    config: await getConfig(userId),
+    config: preparedConfig || await getConfig(userId),
     parserConnections: await getParserConnections(userId),
     chatId: chatId || "",
     characterAppearance: state?.characterAppearance || {}
@@ -3091,38 +3470,51 @@ function tryAcquireRuntimeLock(scope, key) {
 }
 
 // src/backend/generation.ts
-function generatedRecord(value) {
-  if (!value || typeof value !== "object")
-    return null;
-  const candidate = value;
-  return Array.isArray(candidate.prompts) && Array.isArray(candidate.paragraphs) && Array.isArray(candidate.imageUrls) && typeof candidate.messageId === "string" ? candidate : null;
-}
 function sameImageUrl(stored, requested) {
   if (!stored || !requested)
     return false;
   return stored === requested || requested.endsWith(stored) || stored.endsWith(requested);
 }
-function locateGeneratedImage(state, request) {
-  for (const [key, value] of Object.entries(state.generated)) {
-    const record = generatedRecord(value);
+async function locateStoredGeneratedImage(state, request, userId, hydrateWorkflows = true) {
+  const direct = request.imageId ? state.generatedImageIndex?.[`id:${request.imageId}`] : request.imageUrl ? state.generatedImageIndex?.[`url:${request.imageUrl}`] : undefined;
+  const exactKey = request.messageId && request.swipeId !== undefined ? `${request.chatId}:${request.messageId}:${request.swipeId}` : "";
+  const candidates = [...new Set([
+    direct?.key,
+    exactKey && state.generated[exactKey] ? exactKey : undefined,
+    ...Object.keys(state.generated)
+  ].filter((value) => Boolean(value)))];
+  for (const key of candidates) {
+    const record = await loadGeneratedRecord(state.generated[key], userId, hydrateWorkflows);
     if (!record || record.chatId !== request.chatId)
       continue;
     if (request.messageId && record.messageId !== request.messageId)
       continue;
     if (request.swipeId !== undefined && record.swipeId !== request.swipeId)
       continue;
-    const explicitIndex = request.imageIndex;
-    if (explicitIndex !== undefined && Number.isInteger(explicitIndex) && explicitIndex >= 0 && explicitIndex < record.imageUrls.length) {
-      const idMatches = !request.imageId || record.imageIds?.[explicitIndex] === request.imageId;
-      const urlMatches = !request.imageUrl || sameImageUrl(record.imageUrls[explicitIndex] || "", request.imageUrl);
+    const preferredIndex = direct?.key === key ? direct.index : request.imageIndex;
+    if (preferredIndex !== undefined && Number.isInteger(preferredIndex) && preferredIndex >= 0 && preferredIndex < record.imageUrls.length) {
+      const idMatches = !request.imageId || record.imageIds?.[preferredIndex] === request.imageId;
+      const urlMatches = !request.imageUrl || sameImageUrl(record.imageUrls[preferredIndex] || "", request.imageUrl);
       if (idMatches && urlMatches)
-        return { key, record, index: explicitIndex };
+        return { key, record, index: preferredIndex };
     }
     const matchedIndex = record.imageUrls.findIndex((url, index) => request.imageId && record.imageIds?.[index] === request.imageId || request.imageUrl && sameImageUrl(url, request.imageUrl));
     if (matchedIndex >= 0)
       return { key, record, index: matchedIndex };
   }
   throw new Error("The selected image is not present in this chat's generated-image history.");
+}
+async function getStoredImageDetails(request, userId) {
+  const state = await getState(request.chatId, userId);
+  const located = await locateStoredGeneratedImage(state, request, userId, false);
+  const concept = located.record.creativeConcepts?.[located.index];
+  return {
+    prompt: located.record.prompts[located.index] || "",
+    negativePrompt: located.record.negativePrompts?.[located.index] || "",
+    perspectiveMode: located.record.perspectiveModes?.[located.index] || null,
+    perspectiveSource: located.record.perspectiveSources?.[located.index] || null,
+    creativeConcept: concept ? `${concept.anchor}: ${concept.concept}` : ""
+  };
 }
 function replaceAt(values, index, value, fallback) {
   const next = [...values || []];
@@ -3139,9 +3531,24 @@ function compactLorebookNeedsFullRetry(payload, snapshot) {
     return false;
   return !characters.some((character) => [character.identity, character.appearance, character.body, character.attire].some((value) => cleanString2(value)));
 }
+function retryClassification(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/\b(?:401|403|404)\b|unauthori[sz]ed|forbidden|connection not found|select a parser connection/i.test(message)) {
+    return "terminal";
+  }
+  if (/\b(?:408|409|425|429|500|502|503|504|520|522|523|524|525)\b|timeout|timed out|handshake|temporar|rate limit/i.test(message)) {
+    return "transient";
+  }
+  if (/\b400\b.*(?:invalid argument|bad request)/i.test(message))
+    return "terminal";
+  return "context";
+}
+async function waitForParserRetry(attempt) {
+  const delay = Math.min(1500, 250 * 2 ** attempt) + Math.floor(Math.random() * 125);
+  await new Promise((resolve) => setTimeout(resolve, delay));
+}
 async function parseAndSelectPrompts(input) {
   const { chatId, messageId, messages, paragraphs, state, config, userId } = input;
-  const parserConnection = await resolveParserConnection(config, userId);
   const targetIndex = Math.max(0, messages.findIndex((message) => message.id === messageId));
   let parsed = null;
   let selected = [];
@@ -3151,14 +3558,19 @@ async function parseAndSelectPrompts(input) {
   let ideationAttempted = false;
   let creativeTargetSource = null;
   const usedConceptIds = new Set(input.usedCreativeConceptIds || []);
-  const creativePipeline = config.perspectiveMode === "creative" || config.adaptiveMode;
-  const lorebookSnapshot = await buildLorebookContextSnapshot(chatId, paragraphs.map((paragraph) => paragraph.text).join(`
+  const manualCreative = !config.adaptiveMode && config.perspectiveMode === "creative";
+  const creativePipeline = manualCreative || config.adaptiveMode;
+  const [parserConnection, lorebookSnapshot, contextSources] = await Promise.all([
+    resolveParserConnection(config, userId),
+    buildLorebookContextSnapshot(chatId, paragraphs.map((paragraph) => paragraph.text).join(`
 
-`), config, userId);
+`), config, userId),
+    loadParserContextSources(chatId, config, userId)
+  ]);
   for (let attempt = 0;attempt <= config.parserRetries; attempt += 1) {
     try {
-      const context = await buildParserContext(chatId, messages, targetIndex, state.characterAppearance, config, attempt, userId, lorebookSnapshot, config.previousVisualStateEnabled ? state.previousVisualState : undefined);
-      if (creativePipeline && conceptSelections === null) {
+      const context = await buildParserContext(chatId, messages, targetIndex, state.characterAppearance, config, attempt, userId, lorebookSnapshot, config.previousVisualStateEnabled ? state.previousVisualState : undefined, contextSources);
+      if (manualCreative && conceptSelections === null) {
         if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
           const previousConcepts = conceptCandidates.filter((concept) => usedConceptIds.has(concept.id)).map((concept) => concept.concept);
           conceptCandidates = await generateCreativeConcepts(parserConnection, config, paragraphs, formatTargetParagraphs(paragraphs), context, previousConcepts, userId);
@@ -3171,7 +3583,7 @@ async function parseAndSelectPrompts(input) {
       }
       if (creativePipeline && creativeTargetSource === null) {
         const candidateParagraphs = new Set(conceptCandidates.map((concept) => concept.paragraph));
-        if (config.preprocessingEnabled && candidateParagraphs.size > 0) {
+        if (manualCreative && config.preprocessingEnabled && candidateParagraphs.size > 0) {
           creativeTargetSource = formatTargetParagraphs(paragraphs.filter((paragraph) => candidateParagraphs.has(paragraph.parserIndex)));
           logStage(config, "creative_preprocessing_done", {
             candidateCount: conceptCandidates.length,
@@ -3184,7 +3596,7 @@ async function parseAndSelectPrompts(input) {
       const targetSource = creativePipeline ? creativeTargetSource || formatTargetParagraphs(paragraphs) : await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
       const instruction = parserInstruction(config);
       const referenceContext = continuityReference(context.systemContext, context.recentContext);
-      const userRequest = parserUserRequest(targetSource, creativeConceptConstraint(conceptSelections || new Map, config.adaptiveMode));
+      const userRequest = parserUserRequest(targetSource, manualCreative ? creativeConceptConstraint(conceptSelections || new Map, false) : "");
       logStage(config, "parser_prompt_built", {
         attempt,
         instructionLength: instruction.length,
@@ -3204,6 +3616,23 @@ async function parseAndSelectPrompts(input) {
       parsed = await parsePayloadWithRepair(parserConnection, config, parserMessages(instruction, referenceContext, userRequest, context.override), userId);
       parsed = applyPreviousVisualState(parsed, config.previousVisualStateEnabled ? state.previousVisualState : undefined);
       parsed = await repairDynamicCameraDiversity(parserConnection, config, parsed, targetSource, userId);
+      if (config.adaptiveMode) {
+        const creativeParagraphs = new Set(normalizeScenePayload(parsed).filter(({ shot }) => cleanString2(shot.perspectiveMode).toLowerCase() === "creative").map(({ parserParagraph }) => parserParagraph));
+        if (creativeParagraphs.size > 0) {
+          const creativeParagraphEntries = paragraphs.filter((paragraph) => creativeParagraphs.has(paragraph.parserIndex));
+          if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
+            const previousConcepts = conceptCandidates.filter((concept) => usedConceptIds.has(concept.id)).map((concept) => concept.concept);
+            conceptCandidates = await generateCreativeConcepts(parserConnection, config, creativeParagraphEntries, formatTargetParagraphs(creativeParagraphEntries), context, previousConcepts, userId);
+            ideationAttempted = true;
+          }
+          conceptSelections = chooseCreativeConcepts(conceptCandidates.filter((concept) => creativeParagraphs.has(concept.paragraph)), usedConceptIds);
+          if (conceptSelections.size === 0 && conceptCandidates.length > 0) {
+            conceptSelections = chooseCreativeConcepts(conceptCandidates.filter((concept) => creativeParagraphs.has(concept.paragraph)));
+          }
+        } else {
+          conceptSelections = new Map;
+        }
+      }
       selected = selectPromptEntries(parsed, paragraphs, config, conceptSelections || new Map, conceptCandidates);
       if (!config.adaptiveMode && config.perspectiveMode === "creative" && (conceptSelections?.size || 0) > 0) {
         selected = selected.filter((entry) => Boolean(entry.creativeConcept));
@@ -3216,9 +3645,12 @@ async function parseAndSelectPrompts(input) {
       break;
     } catch (error) {
       lastParserError = error;
-      logStage(config, "parser_attempt_failed", { attempt, retries: config.parserRetries, error: error instanceof Error ? error.message : String(error) }, attempt >= config.parserRetries ? "error" : "warn");
-      if (attempt >= config.parserRetries)
+      const classification = retryClassification(error);
+      logStage(config, "parser_attempt_failed", { attempt, retries: config.parserRetries, classification, error: error instanceof Error ? error.message : String(error) }, attempt >= config.parserRetries ? "error" : "warn");
+      if (attempt >= config.parserRetries || classification === "terminal")
         throw error;
+      if (classification === "transient")
+        await waitForParserRetry(attempt);
     }
   }
   if (!parsed)
@@ -3256,8 +3688,8 @@ function logParsedSelection(parsed, selected, paragraphs, config) {
     perspectives: selected.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource }))
   });
 }
-async function prepareAndDispatchImages(chatId, selected, config, userId) {
-  const imageConnection = await resolveImageConnection(config, userId);
+async function prepareAndDispatchImages(chatId, selected, config, userId, preparedImageConnection) {
+  const imageConnection = await (preparedImageConnection || resolveImageConnection(config, userId));
   const preparationStartedAt = Date.now();
   logStage(config, "image_generation_preparation_start", {
     total: selected.length,
@@ -3417,12 +3849,16 @@ async function persistGeneration(input) {
     rawJson: parsed,
     createdAt: new Date().toISOString()
   };
-  await updateState(chatId, userId, (state) => {
-    state.generated[key] = record;
+  const reference = await storeGeneratedRecord(chatId, key, record, userId);
+  const committed = await updateState(chatId, userId, async (state) => {
+    await migrateLegacyGeneratedRecords(chatId, state, userId);
+    updateCache(state.characterAppearance, parsed);
+    state.generated[key] = reference;
     if (visualState)
       state.previousVisualState = visualState;
     else
       delete state.previousVisualState;
+    rebuildGeneratedImageIndex(state);
   });
   logStage(config, "state_persisted", { key, imageCount: assets.imageIds.length, paragraphs: assets.paragraphs });
   const originalContent = String(target.content || "");
@@ -3444,18 +3880,25 @@ async function persistGeneration(input) {
     }
   });
   logStage(config, "message_updated", { chatId, messageId, imageIds: assets.imageIds, paragraphs: assets.paragraphs });
+  spindle.sendToFrontend({
+    type: "character_memory_updated",
+    chatId,
+    characterAppearance: committed.characterAppearance
+  }, userId);
   spindle.sendToFrontend({ type: "status", status: "Generated", record }, userId);
   return record;
 }
-async function commitImageReplacement(request, replacement, config, userId) {
+async function commitImageReplacement(request, replacement, config, userId, parsedForMemory) {
   let committedKey = "";
   let committedIndex = -1;
-  const state = await updateState(request.chatId, userId, (current) => {
-    const located = locateGeneratedImage(current, request);
+  let committedRecord = null;
+  const state = await updateState(request.chatId, userId, async (current) => {
+    await migrateLegacyGeneratedRecords(request.chatId, current, userId);
+    const located = await locateStoredGeneratedImage(current, request, userId);
     committedKey = located.key;
     committedIndex = located.index;
     const record2 = located.record;
-    current.generated[located.key] = {
+    committedRecord = {
       ...record2,
       prompts: replaceAt(record2.prompts, located.index, replacement.prompt, ""),
       negativePrompts: replaceAt(record2.negativePrompts, located.index, replacement.negative, ""),
@@ -3472,8 +3915,12 @@ async function commitImageReplacement(request, replacement, config, userId) {
       imageIds: replaceAt(record2.imageIds, located.index, replacement.imageId, ""),
       imageUrls: replaceAt(record2.imageUrls, located.index, replacement.imageUrl, "")
     };
+    current.generated[located.key] = await storeGeneratedRecord(request.chatId, located.key, committedRecord, userId);
+    if (parsedForMemory)
+      updateCache(current.characterAppearance, parsedForMemory);
+    rebuildGeneratedImageIndex(current);
   });
-  const record = generatedRecord(state.generated[committedKey]);
+  const record = committedRecord;
   if (!record || committedIndex < 0)
     throw new Error("The replacement image could not be persisted.");
   const messages = await spindle.chat.getMessages(request.chatId);
@@ -3489,9 +3936,16 @@ async function commitImageReplacement(request, replacement, config, userId) {
       inlayIllustratorGeneratedAt: record.createdAt
     }
   });
+  if (parsedForMemory) {
+    spindle.sendToFrontend({
+      type: "character_memory_updated",
+      chatId: request.chatId,
+      characterAppearance: state.characterAppearance
+    }, userId);
+  }
   return { record, index: committedIndex };
 }
-async function rerunStoredImage(request, rerunSidecar, userId) {
+async function rerunStoredImage(request, rerunSidecar, userId, preparedConfig) {
   if (!request.chatId)
     throw new Error("Open the image's chat first.");
   const actionKey = JSON.stringify([
@@ -3506,11 +3960,12 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
   if (!releaseAction)
     throw new Error("That image is already being regenerated.");
   try {
-    const config = await getConfig(userId);
+    const config = preparedConfig || await getConfig(userId);
     const initialState = await getState(request.chatId, userId);
-    const located = locateGeneratedImage(initialState, request);
+    const located = await locateStoredGeneratedImage(initialState, request, userId);
     const imageConnection = await resolveImageConnection(config, userId);
     let replacement;
+    let selectionForMemory;
     if (!rerunSidecar) {
       const corePrompt = located.record.corePrompts?.[located.index] || "";
       const promptFormat = located.record.promptFormats?.[located.index] || (config.promptStyle === "default" ? "legacy" : "ordered");
@@ -3580,10 +4035,11 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
         usedCreativeConceptIds: previousConceptHistory,
         userId
       });
+      selectionForMemory = selection.parsed;
       const entry = selection.selected[0];
       if (!entry)
         throw new Error("The sidecar returned no usable replacement prompt.");
-      const stage = await prepareAndDispatchImages(request.chatId, [entry], singleConfig, userId);
+      const stage = await prepareAndDispatchImages(request.chatId, [entry], singleConfig, userId, Promise.resolve(imageConnection));
       const job = stage.jobs[0];
       const result = stage.results[0];
       if (!job || !result)
@@ -3592,7 +4048,6 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
       const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
       if (!imageUrl)
         throw new Error("The image provider returned no replacement image.");
-      await persistCharacterMemory(request.chatId, selection.parsed, singleConfig, userId);
       replacement = {
         prompt: job.prompt,
         negative: job.negative,
@@ -3610,7 +4065,7 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
         imageUrl
       };
     }
-    const committed = await commitImageReplacement(request, replacement, config, userId);
+    const committed = await commitImageReplacement(request, replacement, config, userId, rerunSidecar ? selectionForMemory : undefined);
     logStage(config, rerunSidecar ? "image_sidecar_rerun_done" : "image_reroll_done", {
       chatId: request.chatId,
       messageId: committed.record.messageId,
@@ -3622,14 +4077,15 @@ async function rerunStoredImage(request, rerunSidecar, userId) {
     releaseAction();
   }
 }
-async function generateForMessage(chatId, messageId, content, userId) {
-  const config = await getConfig(userId);
+async function generateForMessage(chatId, messageId, content, userId, prepared) {
+  const generationStartedAt = Date.now();
+  const config = prepared?.config || await getConfig(userId);
   logStage(config, "request_received", { chatId, messageId, contentLength: content.length, enabled: config.enabled, autoGenerate: config.autoGenerate });
   if (!config.enabled) {
     logStage(config, "request_skipped", { reason: "disabled", chatId, messageId });
     return;
   }
-  const messages = await spindle.chat.getMessages(chatId);
+  const messages = prepared?.messages || await spindle.chat.getMessages(chatId);
   const target = messages.find((message) => message.id === messageId);
   logStage(config, "target_checked", {
     found: Boolean(target),
@@ -3663,13 +4119,27 @@ async function generateForMessage(chatId, messageId, content, userId) {
     });
     if (paragraphs.length === 0)
       throw new Error("No usable paragraphs found for image parsing.");
+    const imageConnectionPromise = resolveImageConnection(config, userId);
+    imageConnectionPromise.catch(() => {
+      return;
+    });
     const { parsed, selected } = await parseAndSelectPrompts({ chatId, messageId, messages, paragraphs, state, config, userId });
-    await persistCharacterMemory(chatId, parsed, config, userId);
     logParsedSelection(parsed, selected, paragraphs, config);
-    const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId);
-    const assets = collectImageResults(imageStage, config);
-    const visualState = buildPreviousVisualState(parsed, imageStage.jobs.map((job) => job.parserParagraph).filter((paragraph) => Number.isFinite(paragraph)));
-    await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, visualState, config, userId });
+    try {
+      const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId, imageConnectionPromise);
+      const assets = collectImageResults(imageStage, config);
+      const visualState = buildPreviousVisualState(parsed, imageStage.jobs.map((job) => job.parserParagraph).filter((paragraph) => Number.isFinite(paragraph)));
+      await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, visualState, config, userId });
+      logStage(config, "generation_pipeline_done", {
+        chatId,
+        messageId,
+        imageCount: assets.imageIds.length,
+        elapsedMs: Date.now() - generationStartedAt
+      });
+    } catch (error) {
+      await persistCharacterMemory(chatId, parsed, config, userId);
+      throw error;
+    }
   } finally {
     releaseGeneration();
   }
@@ -3716,7 +4186,7 @@ spindle.on("GENERATION_ENDED", async (payload, userId) => {
       return;
     if (payload.generationType === "continue" || payload.generationType === "impersonate")
       return;
-    await generateForMessage(payload.chatId, payload.messageId, payload.content, userId);
+    await generateForMessage(payload.chatId, payload.messageId, payload.content, userId, { config });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logStage(configForError || { debugLogging: true }, "auto_generation_error", { error: message }, "error");
@@ -3733,7 +4203,7 @@ spindle.onFrontendMessage(async (payload, userId) => {
       configForError = config;
       const chatId = String(message.chatId || "");
       logStage(config, "frontend_get_state", { chatId: chatId || null });
-      await sendState(userId, chatId);
+      await sendState(userId, chatId, config);
     } else if (message.type === "set_config") {
       const next = await setConfig(message.patch || {}, userId);
       configForError = next;
@@ -3785,7 +4255,35 @@ spindle.onFrontendMessage(async (payload, userId) => {
       if (!target)
         throw new Error("No assistant message found.");
       spindle.sendToFrontend({ type: "status", status: "Generating..." }, userId);
-      await generateForMessage(chatId, target.id, target.content, userId);
+      await generateForMessage(chatId, target.id, target.content, userId, {
+        config,
+        messages
+      });
+    } else if (message.type === "get_inlay_image_details") {
+      const request = {
+        chatId: String(message.chatId || ""),
+        messageId: String(message.messageId || "") || undefined,
+        swipeId: Number.isInteger(Number(message.swipeId)) ? Number(message.swipeId) : undefined,
+        imageIndex: Number.isInteger(Number(message.imageIndex)) ? Number(message.imageIndex) : undefined,
+        imageId: String(message.imageId || "") || undefined,
+        imageUrl: String(message.imageUrl || "") || undefined
+      };
+      try {
+        const details = await getStoredImageDetails(request, userId);
+        spindle.sendToFrontend({
+          type: "inlay_image_details_result",
+          requestId: String(message.requestId || ""),
+          ok: true,
+          ...details
+        }, userId);
+      } catch (error) {
+        spindle.sendToFrontend({
+          type: "inlay_image_details_result",
+          requestId: String(message.requestId || ""),
+          ok: false,
+          error: error instanceof Error ? error.message : String(error)
+        }, userId);
+      }
     } else if (message.type === "reroll_image" || message.type === "rerun_image_sidecar") {
       const config = await getConfig(userId);
       configForError = config;
@@ -3805,7 +4303,7 @@ spindle.onFrontendMessage(async (payload, userId) => {
       const rerunSidecar = message.type === "rerun_image_sidecar";
       const actionLabel = rerunSidecar ? "Rerunning sidecar..." : "Rerolling image...";
       spindle.sendToFrontend({ type: "status", status: actionLabel }, userId);
-      const result = await rerunStoredImage(request, rerunSidecar, userId);
+      const result = await rerunStoredImage(request, rerunSidecar, userId, config);
       spindle.sendToFrontend({
         type: "inlay_image_action_result",
         requestId: String(message.requestId || ""),

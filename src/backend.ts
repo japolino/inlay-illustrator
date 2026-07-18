@@ -1,6 +1,11 @@
 import { DEFAULT_CONFIG, normalizeConfig, type Config } from "./shared/config.js";
 import { isOwnMessage } from "./backend/context.js";
-import { generateForMessage, rerunStoredImage, type StoredImageActionRequest } from "./backend/generation.js";
+import {
+  generateForMessage,
+  getStoredImageDetails,
+  rerunStoredImage,
+  type StoredImageActionRequest
+} from "./backend/generation.js";
 import { prepareAndDispatchImageJobs, rerollImageParameters } from "./backend/images.js";
 import { stripInlayContent, stripInlayFromMessages } from "./backend/inlay-content.js";
 import { logStage } from "./backend/logging.js";
@@ -64,7 +69,7 @@ spindle.on("GENERATION_ENDED", async (payload, userId) => {
     });
     if (!config.enabled || !config.autoGenerate || payload.error || !payload.messageId || !payload.content) return;
     if (payload.generationType === "continue" || payload.generationType === "impersonate") return;
-    await generateForMessage(payload.chatId, payload.messageId, payload.content, userId);
+    await generateForMessage(payload.chatId, payload.messageId, payload.content, userId, { config });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logStage(configForError || { debugLogging: true }, "auto_generation_error", { error: message }, "error");
@@ -82,7 +87,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       configForError = config;
       const chatId = String(message.chatId || "");
       logStage(config, "frontend_get_state", { chatId: chatId || null });
-      await sendState(userId, chatId);
+      await sendState(userId, chatId, config);
     } else if (message.type === "set_config") {
       const next = await setConfig((message.patch || {}) as Partial<Config>, userId);
       configForError = next;
@@ -130,7 +135,35 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       const target = [...messages].reverse().find((candidate) => candidate.role === "assistant" && !isOwnMessage(candidate));
       if (!target) throw new Error("No assistant message found.");
       spindle.sendToFrontend({ type: "status", status: "Generating..." }, userId);
-      await generateForMessage(chatId, target.id, target.content, userId);
+      await generateForMessage(chatId, target.id, target.content, userId, {
+        config,
+        messages: messages as import("./backend/types.js").ChatMessage[]
+      });
+    } else if (message.type === "get_inlay_image_details") {
+      const request: StoredImageActionRequest = {
+        chatId: String(message.chatId || ""),
+        messageId: String(message.messageId || "") || undefined,
+        swipeId: Number.isInteger(Number(message.swipeId)) ? Number(message.swipeId) : undefined,
+        imageIndex: Number.isInteger(Number(message.imageIndex)) ? Number(message.imageIndex) : undefined,
+        imageId: String(message.imageId || "") || undefined,
+        imageUrl: String(message.imageUrl || "") || undefined
+      };
+      try {
+        const details = await getStoredImageDetails(request, userId);
+        spindle.sendToFrontend({
+          type: "inlay_image_details_result",
+          requestId: String(message.requestId || ""),
+          ok: true,
+          ...details
+        }, userId);
+      } catch (error) {
+        spindle.sendToFrontend({
+          type: "inlay_image_details_result",
+          requestId: String(message.requestId || ""),
+          ok: false,
+          error: error instanceof Error ? error.message : String(error)
+        }, userId);
+      }
     } else if (message.type === "reroll_image" || message.type === "rerun_image_sidecar") {
       const config = await getConfig(userId);
       configForError = config;
@@ -149,7 +182,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       const rerunSidecar = message.type === "rerun_image_sidecar";
       const actionLabel = rerunSidecar ? "Rerunning sidecar..." : "Rerolling image...";
       spindle.sendToFrontend({ type: "status", status: actionLabel }, userId);
-      const result = await rerunStoredImage(request, rerunSidecar, userId);
+      const result = await rerunStoredImage(request, rerunSidecar, userId, config);
       spindle.sendToFrontend({
         type: "inlay_image_action_result",
         requestId: String(message.requestId || ""),

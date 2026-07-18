@@ -2,7 +2,7 @@
 var DEFAULT_CONFIG = {
   enabled: true,
   autoGenerate: true,
-  debugLogging: true,
+  debugLogging: false,
   adaptiveMode: false,
   perspectiveMode: "dynamic",
   parserConnectionId: null,
@@ -922,6 +922,7 @@ function appendLightboxContent(root, image, details, onAction) {
 function installInlayLightbox(ctx) {
   let activeModal = null;
   let activeRequest = null;
+  let activeDetailsRequest = null;
   disableNativeInlayLightboxes(document);
   const observer = new MutationObserver(() => disableNativeInlayLightboxes(document));
   observer.observe(document.documentElement, { childList: true, subtree: true });
@@ -929,6 +930,13 @@ function installInlayLightbox(ctx) {
     if (!payload || typeof payload !== "object")
       return;
     const result = payload;
+    if (result.type === "inlay_image_details_result" && String(result.requestId || "") === activeDetailsRequest?.id) {
+      if (result.ok === true) {
+        activeDetailsRequest.render(resolveInlayDetails(typeof result.prompt === "string" ? result.prompt : null, null, typeof result.negativePrompt === "string" ? result.negativePrompt : null, null, typeof result.perspectiveMode === "string" ? result.perspectiveMode : null, typeof result.perspectiveSource === "string" ? result.perspectiveSource : null, typeof result.creativeConcept === "string" ? result.creativeConcept : null));
+      }
+      activeDetailsRequest = null;
+      return;
+    }
     if (result.type !== "inlay_image_action_result" || String(result.requestId || "") !== activeRequest?.id)
       return;
     if (result.ok === true) {
@@ -959,7 +967,7 @@ function installInlayLightbox(ctx) {
         maxHeight: Math.max(480, window.innerHeight - 48)
       });
       activeModal = modal;
-      appendLightboxContent(modal.root, image, details, (operation, controls) => {
+      const render = (nextDetails) => appendLightboxContent(modal.root, image, nextDetails, (operation, controls) => {
         let chatId = actionTarget.chatId || "";
         if (!chatId) {
           try {
@@ -985,11 +993,29 @@ function installInlayLightbox(ctx) {
           chatId
         });
       });
+      render(details);
+      if (!details.prompt && (actionTarget.imageId || actionTarget.messageId)) {
+        let chatId = actionTarget.chatId || "";
+        if (!chatId) {
+          try {
+            chatId = String(ctx.getActiveChat().chatId || "");
+          } catch {
+            chatId = "";
+          }
+        }
+        if (chatId) {
+          const requestId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `inlay-details-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          activeDetailsRequest = { id: requestId, modal, render };
+          ctx.sendToBackend({ type: "get_inlay_image_details", requestId, ...actionTarget, chatId });
+        }
+      }
       modal.onDismiss(() => {
         if (activeModal === modal)
           activeModal = null;
         if (activeRequest?.modal === modal)
           activeRequest = null;
+        if (activeDetailsRequest?.modal === modal)
+          activeDetailsRequest = null;
       });
     } catch {
       return;

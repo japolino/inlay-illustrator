@@ -62,7 +62,7 @@ describe("inlay rendering", () => {
     expect(rendered).toContain("max-height:63vh");
   });
 
-  test("escapes URL and prompt HTML and neutralizes prompt code fences", () => {
+  test("escapes image metadata without embedding prompt text in the chat", () => {
     const rendered = renderInlaidMessage(
       "Paragraph.",
       {
@@ -74,12 +74,12 @@ describe("inlay rendering", () => {
     );
 
     expect(rendered).toContain('src="/image?name=&quot;quoted&quot;&amp;tag=&lt;unsafe&gt;"');
-    expect(rendered).toContain("look &quot;here&quot; &amp; &lt;script&gt;alert(1)&lt;/script&gt; '''danger'''");
+    expect(rendered).not.toContain("look &quot;here&quot;");
     expect(rendered).not.toContain("<script>");
     expect(rendered).not.toContain("```");
   });
 
-  test("keeps multiline prompts inside one raw HTML block for image and lightbox rendering", () => {
+  test("keeps a compact one-line image block and stores only lookup metadata", () => {
     const rendered = renderInlaidMessage(
       "Paragraph.",
       {
@@ -102,20 +102,18 @@ describe("inlay rendering", () => {
     const block = rendered.slice(blockStart, blockEnd);
 
     expect(block.split("\n")).toHaveLength(1);
-    expect(block).toContain("quality tags,&#10;&#10;1girl,&#10;&#10;The girl turns toward the viewer.");
+    expect(block).not.toContain("quality tags");
     expect(block).not.toContain("data-lightbox");
-    expect(block).toContain("data-inlay-illustrator-prompt=");
-    expect(block).toContain('data-inlay-illustrator-negative-prompt="lowres, bad anatomy"');
-    expect(block).toContain('data-inlay-illustrator-perspective="creative"');
-    expect(block).toContain('data-inlay-illustrator-perspective-source="adaptive"');
-    expect(block).toContain('data-inlay-illustrator-concept="Eye gap: one red eye framed between two fingers"');
+    expect(block).not.toContain("data-inlay-illustrator-prompt=");
+    expect(block).not.toContain("data-inlay-illustrator-negative-prompt=");
+    expect(block).not.toContain("data-inlay-illustrator-perspective=");
     expect(block).toContain('data-inlay-illustrator-image-id="image-1"');
     expect(block).toContain('data-inlay-illustrator-chat-id="chat-1"');
     expect(block).toContain('data-inlay-illustrator-message-id="message-1"');
     expect(block).toContain('data-inlay-illustrator-swipe-id="2"');
     expect(block).toContain('data-inlay-illustrator-image-index="0"');
-    expect(block).toContain('<pre class="inlay-illustrator-prompt" hidden>');
-    expect(block).toContain('<pre class="inlay-illustrator-negative-prompt" hidden>lowres, bad anatomy</pre>');
+    expect(block).not.toContain('<pre class="inlay-illustrator-prompt"');
+    expect(block).not.toContain('<pre class="inlay-illustrator-negative-prompt"');
   });
 
   test("encodes provider image IDs for the Lumiverse result route", () => {

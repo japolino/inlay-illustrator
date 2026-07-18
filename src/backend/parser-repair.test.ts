@@ -3,7 +3,7 @@ import { DEFAULT_CONFIG } from "../shared/config.js";
 import { generateCreativeConcepts, parsePayloadWithRepair, repairDynamicCameraDiversity } from "./parser.js";
 import type { ParserGenerationRequest } from "./types.js";
 
-type RawRequest = { messages: ParserGenerationRequest["messages"] };
+type RawRequest = { messages: ParserGenerationRequest["messages"]; parameters?: Record<string, unknown> };
 
 const requests: RawRequest[] = [];
 const responses: unknown[] = [];
@@ -50,6 +50,24 @@ describe("parser JSON recovery", () => {
       scenes: [{ place: "garden", shots: [{ paragraph: "P2", camera: "close-up" }] }]
     });
     expect(requests).toHaveLength(1);
+    expect(requests[0].parameters?.response_format).toEqual({ type: "json_object" });
+    expect(requests[0].parameters?.max_tokens).toBeGreaterThan(0);
+  });
+
+  test("retries once without structured output when a compatible proxy rejects the parameter", async () => {
+    const unsupportedConnection = { ...connection, provider: "custom", model: "gemini-unsupported-test" };
+    const unsupportedConfig = { ...config, parserModel: "" };
+    responses.push(
+      Promise.reject(new Error("400 invalid response_format argument")),
+      { content: '{"scenes":[{"paragraph":1,"camera":"portrait"}]}' }
+    );
+
+    const parsed = await parsePayloadWithRepair(unsupportedConnection, unsupportedConfig, messages);
+
+    expect(parsed.scenes).toHaveLength(1);
+    expect(requests).toHaveLength(2);
+    expect(requests[0].parameters?.response_format).toEqual({ type: "json_object" });
+    expect(requests[1].parameters?.response_format).toBeUndefined();
   });
 
   test("collects standalone shot objects when the response omits the top-level scenes wrapper", async () => {
@@ -218,7 +236,12 @@ describe("parser JSON recovery", () => {
   test("logs numeric parser usage without logging response content", async () => {
     responses.push({
       content: '{"scenes":[{"paragraph":1,"camera":"portrait"}]}',
-      usage: { prompt_tokens: 321, completion_tokens: 45, total_tokens: 366 }
+      usage: {
+        prompt_tokens: 321,
+        completion_tokens: 45,
+        total_tokens: 366,
+        prompt_tokens_details: { cached_tokens: 256 }
+      }
     });
 
     await parsePayloadWithRepair(connection, { ...config, debugLogging: true }, messages);
@@ -226,6 +249,7 @@ describe("parser JSON recovery", () => {
     const completionLog = infoLogs.find((message) => message.includes("parser_llm_done")) || "";
     expect(completionLog).toContain('"prompt_tokens":321');
     expect(completionLog).toContain('"total_tokens":366');
+    expect(completionLog).toContain('"cached_tokens":256');
     expect(completionLog).not.toContain('"camera":"portrait"');
   });
 });
@@ -271,19 +295,13 @@ describe("Creative ideation sidecar stage", () => {
 });
 
 describe("camera diversity repair stage", () => {
-  test("repairs exact Dynamic camera collisions with one targeted call", async () => {
+  test("repairs exact Dynamic camera collisions locally before using the provider", async () => {
     const duplicatePayload = {
       scenes: [{ shots: [
         { paragraph: 1, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level", perspective: "three-quarter view", focus: [] }, action: "first" },
         { paragraph: 2, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level", perspective: "three-quarter view", focus: [] }, action: "second" }
       ] }]
     };
-    const repairedPayload = structuredClone(duplicatePayload);
-    const repairedShots = repairedPayload.scenes[0].shots;
-    repairedShots[0].action = "must not leak";
-    repairedShots[1].camera = { framing: "medium shot", angle: "eye level", perspective: "straight-on", focus: [] };
-    responses.push({ content: JSON.stringify(repairedPayload) });
-
     const repaired = await repairDynamicCameraDiversity(
       connection,
       { ...config, adaptiveMode: true },
@@ -291,17 +309,20 @@ describe("camera diversity repair stage", () => {
       "[P1]\nFirst beat.\n\n[P2]\nSecond beat."
     );
 
-    expect(requests).toHaveLength(1);
-    expect(requests[0].messages[0].content).toContain("Repair only the repeated Dynamic camera objects");
+    expect(requests).toHaveLength(0);
     expect(repaired.scenes?.[0].shots?.[0].action).toBe("first");
-    expect(repaired.scenes?.[0].shots?.[1].camera).toEqual(repairedShots[1].camera);
+    expect(repaired.scenes?.[0].shots?.[1].camera).toMatchObject({
+      angle: "eye level",
+      perspective: "three-quarter view"
+    });
+    expect((repaired.scenes?.[0].shots?.[1].camera as { framing?: string } | undefined)?.framing).not.toBe("close-up");
   });
 
   test("fails open when the targeted repair provider errors", async () => {
     const original = {
       scenes: [{ shots: [
-        { paragraph: 1, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level", perspective: "straight-on" } },
-        { paragraph: 2, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level", perspective: "straight-on" } }
+        { paragraph: 1, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level" } },
+        { paragraph: 2, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level" } }
       ] }]
     };
     responses.push(Promise.reject(new Error("proxy timeout")));

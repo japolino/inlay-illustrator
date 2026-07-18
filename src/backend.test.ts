@@ -168,6 +168,49 @@ describe("configuration frontend messages", () => {
   });
 });
 
+describe("lightbox detail lookup", () => {
+  test("returns prompt metadata from storage for compact inlays", async () => {
+    storedFiles.set(storageKey("states/chat-1.json", "user-1"), JSON.stringify({
+      characterAppearance: {},
+      generated: {
+        record: {
+          chatId: "chat-1",
+          messageId: "message-1",
+          swipeId: 0,
+          prompts: ["positive prompt"],
+          negativePrompts: ["negative prompt"],
+          perspectiveModes: ["creative"],
+          perspectiveSources: ["adaptive"],
+          creativeConcepts: [{ anchor: "shadow", concept: "shadow across the wall" }],
+          paragraphs: [1],
+          imageIds: ["image-1"],
+          imageUrls: ["/api/v1/image-gen/results/image-1"],
+          rawJson: { scenes: [] },
+          createdAt: "2026-07-18T00:00:00.000Z"
+        }
+      }
+    }));
+
+    await frontendMessageHandler({
+      type: "get_inlay_image_details",
+      requestId: "details-1",
+      chatId: "chat-1",
+      imageId: "image-1"
+    }, "user-1");
+
+    expect(frontendMessages).toEqual([{
+      type: "inlay_image_details_result",
+      requestId: "details-1",
+      ok: true,
+      prompt: "positive prompt",
+      negativePrompt: "negative prompt",
+      perspectiveMode: "creative",
+      perspectiveSource: "adaptive",
+      creativeConcept: "shadow: shadow across the wall"
+    }]);
+  });
+});
+
 describe("primary-model context interceptor", () => {
   test("runs for every generation flow and preserves non-content message data", async () => {
     const inlay = '<!-- inlay_illustrator -->\n<div data-inlay-illustrator="true"><img src="/generated.png" data-inlay-illustrator-prompt="secret"><pre class="inlay-illustrator-prompt" hidden>secret</pre></div>';

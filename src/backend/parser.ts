@@ -5,13 +5,28 @@ import {
   parseCreativeConcepts
 } from "./creative.js";
 import { parserInstruction } from "./instructions.js";
-import { auditDynamicCameraDiversity, cameraRepairInstruction, mergeDynamicCameraRepair } from "./camera-diversity.js";
+import {
+  auditDynamicCameraDiversity,
+  cameraRepairInstruction,
+  mergeDynamicCameraRepair,
+  repairDynamicCameraDiversityLocally
+} from "./camera-diversity.js";
 import { logStage } from "./logging.js";
 import { normalizeScenePayload, recoverSceneParagraphs } from "./scenes.js";
 import type { CreativeConcept, ParsedPayload, ParserConnection, ParserContext, ParserGenerationRequest, PreparedParagraph, SceneJson, ShotJson } from "./types.js";
 import { asRecord, cleanString, compactBlock, keysOf } from "./utils.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
+
+const parserConnectionCache = new Map<string, { expiresAt: number; connection: ParserConnection }>();
+
+function cacheParserConnection(key: string, connection: ParserConnection): void {
+  if (parserConnectionCache.size >= 32) {
+    const oldest = parserConnectionCache.keys().next().value;
+    if (typeof oldest === "string") parserConnectionCache.delete(oldest);
+  }
+  parserConnectionCache.set(key, { expiresAt: Date.now() + 5000, connection });
+}
 
 export { parserInstruction };
 
@@ -57,11 +72,25 @@ function extractText(result: unknown): string {
 function extractUsage(result: unknown): Record<string, number> {
   const usage = asRecord(asRecord(result).usage);
   const output: Record<string, number> = {};
-  for (const key of ["prompt_tokens", "completion_tokens", "total_tokens"]) {
+  for (const key of ["prompt_tokens", "completion_tokens", "total_tokens", "total_cached_tokens",
+    "prompt_cache_hit_tokens", "prompt_cache_miss_tokens", "cache_write_tokens"]) {
     const value = Number(usage[key]);
     if (Number.isFinite(value)) output[key] = value;
   }
+  const promptDetails = asRecord(usage.prompt_tokens_details);
+  for (const key of ["cached_tokens", "cache_write_tokens"]) {
+    const value = Number(promptDetails[key]);
+    if (Number.isFinite(value)) output[key] = value;
+  }
   return output;
+}
+
+function extractFinishReason(result: unknown): string {
+  const object = asRecord(result);
+  if (typeof object.finish_reason === "string") return object.finish_reason;
+  const choices = Array.isArray(object.choices) ? object.choices : [];
+  const first = asRecord(choices[0]);
+  return typeof first.finish_reason === "string" ? first.finish_reason : "";
 }
 
 const FUZZY_KEYS = [
@@ -279,6 +308,9 @@ function structuralRepairInstruction(issues: string[], allowedParagraphs: number
 export async function resolveParserConnection(config: Config, userId?: string): Promise<ParserConnection> {
   logStage(config, "parser_connection_resolve_start", { configuredConnectionId: config.parserConnectionId, modelOverride: Boolean(config.parserModel) });
   if (!config.parserConnectionId) throw new Error("Select a parser connection before generating.");
+  const cacheKey = JSON.stringify([userId ?? null, config.parserConnectionId]);
+  const cached = parserConnectionCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.connection;
   const connection = await spindle.connections.get(config.parserConnectionId, userId);
   if (!connection) throw new Error("Parser connection not found.");
   logStage(config, "parser_connection_resolved", {
@@ -288,40 +320,109 @@ export async function resolveParserConnection(config: Config, userId?: string): 
     connectionModel: connection.model,
     effectiveModel: config.parserModel || connection.model
   });
-  return { id: connection.id, name: connection.name, provider: connection.provider, model: connection.model };
+  const resolved = { id: connection.id, name: connection.name, provider: connection.provider, model: connection.model };
+  cacheParserConnection(cacheKey, resolved);
+  return resolved;
+}
+
+type ParserStage = "main" | "ideation" | "preprocess" | "repair" | "camera";
+const unsupportedStructuredOutput = new Set<string>();
+
+function parserStageParameters(
+  connection: ParserConnection,
+  config: Config,
+  stage: ParserStage,
+  structured = stage !== "preprocess"
+): { parameters: Record<string, unknown>; injectedStructuredOutput: boolean } {
+  const parameters = { ...config.parserParameters };
+  if (parameters.max_tokens === undefined && parameters.max_completion_tokens === undefined) {
+    const budgets: Record<ParserStage, number> = {
+      main: Math.min(7000, 1800 + Math.max(1, config.maxImages) * 900),
+      ideation: Math.min(5000, 1200 + Math.max(1, config.maxImages) * 700),
+      preprocess: 2400,
+      repair: Math.min(6000, 1600 + Math.max(1, config.maxImages) * 800),
+      camera: 1800
+    };
+    parameters.max_tokens = budgets[stage];
+  }
+  const capabilityKey = JSON.stringify([connection.provider, config.parserModel || connection.model]);
+  const providerModel = `${connection.provider} ${config.parserModel || connection.model}`.toLowerCase();
+  const canRequestJson = /openai|gpt-|gemini|deepseek/.test(providerModel);
+  const injectedStructuredOutput = structured && canRequestJson && parameters.response_format === undefined
+    && !unsupportedStructuredOutput.has(capabilityKey);
+  if (injectedStructuredOutput) parameters.response_format = { type: "json_object" };
+  return { parameters, injectedStructuredOutput };
 }
 
 async function generateParserText(
   connection: ParserConnection,
   config: Config,
   messages: ParserGenerationRequest["messages"],
-  userId?: string
+  userId?: string,
+  stage: ParserStage = "main"
 ): Promise<string> {
+  const startedAt = Date.now();
+  const selected = parserStageParameters(connection, config, stage);
+  const run = async (parameters: Record<string, unknown>): Promise<unknown> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 180_000);
+    try {
+      return await spindle.generate.raw({
+        type: "raw",
+        provider: connection.provider,
+        model: config.parserModel || connection.model,
+        connection_id: connection.id,
+        messages,
+        parameters,
+        reasoning: { source: "off" },
+        userId,
+        signal: controller.signal
+      } as ParserGenerationRequest);
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
   try {
     logStage(config, "parser_llm_start", {
       provider: connection.provider,
       model: config.parserModel || connection.model,
       connectionId: connection.id,
-      parameterKeys: keysOf(config.parserParameters),
+      stage,
+      parameterKeys: keysOf(selected.parameters),
       messageCount: messages.length,
       messageLengths: messages.map((message) => message.content.length)
     });
-    const result = await spindle.generate.raw({
-      type: "raw",
-      provider: connection.provider,
-      model: config.parserModel || connection.model,
-      connection_id: connection.id,
-      messages,
-      parameters: config.parserParameters,
-      reasoning: { source: "off" },
-      userId
-    } as ParserGenerationRequest);
+    let result: unknown;
+    try {
+      result = await run(selected.parameters);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      if (!selected.injectedStructuredOutput || !/\b400\b|invalid.*(?:response|argument|format)|response_format/i.test(reason)) throw error;
+      const capabilityKey = JSON.stringify([connection.provider, config.parserModel || connection.model]);
+      unsupportedStructuredOutput.add(capabilityKey);
+      const fallbackParameters = { ...selected.parameters };
+      delete fallbackParameters.response_format;
+      logStage(config, "parser_structured_output_fallback", { stage, reason }, "warn");
+      result = await run(fallbackParameters);
+    }
     const text = extractText(result);
     const usage = extractUsage(result);
-    logStage(config, "parser_llm_done", { outputLength: text.length, ...(Object.keys(usage).length ? { usage } : {}) });
+    const finishReason = extractFinishReason(result);
+    logStage(config, "parser_llm_done", {
+      stage,
+      outputLength: text.length,
+      elapsedMs: Date.now() - startedAt,
+      ...(finishReason ? { finishReason } : {}),
+      ...(Object.keys(usage).length ? { usage } : {})
+    });
+    if (finishReason === "length" && !text.trim()) throw new Error("Parser response was truncated before producing JSON.");
     return text;
   } catch (error) {
-    logStage(config, "parser_llm_error", { error: error instanceof Error ? error.message : String(error) }, "error");
+    logStage(config, "parser_llm_error", {
+      stage,
+      elapsedMs: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : String(error)
+    }, "error");
     throw new Error(`Parser generation failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -346,7 +447,7 @@ export async function generateCreativeConcepts(
       continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext),
       creativeIdeationRequest(targetSource),
       context.override
-    ), userId);
+    ), userId, "ideation");
     const concepts = parseCreativeConcepts(raw, paragraphs, config);
     if (concepts.length === 0) {
       logStage(config, "creative_ideation_fallback", { reason: "invalid_or_empty_slate", outputLength: raw.length }, "warn");
@@ -464,7 +565,7 @@ export async function preprocessTargetParagraphs(
       continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext),
       preprocessingUserRequest(rawTarget),
       context.override
-    ), userId);
+    ), userId, "preprocess");
     const selection = validatePreprocessedTarget(summary, paragraphs, config);
     if (selection) {
       logStage(config, "preprocessing_done", {
@@ -516,7 +617,7 @@ export async function parsePayloadWithRepair(
     const repaired = await generateParserText(parserConnection, config, [
       { role: "system", content: repairSystem },
       { role: "user", content: repairInput }
-    ], userId);
+    ], userId, "repair");
     if (!repaired.trim()) throw new Error("Parser returned an empty repair response.");
     const parsed = recoverSceneParagraphs(parseJson(repaired), fallbackParagraph);
     const structuralIssues = structuralPayloadIssues(parsed, allowedParagraphs);
@@ -542,6 +643,16 @@ export async function repairDynamicCameraDiversity(
   const audit = auditDynamicCameraDiversity(payload, config);
   logStage(config, "camera_diversity_audit", audit);
   if (audit.exactCollisions.length === 0) return payload;
+  const local = repairDynamicCameraDiversityLocally(payload, config, audit);
+  if (local) {
+    logStage(config, "camera_diversity_repaired", {
+      method: "local",
+      before: audit.signatures,
+      after: auditDynamicCameraDiversity(local, config).signatures,
+      remainingExactCollisions: 0
+    });
+    return local;
+  }
   try {
     const raw = await generateParserText(parserConnection, config, [
       { role: "system", content: cameraRepairInstruction(audit) },
@@ -554,7 +665,7 @@ export async function repairDynamicCameraDiversity(
           JSON.stringify(payload)
         ].join("\n\n")
       }
-    ], userId);
+    ], userId, "camera");
     if (!raw.trim()) throw new Error("empty camera repair response");
     const repaired = parseJson(raw);
     const merged = mergeDynamicCameraRepair(payload, repaired, config, audit);

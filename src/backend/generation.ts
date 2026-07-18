@@ -1,5 +1,11 @@
 import type { Config, PerspectiveMode } from "../shared/config.js";
-import { buildLorebookContextSnapshot, buildParserContext, isOwnMessage, type LorebookContextSnapshot } from "./context.js";
+import {
+  buildLorebookContextSnapshot,
+  buildParserContext,
+  isOwnMessage,
+  loadParserContextSources,
+  type LorebookContextSnapshot
+} from "./context.js";
 import {
   chooseCreativeConcepts,
   creativeConceptConstraint,
@@ -25,13 +31,22 @@ import {
 import { renderNegativeWithCurrentSelection, renderPrompt, renderPromptWithCurrentAffixes } from "./prompt.js";
 import { imageUrlFromId, renderInlaidMessage } from "./rendering.js";
 import { normalizeScenePayload, selectPromptEntries } from "./scenes.js";
-import { getConfig, getState, updateState } from "./storage.js";
+import {
+  getConfig,
+  getState,
+  loadGeneratedRecord,
+  migrateLegacyGeneratedRecords,
+  rebuildGeneratedImageIndex,
+  storeGeneratedRecord,
+  updateState
+} from "./storage.js";
 import { tryAcquireRuntimeLock } from "./runtime-lock.js";
 import type {
   CharacterJson,
   ChatMessage,
   CreativeConcept,
   GeneratedRecord,
+  ImageConnection,
   ParsedPayload,
   PreparedImageJob,
   PreparedParagraph,
@@ -64,7 +79,7 @@ type ImageAssets = {
   imageUrls: string[];
 };
 
-type ParseStageInput = {
+export type ParseStageInput = {
   chatId: string;
   messageId: string;
   messages: ChatMessage[];
@@ -96,6 +111,14 @@ export type StoredImageActionRequest = {
   imageIndex?: number;
   imageId?: string;
   imageUrl?: string;
+};
+
+export type StoredImageDetails = {
+  prompt: string;
+  negativePrompt: string;
+  perspectiveMode: PerspectiveMode | null;
+  perspectiveSource: "adaptive" | "manual" | null;
+  creativeConcept: string;
 };
 
 type LocatedGeneratedImage = { key: string; record: GeneratedRecord; index: number };
@@ -135,6 +158,60 @@ export function locateGeneratedImage(state: State, request: StoredImageActionReq
   throw new Error("The selected image is not present in this chat's generated-image history.");
 }
 
+async function locateStoredGeneratedImage(
+  state: State,
+  request: StoredImageActionRequest,
+  userId?: string,
+  hydrateWorkflows = true
+): Promise<LocatedGeneratedImage> {
+  const direct = request.imageId ? state.generatedImageIndex?.[`id:${request.imageId}`]
+    : request.imageUrl ? state.generatedImageIndex?.[`url:${request.imageUrl}`]
+      : undefined;
+  const exactKey = request.messageId && request.swipeId !== undefined
+    ? `${request.chatId}:${request.messageId}:${request.swipeId}`
+    : "";
+  const candidates = [...new Set([
+    direct?.key,
+    exactKey && state.generated[exactKey] ? exactKey : undefined,
+    ...Object.keys(state.generated)
+  ].filter((value): value is string => Boolean(value)))];
+  for (const key of candidates) {
+    const record = await loadGeneratedRecord(state.generated[key], userId, hydrateWorkflows);
+    if (!record || record.chatId !== request.chatId) continue;
+    if (request.messageId && record.messageId !== request.messageId) continue;
+    if (request.swipeId !== undefined && record.swipeId !== request.swipeId) continue;
+    const preferredIndex = direct?.key === key ? direct.index : request.imageIndex;
+    if (preferredIndex !== undefined && Number.isInteger(preferredIndex)
+      && preferredIndex >= 0 && preferredIndex < record.imageUrls.length) {
+      const idMatches = !request.imageId || record.imageIds?.[preferredIndex] === request.imageId;
+      const urlMatches = !request.imageUrl || sameImageUrl(record.imageUrls[preferredIndex] || "", request.imageUrl);
+      if (idMatches && urlMatches) return { key, record, index: preferredIndex };
+    }
+    const matchedIndex = record.imageUrls.findIndex((url, index) =>
+      (request.imageId && record.imageIds?.[index] === request.imageId)
+      || (request.imageUrl && sameImageUrl(url, request.imageUrl))
+    );
+    if (matchedIndex >= 0) return { key, record, index: matchedIndex };
+  }
+  throw new Error("The selected image is not present in this chat's generated-image history.");
+}
+
+export async function getStoredImageDetails(
+  request: StoredImageActionRequest,
+  userId?: string
+): Promise<StoredImageDetails> {
+  const state = await getState(request.chatId, userId);
+  const located = await locateStoredGeneratedImage(state, request, userId, false);
+  const concept = located.record.creativeConcepts?.[located.index];
+  return {
+    prompt: located.record.prompts[located.index] || "",
+    negativePrompt: located.record.negativePrompts?.[located.index] || "",
+    perspectiveMode: located.record.perspectiveModes?.[located.index] || null,
+    perspectiveSource: located.record.perspectiveSources?.[located.index] || null,
+    creativeConcept: concept ? `${concept.anchor}: ${concept.concept}` : ""
+  };
+}
+
 function replaceAt<T>(values: T[] | undefined, index: number, value: T, fallback: T): T[] {
   const next = [...(values || [])];
   while (next.length <= index) next.push(fallback);
@@ -150,9 +227,25 @@ export function compactLorebookNeedsFullRetry(payload: ParsedPayload, snapshot: 
     .some((value) => cleanString(value)));
 }
 
-async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSelection> {
+function retryClassification(error: unknown): "transient" | "context" | "terminal" {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/\b(?:401|403|404)\b|unauthori[sz]ed|forbidden|connection not found|select a parser connection/i.test(message)) {
+    return "terminal";
+  }
+  if (/\b(?:408|409|425|429|500|502|503|504|520|522|523|524|525)\b|timeout|timed out|handshake|temporar|rate limit/i.test(message)) {
+    return "transient";
+  }
+  if (/\b400\b.*(?:invalid argument|bad request)/i.test(message)) return "terminal";
+  return "context";
+}
+
+async function waitForParserRetry(attempt: number): Promise<void> {
+  const delay = Math.min(1500, 250 * (2 ** attempt)) + Math.floor(Math.random() * 125);
+  await new Promise<void>((resolve) => setTimeout(resolve, delay));
+}
+
+export async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSelection> {
   const { chatId, messageId, messages, paragraphs, state, config, userId } = input;
-  const parserConnection = await resolveParserConnection(config, userId);
   const targetIndex = Math.max(0, messages.findIndex((message) => message.id === messageId));
   let parsed: ParsedPayload | null = null;
   let selected: PromptEntry[] = [];
@@ -162,13 +255,18 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
   let ideationAttempted = false;
   let creativeTargetSource: string | null = null;
   const usedConceptIds = new Set(input.usedCreativeConceptIds || []);
-  const creativePipeline = config.perspectiveMode === "creative" || config.adaptiveMode;
-  const lorebookSnapshot = await buildLorebookContextSnapshot(
-    chatId,
-    paragraphs.map((paragraph) => paragraph.text).join("\n\n"),
-    config,
-    userId
-  );
+  const manualCreative = !config.adaptiveMode && config.perspectiveMode === "creative";
+  const creativePipeline = manualCreative || config.adaptiveMode;
+  const [parserConnection, lorebookSnapshot, contextSources] = await Promise.all([
+    resolveParserConnection(config, userId),
+    buildLorebookContextSnapshot(
+      chatId,
+      paragraphs.map((paragraph) => paragraph.text).join("\n\n"),
+      config,
+      userId
+    ),
+    loadParserContextSources(chatId, config, userId)
+  ]);
 
   for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
     try {
@@ -181,9 +279,10 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
         attempt,
         userId,
         lorebookSnapshot,
-        config.previousVisualStateEnabled ? state.previousVisualState : undefined
+        config.previousVisualStateEnabled ? state.previousVisualState : undefined,
+        contextSources
       );
-      if (creativePipeline && conceptSelections === null) {
+      if (manualCreative && conceptSelections === null) {
         if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
           const previousConcepts = conceptCandidates
             .filter((concept) => usedConceptIds.has(concept.id))
@@ -206,7 +305,7 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
       }
       if (creativePipeline && creativeTargetSource === null) {
         const candidateParagraphs = new Set(conceptCandidates.map((concept) => concept.paragraph));
-        if (config.preprocessingEnabled && candidateParagraphs.size > 0) {
+        if (manualCreative && config.preprocessingEnabled && candidateParagraphs.size > 0) {
           creativeTargetSource = formatTargetParagraphs(
             paragraphs.filter((paragraph) => candidateParagraphs.has(paragraph.parserIndex))
           );
@@ -225,7 +324,7 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
       const referenceContext = continuityReference(context.systemContext, context.recentContext);
       const userRequest = parserUserRequest(
         targetSource,
-        creativeConceptConstraint(conceptSelections || new Map(), config.adaptiveMode)
+        manualCreative ? creativeConceptConstraint(conceptSelections || new Map(), false) : ""
       );
       logStage(config, "parser_prompt_built", {
         attempt,
@@ -254,6 +353,40 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
         config.previousVisualStateEnabled ? state.previousVisualState : undefined
       );
       parsed = await repairDynamicCameraDiversity(parserConnection, config, parsed, targetSource, userId);
+      if (config.adaptiveMode) {
+        const creativeParagraphs = new Set(normalizeScenePayload(parsed)
+          .filter(({ shot }) => cleanString(shot.perspectiveMode).toLowerCase() === "creative")
+          .map(({ parserParagraph }) => parserParagraph));
+        if (creativeParagraphs.size > 0) {
+          const creativeParagraphEntries = paragraphs.filter((paragraph) => creativeParagraphs.has(paragraph.parserIndex));
+          if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
+            const previousConcepts = conceptCandidates
+              .filter((concept) => usedConceptIds.has(concept.id))
+              .map((concept) => concept.concept);
+            conceptCandidates = await generateCreativeConcepts(
+              parserConnection,
+              config,
+              creativeParagraphEntries,
+              formatTargetParagraphs(creativeParagraphEntries),
+              context,
+              previousConcepts,
+              userId
+            );
+            ideationAttempted = true;
+          }
+          conceptSelections = chooseCreativeConcepts(
+            conceptCandidates.filter((concept) => creativeParagraphs.has(concept.paragraph)),
+            usedConceptIds
+          );
+          if (conceptSelections.size === 0 && conceptCandidates.length > 0) {
+            conceptSelections = chooseCreativeConcepts(
+              conceptCandidates.filter((concept) => creativeParagraphs.has(concept.paragraph))
+            );
+          }
+        } else {
+          conceptSelections = new Map();
+        }
+      }
       selected = selectPromptEntries(parsed, paragraphs, config, conceptSelections || new Map(), conceptCandidates);
       if (!config.adaptiveMode && config.perspectiveMode === "creative" && (conceptSelections?.size || 0) > 0) {
         selected = selected.filter((entry) => Boolean(entry.creativeConcept));
@@ -265,13 +398,15 @@ async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSele
       break;
     } catch (error) {
       lastParserError = error;
+      const classification = retryClassification(error);
       logStage(
         config,
         "parser_attempt_failed",
-        { attempt, retries: config.parserRetries, error: error instanceof Error ? error.message : String(error) },
+        { attempt, retries: config.parserRetries, classification, error: error instanceof Error ? error.message : String(error) },
         attempt >= config.parserRetries ? "error" : "warn"
       );
-      if (attempt >= config.parserRetries) throw error;
+      if (attempt >= config.parserRetries || classification === "terminal") throw error;
+      if (classification === "transient") await waitForParserRetry(attempt);
     }
   }
   if (!parsed) throw new Error(lastParserError instanceof Error ? lastParserError.message : "Parser did not return usable prompts.");
@@ -325,9 +460,10 @@ async function prepareAndDispatchImages(
   chatId: string,
   selected: PromptEntry[],
   config: Config,
-  userId?: string
+  userId?: string,
+  preparedImageConnection?: Promise<ImageConnection | null>
 ): Promise<PreparedImageStage> {
-  const imageConnection = await resolveImageConnection(config, userId);
+  const imageConnection = await (preparedImageConnection || resolveImageConnection(config, userId));
   const preparationStartedAt = Date.now();
   logStage(config, "image_generation_preparation_start", {
     total: selected.length,
@@ -487,10 +623,14 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
     rawJson: parsed,
     createdAt: new Date().toISOString()
   };
-  await updateState(chatId, userId, (state) => {
-    state.generated[key] = record;
+  const reference = await storeGeneratedRecord(chatId, key, record, userId);
+  const committed = await updateState(chatId, userId, async (state) => {
+    await migrateLegacyGeneratedRecords(chatId, state, userId);
+    updateCache(state.characterAppearance, parsed);
+    state.generated[key] = reference;
     if (visualState) state.previousVisualState = visualState;
     else delete state.previousVisualState;
+    rebuildGeneratedImageIndex(state);
   });
   logStage(config, "state_persisted", { key, imageCount: assets.imageIds.length, paragraphs: assets.paragraphs });
   const originalContent = String(target.content || "");
@@ -512,6 +652,11 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
     }
   });
   logStage(config, "message_updated", { chatId, messageId, imageIds: assets.imageIds, paragraphs: assets.paragraphs });
+  spindle.sendToFrontend({
+    type: "character_memory_updated",
+    chatId,
+    characterAppearance: committed.characterAppearance
+  }, userId);
   spindle.sendToFrontend({ type: "status", status: "Generated", record }, userId);
   return record;
 }
@@ -537,16 +682,19 @@ async function commitImageReplacement(
   request: StoredImageActionRequest,
   replacement: ImageReplacement,
   config: Config,
-  userId?: string
+  userId?: string,
+  parsedForMemory?: ParsedPayload
 ): Promise<{ record: GeneratedRecord; index: number }> {
   let committedKey = "";
   let committedIndex = -1;
-  const state = await updateState(request.chatId, userId, (current) => {
-    const located = locateGeneratedImage(current, request);
+  let committedRecord: GeneratedRecord | null = null;
+  const state = await updateState(request.chatId, userId, async (current) => {
+    await migrateLegacyGeneratedRecords(request.chatId, current, userId);
+    const located = await locateStoredGeneratedImage(current, request, userId);
     committedKey = located.key;
     committedIndex = located.index;
     const record = located.record;
-    current.generated[located.key] = {
+    committedRecord = {
       ...record,
       prompts: replaceAt(record.prompts, located.index, replacement.prompt, ""),
       negativePrompts: replaceAt(record.negativePrompts, located.index, replacement.negative, ""),
@@ -563,8 +711,11 @@ async function commitImageReplacement(
       imageIds: replaceAt(record.imageIds, located.index, replacement.imageId, ""),
       imageUrls: replaceAt(record.imageUrls, located.index, replacement.imageUrl, "")
     } satisfies GeneratedRecord;
+    current.generated[located.key] = await storeGeneratedRecord(request.chatId, located.key, committedRecord, userId);
+    if (parsedForMemory) updateCache(current.characterAppearance, parsedForMemory);
+    rebuildGeneratedImageIndex(current);
   });
-  const record = generatedRecord(state.generated[committedKey]);
+  const record = committedRecord as GeneratedRecord | null;
   if (!record || committedIndex < 0) throw new Error("The replacement image could not be persisted.");
 
   const messages = await spindle.chat.getMessages(request.chatId) as ChatMessage[];
@@ -579,13 +730,21 @@ async function commitImageReplacement(
       inlayIllustratorGeneratedAt: record.createdAt
     }
   });
+  if (parsedForMemory) {
+    spindle.sendToFrontend({
+      type: "character_memory_updated",
+      chatId: request.chatId,
+      characterAppearance: state.characterAppearance
+    }, userId);
+  }
   return { record, index: committedIndex };
 }
 
 export async function rerunStoredImage(
   request: StoredImageActionRequest,
   rerunSidecar: boolean,
-  userId?: string
+  userId?: string,
+  preparedConfig?: Config
 ): Promise<{ record: GeneratedRecord; index: number }> {
   if (!request.chatId) throw new Error("Open the image's chat first.");
   const actionKey = JSON.stringify([userId ?? null, request.chatId, request.messageId ?? null, request.swipeId ?? null,
@@ -593,11 +752,12 @@ export async function rerunStoredImage(
   const releaseAction = tryAcquireRuntimeLock("image-action", actionKey);
   if (!releaseAction) throw new Error("That image is already being regenerated.");
   try {
-    const config = await getConfig(userId);
+    const config = preparedConfig || await getConfig(userId);
     const initialState = await getState(request.chatId, userId);
-    const located = locateGeneratedImage(initialState, request);
+    const located = await locateStoredGeneratedImage(initialState, request, userId);
     const imageConnection = await resolveImageConnection(config, userId);
     let replacement: ImageReplacement;
+    let selectionForMemory: ParsedPayload | undefined;
 
     if (!rerunSidecar) {
       const corePrompt = located.record.corePrompts?.[located.index] || "";
@@ -672,16 +832,22 @@ export async function rerunStoredImage(
         usedCreativeConceptIds: previousConceptHistory,
         userId
       });
+      selectionForMemory = selection.parsed;
       const entry = selection.selected[0];
       if (!entry) throw new Error("The sidecar returned no usable replacement prompt.");
-      const stage = await prepareAndDispatchImages(request.chatId, [entry], singleConfig, userId);
+      const stage = await prepareAndDispatchImages(
+        request.chatId,
+        [entry],
+        singleConfig,
+        userId,
+        Promise.resolve(imageConnection)
+      );
       const job = stage.jobs[0];
       const result = stage.results[0];
       if (!job || !result) throw new Error("The replacement image was not generated.");
       const imageId = result.imageId || "";
       const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
       if (!imageUrl) throw new Error("The image provider returned no replacement image.");
-      await persistCharacterMemory(request.chatId, selection.parsed, singleConfig, userId);
       replacement = {
         prompt: job.prompt,
         negative: job.negative,
@@ -702,7 +868,13 @@ export async function rerunStoredImage(
       };
     }
 
-    const committed = await commitImageReplacement(request, replacement, config, userId);
+    const committed = await commitImageReplacement(
+      request,
+      replacement,
+      config,
+      userId,
+      rerunSidecar ? selectionForMemory : undefined
+    );
     logStage(config, rerunSidecar ? "image_sidecar_rerun_done" : "image_reroll_done", {
       chatId: request.chatId,
       messageId: committed.record.messageId,
@@ -715,14 +887,21 @@ export async function rerunStoredImage(
   }
 }
 
-export async function generateForMessage(chatId: string, messageId: string, content: string, userId?: string): Promise<void> {
-  const config = await getConfig(userId);
+export async function generateForMessage(
+  chatId: string,
+  messageId: string,
+  content: string,
+  userId?: string,
+  prepared?: { config?: Config; messages?: ChatMessage[] }
+): Promise<void> {
+  const generationStartedAt = Date.now();
+  const config = prepared?.config || await getConfig(userId);
   logStage(config, "request_received", { chatId, messageId, contentLength: content.length, enabled: config.enabled, autoGenerate: config.autoGenerate });
   if (!config.enabled) {
     logStage(config, "request_skipped", { reason: "disabled", chatId, messageId });
     return;
   }
-  const messages = await spindle.chat.getMessages(chatId) as ChatMessage[];
+  const messages = prepared?.messages || await spindle.chat.getMessages(chatId) as ChatMessage[];
   const target = messages.find((message) => message.id === messageId);
   logStage(config, "target_checked", {
     found: Boolean(target),
@@ -755,16 +934,28 @@ export async function generateForMessage(chatId: string, messageId: string, cont
     });
     if (paragraphs.length === 0) throw new Error("No usable paragraphs found for image parsing.");
 
+    const imageConnectionPromise = resolveImageConnection(config, userId);
+    void imageConnectionPromise.catch(() => undefined);
     const { parsed, selected } = await parseAndSelectPrompts({ chatId, messageId, messages, paragraphs, state, config, userId });
-    await persistCharacterMemory(chatId, parsed, config, userId);
     logParsedSelection(parsed, selected, paragraphs, config);
-    const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId);
-    const assets = collectImageResults(imageStage, config);
-    const visualState = buildPreviousVisualState(
-      parsed,
-      imageStage.jobs.map((job) => job.parserParagraph).filter((paragraph): paragraph is number => Number.isFinite(paragraph))
-    );
-    await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, visualState, config, userId });
+    try {
+      const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId, imageConnectionPromise);
+      const assets = collectImageResults(imageStage, config);
+      const visualState = buildPreviousVisualState(
+        parsed,
+        imageStage.jobs.map((job) => job.parserParagraph).filter((paragraph): paragraph is number => Number.isFinite(paragraph))
+      );
+      await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, visualState, config, userId });
+      logStage(config, "generation_pipeline_done", {
+        chatId,
+        messageId,
+        imageCount: assets.imageIds.length,
+        elapsedMs: Date.now() - generationStartedAt
+      });
+    } catch (error) {
+      await persistCharacterMemory(chatId, parsed, config, userId);
+      throw error;
+    }
   } finally {
     releaseGeneration();
   }

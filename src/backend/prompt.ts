@@ -101,8 +101,16 @@ function joinSections(
   return syntax === "comfyui" ? clean.join(format === "ordered" ? ",\n\n" : ",\n") : clean.join(", ");
 }
 
+const renderedPromptCache = new WeakMap<AssembledPrompt, Partial<Record<Config["promptSyntax"], string>>>();
+
 export function renderPrompt(prompt: AssembledPrompt, syntax: Config["promptSyntax"]): string {
-  return joinSections(prompt.sections, syntax, prompt.format || "ordered");
+  const cached = renderedPromptCache.get(prompt)?.[syntax];
+  if (cached !== undefined) return cached;
+  const rendered = joinSections(prompt.sections, syntax, prompt.format || "ordered");
+  const entries = renderedPromptCache.get(prompt) || {};
+  entries[syntax] = rendered;
+  renderedPromptCache.set(prompt, entries);
+  return rendered;
 }
 
 export function renderPromptWithCurrentAffixes(

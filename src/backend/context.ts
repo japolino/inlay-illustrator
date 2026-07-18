@@ -50,6 +50,43 @@ export const EMPTY_LOREBOOK_CONTEXT: LorebookContextSnapshot = {
   diagnostics: { lorebookEntries: 0 }
 };
 
+export type ParserContextSources = {
+  chat: Record<string, unknown> | null;
+  persona: Record<string, unknown> | null;
+  character: Record<string, unknown> | null;
+  diagnostics: Record<string, unknown>;
+};
+
+export async function loadParserContextSources(
+  chatId: string,
+  config: Config,
+  userId?: string
+): Promise<ParserContextSources> {
+  const diagnostics: Record<string, unknown> = {};
+  const needsChat = config.includeCharacterInfo || config.includeLorebook || config.userInstructionsEnabled;
+  const needsPersona = config.includeUserInfo || config.userInstructionsEnabled;
+  const [chatResult, personaResult] = await Promise.allSettled([
+    needsChat ? spindle.chats.get(chatId, userId) : Promise.resolve(null),
+    needsPersona ? spindle.personas.getActive(userId) : Promise.resolve(null)
+  ]);
+  const chat = chatResult.status === "fulfilled" && chatResult.value ? asRecord(chatResult.value) : null;
+  const persona = personaResult.status === "fulfilled" && personaResult.value ? asRecord(personaResult.value) : null;
+  if (chatResult.status === "rejected") diagnostics.chatLookupError = chatResult.reason instanceof Error
+    ? chatResult.reason.message : String(chatResult.reason);
+  if (personaResult.status === "rejected") diagnostics.userInfoError = personaResult.reason instanceof Error
+    ? personaResult.reason.message : String(personaResult.reason);
+
+  let character: Record<string, unknown> | null = null;
+  if (config.includeCharacterInfo && chat?.character_id) {
+    try {
+      character = asRecord(await spindle.characters.get(String(chat.character_id), userId));
+    } catch (error) {
+      diagnostics.characterInfoError = error instanceof Error ? error.message : String(error);
+    }
+  }
+  return { chat, persona, character, diagnostics };
+}
+
 export function isOwnMessage(message: { content?: string; metadata?: Record<string, unknown> }): boolean {
   return Boolean(message.metadata?.extension === EXTENSION_ID);
 }
@@ -295,11 +332,14 @@ export async function buildLorebookContextSnapshot(
 }
 
 export function formatRecentContext(messages: ChatMessage[], targetIndex: number, includeCount: number): string {
-  const previous = messages
-    .slice(0, Math.max(0, targetIndex))
-    .filter((message) => message.role === "assistant" && !isOwnMessage(message))
-    .map((message) => ({ ...message, content: stripInlayContent(message.content) }))
-    .filter((message) => message.content.trim());
+  const previous: ChatMessage[] = [];
+  const limit = includeCount > 0 ? includeCount : 2;
+  for (let index = Math.min(targetIndex, messages.length) - 1; index >= 0 && previous.length < limit; index -= 1) {
+    const message = messages[index];
+    if (message.role !== "assistant" || isOwnMessage(message)) continue;
+    const content = stripInlayContent(message.content);
+    if (content.trim()) previous.unshift({ ...message, content });
+  }
   // The sole prior assistant message is the greeting on the first post-greeting
   // turn. Include it even when Minimum context is zero so initial scene facts
   // are available without making later zero-context calls history-dependent.
@@ -323,32 +363,27 @@ export async function buildParserContext(
   attempt: number,
   userId?: string,
   lorebookSnapshot?: LorebookContextSnapshot,
-  previousVisualState?: PreviousVisualState
+  previousVisualState?: PreviousVisualState,
+  preparedSources?: ParserContextSources
 ): Promise<ParserContext> {
   const blocks: string[] = [];
   const preprocessingBlocks: string[] = [];
   const overrides: string[] = [];
   const diagnostics: Record<string, unknown> = { attempt, includeCount: includeCountForAttempt(config, attempt) };
-  let chat: Record<string, unknown> | null = null;
+  const sources = preparedSources || await loadParserContextSources(chatId, config, userId);
+  const chat = sources.chat;
+  Object.assign(diagnostics, sources.diagnostics);
   const pushBlock = (block: string, includeInPreprocessing = true): void => {
     if (!block) return;
     blocks.push(block);
     if (includeInPreprocessing) preprocessingBlocks.push(block);
   };
 
-  if (config.includeCharacterInfo || config.includeLorebook || config.userInstructionsEnabled) {
-    try {
-      chat = await spindle.chats.get(chatId, userId) as unknown as Record<string, unknown> | null;
-      overrides.push(...collectExtraInstructionStrings(chat?.metadata));
-    } catch (error) {
-      diagnostics.chatLookupError = error instanceof Error ? error.message : String(error);
-    }
-  }
+  if (chat) overrides.push(...collectExtraInstructionStrings(chat.metadata));
 
   if (config.includeUserInfo || config.userInstructionsEnabled) {
-    try {
-      const persona = await spindle.personas.getActive(userId) as unknown;
-      const record = asRecord(persona);
+    if (sources.persona) {
+      const record = sources.persona;
       const block = config.includeUserInfo ? formatInfoBlock("{{user}} Info", [
         namedField("Name", record.name),
         namedField("Title", record.title),
@@ -357,15 +392,12 @@ export async function buildParserContext(
       pushBlock(block);
       overrides.push(...collectExtraInstructionStrings(record.metadata));
       diagnostics.userInfo = Boolean(block);
-    } catch (error) {
-      diagnostics.userInfoError = error instanceof Error ? error.message : String(error);
     }
   }
 
   if (config.includeCharacterInfo && chat?.character_id) {
-    try {
-      const character = await spindle.characters.get(String(chat.character_id), userId) as unknown;
-      const record = asRecord(character);
+    if (sources.character) {
+      const record = sources.character;
       const block = formatInfoBlock("{{char}} Info", [
         namedField("Name", record.name),
         namedField("Description", record.description),
@@ -379,8 +411,6 @@ export async function buildParserContext(
       pushBlock(block);
       overrides.push(...collectExtraInstructionStrings(record.extensions));
       diagnostics.characterInfo = Boolean(block);
-    } catch (error) {
-      diagnostics.characterInfoError = error instanceof Error ? error.message : String(error);
     }
   }
 

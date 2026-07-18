@@ -147,6 +147,45 @@ function clonePayload(payload: ParsedPayload): ParsedPayload {
   return JSON.parse(JSON.stringify(payload)) as ParsedPayload;
 }
 
+const SAFE_FRAMING_ALTERNATIVES = [
+  "close-up", "portrait", "medium close-up", "upper body", "medium shot", "cowboy shot", "full body", "wide shot"
+] as const;
+
+/** Resolves exact Dynamic collisions locally by varying only the duplicate's framing. */
+export function repairDynamicCameraDiversityLocally(
+  payload: ParsedPayload,
+  config: Config,
+  audit = auditDynamicCameraDiversity(payload, config)
+): ParsedPayload | null {
+  if (audit.exactCollisions.length === 0) return payload;
+  const repaired = clonePayload(payload);
+  const shots = orderedShots(repaired);
+  const used = new Set(audit.signatures.map((entry) => entry.signature));
+  for (const collision of audit.exactCollisions) {
+    const entry = shots[collision.duplicateIndex];
+    const camera = asRecord(entry?.shot.camera);
+    const angle = cleanString(camera.angle).toLowerCase();
+    const perspective = cleanString(camera.perspective).toLowerCase();
+    if (!entry || !angle || !perspective) return null;
+    const currentFraming = cleanString(camera.framing).toLowerCase();
+    const currentIndex = SAFE_FRAMING_ALTERNATIVES.indexOf(currentFraming as typeof SAFE_FRAMING_ALTERNATIVES[number]);
+    if (currentIndex < 0) return null;
+    const candidates = [...SAFE_FRAMING_ALTERNATIVES].sort((left, right) => {
+      const leftDistance = Math.abs(SAFE_FRAMING_ALTERNATIVES.indexOf(left) - currentIndex);
+      const rightDistance = Math.abs(SAFE_FRAMING_ALTERNATIVES.indexOf(right) - currentIndex);
+      return leftDistance - rightDistance;
+    });
+    const framing = candidates.find((candidate) => candidate !== currentFraming
+      && !used.has(`${candidate} | ${angle} | ${perspective}`));
+    if (!framing) return null;
+    const replacement: CameraJson = { ...camera, framing };
+    if (!validCamera(replacement)) return null;
+    entry.shot.camera = replacement;
+    used.add(`${framing} | ${angle} | ${perspective}`);
+  }
+  return auditDynamicCameraDiversity(repaired, config).exactCollisions.length === 0 ? repaired : null;
+}
+
 /** Copies only collided Dynamic camera objects from a structurally matching repair. */
 export function mergeDynamicCameraRepair(
   original: ParsedPayload,

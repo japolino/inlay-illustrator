@@ -25,20 +25,42 @@ function splitParagraphBlocks(content: string): string[] {
   return blocks;
 }
 
-function stripIgnoredTags(text: string, config: Config): string {
-  let output = text;
-  for (const tag of ignoredTagNames(config)) {
+type IgnoredTagPattern = { paired: RegExp; element: RegExp; bracket: RegExp };
+const ignoredPatternCache = new Map<string, IgnoredTagPattern[]>();
+
+function ignoredTagPatterns(config: Config): IgnoredTagPattern[] {
+  const key = String(config.ignoredTags || "");
+  const cached = ignoredPatternCache.get(key);
+  if (cached) return cached;
+  const patterns = ignoredTagNames(config).map((tag) => {
     const name = escapeRegExp(tag);
+    return {
+      paired: new RegExp(`<${name}\\b[^>]*>[\\s\\S]*?<\\/${name}>`, "gi"),
+      element: new RegExp(`<\\/?${name}\\b[^>]*>`, "gi"),
+      bracket: new RegExp(`^\\s*\\[${name}\\b[^\\]]*\\]\\s*$`, "gim")
+    };
+  });
+  if (ignoredPatternCache.size >= 32) {
+    const oldest = ignoredPatternCache.keys().next().value;
+    if (typeof oldest === "string") ignoredPatternCache.delete(oldest);
+  }
+  ignoredPatternCache.set(key, patterns);
+  return patterns;
+}
+
+function stripIgnoredTags(text: string, patterns: IgnoredTagPattern[]): string {
+  let output = text;
+  for (const pattern of patterns) {
     output = output
-      .replace(new RegExp(`<${name}\\b[^>]*>[\\s\\S]*?<\\/${name}>`, "gi"), "")
-      .replace(new RegExp(`<\\/?${name}\\b[^>]*>`, "gi"), "")
-      .replace(new RegExp(`^\\s*\\[${name}\\b[^\\]]*\\]\\s*$`, "gim"), "");
+      .replace(pattern.paired, "")
+      .replace(pattern.element, "")
+      .replace(pattern.bracket, "");
   }
   return output;
 }
 
-function cleanParagraphText(text: string, config: Config): string {
-  const stripped = stripIgnoredTags(text, config)
+function cleanParagraphText(text: string, patterns: IgnoredTagPattern[]): string {
+  const stripped = stripIgnoredTags(text, patterns)
     .replace(/CARDDATA:.*$/gim, "")
     .replace(/<Update Log\b[\s\S]*?<\/Update Log>/gi, "")
     .replace(/<Choice\b[\s\S]*?<\/Choice>/gi, "");
@@ -57,8 +79,9 @@ function cleanParagraphText(text: string, config: Config): string {
 export function prepareParagraphs(content: string, config: Config): PreparedParagraph[] {
   const paragraphs: PreparedParagraph[] = [];
   const originalBlocks = splitParagraphBlocks(stripInlayContent(content));
+  const patterns = ignoredTagPatterns(config);
   for (const [index, block] of originalBlocks.entries()) {
-    const cleaned = cleanParagraphText(block, config);
+    const cleaned = cleanParagraphText(block, patterns);
     if (cleaned) paragraphs.push({ parserIndex: paragraphs.length + 1, originalIndex: index + 1, text: cleaned });
   }
   return paragraphs;

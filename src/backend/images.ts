@@ -5,8 +5,21 @@ import { keysOf } from "./utils.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
+const imageConnectionCache = new Map<string, { expiresAt: number; connection: ImageConnection | null }>();
+
+function cacheImageConnection(key: string, connection: ImageConnection | null): void {
+  if (imageConnectionCache.size >= 32) {
+    const oldest = imageConnectionCache.keys().next().value;
+    if (typeof oldest === "string") imageConnectionCache.delete(oldest);
+  }
+  imageConnectionCache.set(key, { expiresAt: Date.now() + 5000, connection });
+}
+
 export async function resolveImageConnection(config: Config, userId?: string): Promise<ImageConnection | null> {
   logStage(config, "image_connection_resolve_start", { configuredConnectionId: config.imageConnectionId });
+  const cacheKey = JSON.stringify([userId ?? null, config.imageConnectionId || "(default)"]);
+  const cached = imageConnectionCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.connection;
   if (config.imageConnectionId) {
     const configured = await spindle.imageGen.getConnection(config.imageConnectionId, userId) as ImageConnection | null;
     if (configured) {
@@ -17,6 +30,7 @@ export async function resolveImageConnection(config: Config, userId?: string): P
         model: configured.model,
         source: "configured"
       });
+      cacheImageConnection(cacheKey, configured);
       return configured;
     }
     logStage(config, "image_connection_missing", { configuredConnectionId: config.imageConnectionId }, "warn");
@@ -30,6 +44,7 @@ export async function resolveImageConnection(config: Config, userId?: string): P
     model: fallback.model,
     source: fallback.is_default ? "default" : "first_available"
   } : { source: "none", availableConnections: 0 }, fallback ? "info" : "warn");
+  cacheImageConnection(cacheKey, fallback);
   return fallback;
 }
 
@@ -57,8 +72,18 @@ function patchComfyWorkflow(
   mappings: ComfyUIMapping[],
   values: Record<string, unknown>
 ): Record<string, unknown> {
-  const patched = JSON.parse(JSON.stringify(workflow)) as Record<string, { inputs?: Record<string, unknown> }>;
+  const source = workflow as Record<string, { inputs?: Record<string, unknown> }>;
+  const patched = { ...source };
+  const clonedNodes = new Set<string>();
   for (const mapping of mappings) {
+    const originalNode = source[mapping.nodeId];
+    if (originalNode && !clonedNodes.has(mapping.nodeId)) {
+      patched[mapping.nodeId] = {
+        ...originalNode,
+        inputs: originalNode.inputs && typeof originalNode.inputs === "object" ? { ...originalNode.inputs } : originalNode.inputs
+      };
+      clonedNodes.add(mapping.nodeId);
+    }
     const node = patched[mapping.nodeId];
     if (!node || !node.inputs || typeof node.inputs !== "object") continue;
     const value = mapping.mappedAs === "custom"
