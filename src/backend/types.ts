@@ -158,6 +158,8 @@ export type GeneratedRecord = {
   negativePrompts: string[];
   perspectiveModes: PerspectiveMode[];
   perspectiveSources: Array<"adaptive" | "manual">;
+  /** Exact provider parameters used per image, retained for reproducible rerolls. */
+  imageParameters?: Array<Record<string, unknown>>;
   paragraphs: number[];
   imageIds: string[];
   imageUrls: string[];

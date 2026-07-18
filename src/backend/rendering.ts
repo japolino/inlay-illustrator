@@ -5,6 +5,10 @@ import { paragraphCount } from "./paragraphs.js";
 import { clampInt } from "./utils.js";
 
 type InlayRecord = {
+  chatId?: string;
+  messageId?: string;
+  swipeId?: number;
+  imageIds?: string[];
   imageUrls: string[];
   prompts: string[];
   negativePrompts?: string[];
@@ -32,6 +36,10 @@ function renderInlayBlock(
   negativePrompt: string,
   perspectiveMode: PerspectiveMode | undefined,
   perspectiveSource: "adaptive" | "manual" | undefined,
+  imageId: string,
+  chatId: string,
+  messageId: string,
+  swipeId: number,
   index: number,
   config: Config
 ): string {
@@ -42,7 +50,7 @@ function renderInlayBlock(
   const safeNegative = negativePrompt.replace(/```/g, "'''");
   const modeAttribute = perspectiveMode ? ` data-inlay-illustrator-perspective="${htmlAttr(perspectiveMode)}"` : "";
   const sourceAttribute = perspectiveSource ? ` data-inlay-illustrator-perspective-source="${htmlAttr(perspectiveSource)}"` : "";
-  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" data-inlay-illustrator-negative-prompt="${htmlAttr(safeNegative)}"${modeAttribute}${sourceAttribute} style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre><pre class="inlay-illustrator-negative-prompt" hidden>${htmlAttr(safeNegative)}</pre></div>`;
+  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" data-inlay-illustrator-negative-prompt="${htmlAttr(safeNegative)}"${modeAttribute}${sourceAttribute} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre><pre class="inlay-illustrator-negative-prompt" hidden>${htmlAttr(safeNegative)}</pre></div>`;
 }
 
 export function renderInlaidMessage(original: string, record: InlayRecord, config: Config): string {
@@ -58,6 +66,10 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
       record.negativePrompts?.[index] || "",
       record.perspectiveModes?.[index],
       record.perspectiveSources?.[index],
+      record.imageIds?.[index] || "",
+      record.chatId || "",
+      record.messageId || "",
+      record.swipeId || 0,
       index,
       config
     ));

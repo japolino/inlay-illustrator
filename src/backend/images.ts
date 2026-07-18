@@ -69,6 +69,59 @@ function patchComfyWorkflow(
   return patched as Record<string, unknown>;
 }
 
+function freshSeed(previous: unknown[]): number {
+  const prior = new Set(previous.map(numberParam).filter((value): value is number => value !== undefined));
+  let seed = Math.floor(Math.random() * 2147483647);
+  while (prior.has(seed)) seed = (seed + 1) % 2147483647;
+  return seed;
+}
+
+/** Clones an exact provider request and changes only its configured seed inputs. */
+export function rerollImageParameters(
+  parameters: Record<string, unknown>,
+  connection: ImageConnection | null
+): Record<string, unknown> {
+  const cloned = JSON.parse(JSON.stringify(parameters)) as Record<string, unknown>;
+  const workflow = cloned.workflow;
+  if (!workflow || typeof workflow !== "object" || Array.isArray(workflow)) {
+    cloned.seed = freshSeed([cloned.seed]);
+    return cloned;
+  }
+
+  const comfy = readComfyConfig(connection?.metadata);
+  const seedMappings = (comfy?.field_mappings || []).filter((mapping) => mapping.mappedAs === "seed");
+  const priorSeeds: unknown[] = [cloned.seed];
+  for (const mapping of seedMappings) {
+    const node = (workflow as Record<string, { inputs?: Record<string, unknown> }>)[mapping.nodeId];
+    priorSeeds.push(node?.inputs?.[mapping.fieldName]);
+  }
+  if (seedMappings.length === 0) {
+    for (const node of Object.values(workflow as Record<string, { inputs?: Record<string, unknown> }>)) {
+      if (!node?.inputs || typeof node.inputs !== "object") continue;
+      for (const [key, value] of Object.entries(node.inputs)) {
+        if (/^(?:seed|noise_seed)$/i.test(key)) priorSeeds.push(value);
+      }
+    }
+  }
+  const seed = freshSeed(priorSeeds);
+  cloned.seed = seed;
+  if (seedMappings.length > 0) {
+    for (const mapping of seedMappings) {
+      const node = (workflow as Record<string, { inputs?: Record<string, unknown> }>)[mapping.nodeId];
+      if (node?.inputs && typeof node.inputs === "object") node.inputs[mapping.fieldName] = seed;
+    }
+    return cloned;
+  }
+
+  for (const node of Object.values(workflow as Record<string, { inputs?: Record<string, unknown> }>)) {
+    if (!node?.inputs || typeof node.inputs !== "object") continue;
+    for (const key of Object.keys(node.inputs)) {
+      if (/^(?:seed|noise_seed)$/i.test(key)) node.inputs[key] = seed;
+    }
+  }
+  return cloned;
+}
+
 export async function buildImageParameters(
   config: Config,
   connection: ImageConnection | null,

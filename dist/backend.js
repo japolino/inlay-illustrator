@@ -146,7 +146,7 @@ var CURRENT_BLOCK = ownedBlock(`(?:${MARKER_PATTERN}\\s*)?${CURRENT_DIV_PATTERN}
 var MARKER_IMAGE_BLOCK = ownedBlock(`${MARKER_PATTERN}\\s*(?:${MARKDOWN_IMAGE_PATTERN}|${HTML_IMAGE_PATTERN})`);
 var PROMPT_PRE_BLOCK = ownedBlock(String.raw`<pre\b(?=[^>]*[\t\n\f\r ]class\s*=\s*(?:"(?:[^"]*[\t\n\f\r ])?inlay-illustrator-(?:negative-)?prompt(?:[\t\n\f\r ][^"]*)?"|'(?:[^']*[\t\n\f\r ])?inlay-illustrator-(?:negative-)?prompt(?:[\t\n\f\r ][^']*)?'|inlay-illustrator-(?:negative-)?prompt(?=[\s>])))[^>]*>[\s\S]*?<\/pre\s*>`);
 var ORPHAN_MARKER = ownedBlock(MARKER_PATTERN);
-var PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-(?:negative-prompt|perspective-source|perspective|prompt)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
+var PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-(?:negative-prompt|perspective-source|image-index|image-id|message-id|swipe-id|chat-id|perspective|prompt)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
 function stripInlayContent(content) {
   return content.replace(LEGACY_BLOCK, "").replace(CURRENT_BLOCK, "").replace(MARKER_IMAGE_BLOCK, "").replace(PROMPT_PRE_BLOCK, "").replace(ORPHAN_MARKER, "").replace(PROMPT_ATTRIBUTE, "");
 }
@@ -1020,6 +1020,57 @@ function patchComfyWorkflow(workflow, mappings, values) {
       node.inputs[mapping.fieldName] = value;
   }
   return patched;
+}
+function freshSeed(previous) {
+  const prior = new Set(previous.map(numberParam).filter((value) => value !== undefined));
+  let seed = Math.floor(Math.random() * 2147483647);
+  while (prior.has(seed))
+    seed = (seed + 1) % 2147483647;
+  return seed;
+}
+function rerollImageParameters(parameters, connection) {
+  const cloned = JSON.parse(JSON.stringify(parameters));
+  const workflow = cloned.workflow;
+  if (!workflow || typeof workflow !== "object" || Array.isArray(workflow)) {
+    cloned.seed = freshSeed([cloned.seed]);
+    return cloned;
+  }
+  const comfy = readComfyConfig(connection?.metadata);
+  const seedMappings = (comfy?.field_mappings || []).filter((mapping) => mapping.mappedAs === "seed");
+  const priorSeeds = [cloned.seed];
+  for (const mapping of seedMappings) {
+    const node = workflow[mapping.nodeId];
+    priorSeeds.push(node?.inputs?.[mapping.fieldName]);
+  }
+  if (seedMappings.length === 0) {
+    for (const node of Object.values(workflow)) {
+      if (!node?.inputs || typeof node.inputs !== "object")
+        continue;
+      for (const [key, value] of Object.entries(node.inputs)) {
+        if (/^(?:seed|noise_seed)$/i.test(key))
+          priorSeeds.push(value);
+      }
+    }
+  }
+  const seed = freshSeed(priorSeeds);
+  cloned.seed = seed;
+  if (seedMappings.length > 0) {
+    for (const mapping of seedMappings) {
+      const node = workflow[mapping.nodeId];
+      if (node?.inputs && typeof node.inputs === "object")
+        node.inputs[mapping.fieldName] = seed;
+    }
+    return cloned;
+  }
+  for (const node of Object.values(workflow)) {
+    if (!node?.inputs || typeof node.inputs !== "object")
+      continue;
+    for (const key of Object.keys(node.inputs)) {
+      if (/^(?:seed|noise_seed)$/i.test(key))
+        node.inputs[key] = seed;
+    }
+  }
+  return cloned;
 }
 async function buildImageParameters(config, connection, prompt, negative) {
   const parameters = { ...connection?.default_parameters || {}, ...config.imageParameters };
@@ -2009,7 +2060,7 @@ function imageUrlFromId(imageId) {
 function htmlAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r\n?|\n/g, "&#10;");
 }
-function renderInlayBlock(url, prompt, negativePrompt, perspectiveMode, perspectiveSource, index, config) {
+function renderInlayBlock(url, prompt, negativePrompt, perspectiveMode, perspectiveSource, imageId, chatId, messageId, swipeId, index, config) {
   const label = `Inlay ${index + 1}`;
   const width = clampInt2(config.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth);
   const maxHeight = clampInt2(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
@@ -2018,7 +2069,7 @@ function renderInlayBlock(url, prompt, negativePrompt, perspectiveMode, perspect
   const modeAttribute = perspectiveMode ? ` data-inlay-illustrator-perspective="${htmlAttr(perspectiveMode)}"` : "";
   const sourceAttribute = perspectiveSource ? ` data-inlay-illustrator-perspective-source="${htmlAttr(perspectiveSource)}"` : "";
   return `${MARKER}
-<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" data-inlay-illustrator-negative-prompt="${htmlAttr(safeNegative)}"${modeAttribute}${sourceAttribute} style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre><pre class="inlay-illustrator-negative-prompt" hidden>${htmlAttr(safeNegative)}</pre></div>`;
+<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-prompt="${htmlAttr(safePrompt)}" data-inlay-illustrator-negative-prompt="${htmlAttr(safeNegative)}"${modeAttribute}${sourceAttribute} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/><pre class="inlay-illustrator-prompt" hidden>${htmlAttr(safePrompt)}</pre><pre class="inlay-illustrator-negative-prompt" hidden>${htmlAttr(safeNegative)}</pre></div>`;
 }
 function renderInlaidMessage(original, record, config) {
   const cleanOriginal = stripInlayContent(original);
@@ -2027,7 +2078,7 @@ function renderInlaidMessage(original, record, config) {
   record.imageUrls.forEach((url, index) => {
     const paragraph2 = clampInt2(record.paragraphs[index], 1, count, Math.min(index + 1, count));
     const existing = blocks.get(paragraph2) || [];
-    existing.push(renderInlayBlock(url, record.prompts[index] || "", record.negativePrompts?.[index] || "", record.perspectiveModes?.[index], record.perspectiveSources?.[index], index, config));
+    existing.push(renderInlayBlock(url, record.prompts[index] || "", record.negativePrompts?.[index] || "", record.perspectiveModes?.[index], record.perspectiveSources?.[index], record.imageIds?.[index] || "", record.chatId || "", record.messageId || "", record.swipeId || 0, index, config));
     blocks.set(paragraph2, existing);
   });
   const tokens = cleanOriginal.trimEnd().split(/(\r?\n\s*\r?\n)/);
@@ -2161,6 +2212,47 @@ async function sendState(userId, chatId) {
 
 // src/backend/generation.ts
 var running = new Set;
+var imageActions = new Set;
+function generatedRecord(value) {
+  if (!value || typeof value !== "object")
+    return null;
+  const candidate = value;
+  return Array.isArray(candidate.prompts) && Array.isArray(candidate.paragraphs) && Array.isArray(candidate.imageUrls) && typeof candidate.messageId === "string" ? candidate : null;
+}
+function sameImageUrl(stored, requested) {
+  if (!stored || !requested)
+    return false;
+  return stored === requested || requested.endsWith(stored) || stored.endsWith(requested);
+}
+function locateGeneratedImage(state, request) {
+  for (const [key, value] of Object.entries(state.generated)) {
+    const record = generatedRecord(value);
+    if (!record || record.chatId !== request.chatId)
+      continue;
+    if (request.messageId && record.messageId !== request.messageId)
+      continue;
+    if (request.swipeId !== undefined && record.swipeId !== request.swipeId)
+      continue;
+    const explicitIndex = request.imageIndex;
+    if (explicitIndex !== undefined && Number.isInteger(explicitIndex) && explicitIndex >= 0 && explicitIndex < record.imageUrls.length) {
+      const idMatches = !request.imageId || record.imageIds?.[explicitIndex] === request.imageId;
+      const urlMatches = !request.imageUrl || sameImageUrl(record.imageUrls[explicitIndex] || "", request.imageUrl);
+      if (idMatches && urlMatches)
+        return { key, record, index: explicitIndex };
+    }
+    const matchedIndex = record.imageUrls.findIndex((url, index) => request.imageId && record.imageIds?.[index] === request.imageId || request.imageUrl && sameImageUrl(url, request.imageUrl));
+    if (matchedIndex >= 0)
+      return { key, record, index: matchedIndex };
+  }
+  throw new Error("The selected image is not present in this chat's generated-image history.");
+}
+function replaceAt(values, index, value, fallback) {
+  const next = [...values || []];
+  while (next.length <= index)
+    next.push(fallback);
+  next[index] = value;
+  return next;
+}
 function compactLorebookNeedsFullRetry(payload, snapshot) {
   if (!snapshot.compacted || !snapshot.hasCharacterVisualReference)
     return false;
@@ -2342,6 +2434,7 @@ function collectImageResults(stage, config) {
   const negativePrompts = stage.jobs.map((job) => job.negative);
   const perspectiveModes = stage.jobs.map((job) => job.perspectiveMode || config.perspectiveMode);
   const perspectiveSources = stage.jobs.map((job) => job.perspectiveSource || "manual");
+  const imageParameters = stage.jobs.map((job) => job.parameters);
   const paragraphs = stage.jobs.map((job) => job.paragraph);
   for (const [index, result] of stage.results.entries()) {
     if (result.imageId)
@@ -2358,7 +2451,7 @@ function collectImageResults(stage, config) {
       model: result.model || null
     });
   }
-  return { prompts, negativePrompts, perspectiveModes, perspectiveSources, paragraphs, imageIds, imageUrls };
+  return { prompts, negativePrompts, perspectiveModes, perspectiveSources, imageParameters, paragraphs, imageIds, imageUrls };
 }
 async function persistGeneration(input) {
   const { chatId, messageId, swipeId, key, target, parsed, assets, config, userId } = input;
@@ -2370,6 +2463,7 @@ async function persistGeneration(input) {
     negativePrompts: assets.negativePrompts,
     perspectiveModes: assets.perspectiveModes,
     perspectiveSources: assets.perspectiveSources,
+    imageParameters: assets.imageParameters,
     paragraphs: assets.paragraphs,
     imageIds: assets.imageIds,
     imageUrls: assets.imageUrls,
@@ -2401,6 +2495,150 @@ async function persistGeneration(input) {
   logStage(config, "message_updated", { chatId, messageId, imageIds: assets.imageIds, paragraphs: assets.paragraphs });
   spindle.sendToFrontend({ type: "status", status: "Generated", record }, userId);
   return record;
+}
+async function commitImageReplacement(request, replacement, config, userId) {
+  let committedKey = "";
+  let committedIndex = -1;
+  const state = await updateState(request.chatId, userId, (current) => {
+    const located = locateGeneratedImage(current, request);
+    committedKey = located.key;
+    committedIndex = located.index;
+    const record2 = located.record;
+    current.generated[located.key] = {
+      ...record2,
+      prompts: replaceAt(record2.prompts, located.index, replacement.prompt, ""),
+      negativePrompts: replaceAt(record2.negativePrompts, located.index, replacement.negative, ""),
+      perspectiveModes: replaceAt(record2.perspectiveModes, located.index, replacement.perspectiveMode, "dynamic"),
+      perspectiveSources: replaceAt(record2.perspectiveSources, located.index, replacement.perspectiveSource, "manual"),
+      imageParameters: replaceAt(record2.imageParameters, located.index, replacement.parameters, {}),
+      paragraphs: replaceAt(record2.paragraphs, located.index, replacement.paragraph, 1),
+      imageIds: replaceAt(record2.imageIds, located.index, replacement.imageId, ""),
+      imageUrls: replaceAt(record2.imageUrls, located.index, replacement.imageUrl, "")
+    };
+  });
+  const record = generatedRecord(state.generated[committedKey]);
+  if (!record || committedIndex < 0)
+    throw new Error("The replacement image could not be persisted.");
+  const messages = await spindle.chat.getMessages(request.chatId);
+  const target = messages.find((message) => message.id === record.messageId);
+  if (!target)
+    throw new Error("The source assistant message no longer exists.");
+  await spindle.chat.updateMessage(request.chatId, record.messageId, {
+    content: renderInlaidMessage(String(target.content || ""), record, config),
+    metadata: {
+      ...target.metadata || {},
+      inlayIllustratorImageIds: record.imageIds,
+      inlayIllustratorParagraphs: record.paragraphs,
+      inlayIllustratorGeneratedAt: record.createdAt
+    }
+  });
+  return { record, index: committedIndex };
+}
+async function rerunStoredImage(request, rerunSidecar, userId) {
+  if (!request.chatId)
+    throw new Error("Open the image's chat first.");
+  const actionKey = JSON.stringify([
+    userId ?? null,
+    request.chatId,
+    request.messageId ?? null,
+    request.swipeId ?? null,
+    request.imageIndex ?? null,
+    request.imageId ?? request.imageUrl ?? null
+  ]);
+  if (imageActions.has(actionKey))
+    throw new Error("That image is already being regenerated.");
+  imageActions.add(actionKey);
+  try {
+    const config = await getConfig(userId);
+    const initialState = await getState(request.chatId, userId);
+    const located = locateGeneratedImage(initialState, request);
+    const imageConnection = await resolveImageConnection(config, userId);
+    let replacement;
+    if (!rerunSidecar) {
+      const prompt = located.record.prompts[located.index] || "";
+      if (!prompt)
+        throw new Error("The selected image has no stored prompt to reroll.");
+      const negative = located.record.negativePrompts?.[located.index] || "";
+      const originalParameters = located.record.imageParameters?.[located.index] || await buildImageParameters(config, imageConnection, prompt, negative);
+      const parameters = rerollImageParameters(originalParameters, imageConnection);
+      const result = await spindle.imageGen.generate({
+        connection_id: config.imageConnectionId || undefined,
+        prompt,
+        negativePrompt: negative || undefined,
+        model: config.imageModel || undefined,
+        parameters,
+        owner_chat_id: request.chatId,
+        userId
+      });
+      const imageId = result.imageId || "";
+      const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+      if (!imageUrl)
+        throw new Error("The image provider returned no replacement image.");
+      replacement = {
+        prompt,
+        negative,
+        paragraph: located.record.paragraphs[located.index] || 1,
+        perspectiveMode: located.record.perspectiveModes?.[located.index] || "dynamic",
+        perspectiveSource: located.record.perspectiveSources?.[located.index] || "manual",
+        parameters,
+        imageId,
+        imageUrl
+      };
+    } else {
+      const messages = await spindle.chat.getMessages(request.chatId);
+      const target = messages.find((message) => message.id === located.record.messageId);
+      if (!target)
+        throw new Error("The source assistant message no longer exists.");
+      const originalParagraph = located.record.paragraphs[located.index] || 1;
+      const sourceParagraph = prepareParagraphs(String(target.content || ""), config).find((paragraph) => paragraph.originalIndex === originalParagraph);
+      if (!sourceParagraph)
+        throw new Error("The source paragraph for this image no longer exists.");
+      const singleConfig = { ...config, minImages: 1, maxImages: 1, preprocessingEnabled: false };
+      const paragraphs = [{ ...sourceParagraph, parserIndex: 1 }];
+      const selection = await parseAndSelectPrompts({
+        chatId: request.chatId,
+        messageId: located.record.messageId,
+        messages,
+        paragraphs,
+        state: initialState,
+        config: singleConfig,
+        userId
+      });
+      const entry = selection.selected[0];
+      if (!entry)
+        throw new Error("The sidecar returned no usable replacement prompt.");
+      const stage = await prepareAndDispatchImages(request.chatId, [entry], singleConfig, userId);
+      const job = stage.jobs[0];
+      const result = stage.results[0];
+      if (!job || !result)
+        throw new Error("The replacement image was not generated.");
+      const imageId = result.imageId || "";
+      const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+      if (!imageUrl)
+        throw new Error("The image provider returned no replacement image.");
+      await persistCharacterMemory(request.chatId, selection.parsed, singleConfig, userId);
+      replacement = {
+        prompt: job.prompt,
+        negative: job.negative,
+        paragraph: originalParagraph,
+        perspectiveMode: entry.perspectiveMode,
+        perspectiveSource: entry.perspectiveSource,
+        parameters: job.parameters,
+        imageId,
+        imageUrl
+      };
+    }
+    const committed = await commitImageReplacement(request, replacement, config, userId);
+    logStage(config, rerunSidecar ? "image_sidecar_rerun_done" : "image_reroll_done", {
+      chatId: request.chatId,
+      messageId: committed.record.messageId,
+      imageIndex: committed.index,
+      imageId: replacement.imageId || null
+    });
+    return committed;
+  } finally {
+    imageActions.delete(actionKey);
+  }
 }
 async function generateForMessage(chatId, messageId, content, userId) {
   const config = await getConfig(userId);
@@ -2469,6 +2707,7 @@ var __testables = {
   preprocessingInstruction,
   preprocessingUserRequest,
   prepareAndDispatchImageJobs,
+  rerollImageParameters,
   normalizeConfig,
   renderPrompt,
   selectPromptEntries,
@@ -2564,11 +2803,51 @@ spindle.onFrontendMessage(async (payload, userId) => {
         throw new Error("No assistant message found.");
       spindle.sendToFrontend({ type: "status", status: "Generating..." }, userId);
       await generateForMessage(chatId, target.id, target.content, userId);
+    } else if (message.type === "reroll_image" || message.type === "rerun_image_sidecar") {
+      const config = await getConfig(userId);
+      configForError = config;
+      const chatId = String(message.chatId || "");
+      if (!chatId)
+        throw new Error("Open the image's chat first.");
+      const numericIndex = Number(message.imageIndex);
+      const numericSwipe = Number(message.swipeId);
+      const request = {
+        chatId,
+        messageId: String(message.messageId || "") || undefined,
+        swipeId: Number.isInteger(numericSwipe) ? numericSwipe : undefined,
+        imageIndex: Number.isInteger(numericIndex) && numericIndex >= 0 ? numericIndex : undefined,
+        imageId: String(message.imageId || "") || undefined,
+        imageUrl: String(message.imageUrl || "") || undefined
+      };
+      const rerunSidecar = message.type === "rerun_image_sidecar";
+      const actionLabel = rerunSidecar ? "Rerunning sidecar..." : "Rerolling image...";
+      spindle.sendToFrontend({ type: "status", status: actionLabel }, userId);
+      const result = await rerunStoredImage(request, rerunSidecar, userId);
+      spindle.sendToFrontend({
+        type: "inlay_image_action_result",
+        requestId: String(message.requestId || ""),
+        operation: rerunSidecar ? "sidecar" : "reroll",
+        ok: true,
+        chatId,
+        messageId: result.record.messageId,
+        imageIndex: result.index,
+        imageUrl: result.record.imageUrls[result.index] || ""
+      }, userId);
+      spindle.sendToFrontend({ type: "status", status: rerunSidecar ? "Sidecar rerun complete" : "Image rerolled", record: result.record }, userId);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStage(configForError || { debugLogging: true }, "frontend_message_error", { type: String(message.type || ""), error: errorMessage }, "error");
     spindle.log.error(errorMessage);
+    if (message.type === "reroll_image" || message.type === "rerun_image_sidecar") {
+      spindle.sendToFrontend({
+        type: "inlay_image_action_result",
+        requestId: String(message.requestId || ""),
+        operation: message.type === "rerun_image_sidecar" ? "sidecar" : "reroll",
+        ok: false,
+        error: errorMessage
+      }, userId);
+    }
     spindle.sendToFrontend({ type: "status", status: "Error", error: errorMessage }, userId);
   }
 });

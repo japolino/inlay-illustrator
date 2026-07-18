@@ -212,6 +212,11 @@ var PANEL_STYLES = `
   .inlay-lightbox-prompt-block:last-child{padding-bottom:14px}
   .inlay-lightbox-prompt-block h4{margin:0 0 6px;font-size:12px;color:var(--lumiverse-text-muted)}
   .inlay-lightbox-prompt{min-height:80px;margin:0;padding:10px;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--lumiverse-text)}
+  .inlay-lightbox-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px}
+  .inlay-lightbox-actions button{border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:8px 10px;cursor:pointer;font:inherit}
+  .inlay-lightbox-actions button:hover:not(:disabled){background:var(--lumiverse-fill-hover)}
+  .inlay-lightbox-actions button:disabled{opacity:.55;cursor:wait}
+  .inlay-lightbox-action-status{grid-column:1/-1;min-height:16px;color:var(--lumiverse-text-muted);font-size:11px;line-height:1.35}
   @media(max-width:800px){.inlay-lightbox-layout{grid-template-columns:1fr}.inlay-lightbox-image{max-height:55vh}.inlay-lightbox-prompt-panel{max-height:35vh}}
 `;
 
@@ -822,6 +827,33 @@ function detailsForImage(image) {
   const fallbackNegative = wrapper?.querySelector(".inlay-illustrator-negative-prompt")?.textContent || null;
   return resolveInlayDetails(image.getAttribute("data-inlay-illustrator-prompt"), fallback, image.getAttribute("data-inlay-illustrator-negative-prompt"), fallbackNegative, image.getAttribute("data-inlay-illustrator-perspective"), image.getAttribute("data-inlay-illustrator-perspective-source"));
 }
+function optionalInteger(value) {
+  if (value === null || value.trim() === "")
+    return;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
+function imageIdFromResultUrl(value) {
+  const match = value.match(/\/api\/v1\/image-gen\/results\/([^?#]+)/i);
+  if (!match?.[1])
+    return;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+function actionTargetForImage(image) {
+  const imageUrl = image.getAttribute("src") || image.currentSrc || image.src;
+  return {
+    chatId: image.getAttribute("data-inlay-illustrator-chat-id") || undefined,
+    messageId: image.getAttribute("data-inlay-illustrator-message-id") || undefined,
+    swipeId: optionalInteger(image.getAttribute("data-inlay-illustrator-swipe-id")),
+    imageIndex: optionalInteger(image.getAttribute("data-inlay-illustrator-image-index")),
+    imageId: image.getAttribute("data-inlay-illustrator-image-id") || imageIdFromResultUrl(imageUrl),
+    imageUrl
+  };
+}
 function promptBlock(label, value, fallback) {
   const block = document.createElement("section");
   block.className = "inlay-lightbox-prompt-block";
@@ -833,7 +865,7 @@ function promptBlock(label, value, fallback) {
   block.append(heading, content);
   return block;
 }
-function appendLightboxContent(root, image, details) {
+function appendLightboxContent(root, image, details, onAction) {
   const layout = document.createElement("div");
   layout.className = "inlay-lightbox-layout";
   const preview = document.createElement("img");
@@ -861,14 +893,49 @@ function appendLightboxContent(root, image, details) {
     panel.append(metadata);
   }
   panel.append(promptBlock("Positive prompt", details.prompt, "No prompt was recorded for this image."), promptBlock("Negative prompt", details.negativePrompt, "No negative prompt was recorded for this image."));
+  const actions = document.createElement("div");
+  actions.className = "inlay-lightbox-actions";
+  const reroll = document.createElement("button");
+  reroll.type = "button";
+  reroll.textContent = "Reroll image";
+  const sidecar = document.createElement("button");
+  sidecar.type = "button";
+  sidecar.textContent = "Rerun sidecar";
+  const status = document.createElement("div");
+  status.className = "inlay-lightbox-action-status";
+  status.setAttribute("aria-live", "polite");
+  const controls = { status, buttons: [reroll, sidecar] };
+  reroll.addEventListener("click", () => onAction("reroll", controls));
+  sidecar.addEventListener("click", () => onAction("sidecar", controls));
+  actions.append(reroll, sidecar, status);
+  panel.append(actions);
   layout.append(preview, panel);
   root.replaceChildren(layout);
 }
 function installInlayLightbox(ctx) {
   let activeModal = null;
+  let activeRequest = null;
   disableNativeInlayLightboxes(document);
   const observer = new MutationObserver(() => disableNativeInlayLightboxes(document));
   observer.observe(document.documentElement, { childList: true, subtree: true });
+  const unsubscribeResults = ctx.onBackendMessage((payload) => {
+    if (!payload || typeof payload !== "object")
+      return;
+    const result = payload;
+    if (result.type !== "inlay_image_action_result" || String(result.requestId || "") !== activeRequest?.id)
+      return;
+    if (result.ok === true) {
+      activeRequest.controls.status.textContent = "Image replaced. Reopening will show its updated details.";
+      activeRequest.modal.dismiss();
+      activeRequest = null;
+      return;
+    }
+    activeRequest.controls.status.textContent = String(result.error || "Image regeneration failed.");
+    activeRequest.controls.buttons.forEach((button) => {
+      button.disabled = false;
+    });
+    activeRequest = null;
+  });
   const onClick = (event) => {
     if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
       return;
@@ -876,6 +943,7 @@ function installInlayLightbox(ctx) {
     if (!image)
       return;
     const details = detailsForImage(image);
+    const actionTarget = actionTargetForImage(image);
     try {
       activeModal?.dismiss();
       const modal = ctx.ui.showModal({
@@ -884,10 +952,37 @@ function installInlayLightbox(ctx) {
         maxHeight: Math.max(480, window.innerHeight - 48)
       });
       activeModal = modal;
-      appendLightboxContent(modal.root, image, details);
+      appendLightboxContent(modal.root, image, details, (operation, controls) => {
+        let chatId = actionTarget.chatId || "";
+        if (!chatId) {
+          try {
+            chatId = String(ctx.getActiveChat().chatId || "");
+          } catch {
+            chatId = "";
+          }
+        }
+        if (!chatId) {
+          controls.status.textContent = "Open the image's chat before regenerating it.";
+          return;
+        }
+        const requestId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `inlay-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        controls.buttons.forEach((button) => {
+          button.disabled = true;
+        });
+        controls.status.textContent = operation === "sidecar" ? "Rerunning sidecar and generating..." : "Rerolling with a fresh seed...";
+        activeRequest = { id: requestId, modal, controls };
+        ctx.sendToBackend({
+          type: operation === "sidecar" ? "rerun_image_sidecar" : "reroll_image",
+          requestId,
+          ...actionTarget,
+          chatId
+        });
+      });
       modal.onDismiss(() => {
         if (activeModal === modal)
           activeModal = null;
+        if (activeRequest?.modal === modal)
+          activeRequest = null;
       });
     } catch {
       return;
@@ -899,6 +994,7 @@ function installInlayLightbox(ctx) {
   window.addEventListener("click", onClick, true);
   return () => {
     observer.disconnect();
+    unsubscribeResults();
     window.removeEventListener("click", onClick, true);
     activeModal?.dismiss();
     activeModal = null;

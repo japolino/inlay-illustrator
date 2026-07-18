@@ -462,6 +462,40 @@ const imageJobs = [
 ];
 
 describe("image preparation and generation pipeline", () => {
+  test("clones exact ComfyUI parameters and changes only mapped seed inputs for rerolls", () => {
+    const originalRandom = Math.random;
+    Math.random = () => 41 / 2147483647;
+    try {
+      const parameters = {
+        workflow: {
+          "3": { inputs: { seed: 41, cfg: 7 } },
+          "7": { inputs: { text: "exact positive prompt" } }
+        },
+        workflowFormat: "api_prompt"
+      };
+      const rerolled = helpers.rerollImageParameters(parameters, {
+        id: "comfy",
+        name: "ComfyUI",
+        provider: "comfyui",
+        model: "workflow",
+        metadata: {
+          comfyui: {
+            workflow_api_json: parameters.workflow,
+            field_mappings: [{ nodeId: "3", fieldName: "seed", mappedAs: "seed" }]
+          }
+        }
+      });
+
+      expect(rerolled).not.toBe(parameters);
+      expect(rerolled.seed).toBe(42);
+      expect((rerolled.workflow as any)["3"].inputs).toEqual({ seed: 42, cfg: 7 });
+      expect((rerolled.workflow as any)["7"].inputs.text).toBe("exact positive prompt");
+      expect(parameters.workflow["3"].inputs.seed).toBe(41);
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
+
   test("submits each ComfyUI image as soon as its sequential cleanup completes", async () => {
     const preparations = imageJobs.map(() => deferred<(typeof imageJobs)[number]>());
     const generations = imageJobs.map(() => deferred<{ imageId: string }>());

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { disableNativeInlayLightboxes, resolveInlayDetails, resolveInlayPrompt } from "./lightbox.js";
+import { disableNativeInlayLightboxes, imageIdFromResultUrl, resolveInlayDetails, resolveInlayPrompt } from "./lightbox.js";
 
 describe("Inlay prompt lightbox", () => {
   test("prefers the prompt stored on the clicked image", () => {
@@ -49,5 +49,11 @@ describe("Inlay prompt lightbox", () => {
 
     disableNativeInlayLightboxes(root);
     expect(removed).toEqual(["data-lightbox"]);
+  });
+
+  test("recovers image IDs from legacy result URLs for reroll lookup", () => {
+    expect(imageIdFromResultUrl("https://local.test/api/v1/image-gen/results/folder%2Fimage%201?x=1"))
+      .toBe("folder/image 1");
+    expect(imageIdFromResultUrl("/unrelated/image.png")).toBeUndefined();
   });
 });

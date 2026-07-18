@@ -1,6 +1,6 @@
 import type { Config, PerspectiveMode } from "../shared/config.js";
 import { buildLorebookContextSnapshot, buildParserContext, isOwnMessage, type LorebookContextSnapshot } from "./context.js";
-import { buildImageParameters, prepareAndDispatchImageJobs, resolveImageConnection } from "./images.js";
+import { buildImageParameters, prepareAndDispatchImageJobs, rerollImageParameters, resolveImageConnection } from "./images.js";
 import { logStage } from "./logging.js";
 import { updateCache } from "./memory.js";
 import { ignoredTagNames, paragraphCount, prepareParagraphs } from "./paragraphs.js";
@@ -39,6 +39,7 @@ type ImageAssets = {
   negativePrompts: string[];
   perspectiveModes: PerspectiveMode[];
   perspectiveSources: Array<"adaptive" | "manual">;
+  imageParameters: Array<Record<string, unknown>>;
   paragraphs: number[];
   imageIds: string[];
   imageUrls: string[];
@@ -67,6 +68,60 @@ type PersistStageInput = {
 };
 
 const running = new Set<string>();
+const imageActions = new Set<string>();
+
+export type StoredImageActionRequest = {
+  chatId: string;
+  messageId?: string;
+  swipeId?: number;
+  imageIndex?: number;
+  imageId?: string;
+  imageUrl?: string;
+};
+
+type LocatedGeneratedImage = { key: string; record: GeneratedRecord; index: number };
+
+function generatedRecord(value: unknown): GeneratedRecord | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<GeneratedRecord>;
+  return Array.isArray(candidate.prompts) && Array.isArray(candidate.paragraphs) && Array.isArray(candidate.imageUrls)
+    && typeof candidate.messageId === "string"
+    ? candidate as GeneratedRecord
+    : null;
+}
+
+function sameImageUrl(stored: string, requested: string): boolean {
+  if (!stored || !requested) return false;
+  return stored === requested || requested.endsWith(stored) || stored.endsWith(requested);
+}
+
+export function locateGeneratedImage(state: State, request: StoredImageActionRequest): LocatedGeneratedImage {
+  for (const [key, value] of Object.entries(state.generated)) {
+    const record = generatedRecord(value);
+    if (!record || record.chatId !== request.chatId) continue;
+    if (request.messageId && record.messageId !== request.messageId) continue;
+    if (request.swipeId !== undefined && record.swipeId !== request.swipeId) continue;
+    const explicitIndex = request.imageIndex;
+    if (explicitIndex !== undefined && Number.isInteger(explicitIndex) && explicitIndex >= 0 && explicitIndex < record.imageUrls.length) {
+      const idMatches = !request.imageId || record.imageIds?.[explicitIndex] === request.imageId;
+      const urlMatches = !request.imageUrl || sameImageUrl(record.imageUrls[explicitIndex] || "", request.imageUrl);
+      if (idMatches && urlMatches) return { key, record, index: explicitIndex };
+    }
+    const matchedIndex = record.imageUrls.findIndex((url, index) =>
+      (request.imageId && record.imageIds?.[index] === request.imageId)
+      || (request.imageUrl && sameImageUrl(url, request.imageUrl))
+    );
+    if (matchedIndex >= 0) return { key, record, index: matchedIndex };
+  }
+  throw new Error("The selected image is not present in this chat's generated-image history.");
+}
+
+function replaceAt<T>(values: T[] | undefined, index: number, value: T, fallback: T): T[] {
+  const next = [...(values || [])];
+  while (next.length <= index) next.push(fallback);
+  next[index] = value;
+  return next;
+}
 
 export function compactLorebookNeedsFullRetry(payload: ParsedPayload, snapshot: LorebookContextSnapshot): boolean {
   if (!snapshot.compacted || !snapshot.hasCharacterVisualReference) return false;
@@ -279,6 +334,7 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
   const negativePrompts = stage.jobs.map((job) => job.negative);
   const perspectiveModes = stage.jobs.map((job) => job.perspectiveMode || config.perspectiveMode);
   const perspectiveSources = stage.jobs.map((job) => job.perspectiveSource || "manual");
+  const imageParameters = stage.jobs.map((job) => job.parameters);
   const paragraphs = stage.jobs.map((job) => job.paragraph);
   for (const [index, result] of stage.results.entries()) {
     if (result.imageId) imageIds.push(result.imageId);
@@ -293,7 +349,7 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
       model: result.model || null
     });
   }
-  return { prompts, negativePrompts, perspectiveModes, perspectiveSources, paragraphs, imageIds, imageUrls };
+  return { prompts, negativePrompts, perspectiveModes, perspectiveSources, imageParameters, paragraphs, imageIds, imageUrls };
 }
 
 async function persistGeneration(input: PersistStageInput): Promise<GeneratedRecord> {
@@ -306,6 +362,7 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
     negativePrompts: assets.negativePrompts,
     perspectiveModes: assets.perspectiveModes,
     perspectiveSources: assets.perspectiveSources,
+    imageParameters: assets.imageParameters,
     paragraphs: assets.paragraphs,
     imageIds: assets.imageIds,
     imageUrls: assets.imageUrls,
@@ -337,6 +394,160 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
   logStage(config, "message_updated", { chatId, messageId, imageIds: assets.imageIds, paragraphs: assets.paragraphs });
   spindle.sendToFrontend({ type: "status", status: "Generated", record }, userId);
   return record;
+}
+
+type ImageReplacement = {
+  prompt: string;
+  negative: string;
+  paragraph: number;
+  perspectiveMode: PromptEntry["perspectiveMode"];
+  perspectiveSource: PromptEntry["perspectiveSource"];
+  parameters: Record<string, unknown>;
+  imageId: string;
+  imageUrl: string;
+};
+
+async function commitImageReplacement(
+  request: StoredImageActionRequest,
+  replacement: ImageReplacement,
+  config: Config,
+  userId?: string
+): Promise<{ record: GeneratedRecord; index: number }> {
+  let committedKey = "";
+  let committedIndex = -1;
+  const state = await updateState(request.chatId, userId, (current) => {
+    const located = locateGeneratedImage(current, request);
+    committedKey = located.key;
+    committedIndex = located.index;
+    const record = located.record;
+    current.generated[located.key] = {
+      ...record,
+      prompts: replaceAt(record.prompts, located.index, replacement.prompt, ""),
+      negativePrompts: replaceAt(record.negativePrompts, located.index, replacement.negative, ""),
+      perspectiveModes: replaceAt(record.perspectiveModes, located.index, replacement.perspectiveMode, "dynamic"),
+      perspectiveSources: replaceAt(record.perspectiveSources, located.index, replacement.perspectiveSource, "manual"),
+      imageParameters: replaceAt(record.imageParameters, located.index, replacement.parameters, {}),
+      paragraphs: replaceAt(record.paragraphs, located.index, replacement.paragraph, 1),
+      imageIds: replaceAt(record.imageIds, located.index, replacement.imageId, ""),
+      imageUrls: replaceAt(record.imageUrls, located.index, replacement.imageUrl, "")
+    } satisfies GeneratedRecord;
+  });
+  const record = generatedRecord(state.generated[committedKey]);
+  if (!record || committedIndex < 0) throw new Error("The replacement image could not be persisted.");
+
+  const messages = await spindle.chat.getMessages(request.chatId) as ChatMessage[];
+  const target = messages.find((message) => message.id === record.messageId);
+  if (!target) throw new Error("The source assistant message no longer exists.");
+  await spindle.chat.updateMessage(request.chatId, record.messageId, {
+    content: renderInlaidMessage(String(target.content || ""), record, config),
+    metadata: {
+      ...(target.metadata || {}),
+      inlayIllustratorImageIds: record.imageIds,
+      inlayIllustratorParagraphs: record.paragraphs,
+      inlayIllustratorGeneratedAt: record.createdAt
+    }
+  });
+  return { record, index: committedIndex };
+}
+
+export async function rerunStoredImage(
+  request: StoredImageActionRequest,
+  rerunSidecar: boolean,
+  userId?: string
+): Promise<{ record: GeneratedRecord; index: number }> {
+  if (!request.chatId) throw new Error("Open the image's chat first.");
+  const actionKey = JSON.stringify([userId ?? null, request.chatId, request.messageId ?? null, request.swipeId ?? null,
+    request.imageIndex ?? null, request.imageId ?? request.imageUrl ?? null]);
+  if (imageActions.has(actionKey)) throw new Error("That image is already being regenerated.");
+  imageActions.add(actionKey);
+  try {
+    const config = await getConfig(userId);
+    const initialState = await getState(request.chatId, userId);
+    const located = locateGeneratedImage(initialState, request);
+    const imageConnection = await resolveImageConnection(config, userId);
+    let replacement: ImageReplacement;
+
+    if (!rerunSidecar) {
+      const prompt = located.record.prompts[located.index] || "";
+      if (!prompt) throw new Error("The selected image has no stored prompt to reroll.");
+      const negative = located.record.negativePrompts?.[located.index] || "";
+      const originalParameters = located.record.imageParameters?.[located.index]
+        || await buildImageParameters(config, imageConnection, prompt, negative);
+      const parameters = rerollImageParameters(originalParameters, imageConnection);
+      const result = await spindle.imageGen.generate({
+        connection_id: config.imageConnectionId || undefined,
+        prompt,
+        negativePrompt: negative || undefined,
+        model: config.imageModel || undefined,
+        parameters,
+        owner_chat_id: request.chatId,
+        userId
+      });
+      const imageId = result.imageId || "";
+      const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+      if (!imageUrl) throw new Error("The image provider returned no replacement image.");
+      replacement = {
+        prompt,
+        negative,
+        paragraph: located.record.paragraphs[located.index] || 1,
+        perspectiveMode: located.record.perspectiveModes?.[located.index] || "dynamic",
+        perspectiveSource: located.record.perspectiveSources?.[located.index] || "manual",
+        parameters,
+        imageId,
+        imageUrl
+      };
+    } else {
+      const messages = await spindle.chat.getMessages(request.chatId) as ChatMessage[];
+      const target = messages.find((message) => message.id === located.record.messageId);
+      if (!target) throw new Error("The source assistant message no longer exists.");
+      const originalParagraph = located.record.paragraphs[located.index] || 1;
+      const sourceParagraph = prepareParagraphs(String(target.content || ""), config)
+        .find((paragraph) => paragraph.originalIndex === originalParagraph);
+      if (!sourceParagraph) throw new Error("The source paragraph for this image no longer exists.");
+      const singleConfig: Config = { ...config, minImages: 1, maxImages: 1, preprocessingEnabled: false };
+      const paragraphs: PreparedParagraph[] = [{ ...sourceParagraph, parserIndex: 1 }];
+      const selection = await parseAndSelectPrompts({
+        chatId: request.chatId,
+        messageId: located.record.messageId,
+        messages,
+        paragraphs,
+        state: initialState,
+        config: singleConfig,
+        userId
+      });
+      const entry = selection.selected[0];
+      if (!entry) throw new Error("The sidecar returned no usable replacement prompt.");
+      const stage = await prepareAndDispatchImages(request.chatId, [entry], singleConfig, userId);
+      const job = stage.jobs[0];
+      const result = stage.results[0];
+      if (!job || !result) throw new Error("The replacement image was not generated.");
+      const imageId = result.imageId || "";
+      const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+      if (!imageUrl) throw new Error("The image provider returned no replacement image.");
+      await persistCharacterMemory(request.chatId, selection.parsed, singleConfig, userId);
+      replacement = {
+        prompt: job.prompt,
+        negative: job.negative,
+        paragraph: originalParagraph,
+        perspectiveMode: entry.perspectiveMode,
+        perspectiveSource: entry.perspectiveSource,
+        parameters: job.parameters,
+        imageId,
+        imageUrl
+      };
+    }
+
+    const committed = await commitImageReplacement(request, replacement, config, userId);
+    logStage(config, rerunSidecar ? "image_sidecar_rerun_done" : "image_reroll_done", {
+      chatId: request.chatId,
+      messageId: committed.record.messageId,
+      imageIndex: committed.index,
+      imageId: replacement.imageId || null
+    });
+    return committed;
+  } finally {
+    imageActions.delete(actionKey);
+  }
 }
 
 export async function generateForMessage(chatId: string, messageId: string, content: string, userId?: string): Promise<void> {

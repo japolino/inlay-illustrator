@@ -12,7 +12,7 @@ Lumiverse extension for persistent, context-aware character image generation.
 - Optional Adaptive Mode that selects a perspective independently for each illustration
 - Creative visible-only tag projection without modifying persistent character memory
 - Atomic Anima composition, structured environments, and ComfyUI-friendly prompt output
-- Image lightbox with positive prompt, final negative prompt, and perspective metadata
+- Image lightbox with prompt metadata, fresh-seed rerolls, and per-image sidecar reruns
 - Optional activated-lorebook context with macro resolution, compact first-pass references, and full-context retry
 
 ## Install from source

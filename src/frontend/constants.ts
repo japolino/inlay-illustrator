@@ -52,5 +52,10 @@ export const PANEL_STYLES = `
   .inlay-lightbox-prompt-block:last-child{padding-bottom:14px}
   .inlay-lightbox-prompt-block h4{margin:0 0 6px;font-size:12px;color:var(--lumiverse-text-muted)}
   .inlay-lightbox-prompt{min-height:80px;margin:0;padding:10px;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--lumiverse-text)}
+  .inlay-lightbox-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px}
+  .inlay-lightbox-actions button{border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:8px 10px;cursor:pointer;font:inherit}
+  .inlay-lightbox-actions button:hover:not(:disabled){background:var(--lumiverse-fill-hover)}
+  .inlay-lightbox-actions button:disabled{opacity:.55;cursor:wait}
+  .inlay-lightbox-action-status{grid-column:1/-1;min-height:16px;color:var(--lumiverse-text-muted);font-size:11px;line-height:1.35}
   @media(max-width:800px){.inlay-lightbox-layout{grid-template-columns:1fr}.inlay-lightbox-image{max-height:55vh}.inlay-lightbox-prompt-panel{max-height:35vh}}
 `;

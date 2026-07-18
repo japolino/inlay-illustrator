@@ -1,7 +1,7 @@
 import { DEFAULT_CONFIG, normalizeConfig, type Config } from "./shared/config.js";
 import { isOwnMessage } from "./backend/context.js";
-import { generateForMessage } from "./backend/generation.js";
-import { prepareAndDispatchImageJobs } from "./backend/images.js";
+import { generateForMessage, rerunStoredImage, type StoredImageActionRequest } from "./backend/generation.js";
+import { prepareAndDispatchImageJobs, rerollImageParameters } from "./backend/images.js";
 import { stripInlayContent, stripInlayFromMessages } from "./backend/inlay-content.js";
 import { logStage } from "./backend/logging.js";
 import { deleteCharacterTag, upsertCharacterTag } from "./backend/memory.js";
@@ -38,6 +38,7 @@ export const __testables = {
   preprocessingInstruction,
   preprocessingUserRequest,
   prepareAndDispatchImageJobs,
+  rerollImageParameters,
   normalizeConfig,
   renderPrompt,
   selectPromptEntries,
@@ -130,11 +131,50 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       if (!target) throw new Error("No assistant message found.");
       spindle.sendToFrontend({ type: "status", status: "Generating..." }, userId);
       await generateForMessage(chatId, target.id, target.content, userId);
+    } else if (message.type === "reroll_image" || message.type === "rerun_image_sidecar") {
+      const config = await getConfig(userId);
+      configForError = config;
+      const chatId = String(message.chatId || "");
+      if (!chatId) throw new Error("Open the image's chat first.");
+      const numericIndex = Number(message.imageIndex);
+      const numericSwipe = Number(message.swipeId);
+      const request: StoredImageActionRequest = {
+        chatId,
+        messageId: String(message.messageId || "") || undefined,
+        swipeId: Number.isInteger(numericSwipe) ? numericSwipe : undefined,
+        imageIndex: Number.isInteger(numericIndex) && numericIndex >= 0 ? numericIndex : undefined,
+        imageId: String(message.imageId || "") || undefined,
+        imageUrl: String(message.imageUrl || "") || undefined
+      };
+      const rerunSidecar = message.type === "rerun_image_sidecar";
+      const actionLabel = rerunSidecar ? "Rerunning sidecar..." : "Rerolling image...";
+      spindle.sendToFrontend({ type: "status", status: actionLabel }, userId);
+      const result = await rerunStoredImage(request, rerunSidecar, userId);
+      spindle.sendToFrontend({
+        type: "inlay_image_action_result",
+        requestId: String(message.requestId || ""),
+        operation: rerunSidecar ? "sidecar" : "reroll",
+        ok: true,
+        chatId,
+        messageId: result.record.messageId,
+        imageIndex: result.index,
+        imageUrl: result.record.imageUrls[result.index] || ""
+      }, userId);
+      spindle.sendToFrontend({ type: "status", status: rerunSidecar ? "Sidecar rerun complete" : "Image rerolled", record: result.record }, userId);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStage(configForError || { debugLogging: true }, "frontend_message_error", { type: String(message.type || ""), error: errorMessage }, "error");
     spindle.log.error(errorMessage);
+    if (message.type === "reroll_image" || message.type === "rerun_image_sidecar") {
+      spindle.sendToFrontend({
+        type: "inlay_image_action_result",
+        requestId: String(message.requestId || ""),
+        operation: message.type === "rerun_image_sidecar" ? "sidecar" : "reroll",
+        ok: false,
+        error: errorMessage
+      }, userId);
+    }
     spindle.sendToFrontend({ type: "status", status: "Error", error: errorMessage }, userId);
   }
 });

@@ -72,6 +72,10 @@ describe("inlay rendering", () => {
     const rendered = renderInlaidMessage(
       "Paragraph.",
       {
+        chatId: "chat-1",
+        messageId: "message-1",
+        swipeId: 2,
+        imageIds: ["image-1"],
         imageUrls: ["/multiline.png"],
         prompts: ["quality tags,\n\n1girl,\n\nThe girl turns toward the viewer."],
         negativePrompts: ["lowres, bad anatomy"],
@@ -92,6 +96,11 @@ describe("inlay rendering", () => {
     expect(block).toContain('data-inlay-illustrator-negative-prompt="lowres, bad anatomy"');
     expect(block).toContain('data-inlay-illustrator-perspective="creative"');
     expect(block).toContain('data-inlay-illustrator-perspective-source="adaptive"');
+    expect(block).toContain('data-inlay-illustrator-image-id="image-1"');
+    expect(block).toContain('data-inlay-illustrator-chat-id="chat-1"');
+    expect(block).toContain('data-inlay-illustrator-message-id="message-1"');
+    expect(block).toContain('data-inlay-illustrator-swipe-id="2"');
+    expect(block).toContain('data-inlay-illustrator-image-index="0"');
     expect(block).toContain('<pre class="inlay-illustrator-prompt" hidden>');
     expect(block).toContain('<pre class="inlay-illustrator-negative-prompt" hidden>lowres, bad anatomy</pre>');
   });
