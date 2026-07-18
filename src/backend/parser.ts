@@ -6,6 +6,7 @@ import {
 } from "./creative.js";
 import { parserInstruction } from "./instructions.js";
 import { logStage } from "./logging.js";
+import { normalizeScenePayload, recoverSceneParagraphs } from "./scenes.js";
 import type { CreativeConcept, ParsedPayload, ParserConnection, ParserContext, ParserGenerationRequest, PreparedParagraph, SceneJson, ShotJson } from "./types.js";
 import { asRecord, cleanString, compactBlock, keysOf } from "./utils.js";
 
@@ -245,6 +246,35 @@ function staticRepairInstruction(issues: string[]): string {
   ].join("\n");
 }
 
+function currentParagraphReferences(messages: ParserGenerationRequest["messages"]): number[] {
+  const request = messages.find((message) => message.role === "user" && message.content.includes("## Current Numbered Paragraph Source"));
+  if (!request) return [];
+  const source = request.content
+    .split("## Current Numbered Paragraph Source", 2)[1]
+    ?.split("## Selected Creative Concepts", 1)[0] || "";
+  return [...new Set([...source.matchAll(/\[P(\d+)\]/gi)].map((match) => Number(match[1])).filter(Number.isFinite))];
+}
+
+function structuralPayloadIssues(payload: ParsedPayload, allowedParagraphs: number[]): string[] {
+  const normalized = normalizeScenePayload(payload);
+  if (normalized.length === 0) return ["no scene contains a shot with a usable paragraph reference"];
+  if (allowedParagraphs.length > 0 && !normalized.some((entry) => allowedParagraphs.includes(entry.parserParagraph))) {
+    return [`no shot references an allowed paragraph (${allowedParagraphs.map((paragraph) => `P${paragraph}`).join(", ")})`];
+  }
+  return [];
+}
+
+function structuralRepairInstruction(issues: string[], allowedParagraphs: number[]): string {
+  return [
+    "Repair this JSON into the required scenes-and-shots structure. Return only valid JSON and preserve all existing scene, character, camera, and environment details.",
+    "Every shot must contain a numeric paragraph field referencing one of the current numbered source paragraphs.",
+    allowedParagraphs.length > 0
+      ? `Allowed paragraph references: ${allowedParagraphs.map((paragraph) => `P${paragraph}`).join(", ")}.`
+      : "Do not invent paragraph references.",
+    `Problems to repair:\n- ${issues.join("\n- ")}`
+  ].join("\n");
+}
+
 export async function resolveParserConnection(config: Config, userId?: string): Promise<ParserConnection> {
   logStage(config, "parser_connection_resolve_start", { configuredConnectionId: config.parserConnectionId, modelOverride: Boolean(config.parserModel) });
   if (!config.parserConnectionId) throw new Error("Select a parser connection before generating.");
@@ -459,13 +489,23 @@ export async function parsePayloadWithRepair(
   userId?: string
 ): Promise<ParsedPayload> {
   const raw = await generateParserText(parserConnection, config, messages, userId);
+  if (!raw.trim()) throw new Error("Parser returned an empty response.");
+  const allowedParagraphs = currentParagraphReferences(messages);
+  const fallbackParagraph = allowedParagraphs.length === 1 ? allowedParagraphs[0] : undefined;
   let repairSystem = "Repair malformed JSON. Return only valid JSON.";
+  let repairInput = raw;
   try {
     logStage(config, "json_parse_start", { rawLength: raw.length, repair: false });
-    const parsed = parseJson(raw);
+    const parsed = recoverSceneParagraphs(parseJson(raw), fallbackParagraph);
+    const structuralIssues = structuralPayloadIssues(parsed, allowedParagraphs);
+    if (structuralIssues.length > 0) {
+      repairSystem = structuralRepairInstruction(structuralIssues, allowedParagraphs);
+      throw new Error("Parser payload has no usable numbered shots.");
+    }
     const issues = staticPayloadIssues(parsed, config);
     if (issues.length > 0) {
       repairSystem = staticRepairInstruction(issues);
+      repairInput = JSON.stringify(parsed);
       throw new Error("Static payload is incomplete.");
     }
     logStage(config, "json_parse_done", { repair: false });
@@ -474,9 +514,14 @@ export async function parsePayloadWithRepair(
     logStage(config, "json_parse_failed", { rawLength: raw.length, repairWillRun: true }, "warn");
     const repaired = await generateParserText(parserConnection, config, [
       { role: "system", content: repairSystem },
-      { role: "user", content: raw }
+      { role: "user", content: repairInput }
     ], userId);
-    const parsed = parseJson(repaired);
+    if (!repaired.trim()) throw new Error("Parser returned an empty repair response.");
+    const parsed = recoverSceneParagraphs(parseJson(repaired), fallbackParagraph);
+    const structuralIssues = structuralPayloadIssues(parsed, allowedParagraphs);
+    if (structuralIssues.length > 0) {
+      throw new Error(`Parser did not return usable numbered scenes: ${structuralIssues.join("; ")}`);
+    }
     const remainingIssues = staticPayloadIssues(parsed, config);
     if (remainingIssues.length > 0) {
       throw new Error(`Parser did not return a complete Static scene: ${remainingIssues.join("; ")}`);

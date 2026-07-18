@@ -11,6 +11,29 @@ function parseParagraphNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/**
+ * Restores paragraph references the parser placed at scene level, or omitted
+ * when the request exposed exactly one possible source paragraph.
+ */
+export function recoverSceneParagraphs(payload: ParsedPayload, fallbackParagraph?: number): ParsedPayload {
+  const scenes = cleanArray<SceneJson>(payload.scenes).map((rawScene) => {
+    const sceneParagraph = parseParagraphNumber(rawScene.paragraph) || fallbackParagraph;
+    const shots = cleanArray<ShotJson>(rawScene.shots);
+    if (shots.length > 0) {
+      return {
+        ...rawScene,
+        shots: shots.map((shot) => parseParagraphNumber(shot.paragraph) || !sceneParagraph
+          ? shot
+          : { ...shot, paragraph: sceneParagraph })
+      };
+    }
+    return parseParagraphNumber(rawScene.paragraph) || !sceneParagraph
+      ? rawScene
+      : { ...rawScene, paragraph: sceneParagraph };
+  });
+  return { ...payload, scenes };
+}
+
 export function normalizeScenePayload(payload: ParsedPayload): NormalizedScene[] {
   const normalized: NormalizedScene[] = [];
   for (const rawScene of cleanArray<SceneJson>(payload.scenes)) {

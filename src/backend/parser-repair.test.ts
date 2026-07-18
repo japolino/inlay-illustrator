@@ -68,6 +68,70 @@ describe("parser JSON recovery", () => {
     expect(requests).toHaveLength(1);
   });
 
+  test("infers an omitted shot paragraph when Adaptive parsing exposes one source paragraph", async () => {
+    responses.push({ content: JSON.stringify({
+      scenes: [{
+        environment: { location: "garden" },
+        shots: [{ perspectiveMode: "creative", camera: { framing: "body-part focus" }, characters: [] }]
+      }]
+    }) });
+    const adaptiveMessages: ParserGenerationRequest["messages"] = [{
+      role: "user",
+      content: [
+        "Create the requested image-prompt batch.",
+        "## Current Numbered Paragraph Source",
+        "[P5]\nShe peers through her fingers.",
+        "## Selected Creative Concepts",
+        "[P5] concept ID: creative-example"
+      ].join("\n\n")
+    }];
+
+    const parsed = await parsePayloadWithRepair(connection, { ...config, adaptiveMode: true }, adaptiveMessages);
+
+    expect(parsed.scenes?.[0].shots?.[0].paragraph).toBe(5);
+    expect(requests).toHaveLength(1);
+  });
+
+  test("inherits a scene-level paragraph into nested shots", async () => {
+    responses.push({ content: JSON.stringify({
+      scenes: [{ paragraph: "P5", environment: { location: "garden" }, shots: [{ camera: "close-up" }] }]
+    }) });
+    const numberedMessages: ParserGenerationRequest["messages"] = [{
+      role: "user",
+      content: "## Current Numbered Paragraph Source\n\n[P2]\nFirst beat.\n\n[P5]\nSecond beat."
+    }];
+
+    const parsed = await parsePayloadWithRepair(connection, config, numberedMessages);
+
+    expect(parsed.scenes?.[0].shots?.[0].paragraph).toBe(5);
+    expect(requests).toHaveLength(1);
+  });
+
+  test("repairs structurally valid JSON with no usable numbered shots", async () => {
+    responses.push(
+      { content: '{"scenes":[{"shots":[{"camera":"close-up"}]}]}' },
+      { content: '{"scenes":[{"shots":[{"paragraph":2,"camera":"close-up"}]}]}' }
+    );
+    const numberedMessages: ParserGenerationRequest["messages"] = [{
+      role: "user",
+      content: "## Current Numbered Paragraph Source\n\n[P2]\nFirst beat.\n\n[P5]\nSecond beat."
+    }];
+
+    const parsed = await parsePayloadWithRepair(connection, config, numberedMessages);
+
+    expect(parsed.scenes?.[0].shots?.[0].paragraph).toBe(2);
+    expect(requests).toHaveLength(2);
+    expect(requests[1].messages[0].content).toContain("Allowed paragraph references: P2, P5");
+    expect(requests[1].messages[1].content).not.toBe("");
+  });
+
+  test("rejects an empty provider response without sending an invalid empty repair request", async () => {
+    responses.push({ content: "" });
+
+    await expect(parsePayloadWithRepair(connection, config, messages)).rejects.toThrow("Parser returned an empty response.");
+    expect(requests).toHaveLength(1);
+  });
+
   test("makes one constrained repair request after malformed JSON", async () => {
     const malformed = '{"scenes": [';
     responses.push(
@@ -153,7 +217,7 @@ describe("parser JSON recovery", () => {
 
   test("logs numeric parser usage without logging response content", async () => {
     responses.push({
-      content: '{"scenes":[]}',
+      content: '{"scenes":[{"paragraph":1,"camera":"portrait"}]}',
       usage: { prompt_tokens: 321, completion_tokens: 45, total_tokens: 366 }
     });
 
@@ -162,7 +226,7 @@ describe("parser JSON recovery", () => {
     const completionLog = infoLogs.find((message) => message.includes("parser_llm_done")) || "";
     expect(completionLog).toContain('"prompt_tokens":321');
     expect(completionLog).toContain('"total_tokens":366');
-    expect(completionLog).not.toContain('{"scenes":[]}');
+    expect(completionLog).not.toContain('"camera":"portrait"');
   });
 });
 
