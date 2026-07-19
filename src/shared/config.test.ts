@@ -73,6 +73,7 @@ describe("shared configuration", () => {
       includeMaxMessages: 2,
       maxCharacters: 0,
       parserRetries: 2.6,
+      parserMaxTokens: 99_999,
       inlayImageWidth: 100,
       inlayImageMaxHeightVh: Number.NaN
     });
@@ -84,9 +85,16 @@ describe("shared configuration", () => {
       includeMaxMessages: 30,
       maxCharacters: 1,
       parserRetries: 3,
+      parserMaxTokens: 32_768,
       inlayImageWidth: 120,
       inlayImageMaxHeightVh: DEFAULT_CONFIG.inlayImageMaxHeightVh
     });
+  });
+
+  test("uses an automatic parser token budget by default and clamps explicit budgets", () => {
+    expect(normalizeConfig({}).parserMaxTokens).toBe(0);
+    expect(normalizeConfig({ parserMaxTokens: -5 }).parserMaxTokens).toBe(0);
+    expect(normalizeConfig({ parserMaxTokens: 9_000.4 }).parserMaxTokens).toBe(9_000);
   });
 
   test("normalizes perspective settings and migrates removed modes without retaining their keys", () => {

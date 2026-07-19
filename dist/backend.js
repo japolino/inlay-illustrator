@@ -8,6 +8,7 @@ var DEFAULT_CONFIG = {
   parserConnectionId: null,
   parserModel: "",
   parserParameters: {},
+  parserMaxTokens: 0,
   imageConnectionId: null,
   imageModel: "",
   imageParameters: {},
@@ -100,6 +101,7 @@ function normalizeConfig(raw) {
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
+    parserMaxTokens: clampInt(raw.parserMaxTokens, 0, 32768, DEFAULT_CONFIG.parserMaxTokens),
     imageConnectionId: cleanNullableString(raw.imageConnectionId) || cleanNullableString(imageGeneration.activeImageGenConnectionId),
     imageModel: cleanString(raw.imageModel) || cleanString(imageGeneration.model),
     imageParameters: Object.keys(imageParameters).length > 0 ? imageParameters : cleanParameters(imageGeneration.parameters),
@@ -469,6 +471,12 @@ function characterDescriptor(character) {
 }
 function buildNameReplacementMap(characters) {
   const replacements = new Map;
+  const firstNameCounts = new Map;
+  for (const character of characters) {
+    const first = normalizeCharacterName(character.name).split(/\s+/)[0]?.toLowerCase();
+    if (first)
+      firstNameCounts.set(first, (firstNameCounts.get(first) || 0) + 1);
+  }
   for (const character of characters) {
     const descriptor = characterDescriptor(character);
     const raw = cleanString2(character.name);
@@ -477,6 +485,9 @@ function buildNameReplacementMap(characters) {
       if (name.length >= 2)
         replacements.set(name, descriptor);
     }
+    const first = normalized.split(/\s+/)[0];
+    if (first.length >= 2 && firstNameCounts.get(first.toLowerCase()) === 1)
+      replacements.set(first, descriptor);
   }
   return replacements;
 }
@@ -670,13 +681,14 @@ function assembleAtomicSharedComposition(value, replacements) {
   const structured = hasAtomicField(record, fields);
   if (!structured) {
     const text = sanitizeComposition(cleanString2(value), replacements);
-    return { text, interaction: "", structured: false };
+    return { text, interaction: "", relation: "", structured: false };
   }
   const interactionParts = unique(sanitizedAtomicSnippets(record.interaction, 2, replacements));
   const relationParts = unique(sanitizedAtomicSnippets(record.spatialRelation, 1, replacements));
   return {
     text: unique([...interactionParts, ...relationParts]).join(", "),
     interaction: interactionParts.join(", "),
+    relation: relationParts.join(", "),
     structured: true
   };
 }
@@ -707,7 +719,7 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode,
   const bindingCreative = perspectiveMode === "creative" && Boolean(creativeConcept);
   const characters = bindingCreative ? allCharacters.slice(0, 1) : allCharacters;
   const conceptScope = perspectiveMode === "creative" ? sanitizeComposition(cleanString2(creativeConcept?.renderScope), replacements) : "";
-  const characterSections = characters.flatMap((character, index) => {
+  const characterParts = characters.map((character, index) => {
     const composition = perspectiveMode === "static" ? assembleStaticCharacterComposition(character.composition, replacements) : assembleAtomicCharacterComposition(character.composition, replacements);
     const scope = perspectiveMode === "creative" ? index === 0 && conceptScope || sanitizeComposition(cleanString2(character.renderScope), replacements) : "";
     const compositionText = perspectiveMode === "creative" && scope ? scope : composition.text;
@@ -715,12 +727,16 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode,
     const baseTags = conceptTags || assembleCharacterBlock(character, config, replacements, false, perspectiveMode);
     const uncoveredActions = composition.structured ? "" : stripOrReplaceNames(uncoveredActionTags(character.action, compositionText), replacements, true);
     const tags = unique(csvParts(baseTags, uncoveredActions)).join(", ");
-    return [compositionText, tags].filter(Boolean);
+    return { compositionText, sections: [compositionText, tags].filter(Boolean) };
   });
+  const characterSections = characterParts.flatMap((part) => part.sections);
+  const individualComposition = characterParts.map((part) => part.compositionText).filter(Boolean).join(", ");
   const hasSharedComposition = Boolean(cleanString2(shot.sharedComposition)) || Object.keys(asRecord(shot.sharedComposition)).length > 0;
   const sharedSource = hasSharedComposition ? shot.sharedComposition : shot.supplement;
   const sharedComposition = assembleAtomicSharedComposition(sharedSource, replacements);
-  const sharedAction = sharedComposition.structured ? config.supplement ? "" : sharedComposition.interaction : stripOrReplaceNames(uncoveredActionTags(shot.action, config.supplement ? sharedComposition.text : ""), replacements, true);
+  const filteredSharedInteraction = sharedComposition.structured ? uncoveredActionTags(sharedComposition.interaction, individualComposition) : sharedComposition.interaction;
+  const filteredSharedText = sharedComposition.structured ? unique(csvParts(filteredSharedInteraction, sharedComposition.relation)).join(", ") : sharedComposition.text;
+  const sharedAction = sharedComposition.structured ? config.supplement ? "" : filteredSharedInteraction : stripOrReplaceNames(uncoveredActionTags(shot.action, config.supplement ? sharedComposition.text : ""), replacements, true);
   const camera = perspectiveMode === "static" ? { text: "medium shot, eye level, straight-on, deep focus", structured: true } : perspectiveMode === "creative" && cleanString2(creativeConcept?.camera) ? { text: cleanString2(creativeConcept?.camera), structured: false } : assembleStructuredCamera(shot.camera);
   const environment = scene.environment || {};
   const location = structuredSnippets(environment.location, 1);
@@ -739,7 +755,7 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode,
     stripOrReplaceNames(bindingCreative ? identitySafeCreativeSituation(shot.situation) : unique(csvParts(shot.situation)).join(", "), replacements, true),
     perspectiveMode === "creative" && characters.length === 0 ? conceptScope : "",
     ...characterSections,
-    config.supplement && perspectiveMode !== "static" && !bindingCreative ? sharedComposition.text : "",
+    config.supplement && perspectiveMode !== "static" && !bindingCreative ? filteredSharedText : "",
     perspectiveMode === "static" || bindingCreative ? "" : sharedAction,
     bindingCreative ? "" : environmentSection,
     stripOrReplaceNames(camera.text, replacements, true)
@@ -1034,6 +1050,33 @@ function recoverSceneParagraphs(payload, fallbackParagraph) {
     return parseParagraphNumber(rawScene.paragraph) || !sceneParagraph ? rawScene : { ...rawScene, paragraph: sceneParagraph };
   });
   return { ...payload, scenes };
+}
+function dedupeCharacters(characters) {
+  if (!Array.isArray(characters))
+    return characters;
+  const seen = new Set;
+  return characters.filter((character) => {
+    const name = cleanString2(character.name).toLowerCase();
+    const key = `${name}\x00${normalizedVisualValue(character)}`;
+    if (seen.has(key))
+      return false;
+    seen.add(key);
+    return true;
+  });
+}
+function dedupeExactShotCharacters(payload) {
+  return {
+    ...payload,
+    scenes: cleanArray(payload.scenes).map((scene) => {
+      const next = { ...scene };
+      if (Array.isArray(scene.characters))
+        next.characters = dedupeCharacters(scene.characters);
+      if (Array.isArray(scene.shots)) {
+        next.shots = scene.shots.map((shot) => Array.isArray(shot.characters) ? { ...shot, characters: dedupeCharacters(shot.characters) } : { ...shot });
+      }
+      return next;
+    })
+  };
 }
 function normalizeScenePayload(payload) {
   const normalized = [];
@@ -2313,9 +2356,15 @@ function parserInstruction(config) {
     "### Atomic Natural Composition",
     "characters[].composition is always required and must use its four atomic fields. The renderer joins them once in this exact order: position, pose, actions, gaze.",
     "For Creative, still populate composition for structured memory and validation, but renderScope is authoritative and replaces composition in the rendered prompt when present.",
+    "Creative never removes a source character object and never turns its object, environment, shadow, reflection, silhouette, or fragment anchor into a character. Keep every source-visible named character in characters[] with complete baseline fields even when cropped out of the rendered Creative scope.",
+    "renderScope and visibleTags belong only inside a source character object. Never move them to the shot or scene, and never use the Creative anchor as characters[].name.",
+    "Creative does not exempt scene continuity fields. Populate the complete environment object within its normal location, timeWeather, lightingMood, and backgroundElements budgets even when the Creative renderer will omit that environment from the current prompt.",
     "composition.position is one concise spatial phrase describing where the character is in frame.",
     "composition.pose is one concise phrase describing the character's static body pose.",
     "composition.actions contains 0-3 concise phrases covering every visible action and movement direction exactly once. Use present visual phrasing such as mid-turn toward the viewer, not mixed completed and ongoing tenses.",
+    "When the source states a direction such as left, right, upward, downward, forward, backward, toward, or away, keep that direction in the same composition.actions phrase. Never reduce running left to running or climbing upward to climbing.",
+    "Preserve each distinctive visible action verb and its visible object or trigger in composition.actions. Never replace ducking away from falling glass with only crouching plus moving right, pulling a wrist with only running, or pushing a jammed door with only leaning forward.",
+    "Preserve source-described environmental contact or encroachment that changes the visible beat, such as rising water around boots, smoke surrounding a face, or vines wrapping an arm. Put the environmental material in an appropriate environment snippet and keep its contact with the character explicit; do not reduce it to generic weather or omit it after preserving the character action.",
     "composition.gaze is one concise gaze-direction phrase, or empty when no gaze is visible.",
     "Each atomic phrase must be independently visual, comma-free, free of semicolons and terminal punctuation, and must not repeat a fact from another composition field.",
     "Do not put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle, appearance, attire, or facial-expression adjectives in any composition field.",
@@ -2352,6 +2401,7 @@ function parserInstruction(config) {
     fixedStatic ? "Shot = one distinct stable visual-novel moment: a readable background plus a foreground character, simple pose, and visible expression. Shots are independent, so repeat tags if the scene has not changed." : "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
     shotInstruction,
     "Paragraph mapping: current message uses [P#] numbering.",
+    "- Paragraph references are 1-based. Copy the exact visible number after P; never convert to zero-based indices, renumber the source, or use paragraph 0.",
     "- Each shot's paragraph must reference an existing [P#].",
     "- Never invent paragraph numbers outside the visible range.",
     "- Tag ONLY the current message. Recent context is for continuity only.",
@@ -2359,6 +2409,7 @@ function parserInstruction(config) {
     "Use common, objective, visualizable Danbooru-style English tags. Never fabricate tag vocabulary; use simpler well-known equivalents if unsure. Conservative scene inference is allowed only where this contract explicitly permits it. Do not use metaphors for tags.",
     "Never output placeholder tags or phrases such as unknown, unspecified, not specified, unmentioned, undetermined, default clothing, or unspecified time. Leave genuinely nonvisual fields empty instead.",
     structuredAnima ? "Tag fields are comma-separated tags. Atomic composition and sharedComposition values are concise comma-free natural-language phrases. Environment arrays contain one comma-free visual snippet per item." : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
+    "Character names are private memory keys. Outside characters[].name, never write a full name or first name in any field, including situation, renderScope, visibleTags, composition, sharedComposition, camera, environment, place, supplement, or negative. Use visual descriptors such as left woman, right man, foreground character, or background character.",
     `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it. For every character object, keep the complete known baseline in appearance, body, and attire even when Creative shows only a partial crop. visibleTags is the separate visible-only rendering projection.`,
     "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for stable appearance, attire, location, and persistent actions.",
     "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts.",
@@ -2376,6 +2427,7 @@ function parserInstruction(config) {
     structuredAnima ? "camera.framing must be empty or exactly one of: portrait, close-up, medium close-up, upper body, medium shot, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, body-part focus." : "Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus.",
     structuredAnima ? "camera.angle must be empty or exactly one of: eye level, low angle, high angle, dutch angle." : "Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
     structuredAnima ? "camera.perspective must be empty or exactly one of: straight-on, from above, from behind, from below, from side, sideways, three-quarter view, pov." : "",
+    structuredAnima ? "Never swap camera.angle and camera.perspective: three-quarter view belongs only in perspective, while eye level, low angle, high angle, and dutch angle belong only in angle." : "",
     structuredAnima ? "camera.focus may contain at most two values chosen only from: shallow depth of field, deep focus, background blur, foreground blur, motion blur, fisheye, wide-angle lens, telephoto lens." : "",
     structuredAnima ? "Do not add any other camera keys or camera values. Lighting, streetlamps, atmosphere, actions, expressions, appearance, clothing, subject counts, and place never belong in camera." : "Use camera only for perspective and framing. Do not include actions, expressions, appearance, clothing, subject counts, or place.",
     structuredAnima ? "Choose framing that can visibly contain the complete focal action unless Creative deliberately isolates a smaller visual anchor." : "",
@@ -2387,6 +2439,7 @@ function parserInstruction(config) {
     "Use girl, boy, or other regardless of age. For out-of-frame partial characters, use label plus out of frame and visible part, such as boy, out of frame, hand.",
     "### name - required",
     "Character name from the narrative. If unnamed, use a consistent identifier such as girl A, boy B, shopkeeper, guard, or stranger. Never empty; this is used for cross-message appearance tracking.",
+    "When the narrative provides a multi-word name, copy that full name exactly in characters[].name. Never shorten it to a first name, surname, nickname, or partial name.",
     structuredAnima ? "Do not put character names in label, age, appearance, body, attire, expression, action, composition, situation, camera, place, environment, sharedComposition, supplement, or negative." : "Do not put character names in label, age, appearance, body, attire, expression, action, situation, camera, place, supplement, or negative.",
     "### age",
     "Visual age category only: child, aged down, mature male, mature female, aged up, or old. Based on appearance only.",
@@ -2673,7 +2726,7 @@ function balancedObjects(text) {
   }
   return [...new Set(objects.sort((left, right) => right.length - left.length))];
 }
-function parseJson(text) {
+function parseParserJson(text) {
   const trimmed = text.trim().replace(/\\\(/g, "(").replace(/\\\)/g, ")");
   const whole = tryParseObject(trimmed);
   if (hasScenes(whole))
@@ -2825,17 +2878,42 @@ async function resolveParserConnection(config, userId) {
   return resolved;
 }
 var unsupportedStructuredOutput = new Set;
+function parserStageTokenBudget(model, config, stage) {
+  if (config.parserMaxTokens > 0)
+    return config.parserMaxTokens;
+  const budgets = {
+    main: Math.min(7000, 1800 + Math.max(1, config.maxImages) * 900),
+    ideation: Math.min(5000, 1200 + Math.max(1, config.maxImages) * 700),
+    preprocess: 2400,
+    repair: Math.min(6000, 1600 + Math.max(1, config.maxImages) * 800),
+    camera: 1800
+  };
+  const base = budgets[stage];
+  if (/kimi[^\n]*k2[.\-_ ]?7[^\n]*code/i.test(model)) {
+    if (stage === "main")
+      return Math.max(base, 16000);
+    if (stage === "repair")
+      return Math.max(base, 12000);
+    return Math.max(base, 8000);
+  }
+  if (!/deepseek[^\n]*v4[^\n]*pro/i.test(model))
+    return base;
+  if (stage === "main")
+    return Math.max(base, 9000);
+  if (stage === "ideation")
+    return Math.max(base, 5000);
+  if (stage === "preprocess")
+    return Math.max(base, 4000);
+  if (stage === "repair")
+    return Math.max(base, 7000);
+  if (stage === "camera")
+    return Math.max(base, 4000);
+  return base;
+}
 function parserStageParameters(connection, config, stage, structured = stage !== "preprocess") {
   const parameters = { ...config.parserParameters };
   if (parameters.max_tokens === undefined && parameters.max_completion_tokens === undefined) {
-    const budgets = {
-      main: Math.min(7000, 1800 + Math.max(1, config.maxImages) * 900),
-      ideation: Math.min(5000, 1200 + Math.max(1, config.maxImages) * 700),
-      preprocess: 2400,
-      repair: Math.min(6000, 1600 + Math.max(1, config.maxImages) * 800),
-      camera: 1800
-    };
-    parameters.max_tokens = budgets[stage];
+    parameters.max_tokens = parserStageTokenBudget(config.parserModel || connection.model, config, stage);
   }
   const capabilityKey = JSON.stringify([connection.provider, config.parserModel || connection.model]);
   const providerModel = `${connection.provider} ${config.parserModel || connection.model}`.toLowerCase();
@@ -3047,7 +3125,7 @@ async function parsePayloadWithRepair(parserConnection, config, messages, userId
   let repairInput = raw;
   try {
     logStage(config, "json_parse_start", { rawLength: raw.length, repair: false });
-    const parsed = recoverSceneParagraphs(parseJson(raw), fallbackParagraph);
+    const parsed = dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(raw), fallbackParagraph));
     const structuralIssues = structuralPayloadIssues(parsed, allowedParagraphs);
     if (structuralIssues.length > 0) {
       repairSystem = structuralRepairInstruction(structuralIssues, allowedParagraphs);
@@ -3069,7 +3147,7 @@ async function parsePayloadWithRepair(parserConnection, config, messages, userId
     ], userId, "repair");
     if (!repaired.trim())
       throw new Error("Parser returned an empty repair response.");
-    const parsed = recoverSceneParagraphs(parseJson(repaired), fallbackParagraph);
+    const parsed = dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(repaired), fallbackParagraph));
     const structuralIssues = structuralPayloadIssues(parsed, allowedParagraphs);
     if (structuralIssues.length > 0) {
       throw new Error(`Parser did not return usable numbered scenes: ${structuralIssues.join("; ")}`);
@@ -3114,7 +3192,7 @@ async function repairDynamicCameraDiversity(parserConnection, config, payload, t
     ], userId, "camera");
     if (!raw.trim())
       throw new Error("empty camera repair response");
-    const repaired = parseJson(raw);
+    const repaired = parseParserJson(raw);
     const merged = mergeDynamicCameraRepair(payload, repaired, config, audit);
     if (!merged)
       throw new Error("camera repair did not safely reduce exact collisions");

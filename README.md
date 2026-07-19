@@ -14,6 +14,7 @@ Lumiverse extension for persistent, context-aware character image generation.
 - Atomic Anima composition, structured environments, and ComfyUI-friendly prompt output
 - Image lightbox with prompt metadata, fresh-seed rerolls, and per-image sidecar reruns
 - Optional activated-lorebook context with macro resolution, compact first-pass references, and full-context retry
+- Configurable maximum parser token budget with automatic allowances for reasoning-heavy sidecars
 
 ## Install from source
 

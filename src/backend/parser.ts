@@ -12,7 +12,7 @@ import {
   repairDynamicCameraDiversityLocally
 } from "./camera-diversity.js";
 import { logStage } from "./logging.js";
-import { normalizeScenePayload, recoverSceneParagraphs } from "./scenes.js";
+import { dedupeExactShotCharacters, normalizeScenePayload, recoverSceneParagraphs } from "./scenes.js";
 import type { CreativeConcept, ParsedPayload, ParserConnection, ParserContext, ParserGenerationRequest, PreparedParagraph, SceneJson, ShotJson } from "./types.js";
 import { asRecord, cleanString, compactBlock, keysOf } from "./utils.js";
 
@@ -184,7 +184,8 @@ function balancedObjects(text: string): string[] {
   return [...new Set(objects.sort((left, right) => right.length - left.length))];
 }
 
-function parseJson(text: string): ParsedPayload {
+/** Parses a raw sidecar response using the production JSON recovery path. */
+export function parseParserJson(text: string): ParsedPayload {
   const trimmed = text.trim().replace(/\\\(/g, "(").replace(/\\\)/g, ")");
   const whole = tryParseObject(trimmed);
   if (hasScenes(whole)) return whole;
@@ -325,8 +326,33 @@ export async function resolveParserConnection(config: Config, userId?: string): 
   return resolved;
 }
 
-type ParserStage = "main" | "ideation" | "preprocess" | "repair" | "camera";
+export type ParserStage = "main" | "ideation" | "preprocess" | "repair" | "camera";
 const unsupportedStructuredOutput = new Set<string>();
+
+/** Matches production output budgets while reserving room for reasoning-heavy compatible models. */
+export function parserStageTokenBudget(model: string, config: Config, stage: ParserStage): number {
+  if (config.parserMaxTokens > 0) return config.parserMaxTokens;
+  const budgets: Record<ParserStage, number> = {
+    main: Math.min(7000, 1800 + Math.max(1, config.maxImages) * 900),
+    ideation: Math.min(5000, 1200 + Math.max(1, config.maxImages) * 700),
+    preprocess: 2400,
+    repair: Math.min(6000, 1600 + Math.max(1, config.maxImages) * 800),
+    camera: 1800
+  };
+  const base = budgets[stage];
+  if (/kimi[^\n]*k2[.\-_ ]?7[^\n]*code/i.test(model)) {
+    if (stage === "main") return Math.max(base, 16000);
+    if (stage === "repair") return Math.max(base, 12000);
+    return Math.max(base, 8000);
+  }
+  if (!/deepseek[^\n]*v4[^\n]*pro/i.test(model)) return base;
+  if (stage === "main") return Math.max(base, 9000);
+  if (stage === "ideation") return Math.max(base, 5000);
+  if (stage === "preprocess") return Math.max(base, 4000);
+  if (stage === "repair") return Math.max(base, 7000);
+  if (stage === "camera") return Math.max(base, 4000);
+  return base;
+}
 
 function parserStageParameters(
   connection: ParserConnection,
@@ -336,14 +362,7 @@ function parserStageParameters(
 ): { parameters: Record<string, unknown>; injectedStructuredOutput: boolean } {
   const parameters = { ...config.parserParameters };
   if (parameters.max_tokens === undefined && parameters.max_completion_tokens === undefined) {
-    const budgets: Record<ParserStage, number> = {
-      main: Math.min(7000, 1800 + Math.max(1, config.maxImages) * 900),
-      ideation: Math.min(5000, 1200 + Math.max(1, config.maxImages) * 700),
-      preprocess: 2400,
-      repair: Math.min(6000, 1600 + Math.max(1, config.maxImages) * 800),
-      camera: 1800
-    };
-    parameters.max_tokens = budgets[stage];
+    parameters.max_tokens = parserStageTokenBudget(config.parserModel || connection.model, config, stage);
   }
   const capabilityKey = JSON.stringify([connection.provider, config.parserModel || connection.model]);
   const providerModel = `${connection.provider} ${config.parserModel || connection.model}`.toLowerCase();
@@ -598,7 +617,7 @@ export async function parsePayloadWithRepair(
   let repairInput = raw;
   try {
     logStage(config, "json_parse_start", { rawLength: raw.length, repair: false });
-    const parsed = recoverSceneParagraphs(parseJson(raw), fallbackParagraph);
+    const parsed = dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(raw), fallbackParagraph));
     const structuralIssues = structuralPayloadIssues(parsed, allowedParagraphs);
     if (structuralIssues.length > 0) {
       repairSystem = structuralRepairInstruction(structuralIssues, allowedParagraphs);
@@ -619,7 +638,7 @@ export async function parsePayloadWithRepair(
       { role: "user", content: repairInput }
     ], userId, "repair");
     if (!repaired.trim()) throw new Error("Parser returned an empty repair response.");
-    const parsed = recoverSceneParagraphs(parseJson(repaired), fallbackParagraph);
+    const parsed = dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(repaired), fallbackParagraph));
     const structuralIssues = structuralPayloadIssues(parsed, allowedParagraphs);
     if (structuralIssues.length > 0) {
       throw new Error(`Parser did not return usable numbered scenes: ${structuralIssues.join("; ")}`);
@@ -667,7 +686,7 @@ export async function repairDynamicCameraDiversity(
       }
     ], userId, "camera");
     if (!raw.trim()) throw new Error("empty camera repair response");
-    const repaired = parseJson(raw);
+    const repaired = parseParserJson(raw);
     const merged = mergeDynamicCameraRepair(payload, repaired, config, audit);
     if (!merged) throw new Error("camera repair did not safely reduce exact collisions");
     const repairedAudit = auditDynamicCameraDiversity(merged, config);

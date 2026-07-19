@@ -147,9 +147,15 @@ export function parserInstruction(config: Config): string {
       "### Atomic Natural Composition",
       "characters[].composition is always required and must use its four atomic fields. The renderer joins them once in this exact order: position, pose, actions, gaze.",
       "For Creative, still populate composition for structured memory and validation, but renderScope is authoritative and replaces composition in the rendered prompt when present.",
+      "Creative never removes a source character object and never turns its object, environment, shadow, reflection, silhouette, or fragment anchor into a character. Keep every source-visible named character in characters[] with complete baseline fields even when cropped out of the rendered Creative scope.",
+      "renderScope and visibleTags belong only inside a source character object. Never move them to the shot or scene, and never use the Creative anchor as characters[].name.",
+      "Creative does not exempt scene continuity fields. Populate the complete environment object within its normal location, timeWeather, lightingMood, and backgroundElements budgets even when the Creative renderer will omit that environment from the current prompt.",
       "composition.position is one concise spatial phrase describing where the character is in frame.",
       "composition.pose is one concise phrase describing the character's static body pose.",
       "composition.actions contains 0-3 concise phrases covering every visible action and movement direction exactly once. Use present visual phrasing such as mid-turn toward the viewer, not mixed completed and ongoing tenses.",
+      "When the source states a direction such as left, right, upward, downward, forward, backward, toward, or away, keep that direction in the same composition.actions phrase. Never reduce running left to running or climbing upward to climbing.",
+      "Preserve each distinctive visible action verb and its visible object or trigger in composition.actions. Never replace ducking away from falling glass with only crouching plus moving right, pulling a wrist with only running, or pushing a jammed door with only leaning forward.",
+      "Preserve source-described environmental contact or encroachment that changes the visible beat, such as rising water around boots, smoke surrounding a face, or vines wrapping an arm. Put the environmental material in an appropriate environment snippet and keep its contact with the character explicit; do not reduce it to generic weather or omit it after preserving the character action.",
       "composition.gaze is one concise gaze-direction phrase, or empty when no gaze is visible.",
       "Each atomic phrase must be independently visual, comma-free, free of semicolons and terminal punctuation, and must not repeat a fact from another composition field.",
       "Do not put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle, appearance, attire, or facial-expression adjectives in any composition field.",
@@ -196,6 +202,7 @@ export function parserInstruction(config: Config): string {
       : "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
     shotInstruction,
     "Paragraph mapping: current message uses [P#] numbering.",
+    "- Paragraph references are 1-based. Copy the exact visible number after P; never convert to zero-based indices, renumber the source, or use paragraph 0.",
     "- Each shot's paragraph must reference an existing [P#].",
     "- Never invent paragraph numbers outside the visible range.",
     "- Tag ONLY the current message. Recent context is for continuity only.",
@@ -205,6 +212,7 @@ export function parserInstruction(config: Config): string {
     structuredAnima
       ? "Tag fields are comma-separated tags. Atomic composition and sharedComposition values are concise comma-free natural-language phrases. Environment arrays contain one comma-free visual snippet per item."
       : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
+    "Character names are private memory keys. Outside characters[].name, never write a full name or first name in any field, including situation, renderScope, visibleTags, composition, sharedComposition, camera, environment, place, supplement, or negative. Use visual descriptors such as left woman, right man, foreground character, or background character.",
     `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it. For every character object, keep the complete known baseline in appearance, body, and attire even when Creative shows only a partial crop. visibleTags is the separate visible-only rendering projection.`,
     "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for stable appearance, attire, location, and persistent actions.",
     "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts.",
@@ -234,6 +242,7 @@ export function parserInstruction(config: Config): string {
       ? "camera.angle must be empty or exactly one of: eye level, low angle, high angle, dutch angle."
       : "Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
     structuredAnima ? "camera.perspective must be empty or exactly one of: straight-on, from above, from behind, from below, from side, sideways, three-quarter view, pov." : "",
+    structuredAnima ? "Never swap camera.angle and camera.perspective: three-quarter view belongs only in perspective, while eye level, low angle, high angle, and dutch angle belong only in angle." : "",
     structuredAnima ? "camera.focus may contain at most two values chosen only from: shallow depth of field, deep focus, background blur, foreground blur, motion blur, fisheye, wide-angle lens, telephoto lens." : "",
     structuredAnima
       ? "Do not add any other camera keys or camera values. Lighting, streetlamps, atmosphere, actions, expressions, appearance, clothing, subject counts, and place never belong in camera."
@@ -247,6 +256,7 @@ export function parserInstruction(config: Config): string {
     "Use girl, boy, or other regardless of age. For out-of-frame partial characters, use label plus out of frame and visible part, such as boy, out of frame, hand.",
     "### name - required",
     "Character name from the narrative. If unnamed, use a consistent identifier such as girl A, boy B, shopkeeper, guard, or stranger. Never empty; this is used for cross-message appearance tracking.",
+    "When the narrative provides a multi-word name, copy that full name exactly in characters[].name. Never shorten it to a first name, surname, nickname, or partial name.",
     structuredAnima
       ? "Do not put character names in label, age, appearance, body, attire, expression, action, composition, situation, camera, place, environment, sharedComposition, supplement, or negative."
       : "Do not put character names in label, age, appearance, body, attire, expression, action, situation, camera, place, supplement, or negative.",

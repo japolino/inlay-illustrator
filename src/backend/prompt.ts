@@ -44,6 +44,11 @@ function characterDescriptor(character: CharacterJson): string {
 
 function buildNameReplacementMap(characters: CharacterJson[]): Map<string, string> {
   const replacements = new Map<string, string>();
+  const firstNameCounts = new Map<string, number>();
+  for (const character of characters) {
+    const first = normalizeCharacterName(character.name).split(/\s+/)[0]?.toLowerCase();
+    if (first) firstNameCounts.set(first, (firstNameCounts.get(first) || 0) + 1);
+  }
   for (const character of characters) {
     const descriptor = characterDescriptor(character);
     const raw = cleanString(character.name);
@@ -51,6 +56,8 @@ function buildNameReplacementMap(characters: CharacterJson[]): Map<string, strin
     for (const name of unique([raw, normalized].filter(Boolean))) {
       if (name.length >= 2) replacements.set(name, descriptor);
     }
+    const first = normalized.split(/\s+/)[0];
+    if (first.length >= 2 && firstNameCounts.get(first.toLowerCase()) === 1) replacements.set(first, descriptor);
   }
   return replacements;
 }
@@ -280,7 +287,7 @@ const CAMERA_PERSPECTIVE = new Set<string>(CAMERA_PERSPECTIVE_VALUES);
 const CAMERA_FOCUS = new Set<string>(CAMERA_FOCUS_VALUES);
 
 type AtomicSection = { text: string; structured: boolean };
-type SharedAtomicSection = AtomicSection & { interaction: string };
+type SharedAtomicSection = AtomicSection & { interaction: string; relation: string };
 
 function hasAtomicField(record: Record<string, unknown>, fields: string[]): boolean {
   return fields.some((field) => Object.prototype.hasOwnProperty.call(record, field));
@@ -333,13 +340,14 @@ function assembleAtomicSharedComposition(value: unknown, replacements: Map<strin
   const structured = hasAtomicField(record, fields);
   if (!structured) {
     const text = sanitizeComposition(cleanString(value), replacements);
-    return { text, interaction: "", structured: false };
+    return { text, interaction: "", relation: "", structured: false };
   }
   const interactionParts = unique(sanitizedAtomicSnippets(record.interaction, 2, replacements));
   const relationParts = unique(sanitizedAtomicSnippets(record.spatialRelation, 1, replacements));
   return {
     text: unique([...interactionParts, ...relationParts]).join(", "),
     interaction: interactionParts.join(", "),
+    relation: relationParts.join(", "),
     structured: true
   };
 }
@@ -384,7 +392,7 @@ function assembleAnimaPrompt(
   const conceptScope = perspectiveMode === "creative"
     ? sanitizeComposition(cleanString(creativeConcept?.renderScope), replacements)
     : "";
-  const characterSections = characters.flatMap((character, index) => {
+  const characterParts = characters.map((character, index) => {
     const composition = perspectiveMode === "static"
       ? assembleStaticCharacterComposition(character.composition, replacements)
       : assembleAtomicCharacterComposition(character.composition, replacements);
@@ -402,16 +410,24 @@ function assembleAnimaPrompt(
       ? ""
       : stripOrReplaceNames(uncoveredActionTags(character.action, compositionText), replacements, true);
     const tags = unique(csvParts(baseTags, uncoveredActions)).join(", ");
-    return [compositionText, tags].filter(Boolean);
+    return { compositionText, sections: [compositionText, tags].filter(Boolean) };
   });
+  const characterSections = characterParts.flatMap((part) => part.sections);
+  const individualComposition = characterParts.map((part) => part.compositionText).filter(Boolean).join(", ");
   const hasSharedComposition = Boolean(cleanString(shot.sharedComposition))
     || Object.keys(asRecord(shot.sharedComposition)).length > 0;
   const sharedSource = hasSharedComposition
     ? shot.sharedComposition
     : shot.supplement;
   const sharedComposition = assembleAtomicSharedComposition(sharedSource, replacements);
+  const filteredSharedInteraction = sharedComposition.structured
+    ? uncoveredActionTags(sharedComposition.interaction, individualComposition)
+    : sharedComposition.interaction;
+  const filteredSharedText = sharedComposition.structured
+    ? unique(csvParts(filteredSharedInteraction, sharedComposition.relation)).join(", ")
+    : sharedComposition.text;
   const sharedAction = sharedComposition.structured
-    ? (config.supplement ? "" : sharedComposition.interaction)
+    ? (config.supplement ? "" : filteredSharedInteraction)
     : stripOrReplaceNames(
       uncoveredActionTags(shot.action, config.supplement ? sharedComposition.text : ""),
       replacements,
@@ -445,7 +461,7 @@ function assembleAnimaPrompt(
     ),
     perspectiveMode === "creative" && characters.length === 0 ? conceptScope : "",
     ...characterSections,
-    config.supplement && perspectiveMode !== "static" && !bindingCreative ? sharedComposition.text : "",
+    config.supplement && perspectiveMode !== "static" && !bindingCreative ? filteredSharedText : "",
     perspectiveMode === "static" || bindingCreative ? "" : sharedAction,
     bindingCreative ? "" : environmentSection,
     stripOrReplaceNames(camera.text, replacements, true)

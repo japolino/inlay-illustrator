@@ -35,6 +35,35 @@ export function recoverSceneParagraphs(payload: ParsedPayload, fallbackParagraph
   return { ...payload, scenes };
 }
 
+function dedupeCharacters(characters: CharacterJson[] | undefined): CharacterJson[] | undefined {
+  if (!Array.isArray(characters)) return characters;
+  const seen = new Set<string>();
+  return characters.filter((character) => {
+    const name = cleanString(character.name).toLowerCase();
+    const key = `${name}\u0000${normalizedVisualValue(character)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** Removes only exact duplicate character objects emitted within the same shot. */
+export function dedupeExactShotCharacters(payload: ParsedPayload): ParsedPayload {
+  return {
+    ...payload,
+    scenes: cleanArray<SceneJson>(payload.scenes).map((scene) => {
+      const next: SceneJson = { ...scene };
+      if (Array.isArray(scene.characters)) next.characters = dedupeCharacters(scene.characters);
+      if (Array.isArray(scene.shots)) {
+        next.shots = scene.shots.map((shot) => Array.isArray(shot.characters)
+          ? { ...shot, characters: dedupeCharacters(shot.characters) }
+          : { ...shot });
+      }
+      return next;
+    })
+  };
+}
+
 export function normalizeScenePayload(payload: ParsedPayload): NormalizedScene[] {
   const normalized: NormalizedScene[] = [];
   for (const rawScene of cleanArray<SceneJson>(payload.scenes)) {

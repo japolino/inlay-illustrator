@@ -40,6 +40,15 @@ export function renderParserSection({ ui, config, parserConnections, actions }: 
   });
   parserParameterTarget.append(parserParameterInput);
 
+  ui.addNumber(
+    section,
+    "parserMaxTokens",
+    "Maximum token budget",
+    0,
+    32768,
+    "0 uses the automatic model and parser-stage budget. Explicit max_tokens or max_completion_tokens in Parser parameters takes precedence."
+  );
+
   ui.addSwitch(section, "preprocessingEnabled", "Illustration preprocessing");
   ui.addNumber(section, "includeMinMessages", "Minimum context", 0, 32);
   ui.addNumber(section, "includeMaxMessages", "Maximum context", 0, 32);

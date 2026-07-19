@@ -8,6 +8,7 @@ var DEFAULT_CONFIG = {
   parserConnectionId: null,
   parserModel: "",
   parserParameters: {},
+  parserMaxTokens: 0,
   imageConnectionId: null,
   imageModel: "",
   imageParameters: {},
@@ -100,6 +101,7 @@ function normalizeConfig(raw) {
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
+    parserMaxTokens: clampInt(raw.parserMaxTokens, 0, 32768, DEFAULT_CONFIG.parserMaxTokens),
     imageConnectionId: cleanNullableString(raw.imageConnectionId) || cleanNullableString(imageGeneration.activeImageGenConnectionId),
     imageModel: cleanString(raw.imageModel) || cleanString(imageGeneration.model),
     imageParameters: Object.keys(imageParameters).length > 0 ? imageParameters : cleanParameters(imageGeneration.parameters),
@@ -399,6 +401,7 @@ function renderParserSection({ ui, config, parserConnections, actions }) {
     }
   });
   parserParameterTarget.append(parserParameterInput);
+  ui.addNumber(section, "parserMaxTokens", "Maximum token budget", 0, 32768, "0 uses the automatic model and parser-stage budget. Explicit max_tokens or max_completion_tokens in Parser parameters takes precedence.");
   ui.addSwitch(section, "preprocessingEnabled", "Illustration preprocessing");
   ui.addNumber(section, "includeMinMessages", "Minimum context", 0, 32);
   ui.addNumber(section, "includeMaxMessages", "Maximum context", 0, 32);

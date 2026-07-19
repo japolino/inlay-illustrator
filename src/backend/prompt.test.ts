@@ -189,6 +189,56 @@ describe("ordered Anima prompt composition", () => {
     expect(rendered.indexOf("cowboy shot")).toBeGreaterThan(rendered.indexOf("short golden blonde hair"));
   });
 
+  test("anonymizes unique first names in shared composition", () => {
+    const config = { ...DEFAULT_CONFIG, promptSyntax: "nai" as const };
+    const entry = assemblePrompt({ environment: {
+      location: "train platform",
+      timeWeather: "rainy evening",
+      lightingMood: ["overcast light"],
+      backgroundElements: ["departing train"]
+    } }, {
+      situation: "1girl, 1boy",
+      camera: { framing: "medium shot", angle: "eye level", perspective: "three-quarter view", focus: [] },
+      sharedComposition: {
+        interaction: ["Rhea gripping Evan's sleeve"],
+        spatialRelation: "Rhea stands close beside Evan"
+      },
+      characters: [
+        { name: "Rhea Calder", label: "girl", composition: { position: "left", pose: "standing", actions: [], gaze: "" } },
+        { name: "Evan Dorne", label: "boy", composition: { position: "right", pose: "leaning back", actions: [], gaze: "" } }
+      ]
+    }, config, 1, 1);
+
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
+    expect(rendered).not.toContain("Rhea");
+    expect(rendered).not.toContain("Evan");
+    expect(rendered).toContain("the girl gripping the boy's sleeve");
+    expect(rendered).toContain("the girl stands close beside the boy");
+  });
+
+  test("removes shared interactions already owned by an individual composition", () => {
+    const config = { ...DEFAULT_CONFIG, promptSyntax: "nai" as const };
+    const entry = assemblePrompt({ environment: {
+      location: "train compartment",
+      timeWeather: "rainy evening",
+      lightingMood: ["soft interior light"],
+      backgroundElements: ["train seat"]
+    } }, {
+      situation: "1girl, 1boy",
+      camera: { framing: "medium close-up", angle: "eye level", perspective: "straight-on", focus: [] },
+      sharedComposition: { interaction: ["bandaging"], spatialRelation: "seated close together" },
+      characters: [{
+        name: "Rhea Calder",
+        label: "girl",
+        composition: { position: "left", pose: "seated", actions: ["bandaging the boy's injured palm"], gaze: "looking at the injured palm" }
+      }]
+    }, config, 1, 1);
+
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
+    expect(rendered.match(/bandaging/g)).toHaveLength(1);
+    expect(rendered).toContain("seated close together");
+  });
+
   test("renders atomic scene data once and rejects camera field leakage", () => {
     const config = { ...DEFAULT_CONFIG, promptSyntax: "comfyui" as const };
     const entry = assemblePrompt({ environment: {
@@ -529,6 +579,9 @@ describe("Anima parser contract and visual distinctness", () => {
     expect(instruction).toContain('"position": "string"');
     expect(instruction).toContain('"actions": ["string"]');
     expect(instruction).toContain('"sharedComposition": {');
+    expect(instruction).toContain("Outside characters[].name, never write a full name or first name in any field");
+    expect(instruction).toContain("Preserve each distinctive visible action verb and its visible object or trigger");
+    expect(instruction).toContain("rising water around boots");
     expect(instruction).toContain('"interaction": ["string"]');
     expect(instruction).toContain('"camera": {');
     expect(instruction).toContain('"environment": {');

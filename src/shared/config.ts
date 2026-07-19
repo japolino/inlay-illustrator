@@ -16,6 +16,7 @@ export type Config = {
   parserConnectionId: string | null;
   parserModel: string;
   parserParameters: Record<string, unknown>;
+  parserMaxTokens: number;
   imageConnectionId: string | null;
   imageModel: string;
   imageParameters: Record<string, unknown>;
@@ -73,6 +74,7 @@ export const DEFAULT_CONFIG: Config = {
   parserConnectionId: null,
   parserModel: "",
   parserParameters: {},
+  parserMaxTokens: 0,
   imageConnectionId: null,
   imageModel: "",
   imageParameters: {},
@@ -170,6 +172,7 @@ export function normalizeConfig(raw: RawConfig): Config {
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
+    parserMaxTokens: clampInt(raw.parserMaxTokens, 0, 32768, DEFAULT_CONFIG.parserMaxTokens),
     imageConnectionId: cleanNullableString(raw.imageConnectionId) || cleanNullableString(imageGeneration.activeImageGenConnectionId),
     imageModel: cleanString(raw.imageModel) || cleanString(imageGeneration.model),
     imageParameters: Object.keys(imageParameters).length > 0 ? imageParameters : cleanParameters(imageGeneration.parameters),

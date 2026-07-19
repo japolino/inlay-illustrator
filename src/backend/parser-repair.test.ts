@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { DEFAULT_CONFIG } from "../shared/config.js";
-import { generateCreativeConcepts, parsePayloadWithRepair, repairDynamicCameraDiversity } from "./parser.js";
+import { generateCreativeConcepts, parsePayloadWithRepair, parserStageTokenBudget, repairDynamicCameraDiversity } from "./parser.js";
 import type { ParserGenerationRequest } from "./types.js";
 
 type RawRequest = { messages: ParserGenerationRequest["messages"]; parameters?: Record<string, unknown> };
@@ -33,7 +33,36 @@ beforeEach(() => {
   };
 });
 
+describe("parser output budgets", () => {
+  test("reserves completion space for reasoning-heavy models and supports a configured override", () => {
+    const singleImage = { ...DEFAULT_CONFIG, maxImages: 1 };
+    expect(parserStageTokenBudget("DeepSeek-A/deepseek-v4-pro", singleImage, "main")).toBe(9000);
+    expect(parserStageTokenBudget("DeepSeek-A/deepseek-v4-pro", singleImage, "repair")).toBe(7000);
+    expect(parserStageTokenBudget("Gemini/gcli-gemini-3.1-pro-preview", singleImage, "main")).toBe(2700);
+    expect(parserStageTokenBudget("CODEX/gpt-5.6-luna", singleImage, "main")).toBe(2700);
+    expect(parserStageTokenBudget("Moonshot/kimi-k2.7-code-highspeed", singleImage, "main")).toBe(16000);
+    expect(parserStageTokenBudget("Moonshot/kimi-k2.7-code-highspeed", singleImage, "repair")).toBe(12000);
+    expect(parserStageTokenBudget("Moonshot/kimi-k2.7-code-highspeed", singleImage, "ideation")).toBe(8000);
+    const explicitBudget = { ...singleImage, parserMaxTokens: 12_000 };
+    expect(parserStageTokenBudget("Moonshot/kimi-k2.7-code-highspeed", explicitBudget, "main")).toBe(12_000);
+    expect(parserStageTokenBudget("Moonshot/kimi-k2.7-code-highspeed", explicitBudget, "ideation")).toBe(12_000);
+  });
+});
+
 describe("parser JSON recovery", () => {
+  test("removes exact duplicate character objects within one shot", async () => {
+    const duplicate = { name: "Rhea Calder", label: "girl", appearance: "long white braid" };
+    responses.push({ content: JSON.stringify({ scenes: [{ shots: [{ paragraph: 1, characters: [duplicate, duplicate] }] }] }) });
+
+    const parsed = await parsePayloadWithRepair(connection, config, [{
+      role: "user",
+      content: "## Current Numbered Paragraph Source\n[P1]\nRhea waits."
+    }]);
+
+    expect(parsed.scenes?.[0].shots?.[0].characters).toHaveLength(1);
+    expect(Object.prototype.hasOwnProperty.call(parsed.scenes?.[0], "characters")).toBe(false);
+  });
+
   test("extracts fenced JSON from surrounding text and repairs near-miss schema keys locally", async () => {
     responses.push({
       content: [
