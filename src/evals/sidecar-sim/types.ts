@@ -4,7 +4,8 @@ import type { ParsedPayload, PreviousVisualState } from "../../backend/types.js"
 export type ScenarioExpectation = {
   paragraph: number;
   character?: string;
-  field: "payload" | "location" | "appearance" | "body" | "attire" | "expression" | "action" | "prompt";
+  field: "payload" | "location" | "appearance" | "body" | "attire" | "expression" | "action" | "prompt"
+    | "terminalLocation" | "terminalAppearance" | "terminalAttire";
   anyOf?: string[];
   noneOf?: string[];
   critical?: boolean;
@@ -21,6 +22,10 @@ export type SidecarScenario = {
   expectations: ScenarioExpectation[];
   expectedParagraphs: number[];
   expectedCharacters: Record<number, string[]>;
+  /** Optional exact alternatives for concept-dependent visible character sets. */
+  allowedCharacterSets?: Record<number, string[][]>;
+  /** Optional permitted Adaptive routing choices for each selected paragraph. */
+  expectedPerspectives?: Record<number, PerspectiveMode[]>;
 };
 
 export type QualityIssue = {

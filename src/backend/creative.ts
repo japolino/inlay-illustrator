@@ -39,15 +39,26 @@ const CREATIVE_SUBJECT_TYPES = new Set([
 
 const IDENTITY_BEARING_CUE = /\b(?:face|facial|cheek|chin|jaw|mouth|lip|lips|eye|eyes|iris|pupil|pupils|eyebrow|eyebrows|eyelash|eyelashes|hair|hairstyle|bangs|braid|ponytail|blonde|brunette|uniform|outfit|clothing|clothes|costume|dress|shirt|blouse|sweater|hoodie|coat|jacket|sleeve|collar|ribbon|tie|skirt|shorts|pants|trousers|stockings|pantyhose|sock|socks|shoe|shoes|boot|boots)\b/i;
 
+function identityBearingClaim(value: string): string {
+  const excludedIdentityList = /\b(?:no|without)\s+(?:recognizable\s+|visible\s+|complete\s+|identifying\s+)*(?:faces?|facial features?|hair|hairstyle|outfits?|clothing|clothes|complete bod(?:y|ies)|bod(?:y|ies)|figures?|people|persons?|characters?)(?:\s*(?:,|or|and)\s*(?:the\s+)?(?:faces?|facial features?|hair|hairstyle|outfits?|clothing|clothes|complete bod(?:y|ies)|bod(?:y|ies)|figures?|people|persons?|characters?))*/gi;
+  return value
+    .replace(excludedIdentityList, " ")
+    .replace(/\b(?:faces?|facial features?|hair|hairstyle|outfits?|clothing|clothes|bod(?:y|ies)|figures?|people|persons?|characters?)\s+(?:is|are|remains?|stay|stays)?\s*(?:fully\s+|entirely\s+)?(?:cropped|excluded|outside|out of frame|not visible|unreadable|occluded)\b/gi, " ")
+    .replace(/\b(?:crop|exclude|omit|hide|occlude)(?:s|d|ing)?\s+(?:the\s+)?(?:faces?|facial features?|hair|hairstyle|outfits?|clothing|clothes|bod(?:y|ies)|figures?|people|persons?|characters?)\b/gi, " ");
+}
+
 export function isIdentitySafeCreativeConcept(concept: CreativeConcept): boolean {
   if (!concept.subjectType || !CREATIVE_SUBJECT_TYPES.has(concept.subjectType)) return false;
-  return !IDENTITY_BEARING_CUE.test([
+  return isIdentitySafeCreativeCue([
     concept.anchor,
     concept.concept,
     concept.renderScope,
-    concept.camera,
     ...concept.visibleCues
   ].join(" "));
+}
+
+export function isIdentitySafeCreativeCue(value: string): boolean {
+  return !IDENTITY_BEARING_CUE.test(identityBearingClaim(value));
 }
 
 export function parseCreativeConcepts(
@@ -162,12 +173,16 @@ export function creativeIdeationInstruction(config: Config, previousConcepts: st
       : `Choose up to ${Math.max(1, config.maxImages)} visually strong paragraph numbers and generate exactly four candidates for each chosen paragraph.`,
     "Candidates for the same paragraph must differ in focal anchor and at least one of crop scale, subject inclusion, depth, occlusion, or viewpoint.",
     "Creative must not focus on recognizable identity-bearing character features. Never use a face, facial feature, hair, hairstyle, or recognizable clothing as the anchor or a visible cue.",
+    "Never write a character name in anchor, concept, renderScope, camera, or visibleCues, even to say that person is cropped out. Use generic terms such as person, figure, or room occupant in exclusion wording.",
     "Allowed subjectType values are object, environment, shadow, silhouette, reflection, fragment, or spatial. Reflections and fragments must remain non-identifying; generic hands, fingers, feet, gestures, and fully unreadable silhouettes are allowed.",
     "Prefer overlooked but meaningful anchors: a source-supported object, environmental detail, shadow, unreadable silhouette, non-identifying fragment, foreground layer, aftermath, or unusual spatial relationship.",
     "If a paragraph has no faithful identity-safe anchor, return no Creative candidate for it. Do not weaken this rule merely to fill the requested count.",
     "Do not merely restate the paragraph's complete main action.",
     "Separate literal cues from metaphors and internal narration. Never render a simile literally and never invent an object, body part, action, or setting detail.",
     "renderScope is binding: state exactly what is inside the frame and what is cropped or occluded. visibleCues contains only traits and elements actually visible inside that scope.",
+    "Repeat the exact source-specific anchor noun in anchor and at least one visibleCues entry. Never shorten a specific object into an ambiguous generic word: for example keep condom wrapper rather than wrapper, train ticket rather than paper, and broken mace head rather than debris.",
+    "Preserve every explicit modifier on an included cue, such as black-gloved fingertip, bronze hand, red switch, wet handprint, or tied used condom. Never simplify an included cue in a way that changes its material, color, state, or ownership.",
+    "Keep one or two source-supported grounding cues around the anchor so the image remains spatially legible, such as the bedside edge and rumpled sheet, arena arch and sand, or bus-shelter glass and rain. Avoid an extreme context-free macro unless the source itself contains no meaningful surrounding context.",
     "Score each candidate from 0-100 for source fidelity, focal specificity, visual clarity, ANIMA promptability, and difference from an obvious Dynamic full-action shot.",
     previousConcepts.length > 0
       ? `Avoid repeating these previously used concepts:\n- ${previousConcepts.map(cleanString).filter(Boolean).join("\n- ")}`

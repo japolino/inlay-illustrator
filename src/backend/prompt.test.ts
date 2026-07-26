@@ -7,7 +7,7 @@ import {
   renderPrompt,
   renderPromptWithCurrentAffixes
 } from "./prompt.js";
-import { exactVisualKey, normalizeScenePayload } from "./scenes.js";
+import { exactVisualKey, normalizeAtomicCompositionTerms, normalizeScenePayload } from "./scenes.js";
 
 describe("ordered Anima prompt composition", () => {
   test("renders a multi-character sofa scene in exact hybrid order with ComfyUI blank lines", () => {
@@ -312,7 +312,8 @@ describe("perspective selection and projection", () => {
     const rendered = renderPrompt(entry.prompt, config.promptSyntax);
 
     expect(entry).toMatchObject({ perspectiveMode: "creative", perspectiveSource: "adaptive" });
-    expect(rendered).toContain("red sleeve, fingertips, window reflection");
+    expect(rendered).toContain("fingertips, window reflection");
+    expect(rendered).not.toContain("red sleeve");
     expect(rendered).not.toContain("long silver hair");
     expect(rendered).not.toContain("blue eyes");
     expect(rendered).not.toContain("black skirt");
@@ -376,11 +377,178 @@ describe("perspective selection and projection", () => {
     expect(rendered).not.toContain("standing together");
   });
 
+  test("keeps the exact Creative anchor and visible cues when the frame contains no character", () => {
+    const config = { ...DEFAULT_CONFIG, perspectiveMode: "creative" as const, promptSyntax: "comfyui" as const };
+    const selectedConcept = {
+      id: "creative-spear",
+      paragraph: 1,
+      subjectType: "object" as const,
+      anchor: "snapped spear",
+      concept: "snapped spear across a sword groove",
+      renderScope: "only the snapped spear and fresh sword groove in sand",
+      camera: "low ground-level detail",
+      visibleCues: ["fresh sword groove", "drifting dust"],
+      score: 94
+    };
+    const entry = assemblePrompt({}, {
+      paragraph: 1,
+      perspectiveMode: "creative",
+      situation: "other",
+      characters: []
+    }, config, 1, 1, selectedConcept);
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
+
+    expect(rendered).toBe([
+      "only the snapped spear and fresh sword groove in sand",
+      "snapped spear, fresh sword groove, drifting dust",
+      "low ground-level detail"
+    ].join(",\n\n"));
+    expect(rendered).not.toContain("other");
+  });
+
   test("manual perspective overrides an incompatible parser value", () => {
     const config = { ...DEFAULT_CONFIG, adaptiveMode: false, perspectiveMode: "static" as const };
     const entry = assemblePrompt({}, { perspectiveMode: "creative", situation: "1girl", characters: [{ label: "girl", appearance: "blue hair" }] }, config, 1, 1);
     expect(entry).toMatchObject({ perspectiveMode: "static", perspectiveSource: "manual" });
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toContain("blue hair");
+  });
+
+  test("projects Dynamic into one prioritized action block with spatial context and complete non-fragment identity", () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      adaptiveMode: false,
+      perspectiveMode: "dynamic" as const,
+      promptSyntax: "comfyui" as const
+    };
+    const entry = assemblePrompt({
+      environment: {
+        location: "inside a train corridor",
+        timeWeather: "rainy evening",
+        lightingMood: ["cold rainy light", "tense reflected light"],
+        backgroundElements: ["closing doorway", "partial bronze mechanical hand", "brass handrail"]
+      }
+    }, {
+      perspectiveMode: "dynamic",
+      situation: "1girl, 1boy",
+      camera: {
+        framing: "medium shot",
+        angle: "eye level",
+        perspective: "from side",
+        focus: ["motion blur"]
+      },
+      shotPlan: {
+        primaryAction: "left man pulls right woman forward by her wrist while running left",
+        secondaryCue: "right woman looks backward at the partial bronze mechanical hand",
+        staging: "left man leads with right woman one step behind"
+      },
+      characters: [{
+        name: "Rhea Calder",
+        label: "girl",
+        age: "mature female",
+        appearance: "tan skin, long white braid, golden eyes, scar through left eyebrow",
+        body: "tall",
+        attire: "navy officer coat, white shirt, red sash, black trousers, knee-high black boots",
+        expression: "tense",
+        renderScope: "upper body visible behind the running man",
+        visibleTags: "long white braid, navy officer coat, red sash",
+        composition: {
+          position: "right side",
+          pose: "running",
+          actions: ["running left"],
+          gaze: "looking backward"
+        }
+      }, {
+        name: "Evan Dorne",
+        label: "boy",
+        age: "mature male",
+        appearance: "messy short black hair, green eyes, freckles",
+        body: "lean build",
+        attire: "gray hooded jacket, dark jeans, white sneakers",
+        expression: "urgent",
+        renderScope: "full upper body leading at the left",
+        visibleTags: "messy short black hair, gray hooded jacket",
+        composition: {
+          position: "left side",
+          pose: "running",
+          actions: ["running left", "pulling the girl's wrist"],
+          gaze: "looking forward"
+        }
+      }],
+      sharedComposition: {
+        interaction: ["holding wrists"],
+        spatialRelation: "the man runs one step ahead"
+      }
+    }, config, 1, 1);
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
+
+    expect(rendered).toBe([
+      "1girl, 1boy",
+      "medium shot, eye level, from side, motion blur",
+      "left man pulls right woman forward by her wrist while running left, right woman looks backward at the partial bronze mechanical hand, left man leads with right woman one step behind",
+      "right side, running, looking backward",
+      "girl, mature female, tan skin, long white braid, golden eyes, scar through left eyebrow, tall, navy officer coat, white shirt, red sash, black trousers, knee-high black boots, tense",
+      "left side, running, looking forward",
+      "boy, mature male, messy short black hair, green eyes, freckles, lean build, gray hooded jacket, dark jeans, white sneakers, urgent",
+      "inside a train corridor, rainy evening, cold rainy light, closing doorway, partial bronze mechanical hand, brass handrail"
+    ].join(",\n\n"));
+    expect(rendered.match(/pulls|pulling/g)).toHaveLength(1);
+    expect(rendered).toContain("golden eyes");
+    expect(rendered).toContain("black trousers");
+    expect(rendered).not.toContain("holding wrists");
+    expect(rendered).toContain("brass handrail");
+    expect(entry.corePrompt.sections).toHaveLength(8);
+  });
+
+  test("keeps Dynamic action priority when natural shared detail is disabled and omits facial state from a fragment crop", () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      adaptiveMode: false,
+      perspectiveMode: "dynamic" as const,
+      promptSyntax: "nai" as const,
+      supplement: false
+    };
+    const entry = assemblePrompt({
+      environment: {
+        location: "inside a train corridor",
+        timeWeather: "rainy evening",
+        lightingMood: ["cold window light"],
+        backgroundElements: ["closing doorway"]
+      }
+    }, {
+      perspectiveMode: "dynamic",
+      situation: "1girl",
+      camera: { framing: "body-part focus", angle: "eye level", perspective: "from side", focus: [] },
+      shotPlan: {
+        primaryAction: "woman's gloved hand grips a brass rail",
+        secondaryCue: "",
+        staging: "the hand fills the foreground"
+      },
+      characters: [{
+        label: "girl",
+        age: "mature female",
+        appearance: "long white braid, golden eyes",
+        attire: "navy officer coat, black leather gloves",
+        expression: "furious, glaring",
+        renderScope: "only the hand detail",
+        visibleTags: "black leather glove, navy sleeve",
+        composition: {
+          position: "foreground",
+          pose: "arm extended",
+          actions: ["gripping the brass rail"],
+          gaze: ""
+        }
+      }]
+    }, config, 1, 1);
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
+
+    expect(rendered).toContain("woman's gloved hand grips a brass rail");
+    expect(rendered).toContain("black leather glove, navy sleeve");
+    expect(rendered).toContain("inside a train corridor, rainy evening");
+    expect(rendered).not.toContain("cold window light");
+    expect(rendered).not.toContain("closing doorway");
+    expect(rendered).not.toContain("mature female");
+    expect(rendered).not.toContain("furious");
+    expect(rendered).not.toContain("golden eyes");
   });
 
   test("locks Static Anima prompts to a simple foreground pose and readable visual-novel background", () => {
@@ -491,6 +659,34 @@ describe("perspective selection and projection", () => {
     expect(noNaturalDetailPrompt).not.toContain("soft daylight");
   });
 
+  test("places two Static characters in stable left and right visual-novel lanes", () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      adaptiveMode: false,
+      perspectiveMode: "static" as const,
+      promptSyntax: "nai" as const
+    };
+    const entry = assemblePrompt({
+      environment: {
+        location: "castle gatehouse",
+        timeWeather: "morning",
+        backgroundElements: ["stone arch"]
+      }
+    }, {
+      situation: "2people",
+      characters: [
+        { label: "woman", appearance: "white braid", composition: { pose: "lunging", actions: ["swinging a sword"] } },
+        { label: "man", appearance: "black hair", composition: { pose: "running", actions: ["raising a shield"] } }
+      ]
+    }, config, 1, 1);
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
+
+    expect(rendered).toContain("left side slightly forward from the background, lunging");
+    expect(rendered).toContain("right side slightly forward from the background, running");
+    expect(rendered).not.toContain("swinging");
+    expect(rendered).not.toContain("raising a shield");
+  });
+
   test("falls back to Dynamic when an adaptive parser omits or misspells its choice", () => {
     const config = { ...DEFAULT_CONFIG, adaptiveMode: true };
     const entry = assemblePrompt({}, { perspectiveMode: "cinematic", situation: "1girl" }, config, 1, 1);
@@ -499,6 +695,32 @@ describe("perspective selection and projection", () => {
 });
 
 describe("prompt compatibility and normalization", () => {
+  test("normalizes camera-facing subject orientation to viewer-facing composition", () => {
+    const payload = normalizeAtomicCompositionTerms({
+      scenes: [{
+        shots: [{
+          paragraph: 1,
+          characters: [{
+            name: "Nyra Vale",
+            composition: {
+              position: "reclining on sofa facing camera",
+              pose: "legs angled toward camera",
+              actions: ["reaching past camera"],
+              gaze: "eyes closed in pleasure"
+            }
+          }]
+        }]
+      }]
+    });
+    const composition = payload.scenes?.[0].shots?.[0].characters?.[0].composition;
+    expect(composition).toEqual({
+      position: "reclining on sofa facing viewer",
+      pose: "legs angled toward viewer",
+      actions: ["reaching past viewer"],
+      gaze: ""
+    });
+  });
+
   test("reapplies current preset layers around an unchanged generated prompt for rerolls", () => {
     const config = {
       ...DEFAULT_CONFIG,
@@ -585,7 +807,9 @@ describe("Anima parser contract and visual distinctness", () => {
     expect(instruction).toContain('"interaction": ["string"]');
     expect(instruction).toContain('"camera": {');
     expect(instruction).toContain('"environment": {');
-    expect(instruction).toContain('"perspectiveMode": "creative | static | dynamic"');
+    expect(instruction).toContain('"perspectiveMode": "dynamic"');
+    expect(instruction).toContain('"shotPlan": {');
+    expect(instruction).toContain('"primaryAction": "string"');
     expect(instruction).toContain('"renderScope": "string"');
     expect(instruction).toContain('"visibleTags": "string"');
     expect(instruction).toContain("exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements");
@@ -594,9 +818,19 @@ describe("Anima parser contract and visual distinctness", () => {
     expect(instruction).toContain("Do not output legacy shot.action or characters[].action fields");
     expect(instruction).toContain("camera.framing must be empty or exactly one of");
     expect(instruction).toContain("A fact must have exactly one owner");
+    expect(instruction).toContain("one visible action or interaction");
+    expect(instruction).not.toContain("### Static shot direction");
+    expect(instruction).not.toContain("### Creative shot direction");
     expect(instruction).toContain("never collapse an object into a string");
     expect(instruction).toContain("never infer romance, calm, menace, or another emotional tone from lighting alone");
     expect(instruction).toContain("unless Creative deliberately isolates a smaller visual anchor");
+    expect(instruction).toContain("Never copy a later paragraph's transformation, prop, attire, action, or environment detail backward into an earlier shot");
+    expect(instruction).toContain("Prefer the source's exact concrete noun phrase over a generic paraphrase");
+    const adaptiveInstruction = parserInstruction({ ...DEFAULT_CONFIG, adaptiveMode: true });
+    expect(adaptiveInstruction).toContain("Include a named source character in shot.characters only when some part of that person is actually visible");
+    expect(adaptiveInstruction).toContain("a required visible action or movement chooses Dynamic");
+    expect(instruction).toContain("adult marker exception applies to every shot in an adult sexual sequence");
+    expect(instruction).not.toContain("never removes the source character object");
     expect(instruction).not.toContain('"supplement": "string"');
   });
 
@@ -635,6 +869,17 @@ describe("Anima parser contract and visual distinctness", () => {
         characters: [{ expression: "smile", composition: { position: "right side", pose: "sitting", actions: [], gaze: "looking left" } }]
       }]
     }] });
+    const [differentShotPlan] = normalizeScenePayload({ scenes: [{
+      environment,
+      shots: [{
+        ...shot,
+        shotPlan: {
+          primaryAction: "left girl pulls right girl upright",
+          secondaryCue: "",
+          staging: "left girl stands beside right girl"
+        }
+      }]
+    }] });
     const [differentProjection] = normalizeScenePayload({ scenes: [{
       environment,
       shots: [{
@@ -652,6 +897,7 @@ describe("Anima parser contract and visual distinctness", () => {
     expect(exactVisualKey(first)).not.toBe(exactVisualKey(different));
     expect(exactVisualKey(first)).not.toBe(exactVisualKey(differentCamera));
     expect(exactVisualKey(first)).not.toBe(exactVisualKey(differentComposition));
+    expect(exactVisualKey(first)).not.toBe(exactVisualKey(differentShotPlan));
     expect(exactVisualKey(first)).not.toBe(exactVisualKey(differentProjection));
   });
 

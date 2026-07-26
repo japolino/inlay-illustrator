@@ -59,6 +59,33 @@ describe("Creative concept ideation", () => {
     expect(hasUnusedCreativeConcepts(candidates, candidates.map((candidate) => candidate.id))).toBe(false);
   });
 
+  test("accepts identity exclusions and camera eye-level language without treating them as visible identity cues", () => {
+    const response = JSON.stringify({ candidates: [
+      {
+        paragraph: 1,
+        subjectType: "object",
+        anchor: "condom wrapper",
+        concept: "condom wrapper on a bedside table with no recognizable face visible",
+        renderScope: "tabletop only; people and faces are fully cropped out of frame",
+        camera: "tight eye-level view across the table",
+        visibleCues: ["opened condom wrapper", "rumpled sheets"],
+        score: 94
+      },
+      {
+        paragraph: 1,
+        subjectType: "object",
+        anchor: "bedside glass",
+        concept: "glass beside an empty wrapper",
+        renderScope: "tabletop without people or clothing",
+        camera: "close side view",
+        visibleCues: ["bedside glass", "empty wrapper"],
+        score: 82
+      }
+    ] });
+
+    expect(parseCreativeConcepts(response, paragraphs, DEFAULT_CONFIG)).toHaveLength(2);
+  });
+
   test("binds selected concepts for manual or Adaptive parsing and rebases cached reruns", () => {
     const selected = new Map([[1, concept("eye-gap", 92)]]);
     const manual = creativeConceptConstraint(selected, false);
@@ -79,6 +106,7 @@ describe("Creative concept ideation", () => {
     expect(instruction).toContain("differ in focal anchor");
     expect(instruction).toContain("Never render a simile literally");
     expect(instruction).toContain("must not focus on recognizable identity-bearing character features");
+    expect(instruction).toContain("Repeat the exact source-specific anchor noun");
     expect(instruction).toContain('"subjectType":"object"');
     expect(instruction).toContain("one eye between fingers");
   });

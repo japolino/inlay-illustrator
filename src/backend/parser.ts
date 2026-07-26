@@ -12,7 +12,12 @@ import {
   repairDynamicCameraDiversityLocally
 } from "./camera-diversity.js";
 import { logStage } from "./logging.js";
-import { dedupeExactShotCharacters, normalizeScenePayload, recoverSceneParagraphs } from "./scenes.js";
+import {
+  dedupeExactShotCharacters,
+  normalizeAtomicCompositionTerms,
+  normalizeScenePayload,
+  recoverSceneParagraphs
+} from "./scenes.js";
 import type { CreativeConcept, ParsedPayload, ParserConnection, ParserContext, ParserGenerationRequest, PreparedParagraph, SceneJson, ShotJson } from "./types.js";
 import { asRecord, cleanString, compactBlock, keysOf } from "./utils.js";
 
@@ -97,7 +102,8 @@ const FUZZY_KEYS = [
   "scenes", "place", "environmentChanges", "shots", "paragraph", "camera", "situation", "characters", "label", "age", "identity", "appearance", "body", "attire", "attireInferred", "visualChanges",
   "expression", "action", "composition", "sharedComposition", "environment", "location", "timeWeather", "lightingMood", "backgroundElements",
   "framing", "angle", "perspective", "focus", "position", "pose", "actions", "gaze", "interaction", "spatialRelation",
-  "negative", "name", "scene", "positive", "quote", "supplement", "perspectiveMode", "renderScope", "visibleTags"
+  "negative", "name", "scene", "positive", "quote", "supplement", "perspectiveMode", "renderScope", "visibleTags",
+  "shotPlan", "primaryAction", "secondaryCue", "staging", "terminalState"
 ];
 
 function levenshtein(a: string, b: string): number {
@@ -215,6 +221,11 @@ function staticShot(shot: ShotJson, config: Config): boolean {
   return cleanString(shot.perspectiveMode).toLowerCase() === "static";
 }
 
+function dynamicShot(shot: ShotJson, config: Config): boolean {
+  if (!config.adaptiveMode) return config.perspectiveMode === "dynamic";
+  return cleanString(shot.perspectiveMode).toLowerCase() === "dynamic";
+}
+
 const GENERIC_LOCATION_WORDS = new Set([
   "background", "inside", "interior", "indoor", "indoors", "outside", "exterior", "outdoor", "outdoors", "room"
 ]);
@@ -277,20 +288,108 @@ function staticRepairInstruction(issues: string[]): string {
   ].join("\n");
 }
 
-function currentParagraphReferences(messages: ParserGenerationRequest["messages"]): number[] {
+const ATOMIC_DIRECTION_END = /[.!?:,;]\s*$/;
+
+function dynamicPayloadIssues(payload: ParsedPayload, config: Config, required = true): string[] {
+  if (config.promptStyle !== "anima" || !required) return [];
+  const issues: string[] = [];
+  const scenes = Array.isArray(payload.scenes) ? payload.scenes : [];
+  scenes.forEach((scene, sceneIndex) => {
+    const shots = Array.isArray(scene.shots) ? scene.shots : [scene];
+    shots.forEach((shot, shotIndex) => {
+      if (!dynamicShot(shot, config)) return;
+      const plan = asRecord(shot.shotPlan);
+      const primaryAction = cleanString(plan.primaryAction);
+      if (!primaryAction) {
+        issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} needs shotPlan.primaryAction`);
+      }
+      for (const field of ["primaryAction", "secondaryCue", "staging"] as const) {
+        const value = cleanString(plan[field]);
+        if (value && (value.includes(",") || value.includes(";") || ATOMIC_DIRECTION_END.test(value))) {
+          issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} shotPlan.${field} must be one atomic comma-free phrase`);
+        }
+      }
+      const characters = Array.isArray(shot.characters) ? shot.characters : [];
+      characters.forEach((character, characterIndex) => {
+        if (!cleanString(character.renderScope)) {
+          issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} character ${characterIndex + 1} needs renderScope`);
+        }
+        if (!cleanString(character.visibleTags)) {
+          issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} character ${characterIndex + 1} needs visibleTags`);
+        }
+      });
+    });
+  });
+  return issues;
+}
+
+function dynamicRepairInstruction(issues: string[]): string {
+  return [
+    "Repair this valid JSON so every Dynamic shot has a compact rendering projection. Return only valid JSON and preserve every source fact, paragraph, character object, baseline field, expression, composition action owner, shared interaction, environment value, and camera.",
+    "Add or repair only shotPlan, renderScope, and visibleTags unless syntax repair requires otherwise.",
+    "shotPlan.primaryAction is one comma-free role-bound subject-verb-object clause selecting the single action or interaction that should dominate the image. Preserve its explicit owner, target or object, and movement direction.",
+    "shotPlan.secondaryCue is empty or one comma-free lower-priority visible gaze, reaction, hazard, or environmental-contact cue. shotPlan.staging is one comma-free spatial arrangement and contains no new action.",
+    "renderScope states what the existing camera actually contains. visibleTags contains only stable appearance, body, and attire traits visible in that crop; it contains no expression, action, camera, environment, name, or subject-count tag.",
+    "Do not add a character, action, contact, emotion, outfit, prop, or event.",
+    `Problems to repair:\n- ${issues.join("\n- ")}`
+  ].join("\n");
+}
+
+function modePayloadIssues(payload: ParsedPayload, config: Config, requireDynamicProjection = true): string[] {
+  return [...staticPayloadIssues(payload, config), ...dynamicPayloadIssues(payload, config, requireDynamicProjection)];
+}
+
+function modeRepairInstruction(
+  payload: ParsedPayload,
+  config: Config,
+  issues: string[],
+  requireDynamicProjection = true
+): string {
+  const hasDynamic = dynamicPayloadIssues(payload, config, requireDynamicProjection).length > 0;
+  const hasStatic = staticPayloadIssues(payload, config).length > 0;
+  if (hasDynamic && !hasStatic) return dynamicRepairInstruction(issues);
+  if (hasStatic && !hasDynamic) return staticRepairInstruction(issues);
+  return [
+    "Repair this valid JSON so its Static and Dynamic shots satisfy the listed mode-specific semantic requirements. Return only valid JSON and preserve all source facts and continuity values.",
+    staticRepairInstruction(staticPayloadIssues(payload, config)),
+    dynamicRepairInstruction(dynamicPayloadIssues(payload, config, requireDynamicProjection))
+  ].join("\n\n");
+}
+
+function currentSourceText(messages: ParserGenerationRequest["messages"]): string {
   const request = messages.find((message) => message.role === "user" && message.content.includes("## Current Numbered Paragraph Source"));
-  if (!request) return [];
-  const source = request.content
+  if (!request) return "";
+  return request.content
     .split("## Current Numbered Paragraph Source", 2)[1]
     ?.split(/## (?:Selected Creative Concepts|Optional Creative Candidates)/i, 1)[0] || "";
+}
+
+function currentParagraphReferences(messages: ParserGenerationRequest["messages"]): number[] {
+  const source = currentSourceText(messages).split("## Non-authoritative Shot-Router Notes", 1)[0] || "";
   return [...new Set([...source.matchAll(/\[P(\d+)\]/gi)].map((match) => Number(match[1])).filter(Number.isFinite))];
+}
+
+function routedParagraphReferences(messages: ParserGenerationRequest["messages"]): number[] {
+  const source = currentSourceText(messages);
+  const notes = source.split("## Non-authoritative Shot-Router Notes", 2)[1] || "";
+  return [...new Set([...notes.matchAll(/^\[P(\d+)\]\s*:/gim)]
+    .map((match) => Number(match[1]))
+    .filter(Number.isFinite))];
 }
 
 function structuralPayloadIssues(payload: ParsedPayload, allowedParagraphs: number[]): string[] {
   const normalized = normalizeScenePayload(payload);
   if (normalized.length === 0) return ["no scene contains a shot with a usable paragraph reference"];
-  if (allowedParagraphs.length > 0 && !normalized.some((entry) => allowedParagraphs.includes(entry.parserParagraph))) {
-    return [`no shot references an allowed paragraph (${allowedParagraphs.map((paragraph) => `P${paragraph}`).join(", ")})`];
+  if (allowedParagraphs.length > 0) {
+    const invalid = [...new Set(normalized
+      .map((entry) => entry.parserParagraph)
+      .filter((paragraph) => !allowedParagraphs.includes(paragraph)))];
+    if (invalid.length > 0) {
+      return [`shots reference unselected or invalid paragraphs (${invalid.map((paragraph) => `P${paragraph}`).join(", ")}); allowed references are ${allowedParagraphs.map((paragraph) => `P${paragraph}`).join(", ")}`];
+    }
+    if (!normalized.some((entry) => allowedParagraphs.includes(entry.parserParagraph))) {
+      return [`no shot references an allowed paragraph (${allowedParagraphs.map((paragraph) => `P${paragraph}`).join(", ")})`];
+    }
   }
   return [];
 }
@@ -344,6 +443,13 @@ export function parserStageTokenBudget(model: string, config: Config, stage: Par
     if (stage === "main") return Math.max(base, 16000);
     if (stage === "repair") return Math.max(base, 12000);
     return Math.max(base, 8000);
+  }
+  if (/claude[^\n]*sonnet[^\n]*5/i.test(model)) {
+    if (stage === "main") return Math.max(base, 9000);
+    if (stage === "ideation") return Math.max(base, 5000);
+    if (stage === "preprocess") return Math.max(base, 4000);
+    if (stage === "repair") return Math.max(base, 7000);
+    if (stage === "camera") return Math.max(base, 4000);
   }
   if (!/deepseek[^\n]*v4[^\n]*pro/i.test(model)) return base;
   if (stage === "main") return Math.max(base, 9000);
@@ -516,18 +622,16 @@ export function preprocessingInstruction(paragraphs: PreparedParagraph[], config
         ? "Favor stable clearly readable beats with conventional framing, limited motion, and limited occlusion."
         : "Favor significant visible action, movement, interaction, and cinematic changes.";
   return [
-    "# Illustration Visual-Beat Editor",
-    "Select and summarize the strongest visual beats from the current numbered assistant paragraphs.",
+    "# Illustration Shot Router",
+    "Select the strongest source paragraphs and give the final mode-specific parser a non-authoritative directing note. Never replace, rewrite, or summarize away the original source facts.",
     `Select between ${minimum} and ${maximum} unique paragraphs.`,
     "Choose paragraphs with the most significant visual changes, actions, interactions, location changes, or emotional beats across the whole source. Do not favor early paragraphs by default.",
     perspectiveGuidance,
-    "Output plain text only. The first line must have exactly this form:",
-    "[Appearance: character name1: current visual baseline tags, character name2: current visual baseline tags]",
-    "Then output one line per selected paragraph in exactly this form:",
-    "[P#]: Visual beat: concise visible details; Camera/composition: concrete angle, framing, depth, or foreground-occlusion note",
+    "Output plain text only with exactly one line per selected paragraph in this form:",
+    "[P#]: Visual thesis: one decisive visible idea; Camera intent: concrete framing and viewpoint",
     "Use each selected [P#] once. Do not invent or alter paragraph numbers.",
-    "Every selected line must include a non-empty Camera/composition note.",
-    "Use only visual details and concise English tags or short tag-like phrases. Output no markdown, greeting, or explanation."
+    "Every selected line must include a non-empty Visual thesis and Camera intent.",
+    "Use concise objective English. Do not output character baselines, rewritten narrative, markdown, greetings, or explanations."
   ].join("\n\n");
 }
 
@@ -537,6 +641,15 @@ export function preprocessingUserRequest(rawTarget: string): string {
 
 export type PreprocessedSelection = { summary: string; selectedParagraphs: number[]; cameraNotes: string[] };
 
+export function routedTargetSource(rawTarget: string, selection: PreprocessedSelection): string {
+  return [
+    rawTarget,
+    "## Non-authoritative Shot-Router Notes",
+    selection.summary,
+    "Create illustration scenes and shots only for the selected [P#] references above. Read every original numbered paragraph for terminalState and continuity. The original paragraphs are authoritative; these notes only prioritize shots and never replace source facts."
+  ].join("\n\n");
+}
+
 export function validatePreprocessedTarget(
   value: string,
   paragraphs: PreparedParagraph[],
@@ -545,10 +658,9 @@ export function validatePreprocessedTarget(
   const summary = cleanString(value);
   if (!summary) return null;
   const lines = summary.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (!/^\[Appearance:[^\]\r\n]*\]$/i.test(lines[0] || "")) return null;
   const minimum = Math.min(config.minImages, paragraphs.length);
   const maximum = Math.min(config.maxImages, paragraphs.length);
-  const paragraphLines = lines.slice(1);
+  const paragraphLines = lines;
   if (paragraphLines.length < minimum || paragraphLines.length > maximum) return null;
 
   const validParagraphs = new Set(paragraphs.map((paragraph) => paragraph.parserIndex));
@@ -560,8 +672,9 @@ export function validatePreprocessedTarget(
     if (!match) return null;
     const paragraph = Number(match[1]);
     if (!validParagraphs.has(paragraph) || seen.has(paragraph)) return null;
-    const camera = match[2].match(/\bCamera\/composition\s*:\s*(\S.*)$/i)?.[1]?.trim() || "";
-    if (!camera) return null;
+    const thesis = match[2].match(/\bVisual thesis\s*:\s*(.+?)(?=;\s*Camera intent\s*:)/i)?.[1]?.trim() || "";
+    const camera = match[2].match(/\bCamera intent\s*:\s*(\S.*)$/i)?.[1]?.trim() || "";
+    if (!thesis || !camera) return null;
     seen.add(paragraph);
     selectedParagraphs.push(paragraph);
     cameraNotes.push(camera);
@@ -594,13 +707,75 @@ export async function preprocessTargetParagraphs(
         selectedParagraphs: selection.selectedParagraphs,
         cameraNotes: selection.cameraNotes
       });
-      return selection.summary;
+      return routedTargetSource(rawTarget, selection);
     }
     logStage(config, "preprocessing_fallback", { reason: "invalid_selection", summaryLength: cleanString(summary).length }, "warn");
   } catch (error) {
     logStage(config, "preprocessing_fallback", { reason: error instanceof Error ? error.message : String(error) }, "warn");
   }
   return rawTarget;
+}
+
+function terminalParagraphNumber(value: unknown): number | null {
+  const match = String(value ?? "").match(/\d+/);
+  if (!match) return null;
+  const paragraph = Number(match[0]);
+  return Number.isSafeInteger(paragraph) && paragraph > 0 ? paragraph : null;
+}
+
+function terminalStateIssues(
+  payload: ParsedPayload,
+  config: Config,
+  currentParagraphs: number[],
+  required: boolean
+): string[] {
+  if (!required) return [];
+  const terminal = asRecord(payload.terminalState);
+  if (Object.keys(terminal).length === 0) return ["terminalState is missing or is not an object"];
+  const finalParagraph = currentParagraphs.at(-1);
+  if (finalParagraph && terminalParagraphNumber(terminal.paragraph) !== finalParagraph) {
+    return [`terminalState.paragraph must reference final source paragraph P${finalParagraph}`];
+  }
+  const issues: string[] = [];
+  if (!Array.isArray(terminal.characters)) issues.push("terminalState.characters must be an array");
+  if (config.promptStyle === "anima") {
+    if (!terminal.environment || typeof terminal.environment !== "object" || Array.isArray(terminal.environment)) {
+      issues.push("terminalState.environment must remain an object");
+    }
+  } else if (!Object.prototype.hasOwnProperty.call(terminal, "place")) {
+    issues.push("terminalState.place is required for Default prompt style");
+  }
+  return issues;
+}
+
+function terminalStateRepairInstruction(issues: string[], config: Config, currentParagraphs: number[]): string {
+  const finalParagraph = currentParagraphs.at(-1);
+  return [
+    "Repair or add only the non-rendered terminalState object while preserving every existing scene and shot exactly. Return the complete JSON object and no other text.",
+    finalParagraph
+      ? `Set terminalState.paragraph to P${finalParagraph}, the final original numbered paragraph.`
+      : "Use the final original numbered paragraph for terminalState.paragraph.",
+    config.promptStyle === "anima"
+      ? "terminalState contains paragraph, a complete environment object, environmentChanges, and characters still present after all source paragraphs."
+      : "terminalState contains paragraph, place, environmentChanges, and characters still present after all source paragraphs.",
+    "Terminal characters contain only name, label, age, appearance, body, attire, attireInferred, and visualChanges. Never add actions, expressions, camera, composition, or rendering fields.",
+    "Use the full current source chronology. Later source changes override earlier illustrated scenes.",
+    `Problems to repair:\n- ${issues.join("\n- ")}`
+  ].join("\n");
+}
+
+function payloadRepairInput(
+  payload: ParsedPayload,
+  messages: ParserGenerationRequest["messages"],
+  includeCurrentSource: boolean
+): string {
+  if (!includeCurrentSource) return JSON.stringify(payload);
+  return [
+    "## Current Numbered Paragraph Source",
+    currentSourceText(messages),
+    "## JSON to Repair",
+    JSON.stringify(payload)
+  ].join("\n\n");
 }
 
 export async function parsePayloadWithRepair(
@@ -611,23 +786,48 @@ export async function parsePayloadWithRepair(
 ): Promise<ParsedPayload> {
   const raw = await generateParserText(parserConnection, config, messages, userId);
   if (!raw.trim()) throw new Error("Parser returned an empty response.");
-  const allowedParagraphs = currentParagraphReferences(messages);
+  const requireDynamicProjection = messages.some((message) =>
+    message.role === "system" && message.content.includes("shotPlan.primaryAction")
+  );
+  const requireTerminalState = messages.some((message) =>
+    message.role === "system" && message.content.includes("## Terminal Visual State")
+  );
+  const currentParagraphs = currentParagraphReferences(messages);
+  const routedParagraphs = routedParagraphReferences(messages);
+  const allowedParagraphs = routedParagraphs.length > 0 ? routedParagraphs : currentParagraphs;
   const fallbackParagraph = allowedParagraphs.length === 1 ? allowedParagraphs[0] : undefined;
   let repairSystem = "Repair malformed JSON. Return only valid JSON.";
   let repairInput = raw;
   try {
     logStage(config, "json_parse_start", { rawLength: raw.length, repair: false });
-    const parsed = dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(raw), fallbackParagraph));
+    const parsed = normalizeAtomicCompositionTerms(
+      dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(raw), fallbackParagraph))
+    );
     const structuralIssues = structuralPayloadIssues(parsed, allowedParagraphs);
+    const terminalIssues = terminalStateIssues(parsed, config, currentParagraphs, requireTerminalState);
     if (structuralIssues.length > 0) {
-      repairSystem = structuralRepairInstruction(structuralIssues, allowedParagraphs);
+      repairSystem = [
+        structuralRepairInstruction(structuralIssues, allowedParagraphs),
+        ...(terminalIssues.length > 0
+          ? [terminalStateRepairInstruction(terminalIssues, config, currentParagraphs)]
+          : [])
+      ].join("\n\n");
+      repairInput = payloadRepairInput(parsed, messages, terminalIssues.length > 0);
       throw new Error("Parser payload has no usable numbered shots.");
     }
-    const issues = staticPayloadIssues(parsed, config);
+    const issues = modePayloadIssues(parsed, config, requireDynamicProjection);
+    if (terminalIssues.length > 0) {
+      repairSystem = [
+        terminalStateRepairInstruction(terminalIssues, config, currentParagraphs),
+        ...(issues.length > 0 ? [modeRepairInstruction(parsed, config, issues, requireDynamicProjection)] : [])
+      ].join("\n\n");
+      repairInput = payloadRepairInput(parsed, messages, true);
+      throw new Error("Terminal visual state is incomplete.");
+    }
     if (issues.length > 0) {
-      repairSystem = staticRepairInstruction(issues);
+      repairSystem = modeRepairInstruction(parsed, config, issues, requireDynamicProjection);
       repairInput = JSON.stringify(parsed);
-      throw new Error("Static payload is incomplete.");
+      throw new Error("Mode-specific payload is incomplete.");
     }
     logStage(config, "json_parse_done", { repair: false });
     return parsed;
@@ -638,14 +838,17 @@ export async function parsePayloadWithRepair(
       { role: "user", content: repairInput }
     ], userId, "repair");
     if (!repaired.trim()) throw new Error("Parser returned an empty repair response.");
-    const parsed = dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(repaired), fallbackParagraph));
+    const parsed = normalizeAtomicCompositionTerms(
+      dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(repaired), fallbackParagraph))
+    );
     const structuralIssues = structuralPayloadIssues(parsed, allowedParagraphs);
     if (structuralIssues.length > 0) {
       throw new Error(`Parser did not return usable numbered scenes: ${structuralIssues.join("; ")}`);
     }
-    const remainingIssues = staticPayloadIssues(parsed, config);
-    if (remainingIssues.length > 0) {
-      throw new Error(`Parser did not return a complete Static scene: ${remainingIssues.join("; ")}`);
+    const remainingIssues = modePayloadIssues(parsed, config, requireDynamicProjection);
+    const remainingTerminalIssues = terminalStateIssues(parsed, config, currentParagraphs, requireTerminalState);
+    if (remainingIssues.length > 0 || remainingTerminalIssues.length > 0) {
+      throw new Error(`Parser did not return a complete payload: ${[...remainingIssues, ...remainingTerminalIssues].join("; ")}`);
     }
     logStage(config, "json_parse_done", { repair: true });
     return parsed;
@@ -662,6 +865,20 @@ export async function repairDynamicCameraDiversity(
   const audit = auditDynamicCameraDiversity(payload, config);
   logStage(config, "camera_diversity_audit", audit);
   if (audit.exactCollisions.length === 0) return payload;
+  const hasProjectedDynamicShot = normalizeScenePayload(payload).some(({ shot }) => {
+    const perspective = config.adaptiveMode
+      ? cleanString(shot.perspectiveMode).toLowerCase()
+      : config.perspectiveMode;
+    return perspective === "dynamic" && Boolean(cleanString(asRecord(shot.shotPlan).primaryAction));
+  });
+  if (hasProjectedDynamicShot) {
+    logStage(config, "camera_diversity_soft_collision_preserved", {
+      reason: "camera and crop-visible projection must remain aligned",
+      signatures: audit.signatures,
+      exactCollisions: audit.exactCollisions
+    });
+    return payload;
+  }
   const local = repairDynamicCameraDiversityLocally(payload, config, audit);
   if (local) {
     logStage(config, "camera_diversity_repaired", {

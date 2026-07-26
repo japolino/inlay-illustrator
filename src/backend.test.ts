@@ -348,6 +348,8 @@ describe("illustration parser construction", () => {
     expect(messages.map((message) => message.role)).toEqual(["system", "system", "user", "user"]);
     expect(messages[0].content).toContain("# Image Tagging System");
     expect(messages[0].content).toContain('"scenes"');
+    expect(messages[0].content).toContain('"terminalState"');
+    expect(messages[0].content).toContain("terminalState is required");
     expect(messages[0].content).not.toContain("She enters the empty station.");
     expect(messages[1].content).toContain("# Continuity Reference Only");
     expect(messages[1].content).toContain("Never restore outdated scene facts");
@@ -362,9 +364,14 @@ describe("illustration parser construction", () => {
     expect(guidance).toContain("at least two of these dimensions");
     expect(guidance).toContain("Every shot must reference a different source paragraph");
     expect(guidance).toContain("Never return two shots for the same paragraph");
-    expect(guidance).toContain("stable appearance, attire, location, and persistent actions");
+    expect(guidance).toContain("Repeat stable appearance, body, and attire tags");
+    expect(guidance).not.toContain("backend restores the exact stored baseline");
     expect(guidance).toContain("Continuity does not require repeating camera angle");
-    expect(guidance).toContain("compare all Dynamic camera objects as a camera ledger");
+    expect(guidance).toContain("compare Dynamic cameras as a soft camera ledger");
+    expect(guidance).toContain("shotPlan.primaryAction");
+    expect(guidance).toContain("one visible action or interaction");
+    expect(guidance).not.toContain("### Static shot direction");
+    expect(guidance).not.toContain("### Creative shot direction");
     expect(guidance).toContain("continuous pov only when the narrative establishes");
     expect(guidance).toContain("Set perspectiveMode to exactly dynamic");
     expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, adaptiveMode: true })).toContain(
@@ -376,6 +383,16 @@ describe("illustration parser construction", () => {
     expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, adaptiveMode: true })).toContain(
       "must not focus on a recognizable face"
     );
+  });
+
+  test("permits baseline omission only when an injectable previous visual state actually exists", () => {
+    const withoutSnapshot = helpers.parserInstruction(helpers.DEFAULT_CONFIG);
+    const withSnapshot = helpers.parserInstruction(helpers.DEFAULT_CONFIG, { hasPreviousVisualState: true });
+
+    expect(withoutSnapshot).toContain("Repeat stable appearance, body, and attire tags");
+    expect(withoutSnapshot).not.toContain("leave age, appearance, body, and attire empty");
+    expect(withSnapshot).toContain("leave age, appearance, body, and attire empty");
+    expect(withSnapshot).toContain("backend restores the exact stored baseline");
   });
 
   test("defines Static as fixed visual-novel framing with simple stable poses", () => {
@@ -392,28 +409,29 @@ describe("illustration parser construction", () => {
     expect(guidance).toContain("an empty actions array");
     expect(guidance).toContain("standing upright with arms relaxed at sides");
     expect(guidance).toContain("2-3 concrete backgroundElements");
-    expect(guidance).toContain("override any batch-wide request for cinematography variation");
+    expect(guidance).toContain("override requests for cinematography variation");
     expect(guidance).toContain("Keep the visual-novel framing fixed across Static shots");
     expect(guidance).toContain("return fewer shots");
+    expect(guidance).not.toContain("### Dynamic shot direction");
+    expect(guidance).not.toContain('"shotPlan"');
   });
 
-  test("asks preprocessing for significant visual beats and a camera/composition note", () => {
+  test("asks preprocessing for significant visual beats without replacing the original source", () => {
     const instruction = helpers.preprocessingInstruction(paragraphs, { ...helpers.DEFAULT_CONFIG, minImages: 3, maxImages: 4 });
 
     expect(instruction).toContain("Select between 3 and 4 unique paragraphs");
     expect(instruction).toContain("most significant visual changes");
     expect(instruction).toContain("Do not favor early paragraphs");
-    expect(instruction).toContain("Camera/composition");
+    expect(instruction).toContain("Camera intent");
+    expect(instruction).toContain("Never replace, rewrite, or summarize away the original source facts");
+    expect(instruction).not.toContain("[Appearance:");
   });
 
   test("keeps lorebook prose out of the optional preprocessing request", async () => {
     const config = { ...helpers.DEFAULT_CONFIG, preprocessingEnabled: true, minImages: 1, maxImages: 2 };
-    parserResponse = [
-      "[Appearance: woman: black hair, red coat]",
-      "[P2]: Visual beat: train entering station; Camera/composition: low wide shot"
-    ].join("\n");
+    parserResponse = "[P2]: Visual thesis: train entering station; Camera intent: low wide shot";
 
-    await helpers.preprocessTargetParagraphs(
+    const result = await helpers.preprocessTargetParagraphs(
       { id: "parser", name: "Parser", provider: "openai", model: "model" },
       config,
       paragraphs,
@@ -429,30 +447,32 @@ describe("illustration parser construction", () => {
     const contextMessage = parserRequests[0].messages.find((message) => message.role === "system" && message.content.includes("Continuity Reference"));
     expect(contextMessage?.content).toContain("BASELINE CONTEXT");
     expect(contextMessage?.content).not.toContain("SECRET LOREBOOK PROSE");
+    expect(result).toContain("[P2]\nA train bursts through the rain.");
+    expect(result).toContain("## Non-authoritative Shot-Router Notes");
+    expect(result).toContain("Camera intent: low wide shot");
+    expect(result).toContain("[P1]\nShe enters the empty station.");
+    expect(result).toContain("Read every original numbered paragraph for terminalState");
   });
 
   test("accepts a valid selected subset and rejects missing, malformed, duplicate, unknown, or camera-less markers", () => {
     const config = { ...helpers.DEFAULT_CONFIG, minImages: 2, maxImages: 3 };
     const valid = [
-      "[Appearance: woman: black hair, red coat]",
-      "[P4]: Visual beat: hands against wet glass; Camera/composition: close-up through rain-streaked window",
-      "[P2]: Visual beat: train entering station; Camera/composition: low wide shot with rails in foreground"
+      "[P4]: Visual thesis: hands against wet glass; Camera intent: close-up through rain-streaked window",
+      "[P2]: Visual thesis: train entering station; Camera intent: low wide shot with rails in foreground"
     ].join("\n");
 
     expect(helpers.validatePreprocessedTarget(valid, paragraphs, config)).toMatchObject({ selectedParagraphs: [4, 2] });
-    expect(helpers.validatePreprocessedTarget(valid.split("\n").slice(0, 2).join("\n"), paragraphs, config)).toBeNull();
+    expect(helpers.validatePreprocessedTarget(valid.split("\n").slice(0, 1).join("\n"), paragraphs, config)).toBeNull();
     expect(helpers.validatePreprocessedTarget(valid.replace("[P4]", "[Paragraph 4]"), paragraphs, config)).toBeNull();
     expect(helpers.validatePreprocessedTarget(valid.replace("[P2]", "[P4]"), paragraphs, config)).toBeNull();
     expect(helpers.validatePreprocessedTarget(valid.replace("[P4]", "[P9]"), paragraphs, config)).toBeNull();
-    expect(helpers.validatePreprocessedTarget(valid.replace("Camera/composition:", "Composition:"), paragraphs, config)).toBeNull();
+    expect(helpers.validatePreprocessedTarget(valid.replace("Camera intent:", "Composition:"), paragraphs, config)).toBeNull();
+    expect(helpers.validatePreprocessedTarget(valid.replace("Visual thesis:", "Visual beat:"), paragraphs, config)).toBeNull();
   });
 
   test("falls back to raw numbered paragraphs when preprocessing output is invalid", async () => {
     const config = { ...helpers.DEFAULT_CONFIG, preprocessingEnabled: true, minImages: 3, maxImages: 4 };
-    parserResponse = [
-      "[Appearance: woman: black hair, red coat]",
-      "[P4]: Visual beat: hands meet; Camera/composition: close-up through glass"
-    ].join("\n");
+    parserResponse = "[P4]: Visual thesis: hands meet; Camera intent: close-up through glass";
 
     const result = await helpers.preprocessTargetParagraphs(
       { id: "parser", name: "Parser", provider: "openai", model: "model" },
@@ -498,6 +518,38 @@ describe("illustration candidate selection", () => {
       expect.stringContaining("straight-on"),
       expect.stringContaining("from below, wide shot")
     ]);
+  });
+
+  test("keeps terminal continuity state completely outside rendered prompts and shot selection", () => {
+    const paragraphs = [{ parserIndex: 1, originalIndex: 1, text: "She waits on the road." }];
+    const payload = {
+      scenes: [{
+        place: "residential road",
+        shots: [{
+          paragraph: 1,
+          camera: "medium shot",
+          situation: "1girl",
+          characters: [{ label: "girl", appearance: "black hair", attire: "blue coat" }]
+        }]
+      }]
+    };
+    const withTerminal = {
+      ...payload,
+      terminalState: {
+        paragraph: 2,
+        place: "apartment living room",
+        environmentChanges: ["place"],
+        characters: []
+      }
+    };
+    const config = { ...helpers.DEFAULT_CONFIG, promptStyle: "default" as const, promptSyntax: "nai" as const };
+    const withoutState = helpers.selectPromptEntries(payload, paragraphs, config);
+    const withState = helpers.selectPromptEntries(withTerminal, paragraphs, config);
+
+    expect(withState.map((entry) => entry.parserParagraph)).toEqual(withoutState.map((entry) => entry.parserParagraph));
+    expect(withState.map((entry) => helpers.renderPrompt(entry.prompt, config.promptSyntax))).toEqual(
+      withoutState.map((entry) => helpers.renderPrompt(entry.prompt, config.promptSyntax))
+    );
   });
 
   test("demotes Adaptive Creative shots without an identity-safe concept", () => {

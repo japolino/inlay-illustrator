@@ -100,10 +100,32 @@ describe("Adaptive parser call sequencing", () => {
         paragraph: 1,
         perspectiveMode: "dynamic",
         camera: { framing: "medium shot", angle: "eye level", perspective: "straight-on" },
-        action: "walking",
-        characters: [{ label: "girl", appearance: "black hair", attire: "coat", composition: { pose: "walking" } }]
+        shotPlan: {
+          primaryAction: "center girl walks toward the viewer",
+          secondaryCue: "",
+          staging: "center girl occupies the street foreground"
+        },
+        characters: [{
+          label: "girl",
+          appearance: "black hair",
+          attire: "coat",
+          renderScope: "full figure at center",
+          visibleTags: "black hair, coat",
+          composition: {
+            position: "center frame",
+            pose: "walking stance",
+            actions: ["walking toward the viewer"],
+            gaze: "looking forward"
+          }
+        }]
       }]
-    }] }) });
+    }],
+    terminalState: {
+      paragraph: 1,
+      environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: [] },
+      environmentChanges: [],
+      characters: []
+    } }) });
 
     const result = await parseAndSelectPrompts({
       chatId: "chat-1", messageId: "message-1", messages, paragraphs,
@@ -128,7 +150,13 @@ describe("Adaptive parser call sequencing", () => {
           renderScope: "shadow and pavement",
           visibleTags: ["shadow", "pavement"]
         }]
-      }] }) },
+      }],
+      terminalState: {
+        paragraph: 1,
+        environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: [] },
+        environmentChanges: [],
+        characters: []
+      } }) },
       { content: JSON.stringify({ candidates: [
         { paragraph: 1, subjectType: "shadow", anchor: "long shadow", concept: "a long shadow crosses the pavement", renderScope: "shadow and pavement only", camera: "low oblique detail", visibleCues: ["long shadow", "pavement"], score: 92 },
         { paragraph: 1, subjectType: "environment", anchor: "pavement seam", concept: "a pavement seam divides light and shade", renderScope: "pavement and divided light only", camera: "tight overhead detail", visibleCues: ["pavement seam", "divided light"], score: 86 }

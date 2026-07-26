@@ -26,6 +26,7 @@ import {
   parserUserRequest,
   preprocessTargetParagraphs,
   repairDynamicCameraDiversity,
+  routedTargetSource,
   resolveParserConnection
 } from "./parser.js";
 import { renderNegativeWithCurrentSelection, renderPrompt, renderPromptWithCurrentAffixes } from "./prompt.js";
@@ -306,12 +307,24 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
       if (creativePipeline && creativeTargetSource === null) {
         const candidateParagraphs = new Set(conceptCandidates.map((concept) => concept.paragraph));
         if (manualCreative && config.preprocessingEnabled && candidateParagraphs.size > 0) {
-          creativeTargetSource = formatTargetParagraphs(
-            paragraphs.filter((paragraph) => candidateParagraphs.has(paragraph.parserIndex))
-          );
+          const selectedParagraphs = [...candidateParagraphs].sort((left, right) => left - right);
+          const notes = selectedParagraphs.map((paragraph) => {
+            const concept = conceptSelections?.get(paragraph)
+              || conceptCandidates.find((candidate) => candidate.paragraph === paragraph);
+            return `[P${paragraph}]: Visual thesis: ${concept?.concept || concept?.anchor || "selected Creative focal beat"}; Camera intent: ${concept?.camera || "identity-safe Creative framing"}`;
+          });
+          creativeTargetSource = routedTargetSource(formatTargetParagraphs(paragraphs), {
+            summary: notes.join("\n"),
+            selectedParagraphs,
+            cameraNotes: selectedParagraphs.map((paragraph) =>
+              conceptSelections?.get(paragraph)?.camera
+              || conceptCandidates.find((candidate) => candidate.paragraph === paragraph)?.camera
+              || "identity-safe Creative framing"
+            )
+          });
           logStage(config, "creative_preprocessing_done", {
             candidateCount: conceptCandidates.length,
-            selectedParagraphs: [...candidateParagraphs].sort((left, right) => left - right)
+            selectedParagraphs
           });
         } else {
           creativeTargetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
@@ -320,7 +333,9 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
       const targetSource = creativePipeline
         ? creativeTargetSource || formatTargetParagraphs(paragraphs)
         : await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
-      const instruction = parserInstruction(config);
+      const instruction = parserInstruction(config, {
+        hasPreviousVisualState: Boolean(config.previousVisualStateEnabled && state.previousVisualState)
+      });
       const referenceContext = continuityReference(context.systemContext, context.recentContext);
       const userRequest = parserUserRequest(
         targetSource,

@@ -32,7 +32,15 @@ export function recoverSceneParagraphs(payload: ParsedPayload, fallbackParagraph
       ? rawScene
       : { ...rawScene, paragraph: sceneParagraph };
   });
-  return { ...payload, scenes };
+  const terminalParagraph = parseParagraphNumber(payload.terminalState?.paragraph);
+  const terminalState = terminalParagraph && payload.terminalState
+    ? { ...payload.terminalState, paragraph: terminalParagraph }
+    : payload.terminalState;
+  return {
+    ...payload,
+    ...(terminalState ? { terminalState } : {}),
+    scenes
+  };
 }
 
 function dedupeCharacters(characters: CharacterJson[] | undefined): CharacterJson[] | undefined {
@@ -49,8 +57,12 @@ function dedupeCharacters(characters: CharacterJson[] | undefined): CharacterJso
 
 /** Removes only exact duplicate character objects emitted within the same shot. */
 export function dedupeExactShotCharacters(payload: ParsedPayload): ParsedPayload {
+  const terminalState = payload.terminalState && Array.isArray(payload.terminalState.characters)
+    ? { ...payload.terminalState, characters: dedupeCharacters(payload.terminalState.characters) }
+    : payload.terminalState;
   return {
     ...payload,
+    ...(terminalState ? { terminalState } : {}),
     scenes: cleanArray<SceneJson>(payload.scenes).map((scene) => {
       const next: SceneJson = { ...scene };
       if (Array.isArray(scene.characters)) next.characters = dedupeCharacters(scene.characters);
@@ -61,6 +73,52 @@ export function dedupeExactShotCharacters(payload: ParsedPayload): ParsedPayload
       }
       return next;
     })
+  };
+}
+
+function normalizeCompositionTerm(value: unknown, key = ""): unknown {
+  if (typeof value === "string") {
+    const viewpointSafe = value.replace(/\bcamera\b/gi, "viewer");
+    return key === "gaze" && /\b(?:eyes?\s+closed|closed\s+eyes?)\b/i.test(viewpointSafe)
+      ? ""
+      : viewpointSafe;
+  }
+  if (Array.isArray(value)) return value.map((entry) => normalizeCompositionTerm(entry, key));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .map(([childKey, child]) => [childKey, normalizeCompositionTerm(child, childKey)]));
+  }
+  return value;
+}
+
+/**
+ * Treats "facing camera" as subject orientation rather than camera metadata,
+ * and keeps closed-eye expression state out of gaze.
+ */
+export function normalizeAtomicCompositionTerms(payload: ParsedPayload): ParsedPayload {
+  const normalizeCharacters = (characters: CharacterJson[] | undefined): CharacterJson[] | undefined =>
+    Array.isArray(characters)
+      ? characters.map((character) => ({
+        ...character,
+        ...(character.composition === undefined
+          ? {}
+          : { composition: normalizeCompositionTerm(character.composition) as CharacterJson["composition"] })
+      }))
+      : characters;
+  return {
+    ...payload,
+    scenes: cleanArray<SceneJson>(payload.scenes).map((scene) => ({
+      ...scene,
+      ...(Array.isArray(scene.characters) ? { characters: normalizeCharacters(scene.characters) } : {}),
+      ...(Array.isArray(scene.shots)
+        ? {
+          shots: scene.shots.map((shot) => ({
+            ...shot,
+            ...(Array.isArray(shot.characters) ? { characters: normalizeCharacters(shot.characters) } : {})
+          }))
+        }
+        : {})
+    }))
   };
 }
 
@@ -111,6 +169,7 @@ export function exactVisualKey(entry: NormalizedScene): string {
     paragraph: entry.parserParagraph,
     perspectiveMode: normalizedVisualValue(entry.shot.perspectiveMode),
     camera: normalizedVisualValue(entry.shot.camera),
+    shotPlan: normalizedVisualValue(entry.shot.shotPlan),
     situation: normalizedVisualValue(entry.shot.situation),
     sceneAction: normalizedVisualValue(entry.scene.action),
     shotAction: normalizedVisualValue(entry.shot.action),

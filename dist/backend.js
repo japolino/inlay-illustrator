@@ -437,6 +437,218 @@ function cameraRepairInstruction(audit) {
 `);
 }
 
+// src/backend/creative.ts
+function stableHash(value) {
+  let hash = 2166136261;
+  for (let index = 0;index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+function parseJsonObject(value) {
+  const clean = value.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+  const candidates = [clean];
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  if (start >= 0 && end > start)
+    candidates.push(clean.slice(start, end + 1));
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+        return parsed;
+    } catch {}
+  }
+  return null;
+}
+function cleanCueList(value) {
+  if (!Array.isArray(value))
+    return [];
+  return [...new Set(value.map(cleanString2).filter(Boolean))].slice(0, 6);
+}
+var CREATIVE_SUBJECT_TYPES = new Set([
+  "object",
+  "environment",
+  "shadow",
+  "silhouette",
+  "reflection",
+  "fragment",
+  "spatial"
+]);
+var IDENTITY_BEARING_CUE = /\b(?:face|facial|cheek|chin|jaw|mouth|lip|lips|eye|eyes|iris|pupil|pupils|eyebrow|eyebrows|eyelash|eyelashes|hair|hairstyle|bangs|braid|ponytail|blonde|brunette|uniform|outfit|clothing|clothes|costume|dress|shirt|blouse|sweater|hoodie|coat|jacket|sleeve|collar|ribbon|tie|skirt|shorts|pants|trousers|stockings|pantyhose|sock|socks|shoe|shoes|boot|boots)\b/i;
+function identityBearingClaim(value) {
+  const excludedIdentityList = /\b(?:no|without)\s+(?:recognizable\s+|visible\s+|complete\s+|identifying\s+)*(?:faces?|facial features?|hair|hairstyle|outfits?|clothing|clothes|complete bod(?:y|ies)|bod(?:y|ies)|figures?|people|persons?|characters?)(?:\s*(?:,|or|and)\s*(?:the\s+)?(?:faces?|facial features?|hair|hairstyle|outfits?|clothing|clothes|complete bod(?:y|ies)|bod(?:y|ies)|figures?|people|persons?|characters?))*/gi;
+  return value.replace(excludedIdentityList, " ").replace(/\b(?:faces?|facial features?|hair|hairstyle|outfits?|clothing|clothes|bod(?:y|ies)|figures?|people|persons?|characters?)\s+(?:is|are|remains?|stay|stays)?\s*(?:fully\s+|entirely\s+)?(?:cropped|excluded|outside|out of frame|not visible|unreadable|occluded)\b/gi, " ").replace(/\b(?:crop|exclude|omit|hide|occlude)(?:s|d|ing)?\s+(?:the\s+)?(?:faces?|facial features?|hair|hairstyle|outfits?|clothing|clothes|bod(?:y|ies)|figures?|people|persons?|characters?)\b/gi, " ");
+}
+function isIdentitySafeCreativeConcept(concept) {
+  if (!concept.subjectType || !CREATIVE_SUBJECT_TYPES.has(concept.subjectType))
+    return false;
+  return isIdentitySafeCreativeCue([
+    concept.anchor,
+    concept.concept,
+    concept.renderScope,
+    ...concept.visibleCues
+  ].join(" "));
+}
+function isIdentitySafeCreativeCue(value) {
+  return !IDENTITY_BEARING_CUE.test(identityBearingClaim(value));
+}
+function parseCreativeConcepts(value, paragraphs, config) {
+  const parsed = parseJsonObject(value);
+  const rawCandidates = Array.isArray(parsed?.candidates) ? parsed.candidates : [];
+  const validParagraphs = new Set(paragraphs.map((paragraph) => paragraph.parserIndex));
+  const perParagraph = new Map;
+  const seenIds = new Set;
+  const concepts = [];
+  for (const raw of rawCandidates) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw))
+      continue;
+    const candidate = raw;
+    const paragraph = Number(String(candidate.paragraph ?? "").match(/\d+/)?.[0]);
+    const subjectType = cleanString2(candidate.subjectType).toLowerCase();
+    const anchor = cleanString2(candidate.anchor);
+    const concept = cleanString2(candidate.concept);
+    const renderScope = cleanString2(candidate.renderScope);
+    const camera = cleanString2(candidate.camera);
+    const visibleCues = cleanCueList(candidate.visibleCues);
+    const scoreValue = Number(candidate.score);
+    if (!validParagraphs.has(paragraph) || !subjectType || !CREATIVE_SUBJECT_TYPES.has(subjectType) || !anchor || !concept || !renderScope || !camera || visibleCues.length === 0)
+      continue;
+    if (!Number.isFinite(scoreValue))
+      continue;
+    const score = Math.max(0, Math.min(100, Math.round(scoreValue)));
+    const id = `creative-${stableHash([paragraph, subjectType, anchor, concept, renderScope, camera].join("|"))}`;
+    const parsedConcept = {
+      id,
+      paragraph,
+      subjectType,
+      anchor,
+      concept,
+      renderScope,
+      camera,
+      visibleCues,
+      score
+    };
+    if (!isIdentitySafeCreativeConcept(parsedConcept))
+      continue;
+    if (seenIds.has(id))
+      continue;
+    const count = perParagraph.get(paragraph) || 0;
+    if (count >= 4)
+      continue;
+    seenIds.add(id);
+    perParagraph.set(paragraph, count + 1);
+    concepts.push(parsedConcept);
+  }
+  const finalCounts = new Map;
+  const paragraphScores = new Map;
+  concepts.forEach((concept) => finalCounts.set(concept.paragraph, (finalCounts.get(concept.paragraph) || 0) + 1));
+  concepts.forEach((concept) => paragraphScores.set(concept.paragraph, Math.max(paragraphScores.get(concept.paragraph) || 0, concept.score)));
+  const eligibleParagraphs = [...new Set(concepts.map((concept) => concept.paragraph))].filter((paragraph) => (finalCounts.get(paragraph) || 0) >= 2).sort((left, right) => (paragraphScores.get(right) || 0) - (paragraphScores.get(left) || 0) || left - right).slice(0, Math.max(1, config.maxImages));
+  const allowed = new Set(eligibleParagraphs);
+  return concepts.filter((concept) => allowed.has(concept.paragraph));
+}
+function hasUnusedCreativeConcepts(candidates, usedIds) {
+  const used = new Set(usedIds);
+  return candidates.some((candidate) => isIdentitySafeCreativeConcept(candidate) && !used.has(candidate.id));
+}
+function chooseCreativeConcepts(candidates, usedIds = [], random = Math.random) {
+  const used = new Set(usedIds);
+  const grouped = new Map;
+  for (const candidate of candidates) {
+    if (!isIdentitySafeCreativeConcept(candidate) || used.has(candidate.id))
+      continue;
+    const group = grouped.get(candidate.paragraph) || [];
+    group.push(candidate);
+    grouped.set(candidate.paragraph, group);
+  }
+  const selected = new Map;
+  for (const [paragraph, group] of grouped) {
+    const sorted = [...group].sort((left, right) => right.score - left.score || left.id.localeCompare(right.id));
+    const bestScore = sorted[0]?.score ?? 0;
+    const shortlist = sorted.filter((candidate) => candidate.score >= Math.max(50, bestScore - 20)).slice(0, 3);
+    const pool = shortlist.length > 0 ? shortlist : sorted.slice(0, 1);
+    if (pool.length === 0)
+      continue;
+    const floor = Math.min(...pool.map((candidate) => candidate.score)) - 5;
+    const weights = pool.map((candidate) => Math.max(1, candidate.score - floor));
+    const total = weights.reduce((sum, weight) => sum + weight, 0);
+    let cursor = Math.min(0.999999, Math.max(0, random())) * total;
+    let choice = pool[pool.length - 1];
+    for (let index = 0;index < pool.length; index += 1) {
+      cursor -= weights[index];
+      if (cursor < 0) {
+        choice = pool[index];
+        break;
+      }
+    }
+    selected.set(paragraph, choice);
+  }
+  return selected;
+}
+function creativeIdeationInstruction(config, previousConcepts = []) {
+  return [
+    "# Creative Illustration Concept Ideator",
+    "Extract literal visual cues from the numbered source and propose genuinely different Creative compositions before the prompt parser runs.",
+    config.adaptiveMode ? `Screen up to ${Math.max(1, config.maxImages)} paragraph numbers for optional identity-safe Creative alternatives, then generate exactly four candidates for each. These candidates must not decide or bias the later Adaptive mode choice.` : `Choose up to ${Math.max(1, config.maxImages)} visually strong paragraph numbers and generate exactly four candidates for each chosen paragraph.`,
+    "Candidates for the same paragraph must differ in focal anchor and at least one of crop scale, subject inclusion, depth, occlusion, or viewpoint.",
+    "Creative must not focus on recognizable identity-bearing character features. Never use a face, facial feature, hair, hairstyle, or recognizable clothing as the anchor or a visible cue.",
+    "Never write a character name in anchor, concept, renderScope, camera, or visibleCues, even to say that person is cropped out. Use generic terms such as person, figure, or room occupant in exclusion wording.",
+    "Allowed subjectType values are object, environment, shadow, silhouette, reflection, fragment, or spatial. Reflections and fragments must remain non-identifying; generic hands, fingers, feet, gestures, and fully unreadable silhouettes are allowed.",
+    "Prefer overlooked but meaningful anchors: a source-supported object, environmental detail, shadow, unreadable silhouette, non-identifying fragment, foreground layer, aftermath, or unusual spatial relationship.",
+    "If a paragraph has no faithful identity-safe anchor, return no Creative candidate for it. Do not weaken this rule merely to fill the requested count.",
+    "Do not merely restate the paragraph's complete main action.",
+    "Separate literal cues from metaphors and internal narration. Never render a simile literally and never invent an object, body part, action, or setting detail.",
+    "renderScope is binding: state exactly what is inside the frame and what is cropped or occluded. visibleCues contains only traits and elements actually visible inside that scope.",
+    "Repeat the exact source-specific anchor noun in anchor and at least one visibleCues entry. Never shorten a specific object into an ambiguous generic word: for example keep condom wrapper rather than wrapper, train ticket rather than paper, and broken mace head rather than debris.",
+    "Preserve every explicit modifier on an included cue, such as black-gloved fingertip, bronze hand, red switch, wet handprint, or tied used condom. Never simplify an included cue in a way that changes its material, color, state, or ownership.",
+    "Keep one or two source-supported grounding cues around the anchor so the image remains spatially legible, such as the bedside edge and rumpled sheet, arena arch and sand, or bus-shelter glass and rain. Avoid an extreme context-free macro unless the source itself contains no meaningful surrounding context.",
+    "Score each candidate from 0-100 for source fidelity, focal specificity, visual clarity, ANIMA promptability, and difference from an obvious Dynamic full-action shot.",
+    previousConcepts.length > 0 ? `Avoid repeating these previously used concepts:
+- ${previousConcepts.map(cleanString2).filter(Boolean).join(`
+- `)}` : "",
+    "Return raw JSON only with this exact shape:",
+    '{"candidates":[{"paragraph":1,"subjectType":"object","anchor":"short anchor label","concept":"concise visible composition","renderScope":"exact contents of frame and crop","camera":"concise framing and viewpoint","visibleCues":["visible cue"],"score":85}]}',
+    "No markdown, commentary, character-memory dump, or fields outside the schema."
+  ].filter(Boolean).join(`
+
+`);
+}
+function creativeIdeationRequest(targetSource) {
+  return [
+    "Generate the Creative concept slate from this current numbered source:",
+    targetSource
+  ].join(`
+
+`);
+}
+function creativeConceptConstraint(concepts, adaptive) {
+  if (concepts.size === 0)
+    return "";
+  const lines = [...concepts.values()].sort((left, right) => left.paragraph - right.paragraph).map((concept) => [
+    `[P${concept.paragraph}] concept ID: ${concept.id}`,
+    `Anchor: ${concept.anchor}`,
+    `Binding render scope: ${concept.renderScope}`,
+    `Camera intent: ${concept.camera}`,
+    `Visible cues only: ${concept.visibleCues.join(", ")}`,
+    `Creative suitability: ${concept.score}/100`
+  ].join(`
+`));
+  return [
+    adaptive ? "## Optional Creative Candidates" : "## Selected Creative Concepts",
+    adaptive ? "First choose perspectiveMode independently from the paragraph itself. Creative is permitted only for paragraphs listed below, and the listed candidate becomes binding only after Creative is chosen. Otherwise ignore it and choose Static or Dynamic normally. Do not choose Creative merely because a candidate or score is present." : "Use only the listed paragraphs for Creative shots. Each listed concept is binding and must control renderScope, visibleTags, camera, and subject inclusion.",
+    "Creative may show only identity-safe objects, environments, shadows, unreadable silhouettes, spatial details, or non-identifying fragments. It must not show a recognizable face, hair, or outfit.",
+    "When a binding render scope exists, do not expand it with the character's complete pose, full action, off-frame attire, or unrelated memory traits.",
+    ...lines
+  ].join(`
+
+`);
+}
+function rebaseCreativeConcepts(candidates, paragraph) {
+  return candidates.map((candidate) => ({ ...candidate, paragraph }));
+}
+
 // src/backend/prompt.ts
 function normalizeReferenceTags(tagString) {
   return unique(csvParts(tagString).filter((tag) => {
@@ -581,7 +793,7 @@ function dedupePromptSections(sections) {
   }
   return output;
 }
-var ACTION_STOP_WORDS = new Set(["a", "an", "at", "in", "of", "on", "the", "to", "toward", "towards", "with"]);
+var ACTION_STOP_WORDS = new Set(["a", "an", "at", "in", "of", "on", "s", "the", "to", "toward", "towards", "with"]);
 function actionToken(value) {
   const lower = value.toLowerCase();
   if (["face", "facing", "gaze", "gazing", "look", "looking", "looks"].includes(lower))
@@ -590,6 +802,16 @@ function actionToken(value) {
     return "turn";
   if (["march", "marching", "walk", "walking", "walks"].includes(lower))
     return "walk";
+  if (["pull", "pulling", "pulls"].includes(lower))
+    return "pull";
+  if (["grip", "gripping", "grips"].includes(lower))
+    return "grip";
+  if (["run", "running", "runs"].includes(lower))
+    return "run";
+  if (["girl", "woman", "female"].includes(lower))
+    return "female";
+  if (["boy", "man", "male"].includes(lower))
+    return "male";
   if (lower === "another")
     return "other";
   if (lower.endsWith("ing") && lower.length > 5) {
@@ -627,6 +849,17 @@ function assembleCharacterBlock(character, config, replacements, includeAction, 
   }
   return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", stripOrReplaceNames(cleanString2(character.age), replacements, true), stripOrReplaceNames(cleanString2(character.appearance), replacements, true), stripOrReplaceNames(cleanString2(character.body), replacements, true), stripOrReplaceNames(cleanString2(character.attire), replacements, true), stripOrReplaceNames(cleanString2(character.expression), replacements, true), includeAction ? stripOrReplaceNames(cleanString2(character.action), replacements, true) : "")).join(", ");
 }
+function assembleProjectedCharacterBlock(character, config, replacements) {
+  const projection = stripOrReplaceNames(cleanString2(character.visibleTags), replacements, true);
+  if (!projection)
+    return assembleCharacterBlock(character, config, replacements, false, "dynamic");
+  const excludesReadableFace = isFragmentRenderScope(character.renderScope);
+  return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", excludesReadableFace ? "" : stripOrReplaceNames(cleanString2(character.age), replacements, true), projection, excludesReadableFace ? "" : stripOrReplaceNames(cleanString2(character.expression), replacements, true))).join(", ");
+}
+function isFragmentRenderScope(value) {
+  const scope = cleanString2(value).toLowerCase();
+  return /\b(?:head|face|eyes)\s+out\s+of\s+frame\b|\b(?:hand|hands|feet|foot|lower body|torso|back|shoulder|silhouette|shadow)\s+(?:only|detail|focus)\b|\bonly\s+(?:the\s+)?(?:hand|hands|feet|foot|lower body|torso|back|shoulder|silhouette|shadow)\b/.test(scope);
+}
 function resolveShotPerspective(shot, config) {
   if (!config.adaptiveMode)
     return { mode: config.perspectiveMode, source: "manual" };
@@ -661,14 +894,37 @@ function assembleAtomicCharacterComposition(value, replacements) {
   ]);
   return { text: snippets.join(", "), structured: true };
 }
-function assembleStaticCharacterComposition(value, replacements) {
+function assembleDynamicCharacterComposition(value, replacements, priority) {
+  const record = asRecord(value);
+  const fields = ["position", "pose", "actions", "gaze"];
+  const structured = hasAtomicField(record, fields);
+  if (!structured)
+    return { text: sanitizeComposition(cleanString2(value), replacements), structured: false };
+  const priorityTokens = actionTokens(priority);
+  const uncovered = (snippet) => {
+    const tokens = actionTokens(snippet);
+    return tokens.length === 0 || !tokens.every((token) => tokenCovered(token, priorityTokens));
+  };
+  const actions = sanitizedAtomicSnippets(record.actions, 3, replacements).filter(uncovered);
+  return {
+    text: unique([
+      ...sanitizedAtomicSnippets(record.position, 1, replacements),
+      ...sanitizedAtomicSnippets(record.pose, 1, replacements),
+      ...actions,
+      ...sanitizedAtomicSnippets(record.gaze, 1, replacements)
+    ]).join(", "),
+    structured: true
+  };
+}
+function assembleStaticCharacterComposition(value, replacements, index, characterCount) {
   const composition = asRecord(value);
   const pose = sanitizedAtomicSnippets(composition.pose, 1, replacements);
   const gaze = sanitizedAtomicSnippets(composition.gaze, 1, replacements);
   const concretePose = pose[0] && !/\bpos(?:e|es|ed|ing)\b/i.test(pose[0]) ? pose[0] : "standing upright with arms relaxed at sides";
+  const position = characterCount === 1 ? "slightly forward from the background" : index === 0 ? "left side slightly forward from the background" : index === characterCount - 1 ? "right side slightly forward from the background" : "center slightly forward from the background";
   return {
     text: unique([
-      "slightly forward from the background",
+      position,
       concretePose,
       ...gaze
     ]).join(", "),
@@ -711,25 +967,65 @@ function assembleStructuredCamera(value) {
     structured: true
   };
 }
-function identitySafeCreativeSituation(value) {
-  return unique(csvParts(value).filter((tag) => !/^(?:\d+(?:girl|boy|other)s?|solo|group)$/i.test(tag.trim()))).join(", ");
+function assembleDynamicShotPlan(value, replacements) {
+  const record = asRecord(value);
+  const fields = ["primaryAction", "secondaryCue", "staging"];
+  const structured = hasAtomicField(record, fields);
+  if (!structured)
+    return { text: sanitizeComposition(cleanString2(value), replacements), structured: false };
+  return {
+    text: unique([
+      ...sanitizedAtomicSnippets(record.primaryAction, 1, replacements),
+      ...sanitizedAtomicSnippets(record.secondaryCue, 1, replacements),
+      ...sanitizedAtomicSnippets(record.staging, 1, replacements)
+    ]).join(", "),
+    structured: true
+  };
 }
-function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode, creativeConcept) {
+function identitySafeCreativeSituation(value) {
+  return unique(csvParts(value).filter((tag) => !/^(?:\d+(?:girl|boy|other)s?|girl|boy|other|solo|group)$/i.test(tag.trim()))).join(", ");
+}
+function normalizedSituation(value, characterCount) {
+  const tags = unique(csvParts(value));
+  if (characterCount !== 1 || tags.some((tag) => tag.toLowerCase() === "solo"))
+    return tags.join(", ");
+  return unique([...tags, tags.some((tag) => /^1(?:girl|boy|other)$/i.test(tag.trim())) ? "solo" : ""]).join(", ");
+}
+function creativeCueTags(anchor, visibleCues, parserVisibleTags = "") {
+  const cues = unique(csvParts(visibleCues));
+  const anchorText = cleanString2(anchor);
+  const cueTokens = actionTokens(cues.join(" "));
+  const anchorTokens = actionTokens(anchorText);
+  const anchorCovered = anchorTokens.length > 0 && anchorTokens.every((token) => tokenCovered(token, cueTokens));
+  const safeParserTags = csvParts(parserVisibleTags).filter(isIdentitySafeCreativeCue);
+  return unique(csvParts(anchorCovered ? "" : anchorText, cues, safeParserTags)).join(", ");
+}
+function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode, creativeConcept, dynamicLayout = "hybrid") {
   const allCharacters = cleanArray(shot.characters).slice(0, config.maxCharacters);
   const bindingCreative = perspectiveMode === "creative" && Boolean(creativeConcept);
   const characters = bindingCreative ? allCharacters.slice(0, 1) : allCharacters;
+  const dynamicShotPlan = perspectiveMode === "dynamic" ? assembleDynamicShotPlan(shot.shotPlan, replacements) : { text: "", structured: false };
+  const compactDynamic = perspectiveMode === "dynamic" && dynamicShotPlan.structured && Boolean(dynamicShotPlan.text);
+  const hybridDynamic = compactDynamic && dynamicLayout === "hybrid";
   const conceptScope = perspectiveMode === "creative" ? sanitizeComposition(cleanString2(creativeConcept?.renderScope), replacements) : "";
   const characterParts = characters.map((character, index) => {
-    const composition = perspectiveMode === "static" ? assembleStaticCharacterComposition(character.composition, replacements) : assembleAtomicCharacterComposition(character.composition, replacements);
-    const scope = perspectiveMode === "creative" ? index === 0 && conceptScope || sanitizeComposition(cleanString2(character.renderScope), replacements) : "";
-    const compositionText = perspectiveMode === "creative" && scope ? scope : composition.text;
-    const conceptTags = perspectiveMode === "creative" && index === 0 ? stripOrReplaceNames(unique(csvParts(creativeConcept?.visibleCues)).join(", "), replacements, true) : "";
-    const baseTags = conceptTags || assembleCharacterBlock(character, config, replacements, false, perspectiveMode);
+    const composition = perspectiveMode === "static" ? assembleStaticCharacterComposition(character.composition, replacements, index, characters.length) : hybridDynamic ? assembleDynamicCharacterComposition(character.composition, replacements, dynamicShotPlan.text) : assembleAtomicCharacterComposition(character.composition, replacements);
+    const scope = perspectiveMode === "creative" ? index === 0 && conceptScope || (() => {
+      const parserScope = sanitizeComposition(cleanString2(character.renderScope), replacements);
+      return isIdentitySafeCreativeCue(parserScope) ? parserScope : "";
+    })() : "";
+    const compositionText = perspectiveMode === "creative" ? scope : composition.text;
+    const conceptTags = perspectiveMode === "creative" && index === 0 ? stripOrReplaceNames(creativeCueTags(creativeConcept?.anchor, creativeConcept?.visibleCues, character.visibleTags), replacements, true) : "";
+    const baseTags = conceptTags || (compactDynamic ? isFragmentRenderScope(character.renderScope) ? assembleProjectedCharacterBlock(character, config, replacements) : hybridDynamic ? assembleCharacterBlock(character, config, replacements, false, "dynamic") : assembleProjectedCharacterBlock(character, config, replacements) : assembleCharacterBlock(character, config, replacements, false, perspectiveMode));
     const uncoveredActions = composition.structured ? "" : stripOrReplaceNames(uncoveredActionTags(character.action, compositionText), replacements, true);
     const tags = unique(csvParts(baseTags, uncoveredActions)).join(", ");
-    return { compositionText, sections: [compositionText, tags].filter(Boolean) };
+    return {
+      compositionText,
+      sections: compactDynamic && !hybridDynamic ? [tags].filter(Boolean) : [compositionText, tags].filter(Boolean)
+    };
   });
   const characterSections = characterParts.flatMap((part) => part.sections);
+  const unboundCreativeCues = bindingCreative && characters.length === 0 ? stripOrReplaceNames(creativeCueTags(creativeConcept?.anchor, creativeConcept?.visibleCues), replacements, true) : "";
   const individualComposition = characterParts.map((part) => part.compositionText).filter(Boolean).join(", ");
   const hasSharedComposition = Boolean(cleanString2(shot.sharedComposition)) || Object.keys(asRecord(shot.sharedComposition)).length > 0;
   const sharedSource = hasSharedComposition ? shot.sharedComposition : shot.supplement;
@@ -741,8 +1037,8 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode,
   const environment = scene.environment || {};
   const location = structuredSnippets(environment.location, 1);
   const timeWeather = structuredSnippets(environment.timeWeather, 1);
-  const lightingMood = config.supplement ? structuredSnippets(environment.lightingMood, 3) : [];
-  const backgroundElements = config.supplement || perspectiveMode === "static" ? structuredSnippets(environment.backgroundElements, 5) : [];
+  const lightingMood = config.supplement ? structuredSnippets(environment.lightingMood, compactDynamic ? 1 : 3) : [];
+  const backgroundElements = config.supplement || perspectiveMode === "static" ? structuredSnippets(environment.backgroundElements, compactDynamic ? 3 : 5) : [];
   const legacyPlace = location.length === 0 ? stripOrReplaceNames(cleanString2(scene.place), replacements, true) : "";
   const environmentSection = [
     ...location.map((value) => stripOrReplaceNames(value, replacements, false)),
@@ -752,13 +1048,16 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode,
     ...backgroundElements.map((value) => stripOrReplaceNames(value, replacements, false))
   ].filter(Boolean).join(", ");
   return { sections: [
-    stripOrReplaceNames(bindingCreative ? identitySafeCreativeSituation(shot.situation) : unique(csvParts(shot.situation)).join(", "), replacements, true),
+    stripOrReplaceNames(bindingCreative ? identitySafeCreativeSituation(shot.situation) : compactDynamic && !hybridDynamic ? unique(csvParts(shot.situation)).join(", ") : hybridDynamic || perspectiveMode === "static" ? normalizedSituation(shot.situation, characters.length) : unique(csvParts(shot.situation)).join(", "), replacements, true),
+    compactDynamic ? stripOrReplaceNames(camera.text, replacements, true) : "",
+    compactDynamic ? dynamicShotPlan.text : "",
     perspectiveMode === "creative" && characters.length === 0 ? conceptScope : "",
+    unboundCreativeCues,
     ...characterSections,
-    config.supplement && perspectiveMode !== "static" && !bindingCreative ? filteredSharedText : "",
-    perspectiveMode === "static" || bindingCreative ? "" : sharedAction,
+    !compactDynamic && config.supplement && perspectiveMode !== "static" && !bindingCreative ? filteredSharedText : "",
+    !compactDynamic && perspectiveMode !== "static" && !bindingCreative ? sharedAction : "",
     bindingCreative ? "" : environmentSection,
-    stripOrReplaceNames(camera.text, replacements, true)
+    compactDynamic ? "" : stripOrReplaceNames(camera.text, replacements, true)
   ].map((section) => section.trim()).filter(Boolean) };
 }
 function assembleDefaultPrompt(scene, shot, config, replacements, perspectiveMode, creativeConcept) {
@@ -780,11 +1079,11 @@ function assembleDefaultPrompt(scene, shot, config, replacements, perspectiveMod
   ]);
   return { sections: [...tagSections, supplement].filter(Boolean), format: "legacy" };
 }
-function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph, creativeConcept) {
+function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph, creativeConcept, evaluationOptions) {
   const characters = cleanArray(shot.characters);
   const replacements = buildNameReplacementMap(characters);
   const perspective = resolveShotPerspective(shot, config);
-  const core = config.promptStyle === "anima" ? assembleAnimaPrompt(scene, shot, config, replacements, perspective.mode, creativeConcept) : assembleDefaultPrompt(scene, shot, config, replacements, perspective.mode, creativeConcept);
+  const core = config.promptStyle === "anima" ? assembleAnimaPrompt(scene, shot, config, replacements, perspective.mode, creativeConcept, evaluationOptions?.dynamicLayout || "hybrid") : assembleDefaultPrompt(scene, shot, config, replacements, perspective.mode, creativeConcept);
   const preset = activePromptPreset(config);
   const presetPrefix = stripOrReplaceNames(preset?.positivePrefix || "", replacements, true);
   const prefix = stripOrReplaceNames(config.customPositivePrefix, replacements, true);
@@ -807,208 +1106,6 @@ function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph,
     perspectiveSource: perspective.source,
     creativeConcept: perspective.mode === "creative" ? creativeConcept : undefined
   };
-}
-
-// src/backend/creative.ts
-function stableHash(value) {
-  let hash = 2166136261;
-  for (let index = 0;index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(36);
-}
-function parseJsonObject(value) {
-  const clean = value.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
-  const candidates = [clean];
-  const start = clean.indexOf("{");
-  const end = clean.lastIndexOf("}");
-  if (start >= 0 && end > start)
-    candidates.push(clean.slice(start, end + 1));
-  for (const candidate of candidates) {
-    try {
-      const parsed = JSON.parse(candidate);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
-        return parsed;
-    } catch {}
-  }
-  return null;
-}
-function cleanCueList(value) {
-  if (!Array.isArray(value))
-    return [];
-  return [...new Set(value.map(cleanString2).filter(Boolean))].slice(0, 6);
-}
-var CREATIVE_SUBJECT_TYPES = new Set([
-  "object",
-  "environment",
-  "shadow",
-  "silhouette",
-  "reflection",
-  "fragment",
-  "spatial"
-]);
-var IDENTITY_BEARING_CUE = /\b(?:face|facial|cheek|chin|jaw|mouth|lip|lips|eye|eyes|iris|pupil|pupils|eyebrow|eyebrows|eyelash|eyelashes|hair|hairstyle|bangs|braid|ponytail|blonde|brunette|uniform|outfit|clothing|clothes|costume|dress|shirt|blouse|sweater|hoodie|coat|jacket|sleeve|collar|ribbon|tie|skirt|shorts|pants|trousers|stockings|pantyhose|sock|socks|shoe|shoes|boot|boots)\b/i;
-function isIdentitySafeCreativeConcept(concept) {
-  if (!concept.subjectType || !CREATIVE_SUBJECT_TYPES.has(concept.subjectType))
-    return false;
-  return !IDENTITY_BEARING_CUE.test([
-    concept.anchor,
-    concept.concept,
-    concept.renderScope,
-    concept.camera,
-    ...concept.visibleCues
-  ].join(" "));
-}
-function parseCreativeConcepts(value, paragraphs, config) {
-  const parsed = parseJsonObject(value);
-  const rawCandidates = Array.isArray(parsed?.candidates) ? parsed.candidates : [];
-  const validParagraphs = new Set(paragraphs.map((paragraph) => paragraph.parserIndex));
-  const perParagraph = new Map;
-  const seenIds = new Set;
-  const concepts = [];
-  for (const raw of rawCandidates) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw))
-      continue;
-    const candidate = raw;
-    const paragraph = Number(String(candidate.paragraph ?? "").match(/\d+/)?.[0]);
-    const subjectType = cleanString2(candidate.subjectType).toLowerCase();
-    const anchor = cleanString2(candidate.anchor);
-    const concept = cleanString2(candidate.concept);
-    const renderScope = cleanString2(candidate.renderScope);
-    const camera = cleanString2(candidate.camera);
-    const visibleCues = cleanCueList(candidate.visibleCues);
-    const scoreValue = Number(candidate.score);
-    if (!validParagraphs.has(paragraph) || !subjectType || !CREATIVE_SUBJECT_TYPES.has(subjectType) || !anchor || !concept || !renderScope || !camera || visibleCues.length === 0)
-      continue;
-    if (!Number.isFinite(scoreValue))
-      continue;
-    const score = Math.max(0, Math.min(100, Math.round(scoreValue)));
-    const id = `creative-${stableHash([paragraph, subjectType, anchor, concept, renderScope, camera].join("|"))}`;
-    const parsedConcept = {
-      id,
-      paragraph,
-      subjectType,
-      anchor,
-      concept,
-      renderScope,
-      camera,
-      visibleCues,
-      score
-    };
-    if (!isIdentitySafeCreativeConcept(parsedConcept))
-      continue;
-    if (seenIds.has(id))
-      continue;
-    const count = perParagraph.get(paragraph) || 0;
-    if (count >= 4)
-      continue;
-    seenIds.add(id);
-    perParagraph.set(paragraph, count + 1);
-    concepts.push(parsedConcept);
-  }
-  const finalCounts = new Map;
-  const paragraphScores = new Map;
-  concepts.forEach((concept) => finalCounts.set(concept.paragraph, (finalCounts.get(concept.paragraph) || 0) + 1));
-  concepts.forEach((concept) => paragraphScores.set(concept.paragraph, Math.max(paragraphScores.get(concept.paragraph) || 0, concept.score)));
-  const eligibleParagraphs = [...new Set(concepts.map((concept) => concept.paragraph))].filter((paragraph) => (finalCounts.get(paragraph) || 0) >= 2).sort((left, right) => (paragraphScores.get(right) || 0) - (paragraphScores.get(left) || 0) || left - right).slice(0, Math.max(1, config.maxImages));
-  const allowed = new Set(eligibleParagraphs);
-  return concepts.filter((concept) => allowed.has(concept.paragraph));
-}
-function hasUnusedCreativeConcepts(candidates, usedIds) {
-  const used = new Set(usedIds);
-  return candidates.some((candidate) => isIdentitySafeCreativeConcept(candidate) && !used.has(candidate.id));
-}
-function chooseCreativeConcepts(candidates, usedIds = [], random = Math.random) {
-  const used = new Set(usedIds);
-  const grouped = new Map;
-  for (const candidate of candidates) {
-    if (!isIdentitySafeCreativeConcept(candidate) || used.has(candidate.id))
-      continue;
-    const group = grouped.get(candidate.paragraph) || [];
-    group.push(candidate);
-    grouped.set(candidate.paragraph, group);
-  }
-  const selected = new Map;
-  for (const [paragraph, group] of grouped) {
-    const sorted = [...group].sort((left, right) => right.score - left.score || left.id.localeCompare(right.id));
-    const bestScore = sorted[0]?.score ?? 0;
-    const shortlist = sorted.filter((candidate) => candidate.score >= Math.max(50, bestScore - 20)).slice(0, 3);
-    const pool = shortlist.length > 0 ? shortlist : sorted.slice(0, 1);
-    if (pool.length === 0)
-      continue;
-    const floor = Math.min(...pool.map((candidate) => candidate.score)) - 5;
-    const weights = pool.map((candidate) => Math.max(1, candidate.score - floor));
-    const total = weights.reduce((sum, weight) => sum + weight, 0);
-    let cursor = Math.min(0.999999, Math.max(0, random())) * total;
-    let choice = pool[pool.length - 1];
-    for (let index = 0;index < pool.length; index += 1) {
-      cursor -= weights[index];
-      if (cursor < 0) {
-        choice = pool[index];
-        break;
-      }
-    }
-    selected.set(paragraph, choice);
-  }
-  return selected;
-}
-function creativeIdeationInstruction(config, previousConcepts = []) {
-  return [
-    "# Creative Illustration Concept Ideator",
-    "Extract literal visual cues from the numbered source and propose genuinely different Creative compositions before the prompt parser runs.",
-    config.adaptiveMode ? `Screen up to ${Math.max(1, config.maxImages)} paragraph numbers for optional identity-safe Creative alternatives, then generate exactly four candidates for each. These candidates must not decide or bias the later Adaptive mode choice.` : `Choose up to ${Math.max(1, config.maxImages)} visually strong paragraph numbers and generate exactly four candidates for each chosen paragraph.`,
-    "Candidates for the same paragraph must differ in focal anchor and at least one of crop scale, subject inclusion, depth, occlusion, or viewpoint.",
-    "Creative must not focus on recognizable identity-bearing character features. Never use a face, facial feature, hair, hairstyle, or recognizable clothing as the anchor or a visible cue.",
-    "Allowed subjectType values are object, environment, shadow, silhouette, reflection, fragment, or spatial. Reflections and fragments must remain non-identifying; generic hands, fingers, feet, gestures, and fully unreadable silhouettes are allowed.",
-    "Prefer overlooked but meaningful anchors: a source-supported object, environmental detail, shadow, unreadable silhouette, non-identifying fragment, foreground layer, aftermath, or unusual spatial relationship.",
-    "If a paragraph has no faithful identity-safe anchor, return no Creative candidate for it. Do not weaken this rule merely to fill the requested count.",
-    "Do not merely restate the paragraph's complete main action.",
-    "Separate literal cues from metaphors and internal narration. Never render a simile literally and never invent an object, body part, action, or setting detail.",
-    "renderScope is binding: state exactly what is inside the frame and what is cropped or occluded. visibleCues contains only traits and elements actually visible inside that scope.",
-    "Score each candidate from 0-100 for source fidelity, focal specificity, visual clarity, ANIMA promptability, and difference from an obvious Dynamic full-action shot.",
-    previousConcepts.length > 0 ? `Avoid repeating these previously used concepts:
-- ${previousConcepts.map(cleanString2).filter(Boolean).join(`
-- `)}` : "",
-    "Return raw JSON only with this exact shape:",
-    '{"candidates":[{"paragraph":1,"subjectType":"object","anchor":"short anchor label","concept":"concise visible composition","renderScope":"exact contents of frame and crop","camera":"concise framing and viewpoint","visibleCues":["visible cue"],"score":85}]}',
-    "No markdown, commentary, character-memory dump, or fields outside the schema."
-  ].filter(Boolean).join(`
-
-`);
-}
-function creativeIdeationRequest(targetSource) {
-  return [
-    "Generate the Creative concept slate from this current numbered source:",
-    targetSource
-  ].join(`
-
-`);
-}
-function creativeConceptConstraint(concepts, adaptive) {
-  if (concepts.size === 0)
-    return "";
-  const lines = [...concepts.values()].sort((left, right) => left.paragraph - right.paragraph).map((concept) => [
-    `[P${concept.paragraph}] concept ID: ${concept.id}`,
-    `Anchor: ${concept.anchor}`,
-    `Binding render scope: ${concept.renderScope}`,
-    `Camera intent: ${concept.camera}`,
-    `Visible cues only: ${concept.visibleCues.join(", ")}`,
-    `Creative suitability: ${concept.score}/100`
-  ].join(`
-`));
-  return [
-    adaptive ? "## Optional Creative Candidates" : "## Selected Creative Concepts",
-    adaptive ? "First choose perspectiveMode independently from the paragraph itself. Creative is permitted only for paragraphs listed below, and the listed candidate becomes binding only after Creative is chosen. Otherwise ignore it and choose Static or Dynamic normally. Do not choose Creative merely because a candidate or score is present." : "Use only the listed paragraphs for Creative shots. Each listed concept is binding and must control renderScope, visibleTags, camera, and subject inclusion.",
-    "Creative may show only identity-safe objects, environments, shadows, unreadable silhouettes, spatial details, or non-identifying fragments. It must not show a recognizable face, hair, or outfit.",
-    "When a binding render scope exists, do not expand it with the character's complete pose, full action, off-frame attire, or unrelated memory traits.",
-    ...lines
-  ].join(`
-
-`);
-}
-function rebaseCreativeConcepts(candidates, paragraph) {
-  return candidates.map((candidate) => ({ ...candidate, paragraph }));
 }
 
 // src/backend/logging.ts
@@ -1049,7 +1146,13 @@ function recoverSceneParagraphs(payload, fallbackParagraph) {
     }
     return parseParagraphNumber(rawScene.paragraph) || !sceneParagraph ? rawScene : { ...rawScene, paragraph: sceneParagraph };
   });
-  return { ...payload, scenes };
+  const terminalParagraph = parseParagraphNumber(payload.terminalState?.paragraph);
+  const terminalState = terminalParagraph && payload.terminalState ? { ...payload.terminalState, paragraph: terminalParagraph } : payload.terminalState;
+  return {
+    ...payload,
+    ...terminalState ? { terminalState } : {},
+    scenes
+  };
 }
 function dedupeCharacters(characters) {
   if (!Array.isArray(characters))
@@ -1065,8 +1168,10 @@ function dedupeCharacters(characters) {
   });
 }
 function dedupeExactShotCharacters(payload) {
+  const terminalState = payload.terminalState && Array.isArray(payload.terminalState.characters) ? { ...payload.terminalState, characters: dedupeCharacters(payload.terminalState.characters) } : payload.terminalState;
   return {
     ...payload,
+    ...terminalState ? { terminalState } : {},
     scenes: cleanArray(payload.scenes).map((scene) => {
       const next = { ...scene };
       if (Array.isArray(scene.characters))
@@ -1076,6 +1181,37 @@ function dedupeExactShotCharacters(payload) {
       }
       return next;
     })
+  };
+}
+function normalizeCompositionTerm(value, key = "") {
+  if (typeof value === "string") {
+    const viewpointSafe = value.replace(/\bcamera\b/gi, "viewer");
+    return key === "gaze" && /\b(?:eyes?\s+closed|closed\s+eyes?)\b/i.test(viewpointSafe) ? "" : viewpointSafe;
+  }
+  if (Array.isArray(value))
+    return value.map((entry) => normalizeCompositionTerm(entry, key));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([childKey, child]) => [childKey, normalizeCompositionTerm(child, childKey)]));
+  }
+  return value;
+}
+function normalizeAtomicCompositionTerms(payload) {
+  const normalizeCharacters = (characters) => Array.isArray(characters) ? characters.map((character) => ({
+    ...character,
+    ...character.composition === undefined ? {} : { composition: normalizeCompositionTerm(character.composition) }
+  })) : characters;
+  return {
+    ...payload,
+    scenes: cleanArray(payload.scenes).map((scene) => ({
+      ...scene,
+      ...Array.isArray(scene.characters) ? { characters: normalizeCharacters(scene.characters) } : {},
+      ...Array.isArray(scene.shots) ? {
+        shots: scene.shots.map((shot) => ({
+          ...shot,
+          ...Array.isArray(shot.characters) ? { characters: normalizeCharacters(shot.characters) } : {}
+        }))
+      } : {}
+    }))
   };
 }
 function normalizeScenePayload(payload) {
@@ -1124,6 +1260,7 @@ function exactVisualKey(entry) {
     paragraph: entry.parserParagraph,
     perspectiveMode: normalizedVisualValue(entry.shot.perspectiveMode),
     camera: normalizedVisualValue(entry.shot.camera),
+    shotPlan: normalizedVisualValue(entry.shot.shotPlan),
     situation: normalizedVisualValue(entry.shot.situation),
     sceneAction: normalizedVisualValue(entry.scene.action),
     shotAction: normalizedVisualValue(entry.shot.action),
@@ -1224,11 +1361,22 @@ function cleanEnvironment(value) {
 function mergeEnvironment(current, previous, changed = new Set) {
   if (!previous)
     return current;
-  if (changed.has("location"))
+  const canonicalLocation = (value) => cleanAtomicField(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const currentLocation = canonicalLocation(current.location);
+  const previousLocation = canonicalLocation(previous.location);
+  const locationBoundary = changed.has("location") || Boolean(currentLocation && previousLocation && currentLocation !== previousLocation);
+  if (locationBoundary) {
+    changed.add("location");
+    changed.add("timeWeather");
+    changed.add("lightingMood");
     changed.add("backgroundElements");
+  }
   const select = (key, currentValue, previousValue) => {
     const hasCurrent = Array.isArray(currentValue) ? currentValue.length > 0 : Boolean(currentValue);
     const hasPrevious = Array.isArray(previousValue) ? previousValue.length > 0 : Boolean(previousValue);
+    if (locationBoundary && (key === "timeWeather" || key === "lightingMood" || key === "backgroundElements")) {
+      return currentValue;
+    }
     if (changed.has(key))
       return hasCurrent ? currentValue : previousValue;
     return hasPrevious ? previousValue : currentValue;
@@ -1254,7 +1402,7 @@ function visualCharacter(character) {
     attireInferred: inferred(character.attireInferred)
   };
 }
-function inheritCharacter(raw, previousCharacters) {
+function inheritCharacter(raw, previousCharacters, explicitCurrentWins = false) {
   const current = visualCharacter(raw);
   const name = current?.name || normalizeCharacterName(raw.name);
   const previous = name ? previousCharacters.get(name.toLowerCase()) : undefined;
@@ -1262,6 +1410,8 @@ function inheritCharacter(raw, previousCharacters) {
   const changes = changeSet(raw.visualChanges, ["age", "appearance", "body", "attire"]);
   const stableField = (key, currentValue, previousValue = "") => {
     if (!previousValue)
+      return currentValue;
+    if (explicitCurrentWins && currentValue)
       return currentValue;
     if (changes.has(key))
       return currentValue || previousValue;
@@ -1274,7 +1424,7 @@ function inheritCharacter(raw, previousCharacters) {
     appearance: stableField("appearance", cleanTagField(raw.appearance), previous?.appearance),
     body: stableField("body", cleanTagField(raw.body), previous?.body),
     attire: stableField("attire", currentAttire, previous?.attire),
-    attireInferred: !previous ? inferred(raw.attireInferred) : changes.has("attire") && currentAttire ? inferred(raw.attireInferred) : previous.attireInferred
+    attireInferred: !previous ? inferred(raw.attireInferred) : (explicitCurrentWins || changes.has("attire")) && currentAttire ? inferred(raw.attireInferred) : previous.attireInferred
   };
   const remembered = visualCharacter(next);
   if (remembered)
@@ -1296,7 +1446,8 @@ function applyPreviousVisualState(payload, previous) {
     const environment = mergeEnvironment(cleanEnvironment(rawScene.environment), carriedEnvironment, environmentChanges);
     carriedEnvironment = environment;
     const currentPlace = cleanTagField(rawScene.place);
-    const place = carriedPlace && !environmentChanges.has("place") ? carriedPlace : currentPlace || carriedPlace;
+    const placeChanged = environmentChanges.has("place") || Boolean(currentPlace && carriedPlace && currentPlace.toLowerCase() !== carriedPlace.toLowerCase());
+    const place = placeChanged ? currentPlace || carriedPlace : carriedPlace || currentPlace;
     carriedPlace = place;
     const shots = cleanArray(rawScene.shots);
     if (shots.length > 0) {
@@ -1313,9 +1464,43 @@ function applyPreviousVisualState(payload, previous) {
       environment
     };
   });
-  return { ...payload, scenes };
+  const rawTerminal = payload.terminalState;
+  if (!rawTerminal || typeof rawTerminal !== "object" || Array.isArray(rawTerminal))
+    return { ...payload, scenes };
+  const terminalChanges = changeSet(rawTerminal.environmentChanges, ["location", "timeWeather", "lightingMood", "backgroundElements", "place"]);
+  const terminalEnvironment = mergeEnvironment(cleanEnvironment(rawTerminal.environment), previous ? cleanEnvironment(previous.environment) : undefined, terminalChanges);
+  const terminalPlaceCurrent = cleanTagField(rawTerminal.place);
+  const previousPlace = previous ? cleanAtomicField(previous.place) : "";
+  const terminalPlaceChanged = terminalChanges.has("place") || Boolean(terminalPlaceCurrent && previousPlace && terminalPlaceCurrent.toLowerCase() !== previousPlace.toLowerCase());
+  const terminalPlace = terminalPlaceChanged ? terminalPlaceCurrent || previousPlace : previousPlace || terminalPlaceCurrent;
+  const terminalCharacters = new Map(cleanArray(previous?.characters).map((character) => [normalizeCharacterName(character.name).toLowerCase(), character]).filter(([name]) => Boolean(name)));
+  return {
+    ...payload,
+    scenes,
+    terminalState: {
+      ...rawTerminal,
+      place: terminalPlace,
+      environment: terminalEnvironment,
+      characters: cleanArray(rawTerminal.characters).map((character) => inheritCharacter(character, terminalCharacters, true))
+    }
+  };
 }
 function buildPreviousVisualState(payload, selectedParserParagraphs) {
+  const terminal = payload.terminalState;
+  if (terminal && typeof terminal === "object" && !Array.isArray(terminal)) {
+    const characters2 = cleanArray(terminal.characters).map(visualCharacter).filter((character) => Boolean(character));
+    const environment2 = cleanEnvironment(terminal.environment);
+    const place2 = cleanTagField(terminal.place);
+    const hasEnvironment2 = Boolean(environment2.location || environment2.timeWeather || environment2.lightingMood.length || environment2.backgroundElements.length || place2);
+    if (characters2.length > 0 || hasEnvironment2) {
+      return {
+        characters: characters2,
+        environment: environment2,
+        place: place2,
+        updatedAt: new Date().toISOString()
+      };
+    }
+  }
   const selected = new Set(selectedParserParagraphs);
   const ordered = normalizeScenePayload(payload).filter((entry) => selected.size === 0 || selected.has(entry.parserParagraph)).sort((left, right) => left.parserParagraph - right.parserParagraph);
   if (ordered.length === 0)
@@ -1358,7 +1543,7 @@ function formatPreviousVisualState(previous) {
   };
   return compactBlock([
     "## Previous Visual State",
-    "This is the immediately previous generated turn, not a new narrative source. Copy its character and environment values exactly when the current numbered source does not explicitly replace them. Current source changes always win. Never copy camera, pose, action, or expression from prior state.",
+    "This is the terminal narrative state of the immediately previous processed response, not a new narrative source. For unchanged returning character baseline fields, leave the raw value empty and leave its change marker absent; the backend injects the exact stored value after parsing. Copy unchanged environment values explicitly because scene validation occurs before inheritance. Output a full new value and its change marker when the current numbered source explicitly replaces it. Current source changes always win. Never copy camera, pose, action, or expression from prior state.",
     JSON.stringify(reference)
   ].join(`
 `), 5000);
@@ -2219,10 +2404,83 @@ function paragraphCount(content) {
 }
 
 // src/backend/instructions.ts
-function parserInstruction(config) {
+function dynamicDirectionContract() {
+  return [
+    "### Dynamic shot direction",
+    "Dynamic is a source-literal action illustration. Choose the one visible action or interaction that best represents the paragraph; do not try to give every simultaneous fact equal rendering priority.",
+    "shotPlan is required for Dynamic. shotPlan.primaryAction is one concise role-bound subject-verb-object clause containing the primary action, its owner and target or object, and any explicit movement direction. Use visual roles such as left woman or right man, never names.",
+    "shotPlan.secondaryCue is empty or one lower-priority visible cue such as a gaze direction, approaching hazard, environmental contact, or consequential reaction. It must not introduce a second competing relational action.",
+    "shotPlan.staging is one concise spatial arrangement that makes the primary action readable. It contains no new action, camera, clothing, expression, or lighting information.",
+    "Every shotPlan string is one atomic phrase with no comma, semicolon, or terminal punctuation. Combine closely related words inside one clause instead of listing clauses.",
+    "shotPlan is a rendering projection of facts still owned by composition and sharedComposition. It may restate the selected facts for priority, but it never changes them and is never persisted as memory.",
+    "Every Dynamic character must have a non-empty renderScope even for an ordinary full-body or upper-body view. renderScope describes what the chosen framing actually contains. Never leave it empty because the character is fully visible.",
+    "For ordinary portrait through full-body Dynamic framing, the renderer preserves the complete known appearance, body, and attire baseline; visibleTags must still list the traits actually visible so framing can be audited. For a true body-part or head-out-of-frame fragment, visibleTags becomes the rendered identity projection and must omit traits outside the crop.",
+    "Per-character composition remains required after shot planning. Preserve position, body arrangement, gaze, and any secondary action not already represented by shotPlan. Do not duplicate the primary action merely to add emphasis.",
+    "Choose framing that contains every source-critical visible fact. Use cowboy shot or full body when lower-body movement or specifically required lower attire must be verified; never crop away an explicit action, partial threat, transformation, or attire transition.",
+    "Camera direction must be compatible with the facts the image must prove. If an explicit facial expression, gaze, eye trait, or eye transformation is important, keep the face readable and do not use from behind. Do not combine a required face-visible fact with a camera that hides it.",
+    "Preserve source-critical modifiers in the projection, especially material, color, partial visibility, and out-of-frame status. A partial bronze mechanical hand must not become a generic mechanical hand or a complete character.",
+    "Choose a camera that clearly contains the primary action. Prefer a repeated suitable camera over a novel camera that crops out or obscures the action. Camera variety is secondary to action readability."
+  ].join(`
+`);
+}
+function staticDirectionContract() {
+  return [
+    "### Static shot direction",
+    "Static uses a visual-novel composition: a clearly readable scene background with one primary character slightly forward on a shallow foreground plane. Include additional characters only when the source cannot be represented faithfully without them; keep them on the same shallow plane.",
+    "Static is fixed to a conventional medium shot at eye level, straight-on, with deep focus so the background remains readable. Do not use close-ups, wide shots, body-part crops, POV, high or low angles, dutch angles, dramatic lenses, motion blur, foreground occlusion, or action-centric framing.",
+    "For one Static character, use slightly forward from the background as the position. For two characters, place one on the left and one on the right, both slightly forward on the same shallow plane; never give both an ambiguous identical position. Use a concrete source-supported resting body arrangement as the pose, an empty actions array, and a source-supported gaze or an empty gaze.",
+    "A Static pose must state the visible body arrangement directly, such as standing upright with arms relaxed at sides or seated upright with hands resting in lap. Never write abstract meta-phrases such as simple pose, stable pose, holding a pose, or posing. Do not depict a mid-action pose.",
+    "Every Static scene must provide a specific physical location and 2-3 concrete backgroundElements so the setting is visibly readable.",
+    "Leave shotPlan absent. Static framing and pose constraints override requests for cinematography variation."
+  ].join(`
+`);
+}
+function creativeDirectionContract() {
+  return [
+    "### Creative shot direction",
+    "Creative isolates a meaningful identity-safe visual anchor from the paragraph instead of showing the complete scene. Use a source-supported object, environment, shadow, unreadable silhouette, foreground layer, aftermath, unusual spatial relationship, or non-identifying body fragment.",
+    "Creative must not focus on a recognizable face, facial feature, hair, hairstyle, outfit, or clothing detail.",
+    "Creative must remain concrete and source-supported. renderScope states exactly what is in frame. visibleTags describes only the identity-safe anchor and contains no character-memory traits.",
+    "shot.characters contains only people with an actually visible body part inside renderScope. If the selected Creative frame contains no person or body fragment, use an empty characters array; keep fully off-frame recurring people only in terminalState and never add placeholder out-of-frame shot characters.",
+    "For a zero-character Creative frame, do not invent shot-level renderScope or visibleTags keys because they are not in the schema. The external binding supplies those render details after parsing; output only the normal declared shot fields with characters as an empty array.",
+    "A supplied Creative candidate is binding. Copy its render scope faithfully, use its camera intent, and do not broaden it back into a recognizable character or the complete paragraph action.",
+    "Leave shotPlan absent. Creative uses renderScope and the supplied concept as its rendering projection."
+  ].join(`
+`);
+}
+function perspectiveContract(config) {
+  if (!config.adaptiveMode) {
+    const contract = config.perspectiveMode === "creative" ? creativeDirectionContract() : config.perspectiveMode === "static" ? staticDirectionContract() : dynamicDirectionContract();
+    return [
+      "### Perspective mode - fixed",
+      `Set perspectiveMode to exactly ${config.perspectiveMode} for every shot.`,
+      contract,
+      "perspectiveMode, renderScope, visibleTags, and shotPlan are shot-only rendering decisions. They never alter or replace complete appearance, body, attire, or environment continuity."
+    ].join(`
+`);
+  }
+  return [
+    "### Perspective mode - Adaptive router",
+    "Choose perspectiveMode independently for every shot before filling any other shot field. It must be exactly creative, static, or dynamic.",
+    "For batches with two or more shots, do not choose Creative for every shot. Include at least one Static or Dynamic shot, and choose each mode from the paragraph rather than from the availability of an optional concept.",
+    "Use Creative only for a faithful identity-safe object, environment, shadow, unreadable silhouette, reflection, foreground layer, aftermath, unusual spatial relationship, or non-identifying fragment. If no such anchor exists, choose Static or Dynamic.",
+    "Use Static for a stable readable visual-novel scene with a conventional medium shot, simple resting pose, and readable background.",
+    "Use Dynamic for visible action, movement, interaction, urgency, or a cinematic change.",
+    "Apply this precedence from source facts: a required visible action or movement chooses Dynamic; a no-character aftermath or identity-safe anchor may choose Creative; an otherwise stable character-and-background beat chooses Static. Do not use camera drama alone to turn a stable beat into Dynamic, and do not use Creative when it would omit the paragraph's only required visible action.",
+    creativeDirectionContract(),
+    staticDirectionContract(),
+    dynamicDirectionContract(),
+    "perspectiveMode, renderScope, visibleTags, and shotPlan are shot-only rendering decisions. They never alter or replace complete appearance, body, attire, or environment continuity."
+  ].join(`
+`);
+}
+function parserInstruction(config, options = {}) {
   const maxCharacters = config.maxCharacters;
   const structuredAnima = config.promptStyle === "anima";
+  const hasPreviousVisualState = config.previousVisualStateEnabled && options.hasPreviousVisualState === true;
   const fixedStatic = !config.adaptiveMode && config.perspectiveMode === "static";
+  const dynamicPossible = config.adaptiveMode || config.perspectiveMode === "dynamic";
+  const creativePossible = config.adaptiveMode || config.perspectiveMode === "creative";
   const staticBackgroundPossible = fixedStatic || config.adaptiveMode;
   const shotInstruction = [
     `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
@@ -2233,24 +2491,7 @@ function parserInstruction(config) {
     structuredAnima ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood." : ""
   ].join(`
 `);
-  const perspectiveInstruction = [
-    "### Perspective mode - required per shot",
-    config.adaptiveMode ? "Choose perspectiveMode independently for every shot before filling any other shot field. It must be exactly creative, static, or dynamic." : `Set perspectiveMode to exactly ${config.perspectiveMode} for every shot.`,
-    config.adaptiveMode ? "For batches with two or more shots, do not choose Creative for every shot. Include at least one Static or Dynamic shot, and choose each mode from the paragraph rather than from the availability of an optional concept." : "",
-    "Creative isolates a meaningful identity-safe visual anchor from the paragraph instead of showing the complete scene. Use a source-supported object, environment, shadow, unreadable silhouette, foreground layer, aftermath, unusual spatial relationship, or non-identifying body fragment.",
-    "Creative must not focus on a recognizable face, facial feature, hair, hairstyle, outfit, or clothing detail. If the paragraph has no faithful identity-safe anchor, use Static or Dynamic in Adaptive mode.",
-    "Creative must remain concrete and source-supported. Use renderScope to state what is actually in frame. visibleTags must describe only the identity-safe anchor and must not contain character-memory traits.",
-    "After Creative is chosen, its supplied Creative candidate is binding. Copy its render scope faithfully, use its camera intent, and do not broaden it back into a recognizable character or the complete paragraph action.",
-    "Dynamic follows the current scene's visible action, movement, interaction, and strongest cinematic viewpoint.",
-    "Static uses a visual-novel composition: a clearly readable scene background with one primary character slightly forward on a shallow foreground plane. Include additional characters only when the source cannot be represented faithfully without them; keep them on the same shallow plane.",
-    "Static is fixed to a conventional medium shot at eye level, straight-on, with deep focus so the background remains readable. Do not use close-ups, wide shots, body-part crops, POV, high or low angles, dutch angles, dramatic lenses, motion blur, foreground occlusion, or action-centric framing.",
-    "For Static character composition, use slightly forward from the background as the position, a concrete source-supported resting body arrangement as the pose, an empty actions array, and a source-supported gaze or an empty gaze.",
-    "A Static pose must state the visible body arrangement directly, such as standing upright with arms relaxed at sides or seated upright with hands resting in lap. Never write abstract meta-phrases such as simple pose, stable pose, holding a pose, or posing. Do not depict a mid-action pose.",
-    "Every scene containing a Static shot must provide a specific physical location and 2-3 concrete backgroundElements so the setting is visibly readable; generic labels such as indoor or outdoor are not sufficient locations.",
-    "These Static framing and pose constraints override any batch-wide request for cinematography variation whenever perspectiveMode is static.",
-    "perspectiveMode, renderScope, and visibleTags are shot-only rendering decisions. They never alter or replace the complete appearance, body, and attire memory fields."
-  ].join(`
-`);
+  const perspectiveInstruction = perspectiveContract(config);
   const source = config.originalReference ? [
     "Original Creation Tag:",
     config.originalCreationName || "(empty)",
@@ -2260,6 +2501,7 @@ function parserInstruction(config) {
     "Do not include any parenthetical, source name, creation reference, title, or alias in name or any other field."
   ].join(`
 `) : "Use names only for the JSON name field as private memory keys. Names will not be included in final prompts. If not given, make a concise stable identifier that fits the description.";
+  const perspectiveSchemaValue = config.adaptiveMode ? "creative | static | dynamic" : config.perspectiveMode;
   const schema = structuredAnima ? [
     "{",
     '  "scenes": [',
@@ -2274,13 +2516,20 @@ function parserInstruction(config) {
     '      "shots": [',
     "        {",
     '          "paragraph": 0,',
-    '          "perspectiveMode": "creative | static | dynamic",',
+    `          "perspectiveMode": "${perspectiveSchemaValue}",`,
     '          "camera": {',
     '            "framing": "string",',
     '            "angle": "string",',
     '            "perspective": "string",',
     '            "focus": ["string"]',
     "          },",
+    ...dynamicPossible ? [
+      '          "shotPlan": {',
+      '            "primaryAction": "string",',
+      '            "secondaryCue": "string",',
+      '            "staging": "string"',
+      "          },"
+    ] : [],
     '          "situation": "string",',
     '          "characters": [',
     "            {",
@@ -2312,7 +2561,29 @@ function parserInstruction(config) {
     "        }",
     "      ]",
     "    }",
-    "  ]",
+    "  ],",
+    '  "terminalState": {',
+    '    "paragraph": 0,',
+    '    "environment": {',
+    '      "location": "string",',
+    '      "timeWeather": "string",',
+    '      "lightingMood": ["string"],',
+    '      "backgroundElements": ["string"]',
+    "    },",
+    '    "environmentChanges": ["location | timeWeather | lightingMood | backgroundElements"],',
+    '    "characters": [',
+    "      {",
+    '        "name": "string",',
+    '        "label": "string",',
+    '        "age": "string",',
+    '        "appearance": "string",',
+    '        "body": "string",',
+    '        "attire": "string",',
+    '        "attireInferred": false,',
+    '        "visualChanges": ["age | appearance | body | attire"]',
+    "      }",
+    "    ]",
+    "  }",
     "}"
   ] : [
     "{",
@@ -2323,7 +2594,7 @@ function parserInstruction(config) {
     '      "shots": [',
     "        {",
     '          "paragraph": 0,',
-    '          "perspectiveMode": "creative | static | dynamic",',
+    `          "perspectiveMode": "${perspectiveSchemaValue}",`,
     '          "camera": "string",',
     '          "situation": "string",',
     '          "action": "string",',
@@ -2349,31 +2620,55 @@ function parserInstruction(config) {
     "        }",
     "      ]",
     "    }",
-    "  ]",
+    "  ],",
+    '  "terminalState": {',
+    '    "paragraph": 0,',
+    '    "place": "string",',
+    '    "environmentChanges": ["place"],',
+    '    "characters": [',
+    "      {",
+    '        "name": "string",',
+    '        "label": "string",',
+    '        "age": "string",',
+    '        "appearance": "string",',
+    '        "body": "string",',
+    '        "attire": "string",',
+    '        "attireInferred": false,',
+    '        "visualChanges": ["age | appearance | body | attire"]',
+    "      }",
+    "    ]",
+    "  }",
     "}"
   ];
   const naturalDetail = structuredAnima ? [
     "### Atomic Natural Composition",
     "characters[].composition is always required and must use its four atomic fields. The renderer joins them once in this exact order: position, pose, actions, gaze.",
-    "For Creative, still populate composition for structured memory and validation, but renderScope is authoritative and replaces composition in the rendered prompt when present.",
-    "Creative never removes a source character object and never turns its object, environment, shadow, reflection, silhouette, or fragment anchor into a character. Keep every source-visible named character in characters[] with complete baseline fields even when cropped out of the rendered Creative scope.",
-    "renderScope and visibleTags belong only inside a source character object. Never move them to the shot or scene, and never use the Creative anchor as characters[].name.",
-    "Creative does not exempt scene continuity fields. Populate the complete environment object within its normal location, timeWeather, lightingMood, and backgroundElements budgets even when the Creative renderer will omit that environment from the current prompt.",
+    ...creativePossible ? [
+      "For Creative, still populate composition for structured memory and validation, but renderScope is authoritative and replaces composition in the rendered prompt when present.",
+      "Creative never turns its object, environment, shadow, reflection, silhouette, or fragment anchor into a character. Include a named source character in shot.characters only when some part of that person is actually visible inside renderScope; keep fully off-frame recurring people in terminalState only.",
+      "When a person or body fragment is visible, renderScope and visibleTags belong only inside that source character object. Never move them to the shot or scene, and never use the Creative anchor as characters[].name. For a zero-character external concept, characters remains empty and the external binding supplies scope and cues.",
+      "Creative does not exempt scene continuity fields. Populate the complete environment object within its normal location, timeWeather, lightingMood, and backgroundElements budgets even when the Creative renderer will omit that environment from the current prompt."
+    ] : [],
+    ...dynamicPossible ? [
+      "For Dynamic, composition and sharedComposition retain complete factual action ownership while shotPlan selects only the primary action, optional secondary cue, and staging that should dominate the rendered image.",
+      "For Dynamic, renderScope describes the actual crop and visibleTags contains only stable appearance, body, and attire traits visible within that crop. Do not put expression, pose, action, camera, environment, names, or subject-count tags in visibleTags."
+    ] : [],
     "composition.position is one concise spatial phrase describing where the character is in frame.",
-    "composition.pose is one concise phrase describing the character's static body pose.",
+    "composition.pose is one concise comma-free phrase describing the character's static body pose. Fold compatible posture words together, such as leaning-forward running stance, instead of writing two comma-separated pose clauses.",
     "composition.actions contains 0-3 concise phrases covering every visible action and movement direction exactly once. Use present visual phrasing such as mid-turn toward the viewer, not mixed completed and ongoing tenses.",
     "When the source states a direction such as left, right, upward, downward, forward, backward, toward, or away, keep that direction in the same composition.actions phrase. Never reduce running left to running or climbing upward to climbing.",
     "Preserve each distinctive visible action verb and its visible object or trigger in composition.actions. Never replace ducking away from falling glass with only crouching plus moving right, pulling a wrist with only running, or pushing a jammed door with only leaning forward.",
     "Preserve source-described environmental contact or encroachment that changes the visible beat, such as rising water around boots, smoke surrounding a face, or vines wrapping an arm. Put the environmental material in an appropriate environment snippet and keep its contact with the character explicit; do not reduce it to generic weather or omit it after preserving the character action.",
-    "composition.gaze is one concise gaze-direction phrase, or empty when no gaze is visible.",
+    "composition.gaze is one concise gaze-direction phrase, or empty when no gaze is visible. Closed eyes and emotional eye states belong only in expression; when eyes are closed, leave gaze empty.",
     "Each atomic phrase must be independently visual, comma-free, free of semicolons and terminal punctuation, and must not repeat a fact from another composition field.",
     "Do not put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle, appearance, attire, or facial-expression adjectives in any composition field.",
     config.supplement ? "Use sharedComposition.interaction for shared contact or combined actions only, and spatialRelation for one spatial relationship phrase. Do not repeat individual character actions." : "Use sharedComposition.interaction only for source-required shared contact or combined actions, and leave spatialRelation empty. The renderer keeps interaction as a compact action fallback while omitting shared prose.",
-    "Do not use any character or persona names in composition fields, including the name of an out-of-frame POV character. Say viewer, camera, left girl, right boy, foreground character, or background character.",
+    "Do not use any character or persona names in composition fields, including the name of an out-of-frame POV character. Say viewer, left girl, right boy, foreground character, or background character. Use viewer rather than camera for subject orientation.",
     "Use concise objective visual phrases, not narration, invisible emotion, smell, sound, or internal sensation.",
     "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements.",
     "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
-    "When the current source does not establish a new environment detail, copy the corresponding location, timeWeather, lightingMood, or backgroundElements from Previous Visual State exactly. If neither current source nor previous state establishes time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time.",
+    "Prefer the source's exact concrete noun phrase over a generic paraphrase: keep arrow-slit windows rather than windows, wet leaf rather than foliage, glass conservatory panes rather than walls, and tied used condom rather than object. Never add a plausible prop that the current paragraph does not establish.",
+    hasPreviousVisualState ? "When the current source does not establish a new environment detail and Previous Visual State supplies it, copy that environment field exactly. If neither current source nor previous state establishes time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time." : "When the current source does not establish time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time.",
     config.supplement ? "Populate lightingMood and backgroundElements within the target budget." : staticBackgroundPossible ? "Leave lightingMood empty. Populate 2-3 backgroundElements for every scene containing a Static shot, and leave backgroundElements empty for scenes without a Static shot. Still populate location and timeWeather." : "Leave lightingMood and backgroundElements empty. Still populate location and timeWeather."
   ].join(`
 `) : config.supplement ? [
@@ -2392,12 +2687,13 @@ function parserInstruction(config) {
     "## JSON Format",
     schema.join(`
 `),
-    structuredAnima ? "- negative is optional. All other fields and nested objects are required. Use empty strings or arrays inside the required objects when a field does not apply; never collapse an object into a string." : "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
+    structuredAnima ? `- negative is optional. All other displayed fields and nested objects are required except shotPlan, which is required only for Dynamic and must be absent for Static or Creative. Use empty strings or arrays inside required objects when a field does not apply; never collapse an object into a string.` : "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
     "- These are the ONLY allowed fields. Adding any unlisted field is a schema violation.",
     "## Scenes & Shots",
     "Scene = shots sharing one physical location.",
     "- Same location means same scene, multiple shots.",
     structuredAnima ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
+    "- When Non-authoritative Shot-Router Notes are present, create scenes and shots only for the selected [P#] references in those notes. Read every original numbered paragraph for continuity, but never turn an unselected paragraph into an illustration shot.",
     fixedStatic ? "Shot = one distinct stable visual-novel moment: a readable background plus a foreground character, simple pose, and visible expression. Shots are independent, so repeat tags if the scene has not changed." : "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
     shotInstruction,
     "Paragraph mapping: current message uses [P#] numbering.",
@@ -2405,24 +2701,31 @@ function parserInstruction(config) {
     "- Each shot's paragraph must reference an existing [P#].",
     "- Never invent paragraph numbers outside the visible range.",
     "- Tag ONLY the current message. Recent context is for continuity only.",
+    "## Terminal Visual State",
+    "terminalState is required, is never rendered, and never changes camera, composition, perspective, shot selection, or prompt content.",
+    "Set terminalState.paragraph to the final original numbered paragraph, even when that paragraph is not selected for illustration.",
+    structuredAnima ? "Read every original paragraph in order and record the physical environment and stable baselines of characters still present after the final paragraph. Use only environment, environmentChanges, and the listed stable character fields; never include action, expression, pose, camera, shotPlan, renderScope, visibleTags, or supplement." : "Read every original paragraph in order and record the final place and stable baselines of characters still present after the final paragraph. Use only place, environmentChanges, and the listed stable character fields; never include action, expression, pose, camera, renderScope, visibleTags, or supplement.",
+    "Apply explicit location, attire, appearance, and body changes from unselected paragraphs to terminalState. Do not let an earlier illustrated paragraph overwrite a later narrative change.",
+    "For unchanged returning baseline fields, follow the same Previous Visual State and visualChanges rules used by shot characters.",
     "## Tag Rules",
     "Use common, objective, visualizable Danbooru-style English tags. Never fabricate tag vocabulary; use simpler well-known equivalents if unsure. Conservative scene inference is allowed only where this contract explicitly permits it. Do not use metaphors for tags.",
     "Never output placeholder tags or phrases such as unknown, unspecified, not specified, unmentioned, undetermined, default clothing, or unspecified time. Leave genuinely nonvisual fields empty instead.",
     structuredAnima ? "Tag fields are comma-separated tags. Atomic composition and sharedComposition values are concise comma-free natural-language phrases. Environment arrays contain one comma-free visual snippet per item." : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
     "Character names are private memory keys. Outside characters[].name, never write a full name or first name in any field, including situation, renderScope, visibleTags, composition, sharedComposition, camera, environment, place, supplement, or negative. Use visual descriptors such as left woman, right man, foreground character, or background character.",
-    `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it. For every character object, keep the complete known baseline in appearance, body, and attire even when Creative shows only a partial crop. visibleTags is the separate visible-only rendering projection.`,
-    "Repeat tags if the situation or scene has not changed. Shots are independent, so repeated tags across shots are expected for stable appearance, attire, location, and persistent actions.",
+    `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it. Every character object resolves to the complete known baseline in appearance, body, and attire regardless of crop. renderScope and visibleTags are the separate shot-only rendering projection.`,
+    hasPreviousVisualState ? "Previous Visual State is injected after parsing. For an unchanged returning character, leave age, appearance, body, and attire empty and leave visualChanges empty; the backend restores the exact stored baseline before rendering and persistence. For a new character, or when no matching previous character exists, output the complete baseline. For an explicit current-source change, list that field in visualChanges and output its complete new value." : "Repeat stable appearance, body, and attire tags for returning characters. Shots are independent, so repeated baseline tags are expected.",
     "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts.",
-    "Before returning the batch, compare all Dynamic camera objects as a camera ledger. Do not repeat the same framing + angle + perspective tuple across Dynamic shots unless the current numbered source explicitly establishes a continuous camera or POV. Sharing one camera value is allowed, and sharing angle + perspective is allowed when framing genuinely differs.",
+    "Before returning the batch, compare Dynamic cameras as a soft camera ledger. When two equally suitable cameras would contain their focal actions, prefer different framing + angle + perspective tuples. Never choose a worse, more extreme, or action-cropping camera merely to create variety. Preserve a repeated camera when it is the clearest source-faithful choice or the source establishes continuous camera or POV.",
     perspectiveInstruction,
-    structuredAnima ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, camera, situation, sharedComposition, environment, and negative." : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
+    structuredAnima ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, renderScope, visibleTags, shotPlan, camera, situation, sharedComposition, environment, and negative." : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
     "## Field Reference",
     "### visual continuity change markers",
-    "When Previous Visual State exists, characters[].visualChanges must list only age, appearance, body, or attire fields explicitly changed by the current numbered source. An empty list means copy those prior fields exactly. Do not mark a field changed merely because you rephrased its tags.",
-    structuredAnima ? "environmentChanges must list only location, timeWeather, lightingMood, or backgroundElements explicitly changed by the current numbered source. An empty list means copy the prior environment exactly. A location change normally also changes backgroundElements." : "environmentChanges contains place only when the current numbered source explicitly changes the setting. Otherwise leave it empty and copy the prior place.",
+    hasPreviousVisualState ? "When Previous Visual State exists, characters[].visualChanges must list only age, appearance, body, or attire fields explicitly changed by the current numbered source. An empty list means the backend injects those prior fields exactly; leave their raw values empty instead of paraphrasing or re-emitting them. Do not mark a field changed merely because you rephrased its tags." : "characters[].visualChanges may be empty when no prior visual state is supplied.",
+    structuredAnima ? hasPreviousVisualState ? "environmentChanges must list only location, timeWeather, lightingMood, or backgroundElements explicitly changed by the current numbered source. Before copying anything, compare the current numbered source against Previous Visual State. Spatial transition language such as now inside, enters, exits, outside, later in, or moves to explicitly changes location; output the new location and backgroundElements and list both change markers. An empty list means copy prior values only when the current source truly leaves them unchanged." : "environmentChanges lists only location, timeWeather, lightingMood, or backgroundElements explicitly changed by the current numbered source." : hasPreviousVisualState ? "environmentChanges contains place only when the current numbered source explicitly changes the setting. Otherwise leave it empty and copy the prior place exactly." : "environmentChanges contains place only when the current numbered source explicitly changes the setting.",
     structuredAnima ? "### environment - scene-level" : "### place - scene-level",
     structuredAnima ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details. Static scenes require a specific physical location and 2-3 backgroundElements." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
     structuredAnima ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment. Use only source-supported visual atmosphere; never infer romance, calm, menace, or another emotional tone from lighting alone." : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
+    structuredAnima ? "Retain source-critical environment modifiers exactly enough to preserve identity and scale, such as partial bronze mechanical hand rather than mechanical hand." : "",
     "### camera - shot-level",
     structuredAnima ? "camera.framing must be empty or exactly one of: portrait, close-up, medium close-up, upper body, medium shot, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, body-part focus." : "Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus.",
     structuredAnima ? "camera.angle must be empty or exactly one of: eye level, low angle, high angle, dutch angle." : "Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
@@ -2434,6 +2737,7 @@ function parserInstruction(config) {
     "### situation - shot-level",
     "Strictly use character count/composition tags such as 1girl, 2girls, 1boy, 1girl, 1boy, other, solo, group, and nsfw only when explicitly visual.",
     "The total number of people should match the visible characters being described/tagged.",
+    dynamicPossible ? "For a Dynamic shot with exactly one complete visible character, include solo alongside the one-character count tag. Partial hands, arms, silhouettes, or off-frame POV owners do not increase the complete-character count." : "",
     "Do not include names, numeric ages, appearance, attire, expression, action, camera, or place.",
     "### label",
     "Use girl, boy, or other regardless of age. For out-of-frame partial characters, use label plus out of frame and visible part, such as boy, out of frame, hand.",
@@ -2444,6 +2748,8 @@ function parserInstruction(config) {
     "### age",
     "Visual age category only: child, aged down, mature male, mature female, aged up, or old. Based on appearance only.",
     "If characters appear late teens to early thirties, leave age blank.",
+    "Exception: when the current source explicitly identifies every participant in sexual content as an adult, never leave age blank. Use mature female, mature male, aged up, or another clearly adult nonnumeric visual category for each visible participant.",
+    "That adult marker exception applies to every shot in an adult sexual sequence, including quiet setup shots before the explicit action. Repeat a clearly adult nonnumeric age category for each visible participant in every such shot.",
     "Never output numeric ages such as 18, 21, or 25.",
     "### identity",
     "Legacy/private recognition tags that are not part of the rolling baseline memory. Leave empty unless a non-clothing trait does not fit appearance or body.",
@@ -2455,11 +2761,12 @@ function parserInstruction(config) {
     "Eyes: color, shape, and visual modifiers such as heterochromia, tareme, tsurime, jitome, empty eyes, or dashed eyes. Always include when known.",
     "Skin: color and visible texture, such as dark skin, tan, red skin, metal skin, see-through body, or patchwork skin.",
     "Other: freckles, facial hair, scars, tattoos with location, symbol in eye, elf, demon, furry, androgynous, and other persistent identity traits.",
+    "A current-source transformation that remains visibly present after the final paragraph belongs in the complete appearance or body baseline and terminalState even when described as magical or temporary. Do not leave wings, changed eyes, horns, tails, or transformed limbs only in composition, visibleTags, or shotPlan.",
     structuredAnima ? "Do not include names, attire, expression, pose, action, camera, place, supplement, blush, flushed cheeks, tears, sweat, or any other transient state in appearance." : "Do not include names, attire, expression, pose, action, camera, place, or supplement in appearance.",
     "### body",
     "Physique, height, body shape, build, and persistent body traits. Exclude normal/default traits.",
     "Examples: muscular, toned, skinny, plump, fat, curvy, petite, shortstack, pear-shaped figure, giant, tall, short, flat chest, small breasts, medium breasts, large breasts, broad shoulders, wide hips, thick thighs.",
-    "appearance + body + attire form the rolling character baseline. Copy the SAME tags for the same character across all shots unless the current message clearly changes their present visual state. Camera framing never justifies omitting known baseline traits.",
+    hasPreviousVisualState ? "appearance + body + attire form the rolling character baseline. The backend restores unchanged stored fields exactly when visualChanges is empty. Camera framing affects only visibleTags and never changes the stored baseline." : "appearance + body + attire form the rolling character baseline. Copy the SAME tags for the same character across all shots unless the current message clearly changes their present visual state. Camera framing never justifies omitting known baseline traits.",
     "Do not include clothing, expression, action, camera, place, or supplement in body.",
     "### attire",
     "All visible clothing and accessories, or visible lack of clothing, with color, material, and style for each.",
@@ -2484,15 +2791,16 @@ function parserInstruction(config) {
     "Only if the client explicitly specifies negative prompt tags. Never infer negative tags.",
     naturalDetail,
     "## Repetition is Consistency",
-    "- If a detail appears in one shot and persists, tag it in all subsequent shots.",
+    hasPreviousVisualState ? "- Keep persistent facts represented in every resolved shot. Raw unchanged character baseline fields may remain empty only because Previous Visual State is injected deterministically before rendering; environment fields remain explicit." : "- If a detail appears in one shot and persists, tag it in all subsequent shots.",
     "- If an action or attire is still in motion or still present, repeat it in later shots.",
+    "- Continuity moves forward only. Never copy a later paragraph's transformation, prop, attire, action, or environment detail backward into an earlier shot.",
     "- Preserve a continuous pov only when the narrative establishes an ongoing viewpoint. Otherwise choose the strongest perspective for each visual beat.",
-    "- appearance + body + attire must be identical for the same character across all shots unless the current message explicitly changes their present visual state.",
+    hasPreviousVisualState ? "- visualChanges must be empty for unchanged baseline fields and name only explicit current-source changes; deterministic inheritance preserves exact identity." : "- appearance + body + attire must be identical for the same character across all shots unless the current message explicitly changes their present visual state.",
     "## Data Priority",
     "1. Client comments or explicit user instructions in the current message override all instructions.",
     structuredAnima ? "2. Current message [P#] paragraphs are authoritative for scene content, action, visible emotion, interpersonal tone, and movement direction. Never soften, romanticize, or replace those facts with an inferred atmosphere. Never restore outdated clothing, props, location, or actions from context." : "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
-    config.previousVisualStateEnabled ? "3. Previous Visual State is the immediate visual continuity layer. Copy unchanged character and environment values exactly; it never overrides an explicit current-source change." : "",
-    config.characterTagContextEnabled ? `${config.previousVisualStateEnabled ? "4" : "3"}. Character tag history is the durable visual baseline for returning characters: label, age, appearance, body, and explicit base attire.` : "",
+    hasPreviousVisualState ? "3. Previous Visual State is the immediate visual continuity layer. Leave unchanged raw character baseline values empty so the backend injects them exactly, and copy unchanged environment values explicitly; it never overrides an explicit current-source change." : "",
+    config.characterTagContextEnabled ? `${hasPreviousVisualState ? "4" : "3"}. Character tag history is the durable visual baseline for returning characters: label, age, appearance, body, and explicit base attire.` : "",
     config.characterTagContextEnabled ? "Use previous character tags as a baseline for returning characters, including base attire. Preserve specific baseline tags when not contradicted, such as short cut, white pupils, small breasts, black high school uniform, red sailor ribbon, black skirt, and white pantyhose." : "",
     config.characterTagContextEnabled ? "The current message is authoritative for the character's present visual state. It can update the baseline when it clearly changes clothing, lack of clothing, appearance, or body traits." : "",
     "## Weights",
@@ -2643,7 +2951,12 @@ var FUZZY_KEYS = [
   "supplement",
   "perspectiveMode",
   "renderScope",
-  "visibleTags"
+  "visibleTags",
+  "shotPlan",
+  "primaryAction",
+  "secondaryCue",
+  "staging",
+  "terminalState"
 ];
 function levenshtein(a, b) {
   let previous = Array.from({ length: b.length + 1 }, (_value, index) => index);
@@ -2760,6 +3073,11 @@ function staticShot(shot, config) {
     return config.perspectiveMode === "static";
   return cleanString2(shot.perspectiveMode).toLowerCase() === "static";
 }
+function dynamicShot(shot, config) {
+  if (!config.adaptiveMode)
+    return config.perspectiveMode === "dynamic";
+  return cleanString2(shot.perspectiveMode).toLowerCase() === "dynamic";
+}
 var GENERIC_LOCATION_WORDS = new Set([
   "background",
   "inside",
@@ -2828,19 +3146,100 @@ function staticRepairInstruction(issues) {
   ].join(`
 `);
 }
-function currentParagraphReferences(messages) {
+var ATOMIC_DIRECTION_END = /[.!?:,;]\s*$/;
+function dynamicPayloadIssues(payload, config, required = true) {
+  if (config.promptStyle !== "anima" || !required)
+    return [];
+  const issues = [];
+  const scenes = Array.isArray(payload.scenes) ? payload.scenes : [];
+  scenes.forEach((scene, sceneIndex) => {
+    const shots = Array.isArray(scene.shots) ? scene.shots : [scene];
+    shots.forEach((shot, shotIndex) => {
+      if (!dynamicShot(shot, config))
+        return;
+      const plan = asRecord(shot.shotPlan);
+      const primaryAction = cleanString2(plan.primaryAction);
+      if (!primaryAction) {
+        issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} needs shotPlan.primaryAction`);
+      }
+      for (const field of ["primaryAction", "secondaryCue", "staging"]) {
+        const value = cleanString2(plan[field]);
+        if (value && (value.includes(",") || value.includes(";") || ATOMIC_DIRECTION_END.test(value))) {
+          issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} shotPlan.${field} must be one atomic comma-free phrase`);
+        }
+      }
+      const characters = Array.isArray(shot.characters) ? shot.characters : [];
+      characters.forEach((character, characterIndex) => {
+        if (!cleanString2(character.renderScope)) {
+          issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} character ${characterIndex + 1} needs renderScope`);
+        }
+        if (!cleanString2(character.visibleTags)) {
+          issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} character ${characterIndex + 1} needs visibleTags`);
+        }
+      });
+    });
+  });
+  return issues;
+}
+function dynamicRepairInstruction(issues) {
+  return [
+    "Repair this valid JSON so every Dynamic shot has a compact rendering projection. Return only valid JSON and preserve every source fact, paragraph, character object, baseline field, expression, composition action owner, shared interaction, environment value, and camera.",
+    "Add or repair only shotPlan, renderScope, and visibleTags unless syntax repair requires otherwise.",
+    "shotPlan.primaryAction is one comma-free role-bound subject-verb-object clause selecting the single action or interaction that should dominate the image. Preserve its explicit owner, target or object, and movement direction.",
+    "shotPlan.secondaryCue is empty or one comma-free lower-priority visible gaze, reaction, hazard, or environmental-contact cue. shotPlan.staging is one comma-free spatial arrangement and contains no new action.",
+    "renderScope states what the existing camera actually contains. visibleTags contains only stable appearance, body, and attire traits visible in that crop; it contains no expression, action, camera, environment, name, or subject-count tag.",
+    "Do not add a character, action, contact, emotion, outfit, prop, or event.",
+    `Problems to repair:
+- ${issues.join(`
+- `)}`
+  ].join(`
+`);
+}
+function modePayloadIssues(payload, config, requireDynamicProjection = true) {
+  return [...staticPayloadIssues(payload, config), ...dynamicPayloadIssues(payload, config, requireDynamicProjection)];
+}
+function modeRepairInstruction(payload, config, issues, requireDynamicProjection = true) {
+  const hasDynamic = dynamicPayloadIssues(payload, config, requireDynamicProjection).length > 0;
+  const hasStatic = staticPayloadIssues(payload, config).length > 0;
+  if (hasDynamic && !hasStatic)
+    return dynamicRepairInstruction(issues);
+  if (hasStatic && !hasDynamic)
+    return staticRepairInstruction(issues);
+  return [
+    "Repair this valid JSON so its Static and Dynamic shots satisfy the listed mode-specific semantic requirements. Return only valid JSON and preserve all source facts and continuity values.",
+    staticRepairInstruction(staticPayloadIssues(payload, config)),
+    dynamicRepairInstruction(dynamicPayloadIssues(payload, config, requireDynamicProjection))
+  ].join(`
+
+`);
+}
+function currentSourceText(messages) {
   const request = messages.find((message) => message.role === "user" && message.content.includes("## Current Numbered Paragraph Source"));
   if (!request)
-    return [];
-  const source = request.content.split("## Current Numbered Paragraph Source", 2)[1]?.split(/## (?:Selected Creative Concepts|Optional Creative Candidates)/i, 1)[0] || "";
+    return "";
+  return request.content.split("## Current Numbered Paragraph Source", 2)[1]?.split(/## (?:Selected Creative Concepts|Optional Creative Candidates)/i, 1)[0] || "";
+}
+function currentParagraphReferences(messages) {
+  const source = currentSourceText(messages).split("## Non-authoritative Shot-Router Notes", 1)[0] || "";
   return [...new Set([...source.matchAll(/\[P(\d+)\]/gi)].map((match) => Number(match[1])).filter(Number.isFinite))];
+}
+function routedParagraphReferences(messages) {
+  const source = currentSourceText(messages);
+  const notes = source.split("## Non-authoritative Shot-Router Notes", 2)[1] || "";
+  return [...new Set([...notes.matchAll(/^\[P(\d+)\]\s*:/gim)].map((match) => Number(match[1])).filter(Number.isFinite))];
 }
 function structuralPayloadIssues(payload, allowedParagraphs) {
   const normalized = normalizeScenePayload(payload);
   if (normalized.length === 0)
     return ["no scene contains a shot with a usable paragraph reference"];
-  if (allowedParagraphs.length > 0 && !normalized.some((entry) => allowedParagraphs.includes(entry.parserParagraph))) {
-    return [`no shot references an allowed paragraph (${allowedParagraphs.map((paragraph) => `P${paragraph}`).join(", ")})`];
+  if (allowedParagraphs.length > 0) {
+    const invalid = [...new Set(normalized.map((entry) => entry.parserParagraph).filter((paragraph) => !allowedParagraphs.includes(paragraph)))];
+    if (invalid.length > 0) {
+      return [`shots reference unselected or invalid paragraphs (${invalid.map((paragraph) => `P${paragraph}`).join(", ")}); allowed references are ${allowedParagraphs.map((paragraph) => `P${paragraph}`).join(", ")}`];
+    }
+    if (!normalized.some((entry) => allowedParagraphs.includes(entry.parserParagraph))) {
+      return [`no shot references an allowed paragraph (${allowedParagraphs.map((paragraph) => `P${paragraph}`).join(", ")})`];
+    }
   }
   return [];
 }
@@ -2895,6 +3294,18 @@ function parserStageTokenBudget(model, config, stage) {
     if (stage === "repair")
       return Math.max(base, 12000);
     return Math.max(base, 8000);
+  }
+  if (/claude[^\n]*sonnet[^\n]*5/i.test(model)) {
+    if (stage === "main")
+      return Math.max(base, 9000);
+    if (stage === "ideation")
+      return Math.max(base, 5000);
+    if (stage === "preprocess")
+      return Math.max(base, 4000);
+    if (stage === "repair")
+      return Math.max(base, 7000);
+    if (stage === "camera")
+      return Math.max(base, 4000);
   }
   if (!/deepseek[^\n]*v4[^\n]*pro/i.test(model))
     return base;
@@ -3039,18 +3450,16 @@ function preprocessingInstruction(paragraphs, config) {
   const maximum = Math.min(config.maxImages, paragraphs.length);
   const perspectiveGuidance = config.adaptiveMode ? "Select varied candidates that give the main parser strong options for Creative, Static, or Dynamic treatment." : config.perspectiveMode === "creative" ? "Favor concrete but easily overlooked visual anchors: partial subjects, objects, reflections, silhouettes, foreground fragments, environmental details, or unusual spatial relationships." : config.perspectiveMode === "static" ? "Favor stable clearly readable beats with conventional framing, limited motion, and limited occlusion." : "Favor significant visible action, movement, interaction, and cinematic changes.";
   return [
-    "# Illustration Visual-Beat Editor",
-    "Select and summarize the strongest visual beats from the current numbered assistant paragraphs.",
+    "# Illustration Shot Router",
+    "Select the strongest source paragraphs and give the final mode-specific parser a non-authoritative directing note. Never replace, rewrite, or summarize away the original source facts.",
     `Select between ${minimum} and ${maximum} unique paragraphs.`,
     "Choose paragraphs with the most significant visual changes, actions, interactions, location changes, or emotional beats across the whole source. Do not favor early paragraphs by default.",
     perspectiveGuidance,
-    "Output plain text only. The first line must have exactly this form:",
-    "[Appearance: character name1: current visual baseline tags, character name2: current visual baseline tags]",
-    "Then output one line per selected paragraph in exactly this form:",
-    "[P#]: Visual beat: concise visible details; Camera/composition: concrete angle, framing, depth, or foreground-occlusion note",
+    "Output plain text only with exactly one line per selected paragraph in this form:",
+    "[P#]: Visual thesis: one decisive visible idea; Camera intent: concrete framing and viewpoint",
     "Use each selected [P#] once. Do not invent or alter paragraph numbers.",
-    "Every selected line must include a non-empty Camera/composition note.",
-    "Use only visual details and concise English tags or short tag-like phrases. Output no markdown, greeting, or explanation."
+    "Every selected line must include a non-empty Visual thesis and Camera intent.",
+    "Use concise objective English. Do not output character baselines, rewritten narrative, markdown, greetings, or explanations."
   ].join(`
 
 `);
@@ -3060,16 +3469,24 @@ function preprocessingUserRequest(rawTarget) {
 
 `);
 }
+function routedTargetSource(rawTarget, selection) {
+  return [
+    rawTarget,
+    "## Non-authoritative Shot-Router Notes",
+    selection.summary,
+    "Create illustration scenes and shots only for the selected [P#] references above. Read every original numbered paragraph for terminalState and continuity. The original paragraphs are authoritative; these notes only prioritize shots and never replace source facts."
+  ].join(`
+
+`);
+}
 function validatePreprocessedTarget(value, paragraphs, config) {
   const summary = cleanString2(value);
   if (!summary)
     return null;
   const lines = summary.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (!/^\[Appearance:[^\]\r\n]*\]$/i.test(lines[0] || ""))
-    return null;
   const minimum = Math.min(config.minImages, paragraphs.length);
   const maximum = Math.min(config.maxImages, paragraphs.length);
-  const paragraphLines = lines.slice(1);
+  const paragraphLines = lines;
   if (paragraphLines.length < minimum || paragraphLines.length > maximum)
     return null;
   const validParagraphs = new Set(paragraphs.map((paragraph) => paragraph.parserIndex));
@@ -3083,8 +3500,9 @@ function validatePreprocessedTarget(value, paragraphs, config) {
     const paragraph = Number(match[1]);
     if (!validParagraphs.has(paragraph) || seen.has(paragraph))
       return null;
-    const camera = match[2].match(/\bCamera\/composition\s*:\s*(\S.*)$/i)?.[1]?.trim() || "";
-    if (!camera)
+    const thesis = match[2].match(/\bVisual thesis\s*:\s*(.+?)(?=;\s*Camera intent\s*:)/i)?.[1]?.trim() || "";
+    const camera = match[2].match(/\bCamera intent\s*:\s*(\S.*)$/i)?.[1]?.trim() || "";
+    if (!thesis || !camera)
       return null;
     seen.add(paragraph);
     selectedParagraphs.push(paragraph);
@@ -3107,7 +3525,7 @@ async function preprocessTargetParagraphs(parserConnection, config, paragraphs, 
         selectedParagraphs: selection.selectedParagraphs,
         cameraNotes: selection.cameraNotes
       });
-      return selection.summary;
+      return routedTargetSource(rawTarget, selection);
     }
     logStage(config, "preprocessing_fallback", { reason: "invalid_selection", summaryLength: cleanString2(summary).length }, "warn");
   } catch (error) {
@@ -3115,27 +3533,103 @@ async function preprocessTargetParagraphs(parserConnection, config, paragraphs, 
   }
   return rawTarget;
 }
+function terminalParagraphNumber(value) {
+  const match = String(value ?? "").match(/\d+/);
+  if (!match)
+    return null;
+  const paragraph = Number(match[0]);
+  return Number.isSafeInteger(paragraph) && paragraph > 0 ? paragraph : null;
+}
+function terminalStateIssues(payload, config, currentParagraphs, required) {
+  if (!required)
+    return [];
+  const terminal = asRecord(payload.terminalState);
+  if (Object.keys(terminal).length === 0)
+    return ["terminalState is missing or is not an object"];
+  const finalParagraph = currentParagraphs.at(-1);
+  if (finalParagraph && terminalParagraphNumber(terminal.paragraph) !== finalParagraph) {
+    return [`terminalState.paragraph must reference final source paragraph P${finalParagraph}`];
+  }
+  const issues = [];
+  if (!Array.isArray(terminal.characters))
+    issues.push("terminalState.characters must be an array");
+  if (config.promptStyle === "anima") {
+    if (!terminal.environment || typeof terminal.environment !== "object" || Array.isArray(terminal.environment)) {
+      issues.push("terminalState.environment must remain an object");
+    }
+  } else if (!Object.prototype.hasOwnProperty.call(terminal, "place")) {
+    issues.push("terminalState.place is required for Default prompt style");
+  }
+  return issues;
+}
+function terminalStateRepairInstruction(issues, config, currentParagraphs) {
+  const finalParagraph = currentParagraphs.at(-1);
+  return [
+    "Repair or add only the non-rendered terminalState object while preserving every existing scene and shot exactly. Return the complete JSON object and no other text.",
+    finalParagraph ? `Set terminalState.paragraph to P${finalParagraph}, the final original numbered paragraph.` : "Use the final original numbered paragraph for terminalState.paragraph.",
+    config.promptStyle === "anima" ? "terminalState contains paragraph, a complete environment object, environmentChanges, and characters still present after all source paragraphs." : "terminalState contains paragraph, place, environmentChanges, and characters still present after all source paragraphs.",
+    "Terminal characters contain only name, label, age, appearance, body, attire, attireInferred, and visualChanges. Never add actions, expressions, camera, composition, or rendering fields.",
+    "Use the full current source chronology. Later source changes override earlier illustrated scenes.",
+    `Problems to repair:
+- ${issues.join(`
+- `)}`
+  ].join(`
+`);
+}
+function payloadRepairInput(payload, messages, includeCurrentSource) {
+  if (!includeCurrentSource)
+    return JSON.stringify(payload);
+  return [
+    "## Current Numbered Paragraph Source",
+    currentSourceText(messages),
+    "## JSON to Repair",
+    JSON.stringify(payload)
+  ].join(`
+
+`);
+}
 async function parsePayloadWithRepair(parserConnection, config, messages, userId) {
   const raw = await generateParserText(parserConnection, config, messages, userId);
   if (!raw.trim())
     throw new Error("Parser returned an empty response.");
-  const allowedParagraphs = currentParagraphReferences(messages);
+  const requireDynamicProjection = messages.some((message) => message.role === "system" && message.content.includes("shotPlan.primaryAction"));
+  const requireTerminalState = messages.some((message) => message.role === "system" && message.content.includes("## Terminal Visual State"));
+  const currentParagraphs = currentParagraphReferences(messages);
+  const routedParagraphs = routedParagraphReferences(messages);
+  const allowedParagraphs = routedParagraphs.length > 0 ? routedParagraphs : currentParagraphs;
   const fallbackParagraph = allowedParagraphs.length === 1 ? allowedParagraphs[0] : undefined;
   let repairSystem = "Repair malformed JSON. Return only valid JSON.";
   let repairInput = raw;
   try {
     logStage(config, "json_parse_start", { rawLength: raw.length, repair: false });
-    const parsed = dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(raw), fallbackParagraph));
+    const parsed = normalizeAtomicCompositionTerms(dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(raw), fallbackParagraph)));
     const structuralIssues = structuralPayloadIssues(parsed, allowedParagraphs);
+    const terminalIssues = terminalStateIssues(parsed, config, currentParagraphs, requireTerminalState);
     if (structuralIssues.length > 0) {
-      repairSystem = structuralRepairInstruction(structuralIssues, allowedParagraphs);
+      repairSystem = [
+        structuralRepairInstruction(structuralIssues, allowedParagraphs),
+        ...terminalIssues.length > 0 ? [terminalStateRepairInstruction(terminalIssues, config, currentParagraphs)] : []
+      ].join(`
+
+`);
+      repairInput = payloadRepairInput(parsed, messages, terminalIssues.length > 0);
       throw new Error("Parser payload has no usable numbered shots.");
     }
-    const issues = staticPayloadIssues(parsed, config);
+    const issues = modePayloadIssues(parsed, config, requireDynamicProjection);
+    if (terminalIssues.length > 0) {
+      repairSystem = [
+        terminalStateRepairInstruction(terminalIssues, config, currentParagraphs),
+        ...issues.length > 0 ? [modeRepairInstruction(parsed, config, issues, requireDynamicProjection)] : []
+      ].join(`
+
+`);
+      repairInput = payloadRepairInput(parsed, messages, true);
+      throw new Error("Terminal visual state is incomplete.");
+    }
     if (issues.length > 0) {
-      repairSystem = staticRepairInstruction(issues);
+      repairSystem = modeRepairInstruction(parsed, config, issues, requireDynamicProjection);
       repairInput = JSON.stringify(parsed);
-      throw new Error("Static payload is incomplete.");
+      throw new Error("Mode-specific payload is incomplete.");
     }
     logStage(config, "json_parse_done", { repair: false });
     return parsed;
@@ -3147,14 +3641,15 @@ async function parsePayloadWithRepair(parserConnection, config, messages, userId
     ], userId, "repair");
     if (!repaired.trim())
       throw new Error("Parser returned an empty repair response.");
-    const parsed = dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(repaired), fallbackParagraph));
+    const parsed = normalizeAtomicCompositionTerms(dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(repaired), fallbackParagraph)));
     const structuralIssues = structuralPayloadIssues(parsed, allowedParagraphs);
     if (structuralIssues.length > 0) {
       throw new Error(`Parser did not return usable numbered scenes: ${structuralIssues.join("; ")}`);
     }
-    const remainingIssues = staticPayloadIssues(parsed, config);
-    if (remainingIssues.length > 0) {
-      throw new Error(`Parser did not return a complete Static scene: ${remainingIssues.join("; ")}`);
+    const remainingIssues = modePayloadIssues(parsed, config, requireDynamicProjection);
+    const remainingTerminalIssues = terminalStateIssues(parsed, config, currentParagraphs, requireTerminalState);
+    if (remainingIssues.length > 0 || remainingTerminalIssues.length > 0) {
+      throw new Error(`Parser did not return a complete payload: ${[...remainingIssues, ...remainingTerminalIssues].join("; ")}`);
     }
     logStage(config, "json_parse_done", { repair: true });
     return parsed;
@@ -3165,6 +3660,18 @@ async function repairDynamicCameraDiversity(parserConnection, config, payload, t
   logStage(config, "camera_diversity_audit", audit);
   if (audit.exactCollisions.length === 0)
     return payload;
+  const hasProjectedDynamicShot = normalizeScenePayload(payload).some(({ shot }) => {
+    const perspective = config.adaptiveMode ? cleanString2(shot.perspectiveMode).toLowerCase() : config.perspectiveMode;
+    return perspective === "dynamic" && Boolean(cleanString2(asRecord(shot.shotPlan).primaryAction));
+  });
+  if (hasProjectedDynamicShot) {
+    logStage(config, "camera_diversity_soft_collision_preserved", {
+      reason: "camera and crop-visible projection must remain aligned",
+      signatures: audit.signatures,
+      exactCollisions: audit.exactCollisions
+    });
+    return payload;
+  }
   const local = repairDynamicCameraDiversityLocally(payload, config, audit);
   if (local) {
     logStage(config, "camera_diversity_repaired", {
@@ -3662,17 +4169,29 @@ async function parseAndSelectPrompts(input) {
       if (creativePipeline && creativeTargetSource === null) {
         const candidateParagraphs = new Set(conceptCandidates.map((concept) => concept.paragraph));
         if (manualCreative && config.preprocessingEnabled && candidateParagraphs.size > 0) {
-          creativeTargetSource = formatTargetParagraphs(paragraphs.filter((paragraph) => candidateParagraphs.has(paragraph.parserIndex)));
+          const selectedParagraphs = [...candidateParagraphs].sort((left, right) => left - right);
+          const notes = selectedParagraphs.map((paragraph) => {
+            const concept = conceptSelections?.get(paragraph) || conceptCandidates.find((candidate) => candidate.paragraph === paragraph);
+            return `[P${paragraph}]: Visual thesis: ${concept?.concept || concept?.anchor || "selected Creative focal beat"}; Camera intent: ${concept?.camera || "identity-safe Creative framing"}`;
+          });
+          creativeTargetSource = routedTargetSource(formatTargetParagraphs(paragraphs), {
+            summary: notes.join(`
+`),
+            selectedParagraphs,
+            cameraNotes: selectedParagraphs.map((paragraph) => conceptSelections?.get(paragraph)?.camera || conceptCandidates.find((candidate) => candidate.paragraph === paragraph)?.camera || "identity-safe Creative framing")
+          });
           logStage(config, "creative_preprocessing_done", {
             candidateCount: conceptCandidates.length,
-            selectedParagraphs: [...candidateParagraphs].sort((left, right) => left - right)
+            selectedParagraphs
           });
         } else {
           creativeTargetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
         }
       }
       const targetSource = creativePipeline ? creativeTargetSource || formatTargetParagraphs(paragraphs) : await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
-      const instruction = parserInstruction(config);
+      const instruction = parserInstruction(config, {
+        hasPreviousVisualState: Boolean(config.previousVisualStateEnabled && state.previousVisualState)
+      });
       const referenceContext = continuityReference(context.systemContext, context.recentContext);
       const userRequest = parserUserRequest(targetSource, manualCreative ? creativeConceptConstraint(conceptSelections || new Map, false) : "");
       logStage(config, "parser_prompt_built", {

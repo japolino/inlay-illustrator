@@ -59,10 +59,26 @@ function mergeEnvironment(
   changed = new Set<string>()
 ): PreviousVisualState["environment"] {
   if (!previous) return current;
-  if (changed.has("location")) changed.add("backgroundElements");
+  const canonicalLocation = (value: unknown): string => cleanAtomicField(value)
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+  const currentLocation = canonicalLocation(current.location);
+  const previousLocation = canonicalLocation(previous.location);
+  const locationBoundary = changed.has("location")
+    || Boolean(currentLocation && previousLocation && currentLocation !== previousLocation);
+  if (locationBoundary) {
+    changed.add("location");
+    changed.add("timeWeather");
+    changed.add("lightingMood");
+    changed.add("backgroundElements");
+  }
   const select = <T extends string | string[]>(key: string, currentValue: T, previousValue: T): T => {
     const hasCurrent = Array.isArray(currentValue) ? currentValue.length > 0 : Boolean(currentValue);
     const hasPrevious = Array.isArray(previousValue) ? previousValue.length > 0 : Boolean(previousValue);
+    if (locationBoundary && (key === "timeWeather" || key === "lightingMood" || key === "backgroundElements")) {
+      return currentValue;
+    }
     if (changed.has(key)) return hasCurrent ? currentValue : previousValue;
     return hasPrevious ? previousValue : currentValue;
   };
@@ -94,7 +110,8 @@ function visualCharacter(character: CharacterJson): PreviousVisualCharacter | nu
 
 function inheritCharacter(
   raw: CharacterJson,
-  previousCharacters: Map<string, PreviousVisualCharacter>
+  previousCharacters: Map<string, PreviousVisualCharacter>,
+  explicitCurrentWins = false
 ): CharacterJson {
   const current = visualCharacter(raw);
   const name = current?.name || normalizeCharacterName(raw.name);
@@ -103,6 +120,7 @@ function inheritCharacter(
   const changes = changeSet(raw.visualChanges, ["age", "appearance", "body", "attire"]);
   const stableField = (key: string, currentValue: string, previousValue = ""): string => {
     if (!previousValue) return currentValue;
+    if (explicitCurrentWins && currentValue) return currentValue;
     if (changes.has(key)) return currentValue || previousValue;
     return previousValue;
   };
@@ -115,7 +133,7 @@ function inheritCharacter(
     attire: stableField("attire", currentAttire, previous?.attire),
     attireInferred: !previous
       ? inferred(raw.attireInferred)
-      : changes.has("attire") && currentAttire
+      : (explicitCurrentWins || changes.has("attire")) && currentAttire
         ? inferred(raw.attireInferred)
         : previous.attireInferred
   };
@@ -157,7 +175,9 @@ export function applyPreviousVisualState(
     const environment = mergeEnvironment(cleanEnvironment(rawScene.environment), carriedEnvironment, environmentChanges);
     carriedEnvironment = environment;
     const currentPlace = cleanTagField(rawScene.place);
-    const place = carriedPlace && !environmentChanges.has("place") ? carriedPlace : currentPlace || carriedPlace;
+    const placeChanged = environmentChanges.has("place")
+      || Boolean(currentPlace && carriedPlace && currentPlace.toLowerCase() !== carriedPlace.toLowerCase());
+    const place = placeChanged ? currentPlace || carriedPlace : carriedPlace || currentPlace;
     carriedPlace = place;
     const shots = cleanArray<ShotJson>(rawScene.shots);
     if (shots.length > 0) {
@@ -174,13 +194,64 @@ export function applyPreviousVisualState(
       environment
     };
   });
-  return { ...payload, scenes };
+
+  const rawTerminal = payload.terminalState;
+  if (!rawTerminal || typeof rawTerminal !== "object" || Array.isArray(rawTerminal)) return { ...payload, scenes };
+  const terminalChanges = changeSet(
+    rawTerminal.environmentChanges,
+    ["location", "timeWeather", "lightingMood", "backgroundElements", "place"]
+  );
+  const terminalEnvironment = mergeEnvironment(
+    cleanEnvironment(rawTerminal.environment),
+    previous ? cleanEnvironment(previous.environment) : undefined,
+    terminalChanges
+  );
+  const terminalPlaceCurrent = cleanTagField(rawTerminal.place);
+  const previousPlace = previous ? cleanAtomicField(previous.place) : "";
+  const terminalPlaceChanged = terminalChanges.has("place")
+    || Boolean(terminalPlaceCurrent && previousPlace
+      && terminalPlaceCurrent.toLowerCase() !== previousPlace.toLowerCase());
+  const terminalPlace = terminalPlaceChanged
+    ? terminalPlaceCurrent || previousPlace
+    : previousPlace || terminalPlaceCurrent;
+  const terminalCharacters = new Map(cleanArray<PreviousVisualCharacter>(previous?.characters)
+    .map((character) => [normalizeCharacterName(character.name).toLowerCase(), character] as const)
+    .filter(([name]) => Boolean(name)));
+  return {
+    ...payload,
+    scenes,
+    terminalState: {
+      ...rawTerminal,
+      place: terminalPlace,
+      environment: terminalEnvironment,
+      characters: cleanArray<CharacterJson>(rawTerminal.characters)
+        .map((character) => inheritCharacter(character, terminalCharacters, true))
+    }
+  };
 }
 
 export function buildPreviousVisualState(
   payload: ParsedPayload,
   selectedParserParagraphs: number[]
 ): PreviousVisualState | null {
+  const terminal = payload.terminalState;
+  if (terminal && typeof terminal === "object" && !Array.isArray(terminal)) {
+    const characters = cleanArray<CharacterJson>(terminal.characters)
+      .map(visualCharacter)
+      .filter((character): character is PreviousVisualCharacter => Boolean(character));
+    const environment = cleanEnvironment(terminal.environment);
+    const place = cleanTagField(terminal.place);
+    const hasEnvironment = Boolean(environment.location || environment.timeWeather
+      || environment.lightingMood.length || environment.backgroundElements.length || place);
+    if (characters.length > 0 || hasEnvironment) {
+      return {
+        characters,
+        environment,
+        place,
+        updatedAt: new Date().toISOString()
+      };
+    }
+  }
   const selected = new Set(selectedParserParagraphs);
   const ordered = normalizeScenePayload(payload)
     .filter((entry) => selected.size === 0 || selected.has(entry.parserParagraph))
@@ -225,7 +296,7 @@ export function formatPreviousVisualState(previous: PreviousVisualState): string
   };
   return compactBlock([
     "## Previous Visual State",
-    "This is the immediately previous generated turn, not a new narrative source. Copy its character and environment values exactly when the current numbered source does not explicitly replace them. Current source changes always win. Never copy camera, pose, action, or expression from prior state.",
+    "This is the terminal narrative state of the immediately previous processed response, not a new narrative source. For unchanged returning character baseline fields, leave the raw value empty and leave its change marker absent; the backend injects the exact stored value after parsing. Copy unchanged environment values explicitly because scene validation occurs before inheritance. Output a full new value and its change marker when the current numbered source explicitly replaces it. Current source changes always win. Never copy camera, pose, action, or expression from prior state.",
     JSON.stringify(reference)
   ].join("\n"), 5000);
 }

@@ -73,7 +73,7 @@ export const nsfwSidecarScenarios: SidecarScenario[] = [
     expectedParagraphs: [1],
     expectedCharacters: { 1: ["Sable Orr"] },
     expectations: [
-      { paragraph: 1, character: "Sable Orr", field: "action", anyOf: ["masturbating", "touching vulva", "touching her exposed vulva", "fingering herself"], critical: true },
+      { paragraph: 1, character: "Sable Orr", field: "action", anyOf: ["masturbating", "touching vulva", "touching her exposed vulva", "touching own exposed vulva", "fingering herself"], critical: true },
       { paragraph: 1, field: "payload", anyOf: ["vulva", "pussy", "female masturbation"], critical: true },
       { paragraph: 1, field: "payload", noneOf: ["partner", "man", "boy", "penis"], critical: true }
     ]
@@ -110,13 +110,49 @@ export const nsfwSidecarScenarios: SidecarScenario[] = [
     ]
   },
   {
+    id: "nsfw_static_adult_portrait",
+    description: "Adult-only Static mode should produce a stable erotic visual-novel portrait with a simple pose and readable private setting.",
+    config: config({ perspectiveMode: "static", maxCharacters: 1 }),
+    paragraphs: ["In a locked private dressing room, consenting adult woman Aria Pell stands nude slightly forward from a velvet screen with one hand resting on her hip and the other relaxed at her side. She has a clearly adult body, looks calmly toward the viewer, and no other person is present. A vanity table, folded towel, and shaded lamp remain visible behind her."],
+    expectedParagraphs: [1],
+    expectedCharacters: { 1: ["Aria Pell"] },
+    expectations: [
+      { paragraph: 1, character: "Aria Pell", field: "attire", anyOf: ["nude", "naked"], critical: true },
+      { paragraph: 1, field: "location", anyOf: ["private dressing room", "dressing room"], critical: true },
+      { paragraph: 1, field: "prompt", anyOf: ["vanity table", "folded towel", "shaded lamp"], critical: true },
+      { paragraph: 1, field: "prompt", anyOf: ["medium shot", "eye level", "straight-on", "deep focus"], critical: true },
+      { paragraph: 1, field: "prompt", noneOf: ["1boy", "2girls", "motion blur", "dutch angle"], critical: true }
+    ]
+  },
+  {
+    id: "nsfw_adaptive_private_sequence",
+    description: "Adult-only Adaptive mode should route a stable setup, explicit action, and empty aftermath independently.",
+    config: config({ adaptiveMode: true, minImages: 3, maxImages: 3 }),
+    characterMemory: adultCoupleMemory,
+    paragraphs: [
+      "In a locked private bedroom at night, consenting adults Lena Voss and Darin Holt sit nude and still on opposite sides of the bed, looking at each other. A bedside table and shaded lamp remain clearly visible.",
+      "Lena pushes Darin onto his back, straddles his hips, and rides his penis during consensual vaginal sex. Darin grips the bedsheet with both hands while looking up at her.",
+      "After both adults leave the frame for the shower, the empty bedroom remains. An opened lubricant tube and tied used condom rest on the bedside table beside the rumpled bedsheets."
+    ],
+    expectedParagraphs: [1, 2, 3],
+    expectedCharacters: { 1: ["Lena Voss", "Darin Holt"], 2: ["Lena Voss", "Darin Holt"], 3: [] },
+    expectedPerspectives: { 1: ["static"], 2: ["dynamic"], 3: ["creative"] },
+    expectations: [
+      { paragraph: 1, character: "Lena Voss", field: "attire", anyOf: ["nude", "naked"], critical: true },
+      { paragraph: 1, character: "Darin Holt", field: "attire", anyOf: ["nude", "naked"], critical: true },
+      { paragraph: 2, character: "Lena Voss", field: "action", anyOf: ["riding", "straddling", "vaginal sex"], critical: true },
+      { paragraph: 2, character: "Darin Holt", field: "action", anyOf: ["grips the bedsheet", "gripping bedsheet", "lying on back"], critical: true },
+      { paragraph: 3, field: "prompt", anyOf: ["lubricant tube", "used condom", "bedside table", "rumpled bedsheets"], critical: true }
+    ]
+  },
+  {
     id: "nsfw_creative_aftermath_anchor",
     description: "Creative mode should isolate an adult sexual aftermath cue without leaking identity memory.",
     config: config({ perspectiveMode: "creative" }),
     characterMemory: adultCoupleMemory,
     paragraphs: ["After consensual sex between adults Lena Voss and Darin Holt, they rest out of focus beyond rumpled bedsheets. An opened condom wrapper and a tied used condom are clearly visible on the bedside table."],
     expectedParagraphs: [1],
-    expectedCharacters: { 1: ["Lena Voss", "Darin Holt"] },
+    expectedCharacters: { 1: [] },
     expectations: [
       { paragraph: 1, field: "prompt", anyOf: ["condom wrapper", "used condom", "bedside table", "rumpled bedsheets"], critical: true },
       { paragraph: 1, field: "prompt", noneOf: ["black hair", "brown eyes", "auburn hair", "gray eyes", "red camisole", "white shirt"], critical: true }

@@ -104,6 +104,20 @@ export const sidecarScenarios: SidecarScenario[] = [
     ]
   },
   {
+    id: "static_two_character_standoff",
+    description: "Static must keep two distinct characters on a readable shallow visual-novel plane without turning tension into action or romance.",
+    config: config({ perspectiveMode: "static" }),
+    paragraphs: ["Inside a rain-lit neighborhood clinic waiting room, adult doctor Lysa Merrow stands slightly forward beside the reception desk while adult courier Penn Arlo remains near the closed entrance. Lysa wears a white lab coat over a teal blouse and black trousers; Penn wears a soaked yellow jacket and gray cargo pants. They watch each other with guarded distrust, neither moving closer."],
+    expectedParagraphs: [1], expectedCharacters: { 1: ["Lysa Merrow", "Penn Arlo"] },
+    expectations: [
+      { paragraph: 1, field: "location", anyOf: ["clinic waiting room", "waiting room"], critical: true },
+      { paragraph: 1, character: "Lysa Merrow", field: "attire", anyOf: ["white lab coat", "teal blouse", "black trousers"], critical: true },
+      { paragraph: 1, character: "Penn Arlo", field: "attire", anyOf: ["yellow jacket", "gray cargo pants"], critical: true },
+      { paragraph: 1, field: "prompt", anyOf: ["medium shot", "eye level", "straight-on", "deep focus"], critical: true },
+      { paragraph: 1, field: "prompt", noneOf: ["kissing", "embracing", "motion blur", "dutch angle"], critical: true }
+    ]
+  },
+  {
     id: "creative_mundane_anchor",
     description: "Manual Creative should isolate an identity-safe overlooked visual cue rather than dump memory.",
     config: config({ perspectiveMode: "creative", preprocessingEnabled: false }),
@@ -116,6 +130,18 @@ export const sidecarScenarios: SidecarScenario[] = [
     ]
   },
   {
+    id: "creative_environmental_trace",
+    description: "Creative should turn a small environmental consequence into an identity-safe image rather than restore the complete character.",
+    config: config({ perspectiveMode: "creative", preprocessingEnabled: false }),
+    characterMemory: { "Jori Vale": "man, adult man, cropped brown hair, hazel eyes, green field jacket, black jeans" },
+    paragraphs: ["After Jori Vale has already left the empty bus shelter, one wet handprint slowly fades from the fogged glass beside an abandoned paper ticket. Streetlights reflect in the rainwater below."],
+    expectedParagraphs: [1], expectedCharacters: { 1: [] },
+    expectations: [
+      { paragraph: 1, field: "prompt", anyOf: ["handprint", "paper ticket", "fogged glass", "rainwater reflection"], critical: true },
+      { paragraph: 1, field: "prompt", noneOf: ["brown hair", "hazel eyes", "green field jacket", "black jeans", "recognizable face"], critical: true }
+    ]
+  },
+  {
     id: "adaptive_urgent_action",
     description: "Adaptive mode should preserve a strong action beat without defaulting every shot to Creative.",
     config: config({ adaptiveMode: true, minImages: 2, maxImages: 2 }),
@@ -124,11 +150,31 @@ export const sidecarScenarios: SidecarScenario[] = [
       "At the greenhouse exit, Oren Kade braces both hands against a jammed steel door and pushes outward while water rises around his boots."
     ],
     expectedParagraphs: [1, 2], expectedCharacters: { 1: ["Oren Kade"], 2: ["Oren Kade"] },
+    expectedPerspectives: { 1: ["dynamic"], 2: ["dynamic"] },
     expectations: [
       { paragraph: 1, character: "Oren Kade", field: "action", anyOf: ["duck", "ducking", "dodging to the right", "dodging right"], critical: true },
       { paragraph: 1, character: "Oren Kade", field: "expression", anyOf: ["terrified", "fear", "afraid"], critical: true },
       { paragraph: 2, character: "Oren Kade", field: "action", anyOf: ["push", "pushing", "bracing"], critical: true },
       { paragraph: 2, field: "payload", anyOf: ["water", "flood"], critical: true }
+    ]
+  },
+  {
+    id: "adaptive_mixed_visual_beats",
+    description: "Adaptive should route a quiet establishing beat, an urgent action, and an identity-safe aftermath independently.",
+    config: config({ adaptiveMode: true, minImages: 3, maxImages: 3 }),
+    paragraphs: [
+      "At sunrise inside a coastal radio station, adult operator Cerys Bell stands calmly beside the console in a navy sweater and tan trousers while broad windows reveal the harbor.",
+      "A warning siren erupts. Cerys lunges across the desk and slams the red emergency switch with her right palm as sparks burst from the receiver.",
+      "After Cerys leaves to warn the harbor, the empty station remains. The red switch is depressed beneath a curl of smoke and her overturned coffee spreads across a chart."
+    ],
+    expectedParagraphs: [1, 2, 3], expectedCharacters: { 1: ["Cerys Bell"], 2: ["Cerys Bell"], 3: [] },
+    expectedPerspectives: { 1: ["static"], 2: ["dynamic"], 3: ["creative"] },
+    expectations: [
+      { paragraph: 1, field: "location", anyOf: ["coastal radio station", "radio station"], critical: true },
+      { paragraph: 1, character: "Cerys Bell", field: "attire", anyOf: ["navy sweater", "tan trousers"], critical: true },
+      { paragraph: 2, character: "Cerys Bell", field: "action", anyOf: ["slams", "slamming", "presses", "strikes"], critical: true },
+      { paragraph: 2, field: "payload", anyOf: ["red emergency switch", "red switch", "sparks"], critical: true },
+      { paragraph: 3, field: "prompt", anyOf: ["depressed switch", "red switch", "curl of smoke", "overturned coffee", "spilled coffee"], critical: true }
     ]
   },
   {

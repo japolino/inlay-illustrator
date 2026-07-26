@@ -40,6 +40,8 @@ describe("parser output budgets", () => {
     expect(parserStageTokenBudget("DeepSeek-A/deepseek-v4-pro", singleImage, "repair")).toBe(7000);
     expect(parserStageTokenBudget("Gemini/gcli-gemini-3.1-pro-preview", singleImage, "main")).toBe(2700);
     expect(parserStageTokenBudget("CODEX/gpt-5.6-luna", singleImage, "main")).toBe(2700);
+    expect(parserStageTokenBudget("AROMA/claude-sonnet-5", singleImage, "main")).toBe(9000);
+    expect(parserStageTokenBudget("AROMA/claude-sonnet-5", singleImage, "repair")).toBe(7000);
     expect(parserStageTokenBudget("Moonshot/kimi-k2.7-code-highspeed", singleImage, "main")).toBe(16000);
     expect(parserStageTokenBudget("Moonshot/kimi-k2.7-code-highspeed", singleImage, "repair")).toBe(12000);
     expect(parserStageTokenBudget("Moonshot/kimi-k2.7-code-highspeed", singleImage, "ideation")).toBe(8000);
@@ -61,6 +63,37 @@ describe("parser JSON recovery", () => {
 
     expect(parsed.scenes?.[0].shots?.[0].characters).toHaveLength(1);
     expect(Object.prototype.hasOwnProperty.call(parsed.scenes?.[0], "characters")).toBe(false);
+  });
+
+  test("normalizes subject-facing camera language and closed-eye expression out of composition", async () => {
+    responses.push({ content: JSON.stringify({
+      scenes: [{
+        shots: [{
+          paragraph: 1,
+          characters: [{
+            name: "Nyra Vale",
+            composition: {
+              position: "reclining toward camera",
+              pose: "legs angled toward camera",
+              actions: ["reaching past camera"],
+              gaze: "eyes closed in pleasure"
+            }
+          }]
+        }]
+      }]
+    }) });
+
+    const parsed = await parsePayloadWithRepair(connection, config, [{
+      role: "user",
+      content: "## Current Numbered Paragraph Source\n[P1]\nNyra reclines."
+    }]);
+
+    expect(parsed.scenes?.[0].shots?.[0].characters?.[0].composition).toEqual({
+      position: "reclining toward viewer",
+      pose: "legs angled toward viewer",
+      actions: ["reaching past viewer"],
+      gaze: ""
+    });
   });
 
   test("extracts fenced JSON from surrounding text and repairs near-miss schema keys locally", async () => {
@@ -172,6 +205,60 @@ describe("parser JSON recovery", () => {
     expect(requests[1].messages[1].content).not.toBe("");
   });
 
+  test("keeps the full source for terminal state while allowing shots only for routed paragraphs", async () => {
+    const routedMessages: ParserGenerationRequest["messages"] = [{
+      role: "system",
+      content: "Production parser contract.\n\n## Terminal Visual State\nterminalState is required."
+    }, {
+      role: "user",
+      content: [
+        "## Current Numbered Paragraph Source",
+        "[P1]\nThe pair argues on a residential road.",
+        "",
+        "[P2]\nThey enter an apartment living room.",
+        "",
+        "## Non-authoritative Shot-Router Notes",
+        "[P1]: Visual thesis: tense roadside argument; Camera intent: medium side view"
+      ].join("\n")
+    }];
+    const initial = {
+      scenes: [{
+        environment: { location: "residential road" },
+        shots: [{ paragraph: 1 }, { paragraph: 2 }]
+      }]
+    };
+    const repaired = {
+      scenes: [{
+        environment: { location: "residential road" },
+        shots: [{ paragraph: 1 }]
+      }],
+      terminalState: {
+        paragraph: 2,
+        environment: {
+          location: "apartment living room",
+          timeWeather: "evening",
+          lightingMood: ["soft ceiling light"],
+          backgroundElements: ["fabric sofa"]
+        },
+        environmentChanges: ["location", "lightingMood", "backgroundElements"],
+        characters: []
+      }
+    };
+    responses.push({ content: JSON.stringify(initial) }, { content: JSON.stringify(repaired) });
+
+    const parsed = await parsePayloadWithRepair(connection, config, routedMessages);
+
+    expect(requests).toHaveLength(2);
+    expect(requests[1].messages[0].content).toContain("allowed references are P1");
+    expect(requests[1].messages[0].content).toContain("terminalState.paragraph");
+    expect(requests[1].messages[1].content).toContain("They enter an apartment living room.");
+    expect(parsed.scenes?.[0].shots).toHaveLength(1);
+    expect(parsed.terminalState).toMatchObject({
+      paragraph: 2,
+      environment: { location: "apartment living room" }
+    });
+  });
+
   test("rejects an empty provider response without sending an invalid empty repair request", async () => {
     responses.push({ content: "" });
 
@@ -257,9 +344,65 @@ describe("parser JSON recovery", () => {
     responses.push({ content: incomplete }, { content: incomplete });
 
     await expect(parsePayloadWithRepair(connection, staticConfig, messages)).rejects.toThrow(
-      "Parser did not return a complete Static scene"
+      "Parser did not return a complete payload"
     );
     expect(requests).toHaveLength(2);
+  });
+
+  test("repairs a Dynamic response that omits its compact rendering projection", async () => {
+    const dynamicMessages: ParserGenerationRequest["messages"] = [{
+      role: "system",
+      content: "Dynamic shots require shotPlan.primaryAction plus renderScope and visibleTags."
+    }, {
+      role: "user",
+      content: "## Current Numbered Paragraph Source\n[P1]\nA woman pulls a man left through a train corridor."
+    }];
+    const incomplete = {
+      scenes: [{
+        environment: {
+          location: "inside train corridor",
+          timeWeather: "rainy evening",
+          lightingMood: ["cold window light"],
+          backgroundElements: ["closing doorway"]
+        },
+        shots: [{
+          paragraph: 1,
+          perspectiveMode: "dynamic",
+          camera: { framing: "medium shot", angle: "eye level", perspective: "from side", focus: ["motion blur"] },
+          situation: "1girl, 1boy",
+          characters: [{
+            name: "woman",
+            label: "girl",
+            appearance: "long white braid",
+            attire: "navy coat",
+            composition: { position: "left side", pose: "running", actions: ["pulling the man left"], gaze: "looking forward" }
+          }]
+        }]
+      }]
+    };
+    const repaired = structuredClone(incomplete) as typeof incomplete & {
+      scenes: Array<{ shots: Array<{
+        shotPlan?: Record<string, string>;
+        characters: Array<{ renderScope?: string; visibleTags?: string }>;
+      }> }>;
+    };
+    repaired.scenes[0].shots[0].shotPlan = {
+      primaryAction: "left woman pulls right man left",
+      secondaryCue: "",
+      staging: "left woman leads beside the closing doorway"
+    };
+    repaired.scenes[0].shots[0].characters[0].renderScope = "upper body visible at the left";
+    repaired.scenes[0].shots[0].characters[0].visibleTags = "long white braid, navy coat";
+    responses.push({ content: JSON.stringify(incomplete) }, { content: JSON.stringify(repaired) });
+
+    const parsed = await parsePayloadWithRepair(connection, config, dynamicMessages);
+
+    expect(requests).toHaveLength(2);
+    expect(requests[1].messages[0].content).toContain("compact rendering projection");
+    expect(requests[1].messages[0].content).toContain("shotPlan.primaryAction");
+    expect(parsed.scenes?.[0].shots?.[0].shotPlan).toMatchObject({
+      primaryAction: "left woman pulls right man left"
+    });
   });
 
   test("logs numeric parser usage without logging response content", async () => {
@@ -324,6 +467,39 @@ describe("Creative ideation sidecar stage", () => {
 });
 
 describe("camera diversity repair stage", () => {
+  test("preserves projected Dynamic cameras so crop-visible tags remain aligned", async () => {
+    const projectedPayload = {
+      scenes: [{ shots: [
+        {
+          paragraph: 1,
+          perspectiveMode: "dynamic",
+          camera: { framing: "close-up", angle: "eye level", perspective: "three-quarter view", focus: [] },
+          shotPlan: { primaryAction: "Rhea points toward the train", secondaryCue: "", staging: "Rhea stands beside Evan" },
+          renderScope: "Rhea from the waist up",
+          visibleTags: ["long white braid", "navy officer coat"]
+        },
+        {
+          paragraph: 2,
+          perspectiveMode: "dynamic",
+          camera: { framing: "close-up", angle: "eye level", perspective: "three-quarter view", focus: [] },
+          shotPlan: { primaryAction: "Evan pulls Rhea forward", secondaryCue: "", staging: "Evan runs ahead of Rhea" },
+          renderScope: "Evan and Rhea from the waist up",
+          visibleTags: ["messy short black hair", "long white braid"]
+        }
+      ] }]
+    };
+
+    const repaired = await repairDynamicCameraDiversity(
+      connection,
+      { ...config, adaptiveMode: true },
+      projectedPayload,
+      "[P1]\nFirst beat.\n\n[P2]\nSecond beat."
+    );
+
+    expect(repaired).toBe(projectedPayload);
+    expect(requests).toHaveLength(0);
+  });
+
   test("repairs exact Dynamic camera collisions locally before using the provider", async () => {
     const duplicatePayload = {
       scenes: [{ shots: [

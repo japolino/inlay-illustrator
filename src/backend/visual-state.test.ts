@@ -92,6 +92,93 @@ describe("previous visual state", () => {
     });
   });
 
+  test("treats a changed explicit location as a complete scene boundary without change markers", () => {
+    const applied = applyPreviousVisualState({ scenes: [{
+      environment: {
+        location: "residential road",
+        timeWeather: "evening",
+        lightingMood: ["amber streetlamp light"],
+        backgroundElements: ["parked cars", "wet pavement"]
+      },
+      shots: [{ paragraph: 1, characters: [{ name: "Jay" }] }]
+    }, {
+      environment: {
+        location: "apartment living room",
+        timeWeather: "evening",
+        lightingMood: ["soft ceiling light"],
+        backgroundElements: ["fabric sofa", "coffee table"]
+      },
+      environmentChanges: [],
+      shots: [{ paragraph: 2, characters: [{ name: "Jay" }] }]
+    }] }, previous);
+
+    expect(applied.scenes?.[1]?.environment).toEqual({
+      location: "apartment living room",
+      timeWeather: "evening",
+      lightingMood: ["soft ceiling light"],
+      backgroundElements: ["fabric sofa", "coffee table"]
+    });
+  });
+
+  test("persists terminal narrative state even when only an earlier road paragraph generated an image", () => {
+    const applied = applyPreviousVisualState({
+      scenes: [{
+        environment: {
+          location: "residential road",
+          timeWeather: "evening",
+          lightingMood: ["amber streetlamp light"],
+          backgroundElements: ["parked cars", "wet pavement"]
+        },
+        environmentChanges: ["location", "timeWeather", "lightingMood", "backgroundElements"],
+        shots: [{
+          paragraph: 1,
+          characters: [{
+            name: "Jay",
+            label: "boy",
+            age: "adult man",
+            appearance: "",
+            body: "",
+            attire: "",
+            visualChanges: []
+          }]
+        }]
+      }],
+      terminalState: {
+        paragraph: 2,
+        environment: {
+          location: "apartment living room",
+          timeWeather: "evening",
+          lightingMood: ["soft ceiling light"],
+          backgroundElements: ["fabric sofa", "coffee table"]
+        },
+        environmentChanges: ["location", "lightingMood", "backgroundElements"],
+        characters: [{
+          name: "Jay",
+          label: "boy",
+          age: "",
+          appearance: "",
+          body: "",
+          attire: "white shirt, black trousers",
+          visualChanges: []
+        }]
+      }
+    }, previous);
+    const state = buildPreviousVisualState(applied, [1]);
+
+    expect(applied.scenes?.[0]?.environment?.location).toBe("residential road");
+    expect(state?.environment).toEqual({
+      location: "apartment living room",
+      timeWeather: "evening",
+      lightingMood: ["soft ceiling light"],
+      backgroundElements: ["fabric sofa", "coffee table"]
+    });
+    expect(state?.characters[0]).toMatchObject({
+      name: "Jay",
+      appearance: "straight black hair, dark brown eyes, pale skin",
+      attire: "white shirt, black trousers"
+    });
+  });
+
   test("builds the next snapshot from successful paragraph selections without transient shot fields", () => {
     const payload = applyPreviousVisualState({ scenes: [{
       environment: {

@@ -26,6 +26,7 @@ import { cleanString } from "../../backend/utils.js";
 import { evaluateQuality, isCensoredEmptyResponse } from "./quality.js";
 import { sidecarScenarios } from "./scenarios.js";
 import { nsfwSidecarScenarios } from "./nsfw-scenarios.js";
+import { expandedSidecarScenarios } from "./expanded-scenarios.js";
 import type { SidecarResult, SidecarScenario } from "./types.js";
 
 const endpoint = cleanString(process.env.INLAY_SIDECAR_ENDPOINT);
@@ -40,20 +41,27 @@ const args = new Map(process.argv.slice(2).map((arg) => {
 }));
 const rounds = Math.max(1, Math.min(5, Number(args.get("rounds") || 1)));
 const scenarioFilter = cleanString(args.get("scenario"));
+const scenarioFilters = scenarioFilter.split(",").map((value) => cleanString(value)).filter(Boolean);
 const modelFilter = cleanString(args.get("model")).toLowerCase();
 const modelIdOverride = cleanString(args.get("model-id"));
 const modelLabelOverride = cleanString(args.get("model-label"));
 const reportLabel = cleanString(args.get("report-label")).toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, "");
 const suite = cleanString(args.get("suite") || "general").toLowerCase();
-if (suite !== "general" && suite !== "nsfw") throw new Error("--suite must be general or nsfw.");
+if (suite !== "general" && suite !== "nsfw" && suite !== "expanded") throw new Error("--suite must be general, nsfw, or expanded.");
 const maxRequests = Math.max(1, Math.min(200, Number(args.get("max-requests") || 120)));
 let requestCount = 0;
 
-type ModelTarget = { label: string; preferredId: string; basename: string };
+type ModelTarget = { label: string; preferredIds: string[]; preferredPrefixes?: string[]; basename: string };
 const TARGETS: ModelTarget[] = [
-  { label: "DeepSeek V4 Pro", preferredId: "DeepSeek-A/deepseek-v4-pro", basename: "deepseek-v4-pro" },
-  { label: "Gemini 3.1 Pro Preview", preferredId: "Gemini/gcli-gemini-3.1-pro-preview", basename: "gcli-gemini-3.1-pro-preview" },
-  { label: "GPT-5.6 Luna", preferredId: "CODEX/gpt-5.6-luna", basename: "gpt-5.6-luna" }
+  { label: "DeepSeek V4 Pro", preferredIds: ["DeepSeek-A/deepseek-v4-pro"], basename: "deepseek-v4-pro" },
+  { label: "Gemini 3.1 Pro Preview", preferredIds: ["Gemini/gcli-gemini-3.1-pro-preview"], basename: "gcli-gemini-3.1-pro-preview" },
+  { label: "Claude Sonnet 5", preferredIds: ["AROMA/claude-sonnet-5"], basename: "claude-sonnet-5" },
+  {
+    label: "GPT-5.6 Luna",
+    preferredIds: ["CODEX3/gpt-5.6-luna", "CODEX/gpt-5.6-luna"],
+    preferredPrefixes: ["CODEX3-A/", "CODEX3-B/", "GPT/"],
+    basename: "gpt-5.6-luna"
+  }
 ];
 
 function authHeaders(): Record<string, string> {
@@ -93,8 +101,9 @@ async function resolveModels(): Promise<Array<{ label: string; id: string }>> {
     return [{ label: modelLabelOverride || id.split("/").at(-1) || id, id }];
   }
   return TARGETS.map((target) => {
-    const preferred = ids.find((id) => id === target.preferredId);
     const candidates = ids.filter((id) => id.toLowerCase().split("/").at(-1) === target.basename);
+    const preferred = target.preferredIds.find((preferredId) => ids.includes(preferredId))
+      || target.preferredPrefixes?.flatMap((prefix) => candidates.filter((id) => id.startsWith(prefix)))[0];
     const id = preferred || (candidates.length === 1 ? candidates[0] : "");
     if (!id) throw new Error(`Could not unambiguously resolve ${target.label} from /v1/models.`);
     return { label: target.label, id };
@@ -251,7 +260,9 @@ async function runScenario(model: string, scenario: SidecarScenario): Promise<Si
     }
     const selectedConcepts = chooseCreativeConcepts(concepts, [], () => 0);
     requestMessages = parserMessages(
-      parserInstruction(scenario.config),
+      parserInstruction(scenario.config, {
+        hasPreviousVisualState: Boolean(scenario.config.previousVisualStateEnabled && scenario.previousVisualState)
+      }),
       reference,
       parserUserRequest(targetSource, creativeConceptConstraint(selectedConcepts, false)),
       ""
@@ -276,7 +287,8 @@ async function runScenario(model: string, scenario: SidecarScenario): Promise<Si
       transformed.payload,
       scenario,
       transformed.rendered.map((entry) => ({ paragraph: entry.paragraph, positive: entry.positive })),
-      rawJson
+      rawJson,
+      { requireTerminalState: true }
     );
     return {
       scenario: scenario.id,
@@ -376,8 +388,12 @@ function summary(results: SidecarResult[], models: Array<{ label: string; id: st
 
 const models = await resolveModels();
 if (models.length === 0) throw new Error("No target models matched the requested filter.");
-const scenarioSource = suite === "nsfw" ? nsfwSidecarScenarios : sidecarScenarios;
-const scenarios = scenarioSource.filter((scenario) => !scenarioFilter || scenario.id.includes(scenarioFilter));
+const scenarioSource = suite === "nsfw"
+  ? nsfwSidecarScenarios
+  : suite === "expanded"
+    ? expandedSidecarScenarios
+    : sidecarScenarios;
+const scenarios = scenarioSource.filter((scenario) => scenarioFilters.length === 0 || scenarioFilters.some((filter) => scenario.id.includes(filter)));
 if (scenarios.length === 0) throw new Error("No scenarios matched the requested filter.");
 const runId = new Date().toISOString().replace(/[:.]/g, "-");
 const rawRoot = join("eval-results", "raw", suite, runId);
@@ -394,9 +410,13 @@ for (let round = 1; round <= rounds; round += 1) {
     }
   }
 }
-const report = summary(results, models, runId, suite !== "nsfw");
+const report = summary(results, models, runId, suite === "general");
 await mkdir("eval-results", { recursive: true });
-const reportStem = suite === "nsfw" ? "latest-nsfw-summary" : "latest-sidecar-summary";
+const reportStem = suite === "nsfw"
+  ? "latest-nsfw-summary"
+  : suite === "expanded"
+    ? "latest-expanded-summary"
+    : "latest-sidecar-summary";
 const reportName = `${reportStem}${reportLabel ? `-${reportLabel}` : ""}.md`;
 await Bun.write(join("eval-results", reportName), `${report}\n`);
 process.stdout.write(`\n${report.split("## Case details", 1)[0]}\nRaw artifacts: ${rawRoot}\n`);

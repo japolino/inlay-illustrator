@@ -19,6 +19,17 @@ export type CameraJson = {
   focus?: unknown;
 };
 
+/**
+ * Shot-only rendering priority. This never becomes character or environment
+ * memory; it selects the small subset of factual scene data that should
+ * dominate a Dynamic image.
+ */
+export type ShotPlanJson = {
+  primaryAction?: unknown;
+  secondaryCue?: unknown;
+  staging?: unknown;
+};
+
 export type CharacterJson = {
   name?: unknown;
   label?: unknown;
@@ -36,7 +47,7 @@ export type CharacterJson = {
   composition?: CharacterCompositionJson | string;
   /** Shot-only framing note. Never persisted into character memory. */
   renderScope?: unknown;
-  /** Shot-only Creative projection containing only traits actually visible in frame. */
+  /** Shot-only rendering projection containing only traits actually visible in frame. */
   visibleTags?: unknown;
 };
 
@@ -51,6 +62,7 @@ export type ShotJson = {
   paragraph?: unknown;
   perspectiveMode?: unknown;
   camera?: CameraJson | string;
+  shotPlan?: ShotPlanJson | string;
   situation?: unknown;
   action?: unknown;
   characters?: CharacterJson[];
@@ -66,7 +78,24 @@ export type SceneJson = ShotJson & {
   environmentChanges?: unknown;
   shots?: ShotJson[];
 };
-export type ParsedPayload = { scenes?: SceneJson[] };
+
+/**
+ * Non-rendered continuity snapshot after the final numbered paragraph. This
+ * lets narrative state advance even when the final paragraph is not selected
+ * for illustration.
+ */
+export type TerminalVisualStateJson = {
+  paragraph?: unknown;
+  environment?: EnvironmentJson;
+  place?: unknown;
+  environmentChanges?: unknown;
+  characters?: CharacterJson[];
+};
+
+export type ParsedPayload = {
+  scenes?: SceneJson[];
+  terminalState?: TerminalVisualStateJson;
+};
 
 export type CreativeConcept = {
   id: string;
