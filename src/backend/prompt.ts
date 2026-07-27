@@ -259,6 +259,7 @@ function assembleCharacterBlock(
     stripOrReplaceNames(cleanString(character.label), replacements, true),
     shouldIncludeCharacterNames(config) ? displayName(cleanString(character.name), config) : "",
     stripOrReplaceNames(cleanString(character.age), replacements, true),
+    stripOrReplaceNames(cleanString(character.identity), replacements, true),
     stripOrReplaceNames(cleanString(character.appearance), replacements, true),
     stripOrReplaceNames(cleanString(character.body), replacements, true),
     stripOrReplaceNames(cleanString(character.attire), replacements, true),

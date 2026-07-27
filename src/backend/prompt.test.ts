@@ -695,6 +695,28 @@ describe("perspective selection and projection", () => {
 });
 
 describe("prompt compatibility and normalization", () => {
+  test("renders legacy identity traits so furry details cannot disappear before memory repair", () => {
+    const config = { ...DEFAULT_CONFIG, perspectiveMode: "dynamic" as const };
+    const entry = assemblePrompt({}, {
+      paragraph: 1,
+      situation: "1girl",
+      camera: { framing: "medium shot", angle: "eye level", perspective: "straight-on", focus: [] },
+      characters: [{
+        name: "Vexa",
+        label: "girl",
+        identity: "furry, wolf girl, gray fur, white muzzle, wolf ears, fluffy tail",
+        appearance: "amber eyes",
+        body: "slim",
+        attire: "blue jacket",
+        composition: { position: "center frame", pose: "standing", actions: [], gaze: "looking at viewer" }
+      }]
+    }, config, 1, 1);
+
+    expect(renderPrompt(entry.prompt, config.promptSyntax)).toContain(
+      "girl, furry, wolf girl, gray fur, white muzzle, wolf ears, fluffy tail, amber eyes, slim, blue jacket"
+    );
+  });
+
   test("normalizes camera-facing subject orientation to viewer-facing composition", () => {
     const payload = normalizeAtomicCompositionTerms({
       scenes: [{

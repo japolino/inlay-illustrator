@@ -1,6 +1,6 @@
 import { normalizeCharacterName, normalizeReferenceTags } from "./prompt.js";
 import { normalizeScenePayload } from "./scenes.js";
-import type { CharacterJson, ParsedPayload, State } from "./types.js";
+import type { CharacterJson, ParsedPayload, PreviousVisualCharacter, State } from "./types.js";
 import { cleanArray, csvParts, unique } from "./utils.js";
 
 const VOLATILE_MEMORY_TERMS = [
@@ -33,20 +33,53 @@ function baselineCharacterTags(character: CharacterJson): string {
   return sanitizeMemoryTags(unique(csvParts(
     character.label,
     character.age,
+    // Keep the legacy identity field as a compatibility input so species,
+    // fur, tails, scars, and similar durable traits cannot disappear.
+    character.identity,
     character.appearance,
     character.body,
     attireInferred ? "" : character.attire
   )).join(", "));
 }
 
-export function updateCache(cache: Record<string, string>, payload: ParsedPayload): void {
+function matchingKey(map: Record<string, string> | undefined, name: string): string | undefined {
+  if (!map) return undefined;
+  return Object.keys(map).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+}
+
+export function updateCache(
+  cache: Record<string, string>,
+  payload: ParsedPayload,
+  manualCharacterAppearance?: Record<string, string>
+): void {
   for (const { shot } of normalizeScenePayload(payload)) {
     for (const character of cleanArray<CharacterJson>(shot.characters)) {
       const name = normalizeCharacterName(character.name);
       const tags = baselineCharacterTags(character);
-      if (name && tags) cache[name] = tags;
+      if (!name || !tags) continue;
+      const manualKey = matchingKey(manualCharacterAppearance, name);
+      if (manualKey) {
+        const cacheKey = matchingKey(cache, name);
+        if (cacheKey && cacheKey !== manualKey) delete cache[cacheKey];
+        cache[manualKey] = manualCharacterAppearance![manualKey];
+        continue;
+      }
+      const cacheKey = matchingKey(cache, name);
+      if (cacheKey && cacheKey !== name) delete cache[cacheKey];
+      cache[name] = tags;
     }
   }
+}
+
+export function updateCharacterMemory(state: State, payload: ParsedPayload): void {
+  updateCache(state.characterAppearance, payload, state.manualCharacterAppearance);
+}
+
+function invalidatePreviousVisualCharacters(state: State, names: string[]): void {
+  if (!state.previousVisualState || names.length === 0) return;
+  const targets = new Set(names.map((name) => normalizeCharacterName(name).toLowerCase()).filter(Boolean));
+  state.previousVisualState.characters = cleanArray<PreviousVisualCharacter>(state.previousVisualState.characters)
+    .filter((character) => !targets.has(normalizeCharacterName(character.name).toLowerCase()));
 }
 
 export function upsertCharacterTag(state: State, oldName: unknown, nextName: unknown, nextTags: unknown): void {
@@ -67,6 +100,16 @@ export function upsertCharacterTag(state: State, oldName: unknown, nextName: unk
 
   if (sourceKey && sourceKey !== name) delete state.characterAppearance[sourceKey];
   state.characterAppearance[name] = tags;
+  const manual = state.manualCharacterAppearance || {};
+  const manualSourceKey = previous ? matchingKey(manual, previous) : undefined;
+  const manualDestinationKey = matchingKey(manual, name);
+  if (manualSourceKey && manualSourceKey !== name) delete manual[manualSourceKey];
+  if (manualDestinationKey && manualDestinationKey !== name) delete manual[manualDestinationKey];
+  manual[name] = tags;
+  state.manualCharacterAppearance = manual;
+  // Otherwise the structured snapshot created before this edit would restore
+  // stale fields after parsing and make the successful save appear ineffective.
+  invalidatePreviousVisualCharacters(state, [previous, name]);
 }
 
 export function deleteCharacterTag(state: State, name: unknown): void {
@@ -74,4 +117,10 @@ export function deleteCharacterTag(state: State, name: unknown): void {
   if (!target) return;
   const key = Object.keys(state.characterAppearance).find((candidate) => candidate.toLowerCase() === target.toLowerCase()) || target;
   delete state.characterAppearance[key];
+  const manualKey = matchingKey(state.manualCharacterAppearance, target);
+  if (manualKey) delete state.manualCharacterAppearance![manualKey];
+  if (state.manualCharacterAppearance && Object.keys(state.manualCharacterAppearance).length === 0) {
+    delete state.manualCharacterAppearance;
+  }
+  invalidatePreviousVisualCharacters(state, [target]);
 }

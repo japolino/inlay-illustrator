@@ -14,7 +14,7 @@ import {
 } from "./creative.js";
 import { buildImageParameters, prepareAndDispatchImageJobs, rerollImageParameters, resolveImageConnection } from "./images.js";
 import { logStage } from "./logging.js";
-import { updateCache } from "./memory.js";
+import { updateCharacterMemory } from "./memory.js";
 import { ignoredTagNames, paragraphCount, prepareParagraphs } from "./paragraphs.js";
 import {
   continuityReference,
@@ -435,7 +435,7 @@ async function persistCharacterMemory(
   userId?: string
 ): Promise<void> {
   const committed = await updateState(chatId, userId, (state) => {
-    updateCache(state.characterAppearance, parsed);
+    updateCharacterMemory(state, parsed);
   });
   spindle.sendToFrontend({
     type: "character_memory_updated",
@@ -641,7 +641,7 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
   const reference = await storeGeneratedRecord(chatId, key, record, userId);
   const committed = await updateState(chatId, userId, async (state) => {
     await migrateLegacyGeneratedRecords(chatId, state, userId);
-    updateCache(state.characterAppearance, parsed);
+    updateCharacterMemory(state, parsed);
     state.generated[key] = reference;
     if (visualState) state.previousVisualState = visualState;
     else delete state.previousVisualState;
@@ -727,7 +727,7 @@ async function commitImageReplacement(
       imageUrls: replaceAt(record.imageUrls, located.index, replacement.imageUrl, "")
     } satisfies GeneratedRecord;
     current.generated[located.key] = await storeGeneratedRecord(request.chatId, located.key, committedRecord, userId);
-    if (parsedForMemory) updateCache(current.characterAppearance, parsedForMemory);
+    if (parsedForMemory) updateCharacterMemory(current, parsedForMemory);
     rebuildGeneratedImageIndex(current);
   });
   const record = committedRecord as GeneratedRecord | null;

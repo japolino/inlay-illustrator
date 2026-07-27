@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { deleteCharacterTag, sanitizeMemoryTags, updateCache, upsertCharacterTag } from "./memory.js";
+import {
+  deleteCharacterTag,
+  sanitizeMemoryTags,
+  updateCache,
+  updateCharacterMemory,
+  upsertCharacterTag
+} from "./memory.js";
 import type { State } from "./types.js";
 
 function state(characterAppearance: Record<string, string>): State {
@@ -24,7 +30,7 @@ describe("character memory", () => {
     expect(tags).toBe("1girl, blonde_hair, blue eyes");
   });
 
-  test("updates named characters from durable scene fields and ignores transient or identity-only details", () => {
+  test("updates named characters from durable scene fields and retains legacy identity details", () => {
     const cache: Record<string, string> = { Existing: "green eyes" };
 
     updateCache(cache, {
@@ -54,7 +60,7 @@ describe("character memory", () => {
 
     expect(cache).toEqual({
       Existing: "green eyes",
-      Alice: "1girl, adult, blonde hair, blue eyes, slim, red coat"
+      Alice: "1girl, adult, royal heir, blonde hair, blue eyes, slim, red coat"
     });
   });
 
@@ -101,7 +107,10 @@ describe("character memory", () => {
 
     upsertCharacterTag(current, "alice", " Alicia (source) ", "blue hair, standing, open shirt, none");
 
-    expect(current.characterAppearance).toEqual({ Bob: "black hair", Alicia: "blue hair" });
+    expect(current).toMatchObject({
+      characterAppearance: { Bob: "black hair", Alicia: "blue hair" },
+      manualCharacterAppearance: { Alicia: "blue hair" }
+    });
   });
 
   test("rejects a blank normalized name without deleting the original entry", () => {
@@ -133,15 +142,75 @@ describe("character memory", () => {
 
     upsertCharacterTag(current, "alice", "ALICE", "blue hair, standing");
 
-    expect(current.characterAppearance).toEqual({ Bob: "black hair", ALICE: "blue hair" });
+    expect(current).toMatchObject({
+      characterAppearance: { Bob: "black hair", ALICE: "blue hair" },
+      manualCharacterAppearance: { ALICE: "blue hair" }
+    });
   });
 
   test("removes entries case-insensitively and treats blank names as a no-op", () => {
     const current = state({ Alice: "red hair", Bob: "black hair" });
+    upsertCharacterTag(current, "Alice", "Alice", "red hair");
 
     deleteCharacterTag(current, "ALICE");
     deleteCharacterTag(current, "   ");
 
     expect(current.characterAppearance).toEqual({ Bob: "black hair" });
+    expect(current.manualCharacterAppearance).toBeUndefined();
+  });
+
+  test("protects a manual furry baseline from automatic replacement and invalidates its stale visual snapshot", () => {
+    const current = state({ Vexa: "1girl, amber eyes" });
+    current.previousVisualState = {
+      characters: [
+        {
+          name: "Vexa",
+          label: "1girl",
+          age: "",
+          appearance: "amber eyes",
+          body: "slim",
+          attire: "blue jacket",
+          attireInferred: false
+        },
+        {
+          name: "Other",
+          label: "1boy",
+          age: "",
+          appearance: "black hair",
+          body: "",
+          attire: "",
+          attireInferred: false
+        }
+      ],
+      environment: { location: "street", timeWeather: "", lightingMood: [], backgroundElements: [] },
+      place: "",
+      updatedAt: "2026-01-01T00:00:00.000Z"
+    };
+
+    upsertCharacterTag(
+      current,
+      "Vexa",
+      "Vexa",
+      "1girl, furry, wolf girl, gray fur, white muzzle, wolf ears, fluffy tail"
+    );
+    expect(current.previousVisualState.characters.map((character) => character.name)).toEqual(["Other"]);
+
+    updateCharacterMemory(current, {
+      scenes: [{ shots: [{
+        paragraph: 1,
+        characters: [{
+          name: "Vexa",
+          label: "1girl",
+          identity: "furry, wolf girl",
+          appearance: "amber eyes",
+          body: "slim",
+          attire: "blue jacket"
+        }]
+      }] }]
+    });
+
+    expect(current.characterAppearance.Vexa).toBe(
+      "1girl, furry, wolf girl, gray fur, white muzzle, wolf ears, fluffy tail"
+    );
   });
 });

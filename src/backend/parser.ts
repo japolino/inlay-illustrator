@@ -571,7 +571,8 @@ export async function generateCreativeConcepts(
       creativeIdeationInstruction(config, previousConcepts),
       continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext),
       creativeIdeationRequest(targetSource),
-      context.override
+      context.override,
+      "auxiliary"
     ), userId, "ideation");
     const concepts = parseCreativeConcepts(raw, paragraphs, config);
     if (concepts.length === 0) {
@@ -596,7 +597,8 @@ export function parserMessages(
   stableInstruction: string,
   referenceContext: string,
   userRequest: string,
-  override: string
+  override: string,
+  stage: "parser" | "auxiliary" = "parser"
 ): ParserGenerationRequest["messages"] {
   const messages: ParserGenerationRequest["messages"] = [{ role: "system", content: stableInstruction.trim() }];
   if (referenceContext.trim()) messages.push({ role: "system", content: referenceContext.trim() });
@@ -605,8 +607,11 @@ export function parserMessages(
     role: "user",
     content: [
       "Final user instructions override lower-priority parser guidance when they do not conflict with valid JSON output.",
+      stage === "parser"
+        ? "If they add or replace durable tags for a character, put those tags in appearance, body, or attire and list each affected field in that character's visualChanges so deterministic continuity preserves the requested change. Do not put those tags only in identity."
+        : "",
       override.trim()
-    ].join("\n\n")
+    ].filter(Boolean).join("\n\n")
   });
   return messages;
 }
@@ -696,7 +701,8 @@ export async function preprocessTargetParagraphs(
       preprocessingInstruction(paragraphs, config),
       continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext),
       preprocessingUserRequest(rawTarget),
-      context.override
+      context.override,
+      "auxiliary"
     ), userId, "preprocess");
     const selection = validatePreprocessedTarget(summary, paragraphs, config);
     if (selection) {

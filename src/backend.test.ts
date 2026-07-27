@@ -83,6 +83,7 @@ describe("character-memory frontend messages", () => {
 
     expect(JSON.parse(storedFiles.get(storageKey("states/chat-1.json", "user-1")) || "{}")).toEqual({
       characterAppearance: { Bob: "black hair", Alicia: "blue hair" },
+      manualCharacterAppearance: { Alicia: "blue hair" },
       generated: { existing: { imageIds: ["kept"] } }
     });
     expect(frontendMessages).toEqual([{
@@ -355,6 +356,7 @@ describe("illustration parser construction", () => {
     expect(messages[1].content).toContain("Never restore outdated scene facts");
     expect(messages[2].content).toContain("[P1]\nShe enters the empty station.");
     expect(messages.at(-1)?.content).toContain("Prefer the rain-soaked climax.");
+    expect(messages.at(-1)?.content).toContain("list each affected field in that character's visualChanges");
   });
 
   test("requires batch-wide cinematic contrast without weakening visual continuity", () => {

@@ -23,6 +23,28 @@ const previous: PreviousVisualState = {
 };
 
 describe("previous visual state", () => {
+  test("folds legacy identity traits into the persistent appearance snapshot", () => {
+    const built = buildPreviousVisualState({
+      scenes: [{
+        shots: [{
+          paragraph: 1,
+          characters: [{
+            name: "Vexa",
+            label: "girl",
+            identity: "furry, wolf girl, gray fur, wolf ears, fluffy tail",
+            appearance: "amber eyes",
+            body: "slim",
+            attire: "blue jacket"
+          }]
+        }]
+      }]
+    }, [1]);
+
+    expect(built?.characters[0].appearance).toBe(
+      "furry, wolf girl, gray fur, wolf ears, fluffy tail, amber eyes"
+    );
+  });
+
   test("removes placeholders and fills only missing character and environment fields", () => {
     const applied = applyPreviousVisualState({ scenes: [{
       environment: {

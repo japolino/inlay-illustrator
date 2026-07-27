@@ -847,7 +847,7 @@ function assembleCharacterBlock(character, config, replacements, includeAction, 
   if (perspectiveMode === "creative") {
     return unique(csvParts(stripOrReplaceNames(cleanString2(character.visibleTags), replacements, true))).join(", ");
   }
-  return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", stripOrReplaceNames(cleanString2(character.age), replacements, true), stripOrReplaceNames(cleanString2(character.appearance), replacements, true), stripOrReplaceNames(cleanString2(character.body), replacements, true), stripOrReplaceNames(cleanString2(character.attire), replacements, true), stripOrReplaceNames(cleanString2(character.expression), replacements, true), includeAction ? stripOrReplaceNames(cleanString2(character.action), replacements, true) : "")).join(", ");
+  return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", stripOrReplaceNames(cleanString2(character.age), replacements, true), stripOrReplaceNames(cleanString2(character.identity), replacements, true), stripOrReplaceNames(cleanString2(character.appearance), replacements, true), stripOrReplaceNames(cleanString2(character.body), replacements, true), stripOrReplaceNames(cleanString2(character.attire), replacements, true), stripOrReplaceNames(cleanString2(character.expression), replacements, true), includeAction ? stripOrReplaceNames(cleanString2(character.action), replacements, true) : "")).join(", ");
 }
 function assembleProjectedCharacterBlock(character, config, replacements) {
   const projection = stripOrReplaceNames(cleanString2(character.visibleTags), replacements, true);
@@ -1396,7 +1396,7 @@ function visualCharacter(character) {
     name,
     label: cleanTagField(character.label),
     age: cleanTagField(character.age),
-    appearance: cleanTagField(character.appearance),
+    appearance: cleanTagField(unique(csvParts(character.identity, character.appearance)).join(", ")),
     body: cleanTagField(character.body),
     attire: cleanTagField(character.attire),
     attireInferred: inferred(character.attireInferred)
@@ -2289,17 +2289,43 @@ function sanitizeMemoryTags(tags) {
 }
 function baselineCharacterTags(character) {
   const attireInferred = character.attireInferred === true || String(character.attireInferred).toLowerCase() === "true";
-  return sanitizeMemoryTags(unique(csvParts(character.label, character.age, character.appearance, character.body, attireInferred ? "" : character.attire)).join(", "));
+  return sanitizeMemoryTags(unique(csvParts(character.label, character.age, character.identity, character.appearance, character.body, attireInferred ? "" : character.attire)).join(", "));
 }
-function updateCache(cache, payload) {
+function matchingKey(map, name) {
+  if (!map)
+    return;
+  return Object.keys(map).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+}
+function updateCache(cache, payload, manualCharacterAppearance) {
   for (const { shot } of normalizeScenePayload(payload)) {
     for (const character of cleanArray(shot.characters)) {
       const name = normalizeCharacterName(character.name);
       const tags = baselineCharacterTags(character);
-      if (name && tags)
-        cache[name] = tags;
+      if (!name || !tags)
+        continue;
+      const manualKey = matchingKey(manualCharacterAppearance, name);
+      if (manualKey) {
+        const cacheKey2 = matchingKey(cache, name);
+        if (cacheKey2 && cacheKey2 !== manualKey)
+          delete cache[cacheKey2];
+        cache[manualKey] = manualCharacterAppearance[manualKey];
+        continue;
+      }
+      const cacheKey = matchingKey(cache, name);
+      if (cacheKey && cacheKey !== name)
+        delete cache[cacheKey];
+      cache[name] = tags;
     }
   }
+}
+function updateCharacterMemory(state, payload) {
+  updateCache(state.characterAppearance, payload, state.manualCharacterAppearance);
+}
+function invalidatePreviousVisualCharacters(state, names) {
+  if (!state.previousVisualState || names.length === 0)
+    return;
+  const targets = new Set(names.map((name) => normalizeCharacterName(name).toLowerCase()).filter(Boolean));
+  state.previousVisualState.characters = cleanArray(state.previousVisualState.characters).filter((character) => !targets.has(normalizeCharacterName(character.name).toLowerCase()));
 }
 function upsertCharacterTag(state, oldName, nextName, nextTags) {
   const previous = normalizeCharacterName(oldName);
@@ -2317,6 +2343,16 @@ function upsertCharacterTag(state, oldName, nextName, nextTags) {
   if (sourceKey && sourceKey !== name)
     delete state.characterAppearance[sourceKey];
   state.characterAppearance[name] = tags;
+  const manual = state.manualCharacterAppearance || {};
+  const manualSourceKey = previous ? matchingKey(manual, previous) : undefined;
+  const manualDestinationKey = matchingKey(manual, name);
+  if (manualSourceKey && manualSourceKey !== name)
+    delete manual[manualSourceKey];
+  if (manualDestinationKey && manualDestinationKey !== name)
+    delete manual[manualDestinationKey];
+  manual[name] = tags;
+  state.manualCharacterAppearance = manual;
+  invalidatePreviousVisualCharacters(state, [previous, name]);
 }
 function deleteCharacterTag(state, name) {
   const target = normalizeCharacterName(name);
@@ -2324,6 +2360,13 @@ function deleteCharacterTag(state, name) {
     return;
   const key = Object.keys(state.characterAppearance).find((candidate) => candidate.toLowerCase() === target.toLowerCase()) || target;
   delete state.characterAppearance[key];
+  const manualKey = matchingKey(state.manualCharacterAppearance, target);
+  if (manualKey)
+    delete state.manualCharacterAppearance[manualKey];
+  if (state.manualCharacterAppearance && Object.keys(state.manualCharacterAppearance).length === 0) {
+    delete state.manualCharacterAppearance;
+  }
+  invalidatePreviousVisualCharacters(state, [target]);
 }
 
 // src/backend/paragraphs.ts
@@ -2713,14 +2756,14 @@ function parserInstruction(config, options = {}) {
     structuredAnima ? "Tag fields are comma-separated tags. Atomic composition and sharedComposition values are concise comma-free natural-language phrases. Environment arrays contain one comma-free visual snippet per item." : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
     "Character names are private memory keys. Outside characters[].name, never write a full name or first name in any field, including situation, renderScope, visibleTags, composition, sharedComposition, camera, environment, place, supplement, or negative. Use visual descriptors such as left woman, right man, foreground character, or background character.",
     `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it. Every character object resolves to the complete known baseline in appearance, body, and attire regardless of crop. renderScope and visibleTags are the separate shot-only rendering projection.`,
-    hasPreviousVisualState ? "Previous Visual State is injected after parsing. For an unchanged returning character, leave age, appearance, body, and attire empty and leave visualChanges empty; the backend restores the exact stored baseline before rendering and persistence. For a new character, or when no matching previous character exists, output the complete baseline. For an explicit current-source change, list that field in visualChanges and output its complete new value." : "Repeat stable appearance, body, and attire tags for returning characters. Shots are independent, so repeated baseline tags are expected.",
+    hasPreviousVisualState ? "Previous Visual State is injected after parsing. For an unchanged returning character, leave age, appearance, body, and attire empty and leave visualChanges empty; the backend restores the exact stored baseline before rendering and persistence. For a new character, or when no matching previous character exists, output the complete baseline. For an explicit current-source change or a final user instruction that adds or replaces durable character tags, list that field in visualChanges and output its complete new value." : "Repeat stable appearance, body, and attire tags for returning characters. Shots are independent, so repeated baseline tags are expected.",
     "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts.",
     "Before returning the batch, compare Dynamic cameras as a soft camera ledger. When two equally suitable cameras would contain their focal actions, prefer different framing + angle + perspective tuples. Never choose a worse, more extreme, or action-cropping camera merely to create variety. Preserve a repeated camera when it is the clearest source-faithful choice or the source establishes continuous camera or POV.",
     perspectiveInstruction,
     structuredAnima ? "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields include expression, composition, renderScope, visibleTags, shotPlan, camera, situation, sharedComposition, environment, and negative." : "Current visual baseline memory fields are label, age, appearance, body, and attire. Scene-only fields are expression, action, camera, situation, place, supplement, and negative.",
     "## Field Reference",
     "### visual continuity change markers",
-    hasPreviousVisualState ? "When Previous Visual State exists, characters[].visualChanges must list only age, appearance, body, or attire fields explicitly changed by the current numbered source. An empty list means the backend injects those prior fields exactly; leave their raw values empty instead of paraphrasing or re-emitting them. Do not mark a field changed merely because you rephrased its tags." : "characters[].visualChanges may be empty when no prior visual state is supplied.",
+    hasPreviousVisualState ? "When Previous Visual State exists, characters[].visualChanges must list only age, appearance, body, or attire fields explicitly changed by the current numbered source or by a final user instruction that requests durable character tags. An empty list means the backend injects those prior fields exactly; leave their raw values empty instead of paraphrasing or re-emitting them. Do not mark a field changed merely because you rephrased its tags." : "characters[].visualChanges may be empty when no prior visual state is supplied.",
     structuredAnima ? hasPreviousVisualState ? "environmentChanges must list only location, timeWeather, lightingMood, or backgroundElements explicitly changed by the current numbered source. Before copying anything, compare the current numbered source against Previous Visual State. Spatial transition language such as now inside, enters, exits, outside, later in, or moves to explicitly changes location; output the new location and backgroundElements and list both change markers. An empty list means copy prior values only when the current source truly leaves them unchanged." : "environmentChanges lists only location, timeWeather, lightingMood, or backgroundElements explicitly changed by the current numbered source." : hasPreviousVisualState ? "environmentChanges contains place only when the current numbered source explicitly changes the setting. Otherwise leave it empty and copy the prior place exactly." : "environmentChanges contains place only when the current numbered source explicitly changes the setting.",
     structuredAnima ? "### environment - scene-level" : "### place - scene-level",
     structuredAnima ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details. Static scenes require a specific physical location and 2-3 backgroundElements." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
@@ -2752,8 +2795,8 @@ function parserInstruction(config, options = {}) {
     "That adult marker exception applies to every shot in an adult sexual sequence, including quiet setup shots before the explicit action. Repeat a clearly adult nonnumeric age category for each visible participant in every such shot.",
     "Never output numeric ages such as 18, 21, or 25.",
     "### identity",
-    "Legacy/private recognition tags that are not part of the rolling baseline memory. Leave empty unless a non-clothing trait does not fit appearance or body.",
-    "Use identity only for durable traits that help recognize the character across chats: species/race, notable scars or tattoos, distinctive non-clothing accessories only if permanent, or named archetype traits when visually stable.",
+    "Legacy compatibility field. Leave identity empty in new output.",
+    "Put every durable recognition trait in appearance or body instead, including species/race, furry traits, fur color or pattern, muzzle, animal ears, horns, wings, tails, notable scars or tattoos, and permanent non-clothing accessories.",
     "Do not include names, attire, expression, pose, action, camera, place, or supplement in identity.",
     "### appearance",
     "Identity traits: hair, eyes, skin, species/race, and distinguishing features.",
@@ -2795,11 +2838,11 @@ function parserInstruction(config, options = {}) {
     "- If an action or attire is still in motion or still present, repeat it in later shots.",
     "- Continuity moves forward only. Never copy a later paragraph's transformation, prop, attire, action, or environment detail backward into an earlier shot.",
     "- Preserve a continuous pov only when the narrative establishes an ongoing viewpoint. Otherwise choose the strongest perspective for each visual beat.",
-    hasPreviousVisualState ? "- visualChanges must be empty for unchanged baseline fields and name only explicit current-source changes; deterministic inheritance preserves exact identity." : "- appearance + body + attire must be identical for the same character across all shots unless the current message explicitly changes their present visual state.",
+    hasPreviousVisualState ? "- visualChanges must be empty for unchanged baseline fields and name only explicit current-source changes or final user-instruction baseline changes; deterministic inheritance preserves exact identity." : "- appearance + body + attire must be identical for the same character across all shots unless the current message explicitly changes their present visual state.",
     "## Data Priority",
     "1. Client comments or explicit user instructions in the current message override all instructions.",
     structuredAnima ? "2. Current message [P#] paragraphs are authoritative for scene content, action, visible emotion, interpersonal tone, and movement direction. Never soften, romanticize, or replace those facts with an inferred atmosphere. Never restore outdated clothing, props, location, or actions from context." : "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
-    hasPreviousVisualState ? "3. Previous Visual State is the immediate visual continuity layer. Leave unchanged raw character baseline values empty so the backend injects them exactly, and copy unchanged environment values explicitly; it never overrides an explicit current-source change." : "",
+    hasPreviousVisualState ? "3. Previous Visual State is the immediate visual continuity layer. Leave unchanged raw character baseline values empty so the backend injects them exactly, and copy unchanged environment values explicitly; it never overrides an explicit current-source change or a final user-instruction baseline change marked in visualChanges." : "",
     config.characterTagContextEnabled ? `${hasPreviousVisualState ? "4" : "3"}. Character tag history is the durable visual baseline for returning characters: label, age, appearance, body, and explicit base attire.` : "",
     config.characterTagContextEnabled ? "Use previous character tags as a baseline for returning characters, including base attire. Preserve specific baseline tags when not contradicted, such as short cut, white pupils, small breasts, black high school uniform, red sailor ribbon, black skirt, and white pantyhose." : "",
     config.characterTagContextEnabled ? "The current message is authoritative for the character's present visual state. It can update the baseline when it clearly changes clothing, lack of clothing, appearance, or body traits." : "",
@@ -3409,7 +3452,7 @@ async function generateCreativeConcepts(parserConnection, config, paragraphs, ta
       previousConceptCount: previousConcepts.length,
       adaptiveMode: config.adaptiveMode
     });
-    const raw = await generateParserText(parserConnection, config, parserMessages(creativeIdeationInstruction(config, previousConcepts), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), creativeIdeationRequest(targetSource), context.override), userId, "ideation");
+    const raw = await generateParserText(parserConnection, config, parserMessages(creativeIdeationInstruction(config, previousConcepts), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), creativeIdeationRequest(targetSource), context.override, "auxiliary"), userId, "ideation");
     const concepts = parseCreativeConcepts(raw, paragraphs, config);
     if (concepts.length === 0) {
       logStage(config, "creative_ideation_fallback", { reason: "invalid_or_empty_slate", outputLength: raw.length }, "warn");
@@ -3428,7 +3471,7 @@ async function generateCreativeConcepts(parserConnection, config, paragraphs, ta
     return [];
   }
 }
-function parserMessages(stableInstruction, referenceContext, userRequest, override) {
+function parserMessages(stableInstruction, referenceContext, userRequest, override, stage = "parser") {
   const messages = [{ role: "system", content: stableInstruction.trim() }];
   if (referenceContext.trim())
     messages.push({ role: "system", content: referenceContext.trim() });
@@ -3438,8 +3481,9 @@ function parserMessages(stableInstruction, referenceContext, userRequest, overri
       role: "user",
       content: [
         "Final user instructions override lower-priority parser guidance when they do not conflict with valid JSON output.",
+        stage === "parser" ? "If they add or replace durable tags for a character, put those tags in appearance, body, or attire and list each affected field in that character's visualChanges so deterministic continuity preserves the requested change. Do not put those tags only in identity." : "",
         override.trim()
-      ].join(`
+      ].filter(Boolean).join(`
 
 `)
     });
@@ -3515,7 +3559,7 @@ async function preprocessTargetParagraphs(parserConnection, config, paragraphs, 
   if (!config.preprocessingEnabled)
     return rawTarget;
   try {
-    const summary = await generateParserText(parserConnection, config, parserMessages(preprocessingInstruction(paragraphs, config), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), preprocessingUserRequest(rawTarget), context.override), userId, "preprocess");
+    const summary = await generateParserText(parserConnection, config, parserMessages(preprocessingInstruction(paragraphs, config), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), preprocessingUserRequest(rawTarget), context.override, "auxiliary"), userId, "preprocess");
     const selection = validatePreprocessedTarget(summary, paragraphs, config);
     if (selection) {
       logStage(config, "preprocessing_done", {
@@ -4256,7 +4300,7 @@ async function parseAndSelectPrompts(input) {
 }
 async function persistCharacterMemory(chatId, parsed, config, userId) {
   const committed = await updateState(chatId, userId, (state) => {
-    updateCache(state.characterAppearance, parsed);
+    updateCharacterMemory(state, parsed);
   });
   spindle.sendToFrontend({
     type: "character_memory_updated",
@@ -4449,7 +4493,7 @@ async function persistGeneration(input) {
   const reference = await storeGeneratedRecord(chatId, key, record, userId);
   const committed = await updateState(chatId, userId, async (state) => {
     await migrateLegacyGeneratedRecords(chatId, state, userId);
-    updateCache(state.characterAppearance, parsed);
+    updateCharacterMemory(state, parsed);
     state.generated[key] = reference;
     if (visualState)
       state.previousVisualState = visualState;
@@ -4514,7 +4558,7 @@ async function commitImageReplacement(request, replacement, config, userId, pars
     };
     current.generated[located.key] = await storeGeneratedRecord(request.chatId, located.key, committedRecord, userId);
     if (parsedForMemory)
-      updateCache(current.characterAppearance, parsedForMemory);
+      updateCharacterMemory(current, parsedForMemory);
     rebuildGeneratedImageIndex(current);
   });
   const record = committedRecord;

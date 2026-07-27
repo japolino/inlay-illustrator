@@ -342,7 +342,7 @@ export function parserInstruction(config: Config, options: ParserInstructionOpti
     "Character names are private memory keys. Outside characters[].name, never write a full name or first name in any field, including situation, renderScope, visibleTags, composition, sharedComposition, camera, environment, place, supplement, or negative. Use visual descriptors such as left woman, right man, foreground character, or background character.",
     `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it. Every character object resolves to the complete known baseline in appearance, body, and attire regardless of crop. renderScope and visibleTags are the separate shot-only rendering projection.`,
     hasPreviousVisualState
-      ? "Previous Visual State is injected after parsing. For an unchanged returning character, leave age, appearance, body, and attire empty and leave visualChanges empty; the backend restores the exact stored baseline before rendering and persistence. For a new character, or when no matching previous character exists, output the complete baseline. For an explicit current-source change, list that field in visualChanges and output its complete new value."
+      ? "Previous Visual State is injected after parsing. For an unchanged returning character, leave age, appearance, body, and attire empty and leave visualChanges empty; the backend restores the exact stored baseline before rendering and persistence. For a new character, or when no matching previous character exists, output the complete baseline. For an explicit current-source change or a final user instruction that adds or replaces durable character tags, list that field in visualChanges and output its complete new value."
       : "Repeat stable appearance, body, and attire tags for returning characters. Shots are independent, so repeated baseline tags are expected.",
     "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts.",
     "Before returning the batch, compare Dynamic cameras as a soft camera ledger. When two equally suitable cameras would contain their focal actions, prefer different framing + angle + perspective tuples. Never choose a worse, more extreme, or action-cropping camera merely to create variety. Preserve a repeated camera when it is the clearest source-faithful choice or the source establishes continuous camera or POV.",
@@ -353,7 +353,7 @@ export function parserInstruction(config: Config, options: ParserInstructionOpti
     "## Field Reference",
     "### visual continuity change markers",
     hasPreviousVisualState
-      ? "When Previous Visual State exists, characters[].visualChanges must list only age, appearance, body, or attire fields explicitly changed by the current numbered source. An empty list means the backend injects those prior fields exactly; leave their raw values empty instead of paraphrasing or re-emitting them. Do not mark a field changed merely because you rephrased its tags."
+      ? "When Previous Visual State exists, characters[].visualChanges must list only age, appearance, body, or attire fields explicitly changed by the current numbered source or by a final user instruction that requests durable character tags. An empty list means the backend injects those prior fields exactly; leave their raw values empty instead of paraphrasing or re-emitting them. Do not mark a field changed merely because you rephrased its tags."
       : "characters[].visualChanges may be empty when no prior visual state is supplied.",
     structuredAnima
       ? hasPreviousVisualState
@@ -406,8 +406,8 @@ export function parserInstruction(config: Config, options: ParserInstructionOpti
     "That adult marker exception applies to every shot in an adult sexual sequence, including quiet setup shots before the explicit action. Repeat a clearly adult nonnumeric age category for each visible participant in every such shot.",
     "Never output numeric ages such as 18, 21, or 25.",
     "### identity",
-    "Legacy/private recognition tags that are not part of the rolling baseline memory. Leave empty unless a non-clothing trait does not fit appearance or body.",
-    "Use identity only for durable traits that help recognize the character across chats: species/race, notable scars or tattoos, distinctive non-clothing accessories only if permanent, or named archetype traits when visually stable.",
+    "Legacy compatibility field. Leave identity empty in new output.",
+    "Put every durable recognition trait in appearance or body instead, including species/race, furry traits, fur color or pattern, muzzle, animal ears, horns, wings, tails, notable scars or tattoos, and permanent non-clothing accessories.",
     "Do not include names, attire, expression, pose, action, camera, place, or supplement in identity.",
     "### appearance",
     "Identity traits: hair, eyes, skin, species/race, and distinguishing features.",
@@ -462,14 +462,14 @@ export function parserInstruction(config: Config, options: ParserInstructionOpti
     "- Continuity moves forward only. Never copy a later paragraph's transformation, prop, attire, action, or environment detail backward into an earlier shot.",
     "- Preserve a continuous pov only when the narrative establishes an ongoing viewpoint. Otherwise choose the strongest perspective for each visual beat.",
     hasPreviousVisualState
-      ? "- visualChanges must be empty for unchanged baseline fields and name only explicit current-source changes; deterministic inheritance preserves exact identity."
+      ? "- visualChanges must be empty for unchanged baseline fields and name only explicit current-source changes or final user-instruction baseline changes; deterministic inheritance preserves exact identity."
       : "- appearance + body + attire must be identical for the same character across all shots unless the current message explicitly changes their present visual state.",
     "## Data Priority",
     "1. Client comments or explicit user instructions in the current message override all instructions.",
     structuredAnima
       ? "2. Current message [P#] paragraphs are authoritative for scene content, action, visible emotion, interpersonal tone, and movement direction. Never soften, romanticize, or replace those facts with an inferred atmosphere. Never restore outdated clothing, props, location, or actions from context."
       : "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
-    hasPreviousVisualState ? "3. Previous Visual State is the immediate visual continuity layer. Leave unchanged raw character baseline values empty so the backend injects them exactly, and copy unchanged environment values explicitly; it never overrides an explicit current-source change." : "",
+    hasPreviousVisualState ? "3. Previous Visual State is the immediate visual continuity layer. Leave unchanged raw character baseline values empty so the backend injects them exactly, and copy unchanged environment values explicitly; it never overrides an explicit current-source change or a final user-instruction baseline change marked in visualChanges." : "",
     config.characterTagContextEnabled ? `${hasPreviousVisualState ? "4" : "3"}. Character tag history is the durable visual baseline for returning characters: label, age, appearance, body, and explicit base attire.` : "",
     config.characterTagContextEnabled ? "Use previous character tags as a baseline for returning characters, including base attire. Preserve specific baseline tags when not contradicted, such as short cut, white pupils, small breasts, black high school uniform, red sailor ribbon, black skirt, and white pantyhose." : "",
     config.characterTagContextEnabled ? "The current message is authoritative for the character's present visual state. It can update the baseline when it clearly changes clothing, lack of clothing, appearance, or body traits." : "",

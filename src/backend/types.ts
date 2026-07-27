@@ -198,6 +198,11 @@ export type PreparedImageJob = {
 
 export type State = {
   characterAppearance: Record<string, string>;
+  /**
+   * Exact user-saved baselines. Automatic parser memory may create and update
+   * characterAppearance entries, but it must never replace these values.
+   */
+  manualCharacterAppearance?: Record<string, string>;
   generated: Record<string, unknown>;
   /** Compact lookup for records stored outside the continuity-state document. */
   generatedImageIndex?: Record<string, { key: string; index: number }>;

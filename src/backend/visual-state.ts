@@ -101,7 +101,8 @@ function visualCharacter(character: CharacterJson): PreviousVisualCharacter | nu
     name,
     label: cleanTagField(character.label),
     age: cleanTagField(character.age),
-    appearance: cleanTagField(character.appearance),
+    // Fold legacy identity into the rendered rolling appearance baseline.
+    appearance: cleanTagField(unique(csvParts(character.identity, character.appearance)).join(", ")),
     body: cleanTagField(character.body),
     attire: cleanTagField(character.attire),
     attireInferred: inferred(character.attireInferred)
