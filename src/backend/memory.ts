@@ -1,6 +1,6 @@
 import { normalizeCharacterName, normalizeReferenceTags } from "./prompt.js";
 import { normalizeScenePayload } from "./scenes.js";
-import type { CharacterJson, ParsedPayload, PreviousVisualCharacter, State } from "./types.js";
+import type { CharacterJson, ParsedPayload, State } from "./types.js";
 import { cleanArray, csvParts, unique } from "./utils.js";
 
 const VOLATILE_MEMORY_TERMS = [
@@ -29,16 +29,12 @@ export function sanitizeMemoryTags(tags: string): string {
 }
 
 function baselineCharacterTags(character: CharacterJson): string {
-  const attireInferred = character.attireInferred === true || String(character.attireInferred).toLowerCase() === "true";
   return sanitizeMemoryTags(unique(csvParts(
     character.label,
     character.age,
-    // Keep the legacy identity field as a compatibility input so species,
-    // fur, tails, scars, and similar durable traits cannot disappear.
-    character.identity,
     character.appearance,
     character.body,
-    attireInferred ? "" : character.attire
+    character.attire
   )).join(", "));
 }
 
@@ -75,13 +71,6 @@ export function updateCharacterMemory(state: State, payload: ParsedPayload): voi
   updateCache(state.characterAppearance, payload, state.manualCharacterAppearance);
 }
 
-function invalidatePreviousVisualCharacters(state: State, names: string[]): void {
-  if (!state.previousVisualState || names.length === 0) return;
-  const targets = new Set(names.map((name) => normalizeCharacterName(name).toLowerCase()).filter(Boolean));
-  state.previousVisualState.characters = cleanArray<PreviousVisualCharacter>(state.previousVisualState.characters)
-    .filter((character) => !targets.has(normalizeCharacterName(character.name).toLowerCase()));
-}
-
 export function upsertCharacterTag(state: State, oldName: unknown, nextName: unknown, nextTags: unknown): void {
   const previous = normalizeCharacterName(oldName);
   const name = normalizeCharacterName(nextName);
@@ -107,9 +96,6 @@ export function upsertCharacterTag(state: State, oldName: unknown, nextName: unk
   if (manualDestinationKey && manualDestinationKey !== name) delete manual[manualDestinationKey];
   manual[name] = tags;
   state.manualCharacterAppearance = manual;
-  // Otherwise the structured snapshot created before this edit would restore
-  // stale fields after parsing and make the successful save appear ineffective.
-  invalidatePreviousVisualCharacters(state, [previous, name]);
 }
 
 export function deleteCharacterTag(state: State, name: unknown): void {
@@ -122,5 +108,4 @@ export function deleteCharacterTag(state: State, name: unknown): void {
   if (state.manualCharacterAppearance && Object.keys(state.manualCharacterAppearance).length === 0) {
     delete state.manualCharacterAppearance;
   }
-  invalidatePreviousVisualCharacters(state, [target]);
 }

@@ -3,9 +3,8 @@ import type { ActivatedWorldInfoEntryDTO, WorldBookEntryDTO, WorldBookSourceDTO 
 import { EXTENSION_ID } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
 import { buildCharacterTagReference } from "./prompt.js";
-import type { ChatMessage, ParserContext, PreviousVisualState } from "./types.js";
+import type { ChatMessage, ParserContext } from "./types.js";
 import { asRecord, cleanString, compactBlock, unique } from "./utils.js";
-import { formatPreviousVisualState } from "./visual-state.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
@@ -343,8 +342,14 @@ export function formatRecentContext(messages: ChatMessage[], targetIndex: number
   // The sole prior assistant message is the greeting on the first post-greeting
   // turn. Include it even when Minimum context is zero so initial scene facts
   // are available without making later zero-context calls history-dependent.
-  const selected = includeCount > 0 ? previous.slice(-includeCount) : previous.length === 1 ? previous : [];
-  return compactBlock(selected.map((message) => `${message.role}: ${message.content}`).join("\n\n"), 8000);
+  const selected = (includeCount > 0 ? previous.slice(-includeCount) : previous.length === 1 ? previous : []).reverse();
+  if (selected.length === 0) return "";
+  return compactBlock([
+    "## Previous Character Messages",
+    "- Ordered from most recent to older.",
+    "- Use them only as supporting context. The current message remains the primary source for the current scene.",
+    ...selected.map((message, index) => `[History ${index + 1}]\n${message.content}`)
+  ].join("\n\n"), 8000);
 }
 
 function includeCountForAttempt(config: Config, attempt: number): number {
@@ -363,7 +368,7 @@ export async function buildParserContext(
   attempt: number,
   userId?: string,
   lorebookSnapshot?: LorebookContextSnapshot,
-  previousVisualState?: PreviousVisualState,
+  _previousVisualState?: unknown,
   preparedSources?: ParserContextSources
 ): Promise<ParserContext> {
   const blocks: string[] = [];
@@ -425,15 +430,9 @@ export async function buildParserContext(
   if (config.characterTagContextEnabled) {
     const characterReference = buildCharacterTagReference(cache);
     if (characterReference) {
-      pushBlock(`${characterReference}\nUse these as a baseline for returning characters (including their base attire). The current message always wins over this reference.`);
+      pushBlock(characterReference);
     }
     diagnostics.cacheCharacters = Object.keys(cache).length;
-  }
-
-  if (config.previousVisualStateEnabled && previousVisualState) {
-    const visualStateReference = formatPreviousVisualState(previousVisualState);
-    pushBlock(visualStateReference);
-    diagnostics.previousVisualState = Boolean(visualStateReference);
   }
 
   if (config.userInstructionsEnabled) overrides.unshift(config.customParserInstructions);

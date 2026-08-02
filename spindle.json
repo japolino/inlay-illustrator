@@ -1,11 +1,11 @@
 {
-  "version": "0.6.1",
+  "version": "0.7.0",
   "name": "Inlay Illustrator",
   "identifier": "inlay_illustrator",
   "author": "japolino",
   "github": "https://github.com/japolino/inlay-illustrator",
   "homepage": "https://github.com/japolino/inlay-illustrator",
-  "description": "Persistent character image generation with adaptive Creative, Static, or Dynamic perspectives, inline prompt details, and Anima/ComfyUI output.",
+  "description": "Faithful Inlay Image v3.5 parser port with Illustration and Asset modes, persistent character tags, quotes, lightbox details, and rerolls.",
   "permissions": ["generation", "interceptor", "image_gen", "chat_mutation", "images", "chats", "characters", "personas", "world_books"],
   "entry_backend": "dist/backend.js",
   "entry_frontend": "dist/frontend.js",

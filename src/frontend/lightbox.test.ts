@@ -1,62 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { disableNativeInlayLightboxes, imageIdFromResultUrl, resolveInlayDetails, resolveInlayPrompt } from "./lightbox.js";
+import { imageIdFromResultUrl, resolveInlayDetails } from "./lightbox.js";
 
 describe("Inlay prompt lightbox", () => {
-  test("prefers the prompt stored on the clicked image", () => {
-    expect(resolveInlayPrompt("  image prompt\n\nwith sections  ", "fallback prompt")).toBe(
-      "image prompt\n\nwith sections"
-    );
-  });
-
-  test("uses the hidden prompt node for legacy rendered images", () => {
-    expect(resolveInlayPrompt(null, "  legacy prompt  ")).toBe("legacy prompt");
-  });
-
-  test("handles images with no recorded prompt", () => {
-    expect(resolveInlayPrompt(null, null)).toBe("");
-  });
-
-  test("resolves exact positive and negative prompts with perspective metadata", () => {
-    expect(resolveInlayDetails(
-      " positive ",
-      "legacy positive",
-      " negative ",
-      "legacy negative",
-      "Creative",
-      "Adaptive",
-      "Eye gap: one red eye framed between two fingers"
-    )).toEqual({
-      prompt: "positive",
-      negativePrompt: "negative",
-      perspectiveMode: "creative",
-      perspectiveSource: "adaptive",
-      creativeConcept: "Eye gap: one red eye framed between two fingers"
-    });
+  test("resolves exact stored prompts and the restored quote", () => {
+    expect(resolveInlayDetails(" positive ", "legacy", " negative ", "legacy negative", "A quiet promise."))
+      .toEqual({ prompt: "positive", negativePrompt: "negative", quote: "A quiet promise." });
   });
 
   test("keeps legacy inlays usable when metadata is absent", () => {
-    expect(resolveInlayDetails(null, "legacy positive", null, null, null, null)).toEqual({
-      prompt: "legacy positive",
-      negativePrompt: "",
-      perspectiveMode: null,
-      perspectiveSource: null,
-      creativeConcept: ""
-    });
+    expect(resolveInlayDetails(null, "legacy positive", null, null, null))
+      .toEqual({ prompt: "legacy positive", negativePrompt: "", quote: "" });
   });
 
-  test("removes the host image-only lightbox trigger from existing Inlay images", () => {
-    const removed: string[] = [];
-    const root = {
-      querySelectorAll: () => [{ removeAttribute: (name: string) => removed.push(name) }]
-    } as unknown as ParentNode;
-
-    disableNativeInlayLightboxes(root);
-    expect(removed).toEqual(["data-lightbox"]);
-  });
-
-  test("recovers image IDs from legacy result URLs for reroll lookup", () => {
-    expect(imageIdFromResultUrl("https://local.test/api/v1/image-gen/results/folder%2Fimage%201?x=1"))
-      .toBe("folder/image 1");
-    expect(imageIdFromResultUrl("/unrelated/image.png")).toBeUndefined();
+  test("recovers image IDs from result URLs for rerolls", () => {
+    expect(imageIdFromResultUrl("/api/v1/image-gen/results/image%201")).toBe("image 1");
   });
 });

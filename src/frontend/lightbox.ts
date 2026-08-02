@@ -11,9 +11,7 @@ export function disableNativeInlayLightboxes(root: ParentNode): void {
 export type InlayGenerationDetails = {
   prompt: string;
   negativePrompt: string;
-  perspectiveMode: "creative" | "static" | "dynamic" | null;
-  perspectiveSource: "adaptive" | "manual" | null;
-  creativeConcept: string;
+  quote: string;
 };
 
 export type InlayActionTarget = {
@@ -37,20 +35,12 @@ export function resolveInlayDetails(
   fallbackPrompt: string | null,
   attributeNegative: string | null,
   fallbackNegative: string | null,
-  perspectiveMode: string | null,
-  perspectiveSource: string | null,
-  creativeConcept: string | null = null
+  quote: string | null = null
 ): InlayGenerationDetails {
-  const normalizedMode = perspectiveMode?.trim().toLowerCase();
-  const normalizedSource = perspectiveSource?.trim().toLowerCase();
   return {
     prompt: resolveInlayPrompt(attributePrompt, fallbackPrompt),
     negativePrompt: resolveInlayPrompt(attributeNegative, fallbackNegative),
-    perspectiveMode: normalizedMode === "creative" || normalizedMode === "static" || normalizedMode === "dynamic"
-      ? normalizedMode
-      : null,
-    perspectiveSource: normalizedSource === "adaptive" || normalizedSource === "manual" ? normalizedSource : null,
-    creativeConcept: (creativeConcept || "").trim()
+    quote: (quote || "").trim()
   };
 }
 
@@ -70,9 +60,7 @@ function detailsForImage(image: HTMLImageElement): InlayGenerationDetails {
     fallback,
     image.getAttribute("data-inlay-illustrator-negative-prompt"),
     fallbackNegative,
-    image.getAttribute("data-inlay-illustrator-perspective"),
-    image.getAttribute("data-inlay-illustrator-perspective-source"),
-    image.getAttribute("data-inlay-illustrator-concept")
+    image.getAttribute("data-inlay-illustrator-quote")
   );
 }
 
@@ -130,29 +118,21 @@ function appendLightboxContent(
   preview.src = image.currentSrc || image.src;
   preview.alt = image.alt || "Generated illustration";
 
+  const visual = document.createElement("div");
+  visual.className = "inlay-lightbox-visual";
+  visual.append(preview);
+  if (details.quote) {
+    const quote = document.createElement("blockquote");
+    quote.className = "inlay-lightbox-quote";
+    quote.textContent = details.quote;
+    visual.append(quote);
+  }
+
   const panel = document.createElement("section");
   panel.className = "inlay-lightbox-prompt-panel";
   const heading = document.createElement("h3");
   heading.textContent = "Generation details";
   panel.append(heading);
-  if (details.perspectiveMode || details.perspectiveSource) {
-    const metadata = document.createElement("div");
-    metadata.className = "inlay-lightbox-meta";
-    if (details.perspectiveMode) {
-      const mode = document.createElement("span");
-      mode.textContent = `Perspective: ${details.perspectiveMode[0].toUpperCase()}${details.perspectiveMode.slice(1)}`;
-      metadata.append(mode);
-    }
-    if (details.perspectiveSource) {
-      const source = document.createElement("span");
-      source.textContent = `Selection: ${details.perspectiveSource === "adaptive" ? "Adaptive" : "Manual"}`;
-      metadata.append(source);
-    }
-    panel.append(metadata);
-  }
-  if (details.creativeConcept) {
-    panel.append(promptBlock("Creative concept", details.creativeConcept, ""));
-  }
   panel.append(
     promptBlock("Positive prompt", details.prompt, "No prompt was recorded for this image."),
     promptBlock("Negative prompt", details.negativePrompt, "No negative prompt was recorded for this image.")
@@ -174,7 +154,7 @@ function appendLightboxContent(
   actions.append(reroll, sidecar, status);
   panel.append(actions);
 
-  layout.append(preview, panel);
+  layout.append(visual, panel);
   root.replaceChildren(layout);
 }
 
@@ -195,9 +175,7 @@ export function installInlayLightbox(ctx: SpindleFrontendContext): () => void {
           null,
           typeof result.negativePrompt === "string" ? result.negativePrompt : null,
           null,
-          typeof result.perspectiveMode === "string" ? result.perspectiveMode : null,
-          typeof result.perspectiveSource === "string" ? result.perspectiveSource : null,
-          typeof result.creativeConcept === "string" ? result.creativeConcept : null
+          typeof result.quote === "string" ? result.quote : null
         ));
       }
       activeDetailsRequest = null;

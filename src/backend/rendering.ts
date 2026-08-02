@@ -1,8 +1,7 @@
-import { DEFAULT_CONFIG, type Config, type PerspectiveMode } from "../shared/config.js";
+import { DEFAULT_CONFIG, type Config } from "../shared/config.js";
 import { MARKER } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
 import { paragraphCount } from "./paragraphs.js";
-import type { CreativeConcept } from "./types.js";
 import { clampInt } from "./utils.js";
 
 type InlayRecord = {
@@ -13,9 +12,7 @@ type InlayRecord = {
   imageUrls: string[];
   prompts: string[];
   negativePrompts?: string[];
-  perspectiveModes?: PerspectiveMode[];
-  perspectiveSources?: Array<"adaptive" | "manual">;
-  creativeConcepts?: Array<CreativeConcept | null>;
+  quotes?: string[];
   paragraphs: number[];
 };
 
@@ -36,9 +33,7 @@ function renderInlayBlock(
   url: string,
   _prompt: string,
   _negativePrompt: string,
-  _perspectiveMode: PerspectiveMode | undefined,
-  _perspectiveSource: "adaptive" | "manual" | undefined,
-  _creativeConcept: CreativeConcept | null | undefined,
+  quote: string,
   imageId: string,
   chatId: string,
   messageId: string,
@@ -47,9 +42,14 @@ function renderInlayBlock(
   config: Config
 ): string {
   const label = `Inlay ${index + 1}`;
-  const width = clampInt(config.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth);
+  const configuredWidth = config.mode === "asset" ? config.assetImageWidth : config.inlayImageWidth;
+  const fallbackWidth = config.mode === "asset" ? DEFAULT_CONFIG.assetImageWidth : DEFAULT_CONFIG.inlayImageWidth;
+  const width = clampInt(configuredWidth, 120, 2400, fallbackWidth);
   const maxHeight = clampInt(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
-  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
+  const quoteHtml = quote.trim()
+    ? `<blockquote class="inlay-illustrator-inline-quote" style="width:min(100%, ${width}px);margin:8px auto 0;padding:8px 12px;text-align:center;font-style:italic;opacity:.9;">${htmlAttr(quote.trim())}</blockquote>`
+    : "";
+  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-quote="${htmlAttr(quote)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/>${quoteHtml}</div>`;
 }
 
 export function renderInlaidMessage(original: string, record: InlayRecord, config: Config): string {
@@ -63,9 +63,7 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
       url,
       record.prompts[index] || "",
       record.negativePrompts?.[index] || "",
-      record.perspectiveModes?.[index],
-      record.perspectiveSources?.[index],
-      record.creativeConcepts?.[index],
+      record.quotes?.[index] || "",
       record.imageIds?.[index] || "",
       record.chatId || "",
       record.messageId || "",

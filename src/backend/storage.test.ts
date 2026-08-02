@@ -321,8 +321,6 @@ describe("compact generated-record storage", () => {
       swipeId: 0,
       prompts: ["positive", "positive two"],
       negativePrompts: ["negative", "negative two"],
-      perspectiveModes: ["dynamic", "static"],
-      perspectiveSources: ["manual", "adaptive"],
       imageParameters: [structuredClone(parameters), structuredClone(parameters)],
       paragraphs: [1, 2],
       imageIds: ["image-1", "image-2"],

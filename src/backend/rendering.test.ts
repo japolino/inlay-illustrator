@@ -90,9 +90,6 @@ describe("inlay rendering", () => {
         imageUrls: ["/multiline.png"],
         prompts: ["quality tags,\n\n1girl,\n\nThe girl turns toward the viewer."],
         negativePrompts: ["lowres, bad anatomy"],
-        perspectiveModes: ["creative"],
-        perspectiveSources: ["adaptive"],
-        creativeConcepts: [creativeConcept],
         paragraphs: [1]
       },
       DEFAULT_CONFIG
@@ -114,6 +111,19 @@ describe("inlay rendering", () => {
     expect(block).toContain('data-inlay-illustrator-image-index="0"');
     expect(block).not.toContain('<pre class="inlay-illustrator-prompt"');
     expect(block).not.toContain('<pre class="inlay-illustrator-negative-prompt"');
+  });
+
+  test("renders an escaped quote below the image and uses the Asset Mode width", () => {
+    const rendered = renderInlaidMessage("Paragraph.", {
+      imageUrls: ["/asset.png"],
+      prompts: ["1girl"],
+      quotes: ['"Stay <close>."'],
+      paragraphs: [1]
+    }, { ...DEFAULT_CONFIG, mode: "asset", assetImageWidth: 512 });
+
+    expect(rendered).toContain("inlay-illustrator-inline-quote");
+    expect(rendered).toContain("&quot;Stay &lt;close&gt;.&quot;");
+    expect(rendered).toContain("width:min(100%, 512px)");
   });
 
   test("encodes provider image IDs for the Lumiverse result route", () => {

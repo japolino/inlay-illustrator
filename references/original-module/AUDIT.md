@@ -1,19 +1,30 @@
 # Original module behavior audit
 
-These files are retained only as historical implementation references. Runtime code does not read or bundle this directory.
+The runtime imports the two original instruction entries directly from the
+tracked `card.json`. Fidelity tests compare the exported templates against those
+entries byte for byte so wording changes cannot be introduced accidentally.
 
-| Concern | Original module | Behavior before this change | Adopted resolution |
-| --- | --- | --- | --- |
-| Illustration count | Defaults to 3–5 shots. | Defaults to 1–3 shots. | Restore 3–5 for new or missing configuration while retaining explicit saved values. |
-| Preprocessing | Selects 3–5 paragraphs with the most significant visual changes or actions and asks for a camera angle. | Requires every paragraph marker, so it cannot act as a visual editor. | Select a valid min/max-sized unique subset of the strongest beats and require a camera/composition note; fall back to raw numbered paragraphs on invalid output. |
-| Parser message roles | Stable core and tagging prompts are system messages; the current source is a user message; user overrides follow it. | The schema, rules, context, and current source are combined into one large user message. | Put stable schema/tagging guidance in a system message, continuity references in a separate system message, current numbered source in a concise user request, and overrides last. |
-| Same-paragraph shots | Later results replace earlier results when mapped by paragraph. | The first shot for a paragraph wins, discarding later alternatives. | Keep distinct same-paragraph shots in model order and collapse only exact visual duplicates. |
-| Batch choice | Preprocessing focuses on significant visual changes/actions. | First-per-paragraph deduplication followed by paragraph sorting tends to favor early paragraphs. | Cap model-prioritized distinct candidates first, then sort the chosen set into paragraph order for rendering. |
-| Continuity | Repeats stable appearance and ongoing scene facts; continuous POV is tied to an established viewpoint. | Continuity wording can encourage camera repetition and POV persistence. | Preserve appearance, attire, location, and persistent actions while explicitly varying cinematography; preserve POV only when the narrative establishes it. |
+| Concern | Original module | Adopted resolution |
+| --- | --- | --- |
+| Illustration count | Defaults to 3–5 shots. | Restore 3–5 for new or missing configuration while retaining explicit saved values. |
+| Preprocessing | Selects 3–5 paragraphs with significant visual changes/actions. | Use the original preprocessing instruction word for word; validate a bounded unique subset and fall back to raw numbered paragraphs on invalid output. |
+| Parser roles | Core and tagging prompts are system messages; current source is a user message; client overrides follow it. | Restore that ordering while retaining connection, retry, timeout, and structured-output compatibility infrastructure. |
+| Same-paragraph shots | A later result replaces an earlier result mapped to the same paragraph. | Restore last-result-wins paragraph mapping. |
+| Batch choice | One mapped result per paragraph, sorted by paragraph and capped to the configured maximum. | Restore deterministic paragraph mapping and sorting. |
+| Asset Mode | Exactly one visible character, viewer-facing portrait/cowboy framing, simple white background. | Restore the original instruction branch and matching prompt projection. |
+| Continuity | Stable appearance tag reference plus recent narrative context. | Keep durable character tags and ordinary context; remove the advanced structured visual snapshot. |
 
 ## Deliberately excluded runtime behavior
 
-Artist presets, response-encoding or placeholder-code bypasses, uncensor/prefill content, and provider-specific sampling behavior in the archived card are not adopted. Prompt presets, parser parameters, image providers, cleanup, asset mode, and generation scheduling remain controlled by the current extension implementation.
+The archived assistant prefill is not adopted. It fabricated an approval/tool
+exchange for a particular provider and was not part of the image parser contract.
+Provider-specific sampling presets and placeholder-code bypasses are likewise
+not adopted. The runtime resolves the original plaintext instruction branch;
+connections, models, and sampling parameters remain explicit extension settings.
+
+Prompt presets, the prompt lightbox, quotes, fresh-seed rerolls, one-paragraph
+sidecar reruns, storage compaction, runtime locking, and context-source controls
+are retained as quality-of-life infrastructure around the v3.5 behavior.
 
 ## Reference artifacts
 

@@ -16,9 +16,13 @@ export function renderPromptSection({ ui, config, actions, rerender }: SectionCo
     { value: "nai", label: "NovelAI" },
     { value: "comfyui", label: "ComfyUI" }
   ]);
-  ui.addSwitch(section, "originalReference", "Source reference");
-  ui.addText(section, "originalCreationName", "Creation name");
+  ui.addSwitch(section, "originalReference", "Source reference", "Include the original creation reference branch from v3.5.", rerender);
+  if (config.originalReference) ui.addText(section, "originalCreationName", "Creation name");
   ui.addSwitch(section, "supplement", config.promptStyle === "anima" ? "Natural/shared detail" : "Natural supplement");
+  ui.addSwitch(section, "quotesEnabled", "Image captions", "Ask the parser for one short source-relevant line per image.", rerender);
+  if (config.quotesEnabled) {
+    ui.addTextarea(section, "quoteInstructions", "Caption instructions", "Optional instructions that replace the original default quote guidance.");
+  }
   ui.addSubtitle(section, "Prompt presets");
 
   const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;

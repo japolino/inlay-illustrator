@@ -1,113 +1,33 @@
-import type { PerspectiveMode } from "../shared/config.js";
-
-export type CharacterCompositionJson = {
-  position?: unknown;
-  pose?: unknown;
-  actions?: unknown;
-  gaze?: unknown;
-};
-
-export type SharedCompositionJson = {
-  interaction?: unknown;
-  spatialRelation?: unknown;
-};
-
-export type CameraJson = {
-  framing?: unknown;
-  angle?: unknown;
-  perspective?: unknown;
-  focus?: unknown;
-};
-
-/**
- * Shot-only rendering priority. This never becomes character or environment
- * memory; it selects the small subset of factual scene data that should
- * dominate a Dynamic image.
- */
-export type ShotPlanJson = {
-  primaryAction?: unknown;
-  secondaryCue?: unknown;
-  staging?: unknown;
-};
-
 export type CharacterJson = {
   name?: unknown;
   label?: unknown;
   age?: unknown;
-  identity?: unknown;
   appearance?: unknown;
   body?: unknown;
   attire?: unknown;
-  /** True when attire was plausibly inferred for this scene instead of sourced from durable character facts. */
-  attireInferred?: unknown;
-  /** Stable visual fields explicitly changed by the current numbered source. */
-  visualChanges?: unknown;
   expression?: unknown;
   action?: unknown;
-  composition?: CharacterCompositionJson | string;
-  /** Shot-only framing note. Never persisted into character memory. */
-  renderScope?: unknown;
-  /** Shot-only rendering projection containing only traits actually visible in frame. */
-  visibleTags?: unknown;
-};
-
-export type EnvironmentJson = {
-  location?: unknown;
-  timeWeather?: unknown;
-  lightingMood?: unknown;
-  backgroundElements?: unknown;
+  negative?: unknown;
 };
 
 export type ShotJson = {
   paragraph?: unknown;
-  perspectiveMode?: unknown;
-  camera?: CameraJson | string;
-  shotPlan?: ShotPlanJson | string;
+  camera?: unknown;
   situation?: unknown;
   action?: unknown;
   characters?: CharacterJson[];
-  sharedComposition?: SharedCompositionJson | string;
   supplement?: unknown;
   negative?: unknown;
+  quote?: unknown;
 };
 
 export type SceneJson = ShotJson & {
   place?: unknown;
-  environment?: EnvironmentJson;
-  /** Environment fields explicitly changed by the current numbered source. */
-  environmentChanges?: unknown;
   shots?: ShotJson[];
-};
-
-/**
- * Non-rendered continuity snapshot after the final numbered paragraph. This
- * lets narrative state advance even when the final paragraph is not selected
- * for illustration.
- */
-export type TerminalVisualStateJson = {
-  paragraph?: unknown;
-  environment?: EnvironmentJson;
-  place?: unknown;
-  environmentChanges?: unknown;
-  characters?: CharacterJson[];
 };
 
 export type ParsedPayload = {
   scenes?: SceneJson[];
-  terminalState?: TerminalVisualStateJson;
-};
-
-export type CreativeConcept = {
-  id: string;
-  paragraph: number;
-  /** Identity-safe focal category. Missing only on legacy persisted concepts. */
-  subjectType?: "object" | "environment" | "shadow" | "silhouette" | "reflection" | "fragment" | "spatial";
-  anchor: string;
-  concept: string;
-  renderScope: string;
-  camera: string;
-  visibleCues: string[];
-  score: number;
 };
 
 export type AssembledPrompt = {
@@ -124,10 +44,7 @@ export type PromptEntry = {
   negative: string;
   paragraph: number;
   parserParagraph: number;
-  perspectiveMode: PerspectiveMode;
-  perspectiveSource: "adaptive" | "manual";
-  creativeConcept?: CreativeConcept;
-  creativeCandidates?: CreativeConcept[];
+  quote: string;
 };
 
 export type PreparedParagraph = { parserIndex: number; originalIndex: number; text: string };
@@ -189,10 +106,7 @@ export type PreparedImageJob = {
   promptFormat?: NonNullable<AssembledPrompt["format"]>;
   paragraph: number;
   parserParagraph?: number;
-  perspectiveMode?: PerspectiveMode;
-  perspectiveSource?: "adaptive" | "manual";
-  creativeConcept?: CreativeConcept;
-  creativeCandidates?: CreativeConcept[];
+  quote?: string;
   parameters: Record<string, unknown>;
 };
 
@@ -206,7 +120,8 @@ export type State = {
   generated: Record<string, unknown>;
   /** Compact lookup for records stored outside the continuity-state document. */
   generatedImageIndex?: Record<string, { key: string; index: number }>;
-  previousVisualState?: PreviousVisualState;
+  /** Ignored legacy state retained only until the next state write. */
+  previousVisualState?: unknown;
 };
 
 export type GeneratedRecordReference = {
@@ -219,28 +134,6 @@ export type GeneratedRecordReference = {
   imageIds: string[];
   imageUrls: string[];
   createdAt: string;
-};
-
-export type PreviousVisualCharacter = {
-  name: string;
-  label: string;
-  age: string;
-  appearance: string;
-  body: string;
-  attire: string;
-  attireInferred: boolean;
-};
-
-export type PreviousVisualState = {
-  characters: PreviousVisualCharacter[];
-  environment: {
-    location: string;
-    timeWeather: string;
-    lightingMood: string[];
-    backgroundElements: string[];
-  };
-  place: string;
-  updatedAt: string;
 };
 
 export type ParserGenerationRequest = {
@@ -261,8 +154,7 @@ export type GeneratedRecord = {
   swipeId: number;
   prompts: string[];
   negativePrompts: string[];
-  perspectiveModes: PerspectiveMode[];
-  perspectiveSources: Array<"adaptive" | "manual">;
+  quotes?: string[];
   /** Exact provider parameters used per image, retained for reproducible rerolls. */
   imageParameters?: Array<Record<string, unknown>>;
   /** Generated prompt layer without user-selectable prefixes or suffixes. */
@@ -270,12 +162,6 @@ export type GeneratedRecord = {
   /** Parser-provided negative layer without user-selectable preset/custom negatives. */
   shotNegatives?: string[];
   promptFormats?: Array<NonNullable<AssembledPrompt["format"]>>;
-  /** Selected Creative concept per image, or null when the image did not use Creative. */
-  creativeConcepts?: Array<CreativeConcept | null>;
-  /** Candidate slate retained per image for conceptually varied sidecar reruns. */
-  creativeConceptCandidates?: CreativeConcept[][];
-  /** IDs of Creative concepts already used for each image slot. */
-  creativeConceptHistory?: string[][];
   paragraphs: number[];
   imageIds: string[];
   imageUrls: string[];

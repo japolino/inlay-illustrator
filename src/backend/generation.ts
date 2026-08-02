@@ -1,4 +1,4 @@
-import type { Config, PerspectiveMode } from "../shared/config.js";
+import type { Config } from "../shared/config.js";
 import {
   buildLorebookContextSnapshot,
   buildParserContext,
@@ -6,27 +6,17 @@ import {
   loadParserContextSources,
   type LorebookContextSnapshot
 } from "./context.js";
-import {
-  chooseCreativeConcepts,
-  creativeConceptConstraint,
-  hasUnusedCreativeConcepts,
-  rebaseCreativeConcepts
-} from "./creative.js";
 import { buildImageParameters, prepareAndDispatchImageJobs, rerollImageParameters, resolveImageConnection } from "./images.js";
 import { logStage } from "./logging.js";
 import { updateCharacterMemory } from "./memory.js";
 import { ignoredTagNames, paragraphCount, prepareParagraphs } from "./paragraphs.js";
 import {
   continuityReference,
-  formatTargetParagraphs,
-  generateCreativeConcepts,
   parsePayloadWithRepair,
   parserInstruction,
   parserMessages,
   parserUserRequest,
   preprocessTargetParagraphs,
-  repairDynamicCameraDiversity,
-  routedTargetSource,
   resolveParserConnection
 } from "./parser.js";
 import { renderNegativeWithCurrentSelection, renderPrompt, renderPromptWithCurrentAffixes } from "./prompt.js";
@@ -45,18 +35,15 @@ import { tryAcquireRuntimeLock } from "./runtime-lock.js";
 import type {
   CharacterJson,
   ChatMessage,
-  CreativeConcept,
   GeneratedRecord,
   ImageConnection,
   ParsedPayload,
   PreparedImageJob,
   PreparedParagraph,
   PromptEntry,
-  PreviousVisualState,
   State
 } from "./types.js";
 import { cleanArray, cleanString, keysOf } from "./utils.js";
-import { applyPreviousVisualState, buildPreviousVisualState } from "./visual-state.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
@@ -66,15 +53,11 @@ type PreparedImageStage = { jobs: PreparedImageJob[]; results: ImageGenerationRe
 type ImageAssets = {
   prompts: string[];
   negativePrompts: string[];
-  perspectiveModes: PerspectiveMode[];
-  perspectiveSources: Array<"adaptive" | "manual">;
+  quotes: string[];
   imageParameters: Array<Record<string, unknown>>;
   corePrompts: string[];
   shotNegatives: string[];
   promptFormats: Array<"legacy" | "ordered">;
-  creativeConcepts: Array<CreativeConcept | null>;
-  creativeConceptCandidates: CreativeConcept[][];
-  creativeConceptHistory: string[][];
   paragraphs: number[];
   imageIds: string[];
   imageUrls: string[];
@@ -87,8 +70,6 @@ export type ParseStageInput = {
   paragraphs: PreparedParagraph[];
   state: State;
   config: Config;
-  creativeCandidates?: CreativeConcept[];
-  usedCreativeConceptIds?: string[];
   userId?: string;
 };
 
@@ -100,7 +81,6 @@ type PersistStageInput = {
   target: ChatMessage;
   parsed: ParsedPayload;
   assets: ImageAssets;
-  visualState: PreviousVisualState | null;
   config: Config;
   userId?: string;
 };
@@ -117,9 +97,7 @@ export type StoredImageActionRequest = {
 export type StoredImageDetails = {
   prompt: string;
   negativePrompt: string;
-  perspectiveMode: PerspectiveMode | null;
-  perspectiveSource: "adaptive" | "manual" | null;
-  creativeConcept: string;
+  quote: string;
 };
 
 type LocatedGeneratedImage = { key: string; record: GeneratedRecord; index: number };
@@ -203,13 +181,10 @@ export async function getStoredImageDetails(
 ): Promise<StoredImageDetails> {
   const state = await getState(request.chatId, userId);
   const located = await locateStoredGeneratedImage(state, request, userId, false);
-  const concept = located.record.creativeConcepts?.[located.index];
   return {
     prompt: located.record.prompts[located.index] || "",
     negativePrompt: located.record.negativePrompts?.[located.index] || "",
-    perspectiveMode: located.record.perspectiveModes?.[located.index] || null,
-    perspectiveSource: located.record.perspectiveSources?.[located.index] || null,
-    creativeConcept: concept ? `${concept.anchor}: ${concept.concept}` : ""
+    quote: located.record.quotes?.[located.index] || ""
   };
 }
 
@@ -224,7 +199,7 @@ export function compactLorebookNeedsFullRetry(payload: ParsedPayload, snapshot: 
   if (!snapshot.compacted || !snapshot.hasCharacterVisualReference) return false;
   const characters = normalizeScenePayload(payload).flatMap(({ shot }) => cleanArray<CharacterJson>(shot.characters));
   if (characters.length === 0) return false;
-  return !characters.some((character) => [character.identity, character.appearance, character.body, character.attire]
+  return !characters.some((character) => [character.appearance, character.body, character.attire]
     .some((value) => cleanString(value)));
 }
 
@@ -246,186 +221,75 @@ async function waitForParserRetry(attempt: number): Promise<void> {
 }
 
 export async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSelection> {
-  const { chatId, messageId, messages, paragraphs, state, config, userId } = input;
-  const targetIndex = Math.max(0, messages.findIndex((message) => message.id === messageId));
-  let parsed: ParsedPayload | null = null;
-  let selected: PromptEntry[] = [];
-  let lastParserError: unknown = null;
-  let conceptCandidates = [...(input.creativeCandidates || [])];
-  let conceptSelections: Map<number, CreativeConcept> | null = null;
-  let ideationAttempted = false;
-  let creativeTargetSource: string | null = null;
-  const usedConceptIds = new Set(input.usedCreativeConceptIds || []);
-  const manualCreative = !config.adaptiveMode && config.perspectiveMode === "creative";
-  const creativePipeline = manualCreative || config.adaptiveMode;
-  const [parserConnection, lorebookSnapshot, contextSources] = await Promise.all([
-    resolveParserConnection(config, userId),
-    buildLorebookContextSnapshot(
-      chatId,
-      paragraphs.map((paragraph) => paragraph.text).join("\n\n"),
-      config,
-      userId
-    ),
-    loadParserContextSources(chatId, config, userId)
-  ]);
-
-  for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
-    try {
-      const context = await buildParserContext(
-        chatId,
-        messages,
-        targetIndex,
-        state.characterAppearance,
-        config,
-        attempt,
-        userId,
-        lorebookSnapshot,
-        config.previousVisualStateEnabled ? state.previousVisualState : undefined,
-        contextSources
-      );
-      if (manualCreative && conceptSelections === null) {
-        if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
-          const previousConcepts = conceptCandidates
-            .filter((concept) => usedConceptIds.has(concept.id))
-            .map((concept) => concept.concept);
-          conceptCandidates = await generateCreativeConcepts(
-            parserConnection,
-            config,
-            paragraphs,
-            formatTargetParagraphs(paragraphs),
-            context,
-            previousConcepts,
-            userId
-          );
-          ideationAttempted = true;
+  {
+    const { chatId, messageId, messages, paragraphs, state, config, userId } = input;
+    const targetIndex = Math.max(0, messages.findIndex((message) => message.id === messageId));
+    const [parserConnection, lorebookSnapshot, contextSources] = await Promise.all([
+      resolveParserConnection(config, userId),
+      buildLorebookContextSnapshot(chatId, paragraphs.map((paragraph) => paragraph.text).join("\n\n"), config, userId),
+      loadParserContextSources(chatId, config, userId)
+    ]);
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
+      try {
+        const context = await buildParserContext(
+          chatId,
+          messages,
+          targetIndex,
+          state.characterAppearance,
+          config,
+          attempt,
+          userId,
+          lorebookSnapshot,
+          undefined,
+          contextSources
+        );
+        const targetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
+        const instruction = parserInstruction(config);
+        const referenceContext = continuityReference(context.systemContext, context.recentContext);
+        const userRequest = parserUserRequest(targetSource, config);
+        logStage(config, "parser_prompt_built", {
+          attempt,
+          instructionLength: instruction.length,
+          systemContextLength: context.systemContext.length,
+          recentContextLength: context.recentContext.length,
+          overrideLength: context.override.length,
+          parserParagraphs: paragraphs.length,
+          cacheCharacters: Object.keys(state.characterAppearance).length,
+          promptStyle: config.promptStyle,
+          promptSyntax: config.promptSyntax,
+          mode: config.mode,
+          maxCharacters: config.mode === "asset" ? 1 : config.maxCharacters,
+          preprocessingEnabled: config.preprocessingEnabled,
+          contextDiagnostics: context.diagnostics
+        });
+        const parsed = await parsePayloadWithRepair(
+          parserConnection,
+          config,
+          parserMessages(instruction, referenceContext, userRequest, context.override),
+          userId
+        );
+        const selected = selectPromptEntries(parsed, paragraphs, config);
+        if (selected.length === 0) throw new Error("No usable prompts were parsed.");
+        if (attempt === 0 && config.parserRetries > 0 && compactLorebookNeedsFullRetry(parsed, lorebookSnapshot)) {
+          throw new Error("Compact lorebook context did not produce durable character tags; retrying with full lorebook context.");
         }
-        conceptSelections = chooseCreativeConcepts(conceptCandidates, usedConceptIds);
-        if (conceptSelections.size === 0 && conceptCandidates.length > 0) {
-          conceptSelections = chooseCreativeConcepts(conceptCandidates);
-        }
+        return { parsed, selected };
+      } catch (error) {
+        lastError = error;
+        const classification = retryClassification(error);
+        logStage(config, "parser_attempt_failed", {
+          attempt,
+          retries: config.parserRetries,
+          classification,
+          error: error instanceof Error ? error.message : String(error)
+        }, attempt >= config.parserRetries ? "error" : "warn");
+        if (attempt >= config.parserRetries || classification === "terminal") throw error;
+        if (classification === "transient") await waitForParserRetry(attempt);
       }
-      if (creativePipeline && creativeTargetSource === null) {
-        const candidateParagraphs = new Set(conceptCandidates.map((concept) => concept.paragraph));
-        if (manualCreative && config.preprocessingEnabled && candidateParagraphs.size > 0) {
-          const selectedParagraphs = [...candidateParagraphs].sort((left, right) => left - right);
-          const notes = selectedParagraphs.map((paragraph) => {
-            const concept = conceptSelections?.get(paragraph)
-              || conceptCandidates.find((candidate) => candidate.paragraph === paragraph);
-            return `[P${paragraph}]: Visual thesis: ${concept?.concept || concept?.anchor || "selected Creative focal beat"}; Camera intent: ${concept?.camera || "identity-safe Creative framing"}`;
-          });
-          creativeTargetSource = routedTargetSource(formatTargetParagraphs(paragraphs), {
-            summary: notes.join("\n"),
-            selectedParagraphs,
-            cameraNotes: selectedParagraphs.map((paragraph) =>
-              conceptSelections?.get(paragraph)?.camera
-              || conceptCandidates.find((candidate) => candidate.paragraph === paragraph)?.camera
-              || "identity-safe Creative framing"
-            )
-          });
-          logStage(config, "creative_preprocessing_done", {
-            candidateCount: conceptCandidates.length,
-            selectedParagraphs
-          });
-        } else {
-          creativeTargetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
-        }
-      }
-      const targetSource = creativePipeline
-        ? creativeTargetSource || formatTargetParagraphs(paragraphs)
-        : await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
-      const instruction = parserInstruction(config, {
-        hasPreviousVisualState: Boolean(config.previousVisualStateEnabled && state.previousVisualState)
-      });
-      const referenceContext = continuityReference(context.systemContext, context.recentContext);
-      const userRequest = parserUserRequest(
-        targetSource,
-        manualCreative ? creativeConceptConstraint(conceptSelections || new Map(), false) : ""
-      );
-      logStage(config, "parser_prompt_built", {
-        attempt,
-        instructionLength: instruction.length,
-        systemContextLength: context.systemContext.length,
-        recentContextLength: context.recentContext.length,
-        overrideLength: context.override.length,
-        parserParagraphs: paragraphs.length,
-        cacheCharacters: Object.keys(state.characterAppearance).length,
-        promptStyle: config.promptStyle,
-        promptSyntax: config.promptSyntax,
-        adaptiveMode: config.adaptiveMode,
-        perspectiveMode: config.perspectiveMode,
-        maxCharacters: config.maxCharacters,
-        preprocessingEnabled: config.preprocessingEnabled,
-        contextDiagnostics: context.diagnostics
-      });
-      parsed = await parsePayloadWithRepair(
-        parserConnection,
-        config,
-        parserMessages(instruction, referenceContext, userRequest, context.override),
-        userId
-      );
-      parsed = applyPreviousVisualState(
-        parsed,
-        config.previousVisualStateEnabled ? state.previousVisualState : undefined
-      );
-      parsed = await repairDynamicCameraDiversity(parserConnection, config, parsed, targetSource, userId);
-      if (config.adaptiveMode) {
-        const creativeParagraphs = new Set(normalizeScenePayload(parsed)
-          .filter(({ shot }) => cleanString(shot.perspectiveMode).toLowerCase() === "creative")
-          .map(({ parserParagraph }) => parserParagraph));
-        if (creativeParagraphs.size > 0) {
-          const creativeParagraphEntries = paragraphs.filter((paragraph) => creativeParagraphs.has(paragraph.parserIndex));
-          if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
-            const previousConcepts = conceptCandidates
-              .filter((concept) => usedConceptIds.has(concept.id))
-              .map((concept) => concept.concept);
-            conceptCandidates = await generateCreativeConcepts(
-              parserConnection,
-              config,
-              creativeParagraphEntries,
-              formatTargetParagraphs(creativeParagraphEntries),
-              context,
-              previousConcepts,
-              userId
-            );
-            ideationAttempted = true;
-          }
-          conceptSelections = chooseCreativeConcepts(
-            conceptCandidates.filter((concept) => creativeParagraphs.has(concept.paragraph)),
-            usedConceptIds
-          );
-          if (conceptSelections.size === 0 && conceptCandidates.length > 0) {
-            conceptSelections = chooseCreativeConcepts(
-              conceptCandidates.filter((concept) => creativeParagraphs.has(concept.paragraph))
-            );
-          }
-        } else {
-          conceptSelections = new Map();
-        }
-      }
-      selected = selectPromptEntries(parsed, paragraphs, config, conceptSelections || new Map(), conceptCandidates);
-      if (!config.adaptiveMode && config.perspectiveMode === "creative" && (conceptSelections?.size || 0) > 0) {
-        selected = selected.filter((entry) => Boolean(entry.creativeConcept));
-      }
-      if (selected.length === 0) throw new Error("No usable prompts were parsed.");
-      if (attempt === 0 && config.parserRetries > 0 && compactLorebookNeedsFullRetry(parsed, lorebookSnapshot)) {
-        throw new Error("Compact lorebook context did not produce durable character tags; retrying with full lorebook context.");
-      }
-      break;
-    } catch (error) {
-      lastParserError = error;
-      const classification = retryClassification(error);
-      logStage(
-        config,
-        "parser_attempt_failed",
-        { attempt, retries: config.parserRetries, classification, error: error instanceof Error ? error.message : String(error) },
-        attempt >= config.parserRetries ? "error" : "warn"
-      );
-      if (attempt >= config.parserRetries || classification === "terminal") throw error;
-      if (classification === "transient") await waitForParserRetry(attempt);
     }
+    throw lastError instanceof Error ? lastError : new Error("Parser did not return usable prompts.");
   }
-  if (!parsed) throw new Error(lastParserError instanceof Error ? lastParserError.message : "Parser did not return usable prompts.");
-  return { parsed, selected };
 }
 
 async function persistCharacterMemory(
@@ -467,7 +331,7 @@ function logParsedSelection(
     originalParagraphs: selected.map((entry) => entry.paragraph),
     promptLengths: selected.map((entry) => renderPrompt(entry.prompt, config.promptSyntax).length),
     negativeLengths: selected.map((entry) => entry.negative.length),
-    perspectives: selected.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource }))
+    mode: config.mode
   });
 }
 
@@ -504,10 +368,7 @@ async function prepareAndDispatchImages(
       promptFormat,
       paragraph: entry.paragraph,
       parserParagraph: entry.parserParagraph,
-      perspectiveMode: entry.perspectiveMode,
-      perspectiveSource: entry.perspectiveSource,
-      creativeConcept: entry.creativeConcept,
-      creativeCandidates: entry.creativeCandidates,
+      quote: entry.quote,
       parameters
     };
     logStage(config, "image_generation_prepared", {
@@ -574,15 +435,11 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
   const imageUrls: string[] = [];
   const prompts = stage.jobs.map((job) => job.prompt);
   const negativePrompts = stage.jobs.map((job) => job.negative);
-  const perspectiveModes = stage.jobs.map((job) => job.perspectiveMode || config.perspectiveMode);
-  const perspectiveSources = stage.jobs.map((job) => job.perspectiveSource || "manual");
+  const quotes = stage.jobs.map((job) => job.quote || "");
   const imageParameters = stage.jobs.map((job) => job.parameters);
   const corePrompts = stage.jobs.map((job) => job.corePrompt || "");
   const shotNegatives = stage.jobs.map((job) => job.shotNegative || "");
   const promptFormats = stage.jobs.map((job) => job.promptFormat || "ordered");
-  const creativeConcepts = stage.jobs.map((job) => job.creativeConcept || null);
-  const creativeConceptCandidates = stage.jobs.map((job) => job.creativeCandidates || []);
-  const creativeConceptHistory = stage.jobs.map((job) => job.creativeConcept ? [job.creativeConcept.id] : []);
   const paragraphs = stage.jobs.map((job) => job.paragraph);
   for (const [index, result] of stage.results.entries()) {
     if (result.imageId) imageIds.push(result.imageId);
@@ -600,15 +457,11 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
   return {
     prompts,
     negativePrompts,
-    perspectiveModes,
-    perspectiveSources,
+    quotes,
     imageParameters,
     corePrompts,
     shotNegatives,
     promptFormats,
-    creativeConcepts,
-    creativeConceptCandidates,
-    creativeConceptHistory,
     paragraphs,
     imageIds,
     imageUrls
@@ -616,22 +469,18 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
 }
 
 async function persistGeneration(input: PersistStageInput): Promise<GeneratedRecord> {
-  const { chatId, messageId, swipeId, key, target, parsed, assets, visualState, config, userId } = input;
+  const { chatId, messageId, swipeId, key, target, parsed, assets, config, userId } = input;
   const record: GeneratedRecord = {
     chatId,
     messageId,
     swipeId,
     prompts: assets.prompts,
     negativePrompts: assets.negativePrompts,
-    perspectiveModes: assets.perspectiveModes,
-    perspectiveSources: assets.perspectiveSources,
+    quotes: assets.quotes,
     imageParameters: assets.imageParameters,
     corePrompts: assets.corePrompts,
     shotNegatives: assets.shotNegatives,
     promptFormats: assets.promptFormats,
-    creativeConcepts: assets.creativeConcepts,
-    creativeConceptCandidates: assets.creativeConceptCandidates,
-    creativeConceptHistory: assets.creativeConceptHistory,
     paragraphs: assets.paragraphs,
     imageIds: assets.imageIds,
     imageUrls: assets.imageUrls,
@@ -643,8 +492,7 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
     await migrateLegacyGeneratedRecords(chatId, state, userId);
     updateCharacterMemory(state, parsed);
     state.generated[key] = reference;
-    if (visualState) state.previousVisualState = visualState;
-    else delete state.previousVisualState;
+    delete state.previousVisualState;
     rebuildGeneratedImageIndex(state);
   });
   logStage(config, "state_persisted", { key, imageCount: assets.imageIds.length, paragraphs: assets.paragraphs });
@@ -679,15 +527,11 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
 type ImageReplacement = {
   prompt: string;
   negative: string;
+  quote: string;
   corePrompt: string;
   shotNegative: string;
   promptFormat: "legacy" | "ordered";
   paragraph: number;
-  perspectiveMode: PromptEntry["perspectiveMode"];
-  perspectiveSource: PromptEntry["perspectiveSource"];
-  creativeConcept: CreativeConcept | null;
-  creativeCandidates: CreativeConcept[];
-  creativeConceptHistory: string[];
   parameters: Record<string, unknown>;
   imageId: string;
   imageUrl: string;
@@ -713,15 +557,11 @@ async function commitImageReplacement(
       ...record,
       prompts: replaceAt(record.prompts, located.index, replacement.prompt, ""),
       negativePrompts: replaceAt(record.negativePrompts, located.index, replacement.negative, ""),
-      perspectiveModes: replaceAt(record.perspectiveModes, located.index, replacement.perspectiveMode, "dynamic"),
-      perspectiveSources: replaceAt(record.perspectiveSources, located.index, replacement.perspectiveSource, "manual"),
+      quotes: replaceAt(record.quotes, located.index, replacement.quote, ""),
       imageParameters: replaceAt(record.imageParameters, located.index, replacement.parameters, {}),
       corePrompts: replaceAt(record.corePrompts, located.index, replacement.corePrompt, ""),
       shotNegatives: replaceAt(record.shotNegatives, located.index, replacement.shotNegative, ""),
       promptFormats: replaceAt(record.promptFormats, located.index, replacement.promptFormat, "ordered"),
-      creativeConcepts: replaceAt(record.creativeConcepts, located.index, replacement.creativeConcept, null),
-      creativeConceptCandidates: replaceAt(record.creativeConceptCandidates, located.index, replacement.creativeCandidates, []),
-      creativeConceptHistory: replaceAt(record.creativeConceptHistory, located.index, replacement.creativeConceptHistory, []),
       paragraphs: replaceAt(record.paragraphs, located.index, replacement.paragraph, 1),
       imageIds: replaceAt(record.imageIds, located.index, replacement.imageId, ""),
       imageUrls: replaceAt(record.imageUrls, located.index, replacement.imageUrl, "")
@@ -802,15 +642,11 @@ export async function rerunStoredImage(
       replacement = {
         prompt,
         negative,
+        quote: located.record.quotes?.[located.index] || "",
         corePrompt,
         shotNegative,
         promptFormat,
         paragraph: located.record.paragraphs[located.index] || 1,
-        perspectiveMode: located.record.perspectiveModes?.[located.index] || "dynamic",
-        perspectiveSource: located.record.perspectiveSources?.[located.index] || "manual",
-        creativeConcept: located.record.creativeConcepts?.[located.index] || null,
-        creativeCandidates: located.record.creativeConceptCandidates?.[located.index] || [],
-        creativeConceptHistory: located.record.creativeConceptHistory?.[located.index] || [],
         parameters,
         imageId,
         imageUrl
@@ -827,15 +663,9 @@ export async function rerunStoredImage(
         ...config,
         minImages: 1,
         maxImages: 1,
-        preprocessingEnabled: false,
-        previousVisualStateEnabled: false
+        preprocessingEnabled: false
       };
       const paragraphs: PreparedParagraph[] = [{ ...sourceParagraph, parserIndex: 1 }];
-      const storedCandidates = rebaseCreativeConcepts(
-        located.record.creativeConceptCandidates?.[located.index] || [],
-        1
-      );
-      const previousConceptHistory = located.record.creativeConceptHistory?.[located.index] || [];
       const selection = await parseAndSelectPrompts({
         chatId: request.chatId,
         messageId: located.record.messageId,
@@ -843,8 +673,6 @@ export async function rerunStoredImage(
         paragraphs,
         state: initialState,
         config: singleConfig,
-        creativeCandidates: storedCandidates,
-        usedCreativeConceptIds: previousConceptHistory,
         userId
       });
       selectionForMemory = selection.parsed;
@@ -866,17 +694,11 @@ export async function rerunStoredImage(
       replacement = {
         prompt: job.prompt,
         negative: job.negative,
+        quote: entry.quote,
         corePrompt: job.corePrompt || renderPrompt(entry.corePrompt, singleConfig.promptSyntax),
         shotNegative: job.shotNegative || entry.shotNegative,
         promptFormat: job.promptFormat || entry.corePrompt.format || "ordered",
         paragraph: originalParagraph,
-        perspectiveMode: entry.perspectiveMode,
-        perspectiveSource: entry.perspectiveSource,
-        creativeConcept: entry.creativeConcept || null,
-        creativeCandidates: entry.creativeCandidates || storedCandidates,
-        creativeConceptHistory: entry.creativeConcept
-          ? [...new Set([...previousConceptHistory, entry.creativeConcept.id])]
-          : previousConceptHistory,
         parameters: job.parameters,
         imageId,
         imageUrl
@@ -956,11 +778,7 @@ export async function generateForMessage(
     try {
       const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId, imageConnectionPromise);
       const assets = collectImageResults(imageStage, config);
-      const visualState = buildPreviousVisualState(
-        parsed,
-        imageStage.jobs.map((job) => job.parserParagraph).filter((paragraph): paragraph is number => Number.isFinite(paragraph))
-      );
-      await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, visualState, config, userId });
+      await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, config, userId });
       logStage(config, "generation_pipeline_done", {
         chatId,
         messageId,
