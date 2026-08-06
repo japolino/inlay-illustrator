@@ -11,7 +11,7 @@ export function disableNativeInlayLightboxes(root: ParentNode): void {
 export type InlayGenerationDetails = {
   prompt: string;
   negativePrompt: string;
-  perspectiveMode: "creative" | "static" | "dynamic" | null;
+  perspectiveMode: "creative" | "static" | "dynamic" | "asset" | null;
   perspectiveSource: "adaptive" | "manual" | null;
   creativeConcept: string;
 };
@@ -46,7 +46,7 @@ export function resolveInlayDetails(
   return {
     prompt: resolveInlayPrompt(attributePrompt, fallbackPrompt),
     negativePrompt: resolveInlayPrompt(attributeNegative, fallbackNegative),
-    perspectiveMode: normalizedMode === "creative" || normalizedMode === "static" || normalizedMode === "dynamic"
+    perspectiveMode: normalizedMode === "creative" || normalizedMode === "static" || normalizedMode === "dynamic" || normalizedMode === "asset"
       ? normalizedMode
       : null,
     perspectiveSource: normalizedSource === "adaptive" || normalizedSource === "manual" ? normalizedSource : null,

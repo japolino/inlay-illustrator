@@ -14,13 +14,18 @@ export function renderGenerationSection({ ui, config, actions, rerender }: Secti
   ui.addRangeChoice(section, "perspectiveMode", "Perspective", [
     { value: "creative", label: "Creative" },
     { value: "static", label: "Static" },
-    { value: "dynamic", label: "Dynamic" }
+    { value: "dynamic", label: "Dynamic" },
+    { value: "asset", label: "Asset" }
   ], config.adaptiveMode, config.adaptiveMode
-    ? "Selected independently by the parser for each image."
-    : "Creative explores identity-safe objects, environments, shadows, silhouettes, and non-identifying fragments; Static uses fixed visual-novel framing; Dynamic follows scene action.");
+    ? "Selected independently by the parser for each image from Creative, Static, or Dynamic. Adaptive never selects Asset."
+    : config.perspectiveMode === "asset"
+      ? "One reusable viewer-facing character asset per selected paragraph on a simple white background."
+      : "Creative explores identity-safe objects, environments, shadows, silhouettes, and non-identifying fragments; Static uses fixed visual-novel framing; Dynamic follows scene action.", rerender);
   ui.addNumber(section, "minImages", "Minimum images", 1, 12);
   ui.addNumber(section, "maxImages", "Maximum images", 1, 12);
-  ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 8);
+  if (config.perspectiveMode !== "asset" || config.adaptiveMode) {
+    ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 8);
+  }
   ui.addActions(section, [{
     label: "Generate latest",
     primary: true,

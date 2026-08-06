@@ -102,7 +102,8 @@ export class UiBuilder {
     label: string,
     choices: RangeChoice[],
     disabled = false,
-    hint = ""
+    hint = "",
+    afterChange?: () => void
   ): void {
     const target = this.row(parent, label, hint);
     const wrapper = document.createElement("div");
@@ -132,7 +133,10 @@ export class UiBuilder {
     input.addEventListener("input", update);
     input.addEventListener("change", () => {
       const choice = choices[Number(input.value)];
-      if (choice) this.patchConfig({ [key]: choice.value } as Partial<Config>);
+      if (choice) {
+        this.patchConfig({ [key]: choice.value } as Partial<Config>);
+        afterChange?.();
+      }
     });
     update();
     wrapper.append(input, labels);

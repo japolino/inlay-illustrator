@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import archivedCard from "../../references/original-module/card.json";
 import { DEFAULT_CONFIG, normalizeConfig } from "../shared/config.js";
 import { parserInstruction } from "./instructions.js";
 import {
@@ -411,6 +412,59 @@ describe("perspective selection and projection", () => {
     const entry = assemblePrompt({}, { perspectiveMode: "creative", situation: "1girl", characters: [{ label: "girl", appearance: "blue hair" }] }, config, 1, 1);
     expect(entry).toMatchObject({ perspectiveMode: "static", perspectiveSource: "manual" });
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toContain("blue hair");
+  });
+
+  test("restores Original Asset Mode as a one-character viewer-facing white-background prompt", () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      adaptiveMode: false,
+      perspectiveMode: "asset" as const,
+      promptSyntax: "comfyui" as const
+    };
+    const entry = assemblePrompt({
+      environment: {
+        location: "busy market",
+        timeWeather: "rainy evening",
+        lightingMood: ["neon light"],
+        backgroundElements: ["fruit stalls"]
+      }
+    }, {
+      perspectiveMode: "dynamic",
+      situation: "2girls, nsfw",
+      camera: { framing: "wide shot", angle: "high angle", perspective: "from behind", focus: [] },
+      characters: [{
+        name: "Mira",
+        label: "girl",
+        appearance: "black hair, blue eyes",
+        attire: "red dress",
+        composition: { position: "center frame", pose: "standing", actions: ["holding a book"], gaze: "looking away" }
+      }, {
+        name: "Nia",
+        label: "girl",
+        appearance: "red hair, green eyes",
+        attire: "blue coat",
+        composition: { position: "left side", pose: "waving", actions: [], gaze: "looking at viewer" }
+      }]
+    }, config, 1, 1);
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
+
+    expect(entry).toMatchObject({ perspectiveMode: "asset", perspectiveSource: "manual" });
+    expect(rendered).toContain("1girl, solo, nsfw");
+    expect(rendered).toContain("black hair, blue eyes");
+    expect(rendered).not.toContain("red hair");
+    expect(rendered).toContain("looking at viewer");
+    expect(rendered).not.toContain("looking away");
+    expect(rendered).toContain("white background, simple background");
+    expect(rendered).not.toContain("busy market");
+    expect(rendered).not.toContain("fruit stalls");
+    expect(rendered).toContain("portrait, cowboy shot");
+    expect(rendered).not.toContain("wide shot");
+  });
+
+  test("never accepts Asset as an Adaptive per-shot choice", () => {
+    const config = { ...DEFAULT_CONFIG, adaptiveMode: true, perspectiveMode: "asset" as const };
+    const entry = assemblePrompt({}, { perspectiveMode: "asset", situation: "1girl" }, config, 1, 1);
+    expect(entry).toMatchObject({ perspectiveMode: "dynamic", perspectiveSource: "adaptive" });
   });
 
   test("projects Dynamic into one prioritized action block with spatial context and complete non-fragment identity", () => {
@@ -851,9 +905,35 @@ describe("Anima parser contract and visual distinctness", () => {
     const adaptiveInstruction = parserInstruction({ ...DEFAULT_CONFIG, adaptiveMode: true });
     expect(adaptiveInstruction).toContain("Include a named source character in shot.characters only when some part of that person is actually visible");
     expect(adaptiveInstruction).toContain("a required visible action or movement chooses Dynamic");
+    expect(adaptiveInstruction).toContain("It must be exactly creative, static, or dynamic");
+    expect(adaptiveInstruction).not.toContain("### Asset shot direction");
     expect(instruction).toContain("adult marker exception applies to every shot in an adult sexual sequence");
     expect(instruction).not.toContain("never removes the source character object");
     expect(instruction).not.toContain('"supplement": "string"');
+  });
+
+  test("uses Original's Asset instructions word for word only for fixed Asset Mode", () => {
+    const assetInstruction = parserInstruction({
+      ...DEFAULT_CONFIG,
+      adaptiveMode: false,
+      perspectiveMode: "asset"
+    });
+
+    const originalInstruction = (archivedCard.data.character_book.entries as Array<{ name?: string; content?: string }>)
+      .find((entry) => entry.name === "Card.Image.axLLM")?.content || "";
+    const exactAssetLines = [
+      "One shot per selected paragraph, each containing exactly one visible character.",
+      "Always `white background, simple background`. No location, lighting, weather, or prop tags."
+    ];
+    for (const line of exactAssetLines) {
+      expect(originalInstruction).toContain(line);
+      expect(assetInstruction).toContain(line);
+    }
+    expect(assetInstruction).toContain('"perspectiveMode": "asset"');
+    expect(assetInstruction).toContain("Character limit: max 1 character object(s) per shot");
+    expect(assetInstruction).not.toContain("### Dynamic shot direction");
+    expect(assetInstruction).not.toContain("### Static shot direction");
+    expect(assetInstruction).not.toContain("### Creative shot direction");
   });
 
   test("includes character/shared composition and environment fields in exact visual keys", () => {

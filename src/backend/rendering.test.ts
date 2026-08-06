@@ -135,6 +135,26 @@ describe("inlay rendering", () => {
     expect(rerendered.split(MARKER)).toHaveLength(3);
   });
 
+  test("uses the compact Asset width only for records generated in Asset Mode", () => {
+    const config = { ...DEFAULT_CONFIG, inlayImageWidth: 800, assetImageWidth: 420 };
+    const asset = renderInlaidMessage("Paragraph.", {
+      imageUrls: ["/asset.png"],
+      prompts: ["asset"],
+      perspectiveModes: ["asset"],
+      paragraphs: [1]
+    }, config);
+    const adaptiveIllustration = renderInlaidMessage("Paragraph.", {
+      imageUrls: ["/dynamic.png"],
+      prompts: ["dynamic"],
+      perspectiveModes: ["dynamic"],
+      perspectiveSources: ["adaptive"],
+      paragraphs: [1]
+    }, { ...config, adaptiveMode: true, perspectiveMode: "asset" });
+
+    expect(asset).toContain("width:min(100%, 420px)");
+    expect(adaptiveIllustration).toContain("width:min(100%, 800px)");
+  });
+
   test("renders stable progressive slots in paragraph order and replaces placeholders in place", () => {
     const pending = renderInlaidMessage("First.\n\nSecond.", {
       imageUrls: ["", ""],

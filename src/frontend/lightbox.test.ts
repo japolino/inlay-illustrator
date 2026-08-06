@@ -44,6 +44,13 @@ describe("Inlay prompt lightbox", () => {
     });
   });
 
+  test("recognizes manual Asset metadata in image details", () => {
+    expect(resolveInlayDetails("asset prompt", null, "", null, "Asset", "Manual")).toMatchObject({
+      perspectiveMode: "asset",
+      perspectiveSource: "manual"
+    });
+  });
+
   test("removes the host image-only lightbox trigger from existing Inlay images", () => {
     const removed: string[] = [];
     const root = {

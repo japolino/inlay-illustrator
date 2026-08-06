@@ -44,13 +44,22 @@ function creativeDirectionContract(): string {
   ].join("\n");
 }
 
+function assetDirectionContract(): string {
+  return [
+    "### Asset shot direction",
+    "Always `white background, simple background`. No location, lighting, weather, or prop tags."
+  ].join("\n");
+}
+
 function perspectiveContract(config: Config): string {
   if (!config.adaptiveMode) {
     const contract = config.perspectiveMode === "creative"
       ? creativeDirectionContract()
       : config.perspectiveMode === "static"
         ? staticDirectionContract()
-        : dynamicDirectionContract();
+        : config.perspectiveMode === "asset"
+          ? assetDirectionContract()
+          : dynamicDirectionContract();
     return [
       "### Perspective mode - fixed",
       `Set perspectiveMode to exactly ${config.perspectiveMode} for every shot.`,
@@ -78,7 +87,8 @@ export type ParserInstructionOptions = {
 };
 
 export function parserInstruction(config: Config, options: ParserInstructionOptions = {}): string {
-  const maxCharacters = config.maxCharacters;
+  const fixedAsset = !config.adaptiveMode && config.perspectiveMode === "asset";
+  const maxCharacters = fixedAsset ? 1 : config.maxCharacters;
   const structuredAnima = config.promptStyle === "anima";
   const hasPreviousVisualState = config.previousVisualStateEnabled && options.hasPreviousVisualState === true;
   const fixedStatic = !config.adaptiveMode && config.perspectiveMode === "static";
@@ -86,15 +96,21 @@ export function parserInstruction(config: Config, options: ParserInstructionOpti
   const creativePossible = config.adaptiveMode || config.perspectiveMode === "creative";
   const staticBackgroundPossible = fixedStatic || config.adaptiveMode;
   const shotInstruction = [
-    `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
+    fixedAsset
+      ? "One shot per selected paragraph, each containing exactly one visible character."
+      : `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
     "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
-    fixedStatic
+    fixedAsset
+      ? "Every shot must reference a different selected source paragraph. Never return two shots for the same paragraph."
+      : fixedStatic
       ? "Keep the visual-novel framing fixed across Static shots. Distinguish additional shots through source-supported changes in primary character, expression, simple pose, or background instead of dramatic cinematography."
       : "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
-    fixedStatic
+    fixedAsset
+      ? "Do not invent narrative events or add a second visible character."
+      : fixedStatic
       ? "If the source contains too few distinct stable paragraphs, return fewer shots. Do not repeat a paragraph, invent narrative events, or switch to action-centric framing."
       : "If the source contains too few distinct visual paragraphs, return fewer shots. Do not repeat a paragraph or invent narrative events.",
-    "Every shot must reference a different source paragraph. Never return two shots for the same paragraph. Order shots by their visual importance, not paragraph number.",
+    fixedAsset ? "" : "Every shot must reference a different source paragraph. Never return two shots for the same paragraph. Order shots by their visual importance, not paragraph number.",
     structuredAnima
       ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood."
       : ""
@@ -279,17 +295,24 @@ export function parserInstruction(config: Config, options: ParserInstructionOpti
         : "Use sharedComposition.interaction only for source-required shared contact or combined actions, and leave spatialRelation empty. The renderer keeps interaction as a compact action fallback while omitting shared prose.",
       "Do not use any character or persona names in composition fields, including the name of an out-of-frame POV character. Say viewer, left girl, right boy, foreground character, or background character. Use viewer rather than camera for subject orientation.",
       "Use concise objective visual phrases, not narration, invisible emotion, smell, sound, or internal sensation.",
-      "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements.",
-      "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
-      "Prefer the source's exact concrete noun phrase over a generic paraphrase: keep arrow-slit windows rather than windows, wet leaf rather than foliage, glass conservatory panes rather than walls, and tied used condom rather than object. Never add a plausible prop that the current paragraph does not establish.",
-      hasPreviousVisualState
-        ? "When the current source does not establish a new environment detail and Previous Visual State supplies it, copy that environment field exactly. If neither current source nor previous state establishes time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time."
-        : "When the current source does not establish time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time.",
-      config.supplement
-        ? "Populate lightingMood and backgroundElements within the target budget."
-        : staticBackgroundPossible
-          ? "Leave lightingMood empty. Populate 2-3 backgroundElements for every scene containing a Static shot, and leave backgroundElements empty for scenes without a Static shot. Still populate location and timeWeather."
-          : "Leave lightingMood and backgroundElements empty. Still populate location and timeWeather."
+      ...(fixedAsset
+        ? [
+          "Always `white background, simple background`. No location, lighting, weather, or prop tags.",
+          "Put that exact value in environment.location. Leave timeWeather, lightingMood, and backgroundElements empty."
+        ]
+        : [
+          "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements.",
+          "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
+          "Prefer the source's exact concrete noun phrase over a generic paraphrase: keep arrow-slit windows rather than windows, wet leaf rather than foliage, glass conservatory panes rather than walls, and tied used condom rather than object. Never add a plausible prop that the current paragraph does not establish.",
+          hasPreviousVisualState
+            ? "When the current source does not establish a new environment detail and Previous Visual State supplies it, copy that environment field exactly. If neither current source nor previous state establishes time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time."
+            : "When the current source does not establish time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time.",
+          config.supplement
+            ? "Populate lightingMood and backgroundElements within the target budget."
+            : staticBackgroundPossible
+              ? "Leave lightingMood empty. Populate 2-3 backgroundElements for every scene containing a Static shot, and leave backgroundElements empty for scenes without a Static shot. Still populate location and timeWeather."
+              : "Leave lightingMood and backgroundElements empty. Still populate location and timeWeather."
+        ])
     ].join("\n")
     : config.supplement
       ? [
@@ -316,7 +339,9 @@ export function parserInstruction(config: Config, options: ParserInstructionOpti
     "- Same location means same scene, multiple shots.",
     structuredAnima ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
     "- When Non-authoritative Shot-Router Notes are present, create scenes and shots only for the selected [P#] references in those notes. Read every original numbered paragraph for continuity, but never turn an unselected paragraph into an illustration shot.",
-    fixedStatic
+    fixedAsset
+      ? "Shot = one selected paragraph containing exactly one visible character. Shots are independent, so repeat tags if the scene has not changed."
+      : fixedStatic
       ? "Shot = one distinct stable visual-novel moment: a readable background plus a foreground character, simple pose, and visible expression. Shots are independent, so repeat tags if the scene has not changed."
       : "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
     shotInstruction,
@@ -363,7 +388,9 @@ export function parserInstruction(config: Config, options: ParserInstructionOpti
         ? "environmentChanges contains place only when the current numbered source explicitly changes the setting. Otherwise leave it empty and copy the prior place exactly."
         : "environmentChanges contains place only when the current numbered source explicitly changes the setting.",
     structuredAnima ? "### environment - scene-level" : "### place - scene-level",
-    structuredAnima
+    fixedAsset
+      ? "Always `white background, simple background`. No location, lighting, weather, or prop tags."
+      : structuredAnima
       ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details. Static scenes require a specific physical location and 2-3 backgroundElements."
       : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
     structuredAnima

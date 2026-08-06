@@ -20,6 +20,7 @@ var DEFAULT_CONFIG = {
   parserRetries: 1,
   preprocessingEnabled: false,
   inlayImageWidth: 640,
+  assetImageWidth: 400,
   inlayImageMaxHeightVh: 70,
   promptStyle: "anima",
   promptSyntax: "comfyui",
@@ -81,7 +82,6 @@ function normalizeConfig(raw) {
     danbooruCleanup: _legacyDanbooruCleanup,
     danbooruEndpoint: _legacyDanbooruEndpoint,
     mode: _legacyMode,
-    assetImageWidth: _legacyAssetImageWidth,
     imageGeneration: _legacyImageGeneration,
     ...current
   } = raw;
@@ -97,7 +97,7 @@ function normalizeConfig(raw) {
     ...DEFAULT_CONFIG,
     ...current,
     adaptiveMode: raw.adaptiveMode === true,
-    perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" ? raw.perspectiveMode : raw.mode === "asset" ? "static" : "dynamic",
+    perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" || raw.perspectiveMode === "asset" ? raw.perspectiveMode : raw.mode === "asset" ? "asset" : "dynamic",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
@@ -113,6 +113,7 @@ function normalizeConfig(raw) {
     parserRetries: clampInt(raw.parserRetries, 0, 5, DEFAULT_CONFIG.parserRetries),
     preprocessingEnabled: raw.preprocessingEnabled === true,
     inlayImageWidth: clampInt(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
+    assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
     promptStyle: raw.promptStyle === "default" ? "default" : "anima",
     promptSyntax: raw.promptSyntax === "nai" ? "nai" : "comfyui",
@@ -991,6 +992,32 @@ function normalizedSituation(value, characterCount) {
     return tags.join(", ");
   return unique([...tags, tags.some((tag) => /^1(?:girl|boy|other)$/i.test(tag.trim())) ? "solo" : ""]).join(", ");
 }
+function assetSituation(value, character) {
+  const label = csvParts(character?.label, character?.age).join(" ").toLowerCase();
+  const count = /\b(?:girl|female|woman)\b/.test(label) ? "1girl" : /\b(?:boy|male|man)\b/.test(label) ? "1boy" : "1other";
+  const explicitRating = csvParts(value).filter((tag) => tag.toLowerCase() === "nsfw");
+  return unique([count, "solo", ...explicitRating]).join(", ");
+}
+function assembleAssetCharacterComposition(value, replacements) {
+  const record = asRecord(value);
+  const fields = ["position", "pose", "actions", "gaze"];
+  const structured = hasAtomicField(record, fields);
+  if (!structured) {
+    return {
+      text: unique(csvParts(sanitizeComposition(cleanString2(value), replacements), "looking at viewer")).join(", "),
+      structured: false
+    };
+  }
+  return {
+    text: unique([
+      ...sanitizedAtomicSnippets(record.position, 1, replacements),
+      ...sanitizedAtomicSnippets(record.pose, 1, replacements),
+      ...sanitizedAtomicSnippets(record.actions, 3, replacements),
+      "looking at viewer"
+    ]).join(", "),
+    structured: true
+  };
+}
 function creativeCueTags(anchor, visibleCues, parserVisibleTags = "") {
   const cues = unique(csvParts(visibleCues));
   const anchorText = cleanString2(anchor);
@@ -1001,7 +1028,7 @@ function creativeCueTags(anchor, visibleCues, parserVisibleTags = "") {
   return unique(csvParts(anchorCovered ? "" : anchorText, cues, safeParserTags)).join(", ");
 }
 function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode, creativeConcept, dynamicLayout = "hybrid") {
-  const allCharacters = cleanArray(shot.characters).slice(0, config.maxCharacters);
+  const allCharacters = cleanArray(shot.characters).slice(0, perspectiveMode === "asset" ? 1 : config.maxCharacters);
   const bindingCreative = perspectiveMode === "creative" && Boolean(creativeConcept);
   const characters = bindingCreative ? allCharacters.slice(0, 1) : allCharacters;
   const dynamicShotPlan = perspectiveMode === "dynamic" ? assembleDynamicShotPlan(shot.shotPlan, replacements) : { text: "", structured: false };
@@ -1009,7 +1036,7 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode,
   const hybridDynamic = compactDynamic && dynamicLayout === "hybrid";
   const conceptScope = perspectiveMode === "creative" ? sanitizeComposition(cleanString2(creativeConcept?.renderScope), replacements) : "";
   const characterParts = characters.map((character, index) => {
-    const composition = perspectiveMode === "static" ? assembleStaticCharacterComposition(character.composition, replacements, index, characters.length) : hybridDynamic ? assembleDynamicCharacterComposition(character.composition, replacements, dynamicShotPlan.text) : assembleAtomicCharacterComposition(character.composition, replacements);
+    const composition = perspectiveMode === "asset" ? assembleAssetCharacterComposition(character.composition, replacements) : perspectiveMode === "static" ? assembleStaticCharacterComposition(character.composition, replacements, index, characters.length) : hybridDynamic ? assembleDynamicCharacterComposition(character.composition, replacements, dynamicShotPlan.text) : assembleAtomicCharacterComposition(character.composition, replacements);
     const scope = perspectiveMode === "creative" ? index === 0 && conceptScope || (() => {
       const parserScope = sanitizeComposition(cleanString2(character.renderScope), replacements);
       return isIdentitySafeCreativeCue(parserScope) ? parserScope : "";
@@ -1033,14 +1060,14 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode,
   const filteredSharedInteraction = sharedComposition.structured ? uncoveredActionTags(sharedComposition.interaction, individualComposition) : sharedComposition.interaction;
   const filteredSharedText = sharedComposition.structured ? unique(csvParts(filteredSharedInteraction, sharedComposition.relation)).join(", ") : sharedComposition.text;
   const sharedAction = sharedComposition.structured ? config.supplement ? "" : filteredSharedInteraction : stripOrReplaceNames(uncoveredActionTags(shot.action, config.supplement ? sharedComposition.text : ""), replacements, true);
-  const camera = perspectiveMode === "static" ? { text: "medium shot, eye level, straight-on, deep focus", structured: true } : perspectiveMode === "creative" && cleanString2(creativeConcept?.camera) ? { text: cleanString2(creativeConcept?.camera), structured: false } : assembleStructuredCamera(shot.camera);
+  const camera = perspectiveMode === "asset" ? { text: "portrait, cowboy shot", structured: false } : perspectiveMode === "static" ? { text: "medium shot, eye level, straight-on, deep focus", structured: true } : perspectiveMode === "creative" && cleanString2(creativeConcept?.camera) ? { text: cleanString2(creativeConcept?.camera), structured: false } : assembleStructuredCamera(shot.camera);
   const environment = scene.environment || {};
   const location = structuredSnippets(environment.location, 1);
   const timeWeather = structuredSnippets(environment.timeWeather, 1);
   const lightingMood = config.supplement ? structuredSnippets(environment.lightingMood, compactDynamic ? 1 : 3) : [];
   const backgroundElements = config.supplement || perspectiveMode === "static" ? structuredSnippets(environment.backgroundElements, compactDynamic ? 3 : 5) : [];
   const legacyPlace = location.length === 0 ? stripOrReplaceNames(cleanString2(scene.place), replacements, true) : "";
-  const environmentSection = [
+  const environmentSection = perspectiveMode === "asset" ? "white background, simple background" : [
     ...location.map((value) => stripOrReplaceNames(value, replacements, false)),
     legacyPlace,
     ...timeWeather.map((value) => stripOrReplaceNames(value, replacements, false)),
@@ -1048,32 +1075,33 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode,
     ...backgroundElements.map((value) => stripOrReplaceNames(value, replacements, false))
   ].filter(Boolean).join(", ");
   return { sections: [
-    stripOrReplaceNames(bindingCreative ? identitySafeCreativeSituation(shot.situation) : compactDynamic && !hybridDynamic ? unique(csvParts(shot.situation)).join(", ") : hybridDynamic || perspectiveMode === "static" ? normalizedSituation(shot.situation, characters.length) : unique(csvParts(shot.situation)).join(", "), replacements, true),
+    stripOrReplaceNames(perspectiveMode === "asset" ? assetSituation(shot.situation, characters[0]) : bindingCreative ? identitySafeCreativeSituation(shot.situation) : compactDynamic && !hybridDynamic ? unique(csvParts(shot.situation)).join(", ") : hybridDynamic || perspectiveMode === "static" ? normalizedSituation(shot.situation, characters.length) : unique(csvParts(shot.situation)).join(", "), replacements, true),
     compactDynamic ? stripOrReplaceNames(camera.text, replacements, true) : "",
     compactDynamic ? dynamicShotPlan.text : "",
     perspectiveMode === "creative" && characters.length === 0 ? conceptScope : "",
     unboundCreativeCues,
     ...characterSections,
-    !compactDynamic && config.supplement && perspectiveMode !== "static" && !bindingCreative ? filteredSharedText : "",
-    !compactDynamic && perspectiveMode !== "static" && !bindingCreative ? sharedAction : "",
+    !compactDynamic && config.supplement && perspectiveMode !== "static" && perspectiveMode !== "asset" && !bindingCreative ? filteredSharedText : "",
+    !compactDynamic && perspectiveMode !== "static" && perspectiveMode !== "asset" && !bindingCreative ? sharedAction : "",
     bindingCreative ? "" : environmentSection,
     compactDynamic ? "" : stripOrReplaceNames(camera.text, replacements, true)
   ].map((section) => section.trim()).filter(Boolean) };
 }
 function assembleDefaultPrompt(scene, shot, config, replacements, perspectiveMode, creativeConcept) {
-  const allCharacters = cleanArray(shot.characters).slice(0, config.maxCharacters);
+  const allCharacters = cleanArray(shot.characters).slice(0, perspectiveMode === "asset" ? 1 : config.maxCharacters);
   const bindingCreative = perspectiveMode === "creative" && Boolean(creativeConcept);
   const characters = bindingCreative ? allCharacters.slice(0, 1) : allCharacters;
   const selectedScope = perspectiveMode === "creative" ? sanitizeComposition(cleanString2(creativeConcept?.renderScope), replacements) : "";
   const creativeScopes = perspectiveMode === "creative" ? selectedScope ? [selectedScope] : unique(characters.map((character) => sanitizeComposition(cleanString2(character.renderScope), replacements)).filter(Boolean)) : [];
   const characterBlocks = characters.map((character, index) => {
     const conceptTags = perspectiveMode === "creative" && index === 0 ? stripOrReplaceNames(unique(csvParts(creativeConcept?.visibleCues)).join(", "), replacements, true) : "";
-    return conceptTags || assembleCharacterBlock(character, config, replacements, true, perspectiveMode);
+    const block = conceptTags || assembleCharacterBlock(character, config, replacements, true, perspectiveMode);
+    return perspectiveMode === "asset" ? unique(csvParts(block, "looking at viewer")).join(", ") : block;
   }).filter(Boolean);
   const supplement = config.supplement && !(perspectiveMode === "creative" && creativeScopes.length > 0) ? normalizeSupplement(stripOrReplaceNames(cleanString2(shot.supplement), replacements, false)) : "";
   const tagSections = dedupePromptSections([
-    stripOrReplaceNames(unique(csvParts(perspectiveMode === "creative" && cleanString2(creativeConcept?.camera) ? creativeConcept?.camera : shot.camera, bindingCreative ? identitySafeCreativeSituation(shot.situation) : shot.situation, perspectiveMode === "creative" && creativeScopes.length > 0 ? "" : shot.action)).join(", "), replacements, true),
-    bindingCreative ? "" : stripOrReplaceNames(unique(csvParts(scene.place)).join(", "), replacements, true),
+    stripOrReplaceNames(unique(csvParts(perspectiveMode === "asset" ? "portrait, cowboy shot" : perspectiveMode === "creative" && cleanString2(creativeConcept?.camera) ? creativeConcept?.camera : shot.camera, perspectiveMode === "asset" ? assetSituation(shot.situation, characters[0]) : bindingCreative ? identitySafeCreativeSituation(shot.situation) : shot.situation, perspectiveMode === "creative" && creativeScopes.length > 0 ? "" : shot.action)).join(", "), replacements, true),
+    perspectiveMode === "asset" ? "white background, simple background" : bindingCreative ? "" : stripOrReplaceNames(unique(csvParts(scene.place)).join(", "), replacements, true),
     ...creativeScopes,
     ...characterBlocks
   ]);
@@ -2609,9 +2637,16 @@ function creativeDirectionContract() {
   ].join(`
 `);
 }
+function assetDirectionContract() {
+  return [
+    "### Asset shot direction",
+    "Always `white background, simple background`. No location, lighting, weather, or prop tags."
+  ].join(`
+`);
+}
 function perspectiveContract(config) {
   if (!config.adaptiveMode) {
-    const contract = config.perspectiveMode === "creative" ? creativeDirectionContract() : config.perspectiveMode === "static" ? staticDirectionContract() : dynamicDirectionContract();
+    const contract = config.perspectiveMode === "creative" ? creativeDirectionContract() : config.perspectiveMode === "static" ? staticDirectionContract() : config.perspectiveMode === "asset" ? assetDirectionContract() : dynamicDirectionContract();
     return [
       "### Perspective mode - fixed",
       `Set perspectiveMode to exactly ${config.perspectiveMode} for every shot.`,
@@ -2636,7 +2671,8 @@ function perspectiveContract(config) {
 `);
 }
 function parserInstruction(config, options = {}) {
-  const maxCharacters = config.maxCharacters;
+  const fixedAsset = !config.adaptiveMode && config.perspectiveMode === "asset";
+  const maxCharacters = fixedAsset ? 1 : config.maxCharacters;
   const structuredAnima = config.promptStyle === "anima";
   const hasPreviousVisualState = config.previousVisualStateEnabled && options.hasPreviousVisualState === true;
   const fixedStatic = !config.adaptiveMode && config.perspectiveMode === "static";
@@ -2644,11 +2680,11 @@ function parserInstruction(config, options = {}) {
   const creativePossible = config.adaptiveMode || config.perspectiveMode === "creative";
   const staticBackgroundPossible = fixedStatic || config.adaptiveMode;
   const shotInstruction = [
-    `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
+    fixedAsset ? "One shot per selected paragraph, each containing exactly one visible character." : `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
     "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
-    fixedStatic ? "Keep the visual-novel framing fixed across Static shots. Distinguish additional shots through source-supported changes in primary character, expression, simple pose, or background instead of dramatic cinematography." : "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
-    fixedStatic ? "If the source contains too few distinct stable paragraphs, return fewer shots. Do not repeat a paragraph, invent narrative events, or switch to action-centric framing." : "If the source contains too few distinct visual paragraphs, return fewer shots. Do not repeat a paragraph or invent narrative events.",
-    "Every shot must reference a different source paragraph. Never return two shots for the same paragraph. Order shots by their visual importance, not paragraph number.",
+    fixedAsset ? "Every shot must reference a different selected source paragraph. Never return two shots for the same paragraph." : fixedStatic ? "Keep the visual-novel framing fixed across Static shots. Distinguish additional shots through source-supported changes in primary character, expression, simple pose, or background instead of dramatic cinematography." : "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
+    fixedAsset ? "Do not invent narrative events or add a second visible character." : fixedStatic ? "If the source contains too few distinct stable paragraphs, return fewer shots. Do not repeat a paragraph, invent narrative events, or switch to action-centric framing." : "If the source contains too few distinct visual paragraphs, return fewer shots. Do not repeat a paragraph or invent narrative events.",
+    fixedAsset ? "" : "Every shot must reference a different source paragraph. Never return two shots for the same paragraph. Order shots by their visual importance, not paragraph number.",
     structuredAnima ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood." : ""
   ].join(`
 `);
@@ -2826,11 +2862,16 @@ function parserInstruction(config, options = {}) {
     config.supplement ? "Use sharedComposition.interaction for shared contact or combined actions only, and spatialRelation for one spatial relationship phrase. Do not repeat individual character actions." : "Use sharedComposition.interaction only for source-required shared contact or combined actions, and leave spatialRelation empty. The renderer keeps interaction as a compact action fallback while omitting shared prose.",
     "Do not use any character or persona names in composition fields, including the name of an out-of-frame POV character. Say viewer, left girl, right boy, foreground character, or background character. Use viewer rather than camera for subject orientation.",
     "Use concise objective visual phrases, not narration, invisible emotion, smell, sound, or internal sensation.",
-    "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements.",
-    "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
-    "Prefer the source's exact concrete noun phrase over a generic paraphrase: keep arrow-slit windows rather than windows, wet leaf rather than foliage, glass conservatory panes rather than walls, and tied used condom rather than object. Never add a plausible prop that the current paragraph does not establish.",
-    hasPreviousVisualState ? "When the current source does not establish a new environment detail and Previous Visual State supplies it, copy that environment field exactly. If neither current source nor previous state establishes time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time." : "When the current source does not establish time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time.",
-    config.supplement ? "Populate lightingMood and backgroundElements within the target budget." : staticBackgroundPossible ? "Leave lightingMood empty. Populate 2-3 backgroundElements for every scene containing a Static shot, and leave backgroundElements empty for scenes without a Static shot. Still populate location and timeWeather." : "Leave lightingMood and backgroundElements empty. Still populate location and timeWeather."
+    ...fixedAsset ? [
+      "Always `white background, simple background`. No location, lighting, weather, or prop tags.",
+      "Put that exact value in environment.location. Leave timeWeather, lightingMood, and backgroundElements empty."
+    ] : [
+      "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements.",
+      "Each environment snippet must be concise and contain no comma, semicolon, or terminal punctuation.",
+      "Prefer the source's exact concrete noun phrase over a generic paraphrase: keep arrow-slit windows rather than windows, wet leaf rather than foliage, glass conservatory panes rather than walls, and tied used condom rather than object. Never add a plausible prop that the current paragraph does not establish.",
+      hasPreviousVisualState ? "When the current source does not establish a new environment detail and Previous Visual State supplies it, copy that environment field exactly. If neither current source nor previous state establishes time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time." : "When the current source does not establish time/weather, choose one conservative visually coherent value supported by the setting; never write unknown or unspecified time.",
+      config.supplement ? "Populate lightingMood and backgroundElements within the target budget." : staticBackgroundPossible ? "Leave lightingMood empty. Populate 2-3 backgroundElements for every scene containing a Static shot, and leave backgroundElements empty for scenes without a Static shot. Still populate location and timeWeather." : "Leave lightingMood and backgroundElements empty. Still populate location and timeWeather."
+    ]
   ].join(`
 `) : config.supplement ? [
     "### Natural Language Supplement",
@@ -2855,7 +2896,7 @@ function parserInstruction(config, options = {}) {
     "- Same location means same scene, multiple shots.",
     structuredAnima ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
     "- When Non-authoritative Shot-Router Notes are present, create scenes and shots only for the selected [P#] references in those notes. Read every original numbered paragraph for continuity, but never turn an unselected paragraph into an illustration shot.",
-    fixedStatic ? "Shot = one distinct stable visual-novel moment: a readable background plus a foreground character, simple pose, and visible expression. Shots are independent, so repeat tags if the scene has not changed." : "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
+    fixedAsset ? "Shot = one selected paragraph containing exactly one visible character. Shots are independent, so repeat tags if the scene has not changed." : fixedStatic ? "Shot = one distinct stable visual-novel moment: a readable background plus a foreground character, simple pose, and visible expression. Shots are independent, so repeat tags if the scene has not changed." : "Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
     shotInstruction,
     "Paragraph mapping: current message uses [P#] numbering.",
     "- Paragraph references are 1-based. Copy the exact visible number after P; never convert to zero-based indices, renumber the source, or use paragraph 0.",
@@ -2884,7 +2925,7 @@ function parserInstruction(config, options = {}) {
     hasPreviousVisualState ? "When Previous Visual State exists, characters[].visualChanges must list only age, appearance, body, or attire fields explicitly changed by the current numbered source or by a final user instruction that requests durable character tags. An empty list means the backend injects those prior fields exactly; leave their raw values empty instead of paraphrasing or re-emitting them. Do not mark a field changed merely because you rephrased its tags." : "characters[].visualChanges may be empty when no prior visual state is supplied.",
     structuredAnima ? hasPreviousVisualState ? "environmentChanges must list only location, timeWeather, lightingMood, or backgroundElements explicitly changed by the current numbered source. Before copying anything, compare the current numbered source against Previous Visual State. Spatial transition language such as now inside, enters, exits, outside, later in, or moves to explicitly changes location; output the new location and backgroundElements and list both change markers. An empty list means copy prior values only when the current source truly leaves them unchanged." : "environmentChanges lists only location, timeWeather, lightingMood, or backgroundElements explicitly changed by the current numbered source." : hasPreviousVisualState ? "environmentChanges contains place only when the current numbered source explicitly changes the setting. Otherwise leave it empty and copy the prior place exactly." : "environmentChanges contains place only when the current numbered source explicitly changes the setting.",
     structuredAnima ? "### environment - scene-level" : "### place - scene-level",
-    structuredAnima ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details. Static scenes require a specific physical location and 2-3 backgroundElements." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
+    fixedAsset ? "Always `white background, simple background`. No location, lighting, weather, or prop tags." : structuredAnima ? "environment.location is one physical location phrase; timeWeather is one time/weather phrase; lightingMood targets 1-2 snippets; backgroundElements targets 1-3 prominent visual props or setting details. Static scenes require a specific physical location and 2-3 backgroundElements." : "Start with interior or exterior when location is known, then add location, mood, lighting, time, weather, and prominent props. Prominent props should be color + object. Define once per scene; all shots in the scene share identical place.",
     structuredAnima ? "Do not include character names, actions, expressions, clothing, body traits, or camera framing in environment. Use only source-supported visual atmosphere; never infer romance, calm, menace, or another emotional tone from lighting alone." : "Do not include character names, actions, expressions, clothing, body traits, or camera framing in place.",
     structuredAnima ? "Retain source-critical environment modifiers exactly enough to preserve identity and scale, such as partial bronze mechanical hand rather than mechanical hand." : "",
     "### camera - shot-level",
@@ -3617,7 +3658,7 @@ function parserMessages(stableInstruction, referenceContext, userRequest, overri
 function preprocessingInstruction(paragraphs, config) {
   const minimum = Math.min(config.minImages, paragraphs.length);
   const maximum = Math.min(config.maxImages, paragraphs.length);
-  const perspectiveGuidance = config.adaptiveMode ? "Select varied candidates that give the main parser strong options for Creative, Static, or Dynamic treatment." : config.perspectiveMode === "creative" ? "Favor concrete but easily overlooked visual anchors: partial subjects, objects, reflections, silhouettes, foreground fragments, environmental details, or unusual spatial relationships." : config.perspectiveMode === "static" ? "Favor stable clearly readable beats with conventional framing, limited motion, and limited occlusion." : "Favor significant visible action, movement, interaction, and cinematic changes.";
+  const perspectiveGuidance = config.adaptiveMode ? "Select varied candidates that give the main parser strong options for Creative, Static, or Dynamic treatment." : config.perspectiveMode === "creative" ? "Favor concrete but easily overlooked visual anchors: partial subjects, objects, reflections, silhouettes, foreground fragments, environmental details, or unusual spatial relationships." : config.perspectiveMode === "asset" ? "One shot per selected paragraph, each containing exactly one visible character." : config.perspectiveMode === "static" ? "Favor stable clearly readable beats with conventional framing, limited motion, and limited occlusion." : "Favor significant visible action, movement, interaction, and cinematic changes.";
   return [
     "# Illustration Shot Router",
     "Select the strongest source paragraphs and give the final mode-specific parser a non-authoritative directing note. Never replace, rewrite, or summarize away the original source facts.",
@@ -3898,9 +3939,10 @@ function imageUrlFromId(imageId) {
 function htmlAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r\n?|\n/g, "&#10;");
 }
-function renderInlayBlock(url, _prompt, _negativePrompt, _perspectiveMode, _perspectiveSource, _creativeConcept, imageId, chatId, messageId, swipeId, index, config) {
+function renderInlayBlock(url, _prompt, _negativePrompt, perspectiveMode, _perspectiveSource, _creativeConcept, imageId, chatId, messageId, swipeId, index, config) {
   const label = `Inlay ${index + 1}`;
-  const width = clampInt2(config.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth);
+  const asset = perspectiveMode === "asset";
+  const width = clampInt2(asset ? config.assetImageWidth : config.inlayImageWidth, 120, 2400, asset ? DEFAULT_CONFIG.assetImageWidth : DEFAULT_CONFIG.inlayImageWidth);
   const maxHeight = clampInt2(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
   return `${MARKER}
 <div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;

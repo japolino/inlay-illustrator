@@ -632,6 +632,8 @@ export function preprocessingInstruction(paragraphs: PreparedParagraph[], config
     ? "Select varied candidates that give the main parser strong options for Creative, Static, or Dynamic treatment."
     : config.perspectiveMode === "creative"
       ? "Favor concrete but easily overlooked visual anchors: partial subjects, objects, reflections, silhouettes, foreground fragments, environmental details, or unusual spatial relationships."
+      : config.perspectiveMode === "asset"
+        ? "One shot per selected paragraph, each containing exactly one visible character."
       : config.perspectiveMode === "static"
         ? "Favor stable clearly readable beats with conventional framing, limited motion, and limited occlusion."
         : "Favor significant visible action, movement, interaction, and cinematic changes.";

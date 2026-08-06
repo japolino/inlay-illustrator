@@ -37,7 +37,7 @@ function renderInlayBlock(
   url: string,
   _prompt: string,
   _negativePrompt: string,
-  _perspectiveMode: PerspectiveMode | undefined,
+  perspectiveMode: PerspectiveMode | undefined,
   _perspectiveSource: "adaptive" | "manual" | undefined,
   _creativeConcept: CreativeConcept | null | undefined,
   imageId: string,
@@ -48,7 +48,13 @@ function renderInlayBlock(
   config: Config
 ): string {
   const label = `Inlay ${index + 1}`;
-  const width = clampInt(config.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth);
+  const asset = perspectiveMode === "asset";
+  const width = clampInt(
+    asset ? config.assetImageWidth : config.inlayImageWidth,
+    120,
+    2400,
+    asset ? DEFAULT_CONFIG.assetImageWidth : DEFAULT_CONFIG.inlayImageWidth
+  );
   const maxHeight = clampInt(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
   return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
 }

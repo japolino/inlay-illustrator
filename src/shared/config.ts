@@ -5,7 +5,7 @@ export type PromptPreset = {
   negativePrefix: string;
 };
 
-export type PerspectiveMode = "creative" | "static" | "dynamic";
+export type PerspectiveMode = "creative" | "static" | "dynamic" | "asset";
 
 export type Config = {
   enabled: boolean;
@@ -28,6 +28,7 @@ export type Config = {
   parserRetries: number;
   preprocessingEnabled: boolean;
   inlayImageWidth: number;
+  assetImageWidth: number;
   inlayImageMaxHeightVh: number;
   promptStyle: "default" | "anima";
   promptSyntax: "nai" | "comfyui";
@@ -52,7 +53,6 @@ export type Config = {
 export type RawConfig = Partial<Config> & {
   /** Removed settings retained only so legacy persisted records can be ignored. */
   mode?: unknown;
-  assetImageWidth?: unknown;
   danbooruCleanup?: unknown;
   danbooruEndpoint?: unknown;
   imageGeneration?: {
@@ -86,6 +86,7 @@ export const DEFAULT_CONFIG: Config = {
   parserRetries: 1,
   preprocessingEnabled: false,
   inlayImageWidth: 640,
+  assetImageWidth: 400,
   inlayImageMaxHeightVh: 70,
   promptStyle: "anima",
   promptSyntax: "comfyui",
@@ -150,7 +151,6 @@ export function normalizeConfig(raw: RawConfig): Config {
     danbooruCleanup: _legacyDanbooruCleanup,
     danbooruEndpoint: _legacyDanbooruEndpoint,
     mode: _legacyMode,
-    assetImageWidth: _legacyAssetImageWidth,
     imageGeneration: _legacyImageGeneration,
     ...current
   } = raw;
@@ -166,9 +166,9 @@ export function normalizeConfig(raw: RawConfig): Config {
     ...DEFAULT_CONFIG,
     ...current,
     adaptiveMode: raw.adaptiveMode === true,
-    perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic"
+    perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" || raw.perspectiveMode === "asset"
       ? raw.perspectiveMode
-      : raw.mode === "asset" ? "static" : "dynamic",
+      : raw.mode === "asset" ? "asset" : "dynamic",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
@@ -184,6 +184,7 @@ export function normalizeConfig(raw: RawConfig): Config {
     parserRetries: clampInt(raw.parserRetries, 0, 5, DEFAULT_CONFIG.parserRetries),
     preprocessingEnabled: raw.preprocessingEnabled === true,
     inlayImageWidth: clampInt(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
+    assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
     promptStyle: raw.promptStyle === "default" ? "default" : "anima",
     promptSyntax: raw.promptSyntax === "nai" ? "nai" : "comfyui",

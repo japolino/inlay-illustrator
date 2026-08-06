@@ -20,6 +20,7 @@ var DEFAULT_CONFIG = {
   parserRetries: 1,
   preprocessingEnabled: false,
   inlayImageWidth: 640,
+  assetImageWidth: 400,
   inlayImageMaxHeightVh: 70,
   promptStyle: "anima",
   promptSyntax: "comfyui",
@@ -81,7 +82,6 @@ function normalizeConfig(raw) {
     danbooruCleanup: _legacyDanbooruCleanup,
     danbooruEndpoint: _legacyDanbooruEndpoint,
     mode: _legacyMode,
-    assetImageWidth: _legacyAssetImageWidth,
     imageGeneration: _legacyImageGeneration,
     ...current
   } = raw;
@@ -97,7 +97,7 @@ function normalizeConfig(raw) {
     ...DEFAULT_CONFIG,
     ...current,
     adaptiveMode: raw.adaptiveMode === true,
-    perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" ? raw.perspectiveMode : raw.mode === "asset" ? "static" : "dynamic",
+    perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" || raw.perspectiveMode === "asset" ? raw.perspectiveMode : raw.mode === "asset" ? "asset" : "dynamic",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
@@ -113,6 +113,7 @@ function normalizeConfig(raw) {
     parserRetries: clampInt(raw.parserRetries, 0, 5, DEFAULT_CONFIG.parserRetries),
     preprocessingEnabled: raw.preprocessingEnabled === true,
     inlayImageWidth: clampInt(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
+    assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
     promptStyle: raw.promptStyle === "default" ? "default" : "anima",
     promptSyntax: raw.promptSyntax === "nai" ? "nai" : "comfyui",
@@ -308,11 +309,14 @@ function renderGenerationSection({ ui, config, actions, rerender }) {
   ui.addRangeChoice(section, "perspectiveMode", "Perspective", [
     { value: "creative", label: "Creative" },
     { value: "static", label: "Static" },
-    { value: "dynamic", label: "Dynamic" }
-  ], config.adaptiveMode, config.adaptiveMode ? "Selected independently by the parser for each image." : "Creative explores identity-safe objects, environments, shadows, silhouettes, and non-identifying fragments; Static uses fixed visual-novel framing; Dynamic follows scene action.");
+    { value: "dynamic", label: "Dynamic" },
+    { value: "asset", label: "Asset" }
+  ], config.adaptiveMode, config.adaptiveMode ? "Selected independently by the parser for each image from Creative, Static, or Dynamic. Adaptive never selects Asset." : config.perspectiveMode === "asset" ? "One reusable viewer-facing character asset per selected paragraph on a simple white background." : "Creative explores identity-safe objects, environments, shadows, silhouettes, and non-identifying fragments; Static uses fixed visual-novel framing; Dynamic follows scene action.", rerender);
   ui.addNumber(section, "minImages", "Minimum images", 1, 12);
   ui.addNumber(section, "maxImages", "Maximum images", 1, 12);
-  ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 8);
+  if (config.perspectiveMode !== "asset" || config.adaptiveMode) {
+    ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 8);
+  }
   ui.addActions(section, [{
     label: "Generate latest",
     primary: true,
@@ -396,9 +400,13 @@ function renderMemorySection({ ui, characterAppearance, actions }) {
 }
 
 // src/frontend/sections/output.ts
-function renderOutputSection({ ui }) {
+function renderOutputSection({ ui, config }) {
   const section = ui.section("Image output", false);
-  ui.addNumber(section, "inlayImageWidth", "Illustration width", 120, 2400);
+  if (!config.adaptiveMode && config.perspectiveMode === "asset") {
+    ui.addNumber(section, "assetImageWidth", "Asset width", 120, 2400);
+  } else {
+    ui.addNumber(section, "inlayImageWidth", "Illustration width", 120, 2400);
+  }
   ui.addNumber(section, "inlayImageMaxHeightVh", "Maximum height", 10, 100, "Viewport height percentage.");
   ui.addTextarea(section, "ignoredTags", "Ignored tags", "Separate tags with commas or semicolons.");
 }
@@ -680,7 +688,7 @@ class UiBuilder {
       }
     }));
   }
-  addRangeChoice(parent, key, label, choices, disabled = false, hint = "") {
+  addRangeChoice(parent, key, label, choices, disabled = false, hint = "", afterChange) {
     const target = this.row(parent, label, hint);
     const wrapper = document.createElement("div");
     wrapper.className = "inlay-range-choice";
@@ -708,8 +716,10 @@ class UiBuilder {
     input.addEventListener("input", update);
     input.addEventListener("change", () => {
       const choice = choices[Number(input.value)];
-      if (choice)
+      if (choice) {
         this.patchConfig({ [key]: choice.value });
+        afterChange?.();
+      }
     });
     update();
     wrapper.append(input, labels);
@@ -842,7 +852,7 @@ function resolveInlayDetails(attributePrompt, fallbackPrompt, attributeNegative,
   return {
     prompt: resolveInlayPrompt(attributePrompt, fallbackPrompt),
     negativePrompt: resolveInlayPrompt(attributeNegative, fallbackNegative),
-    perspectiveMode: normalizedMode === "creative" || normalizedMode === "static" || normalizedMode === "dynamic" ? normalizedMode : null,
+    perspectiveMode: normalizedMode === "creative" || normalizedMode === "static" || normalizedMode === "dynamic" || normalizedMode === "asset" ? normalizedMode : null,
     perspectiveSource: normalizedSource === "adaptive" || normalizedSource === "manual" ? normalizedSource : null,
     creativeConcept: (creativeConcept || "").trim()
   };

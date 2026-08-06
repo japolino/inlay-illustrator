@@ -75,6 +75,7 @@ describe("shared configuration", () => {
       parserRetries: 2.6,
       parserMaxTokens: 99_999,
       inlayImageWidth: 100,
+      assetImageWidth: 99_999,
       inlayImageMaxHeightVh: Number.NaN
     });
 
@@ -87,6 +88,7 @@ describe("shared configuration", () => {
       parserRetries: 3,
       parserMaxTokens: 32_768,
       inlayImageWidth: 120,
+      assetImageWidth: 2400,
       inlayImageMaxHeightVh: DEFAULT_CONFIG.inlayImageMaxHeightVh
     });
   });
@@ -97,18 +99,19 @@ describe("shared configuration", () => {
     expect(normalizeConfig({ parserMaxTokens: 9_000.4 }).parserMaxTokens).toBe(9_000);
   });
 
-  test("normalizes perspective settings and migrates removed modes without retaining their keys", () => {
+  test("normalizes all manual perspectives and restores the legacy Asset selection", () => {
     expect(normalizeConfig({ perspectiveMode: "creative", adaptiveMode: true })).toMatchObject({
       perspectiveMode: "creative",
       adaptiveMode: true
     });
-    expect(normalizeConfig({ mode: "asset" }).perspectiveMode).toBe("static");
+    expect(normalizeConfig({ perspectiveMode: "asset" }).perspectiveMode).toBe("asset");
+    expect(normalizeConfig({ mode: "asset" }).perspectiveMode).toBe("asset");
     expect(normalizeConfig({ mode: "experimental" }).perspectiveMode).toBe("dynamic");
     expect(normalizeConfig({ mode: "illustration" }).perspectiveMode).toBe("dynamic");
     expect(normalizeConfig({ perspectiveMode: "invalid" as never }).perspectiveMode).toBe("dynamic");
     const migrated = normalizeConfig({ mode: "asset", assetImageWidth: 812 });
     expect("mode" in migrated).toBe(false);
-    expect("assetImageWidth" in migrated).toBe(false);
+    expect(migrated.assetImageWidth).toBe(812);
   });
 
   test("enables previous visual state by default and preserves an explicit opt-out", () => {
