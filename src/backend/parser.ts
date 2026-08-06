@@ -431,7 +431,6 @@ const unsupportedStructuredOutput = new Set<string>();
 
 /** Matches production output budgets while reserving room for reasoning-heavy compatible models. */
 export function parserStageTokenBudget(model: string, config: Config, stage: ParserStage): number {
-  if (config.parserMaxTokens > 0) return config.parserMaxTokens;
   const budgets: Record<ParserStage, number> = {
     main: Math.min(7000, 1800 + Math.max(1, config.maxImages) * 900),
     ideation: Math.min(5000, 1200 + Math.max(1, config.maxImages) * 700),
@@ -439,25 +438,34 @@ export function parserStageTokenBudget(model: string, config: Config, stage: Par
     repair: Math.min(6000, 1600 + Math.max(1, config.maxImages) * 800),
     camera: 1800
   };
-  const base = budgets[stage];
+  let base = budgets[stage];
   if (/kimi[^\n]*k2[.\-_ ]?7[^\n]*code/i.test(model)) {
-    if (stage === "main") return Math.max(base, 16000);
-    if (stage === "repair") return Math.max(base, 12000);
-    return Math.max(base, 8000);
+    if (stage === "main") base = Math.max(base, 16000);
+    else if (stage === "repair") base = Math.max(base, 12000);
+    else base = Math.max(base, 8000);
+  } else if (/claude[^\n]*sonnet[^\n]*5/i.test(model)) {
+    if (stage === "main") base = Math.max(base, 9000);
+    else if (stage === "ideation") base = Math.max(base, 5000);
+    else if (stage === "preprocess") base = Math.max(base, 4000);
+    else if (stage === "repair") base = Math.max(base, 7000);
+    else if (stage === "camera") base = Math.max(base, 4000);
+  } else if (/deepseek[^\n]*v4[^\n]*pro/i.test(model)) {
+    if (stage === "main") base = Math.max(base, 9000);
+    else if (stage === "ideation") base = Math.max(base, 5000);
+    else if (stage === "preprocess") base = Math.max(base, 4000);
+    else if (stage === "repair") base = Math.max(base, 7000);
+    else if (stage === "camera") base = Math.max(base, 4000);
   }
-  if (/claude[^\n]*sonnet[^\n]*5/i.test(model)) {
-    if (stage === "main") return Math.max(base, 9000);
-    if (stage === "ideation") return Math.max(base, 5000);
-    if (stage === "preprocess") return Math.max(base, 4000);
-    if (stage === "repair") return Math.max(base, 7000);
-    if (stage === "camera") return Math.max(base, 4000);
+  if (config.fastMode) {
+    // Fast Mode caps the single-pass stages; ideation/preprocess/camera should
+    // not normally run, so their cap is the only bound that matters.
+    const fastCap = stage === "main" || stage === "repair"
+      ? 1400 + Math.max(1, config.maxImages) * 600
+      : Math.min(base, 2400);
+    const fast = Math.min(base, fastCap);
+    return config.parserMaxTokens > 0 ? Math.min(config.parserMaxTokens, fast) : fast;
   }
-  if (!/deepseek[^\n]*v4[^\n]*pro/i.test(model)) return base;
-  if (stage === "main") return Math.max(base, 9000);
-  if (stage === "ideation") return Math.max(base, 5000);
-  if (stage === "preprocess") return Math.max(base, 4000);
-  if (stage === "repair") return Math.max(base, 7000);
-  if (stage === "camera") return Math.max(base, 4000);
+  if (config.parserMaxTokens > 0) return config.parserMaxTokens;
   return base;
 }
 
@@ -909,6 +917,14 @@ export async function repairDynamicCameraDiversity(
       remainingExactCollisions: 0
     });
     return local;
+  }
+  if (config.fastMode) {
+    logStage(config, "camera_diversity_remote_repair_skipped", {
+      reason: "fast_mode",
+      signatures: audit.signatures,
+      exactCollisions: audit.exactCollisions
+    }, "warn");
+    return payload;
   }
   try {
     const raw = await generateParserText(parserConnection, config, [

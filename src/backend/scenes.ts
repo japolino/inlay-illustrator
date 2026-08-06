@@ -235,7 +235,10 @@ export function selectPromptEntries(
     if (!paragraph) continue;
     const concept = safeCreativeConcepts.get(entry.parserParagraph);
     const requestedPerspective = cleanString(entry.shot.perspectiveMode).toLowerCase();
-    const shot = config.adaptiveMode && requestedPerspective === "creative"
+    // Fast Mode trusts the parser's Creative classification without a concept
+    // slate (ideation is skipped), so Creative shots render as unbound Creative
+    // instead of being downgraded to Dynamic.
+    const shot = config.adaptiveMode && !config.fastMode && requestedPerspective === "creative"
       && (!concept || !adaptiveCreativeAllowed.has(entry))
       ? { ...entry.shot, perspectiveMode: "dynamic" }
       : entry.shot;

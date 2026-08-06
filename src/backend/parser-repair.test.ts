@@ -562,3 +562,73 @@ describe("camera diversity repair stage", () => {
     expect(requests).toHaveLength(1);
   });
 });
+
+
+describe("Fast Mode parser budgets", () => {
+  test("caps the main and repair budgets below the normal per-image formula", () => {
+    const normal = { ...DEFAULT_CONFIG, maxImages: 5 };
+    const fast = { ...DEFAULT_CONFIG, fastMode: true, maxImages: 5 };
+    expect(parserStageTokenBudget("base-model", normal, "main")).toBe(6300);
+    expect(parserStageTokenBudget("base-model", fast, "main")).toBe(4400);
+    expect(parserStageTokenBudget("base-model", normal, "repair")).toBe(5600);
+    expect(parserStageTokenBudget("base-model", fast, "repair")).toBe(4400);
+  });
+
+  test("keeps the configured parserMaxTokens as an upper bound in Fast Mode", () => {
+    const fast = { ...DEFAULT_CONFIG, fastMode: true, maxImages: 5, parserMaxTokens: 3000 };
+    expect(parserStageTokenBudget("base-model", fast, "main")).toBe(3000);
+  });
+
+  test("caps stages that should not normally run in Fast Mode", () => {
+    const fast = { ...DEFAULT_CONFIG, fastMode: true, maxImages: 5 };
+    expect(parserStageTokenBudget("base-model", fast, "ideation")).toBe(2400);
+    expect(parserStageTokenBudget("base-model", fast, "preprocess")).toBe(2400);
+    expect(parserStageTokenBudget("base-model", fast, "camera")).toBe(1800);
+  });
+
+  test("does not let reasoning-heavy model bumps escape the Fast Mode cap", () => {
+    const fast = { ...DEFAULT_CONFIG, fastMode: true, maxImages: 1 };
+    expect(parserStageTokenBudget("DeepSeek-A/deepseek-v4-pro", fast, "main")).toBe(2000);
+    expect(parserStageTokenBudget("Moonshot/kimi-k2.7-code-highspeed", fast, "main")).toBe(2000);
+    expect(parserStageTokenBudget("AROMA/claude-sonnet-5", fast, "repair")).toBe(2000);
+  });
+});
+
+describe("Fast Mode camera diversity", () => {
+  test("never invokes the remote repair LLM and preserves the original payload when local repair cannot resolve collisions", async () => {
+    const original = {
+      scenes: [{ shots: [
+        { paragraph: 1, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level" } },
+        { paragraph: 2, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level" } }
+      ] }]
+    };
+
+    const repaired = await repairDynamicCameraDiversity(
+      connection,
+      { ...config, fastMode: true, adaptiveMode: true },
+      original,
+      "[P1]\nOne\n\n[P2]\nTwo"
+    );
+
+    expect(repaired).toBe(original);
+    expect(requests).toHaveLength(0);
+  });
+
+  test("still applies the local camera repair in Fast Mode when it can resolve collisions", async () => {
+    const duplicatePayload = {
+      scenes: [{ shots: [
+        { paragraph: 1, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level", perspective: "three-quarter view", focus: [] }, action: "first" },
+        { paragraph: 2, perspectiveMode: "dynamic", camera: { framing: "close-up", angle: "eye level", perspective: "three-quarter view", focus: [] }, action: "second" }
+      ] }]
+    };
+    const repaired = await repairDynamicCameraDiversity(
+      connection,
+      { ...config, fastMode: true, adaptiveMode: true },
+      duplicatePayload,
+      "[P1]\nFirst beat.\n\n[P2]\nSecond beat."
+    );
+
+    expect(requests).toHaveLength(0);
+    expect((repaired.scenes?.[0].shots?.[1].camera as { framing?: string } | undefined)?.framing).not.toBe("close-up");
+  });
+});

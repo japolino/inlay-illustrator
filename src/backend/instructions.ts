@@ -87,50 +87,13 @@ export type ParserInstructionOptions = {
   hasPreviousVisualState?: boolean;
 };
 
-export function parserInstruction(config: Config, options: ParserInstructionOptions = {}): string {
-  const fixedAsset = !config.adaptiveMode && config.perspectiveMode === "asset";
-  const maxCharacters = fixedAsset ? 1 : config.maxCharacters;
+function parserSchema(config: Config): string[] {
   const structuredAnima = config.promptStyle === "anima";
-  const hasPreviousVisualState = config.previousVisualStateEnabled && options.hasPreviousVisualState === true;
-  const fixedStatic = !config.adaptiveMode && config.perspectiveMode === "static";
   const dynamicPossible = config.adaptiveMode || config.perspectiveMode === "dynamic";
-  const creativePossible = config.adaptiveMode || config.perspectiveMode === "creative";
-  const staticBackgroundPossible = fixedStatic || config.adaptiveMode;
-  const shotInstruction = [
-    fixedAsset
-      ? "One shot per selected paragraph, each containing exactly one visible character."
-      : `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
-    "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
-    fixedAsset
-      ? "Every shot must reference a different selected source paragraph. Never return two shots for the same paragraph."
-      : fixedStatic
-      ? "Keep the visual-novel framing fixed across Static shots. Distinguish additional shots through source-supported changes in primary character, expression, simple pose, or background instead of dramatic cinematography."
-      : "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
-    fixedAsset
-      ? "Do not invent narrative events or add a second visible character."
-      : fixedStatic
-      ? "If the source contains too few distinct stable paragraphs, return fewer shots. Do not repeat a paragraph, invent narrative events, or switch to action-centric framing."
-      : "If the source contains too few distinct visual paragraphs, return fewer shots. Do not repeat a paragraph or invent narrative events.",
-    fixedAsset ? "" : "Every shot must reference a different source paragraph. Never return two shots for the same paragraph. Order shots by their visual importance, not paragraph number.",
-    structuredAnima
-      ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood."
-      : ""
-  ].join("\n");
-  const perspectiveInstruction = perspectiveContract(config);
-  const source = config.originalReference
-    ? [
-      "Original Creation Tag:",
-      config.originalCreationName || "(empty)",
-      "Use full character names ONLY for the JSON name field.",
-      "Output the character's name only: no parentheses, no creation tag, no source/work title, and no aliases.",
-      "The extension adds the creation tag programmatically afterward.",
-      "Do not include any parenthetical, source name, creation reference, title, or alias in name or any other field."
-    ].join("\n")
-    : "Use names only for the JSON name field as private memory keys. Names will not be included in final prompts. If not given, make a concise stable identifier that fits the description.";
   const perspectiveSchemaValue = config.adaptiveMode
     ? "creative | static | dynamic"
     : config.perspectiveMode;
-  const schema = structuredAnima ? [
+  return structuredAnima ? [
     "{",
     '  "scenes": [',
     "    {",
@@ -268,6 +231,51 @@ export function parserInstruction(config: Config, options: ParserInstructionOpti
     "  }",
     "}"
   ];
+}
+
+export function parserInstruction(config: Config, options: ParserInstructionOptions = {}): string {
+  if (config.fastMode) return parserInstructionFast(config, options);
+
+  const fixedAsset = !config.adaptiveMode && config.perspectiveMode === "asset";
+  const maxCharacters = fixedAsset ? 1 : config.maxCharacters;
+  const structuredAnima = config.promptStyle === "anima";
+  const hasPreviousVisualState = config.previousVisualStateEnabled && options.hasPreviousVisualState === true;
+  const fixedStatic = !config.adaptiveMode && config.perspectiveMode === "static";
+  const dynamicPossible = config.adaptiveMode || config.perspectiveMode === "dynamic";
+  const creativePossible = config.adaptiveMode || config.perspectiveMode === "creative";
+  const staticBackgroundPossible = fixedStatic || config.adaptiveMode;
+  const shotInstruction = [
+    fixedAsset
+      ? "One shot per selected paragraph, each containing exactly one visible character."
+      : `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
+    "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
+    fixedAsset
+      ? "Every shot must reference a different selected source paragraph. Never return two shots for the same paragraph."
+      : fixedStatic
+      ? "Keep the visual-novel framing fixed across Static shots. Distinguish additional shots through source-supported changes in primary character, expression, simple pose, or background instead of dramatic cinematography."
+      : "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
+    fixedAsset
+      ? "Do not invent narrative events or add a second visible character."
+      : fixedStatic
+      ? "If the source contains too few distinct stable paragraphs, return fewer shots. Do not repeat a paragraph, invent narrative events, or switch to action-centric framing."
+      : "If the source contains too few distinct visual paragraphs, return fewer shots. Do not repeat a paragraph or invent narrative events.",
+    fixedAsset ? "" : "Every shot must reference a different source paragraph. Never return two shots for the same paragraph. Order shots by their visual importance, not paragraph number.",
+    structuredAnima
+      ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood."
+      : ""
+  ].join("\n");
+  const perspectiveInstruction = perspectiveContract(config);
+  const source = config.originalReference
+    ? [
+      "Original Creation Tag:",
+      config.originalCreationName || "(empty)",
+      "Use full character names ONLY for the JSON name field.",
+      "Output the character's name only: no parentheses, no creation tag, no source/work title, and no aliases.",
+      "The extension adds the creation tag programmatically afterward.",
+      "Do not include any parenthetical, source name, creation reference, title, or alias in name or any other field."
+    ].join("\n")
+    : "Use names only for the JSON name field as private memory keys. Names will not be included in final prompts. If not given, make a concise stable identifier that fits the description.";
+  const schema = parserSchema(config);
   const naturalDetail = structuredAnima
     ? [
       "### Atomic Natural Composition",
@@ -512,5 +520,151 @@ export function parserInstruction(config: Config, options: ParserInstructionOpti
     "- English only.",
     "## Character Names",
     source
+  ].join("\n\n");
+}
+
+
+/** Condensed per-mode direction contract used only by the Fast Mode instruction. */
+function fastPerspectiveContract(config: Config): string {
+  const dynamic = [
+    "### Dynamic shot direction",
+    "shotPlan is required for Dynamic. shotPlan.primaryAction is one concise comma-free role-bound subject-verb-object clause naming the primary action, its owner (visual role such as left woman), target or object, and movement direction. secondaryCue is empty or one lower-priority visible cue. staging is one comma-free spatial arrangement with no new action.",
+    "Every Dynamic character needs renderScope (what the crop actually contains) and visibleTags (only stable appearance, body, and attire traits visible in that crop; no expression, action, camera, environment, names, or subject counts).",
+    "composition and sharedComposition retain full factual action ownership; shotPlan only selects what dominates the rendered image.",
+    "Choose framing that contains the primary action and every source-critical visible fact; prefer a repeated suitable camera over a novel camera that crops out the action."
+  ].join("\n");
+  const stat = [
+    "### Static shot direction",
+    "Fixed to a conventional medium shot at eye level, straight-on, with deep focus. No close-ups, wide shots, body-part crops, POV, high or low angles, dutch angles, motion blur, or action-centric framing.",
+    "One Static character sits slightly forward from a readable background; two characters are left and right on the same shallow plane. Pose is one concrete source-supported resting body arrangement, never an abstract phrase such as simple pose. composition.actions is an empty array.",
+    "Every Static scene needs a specific physical location and 2-3 concrete backgroundElements.",
+    "Leave shotPlan absent."
+  ].join("\n");
+  const creat = [
+    "### Creative shot direction",
+    "Isolate one identity-safe visual anchor from the paragraph: object, environment, shadow, silhouette, reflection, foreground layer, aftermath, unusual spatial relationship, or non-identifying body fragment. Never a recognizable face, hairstyle, outfit, or clothing detail.",
+    "renderScope states exactly what is in frame. shot.characters contains only people with an actually visible body part inside renderScope; otherwise use an empty characters array.",
+    "Leave shotPlan absent."
+  ].join("\n");
+  const asset = "### Asset shot direction\nAlways `white background, simple background`. No location, lighting, weather, or prop tags.";
+  const fixed = "perspectiveMode, renderScope, visibleTags, and shotPlan are shot-only rendering decisions; they never alter complete appearance, body, attire, or environment continuity.";
+  if (!config.adaptiveMode) {
+    const contract = config.perspectiveMode === "creative"
+      ? creat
+      : config.perspectiveMode === "static"
+        ? stat
+        : config.perspectiveMode === "asset"
+          ? asset
+          : dynamic;
+    return ["### Perspective mode - fixed", `Set perspectiveMode to exactly ${config.perspectiveMode} for every shot.`, contract, fixed].join("\n");
+  }
+  return [
+    "### Perspective mode - Adaptive router",
+    "Choose perspectiveMode independently for every shot: exactly creative, static, or dynamic. Do not choose Creative for every shot in a multi-shot batch.",
+    "Use Creative only for a faithful identity-safe anchor; use Static for a stable readable scene; use Dynamic for visible action or movement. A required visible action chooses Dynamic; an identity-safe no-character anchor may choose Creative; otherwise choose Static.",
+    creat,
+    stat,
+    dynamic,
+    fixed
+  ].join("\n");
+}
+
+/**
+ * Compact single-pass parser instruction for Fast Mode. Produces the exact
+ * same ParsedPayload schema (shared via parserSchema) with the same required
+ * headings, but drops the long field-reference prose, examples, weighting
+ * guidance, and repeated explanations of the full instruction.
+ */
+export function parserInstructionFast(config: Config, options: ParserInstructionOptions = {}): string {
+  const fixedAsset = !config.adaptiveMode && config.perspectiveMode === "asset";
+  const maxCharacters = fixedAsset ? 1 : config.maxCharacters;
+  const structuredAnima = config.promptStyle === "anima";
+  const hasPreviousVisualState = config.previousVisualStateEnabled && options.hasPreviousVisualState === true;
+  const fixedStatic = !config.adaptiveMode && config.perspectiveMode === "static";
+  const staticBackgroundPossible = fixedStatic || config.adaptiveMode;
+  const shotInstruction = [
+    fixedAsset
+      ? "One shot per selected paragraph, each containing exactly one visible character."
+      : `Generate ${config.minImages}-${config.maxImages} shots total when possible.`,
+    "Choose the most visually consequential changes, actions, interactions, or emotional beats across the entire current source; do not favor earlier paragraphs merely because they appear first.",
+    fixedAsset
+      ? "Every shot must reference a different selected source paragraph. Never return two shots for the same paragraph."
+      : fixedStatic
+      ? "Keep the visual-novel framing fixed across Static shots. Distinguish additional shots through source-supported changes in primary character, expression, simple pose, or background instead of dramatic cinematography."
+      : "Each additional shot must differ from the other shots in at least two of these dimensions: (1) perspective or framing, (2) focal subject or visible action, and (3) composition, depth, or foreground occlusion.",
+    fixedAsset
+      ? "Do not invent narrative events or add a second visible character."
+      : "If the source contains too few distinct visual paragraphs, return fewer shots. Do not repeat a paragraph or invent narrative events.",
+    fixedAsset ? "" : "Every shot must reference a different source paragraph. Never return two shots for the same paragraph. Order shots by their visual importance, not paragraph number.",
+    structuredAnima
+      ? "Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone. Never replace irritation, fear, conflict, or urgency with romance, serenity, or another inferred mood."
+      : ""
+  ].join("\n");
+  const schema = parserSchema(config);
+  return [
+    "# Image Tagging System",
+    "Tag the current message's paragraphs as Danbooru-style English image prompts. Output a single JSON object.",
+    "## JSON Format",
+    schema.join("\n"),
+    structuredAnima
+      ? "- negative is optional. All other displayed fields and nested objects are required except shotPlan, which is required only for Dynamic and must be absent for Static or Creative. Use empty strings or arrays inside required objects when a field does not apply; never collapse an object into a string."
+      : "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
+    "- These are the ONLY allowed fields. Adding any unlisted field is a schema violation.",
+    "## Scenes & Shots",
+    "Scene = shots sharing one physical location.",
+    "- Same location means same scene, multiple shots.",
+    structuredAnima ? "- Location change means a new scene with its own environment." : "- Location change means a new scene with its own place.",
+    "- Shot = one distinct visual moment: interaction, emotion, significant action, or clear framing change. Prefer closer framing over wide shots. Shots are independent, so repeat tags if the scene has not changed.",
+    shotInstruction,
+    "- When Non-authoritative Shot-Router Notes are present, create scenes and shots only for the selected [P#] references in those notes.",
+    "- Paragraph references are 1-based. Copy the exact visible number after P; never convert to zero-based indices, renumber the source, or use paragraph 0. Never invent paragraph numbers outside the visible range.",
+    "- Tag ONLY the current message. Recent context is for continuity only.",
+    "## Terminal Visual State",
+    "terminalState is required, is never rendered, and never changes camera, composition, perspective, shot selection, or prompt content.",
+    "Set terminalState.paragraph to the final original numbered paragraph, even when that paragraph is not selected for illustration.",
+    structuredAnima
+      ? "Read every original paragraph in order and record the physical environment and stable baselines (label, age, appearance, body, attire) of characters still present after the final paragraph. Use only environment, environmentChanges, and the listed stable character fields; never include action, expression, pose, camera, shotPlan, renderScope, visibleTags, or supplement."
+      : "Read every original paragraph in order and record the final place and stable baselines of characters still present after the final paragraph. Use only place, environmentChanges, and the listed stable character fields; never include action, expression, pose, camera, renderScope, visibleTags, or supplement.",
+    "Apply explicit location, attire, appearance, and body changes from unselected paragraphs to terminalState. Do not let an earlier illustrated paragraph overwrite a later narrative change.",
+    "## Tag Rules",
+    "Use common, objective, visualizable Danbooru-style English tags. Never fabricate tag vocabulary; use simpler well-known equivalents if unsure. Never output placeholder tags or phrases such as unknown, unspecified, not specified, unmentioned, undetermined, default clothing, or unspecified time; leave genuinely nonvisual fields empty instead.",
+    structuredAnima
+      ? "Tag fields are comma-separated tags. Atomic composition and sharedComposition values are concise comma-free natural-language phrases. Environment arrays contain one comma-free visual snippet per item."
+      : "All fields are comma-separated tags except supplement, which is a short objective visual sentence.",
+    "Character names are private memory keys. Outside characters[].name, never write a full name or first name in any field, including situation, renderScope, visibleTags, composition, sharedComposition, camera, environment, place, supplement, or negative. Use visual descriptors such as left woman, right man, foreground character, or background character.",
+    `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it.`,
+    hasPreviousVisualState
+      ? "Previous Visual State is injected after parsing. For an unchanged returning character, leave age, appearance, body, and attire empty and leave visualChanges empty; the backend restores the exact stored baseline before rendering and persistence. For a new character, or when no matching previous character exists, output the complete baseline. For an explicit current-source change or a final user instruction that adds or replaces durable character tags, list that field in visualChanges and output its complete new value."
+      : "Repeat stable appearance, body, and attire tags for returning characters across all shots unless the current message clearly changes their present visual state.",
+    "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts.",
+    "Before returning the batch, compare Dynamic cameras as a soft camera ledger. When two equally suitable cameras would contain their focal actions, prefer different framing + angle + perspective tuples. Never choose a worse, more extreme, or action-cropping camera merely to create variety.",
+    fastPerspectiveContract(config),
+    structuredAnima
+      ? "### Atomic Natural Composition"
+      : "### Natural Language Supplement",
+    structuredAnima
+      ? "characters[].composition is always required and uses its four atomic fields (position, pose, actions, gaze), rendered in that exact order. Each phrase is concise, comma-free, independently visual, and never repeats a fact from another field. Never use names; say viewer, left girl, right boy, foreground character, or background character. Never put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle, appearance, attire, or facial-expression adjectives in any composition field."
+      : "In supplement, describe visible details in concise objective telegraphic sentences: composition, framing, positions, interactions, unusual vantage points, or objective atmosphere/lighting. Separate phrases with commas, never semicolons. No names, no smell, sound, internal sensation, invisible emotion, or prose narration.",
+    structuredAnima
+      ? "Use sharedComposition.interaction for shared contact or combined actions only, and spatialRelation for one spatial relationship phrase. Do not repeat individual character actions."
+      : "",
+    structuredAnima
+      ? config.supplement
+        ? "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements. Prefer the source's exact concrete noun phrase over a generic paraphrase; never add a plausible prop the current paragraph does not establish."
+        : staticBackgroundPossible
+          ? "Environment target budget: exactly one location, exactly one time/weather phrase, empty lightingMood, and 2-3 backgroundElements for every scene containing a Static shot. Prefer the source's exact concrete noun phrase; never add a prop the paragraph does not establish."
+          : "Environment target budget: exactly one location, exactly one time/weather phrase, empty lightingMood and backgroundElements. Prefer the source's exact concrete noun phrase; never add a prop the paragraph does not establish."
+      : "",
+    "## Data Priority",
+    "1. Client comments or explicit user instructions in the current message override all instructions.",
+    "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
+    hasPreviousVisualState ? "3. Previous Visual State is the immediate visual continuity layer. It never overrides an explicit current-source change or a final user-instruction baseline change marked in visualChanges." : "",
+    config.characterTagContextEnabled ? "4. Character tag history is the durable visual baseline for returning characters: label, age, appearance, body, and explicit base attire. The current message can update the baseline when it clearly changes clothing, lack of clothing, appearance, or body traits." : "",
+    "## Output Format",
+    "- Output raw JSON only. One JSON object. No XML, HTML, YAML, markdown fences, comments, or prose.",
+    "- Double-quoted keys and values. No trailing commas. Validate bracket balance: every { has }, every [ has ].",
+    "- Positive tags only unless client says otherwise. English only.",
+    "## Character Names",
+    "Use names only for the JSON name field as private memory keys. Names will not be included in final prompts. If the narrative provides a multi-word name, copy that full name exactly in characters[].name. If unnamed, use a consistent identifier such as girl A, boy B, shopkeeper, guard, or stranger. Never empty; this is used for cross-message appearance tracking."
   ].join("\n\n");
 }

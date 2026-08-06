@@ -1370,3 +1370,47 @@ describe("Anima parser contract and visual distinctness", () => {
     expect("danbooruEndpoint" in config).toBe(false);
   });
 });
+
+
+describe("Fast Mode parser instruction", () => {
+  test("keeps every required heading and schema element in the compact form", () => {
+    const instruction = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true });
+
+    expect(instruction).toContain("# Image Tagging System");
+    expect(instruction).toContain("## JSON Format");
+    expect(instruction).toContain("## Scenes & Shots");
+    expect(instruction).toContain("## Terminal Visual State");
+    expect(instruction).toContain("## Tag Rules");
+    expect(instruction).toContain("## Output Format");
+    expect(instruction).toContain("## Character Names");
+    expect(instruction).toContain("terminalState");
+    expect(instruction).toContain("perspectiveMode");
+    expect(instruction).toContain("shotPlan");
+    expect(instruction).toContain("## Data Priority");
+  });
+
+  test("keeps the configured shot-count requirement and the required schema fields", () => {
+    const instruction = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true, minImages: 2, maxImages: 4 });
+    expect(instruction).toContain("Generate 2-4 shots total when possible.");
+    expect(instruction).toContain("visualChanges");
+    expect(instruction).toContain("renderScope");
+    expect(instruction).toContain("attireInferred");
+  });
+
+  test("is meaningfully shorter than the full instruction while sharing the schema", () => {
+    const full = parserInstruction(DEFAULT_CONFIG);
+    const fast = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true });
+    expect(fast.length).toBeLessThan(full.length * 0.6);
+    expect(fast).toContain('"terminalState"');
+  });
+
+  test("retains the mode-specific direction contract for Static and Dynamic requirements", () => {
+    const staticFast = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true, perspectiveMode: "static" });
+    expect(staticFast).toContain("Static shot direction");
+    expect(staticFast).toContain("backgroundElements");
+
+    const dynamicFast = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true, perspectiveMode: "dynamic" });
+    expect(dynamicFast).toContain("Dynamic shot direction");
+    expect(dynamicFast).toContain("shotPlan.primaryAction");
+  });
+});

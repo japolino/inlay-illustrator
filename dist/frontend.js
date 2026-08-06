@@ -4,6 +4,7 @@ var DEFAULT_CONFIG = {
   autoGenerate: true,
   debugLogging: false,
   adaptiveMode: false,
+  fastMode: false,
   perspectiveMode: "dynamic",
   parserConnectionId: null,
   parserModel: "",
@@ -97,6 +98,7 @@ function normalizeConfig(raw) {
     ...DEFAULT_CONFIG,
     ...current,
     adaptiveMode: raw.adaptiveMode === true,
+    fastMode: raw.fastMode === true,
     perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" || raw.perspectiveMode === "asset" ? raw.perspectiveMode : raw.mode === "asset" ? "asset" : "dynamic",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
@@ -130,6 +132,16 @@ function normalizeConfig(raw) {
     customNegative: cleanString(raw.customNegative),
     promptPresets,
     activePromptPresetId: activePromptPresetId && promptPresets.some((preset) => preset.id === activePromptPresetId) ? activePromptPresetId : null
+  };
+}
+function effectiveGenerationConfig(config) {
+  if (!config.fastMode)
+    return config;
+  return {
+    ...config,
+    preprocessingEnabled: false,
+    parserRetries: 0,
+    includeLorebook: false
   };
 }
 
@@ -414,6 +426,7 @@ function renderOutputSection({ ui, config }) {
 // src/frontend/sections/parser.ts
 function renderParserSection({ ui, config, parserConnections, actions }) {
   const section = ui.section("Parser and context", false);
+  ui.addSwitch(section, "fastMode", "Fast mode", "Use a compact single-pass sidecar with reduced context. Skips lorebook, history, shot routing, Creative ideation, and remote camera repair. Keeps your configured image count but may reduce prompt detail, continuity, and shot variety.");
   const selectedParser = parserConnections.find((connection) => connection.id === config.parserConnectionId);
   const parserOptions = parserConnections.map((connection) => ({
     value: connection.id,

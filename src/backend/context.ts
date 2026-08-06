@@ -60,9 +60,34 @@ export type ParserContextSources = {
 export async function loadParserContextSources(
   chatId: string,
   config: Config,
-  userId?: string
+  userId?: string,
+  options: { fastBootstrapCharacter?: boolean } = {}
 ): Promise<ParserContextSources> {
   const diagnostics: Record<string, unknown> = {};
+  if (config.fastMode) {
+    // Fast Mode skips chat/persona context entirely. The one exception is a
+    // character-card bootstrap on the first generation, when no durable
+    // character tags exist yet; after that, cached character tags carry the
+    // visual baseline without any character RPC.
+    const needsChat = config.includeCharacterInfo && options.fastBootstrapCharacter === true;
+    let chat: Record<string, unknown> | null = null;
+    let character: Record<string, unknown> | null = null;
+    if (needsChat) {
+      try {
+        chat = asRecord(await spindle.chats.get(chatId, userId));
+        if (config.includeCharacterInfo && chat?.character_id) {
+          character = asRecord(await spindle.characters.get(String(chat.character_id), userId));
+        }
+      } catch (error) {
+        diagnostics.characterInfoError = error instanceof Error ? error.message : String(error);
+      }
+      diagnostics.fastBootstrapCharacter = true;
+    } else {
+      diagnostics.fastBootstrapCharacter = false;
+    }
+    diagnostics.fastMode = true;
+    return { chat, persona: null, character, diagnostics };
+  }
   const needsChat = config.includeCharacterInfo || config.includeLorebook || config.userInstructionsEnabled;
   const needsPersona = config.includeUserInfo || config.userInstructionsEnabled;
   const [chatResult, personaResult] = await Promise.allSettled([
@@ -414,7 +439,7 @@ export async function buildParserContext(
     }
   }
 
-  if (config.includeLorebook) {
+  if (config.includeLorebook && !config.fastMode) {
     const target = messages[targetIndex]?.content || "";
     const snapshot = lorebookSnapshot || await buildLorebookContextSnapshot(chatId, target, config, userId);
     const block = attempt === 0 ? snapshot.compact : snapshot.full;
@@ -440,7 +465,9 @@ export async function buildParserContext(
   return {
     systemContext: blocks.filter(Boolean).join("\n\n"),
     preprocessingSystemContext: preprocessingBlocks.filter(Boolean).join("\n\n"),
-    recentContext: formatRecentContext(messages, targetIndex, includeCountForAttempt(config, attempt)),
+    recentContext: config.fastMode
+      ? ""
+      : formatRecentContext(messages, targetIndex, includeCountForAttempt(config, attempt)),
     override: unique(overrides.map((value) => cleanString(value)).filter(Boolean)).join("\n\n"),
     diagnostics
   };

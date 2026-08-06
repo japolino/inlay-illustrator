@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_CONFIG, normalizeConfig, normalizePromptPresets } from "./config.js";
+import { DEFAULT_CONFIG, effectiveGenerationConfig, normalizeConfig, normalizePromptPresets } from "./config.js";
 
 describe("shared configuration", () => {
   test("normalizes an empty persisted record to independent defaults", () => {
@@ -135,5 +135,53 @@ describe("shared configuration", () => {
     }]);
     expect(normalizeConfig({ promptPresets: presets, activePromptPresetId: " cinematic " }).activePromptPresetId).toBe("cinematic");
     expect(normalizeConfig({ promptPresets: presets, activePromptPresetId: "missing" }).activePromptPresetId).toBeNull();
+  });
+});
+
+
+describe("Fast Mode configuration", () => {
+  test("fastMode defaults to false", () => {
+    expect(normalizeConfig({}).fastMode).toBe(false);
+  });
+
+  test("normalizeConfig preserves the fastMode boolean", () => {
+    expect(normalizeConfig({ fastMode: true }).fastMode).toBe(true);
+    expect(normalizeConfig({ fastMode: false }).fastMode).toBe(false);
+  });
+
+  test("effectiveGenerationConfig leaves Normal Mode unchanged", () => {
+    const config = normalizeConfig({
+      minImages: 2,
+      maxImages: 4,
+      preprocessingEnabled: true,
+      parserRetries: 3,
+      includeLorebook: true
+    });
+    expect(effectiveGenerationConfig(config)).toBe(config);
+  });
+
+  test("Fast Mode disables preprocessing, retries, and lorebook without changing image counts", () => {
+    const config = normalizeConfig({
+      fastMode: true,
+      minImages: 2,
+      maxImages: 4,
+      preprocessingEnabled: true,
+      parserRetries: 3,
+      includeLorebook: true
+    });
+    const effective = effectiveGenerationConfig(config);
+    expect(effective.fastMode).toBe(true);
+    expect(effective.minImages).toBe(2);
+    expect(effective.maxImages).toBe(4);
+    expect(effective.preprocessingEnabled).toBe(false);
+    expect(effective.parserRetries).toBe(0);
+    expect(effective.includeLorebook).toBe(false);
+  });
+
+  test("Fast Mode preserves a configured maximum of one image", () => {
+    const config = normalizeConfig({ fastMode: true, minImages: 1, maxImages: 1 });
+    const effective = effectiveGenerationConfig(config);
+    expect(effective.minImages).toBe(1);
+    expect(effective.maxImages).toBe(1);
   });
 });

@@ -1,4 +1,4 @@
-import type { Config, PerspectiveMode } from "../shared/config.js";
+import { effectiveGenerationConfig, type Config, type PerspectiveMode } from "../shared/config.js";
 import {
   buildLorebookContextSnapshot,
   buildParserContext,
@@ -85,6 +85,8 @@ export type ParseStageInput = {
   userId?: string;
   signal?: AbortSignal;
   preparedParserConnection?: Promise<ParserConnection>;
+  /** Fast Mode only: load the character card once when no durable character tags exist yet. */
+  fastBootstrapCharacter?: boolean;
 };
 
 export type StoredImageActionRequest = {
@@ -262,7 +264,9 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
       config,
       userId
     ),
-    loadParserContextSources(chatId, config, userId)
+    loadParserContextSources(chatId, config, userId, {
+      fastBootstrapCharacter: input.fastBootstrapCharacter === true
+    })
   ]);
 
   for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
@@ -281,7 +285,10 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
         contextSources
       );
       if (manualCreative && conceptSelections === null) {
-        if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
+        if (config.fastMode) {
+          logStage(config, "creative_ideation_skipped", { reason: "fast_mode", mode: "manual_creative" });
+          conceptSelections = new Map();
+        } else if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
           const previousConcepts = conceptCandidates
             .filter((concept) => usedConceptIds.has(concept.id))
             .map((concept) => concept.concept);
@@ -367,7 +374,10 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
         config.previousVisualStateEnabled ? state.previousVisualState : undefined
       );
       parsed = await repairDynamicCameraDiversity(parserConnection, config, parsed, targetSource, userId, signal);
-      if (config.adaptiveMode) {
+      if (config.adaptiveMode && config.fastMode) {
+        logStage(config, "creative_ideation_skipped", { reason: "fast_mode", mode: "adaptive" });
+        conceptSelections = new Map();
+      } else if (config.adaptiveMode) {
         const creativeParagraphs = new Set(normalizeScenePayload(parsed)
           .filter(({ shot }) => cleanString(shot.perspectiveMode).toLowerCase() === "creative")
           .map(({ parserParagraph }) => parserParagraph));
@@ -982,7 +992,7 @@ export async function rerunStoredImage(
         .find((paragraph) => paragraph.originalIndex === originalParagraph);
       if (!sourceParagraph) throw new Error("The source paragraph for this image no longer exists.");
       const singleConfig: Config = {
-        ...config,
+        ...effectiveGenerationConfig(config),
         minImages: 1,
         maxImages: 1,
         preprocessingEnabled: false,
@@ -1003,7 +1013,9 @@ export async function rerunStoredImage(
         config: singleConfig,
         creativeCandidates: storedCandidates,
         usedCreativeConceptIds: previousConceptHistory,
-        userId
+        userId,
+        fastBootstrapCharacter: singleConfig.fastMode && singleConfig.includeCharacterInfo
+          && Object.keys(initialState.characterAppearance).length === 0
       });
       selectionForMemory = selection.parsed;
       const entry = selection.selected[0];
@@ -1079,8 +1091,21 @@ async function runGenerationForMessage(
   const successfulParserParagraphs: number[] = [];
   try {
     throwIfAborted(signal);
-    config = prepared?.config || await getConfig(userId);
+    const storedConfig = prepared?.config || await getConfig(userId);
+    config = effectiveGenerationConfig(storedConfig);
     logStage(config, "request_received", { chatId, messageId, contentLength: content.length, enabled: config.enabled, autoGenerate: config.autoGenerate });
+    if (config.fastMode) {
+      logStage(config, "fast_mode_applied", {
+        configuredMinImages: storedConfig.minImages,
+        configuredMaxImages: storedConfig.maxImages,
+        effectiveMinImages: config.minImages,
+        effectiveMaxImages: config.maxImages,
+        recentContextSkipped: true,
+        preprocessingSkipped: true,
+        retriesDisabled: true,
+        lorebookSkipped: storedConfig.includeLorebook && !config.includeLorebook
+      });
+    }
     if (!config.enabled) {
       logStage(config, "request_skipped", { reason: "disabled", chatId, messageId });
       return;
@@ -1152,7 +1177,9 @@ async function runGenerationForMessage(
       config,
       userId,
       signal,
-      preparedParserConnection: parserConnectionPromise
+      preparedParserConnection: parserConnectionPromise,
+      fastBootstrapCharacter: config.fastMode && config.includeCharacterInfo
+        && Object.keys(state.characterAppearance).length === 0
     });
     parsed = selection.parsed;
     const selected = selection.selected;

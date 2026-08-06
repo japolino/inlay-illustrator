@@ -12,6 +12,8 @@ export type Config = {
   autoGenerate: boolean;
   debugLogging: boolean;
   adaptiveMode: boolean;
+  /** Fast Mode: single compact parser pass with reduced context. Never changes minImages/maxImages. */
+  fastMode: boolean;
   perspectiveMode: PerspectiveMode;
   parserConnectionId: string | null;
   parserModel: string;
@@ -70,6 +72,7 @@ export const DEFAULT_CONFIG: Config = {
   autoGenerate: true,
   debugLogging: false,
   adaptiveMode: false,
+  fastMode: false,
   perspectiveMode: "dynamic",
   parserConnectionId: null,
   parserModel: "",
@@ -166,6 +169,7 @@ export function normalizeConfig(raw: RawConfig): Config {
     ...DEFAULT_CONFIG,
     ...current,
     adaptiveMode: raw.adaptiveMode === true,
+    fastMode: raw.fastMode === true,
     perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" || raw.perspectiveMode === "asset"
       ? raw.perspectiveMode
       : raw.mode === "asset" ? "asset" : "dynamic",
@@ -203,5 +207,26 @@ export function normalizeConfig(raw: RawConfig): Config {
     activePromptPresetId: activePromptPresetId && promptPresets.some((preset) => preset.id === activePromptPresetId)
       ? activePromptPresetId
       : null
+  };
+}
+
+/**
+ * Runtime config applied at the generation pipeline boundary when Fast Mode is
+ * enabled. Never mutates the stored config and never changes the configured
+ * minImages/maxImages image count.
+ *
+ * Fast Mode forces out the LLM stages that are redundant or optional for a
+ * single compact parser pass: shot routing (preprocessing), outer parser
+ * retries, and lorebook loading (which also disables the full-context retry).
+ * Recent-context, persona, and metadata skipping are handled by the context
+ * builder itself because they need chat state (character-memory bootstrap).
+ */
+export function effectiveGenerationConfig(config: Config): Config {
+  if (!config.fastMode) return config;
+  return {
+    ...config,
+    preprocessingEnabled: false,
+    parserRetries: 0,
+    includeLorebook: false
   };
 }

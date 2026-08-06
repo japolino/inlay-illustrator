@@ -2,6 +2,13 @@ import type { SectionContext } from "./section-context.js";
 
 export function renderParserSection({ ui, config, parserConnections, actions }: SectionContext): void {
   const section = ui.section("Parser and context", false);
+  ui.addSwitch(
+    section,
+    "fastMode",
+    "Fast mode",
+    "Use a compact single-pass sidecar with reduced context. Skips lorebook, history, shot routing, Creative ideation, and remote camera repair. Keeps your configured image count but may reduce prompt detail, continuity, and shot variety."
+  );
+
   const selectedParser = parserConnections.find((connection) => connection.id === config.parserConnectionId);
   const parserOptions = parserConnections.map((connection) => ({
     value: connection.id,

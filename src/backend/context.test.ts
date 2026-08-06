@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { DEFAULT_CONFIG } from "../shared/config.js";
 import { MARKER } from "./constants.js";
-import { buildLorebookContextSnapshot, buildParserContext, formatRecentContext } from "./context.js";
+import { buildLorebookContextSnapshot, buildParserContext, formatRecentContext, loadParserContextSources } from "./context.js";
 import type { ChatMessage } from "./types.js";
 
 let activationCalls = 0;
@@ -227,5 +227,88 @@ describe("activated lorebook parser context", () => {
     expect(entryCalls).toContain("target-entry");
     expect(snapshot.compact).toContain("Moonblade");
     expect(snapshot.diagnostics).toMatchObject({ lorebookActivated: 30, lorebookSelected: 24 });
+  });
+});
+
+
+describe("Fast Mode parser context", () => {
+  const characterCache = {
+    Elara: "long silver hair, violet eyes, slim, blue robe"
+  };
+  const previousVisualState = {
+    characters: [{ name: "Elara", label: "girl", age: "", appearance: "", body: "", attire: "", attireInferred: false }],
+    environment: { location: "school clubroom", timeWeather: "late afternoon", lightingMood: ["warm window light"], backgroundElements: ["desks"] },
+    place: "",
+    updatedAt: "2026-07-18T00:00:00.000Z"
+  };
+  const fastConfig = {
+    ...DEFAULT_CONFIG,
+    fastMode: true,
+    includeUserInfo: true,
+    includeCharacterInfo: true,
+    includeLorebook: true,
+    userInstructionsEnabled: true,
+    customParserInstructions: "Custom parser override.",
+    characterTagContextEnabled: true,
+    previousVisualStateEnabled: true
+  };
+  const messages: ChatMessage[] = [
+    { id: "a1", role: "assistant", content: "Earlier narrative." },
+    { id: "target", role: "assistant", content: "Current target." }
+  ];
+
+  test("skips recent history, lorebook, chat, persona, and metadata RPCs while keeping cached tags, previous visual state, and custom instructions", async () => {
+    const calls: string[] = [];
+    const spindleMock = (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle as Record<string, any>;
+    spindleMock.chats.get = async () => { calls.push("chats.get"); return { id: "chat-1", character_id: "char-1" }; };
+    spindleMock.personas.getActive = async () => { calls.push("personas.getActive"); return { id: "persona-1", name: "User", description: "profile" }; };
+    spindleMock.characters.get = async () => { calls.push("characters.get"); return { id: "char-1", name: "Elara", description: "long silver hair" }; };
+    spindleMock.world_books.getActivated = async () => { calls.push("world_books.getActivated"); return []; };
+
+    const context = await buildParserContext("chat-1", messages, 1, characterCache, fastConfig, 0, "user-1", undefined, previousVisualState);
+
+    expect(calls).toEqual([]);
+    expect(activationCalls).toBe(0);
+    expect(context.recentContext).toBe("");
+    expect(context.systemContext).not.toContain("Earlier narrative");
+    expect(context.systemContext).not.toContain("Lorebook");
+    expect(context.systemContext).not.toContain("{{user}} Info");
+    expect(context.systemContext).not.toContain("{{char}} Info");
+    expect(context.systemContext).toContain("long silver hair, violet eyes");
+    expect(context.systemContext).toContain("## Previous Visual State");
+    expect(context.override).toContain("Custom parser override.");
+    expect(context.override).not.toContain("profile");
+    expect(context.diagnostics.fastMode).toBe(true);
+  });
+
+  test("bootstraps the character card once when Fast Mode has no durable character tags", async () => {
+    const calls: string[] = [];
+    const spindleMock = (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle as Record<string, any>;
+    spindleMock.chats.get = async () => { calls.push("chats.get"); return { id: "chat-1", character_id: "char-1" }; };
+    spindleMock.personas.getActive = async () => { calls.push("personas.getActive"); return { id: "persona-1" }; };
+    spindleMock.characters.get = async () => { calls.push("characters.get"); return { id: "char-1", name: "Elara", description: "long silver hair" }; };
+    spindleMock.world_books.getActivated = async () => { calls.push("world_books.getActivated"); return []; };
+
+    const sources = await loadParserContextSources("chat-1", fastConfig, "user-1", { fastBootstrapCharacter: true });
+
+    expect(calls).toEqual(["chats.get", "characters.get"]);
+    expect(sources.chat).toMatchObject({ id: "chat-1" });
+    expect(sources.character).toMatchObject({ id: "char-1" });
+    expect(sources.persona).toBeNull();
+    expect(sources.diagnostics.fastBootstrapCharacter).toBe(true);
+  });
+
+  test("does not load chat or character sources when durable character tags already exist", async () => {
+    const calls: string[] = [];
+    const spindleMock = (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle as Record<string, any>;
+    spindleMock.chats.get = async () => { calls.push("chats.get"); return { id: "chat-1", character_id: "char-1" }; };
+    spindleMock.characters.get = async () => { calls.push("characters.get"); return { id: "char-1" }; };
+
+    const sources = await loadParserContextSources("chat-1", fastConfig, "user-1", { fastBootstrapCharacter: false });
+
+    expect(calls).toEqual([]);
+    expect(sources.chat).toBeNull();
+    expect(sources.character).toBeNull();
+    expect(sources.diagnostics.fastBootstrapCharacter).toBe(false);
   });
 });

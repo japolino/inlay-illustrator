@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { DEFAULT_CONFIG } from "../shared/config.js";
+import { DEFAULT_CONFIG, effectiveGenerationConfig } from "../shared/config.js";
 import {
   compactLorebookNeedsFullRetry,
   generateForMessage,
@@ -311,5 +311,116 @@ describe("progressive ComfyUI delivery", () => {
     expect(message.content.indexOf("/second.png")).toBeLessThan(message.content.indexOf("Second visual beat."));
     expect(frontend.some((payload) => payload.type === "generation_progress" && payload.stage === "completed")).toBe(true);
     expect(updates.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+
+describe("Fast Mode parser call sequencing", () => {
+  const requests: Array<Record<string, unknown>> = [];
+  const responses: unknown[] = [];
+  const baseConfig = effectiveGenerationConfig({
+    ...DEFAULT_CONFIG,
+    fastMode: true,
+    parserConnectionId: "fast-parser",
+    includeCharacterInfo: true,
+    includeUserInfo: true,
+    includeLorebook: true,
+    userInstructionsEnabled: true,
+    previousVisualStateEnabled: false,
+    preprocessingEnabled: true,
+    parserRetries: 1,
+    minImages: 1,
+    maxImages: 1
+  });
+  const messages = [{ id: "message-1", role: "assistant", content: "A creative beat." }];
+  const paragraphs = [{ parserIndex: 1, originalIndex: 1, text: "A creative beat." }];
+  const state = { characterAppearance: { Elara: "silver hair" }, generated: {} };
+
+  beforeEach(() => {
+    requests.splice(0);
+    responses.splice(0);
+    (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
+      connections: {
+        get: async () => ({ id: "fast-parser", name: "Fast", provider: "openai", model: "gpt-test" })
+      },
+      generate: {
+        raw: async (request: Record<string, unknown>) => {
+          requests.push(request);
+          return responses.shift();
+        }
+      },
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+  });
+
+  const creativePayload = (perspectiveMode: string): Record<string, unknown> => ({
+    scenes: [{
+      place: "street",
+      environment: { location: "street", timeWeather: "day" },
+      shots: [{
+        paragraph: 1,
+        perspectiveMode,
+        camera: { framing: "body-part focus", angle: "eye level", perspective: "from side" },
+        ...(perspectiveMode === "creative" ? { renderScope: "shadow and pavement", visibleTags: ["shadow", "pavement"] } : {}),
+        ...(perspectiveMode === "dynamic" ? {
+          shotPlan: { primaryAction: "wind moves paper across the street", secondaryCue: "", staging: "paper crosses the foreground" }
+        } : {}),
+        characters: []
+      }]
+    }],
+    terminalState: {
+      paragraph: 1,
+      place: "street",
+      environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: [] },
+      environmentChanges: [],
+      characters: []
+    }
+  });
+
+  test("manual Creative Fast Mode uses one compact main call and skips ideation and preprocessing", async () => {
+    const config = effectiveGenerationConfig({
+      ...baseConfig,
+      adaptiveMode: false,
+      perspectiveMode: "creative" as const
+    });
+    responses.push({ content: JSON.stringify(creativePayload("creative")) });
+
+    const result = await parseAndSelectPrompts({
+      chatId: "chat-1", messageId: "message-1", messages, paragraphs,
+      state, config
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(result.selected[0]?.perspectiveMode).toBe("creative");
+    expect(result.selected[0]?.creativeConcept).toBeUndefined();
+    expect((requests[0].messages as Array<{ content: string }>)[0].content).toContain("# Image Tagging System");
+    expect((requests[0].messages as Array<{ content: string }>)[0].content).not.toContain("Creative Illustration Concept Ideator");
+  });
+
+  test("Adaptive Fast Mode keeps a Creative shot without an ideation call instead of downgrading it", async () => {
+    const config = effectiveGenerationConfig({ ...baseConfig, adaptiveMode: true });
+    responses.push({ content: JSON.stringify(creativePayload("creative")) });
+
+    const result = await parseAndSelectPrompts({
+      chatId: "chat-1", messageId: "message-1", messages, paragraphs,
+      state, config
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(result.selected[0]?.perspectiveMode).toBe("creative");
+    expect(result.selected[0]?.creativeConcept).toBeUndefined();
+  });
+
+  test("Adaptive Fast Mode parses a Dynamic shot with a single call", async () => {
+    const config = effectiveGenerationConfig({ ...baseConfig, adaptiveMode: true });
+    responses.push({ content: JSON.stringify(creativePayload("dynamic")) });
+
+    const result = await parseAndSelectPrompts({
+      chatId: "chat-1", messageId: "message-1", messages, paragraphs,
+      state, config
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(result.selected[0]?.perspectiveMode).toBe("dynamic");
   });
 });
