@@ -53,12 +53,17 @@ function renderInlayBlock(
   const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
   const asset = perspectiveMode === "asset";
   const width = clampInt(
-    asset ? config.assetImageWidth : config.inlayImageWidth,
+    asset ? config.assetImageWidth : placement === "cover" ? config.coverImageWidth : config.inlayImageWidth,
     120,
     2400,
-    asset ? DEFAULT_CONFIG.assetImageWidth : DEFAULT_CONFIG.inlayImageWidth
+    asset ? DEFAULT_CONFIG.assetImageWidth : placement === "cover" ? DEFAULT_CONFIG.coverImageWidth : DEFAULT_CONFIG.inlayImageWidth
   );
-  const maxHeight = clampInt(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
+  const maxHeight = clampInt(
+    placement === "cover" ? config.coverImageMaxHeightVh : config.inlayImageMaxHeightVh,
+    10,
+    100,
+    placement === "cover" ? DEFAULT_CONFIG.coverImageMaxHeightVh : DEFAULT_CONFIG.inlayImageMaxHeightVh
+  );
   return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
 }
 

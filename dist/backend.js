@@ -24,6 +24,8 @@ var DEFAULT_CONFIG = {
   inlayImageWidth: 640,
   assetImageWidth: 400,
   inlayImageMaxHeightVh: 70,
+  coverImageWidth: 1200,
+  coverImageMaxHeightVh: 80,
   promptStyle: "anima",
   promptSyntax: "comfyui",
   includeUserInfo: true,
@@ -119,6 +121,8 @@ function normalizeConfig(raw) {
     inlayImageWidth: clampInt(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
     assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
+    coverImageWidth: clampInt(raw.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth),
+    coverImageMaxHeightVh: clampInt(raw.coverImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.coverImageMaxHeightVh),
     promptStyle: raw.promptStyle === "default" ? "default" : "anima",
     promptSyntax: raw.promptSyntax === "nai" ? "nai" : "comfyui",
     includeUserInfo: raw.includeUserInfo !== false,
@@ -4553,8 +4557,8 @@ function htmlAttr(value) {
 function renderInlayBlock(url, _prompt, _negativePrompt, perspectiveMode, _perspectiveSource, _creativeConcept, imageId, chatId, messageId, swipeId, index, config, placement = "paragraph", illustrationNumber = index + 1) {
   const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
   const asset = perspectiveMode === "asset";
-  const width = clampInt2(asset ? config.assetImageWidth : config.inlayImageWidth, 120, 2400, asset ? DEFAULT_CONFIG.assetImageWidth : DEFAULT_CONFIG.inlayImageWidth);
-  const maxHeight = clampInt2(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
+  const width = clampInt2(asset ? config.assetImageWidth : placement === "cover" ? config.coverImageWidth : config.inlayImageWidth, 120, 2400, asset ? DEFAULT_CONFIG.assetImageWidth : placement === "cover" ? DEFAULT_CONFIG.coverImageWidth : DEFAULT_CONFIG.inlayImageWidth);
+  const maxHeight = clampInt2(placement === "cover" ? config.coverImageMaxHeightVh : config.inlayImageMaxHeightVh, 10, 100, placement === "cover" ? DEFAULT_CONFIG.coverImageMaxHeightVh : DEFAULT_CONFIG.inlayImageMaxHeightVh);
   return `${MARKER}
 <div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
 }

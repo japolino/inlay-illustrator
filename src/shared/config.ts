@@ -34,6 +34,10 @@ export type Config = {
   inlayImageWidth: number;
   assetImageWidth: number;
   inlayImageMaxHeightVh: number;
+  /** Maximum display width of the optional cover image. */
+  coverImageWidth: number;
+  /** Maximum display height of the optional cover image. */
+  coverImageMaxHeightVh: number;
   promptStyle: "default" | "anima";
   promptSyntax: "nai" | "comfyui";
   includeUserInfo: boolean;
@@ -94,6 +98,8 @@ export const DEFAULT_CONFIG: Config = {
   inlayImageWidth: 640,
   assetImageWidth: 400,
   inlayImageMaxHeightVh: 70,
+  coverImageWidth: 1200,
+  coverImageMaxHeightVh: 80,
   promptStyle: "anima",
   promptSyntax: "comfyui",
   includeUserInfo: true,
@@ -194,6 +200,8 @@ export function normalizeConfig(raw: RawConfig): Config {
     inlayImageWidth: clampInt(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
     assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
+    coverImageWidth: clampInt(raw.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth),
+    coverImageMaxHeightVh: clampInt(raw.coverImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.coverImageMaxHeightVh),
     promptStyle: raw.promptStyle === "default" ? "default" : "anima",
     promptSyntax: raw.promptSyntax === "nai" ? "nai" : "comfyui",
     includeUserInfo: raw.includeUserInfo !== false,

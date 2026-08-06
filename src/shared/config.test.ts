@@ -121,6 +121,19 @@ describe("shared configuration", () => {
     expect(normalizeConfig({ coverImageEnabled: "true" as never }).coverImageEnabled).toBe(false);
   });
 
+  test("uses dedicated display size defaults for cover images and clamps persisted values", () => {
+    expect(DEFAULT_CONFIG.coverImageWidth).toBe(1200);
+    expect(DEFAULT_CONFIG.coverImageMaxHeightVh).toBe(80);
+    expect(normalizeConfig({ coverImageWidth: 960, coverImageMaxHeightVh: 55 })).toMatchObject({
+      coverImageWidth: 960,
+      coverImageMaxHeightVh: 55
+    });
+    expect(normalizeConfig({ coverImageWidth: 10, coverImageMaxHeightVh: 999 })).toMatchObject({
+      coverImageWidth: 120,
+      coverImageMaxHeightVh: 100
+    });
+  });
+
   test("enables previous visual state by default and preserves an explicit opt-out", () => {
     expect(normalizeConfig({}).previousVisualStateEnabled).toBe(true);
     expect(normalizeConfig({ previousVisualStateEnabled: false }).previousVisualStateEnabled).toBe(false);

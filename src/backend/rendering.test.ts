@@ -58,6 +58,28 @@ describe("inlay rendering", () => {
     expect(renderInlaidMessage(rendered, record, DEFAULT_CONFIG)).toBe(rendered);
   });
 
+  test("applies dedicated cover display size while paragraph inlays keep their own size", () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      inlayImageWidth: 640,
+      inlayImageMaxHeightVh: 70,
+      coverImageWidth: 1500,
+      coverImageMaxHeightVh: 45
+    };
+    const rendered = renderInlaidMessage("First.\n\nSecond.", {
+      imageUrls: ["/cover.png", "/first.png"],
+      prompts: ["cover", "first"],
+      placements: ["cover", "paragraph"] as Array<"cover" | "paragraph">,
+      paragraphs: [1, 1]
+    }, config);
+    const coverBlock = rendered.slice(rendered.indexOf("/cover.png"), rendered.indexOf("</div>", rendered.indexOf("/cover.png")));
+    const paragraphBlock = rendered.slice(rendered.indexOf("/first.png"), rendered.indexOf("</div>", rendered.indexOf("/first.png")));
+    expect(coverBlock).toContain("width:min(100%, 1500px)");
+    expect(coverBlock).toContain("max-height:45vh");
+    expect(paragraphBlock).toContain("width:min(100%, 640px)");
+    expect(paragraphBlock).toContain("max-height:70vh");
+  });
+
   test("clamps invalid paragraph targets and applies configured dimensions", () => {
     const rendered = renderInlaidMessage(
       "First.\n\nSecond.",

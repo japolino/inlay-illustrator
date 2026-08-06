@@ -24,6 +24,8 @@ var DEFAULT_CONFIG = {
   inlayImageWidth: 640,
   assetImageWidth: 400,
   inlayImageMaxHeightVh: 70,
+  coverImageWidth: 1200,
+  coverImageMaxHeightVh: 80,
   promptStyle: "anima",
   promptSyntax: "comfyui",
   includeUserInfo: true,
@@ -119,6 +121,8 @@ function normalizeConfig(raw) {
     inlayImageWidth: clampInt(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
     assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
+    coverImageWidth: clampInt(raw.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth),
+    coverImageMaxHeightVh: clampInt(raw.coverImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.coverImageMaxHeightVh),
     promptStyle: raw.promptStyle === "default" ? "default" : "anima",
     promptSyntax: raw.promptSyntax === "nai" ? "nai" : "comfyui",
     includeUserInfo: raw.includeUserInfo !== false,
@@ -319,7 +323,11 @@ function renderGenerationSection({ ui, config, actions, rerender }) {
   const section = ui.section("Generation", true);
   ui.addSwitch(section, "enabled", "Power");
   ui.addSwitch(section, "autoGenerate", "Auto generate");
-  ui.addSwitch(section, "coverImageEnabled", "Cover image", "Generate one additional cinematic key visual for the whole message and place it above the first paragraph.");
+  ui.addSwitch(section, "coverImageEnabled", "Cover image", "Generate one additional cinematic key visual for the whole message and place it above the first paragraph.", rerender);
+  if (config.coverImageEnabled) {
+    ui.addNumber(section, "coverImageWidth", "Cover image width", 120, 2400);
+    ui.addNumber(section, "coverImageMaxHeightVh", "Cover image max height (vh)", 10, 100);
+  }
   ui.addSwitch(section, "adaptiveMode", "Adaptive Mode", "Let the parser choose a balanced perspective mix, using Creative only for identity-safe details when appropriate.", rerender);
   ui.addRangeChoice(section, "perspectiveMode", "Perspective", [
     { value: "creative", label: "Creative" },

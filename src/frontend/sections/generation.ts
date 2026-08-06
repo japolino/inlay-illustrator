@@ -8,8 +8,13 @@ export function renderGenerationSection({ ui, config, actions, rerender }: Secti
     section,
     "coverImageEnabled",
     "Cover image",
-    "Generate one additional cinematic key visual for the whole message and place it above the first paragraph."
+    "Generate one additional cinematic key visual for the whole message and place it above the first paragraph.",
+    rerender
   );
+  if (config.coverImageEnabled) {
+    ui.addNumber(section, "coverImageWidth", "Cover image width", 120, 2400);
+    ui.addNumber(section, "coverImageMaxHeightVh", "Cover image max height (vh)", 10, 100);
+  }
   ui.addSwitch(
     section,
     "adaptiveMode",
