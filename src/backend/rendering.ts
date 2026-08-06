@@ -2,7 +2,7 @@ import { DEFAULT_CONFIG, type Config, type PerspectiveMode } from "../shared/con
 import { MARKER } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
 import { paragraphCount } from "./paragraphs.js";
-import type { CreativeConcept } from "./types.js";
+import type { CreativeConcept, GenerationSlotStatus } from "./types.js";
 import { clampInt } from "./utils.js";
 
 type InlayRecord = {
@@ -17,6 +17,7 @@ type InlayRecord = {
   perspectiveSources?: Array<"adaptive" | "manual">;
   creativeConcepts?: Array<CreativeConcept | null>;
   paragraphs: number[];
+  slotStatuses?: GenerationSlotStatus[];
 };
 
 export function imageUrlFromId(imageId: string): string {
@@ -52,29 +53,44 @@ function renderInlayBlock(
   return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
 }
 
+function renderSlotPlaceholder(status: GenerationSlotStatus, index: number): string {
+  const label = status === "failed"
+    ? `Illustration ${index + 1} failed. Use Generate latest to retry.`
+    : status === "cancelled"
+      ? `Illustration ${index + 1} cancelled.`
+      : `Generating illustration ${index + 1}…`;
+  return `${MARKER}\n<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-image-index="${index}" role="status">${htmlAttr(label)}</div>`;
+}
+
 export function renderInlaidMessage(original: string, record: InlayRecord, config: Config): string {
   const cleanOriginal = stripInlayContent(original);
   const blocks = new Map<number, string[]>();
   const count = Math.max(1, paragraphCount(cleanOriginal));
-  record.imageUrls.forEach((url, index) => {
+  const slotCount = Math.max(record.imageUrls.length, record.paragraphs.length, record.slotStatuses?.length || 0);
+  for (let index = 0; index < slotCount; index += 1) {
+    const url = record.imageUrls[index] || "";
+    const status = record.slotStatuses?.[index];
+    if (!url && !status) continue;
     const paragraph = clampInt(record.paragraphs[index], 1, count, Math.min(index + 1, count));
     const existing = blocks.get(paragraph) || [];
-    existing.push(renderInlayBlock(
-      url,
-      record.prompts[index] || "",
-      record.negativePrompts?.[index] || "",
-      record.perspectiveModes?.[index],
-      record.perspectiveSources?.[index],
-      record.creativeConcepts?.[index],
-      record.imageIds?.[index] || "",
-      record.chatId || "",
-      record.messageId || "",
-      record.swipeId || 0,
-      index,
-      config
-    ));
+    existing.push(url
+      ? renderInlayBlock(
+        url,
+        record.prompts[index] || "",
+        record.negativePrompts?.[index] || "",
+        record.perspectiveModes?.[index],
+        record.perspectiveSources?.[index],
+        record.creativeConcepts?.[index],
+        record.imageIds?.[index] || "",
+        record.chatId || "",
+        record.messageId || "",
+        record.swipeId || 0,
+        index,
+        config
+      )
+      : renderSlotPlaceholder(status || "pending", index));
     blocks.set(paragraph, existing);
-  });
+  }
 
   const tokens = cleanOriginal.trimEnd().split(/(\r?\n\s*\r?\n)/);
   let paragraph = 0;

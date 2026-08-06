@@ -134,4 +134,28 @@ describe("inlay rendering", () => {
     expect(rerendered).toBe(rendered);
     expect(rerendered.split(MARKER)).toHaveLength(3);
   });
+
+  test("renders stable progressive slots in paragraph order and replaces placeholders in place", () => {
+    const pending = renderInlaidMessage("First.\n\nSecond.", {
+      imageUrls: ["", ""],
+      prompts: ["first", "second"],
+      paragraphs: [1, 2],
+      slotStatuses: ["pending", "pending"]
+    }, DEFAULT_CONFIG);
+    expect(pending).toContain("Generating illustration 1");
+    expect(pending).toContain("Generating illustration 2");
+    expect(pending.indexOf("Generating illustration 1")).toBeLessThan(pending.indexOf("First."));
+    expect(pending.indexOf("Generating illustration 2")).toBeLessThan(pending.indexOf("Second."));
+
+    const progressive = renderInlaidMessage(pending, {
+      imageUrls: ["", "/second.png"],
+      prompts: ["first", "second"],
+      paragraphs: [1, 2],
+      slotStatuses: ["failed", "completed"]
+    }, DEFAULT_CONFIG);
+    expect(progressive).not.toContain("Generating illustration");
+    expect(progressive).toContain("Illustration 1 failed");
+    expect(progressive).toContain("/second.png");
+    expect(progressive.split(MARKER)).toHaveLength(3);
+  });
 });

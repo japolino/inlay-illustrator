@@ -129,6 +129,7 @@ describe("character-memory frontend messages", () => {
     expect(storageWrites).toEqual([]);
     expect(frontendMessages).toEqual([{
       type: "status",
+      chatId: "chat-1",
       status: "Error",
       error: "Character name is required."
     }]);
@@ -146,6 +147,7 @@ describe("character-memory frontend messages", () => {
     expect(storedFiles.get(path)).toBe(original);
     expect(frontendMessages).toEqual([{
       type: "status",
+      chatId: "chat-1",
       status: "Error",
       error: "Storage unavailable."
     }]);
@@ -824,5 +826,76 @@ describe("image preparation and generation pipeline", () => {
     });
 
     await expect(completed).rejects.toBe(firstFailure);
+  });
+
+  test("reports eager results as each Promise settles without rearranging the final batch", async () => {
+    const generations = imageJobs.map(() => deferred<string>());
+    const progressive: string[] = [];
+    const completed = helpers.prepareAndDispatchImageJobs(
+      [0, 1, 2],
+      true,
+      (index) => imageJobs[index],
+      (job) => generations[job.index].promise,
+      {
+        onSettled: (job, result) => {
+          progressive.push(`${job.index}:${result.status}`);
+        }
+      }
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    generations[2].resolve("third");
+    await Promise.resolve();
+    generations[0].resolve("first");
+    await Promise.resolve();
+    generations[1].resolve("second");
+
+    await expect(completed).resolves.toEqual({ jobs: imageJobs, results: ["first", "second", "third"] });
+    expect(progressive).toEqual(["2:fulfilled", "0:fulfilled", "1:fulfilled"]);
+  });
+
+  test("cancellation prevents later serial provider submissions", async () => {
+    const controller = new AbortController();
+    const first = deferred<string>();
+    const submitted: number[] = [];
+    const settled: string[] = [];
+    const completed = helpers.prepareAndDispatchImageJobs(
+      [0, 1],
+      false,
+      (index) => imageJobs[index],
+      (job) => {
+        submitted.push(job.index);
+        return first.promise;
+      },
+      {
+        signal: controller.signal,
+        onSettled: (job, result) => { settled.push(`${job.index}:${result.status}`); }
+      }
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.abort();
+    first.resolve("first");
+    await expect(completed).resolves.toEqual({ jobs: [imageJobs[0]], results: ["first"] });
+    expect(submitted).toEqual([0]);
+    expect(settled).toEqual(["0:fulfilled", "1:rejected"]);
+  });
+
+  test("cooperative cancellation can stop waiting for already-submitted provider work", async () => {
+    const controller = new AbortController();
+    const generations = imageJobs.slice(0, 2).map(() => deferred<string>());
+    const completed = helpers.prepareAndDispatchImageJobs(
+      [0, 1],
+      true,
+      (index) => imageJobs[index],
+      (job) => generations[job.index].promise,
+      { signal: controller.signal, stopWaitingOnAbort: true }
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.abort();
+    await expect(completed).rejects.toHaveProperty("name", "AbortError");
+    generations[0].resolve("ignored-first");
+    generations[1].resolve("ignored-second");
   });
 });

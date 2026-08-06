@@ -206,6 +206,7 @@ var PANEL_STYLES = `
   .inlay-subtitle{font-size:13px;font-weight:600;margin:2px 0}
   .inlay-parser-summary{font-size:12px;color:var(--lumiverse-text-muted);line-height:1.4}
   .inlay-status{padding:9px 10px;border:1px solid var(--lumiverse-border);border-radius:7px;background:var(--lumiverse-fill-subtle);font-size:12px;color:var(--lumiverse-text-muted);white-space:pre-wrap;min-height:18px}
+  .inlay-illustrator-placeholder{box-sizing:border-box;margin:10px auto;width:min(100%,720px);padding:12px 14px;border:1px dashed currentColor;border-radius:8px;text-align:center;opacity:.72}
   .inlay-lightbox-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);gap:16px;align-items:start;min-width:0}
   .inlay-lightbox-image{display:block;width:100%;height:auto;max-height:calc(100vh - 150px);object-fit:contain;border-radius:8px;background:#080808}
   .inlay-lightbox-prompt-panel{display:flex;flex-direction:column;min-width:0;max-height:calc(100vh - 150px);border:1px solid var(--lumiverse-border);border-radius:8px;background:var(--lumiverse-fill-subtle);overflow:auto}
@@ -253,11 +254,31 @@ function routeBackendMessage(message, getActiveChatId, actions) {
     actions.replaceCharacterMemory(message.characterAppearance || {}, "Character visual baseline updated.");
     return;
   }
+  if (message.type === "generation_progress" && message.stage) {
+    if (message.chatId && message.chatId !== getActiveChatId())
+      return;
+    const labels = {
+      queued: "Queued…",
+      loading: "Loading chat context…",
+      parsing: "Parsing illustration prompts…",
+      preparing: "Preparing image jobs…",
+      generating: message.total ? `Generating illustrations ${message.completed || 0}/${message.total}…` : "Generating illustrations…",
+      persisting: "Saving illustrations…",
+      completed: "Generation complete.",
+      failed: "Generation failed.",
+      cancelled: "Generation cancelled."
+    };
+    actions.updateStatus(message.detail ? `${labels[message.stage]}
+${message.detail}` : labels[message.stage]);
+    return;
+  }
   if (message.type === "status") {
+    if (message.chatId && message.chatId !== getActiveChatId())
+      return;
     let status = message.error ? `${message.status}: ${message.error}` : String(message.status || "Ready");
     if (message.record?.imageUrls) {
       status += `
-${message.record.imageUrls.length} image(s) generated.`;
+${message.record.imageUrls.filter(Boolean).length} image(s) generated.`;
     }
     actions.updateStatus(status);
     return;
@@ -298,6 +319,12 @@ function renderGenerationSection({ ui, config, actions, rerender }) {
     onClick: () => {
       actions.updateStatus("Generating...");
       actions.sendToBackend({ type: "generate_latest", chatId: actions.activeChatId() });
+    }
+  }, {
+    label: "Cancel generation",
+    onClick: () => {
+      actions.updateStatus("Requesting cancellation...");
+      actions.sendToBackend({ type: "cancel_generation", chatId: actions.activeChatId() });
     }
   }]);
 }

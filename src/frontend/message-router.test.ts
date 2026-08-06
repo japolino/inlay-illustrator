@@ -122,4 +122,31 @@ describe("frontend backend-message routing", () => {
       "Ready\n0 image(s) generated."
     ]);
   });
+
+  test("renders operation-scoped progressive status and ignores another chat", () => {
+    routeBackendMessage({
+      type: "generation_progress",
+      chatId: "other-chat",
+      operationId: "other",
+      stage: "generating",
+      completed: 1,
+      total: 4
+    }, () => "chat-1", actions);
+    routeBackendMessage({
+      type: "generation_progress",
+      chatId: "chat-1",
+      operationId: "current",
+      stage: "generating",
+      completed: 2,
+      total: 4,
+      detail: "Illustration 2 ready."
+    }, () => "chat-1", actions);
+
+    expect(statuses).toEqual(["Generating illustrations 2/4…\nIllustration 2 ready."]);
+  });
+
+  test("ignores chat-scoped legacy status from another chat", () => {
+    routeBackendMessage({ type: "status", chatId: "other-chat", status: "Generated" }, () => "chat-1", actions);
+    expect(statuses).toEqual([]);
+  });
 });

@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { DEFAULT_CONFIG } from "../shared/config.js";
-import { compactLorebookNeedsFullRetry, locateGeneratedImage, parseAndSelectPrompts } from "./generation.js";
+import {
+  compactLorebookNeedsFullRetry,
+  generateForMessage,
+  locateGeneratedImage,
+  matchesGenerationSource,
+  parseAndSelectPrompts,
+  sourceContentFingerprint
+} from "./generation.js";
 import type { LorebookContextSnapshot } from "./context.js";
 
 const compactedVisualSnapshot: LorebookContextSnapshot = {
@@ -173,5 +180,136 @@ describe("Adaptive parser call sequencing", () => {
     expect(requests).toHaveLength(2);
     expect((requests[0].messages as Array<{ content: string }>)[0].content).toContain("# Image Tagging System");
     expect((requests[1].messages as Array<{ content: string }>)[0].content).toContain("Creative Illustration Concept Ideator");
+  });
+});
+
+describe("progressive generation stale-result guard", () => {
+  test("accepts the captured assistant swipe and rejects edits, swipes, and other roles", () => {
+    const fingerprint = sourceContentFingerprint("Original narrative.");
+    expect(matchesGenerationSource({ id: "m", role: "assistant", content: "Original narrative.", swipe_id: 2 }, 2, fingerprint)).toBe(true);
+    expect(matchesGenerationSource({ id: "m", role: "assistant", content: "Edited narrative.", swipe_id: 2 }, 2, fingerprint)).toBe(false);
+    expect(matchesGenerationSource({ id: "m", role: "assistant", content: "Original narrative.", swipe_id: 3 }, 2, fingerprint)).toBe(false);
+    expect(matchesGenerationSource({ id: "m", role: "user", content: "Original narrative.", swipe_id: 2 }, 2, fingerprint)).toBe(false);
+  });
+});
+
+describe("progressive ComfyUI delivery", () => {
+  test("submits eagerly and inserts out-of-order completions into stable narrative slots", async () => {
+    const files = new Map<string, unknown>();
+    const updates: string[] = [];
+    const events: string[] = [];
+    const frontend: Array<Record<string, unknown>> = [];
+    const imageResolvers: Array<(value: Record<string, unknown>) => void> = [];
+    const message = {
+      id: "progress-message",
+      role: "assistant",
+      content: "First visual beat.\n\nSecond visual beat.",
+      metadata: {},
+      swipe_id: 0
+    };
+    const generationConfig = {
+      ...DEFAULT_CONFIG,
+      parserConnectionId: "progress-parser",
+      imageConnectionId: "progress-comfy",
+      includeCharacterInfo: false,
+      includeUserInfo: false,
+      includeLorebook: false,
+      userInstructionsEnabled: false,
+      previousVisualStateEnabled: false,
+      preprocessingEnabled: false,
+      parserRetries: 0,
+      adaptiveMode: false,
+      perspectiveMode: "dynamic" as const,
+      minImages: 2,
+      maxImages: 2
+    };
+    (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
+      connections: {
+        get: async () => ({ id: "progress-parser", name: "Parser", provider: "openai", model: "test" })
+      },
+      generate: {
+        raw: async () => ({ content: JSON.stringify({
+          scenes: [{
+            place: "street",
+            environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: ["shops", "pavement"] },
+            shots: [
+              {
+                paragraph: 1,
+                action: "first beat",
+                shotPlan: { primaryAction: "wind moves paper", secondaryCue: "", staging: "paper crosses foreground" },
+                characters: [],
+                camera: { framing: "wide shot", angle: "eye level", perspective: "straight-on" }
+              },
+              {
+                paragraph: 2,
+                action: "second beat",
+                shotPlan: { primaryAction: "rain darkens pavement", secondaryCue: "", staging: "pavement fills foreground" },
+                characters: [],
+                camera: { framing: "close-up", angle: "low angle", perspective: "from side" }
+              }
+            ]
+          }],
+          terminalState: {
+            paragraph: 2,
+            place: "street",
+            environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: ["shops", "pavement"] },
+            environmentChanges: [],
+            characters: []
+          }
+        }) })
+      },
+      imageGen: {
+        getConnection: async () => ({ id: "progress-comfy", name: "Comfy", provider: "comfyui", model: "workflow" }),
+        generate: () => {
+          const index = imageResolvers.length;
+          events.push(`generate-${index}`);
+          return new Promise((resolve) => { imageResolvers.push(resolve); });
+        }
+      },
+      userStorage: {
+        getJson: async <T>(path: string, options: { fallback: T }) => (files.has(path) ? files.get(path) : options.fallback) as T,
+        setJson: async (path: string, value: unknown) => { files.set(path, structuredClone(value)); },
+        exists: async (path: string) => files.has(path),
+        read: async (path: string) => JSON.stringify(files.get(path)),
+        write: async (path: string, value: string) => { files.set(path, JSON.parse(value)); },
+        mkdir: async () => undefined
+      },
+      chat: {
+        getMessages: async () => [message],
+        updateMessage: async (_chatId: string, _messageId: string, patch: { content?: string; metadata?: Record<string, unknown> }) => {
+          if (patch.content) message.content = patch.content;
+          if (patch.metadata) message.metadata = patch.metadata;
+          updates.push(message.content);
+          events.push(message.content.includes("Generating illustration") ? "placeholder" : "image-update");
+        }
+      },
+      sendToFrontend: (payload: Record<string, unknown>) => frontend.push(payload),
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+
+    const generation = generateForMessage("progress-chat", message.id, message.content, "progress-user", {
+      config: generationConfig,
+      messages: [message]
+    });
+    for (let attempt = 0; attempt < 20 && imageResolvers.length < 2; attempt += 1) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
+    expect(imageResolvers).toHaveLength(2);
+    expect(events.indexOf("generate-0")).toBeLessThan(events.indexOf("placeholder"));
+
+    imageResolvers[1]({ imageId: "second-id", imageUrl: "/second.png", imageDataUrl: "", model: "workflow", provider: "comfyui" });
+    for (let attempt = 0; attempt < 20 && !message.content.includes("/second.png"); attempt += 1) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
+    expect(message.content).toContain("Generating illustration 1");
+    expect(message.content).toContain("/second.png");
+
+    imageResolvers[0]({ imageId: "first-id", imageUrl: "/first.png", imageDataUrl: "", model: "workflow", provider: "comfyui" });
+    await generation;
+    expect(message.content).not.toContain("Generating illustration");
+    expect(message.content.indexOf("/first.png")).toBeLessThan(message.content.indexOf("First visual beat."));
+    expect(message.content.indexOf("/second.png")).toBeLessThan(message.content.indexOf("Second visual beat."));
+    expect(frontend.some((payload) => payload.type === "generation_progress" && payload.stage === "completed")).toBe(true);
+    expect(updates.length).toBeGreaterThanOrEqual(3);
   });
 });

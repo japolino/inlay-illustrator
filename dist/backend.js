@@ -1974,6 +1974,101 @@ Use these as a baseline for returning characters (including their base attire). 
   };
 }
 
+// src/backend/operation-manager.ts
+function operationKey(userId, chatId, messageId) {
+  return JSON.stringify([userId ?? null, chatId, messageId]);
+}
+function chatKey(userId, chatId) {
+  return JSON.stringify([userId ?? null, chatId]);
+}
+function randomOperationId() {
+  if (globalThis.crypto?.randomUUID)
+    return globalThis.crypto.randomUUID();
+  return `inlay-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+class GenerationOperationQueue {
+  operations = new Map;
+  chatTails = new Map;
+  enqueue(userId, chatId, messageId, task, dedupeId = messageId) {
+    const key = operationKey(userId, chatId, dedupeId);
+    const existing = this.operations.get(key);
+    if (existing)
+      return { ...existing, reused: true };
+    const operation = {
+      id: randomOperationId(),
+      userId,
+      chatId,
+      messageId,
+      controller: new AbortController,
+      stage: "queued",
+      completed: 0,
+      total: 0
+    };
+    const queueKey = chatKey(userId, chatId);
+    const previous = this.chatTails.get(queueKey) || Promise.resolve();
+    const execution = previous.then(() => task(operation), () => task(operation));
+    const tail = execution.then(() => {
+      return;
+    }, () => {
+      return;
+    });
+    const scheduled = { operation, promise: execution, reused: false };
+    this.operations.set(key, scheduled);
+    this.chatTails.set(queueKey, tail);
+    tail.finally(() => {
+      if (this.operations.get(key)?.promise === execution)
+        this.operations.delete(key);
+      if (this.chatTails.get(queueKey) === tail)
+        this.chatTails.delete(queueKey);
+    });
+    return scheduled;
+  }
+  cancelChat(userId, chatId, operationId) {
+    const cancelled = [];
+    for (const scheduled of this.operations.values()) {
+      const operation = scheduled.operation;
+      if (operation.userId !== userId || operation.chatId !== chatId)
+        continue;
+      if (operationId && operation.id !== operationId)
+        continue;
+      if (!operation.controller.signal.aborted)
+        operation.controller.abort("Cancelled by user");
+      cancelled.push(operation.id);
+    }
+    return cancelled;
+  }
+}
+var REGISTRY_KEY = Symbol.for("inlay-illustrator.generation-operations");
+var globalRegistry = globalThis;
+function sharedQueue() {
+  const existing = globalRegistry[REGISTRY_KEY];
+  if (existing?.queue && typeof existing.queue.enqueue === "function" && typeof existing.queue.cancelChat === "function") {
+    return existing.queue;
+  }
+  const created = { queue: new GenerationOperationQueue };
+  globalRegistry[REGISTRY_KEY] = created;
+  return created.queue;
+}
+function enqueueGeneration(userId, chatId, messageId, task, dedupeId) {
+  return sharedQueue().enqueue(userId, chatId, messageId, task, dedupeId);
+}
+function cancelChatGenerations(userId, chatId, operationId) {
+  return sharedQueue().cancelChat(userId, chatId, operationId);
+}
+function abortError(message = "Generation cancelled.") {
+  const error = new Error(message);
+  error.name = "AbortError";
+  return error;
+}
+function throwIfAborted(signal) {
+  if (signal?.aborted)
+    throw abortError(typeof signal.reason === "string" ? signal.reason : undefined);
+}
+function isAbortError(error, signal) {
+  return Boolean(signal?.aborted || error instanceof Error && error.name === "AbortError");
+}
+
 // src/backend/images.ts
 var imageConnectionCache = new Map;
 function cacheImageConnection(key, connection) {
@@ -2172,7 +2267,7 @@ async function buildImageParameters(config, connection, prompt, negative) {
   });
   return { ...parameters, workflow: patched, workflowFormat: "api_prompt", preserveImportedWorkflow: true };
 }
-async function prepareAndDispatchImageJobs(inputs, eager, prepare, generate) {
+async function prepareAndDispatchImageJobs(inputs, eager, prepare, generate, options = {}) {
   const jobs = [];
   const requests = [];
   let serialRequest = Promise.resolve();
@@ -2181,7 +2276,9 @@ async function prepareAndDispatchImageJobs(inputs, eager, prepare, generate) {
   for (const [index, input] of inputs.entries()) {
     let job;
     try {
+      throwIfAborted(options.signal);
       job = await prepare(input, index);
+      throwIfAborted(options.signal);
     } catch (error) {
       preparationFailure = error;
       hasPreparationFailure = true;
@@ -2190,24 +2287,45 @@ async function prepareAndDispatchImageJobs(inputs, eager, prepare, generate) {
     jobs.push(job);
     const invoke = () => {
       try {
+        throwIfAborted(options.signal);
         return Promise.resolve(generate(job));
       } catch (error) {
         return Promise.reject(error);
       }
     };
-    const request = eager || requests.length === 0 ? invoke() : serialRequest.then(invoke);
+    const providerRequest = eager || requests.length === 0 ? invoke() : serialRequest.then(invoke);
+    const request = options.onSettled ? providerRequest.then(async (result) => {
+      await options.onSettled?.(job, { status: "fulfilled", value: result });
+      return result;
+    }, async (error) => {
+      await options.onSettled?.(job, { status: "rejected", reason: error });
+      throw error;
+    }) : providerRequest;
     request.catch(() => {
       return;
     });
     requests.push(request);
     if (!eager)
-      serialRequest = request.then(() => {
+      serialRequest = providerRequest.then(() => {
         return;
       }, () => {
         return;
       });
   }
-  const settled = await Promise.allSettled(requests);
+  const allSettled = Promise.allSettled(requests);
+  const settled = options.stopWaitingOnAbort && options.signal ? await new Promise((resolve, reject) => {
+    const cancel = () => {
+      options.signal?.removeEventListener("abort", cancel);
+      reject(abortError());
+    };
+    options.signal?.addEventListener("abort", cancel, { once: true });
+    allSettled.then((results) => {
+      options.signal?.removeEventListener("abort", cancel);
+      resolve(results);
+    });
+    if (options.signal?.aborted)
+      cancel();
+  }) : await allSettled;
   const successfulJobs = [];
   const successfulResults = [];
   for (const [index, result] of settled.entries()) {
@@ -3377,12 +3495,15 @@ function parserStageParameters(connection, config, stage, structured = stage !==
     parameters.response_format = { type: "json_object" };
   return { parameters, injectedStructuredOutput };
 }
-async function generateParserText(connection, config, messages, userId, stage = "main") {
+async function generateParserText(connection, config, messages, userId, stage = "main", signal) {
   const startedAt = Date.now();
   const selected = parserStageParameters(connection, config, stage);
   const run = async (parameters) => {
+    throwIfAborted(signal);
     const controller = new AbortController;
     const timeout = setTimeout(() => controller.abort(), 180000);
+    const cancel = () => controller.abort(signal?.reason);
+    signal?.addEventListener("abort", cancel, { once: true });
     try {
       return await spindle.generate.raw({
         type: "raw",
@@ -3397,6 +3518,7 @@ async function generateParserText(connection, config, messages, userId, stage = 
       });
     } finally {
       clearTimeout(timeout);
+      signal?.removeEventListener("abort", cancel);
     }
   };
   try {
@@ -3437,6 +3559,8 @@ async function generateParserText(connection, config, messages, userId, stage = 
       throw new Error("Parser response was truncated before producing JSON.");
     return text;
   } catch (error) {
+    if (signal?.aborted)
+      throw abortError(typeof signal.reason === "string" ? signal.reason : undefined);
     logStage(config, "parser_llm_error", {
       stage,
       elapsedMs: Date.now() - startedAt,
@@ -3445,14 +3569,14 @@ async function generateParserText(connection, config, messages, userId, stage = 
     throw new Error(`Parser generation failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
-async function generateCreativeConcepts(parserConnection, config, paragraphs, targetSource, context, previousConcepts = [], userId) {
+async function generateCreativeConcepts(parserConnection, config, paragraphs, targetSource, context, previousConcepts = [], userId, signal) {
   try {
     logStage(config, "creative_ideation_start", {
       paragraphCount: paragraphs.length,
       previousConceptCount: previousConcepts.length,
       adaptiveMode: config.adaptiveMode
     });
-    const raw = await generateParserText(parserConnection, config, parserMessages(creativeIdeationInstruction(config, previousConcepts), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), creativeIdeationRequest(targetSource), context.override, "auxiliary"), userId, "ideation");
+    const raw = await generateParserText(parserConnection, config, parserMessages(creativeIdeationInstruction(config, previousConcepts), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), creativeIdeationRequest(targetSource), context.override, "auxiliary"), userId, "ideation", signal);
     const concepts = parseCreativeConcepts(raw, paragraphs, config);
     if (concepts.length === 0) {
       logStage(config, "creative_ideation_fallback", { reason: "invalid_or_empty_slate", outputLength: raw.length }, "warn");
@@ -3465,6 +3589,7 @@ async function generateCreativeConcepts(parserConnection, config, paragraphs, ta
     });
     return concepts;
   } catch (error) {
+    throwIfAborted(signal);
     logStage(config, "creative_ideation_fallback", {
       reason: error instanceof Error ? error.message : String(error)
     }, "warn");
@@ -3554,12 +3679,12 @@ function validatePreprocessedTarget(value, paragraphs, config) {
   }
   return { summary: compactBlock(summary, 12000), selectedParagraphs, cameraNotes };
 }
-async function preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId) {
+async function preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId, signal) {
   const rawTarget = formatTargetParagraphs(paragraphs);
   if (!config.preprocessingEnabled)
     return rawTarget;
   try {
-    const summary = await generateParserText(parserConnection, config, parserMessages(preprocessingInstruction(paragraphs, config), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), preprocessingUserRequest(rawTarget), context.override, "auxiliary"), userId, "preprocess");
+    const summary = await generateParserText(parserConnection, config, parserMessages(preprocessingInstruction(paragraphs, config), continuityReference(context.preprocessingSystemContext ?? context.systemContext, context.recentContext), preprocessingUserRequest(rawTarget), context.override, "auxiliary"), userId, "preprocess", signal);
     const selection = validatePreprocessedTarget(summary, paragraphs, config);
     if (selection) {
       logStage(config, "preprocessing_done", {
@@ -3573,6 +3698,7 @@ async function preprocessTargetParagraphs(parserConnection, config, paragraphs, 
     }
     logStage(config, "preprocessing_fallback", { reason: "invalid_selection", summaryLength: cleanString2(summary).length }, "warn");
   } catch (error) {
+    throwIfAborted(signal);
     logStage(config, "preprocessing_fallback", { reason: error instanceof Error ? error.message : String(error) }, "warn");
   }
   return rawTarget;
@@ -3632,8 +3758,8 @@ function payloadRepairInput(payload, messages, includeCurrentSource) {
 
 `);
 }
-async function parsePayloadWithRepair(parserConnection, config, messages, userId) {
-  const raw = await generateParserText(parserConnection, config, messages, userId);
+async function parsePayloadWithRepair(parserConnection, config, messages, userId, signal) {
+  const raw = await generateParserText(parserConnection, config, messages, userId, "main", signal);
   if (!raw.trim())
     throw new Error("Parser returned an empty response.");
   const requireDynamicProjection = messages.some((message) => message.role === "system" && message.content.includes("shotPlan.primaryAction"));
@@ -3682,7 +3808,7 @@ async function parsePayloadWithRepair(parserConnection, config, messages, userId
     const repaired = await generateParserText(parserConnection, config, [
       { role: "system", content: repairSystem },
       { role: "user", content: repairInput }
-    ], userId, "repair");
+    ], userId, "repair", signal);
     if (!repaired.trim())
       throw new Error("Parser returned an empty repair response.");
     const parsed = normalizeAtomicCompositionTerms(dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(repaired), fallbackParagraph)));
@@ -3699,7 +3825,7 @@ async function parsePayloadWithRepair(parserConnection, config, messages, userId
     return parsed;
   }
 }
-async function repairDynamicCameraDiversity(parserConnection, config, payload, targetSource, userId) {
+async function repairDynamicCameraDiversity(parserConnection, config, payload, targetSource, userId, signal) {
   const audit = auditDynamicCameraDiversity(payload, config);
   logStage(config, "camera_diversity_audit", audit);
   if (audit.exactCollisions.length === 0)
@@ -3740,7 +3866,7 @@ async function repairDynamicCameraDiversity(parserConnection, config, payload, t
 
 `)
       }
-    ], userId, "camera");
+    ], userId, "camera", signal);
     if (!raw.trim())
       throw new Error("empty camera repair response");
     const repaired = parseParserJson(raw);
@@ -3756,6 +3882,7 @@ async function repairDynamicCameraDiversity(parserConnection, config, payload, t
     });
     return merged;
   } catch (error) {
+    throwIfAborted(signal);
     logStage(config, "camera_diversity_repair_fallback", {
       reason: error instanceof Error ? error.message : String(error),
       preservedSignatures: audit.signatures
@@ -3778,16 +3905,26 @@ function renderInlayBlock(url, _prompt, _negativePrompt, _perspectiveMode, _pers
   return `${MARKER}
 <div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
 }
+function renderSlotPlaceholder(status, index) {
+  const label = status === "failed" ? `Illustration ${index + 1} failed. Use Generate latest to retry.` : status === "cancelled" ? `Illustration ${index + 1} cancelled.` : `Generating illustration ${index + 1}…`;
+  return `${MARKER}
+<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-image-index="${index}" role="status">${htmlAttr(label)}</div>`;
+}
 function renderInlaidMessage(original, record, config) {
   const cleanOriginal = stripInlayContent(original);
   const blocks = new Map;
   const count = Math.max(1, paragraphCount(cleanOriginal));
-  record.imageUrls.forEach((url, index) => {
+  const slotCount = Math.max(record.imageUrls.length, record.paragraphs.length, record.slotStatuses?.length || 0);
+  for (let index = 0;index < slotCount; index += 1) {
+    const url = record.imageUrls[index] || "";
+    const status = record.slotStatuses?.[index];
+    if (!url && !status)
+      continue;
     const paragraph2 = clampInt2(record.paragraphs[index], 1, count, Math.min(index + 1, count));
     const existing = blocks.get(paragraph2) || [];
-    existing.push(renderInlayBlock(url, record.prompts[index] || "", record.negativePrompts?.[index] || "", record.perspectiveModes?.[index], record.perspectiveSources?.[index], record.creativeConcepts?.[index], record.imageIds?.[index] || "", record.chatId || "", record.messageId || "", record.swipeId || 0, index, config));
+    existing.push(url ? renderInlayBlock(url, record.prompts[index] || "", record.negativePrompts?.[index] || "", record.perspectiveModes?.[index], record.perspectiveSources?.[index], record.creativeConcepts?.[index], record.imageIds?.[index] || "", record.chatId || "", record.messageId || "", record.swipeId || 0, index, config) : renderSlotPlaceholder(status || "pending", index));
     blocks.set(paragraph2, existing);
-  });
+  }
   const tokens = cleanOriginal.trimEnd().split(/(\r?\n\s*\r?\n)/);
   let paragraph = 0;
   const output = [];
@@ -3937,6 +4074,9 @@ async function compactParameters(parameters, userId) {
   const workflow = parameters.workflow;
   if (!workflow || typeof workflow !== "object")
     return parameters;
+  if (!Array.isArray(workflow) && typeof workflow[WORKFLOW_REFERENCE_KEY] === "string") {
+    return parameters;
+  }
   const serialized = JSON.stringify(workflow);
   const hash = await contentHash(serialized);
   await ensureWorkflowStored(hash, workflow, userId);
@@ -3972,7 +4112,9 @@ function generatedRecordReference(record, path) {
     paragraphs: record.paragraphs,
     imageIds: record.imageIds,
     imageUrls: record.imageUrls,
-    createdAt: record.createdAt
+    createdAt: record.createdAt,
+    operationId: record.operationId,
+    generationStatus: record.generationStatus
   };
 }
 async function storeGeneratedRecord(chatId, key, record, userId) {
@@ -4061,26 +4203,30 @@ async function getParserConnections(userId) {
   }
 }
 async function sendState(userId, chatId, preparedConfig) {
-  const state = chatId ? await getState(chatId, userId) : null;
+  const [state, config, parserConnections] = await Promise.all([
+    chatId ? getState(chatId, userId) : Promise.resolve(null),
+    preparedConfig ? Promise.resolve(preparedConfig) : getConfig(userId),
+    getParserConnections(userId)
+  ]);
   spindle.sendToFrontend({
     type: "state",
-    config: preparedConfig || await getConfig(userId),
-    parserConnections: await getParserConnections(userId),
+    config,
+    parserConnections,
     chatId: chatId || "",
     characterAppearance: state?.characterAppearance || {}
   }, userId);
 }
 
 // src/backend/runtime-lock.ts
-var REGISTRY_KEY = Symbol.for("inlay-illustrator.runtime-locks");
-var globalRegistry = globalThis;
+var REGISTRY_KEY2 = Symbol.for("inlay-illustrator.runtime-locks");
+var globalRegistry2 = globalThis;
 function registry() {
-  const existing = globalRegistry[REGISTRY_KEY];
+  const existing = globalRegistry2[REGISTRY_KEY2];
   if (existing && typeof existing === "object" && existing.locks instanceof Set) {
     return existing;
   }
   const created = { locks: new Set };
-  globalRegistry[REGISTRY_KEY] = created;
+  globalRegistry2[REGISTRY_KEY2] = created;
   return created;
 }
 function tryAcquireRuntimeLock(scope, key) {
@@ -4172,12 +4318,28 @@ function retryClassification(error) {
     return "terminal";
   return "context";
 }
-async function waitForParserRetry(attempt) {
+async function waitForParserRetry(attempt, signal) {
   const delay = Math.min(1500, 250 * 2 ** attempt) + Math.floor(Math.random() * 125);
-  await new Promise((resolve) => setTimeout(resolve, delay));
+  await new Promise((resolve, reject) => {
+    const complete = () => {
+      signal?.removeEventListener("abort", cancel);
+      resolve();
+    };
+    const timeout = setTimeout(complete, delay);
+    const cancel = () => {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", cancel);
+      reject(abortError());
+    };
+    if (signal?.aborted)
+      cancel();
+    else
+      signal?.addEventListener("abort", cancel, { once: true });
+  });
 }
 async function parseAndSelectPrompts(input) {
-  const { chatId, messageId, messages, paragraphs, state, config, userId } = input;
+  const { chatId, messageId, messages, paragraphs, state, config, userId, signal } = input;
+  throwIfAborted(signal);
   const targetIndex = Math.max(0, messages.findIndex((message) => message.id === messageId));
   let parsed = null;
   let selected = [];
@@ -4190,7 +4352,7 @@ async function parseAndSelectPrompts(input) {
   const manualCreative = !config.adaptiveMode && config.perspectiveMode === "creative";
   const creativePipeline = manualCreative || config.adaptiveMode;
   const [parserConnection, lorebookSnapshot, contextSources] = await Promise.all([
-    resolveParserConnection(config, userId),
+    input.preparedParserConnection || resolveParserConnection(config, userId),
     buildLorebookContextSnapshot(chatId, paragraphs.map((paragraph) => paragraph.text).join(`
 
 `), config, userId),
@@ -4198,11 +4360,12 @@ async function parseAndSelectPrompts(input) {
   ]);
   for (let attempt = 0;attempt <= config.parserRetries; attempt += 1) {
     try {
+      throwIfAborted(signal);
       const context = await buildParserContext(chatId, messages, targetIndex, state.characterAppearance, config, attempt, userId, lorebookSnapshot, config.previousVisualStateEnabled ? state.previousVisualState : undefined, contextSources);
       if (manualCreative && conceptSelections === null) {
         if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
           const previousConcepts = conceptCandidates.filter((concept) => usedConceptIds.has(concept.id)).map((concept) => concept.concept);
-          conceptCandidates = await generateCreativeConcepts(parserConnection, config, paragraphs, formatTargetParagraphs(paragraphs), context, previousConcepts, userId);
+          conceptCandidates = await generateCreativeConcepts(parserConnection, config, paragraphs, formatTargetParagraphs(paragraphs), context, previousConcepts, userId, signal);
           ideationAttempted = true;
         }
         conceptSelections = chooseCreativeConcepts(conceptCandidates, usedConceptIds);
@@ -4229,10 +4392,10 @@ async function parseAndSelectPrompts(input) {
             selectedParagraphs
           });
         } else {
-          creativeTargetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
+          creativeTargetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId, signal);
         }
       }
-      const targetSource = creativePipeline ? creativeTargetSource || formatTargetParagraphs(paragraphs) : await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
+      const targetSource = creativePipeline ? creativeTargetSource || formatTargetParagraphs(paragraphs) : await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId, signal);
       const instruction = parserInstruction(config, {
         hasPreviousVisualState: Boolean(config.previousVisualStateEnabled && state.previousVisualState)
       });
@@ -4254,16 +4417,16 @@ async function parseAndSelectPrompts(input) {
         preprocessingEnabled: config.preprocessingEnabled,
         contextDiagnostics: context.diagnostics
       });
-      parsed = await parsePayloadWithRepair(parserConnection, config, parserMessages(instruction, referenceContext, userRequest, context.override), userId);
+      parsed = await parsePayloadWithRepair(parserConnection, config, parserMessages(instruction, referenceContext, userRequest, context.override), userId, signal);
       parsed = applyPreviousVisualState(parsed, config.previousVisualStateEnabled ? state.previousVisualState : undefined);
-      parsed = await repairDynamicCameraDiversity(parserConnection, config, parsed, targetSource, userId);
+      parsed = await repairDynamicCameraDiversity(parserConnection, config, parsed, targetSource, userId, signal);
       if (config.adaptiveMode) {
         const creativeParagraphs = new Set(normalizeScenePayload(parsed).filter(({ shot }) => cleanString2(shot.perspectiveMode).toLowerCase() === "creative").map(({ parserParagraph }) => parserParagraph));
         if (creativeParagraphs.size > 0) {
           const creativeParagraphEntries = paragraphs.filter((paragraph) => creativeParagraphs.has(paragraph.parserIndex));
           if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
             const previousConcepts = conceptCandidates.filter((concept) => usedConceptIds.has(concept.id)).map((concept) => concept.concept);
-            conceptCandidates = await generateCreativeConcepts(parserConnection, config, creativeParagraphEntries, formatTargetParagraphs(creativeParagraphEntries), context, previousConcepts, userId);
+            conceptCandidates = await generateCreativeConcepts(parserConnection, config, creativeParagraphEntries, formatTargetParagraphs(creativeParagraphEntries), context, previousConcepts, userId, signal);
             ideationAttempted = true;
           }
           conceptSelections = chooseCreativeConcepts(conceptCandidates.filter((concept) => creativeParagraphs.has(concept.paragraph)), usedConceptIds);
@@ -4285,29 +4448,19 @@ async function parseAndSelectPrompts(input) {
       }
       break;
     } catch (error) {
+      throwIfAborted(signal);
       lastParserError = error;
       const classification = retryClassification(error);
       logStage(config, "parser_attempt_failed", { attempt, retries: config.parserRetries, classification, error: error instanceof Error ? error.message : String(error) }, attempt >= config.parserRetries ? "error" : "warn");
       if (attempt >= config.parserRetries || classification === "terminal")
         throw error;
       if (classification === "transient")
-        await waitForParserRetry(attempt);
+        await waitForParserRetry(attempt, signal);
     }
   }
   if (!parsed)
     throw new Error(lastParserError instanceof Error ? lastParserError.message : "Parser did not return usable prompts.");
   return { parsed, selected };
-}
-async function persistCharacterMemory(chatId, parsed, config, userId) {
-  const committed = await updateState(chatId, userId, (state) => {
-    updateCharacterMemory(state, parsed);
-  });
-  spindle.sendToFrontend({
-    type: "character_memory_updated",
-    chatId,
-    characterAppearance: committed.characterAppearance
-  }, userId);
-  logStage(config, "character_memory_persisted", { chatId, characterCount: Object.keys(committed.characterAppearance).length });
 }
 function logParsedSelection(parsed, selected, paragraphs, config) {
   const scenes = parsed.scenes || [];
@@ -4329,7 +4482,211 @@ function logParsedSelection(parsed, selected, paragraphs, config) {
     perspectives: selected.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource }))
   });
 }
-async function prepareAndDispatchImages(chatId, selected, config, userId, preparedImageConnection) {
+var MESSAGE_COMMIT_REGISTRY_KEY = Symbol.for("inlay-illustrator.message-commit-queues");
+var messageCommitGlobal = globalThis;
+function messageCommitQueues() {
+  const existing = messageCommitGlobal[MESSAGE_COMMIT_REGISTRY_KEY];
+  if (existing?.queues instanceof Map)
+    return existing.queues;
+  const created = { queues: new Map };
+  messageCommitGlobal[MESSAGE_COMMIT_REGISTRY_KEY] = created;
+  return created.queues;
+}
+function enqueueMessageWrite(userId, chatId, messageId, task) {
+  const queues = messageCommitQueues();
+  const queueKey = JSON.stringify([userId ?? null, chatId, messageId]);
+  const previous = queues.get(queueKey) || Promise.resolve();
+  const operation = previous.then(task, task);
+  const tail = operation.then(() => {
+    return;
+  }, () => {
+    return;
+  });
+  queues.set(queueKey, tail);
+  tail.finally(() => {
+    if (queues.get(queueKey) === tail)
+      queues.delete(queueKey);
+  });
+  return operation;
+}
+function enqueueMessageCommit(context, task) {
+  return enqueueMessageWrite(context.userId, context.chatId, context.messageId, task);
+}
+function sourceContentFingerprint(content) {
+  let left = 2166136261;
+  let right = 2246822519;
+  for (let index = 0;index < content.length; index += 1) {
+    const code = content.charCodeAt(index);
+    left = Math.imul(left ^ code, 16777619);
+    right = Math.imul(right ^ code, 3266489917);
+  }
+  return `${(left >>> 0).toString(16).padStart(8, "0")}${(right >>> 0).toString(16).padStart(8, "0")}`;
+}
+function reportGenerationProgress(operation, stage, userId, detail) {
+  operation.stage = stage;
+  spindle.sendToFrontend({
+    type: "generation_progress",
+    operationId: operation.id,
+    chatId: operation.chatId,
+    messageId: operation.messageId,
+    stage,
+    completed: operation.completed,
+    total: operation.total,
+    detail
+  }, userId);
+}
+function pendingGenerationRecord(context, selected, parsed) {
+  return {
+    chatId: context.chatId,
+    messageId: context.messageId,
+    swipeId: context.swipeId,
+    prompts: selected.map((entry) => renderPrompt(entry.prompt, context.config.promptSyntax)),
+    negativePrompts: selected.map((entry) => entry.negative || ""),
+    perspectiveModes: selected.map((entry) => entry.perspectiveMode),
+    perspectiveSources: selected.map((entry) => entry.perspectiveSource),
+    imageParameters: selected.map(() => ({})),
+    corePrompts: selected.map((entry) => renderPrompt(entry.corePrompt, context.config.promptSyntax)),
+    shotNegatives: selected.map((entry) => entry.shotNegative),
+    promptFormats: selected.map((entry) => entry.corePrompt.format || "ordered"),
+    creativeConcepts: selected.map((entry) => entry.creativeConcept || null),
+    creativeConceptCandidates: selected.map((entry) => entry.creativeCandidates || []),
+    creativeConceptHistory: selected.map((entry) => entry.creativeConcept ? [entry.creativeConcept.id] : []),
+    paragraphs: selected.map((entry) => entry.paragraph),
+    imageIds: selected.map(() => ""),
+    imageUrls: selected.map(() => ""),
+    slotStatuses: selected.map(() => "pending"),
+    slotErrors: selected.map(() => ""),
+    operationId: context.operation.id,
+    generationStatus: "pending",
+    sourceFingerprint: context.sourceFingerprint,
+    rawJson: parsed,
+    createdAt: new Date().toISOString()
+  };
+}
+function currentSwipe(message) {
+  return Number.isFinite(Number(message.swipe_id)) ? Number(message.swipe_id) : 0;
+}
+function matchesGenerationSource(message, swipeId, fingerprint) {
+  return message.role === "assistant" && currentSwipe(message) === swipeId && sourceContentFingerprint(stripInlayContent(String(message.content || ""))) === fingerprint;
+}
+function assertCurrentSource(message, context) {
+  if (!message || message.role !== "assistant")
+    throw new Error("The source assistant message no longer exists.");
+  if (currentSwipe(message) !== context.swipeId)
+    throw new Error("The source message changed swipes while illustrations were generating.");
+  if (!matchesGenerationSource(message, context.swipeId, context.sourceFingerprint)) {
+    throw new Error("The source message was edited while illustrations were generating.");
+  }
+}
+function recordMetadata(message, record) {
+  return {
+    ...message.metadata || {},
+    inlayIllustratorImageIds: record.imageIds,
+    inlayIllustratorParagraphs: record.paragraphs,
+    inlayIllustratorGeneratedAt: record.createdAt,
+    inlayIllustratorOperationId: record.operationId,
+    inlayIllustratorGenerationStatus: record.generationStatus
+  };
+}
+async function renderProgressiveRecord(message, record, context) {
+  await spindle.chat.updateMessage(context.chatId, context.messageId, {
+    content: renderInlaidMessage(String(message.content || ""), record, context.config),
+    metadata: recordMetadata(message, record),
+    skipChunkRebuild: true
+  });
+}
+async function initializeProgressiveGeneration(context, record) {
+  await enqueueMessageCommit(context, async () => {
+    const messages = await spindle.chat.getMessages(context.chatId);
+    const current = messages.find((message) => message.id === context.messageId);
+    assertCurrentSource(current, context);
+    const reference = await storeGeneratedRecord(context.chatId, context.key, record, context.userId);
+    const committed = await updateState(context.chatId, context.userId, async (state) => {
+      await migrateLegacyGeneratedRecords(context.chatId, state, context.userId);
+      updateCharacterMemory(state, record.rawJson);
+      state.generated[context.key] = reference;
+      rebuildGeneratedImageIndex(state);
+    });
+    await renderProgressiveRecord(current, record, context);
+    spindle.sendToFrontend({
+      type: "character_memory_updated",
+      chatId: context.chatId,
+      characterAppearance: committed.characterAppearance
+    }, context.userId);
+  });
+}
+async function mutateProgressiveGeneration(context, mutate, mutateState) {
+  return enqueueMessageCommit(context, async () => {
+    const messages = await spindle.chat.getMessages(context.chatId);
+    const currentMessage = messages.find((message) => message.id === context.messageId);
+    assertCurrentSource(currentMessage, context);
+    let committedRecord = null;
+    await updateState(context.chatId, context.userId, async (state) => {
+      const currentRecord = await loadGeneratedRecord(state.generated[context.key], context.userId, false);
+      if (!currentRecord || currentRecord.operationId !== context.operation.id) {
+        throw new Error("A newer illustration operation replaced this generation.");
+      }
+      committedRecord = mutate(currentRecord);
+      state.generated[context.key] = await storeGeneratedRecord(context.chatId, context.key, committedRecord, context.userId);
+      mutateState?.(state, committedRecord);
+      rebuildGeneratedImageIndex(state);
+    });
+    const record = committedRecord;
+    if (!record)
+      throw new Error("The progressive illustration record could not be persisted.");
+    await renderProgressiveRecord(currentMessage, record, context);
+    return record;
+  });
+}
+async function commitProgressiveSlot(context, job, settlement) {
+  const cancelled = context.operation.controller.signal.aborted;
+  const providerResult = settlement.status === "fulfilled" ? settlement.value : null;
+  const imageId = cancelled ? "" : providerResult?.imageId || "";
+  const imageUrl = cancelled ? "" : providerResult?.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+  const completed = Boolean(imageUrl);
+  const status = cancelled ? "cancelled" : completed ? "completed" : "failed";
+  const reason = settlement.status === "rejected" ? settlement.reason instanceof Error ? settlement.reason.message : String(settlement.reason) : completed ? "" : "The image provider returned no image.";
+  await mutateProgressiveGeneration(context, (record) => ({
+    ...record,
+    prompts: replaceAt(record.prompts, job.index, job.prompt, ""),
+    negativePrompts: replaceAt(record.negativePrompts, job.index, job.negative, ""),
+    perspectiveModes: replaceAt(record.perspectiveModes, job.index, job.perspectiveMode || context.config.perspectiveMode, "dynamic"),
+    perspectiveSources: replaceAt(record.perspectiveSources, job.index, job.perspectiveSource || "manual", "manual"),
+    imageParameters: replaceAt(record.imageParameters, job.index, job.parameters, {}),
+    corePrompts: replaceAt(record.corePrompts, job.index, job.corePrompt || "", ""),
+    shotNegatives: replaceAt(record.shotNegatives, job.index, job.shotNegative || "", ""),
+    promptFormats: replaceAt(record.promptFormats, job.index, job.promptFormat || "ordered", "ordered"),
+    creativeConcepts: replaceAt(record.creativeConcepts, job.index, job.creativeConcept || null, null),
+    creativeConceptCandidates: replaceAt(record.creativeConceptCandidates, job.index, job.creativeCandidates || [], []),
+    paragraphs: replaceAt(record.paragraphs, job.index, job.paragraph, 1),
+    imageIds: replaceAt(record.imageIds, job.index, imageId, ""),
+    imageUrls: replaceAt(record.imageUrls, job.index, imageUrl, ""),
+    slotStatuses: replaceAt(record.slotStatuses, job.index, status, "pending"),
+    slotErrors: replaceAt(record.slotErrors, job.index, reason.slice(0, 500), "")
+  }));
+  return completed;
+}
+async function finalizeProgressiveGeneration(context, parsed, successfulParserParagraphs, cancelled) {
+  const visualState = successfulParserParagraphs.length > 0 ? buildPreviousVisualState(parsed, successfulParserParagraphs) : null;
+  return mutateProgressiveGeneration(context, (record) => {
+    const slotStatuses = (record.slotStatuses || record.imageUrls.map((url) => url ? "completed" : "pending")).map((status) => status === "pending" || status === "generating" ? cancelled ? "cancelled" : "failed" : status);
+    const hasSuccess = slotStatuses.includes("completed");
+    return {
+      ...record,
+      slotStatuses,
+      generationStatus: cancelled ? "cancelled" : hasSuccess ? "completed" : "failed"
+    };
+  }, (state) => {
+    if (successfulParserParagraphs.length > 0) {
+      if (visualState)
+        state.previousVisualState = visualState;
+      else
+        delete state.previousVisualState;
+    }
+  });
+}
+async function prepareAndDispatchImages(chatId, selected, config, userId, preparedImageConnection, options = {}) {
+  throwIfAborted(options.signal);
   const imageConnection = await (preparedImageConnection || resolveImageConnection(config, userId));
   const preparationStartedAt = Date.now();
   logStage(config, "image_generation_preparation_start", {
@@ -4418,116 +4775,7 @@ async function prepareAndDispatchImages(chatId, selected, config, userId, prepar
       }, "error");
       throw error;
     });
-  });
-}
-function collectImageResults(stage, config) {
-  const imageIds = [];
-  const imageUrls = [];
-  const prompts = stage.jobs.map((job) => job.prompt);
-  const negativePrompts = stage.jobs.map((job) => job.negative);
-  const perspectiveModes = stage.jobs.map((job) => job.perspectiveMode || config.perspectiveMode);
-  const perspectiveSources = stage.jobs.map((job) => job.perspectiveSource || "manual");
-  const imageParameters = stage.jobs.map((job) => job.parameters);
-  const corePrompts = stage.jobs.map((job) => job.corePrompt || "");
-  const shotNegatives = stage.jobs.map((job) => job.shotNegative || "");
-  const promptFormats = stage.jobs.map((job) => job.promptFormat || "ordered");
-  const creativeConcepts = stage.jobs.map((job) => job.creativeConcept || null);
-  const creativeConceptCandidates = stage.jobs.map((job) => job.creativeCandidates || []);
-  const creativeConceptHistory = stage.jobs.map((job) => job.creativeConcept ? [job.creativeConcept.id] : []);
-  const paragraphs = stage.jobs.map((job) => job.paragraph);
-  for (const [index, result] of stage.results.entries()) {
-    if (result.imageId)
-      imageIds.push(result.imageId);
-    const imageUrl = result.imageUrl || (result.imageId ? imageUrlFromId(result.imageId) : "");
-    if (imageUrl)
-      imageUrls.push(imageUrl);
-    logStage(config, "image_generation_results_collected", {
-      index: index + 1,
-      imageId: result.imageId || null,
-      returnedImageUrl: result.imageUrl || null,
-      markdownImageUrl: imageUrls[imageUrls.length - 1] || null,
-      provider: result.provider || null,
-      model: result.model || null
-    });
-  }
-  return {
-    prompts,
-    negativePrompts,
-    perspectiveModes,
-    perspectiveSources,
-    imageParameters,
-    corePrompts,
-    shotNegatives,
-    promptFormats,
-    creativeConcepts,
-    creativeConceptCandidates,
-    creativeConceptHistory,
-    paragraphs,
-    imageIds,
-    imageUrls
-  };
-}
-async function persistGeneration(input) {
-  const { chatId, messageId, swipeId, key, target, parsed, assets, visualState, config, userId } = input;
-  const record = {
-    chatId,
-    messageId,
-    swipeId,
-    prompts: assets.prompts,
-    negativePrompts: assets.negativePrompts,
-    perspectiveModes: assets.perspectiveModes,
-    perspectiveSources: assets.perspectiveSources,
-    imageParameters: assets.imageParameters,
-    corePrompts: assets.corePrompts,
-    shotNegatives: assets.shotNegatives,
-    promptFormats: assets.promptFormats,
-    creativeConcepts: assets.creativeConcepts,
-    creativeConceptCandidates: assets.creativeConceptCandidates,
-    creativeConceptHistory: assets.creativeConceptHistory,
-    paragraphs: assets.paragraphs,
-    imageIds: assets.imageIds,
-    imageUrls: assets.imageUrls,
-    rawJson: parsed,
-    createdAt: new Date().toISOString()
-  };
-  const reference = await storeGeneratedRecord(chatId, key, record, userId);
-  const committed = await updateState(chatId, userId, async (state) => {
-    await migrateLegacyGeneratedRecords(chatId, state, userId);
-    updateCharacterMemory(state, parsed);
-    state.generated[key] = reference;
-    if (visualState)
-      state.previousVisualState = visualState;
-    else
-      delete state.previousVisualState;
-    rebuildGeneratedImageIndex(state);
-  });
-  logStage(config, "state_persisted", { key, imageCount: assets.imageIds.length, paragraphs: assets.paragraphs });
-  const originalContent = String(target.content || "");
-  const nextContent = renderInlaidMessage(originalContent, record, config);
-  logStage(config, "inlay_rendered", {
-    originalLength: originalContent.length,
-    finalLength: nextContent.length,
-    originalParagraphs: paragraphCount(originalContent),
-    imageCount: assets.imageUrls.length,
-    paragraphs: assets.paragraphs
-  });
-  await spindle.chat.updateMessage(chatId, messageId, {
-    content: nextContent,
-    metadata: {
-      ...target.metadata || {},
-      inlayIllustratorImageIds: assets.imageIds,
-      inlayIllustratorParagraphs: assets.paragraphs,
-      inlayIllustratorGeneratedAt: record.createdAt
-    }
-  });
-  logStage(config, "message_updated", { chatId, messageId, imageIds: assets.imageIds, paragraphs: assets.paragraphs });
-  spindle.sendToFrontend({
-    type: "character_memory_updated",
-    chatId,
-    characterAppearance: committed.characterAppearance
-  }, userId);
-  spindle.sendToFrontend({ type: "status", status: "Generated", record }, userId);
-  return record;
+  }, options);
 }
 async function commitImageReplacement(request, replacement, config, userId, parsedForMemory) {
   let committedKey = "";
@@ -4564,18 +4812,23 @@ async function commitImageReplacement(request, replacement, config, userId, pars
   const record = committedRecord;
   if (!record || committedIndex < 0)
     throw new Error("The replacement image could not be persisted.");
-  const messages = await spindle.chat.getMessages(request.chatId);
-  const target = messages.find((message) => message.id === record.messageId);
-  if (!target)
-    throw new Error("The source assistant message no longer exists.");
-  await spindle.chat.updateMessage(request.chatId, record.messageId, {
-    content: renderInlaidMessage(String(target.content || ""), record, config),
-    metadata: {
-      ...target.metadata || {},
-      inlayIllustratorImageIds: record.imageIds,
-      inlayIllustratorParagraphs: record.paragraphs,
-      inlayIllustratorGeneratedAt: record.createdAt
-    }
+  await enqueueMessageWrite(userId, request.chatId, record.messageId, async () => {
+    const latestState = await getState(request.chatId, userId);
+    const latestRecord = await loadGeneratedRecord(latestState.generated[committedKey], userId, false) || record;
+    const messages = await spindle.chat.getMessages(request.chatId);
+    const target = messages.find((message) => message.id === record.messageId);
+    if (!target)
+      throw new Error("The source assistant message no longer exists.");
+    await spindle.chat.updateMessage(request.chatId, record.messageId, {
+      content: renderInlaidMessage(String(target.content || ""), latestRecord, config),
+      metadata: {
+        ...target.metadata || {},
+        inlayIllustratorImageIds: latestRecord.imageIds,
+        inlayIllustratorParagraphs: latestRecord.paragraphs,
+        inlayIllustratorGeneratedAt: latestRecord.createdAt
+      },
+      skipChunkRebuild: true
+    });
   });
   if (parsedForMemory) {
     spindle.sendToFrontend({
@@ -4718,39 +4971,73 @@ async function rerunStoredImage(request, rerunSidecar, userId, preparedConfig) {
     releaseAction();
   }
 }
-async function generateForMessage(chatId, messageId, content, userId, prepared) {
+async function runGenerationForMessage(chatId, messageId, content, operation, userId, prepared) {
   const generationStartedAt = Date.now();
-  const config = prepared?.config || await getConfig(userId);
-  logStage(config, "request_received", { chatId, messageId, contentLength: content.length, enabled: config.enabled, autoGenerate: config.autoGenerate });
-  if (!config.enabled) {
-    logStage(config, "request_skipped", { reason: "disabled", chatId, messageId });
-    return;
-  }
-  const messages = prepared?.messages || await spindle.chat.getMessages(chatId);
-  const target = messages.find((message) => message.id === messageId);
-  logStage(config, "target_checked", {
-    found: Boolean(target),
-    role: target?.role || null,
-    ownMessage: target ? isOwnMessage(target) : false,
-    messageCount: messages.length
-  });
-  if (!target || target.role !== "assistant" || isOwnMessage(target))
-    return;
-  const swipeId = Number.isFinite(Number(target.swipe_id)) ? Number(target.swipe_id) : 0;
-  const key = `${chatId}:${messageId}:${swipeId}`;
-  const runningKey = JSON.stringify([userId ?? null, key]);
-  const releaseGeneration = tryAcquireRuntimeLock("generation", runningKey);
-  if (!releaseGeneration) {
-    logStage(config, "request_skipped", { reason: "already_running", key });
-    return;
-  }
+  const signal = operation.controller.signal;
+  let config = null;
+  let context = null;
+  let parsed = null;
+  let initialized = false;
+  let initializationPromise = null;
+  let releaseGeneration = null;
+  const successfulParserParagraphs = [];
   try {
-    const state = await getState(chatId, userId);
-    if (state.generated[key]) {
-      logStage(config, "request_skipped", { reason: "already_generated", key });
+    throwIfAborted(signal);
+    config = prepared?.config || await getConfig(userId);
+    logStage(config, "request_received", { chatId, messageId, contentLength: content.length, enabled: config.enabled, autoGenerate: config.autoGenerate });
+    if (!config.enabled) {
+      logStage(config, "request_skipped", { reason: "disabled", chatId, messageId });
       return;
     }
-    const sourceContent = String(content || target.content || "");
+    reportGenerationProgress(operation, "loading", userId);
+    const messagesPromise = prepared?.messages ? Promise.resolve(prepared.messages) : spindle.chat.getMessages(chatId);
+    const statePromise = getState(chatId, userId);
+    const imageConnectionPromise = resolveImageConnection(config, userId);
+    const parserConnectionPromise = resolveParserConnection(config, userId);
+    imageConnectionPromise.catch(() => {
+      return;
+    });
+    parserConnectionPromise.catch(() => {
+      return;
+    });
+    const [messages, state] = await Promise.all([messagesPromise, statePromise]);
+    throwIfAborted(signal);
+    const target = messages.find((message) => message.id === messageId);
+    logStage(config, "target_checked", {
+      found: Boolean(target),
+      role: target?.role || null,
+      ownMessage: target ? isOwnMessage(target) : false,
+      messageCount: messages.length
+    });
+    if (!target || target.role !== "assistant" || isOwnMessage(target))
+      return;
+    const swipeId = currentSwipe(target);
+    const key = `${chatId}:${messageId}:${swipeId}`;
+    const runningKey = JSON.stringify([userId ?? null, key]);
+    releaseGeneration = tryAcquireRuntimeLock("generation", runningKey);
+    if (!releaseGeneration) {
+      logStage(config, "request_skipped", { reason: "already_running", key });
+      return;
+    }
+    if (state.generated[key]) {
+      const existing = await loadGeneratedRecord(state.generated[key], userId, false);
+      const hasIncompleteSlot = existing?.slotStatuses?.some((status) => status !== "completed") || false;
+      if (!existing?.generationStatus || existing.generationStatus === "completed" && !hasIncompleteSlot) {
+        logStage(config, "request_skipped", { reason: "already_generated", key });
+        return;
+      }
+    }
+    const sourceContent = stripInlayContent(String(target.content || content || ""));
+    context = {
+      chatId,
+      messageId,
+      swipeId,
+      key,
+      sourceFingerprint: sourceContentFingerprint(sourceContent),
+      operation,
+      config,
+      userId
+    };
     const paragraphs = prepareParagraphs(sourceContent, config);
     logStage(config, "paragraph_cleanup_done", {
       originalParagraphs: paragraphCount(sourceContent),
@@ -4760,30 +5047,94 @@ async function generateForMessage(chatId, messageId, content, userId, prepared) 
     });
     if (paragraphs.length === 0)
       throw new Error("No usable paragraphs found for image parsing.");
-    const imageConnectionPromise = resolveImageConnection(config, userId);
-    imageConnectionPromise.catch(() => {
+    reportGenerationProgress(operation, "parsing", userId);
+    const selection = await parseAndSelectPrompts({
+      chatId,
+      messageId,
+      messages,
+      paragraphs,
+      state,
+      config,
+      userId,
+      signal,
+      preparedParserConnection: parserConnectionPromise
+    });
+    parsed = selection.parsed;
+    const selected = selection.selected;
+    logParsedSelection(parsed, selected, paragraphs, config);
+    operation.total = selected.length;
+    reportGenerationProgress(operation, "preparing", userId);
+    initializationPromise = initializeProgressiveGeneration(context, pendingGenerationRecord(context, selected, parsed)).then(() => {
+      initialized = true;
+    });
+    initializationPromise.catch(() => {
       return;
     });
-    const { parsed, selected } = await parseAndSelectPrompts({ chatId, messageId, messages, paragraphs, state, config, userId });
-    logParsedSelection(parsed, selected, paragraphs, config);
-    try {
-      const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId, imageConnectionPromise);
-      const assets = collectImageResults(imageStage, config);
-      const visualState = buildPreviousVisualState(parsed, imageStage.jobs.map((job) => job.parserParagraph).filter((paragraph) => Number.isFinite(paragraph)));
-      await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, visualState, config, userId });
-      logStage(config, "generation_pipeline_done", {
-        chatId,
-        messageId,
-        imageCount: assets.imageIds.length,
-        elapsedMs: Date.now() - generationStartedAt
-      });
-    } catch (error) {
-      await persistCharacterMemory(chatId, parsed, config, userId);
-      throw error;
+    reportGenerationProgress(operation, "generating", userId);
+    await prepareAndDispatchImages(chatId, selected, config, userId, imageConnectionPromise, {
+      signal,
+      stopWaitingOnAbort: true,
+      onSettled: async (job, settlement) => {
+        if (signal.aborted)
+          return;
+        try {
+          await initializationPromise;
+          const completed = await commitProgressiveSlot(context, job, settlement);
+          if (completed && Number.isFinite(job.parserParagraph))
+            successfulParserParagraphs.push(job.parserParagraph);
+          operation.completed += 1;
+          reportGenerationProgress(operation, "generating", userId, completed ? `Illustration ${job.index + 1} ready.` : `Illustration ${job.index + 1} did not complete.`);
+          if (settlement.status === "fulfilled" && !completed && !signal.aborted) {
+            throw new Error("The image provider returned no image.");
+          }
+        } catch (error) {
+          throw error;
+        }
+      }
+    });
+    await initializationPromise;
+    throwIfAborted(signal);
+    reportGenerationProgress(operation, "persisting", userId);
+    const record = await finalizeProgressiveGeneration(context, parsed, successfulParserParagraphs, false);
+    reportGenerationProgress(operation, "completed", userId);
+    spindle.sendToFrontend({ type: "status", chatId, operationId: operation.id, status: "Generated", record }, userId);
+    logStage(config, "generation_pipeline_done", {
+      chatId,
+      messageId,
+      imageCount: record.imageUrls.filter(Boolean).length,
+      elapsedMs: Date.now() - generationStartedAt
+    });
+  } catch (error) {
+    const cancelled = isAbortError(error, signal);
+    if (!initialized && initializationPromise) {
+      try {
+        await initializationPromise;
+      } catch {}
     }
+    if (initialized && context && parsed) {
+      try {
+        await finalizeProgressiveGeneration(context, parsed, successfulParserParagraphs, cancelled);
+      } catch (finalizeError) {
+        logStage(config || { debugLogging: true }, "progressive_finalize_error", {
+          error: finalizeError instanceof Error ? finalizeError.message : String(finalizeError)
+        }, "error");
+      }
+    }
+    if (cancelled) {
+      reportGenerationProgress(operation, "cancelled", userId);
+      return;
+    }
+    reportGenerationProgress(operation, "failed", userId, error instanceof Error ? error.message : String(error));
+    throw error;
   } finally {
-    releaseGeneration();
+    releaseGeneration?.();
   }
+}
+async function generateForMessage(chatId, messageId, content, userId, prepared) {
+  const scheduled = enqueueGeneration(userId, chatId, messageId, (operation) => runGenerationForMessage(chatId, messageId, content, operation, userId, prepared), `${messageId}:${sourceContentFingerprint(stripInlayContent(content))}`);
+  if (!scheduled.reused)
+    reportGenerationProgress(scheduled.operation, "queued", userId);
+  return scheduled.promise;
 }
 
 // src/backend.ts
@@ -4832,7 +5183,7 @@ spindle.on("GENERATION_ENDED", async (payload, userId) => {
     const message = error instanceof Error ? error.message : String(error);
     logStage(configForError || { debugLogging: true }, "auto_generation_error", { error: message }, "error");
     spindle.log.error(`Auto generation failed: ${message}`);
-    spindle.sendToFrontend({ type: "status", status: "Error", error: message }, userId);
+    spindle.sendToFrontend({ type: "status", chatId: payload.chatId, status: "Error", error: message }, userId);
   }
 });
 spindle.onFrontendMessage(async (payload, userId) => {
@@ -4884,6 +5235,16 @@ spindle.onFrontendMessage(async (payload, userId) => {
         chatId,
         characterAppearance: state.characterAppearance
       }, userId);
+    } else if (message.type === "cancel_generation") {
+      const chatId = String(message.chatId || "");
+      if (!chatId)
+        throw new Error("Open a chat first.");
+      const cancelled = cancelChatGenerations(userId, chatId, String(message.operationId || "") || undefined);
+      spindle.sendToFrontend({
+        type: "status",
+        chatId,
+        status: cancelled.length ? "Cancellation requested…" : "No active generation to cancel."
+      }, userId);
     } else if (message.type === "generate_latest") {
       const config = await getConfig(userId);
       configForError = config;
@@ -4895,7 +5256,7 @@ spindle.onFrontendMessage(async (payload, userId) => {
       const target = [...messages].reverse().find((candidate) => candidate.role === "assistant" && !isOwnMessage(candidate));
       if (!target)
         throw new Error("No assistant message found.");
-      spindle.sendToFrontend({ type: "status", status: "Generating..." }, userId);
+      spindle.sendToFrontend({ type: "status", chatId, status: "Generating..." }, userId);
       await generateForMessage(chatId, target.id, target.content, userId, {
         config,
         messages
@@ -4943,7 +5304,7 @@ spindle.onFrontendMessage(async (payload, userId) => {
       };
       const rerunSidecar = message.type === "rerun_image_sidecar";
       const actionLabel = rerunSidecar ? "Rerunning sidecar..." : "Rerolling image...";
-      spindle.sendToFrontend({ type: "status", status: actionLabel }, userId);
+      spindle.sendToFrontend({ type: "status", chatId, status: actionLabel }, userId);
       const result = await rerunStoredImage(request, rerunSidecar, userId, config);
       spindle.sendToFrontend({
         type: "inlay_image_action_result",
@@ -4955,7 +5316,7 @@ spindle.onFrontendMessage(async (payload, userId) => {
         imageIndex: result.index,
         imageUrl: result.record.imageUrls[result.index] || ""
       }, userId);
-      spindle.sendToFrontend({ type: "status", status: rerunSidecar ? "Sidecar rerun complete" : "Image rerolled", record: result.record }, userId);
+      spindle.sendToFrontend({ type: "status", chatId, status: rerunSidecar ? "Sidecar rerun complete" : "Image rerolled", record: result.record }, userId);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -4970,7 +5331,7 @@ spindle.onFrontendMessage(async (payload, userId) => {
         error: errorMessage
       }, userId);
     }
-    spindle.sendToFrontend({ type: "status", status: "Error", error: errorMessage }, userId);
+    spindle.sendToFrontend({ type: "status", chatId: String(message.chatId || ""), status: "Error", error: errorMessage }, userId);
   }
 });
 spindle.log.info("Inlay Illustrator loaded.");

@@ -219,6 +219,8 @@ export type GeneratedRecordReference = {
   imageIds: string[];
   imageUrls: string[];
   createdAt: string;
+  operationId?: string;
+  generationStatus?: GenerationStatus;
 };
 
 export type PreviousVisualCharacter = {
@@ -279,6 +281,16 @@ export type GeneratedRecord = {
   paragraphs: number[];
   imageIds: string[];
   imageUrls: string[];
+  /** Stable per-prompt slots allow results to be persisted in completion order without changing narrative order. */
+  slotStatuses?: GenerationSlotStatus[];
+  slotErrors?: string[];
+  operationId?: string;
+  generationStatus?: GenerationStatus;
+  /** Fingerprint of the narrative source, used to reject late results after an edit or swipe change. */
+  sourceFingerprint?: string;
   rawJson: ParsedPayload;
   createdAt: string;
 };
+
+export type GenerationSlotStatus = "pending" | "generating" | "completed" | "failed" | "cancelled";
+export type GenerationStatus = "pending" | "completed" | "failed" | "cancelled";

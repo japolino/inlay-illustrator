@@ -1,5 +1,6 @@
 import type { Config } from "../shared/config.js";
 import { logStage } from "./logging.js";
+import { abortError, throwIfAborted } from "./operation-manager.js";
 import type { ComfyUIConfig, ComfyUIMapping, ImageConnection, PreparedImageJob } from "./types.js";
 import { keysOf } from "./utils.js";
 
@@ -234,7 +235,15 @@ export async function prepareAndDispatchImageJobs<TInput, TResult>(
   inputs: TInput[],
   eager: boolean,
   prepare: (input: TInput, index: number) => Promise<PreparedImageJob> | PreparedImageJob,
-  generate: (job: PreparedImageJob) => Promise<TResult> | TResult
+  generate: (job: PreparedImageJob) => Promise<TResult> | TResult,
+  options: {
+    signal?: AbortSignal;
+    stopWaitingOnAbort?: boolean;
+    onSettled?: (
+      job: PreparedImageJob,
+      result: PromiseSettledResult<TResult>
+    ) => Promise<void> | void;
+  } = {}
 ): Promise<{ jobs: PreparedImageJob[]; results: TResult[] }> {
   const jobs: PreparedImageJob[] = [];
   const requests: Promise<TResult>[] = [];
@@ -245,7 +254,9 @@ export async function prepareAndDispatchImageJobs<TInput, TResult>(
   for (const [index, input] of inputs.entries()) {
     let job: PreparedImageJob;
     try {
+      throwIfAborted(options.signal);
       job = await prepare(input, index);
+      throwIfAborted(options.signal);
     } catch (error) {
       preparationFailure = error;
       hasPreparationFailure = true;
@@ -255,19 +266,43 @@ export async function prepareAndDispatchImageJobs<TInput, TResult>(
 
     const invoke = (): Promise<TResult> => {
       try {
+        throwIfAborted(options.signal);
         return Promise.resolve(generate(job));
       } catch (error) {
         return Promise.reject(error);
       }
     };
-    const request = eager || requests.length === 0 ? invoke() : serialRequest.then(invoke);
+    const providerRequest = eager || requests.length === 0 ? invoke() : serialRequest.then(invoke);
+    const request = options.onSettled
+      ? providerRequest.then(async (result) => {
+        await options.onSettled?.(job, { status: "fulfilled", value: result });
+        return result;
+      }, async (error) => {
+        await options.onSettled?.(job, { status: "rejected", reason: error });
+        throw error;
+      })
+      : providerRequest;
     void request.catch(() => undefined);
     requests.push(request);
     // A failed request must not prevent later serial jobs from being attempted.
-    if (!eager) serialRequest = request.then(() => undefined, () => undefined);
+    if (!eager) serialRequest = providerRequest.then(() => undefined, () => undefined);
   }
 
-  const settled = await Promise.allSettled(requests);
+  const allSettled = Promise.allSettled(requests);
+  const settled = options.stopWaitingOnAbort && options.signal
+    ? await new Promise<PromiseSettledResult<TResult>[]>((resolve, reject) => {
+      const cancel = () => {
+        options.signal?.removeEventListener("abort", cancel);
+        reject(abortError());
+      };
+      options.signal?.addEventListener("abort", cancel, { once: true });
+      void allSettled.then((results) => {
+        options.signal?.removeEventListener("abort", cancel);
+        resolve(results);
+      });
+      if (options.signal?.aborted) cancel();
+    })
+    : await allSettled;
   const successfulJobs: PreparedImageJob[] = [];
   const successfulResults: TResult[] = [];
   for (const [index, result] of settled.entries()) {

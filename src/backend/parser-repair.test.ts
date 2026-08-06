@@ -3,7 +3,7 @@ import { DEFAULT_CONFIG } from "../shared/config.js";
 import { generateCreativeConcepts, parsePayloadWithRepair, parserStageTokenBudget, repairDynamicCameraDiversity } from "./parser.js";
 import type { ParserGenerationRequest } from "./types.js";
 
-type RawRequest = { messages: ParserGenerationRequest["messages"]; parameters?: Record<string, unknown> };
+type RawRequest = { messages: ParserGenerationRequest["messages"]; parameters?: Record<string, unknown>; signal?: AbortSignal };
 
 const requests: RawRequest[] = [];
 const responses: unknown[] = [];
@@ -52,6 +52,30 @@ describe("parser output budgets", () => {
 });
 
 describe("parser JSON recovery", () => {
+  test("forwards cooperative cancellation into an active parser request", async () => {
+    let providerSignal: AbortSignal | undefined;
+    (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle = {
+      generate: {
+        raw: (request: RawRequest) => new Promise((_resolve, reject) => {
+          providerSignal = request.signal;
+          request.signal?.addEventListener("abort", () => {
+            const error = new Error("provider aborted");
+            error.name = "AbortError";
+            reject(error);
+          }, { once: true });
+        })
+      },
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+    const controller = new AbortController();
+    const parsing = parsePayloadWithRepair(connection, config, messages, undefined, controller.signal);
+    await Promise.resolve();
+    controller.abort("test cancellation");
+
+    await expect(parsing).rejects.toHaveProperty("name", "AbortError");
+    expect(providerSignal?.aborted).toBe(true);
+  });
+
   test("removes exact duplicate character objects within one shot", async () => {
     const duplicate = { name: "Rhea Calder", label: "girl", appearance: "long white braid" };
     responses.push({ content: JSON.stringify({ scenes: [{ shots: [{ paragraph: 1, characters: [duplicate, duplicate] }] }] }) });

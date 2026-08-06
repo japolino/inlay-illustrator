@@ -35,6 +35,12 @@ export type BackendMessage = {
   status?: string;
   error?: string;
   record?: { imageUrls?: string[] };
+  operationId?: string;
+  messageId?: string;
+  stage?: "queued" | "loading" | "parsing" | "preparing" | "generating" | "persisting" | "completed" | "failed" | "cancelled";
+  completed?: number;
+  total?: number;
+  detail?: string;
 };
 
 export type ImageGenerationSettings = {

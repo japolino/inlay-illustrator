@@ -343,6 +343,20 @@ describe("compact generated-record storage", () => {
     expect(hydrated?.imageParameters).toEqual(original.imageParameters);
   });
 
+  test("re-saves progressive records without nesting compact workflow references", async () => {
+    const original = record();
+    const firstReference = await storeGeneratedRecord("chat-progress", "progress-key", original, "user-progress");
+    const compact = await loadGeneratedRecord(firstReference, "user-progress", false);
+    expect(compact).not.toBeNull();
+    if (!compact) return;
+    compact.imageUrls[0] = "/progressive-result.png";
+    const secondReference = await storeGeneratedRecord("chat-progress", "progress-key", compact, "user-progress");
+    const hydrated = await loadGeneratedRecord(secondReference, "user-progress");
+
+    expect(hydrated?.imageParameters?.[0]).toEqual(original.imageParameters?.[0]);
+    expect(hydrated?.imageUrls[0]).toBe("/progressive-result.png");
+  });
+
   test("migrates legacy records into compact references and builds direct image indexes", async () => {
     const state: State = { characterAppearance: {}, generated: { legacy: record() } };
     await migrateLegacyGeneratedRecords("chat-1", state, "user-1");

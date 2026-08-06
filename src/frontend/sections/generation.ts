@@ -28,5 +28,11 @@ export function renderGenerationSection({ ui, config, actions, rerender }: Secti
       actions.updateStatus("Generating...");
       actions.sendToBackend({ type: "generate_latest", chatId: actions.activeChatId() });
     }
+  }, {
+    label: "Cancel generation",
+    onClick: () => {
+      actions.updateStatus("Requesting cancellation...");
+      actions.sendToBackend({ type: "cancel_generation", chatId: actions.activeChatId() });
+    }
   }]);
 }

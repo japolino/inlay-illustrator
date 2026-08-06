@@ -51,12 +51,32 @@ export function routeBackendMessage(
     return;
   }
 
+  if (message.type === "generation_progress" && message.stage) {
+    if (message.chatId && message.chatId !== getActiveChatId()) return;
+    const labels = {
+      queued: "Queued…",
+      loading: "Loading chat context…",
+      parsing: "Parsing illustration prompts…",
+      preparing: "Preparing image jobs…",
+      generating: message.total
+        ? `Generating illustrations ${message.completed || 0}/${message.total}…`
+        : "Generating illustrations…",
+      persisting: "Saving illustrations…",
+      completed: "Generation complete.",
+      failed: "Generation failed.",
+      cancelled: "Generation cancelled."
+    };
+    actions.updateStatus(message.detail ? `${labels[message.stage]}\n${message.detail}` : labels[message.stage]);
+    return;
+  }
+
   if (message.type === "status") {
+    if (message.chatId && message.chatId !== getActiveChatId()) return;
     let status = message.error
       ? `${message.status}: ${message.error}`
       : String(message.status || "Ready");
     if (message.record?.imageUrls) {
-      status += `\n${message.record.imageUrls.length} image(s) generated.`;
+      status += `\n${message.record.imageUrls.filter(Boolean).length} image(s) generated.`;
     }
     actions.updateStatus(status);
     return;

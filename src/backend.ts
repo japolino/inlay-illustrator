@@ -9,6 +9,7 @@ import {
 import { prepareAndDispatchImageJobs, rerollImageParameters } from "./backend/images.js";
 import { stripInlayContent, stripInlayFromMessages } from "./backend/inlay-content.js";
 import { logStage } from "./backend/logging.js";
+import { cancelChatGenerations } from "./backend/operation-manager.js";
 import { deleteCharacterTag, upsertCharacterTag } from "./backend/memory.js";
 import {
   continuityReference,
@@ -74,7 +75,7 @@ spindle.on("GENERATION_ENDED", async (payload, userId) => {
     const message = error instanceof Error ? error.message : String(error);
     logStage(configForError || { debugLogging: true }, "auto_generation_error", { error: message }, "error");
     spindle.log.error(`Auto generation failed: ${message}`);
-    spindle.sendToFrontend({ type: "status", status: "Error", error: message }, userId);
+    spindle.sendToFrontend({ type: "status", chatId: payload.chatId, status: "Error", error: message }, userId);
   }
 });
 
@@ -125,6 +126,15 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         chatId,
         characterAppearance: state.characterAppearance
       }, userId);
+    } else if (message.type === "cancel_generation") {
+      const chatId = String(message.chatId || "");
+      if (!chatId) throw new Error("Open a chat first.");
+      const cancelled = cancelChatGenerations(userId, chatId, String(message.operationId || "") || undefined);
+      spindle.sendToFrontend({
+        type: "status",
+        chatId,
+        status: cancelled.length ? "Cancellation requested…" : "No active generation to cancel."
+      }, userId);
     } else if (message.type === "generate_latest") {
       const config = await getConfig(userId);
       configForError = config;
@@ -134,7 +144,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       const messages = await spindle.chat.getMessages(chatId);
       const target = [...messages].reverse().find((candidate) => candidate.role === "assistant" && !isOwnMessage(candidate));
       if (!target) throw new Error("No assistant message found.");
-      spindle.sendToFrontend({ type: "status", status: "Generating..." }, userId);
+      spindle.sendToFrontend({ type: "status", chatId, status: "Generating..." }, userId);
       await generateForMessage(chatId, target.id, target.content, userId, {
         config,
         messages: messages as import("./backend/types.js").ChatMessage[]
@@ -181,7 +191,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       };
       const rerunSidecar = message.type === "rerun_image_sidecar";
       const actionLabel = rerunSidecar ? "Rerunning sidecar..." : "Rerolling image...";
-      spindle.sendToFrontend({ type: "status", status: actionLabel }, userId);
+      spindle.sendToFrontend({ type: "status", chatId, status: actionLabel }, userId);
       const result = await rerunStoredImage(request, rerunSidecar, userId, config);
       spindle.sendToFrontend({
         type: "inlay_image_action_result",
@@ -193,7 +203,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         imageIndex: result.index,
         imageUrl: result.record.imageUrls[result.index] || ""
       }, userId);
-      spindle.sendToFrontend({ type: "status", status: rerunSidecar ? "Sidecar rerun complete" : "Image rerolled", record: result.record }, userId);
+      spindle.sendToFrontend({ type: "status", chatId, status: rerunSidecar ? "Sidecar rerun complete" : "Image rerolled", record: result.record }, userId);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -208,7 +218,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         error: errorMessage
       }, userId);
     }
-    spindle.sendToFrontend({ type: "status", status: "Error", error: errorMessage }, userId);
+    spindle.sendToFrontend({ type: "status", chatId: String(message.chatId || ""), status: "Error", error: errorMessage }, userId);
   }
 });
 

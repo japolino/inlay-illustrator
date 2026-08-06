@@ -12,6 +12,7 @@ import {
   repairDynamicCameraDiversityLocally
 } from "./camera-diversity.js";
 import { logStage } from "./logging.js";
+import { abortError, throwIfAborted } from "./operation-manager.js";
 import {
   dedupeExactShotCharacters,
   normalizeAtomicCompositionTerms,
@@ -484,13 +485,17 @@ async function generateParserText(
   config: Config,
   messages: ParserGenerationRequest["messages"],
   userId?: string,
-  stage: ParserStage = "main"
+  stage: ParserStage = "main",
+  signal?: AbortSignal
 ): Promise<string> {
   const startedAt = Date.now();
   const selected = parserStageParameters(connection, config, stage);
   const run = async (parameters: Record<string, unknown>): Promise<unknown> => {
+    throwIfAborted(signal);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 180_000);
+    const cancel = () => controller.abort(signal?.reason);
+    signal?.addEventListener("abort", cancel, { once: true });
     try {
       return await spindle.generate.raw({
         type: "raw",
@@ -505,6 +510,7 @@ async function generateParserText(
       } as ParserGenerationRequest);
     } finally {
       clearTimeout(timeout);
+      signal?.removeEventListener("abort", cancel);
     }
   };
   try {
@@ -543,6 +549,7 @@ async function generateParserText(
     if (finishReason === "length" && !text.trim()) throw new Error("Parser response was truncated before producing JSON.");
     return text;
   } catch (error) {
+    if (signal?.aborted) throw abortError(typeof signal.reason === "string" ? signal.reason : undefined);
     logStage(config, "parser_llm_error", {
       stage,
       elapsedMs: Date.now() - startedAt,
@@ -559,7 +566,8 @@ export async function generateCreativeConcepts(
   targetSource: string,
   context: ParserContext,
   previousConcepts: string[] = [],
-  userId?: string
+  userId?: string,
+  signal?: AbortSignal
 ): Promise<CreativeConcept[]> {
   try {
     logStage(config, "creative_ideation_start", {
@@ -573,7 +581,7 @@ export async function generateCreativeConcepts(
       creativeIdeationRequest(targetSource),
       context.override,
       "auxiliary"
-    ), userId, "ideation");
+    ), userId, "ideation", signal);
     const concepts = parseCreativeConcepts(raw, paragraphs, config);
     if (concepts.length === 0) {
       logStage(config, "creative_ideation_fallback", { reason: "invalid_or_empty_slate", outputLength: raw.length }, "warn");
@@ -586,6 +594,7 @@ export async function generateCreativeConcepts(
     });
     return concepts;
   } catch (error) {
+    throwIfAborted(signal);
     logStage(config, "creative_ideation_fallback", {
       reason: error instanceof Error ? error.message : String(error)
     }, "warn");
@@ -692,7 +701,8 @@ export async function preprocessTargetParagraphs(
   config: Config,
   paragraphs: PreparedParagraph[],
   context: ParserContext,
-  userId?: string
+  userId?: string,
+  signal?: AbortSignal
 ): Promise<string> {
   const rawTarget = formatTargetParagraphs(paragraphs);
   if (!config.preprocessingEnabled) return rawTarget;
@@ -703,7 +713,7 @@ export async function preprocessTargetParagraphs(
       preprocessingUserRequest(rawTarget),
       context.override,
       "auxiliary"
-    ), userId, "preprocess");
+    ), userId, "preprocess", signal);
     const selection = validatePreprocessedTarget(summary, paragraphs, config);
     if (selection) {
       logStage(config, "preprocessing_done", {
@@ -717,6 +727,7 @@ export async function preprocessTargetParagraphs(
     }
     logStage(config, "preprocessing_fallback", { reason: "invalid_selection", summaryLength: cleanString(summary).length }, "warn");
   } catch (error) {
+    throwIfAborted(signal);
     logStage(config, "preprocessing_fallback", { reason: error instanceof Error ? error.message : String(error) }, "warn");
   }
   return rawTarget;
@@ -788,9 +799,10 @@ export async function parsePayloadWithRepair(
   parserConnection: ParserConnection,
   config: Config,
   messages: ParserGenerationRequest["messages"],
-  userId?: string
+  userId?: string,
+  signal?: AbortSignal
 ): Promise<ParsedPayload> {
-  const raw = await generateParserText(parserConnection, config, messages, userId);
+  const raw = await generateParserText(parserConnection, config, messages, userId, "main", signal);
   if (!raw.trim()) throw new Error("Parser returned an empty response.");
   const requireDynamicProjection = messages.some((message) =>
     message.role === "system" && message.content.includes("shotPlan.primaryAction")
@@ -842,7 +854,7 @@ export async function parsePayloadWithRepair(
     const repaired = await generateParserText(parserConnection, config, [
       { role: "system", content: repairSystem },
       { role: "user", content: repairInput }
-    ], userId, "repair");
+    ], userId, "repair", signal);
     if (!repaired.trim()) throw new Error("Parser returned an empty repair response.");
     const parsed = normalizeAtomicCompositionTerms(
       dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(repaired), fallbackParagraph))
@@ -866,7 +878,8 @@ export async function repairDynamicCameraDiversity(
   config: Config,
   payload: ParsedPayload,
   targetSource: string,
-  userId?: string
+  userId?: string,
+  signal?: AbortSignal
 ): Promise<ParsedPayload> {
   const audit = auditDynamicCameraDiversity(payload, config);
   logStage(config, "camera_diversity_audit", audit);
@@ -907,7 +920,7 @@ export async function repairDynamicCameraDiversity(
           JSON.stringify(payload)
         ].join("\n\n")
       }
-    ], userId, "camera");
+    ], userId, "camera", signal);
     if (!raw.trim()) throw new Error("empty camera repair response");
     const repaired = parseParserJson(raw);
     const merged = mergeDynamicCameraRepair(payload, repaired, config, audit);
@@ -921,6 +934,7 @@ export async function repairDynamicCameraDiversity(
     });
     return merged;
   } catch (error) {
+    throwIfAborted(signal);
     logStage(config, "camera_diversity_repair_fallback", {
       reason: error instanceof Error ? error.message : String(error),
       preservedSignatures: audit.signatures

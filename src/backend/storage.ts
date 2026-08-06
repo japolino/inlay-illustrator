@@ -128,6 +128,9 @@ async function ensureWorkflowStored(hash: string, workflow: object, userId?: str
 async function compactParameters(parameters: Record<string, unknown>, userId?: string): Promise<Record<string, unknown>> {
   const workflow = parameters.workflow;
   if (!workflow || typeof workflow !== "object") return parameters;
+  if (!Array.isArray(workflow) && typeof (workflow as Record<string, unknown>)[WORKFLOW_REFERENCE_KEY] === "string") {
+    return parameters;
+  }
   const serialized = JSON.stringify(workflow);
   const hash = await contentHash(serialized);
   await ensureWorkflowStored(hash, workflow, userId);
@@ -162,7 +165,9 @@ export function generatedRecordReference(record: GeneratedRecord, path: string):
     paragraphs: record.paragraphs,
     imageIds: record.imageIds,
     imageUrls: record.imageUrls,
-    createdAt: record.createdAt
+    createdAt: record.createdAt,
+    operationId: record.operationId,
+    generationStatus: record.generationStatus
   };
 }
 
@@ -257,11 +262,15 @@ async function getParserConnections(userId?: string): Promise<ParserConnection[]
 }
 
 export async function sendState(userId?: string, chatId?: string, preparedConfig?: Config): Promise<void> {
-  const state = chatId ? await getState(chatId, userId) : null;
+  const [state, config, parserConnections] = await Promise.all([
+    chatId ? getState(chatId, userId) : Promise.resolve(null),
+    preparedConfig ? Promise.resolve(preparedConfig) : getConfig(userId),
+    getParserConnections(userId)
+  ]);
   spindle.sendToFrontend({
     type: "state",
-    config: preparedConfig || await getConfig(userId),
-    parserConnections: await getParserConnections(userId),
+    config,
+    parserConnections,
     chatId: chatId || "",
     characterAppearance: state?.characterAppearance || {}
   }, userId);
