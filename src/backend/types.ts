@@ -300,7 +300,8 @@ export type GenerationStatus = "pending" | "completed" | "failed" | "cancelled";
 // lumiverse-spindle-types@0.6.2 predates the host's includeDataUrl option.
 // Declared here so generation.ts can opt out of the base64 imageDataUrl RPC
 // payload (host-side: Lumiverse spindle worker-host-image-gen-api, commit
-// "feat(spindle): let extensions opt out of the base64 imageDataUrl payload").
+// "feat(spindle): let extensions opt out of the base64 imageDataUrl payload";
+// types-side: prolix-oc/lumiverse-spindle-types PR #38).
 // Remove once the published types include the field.
 declare module "lumiverse-spindle-types" {
   interface ImageGenRequestDTO {
