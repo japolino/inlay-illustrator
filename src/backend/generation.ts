@@ -287,26 +287,31 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
       if (manualCreative && conceptSelections === null) {
         if (config.fastMode) {
           logStage(config, "creative_ideation_skipped", { reason: "fast_mode", mode: "manual_creative" });
+          // Fast Mode renders Creative shots directly from the main parser with
+          // no concept slate; keep the selection empty so the creative-entry
+          // filter below cannot discard parsed shots.
           conceptSelections = new Map();
-        } else if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
-          const previousConcepts = conceptCandidates
-            .filter((concept) => usedConceptIds.has(concept.id))
-            .map((concept) => concept.concept);
-          conceptCandidates = await generateCreativeConcepts(
-            parserConnection,
-            config,
-            paragraphs,
-            formatTargetParagraphs(paragraphs),
-            context,
-            previousConcepts,
-            userId,
-            signal
-          );
-          ideationAttempted = true;
-        }
-        conceptSelections = chooseCreativeConcepts(conceptCandidates, usedConceptIds);
-        if (conceptSelections.size === 0 && conceptCandidates.length > 0) {
-          conceptSelections = chooseCreativeConcepts(conceptCandidates);
+        } else {
+          if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
+            const previousConcepts = conceptCandidates
+              .filter((concept) => usedConceptIds.has(concept.id))
+              .map((concept) => concept.concept);
+            conceptCandidates = await generateCreativeConcepts(
+              parserConnection,
+              config,
+              paragraphs,
+              formatTargetParagraphs(paragraphs),
+              context,
+              previousConcepts,
+              userId,
+              signal
+            );
+            ideationAttempted = true;
+          }
+          conceptSelections = chooseCreativeConcepts(conceptCandidates, usedConceptIds);
+          if (conceptSelections.size === 0 && conceptCandidates.length > 0) {
+            conceptSelections = chooseCreativeConcepts(conceptCandidates);
+          }
         }
       }
       if (creativePipeline && creativeTargetSource === null) {

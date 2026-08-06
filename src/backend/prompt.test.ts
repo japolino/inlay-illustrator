@@ -1404,6 +1404,35 @@ describe("Fast Mode parser instruction", () => {
     expect(fast).toContain('"terminalState"');
   });
 
+  test("gates the supplement guidance on the supplement config in Fast Mode", () => {
+    const withSupplement = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true, promptStyle: "default", supplement: true });
+    expect(withSupplement).toContain("Natural Language Supplement");
+    const withoutSupplement = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true, promptStyle: "default", supplement: false });
+    expect(withoutSupplement).toContain("Do not include supplement text.");
+  });
+
+  test("keeps the Original Creation Tag rules in Fast Mode when originalReference is enabled", () => {
+    const instruction = parserInstruction({
+      ...DEFAULT_CONFIG,
+      fastMode: true,
+      originalReference: true,
+      originalCreationName: "Custom Creation"
+    });
+    expect(instruction).toContain("Original Creation Tag:");
+    expect(instruction).toContain("Custom Creation");
+    expect(instruction).toContain("no creation tag, no source/work title, and no aliases");
+  });
+
+  test("keeps the allowed camera value enums in the Fast Mode instruction", () => {
+    const instruction = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true });
+    expect(instruction).toContain("body-part focus");
+    expect(instruction).toContain("three-quarter view");
+    expect(instruction).toContain("shallow depth of field");
+    const defaultStyle = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true, promptStyle: "default" });
+    expect(defaultStyle).toContain("Framing tags:");
+    expect(defaultStyle).toContain("Perspective tags:");
+  });
+
   test("retains the mode-specific direction contract for Static and Dynamic requirements", () => {
     const staticFast = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true, perspectiveMode: "static" });
     expect(staticFast).toContain("Static shot direction");

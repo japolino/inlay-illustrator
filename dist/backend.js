@@ -3418,8 +3418,10 @@ function parserInstructionFast(config, options = {}) {
     "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts.",
     "Before returning the batch, compare Dynamic cameras as a soft camera ledger. When two equally suitable cameras would contain their focal actions, prefer different framing + angle + perspective tuples. Never choose a worse, more extreme, or action-cropping camera merely to create variety.",
     fastPerspectiveContract(config),
-    structuredAnima ? "### Atomic Natural Composition" : "### Natural Language Supplement",
-    structuredAnima ? "characters[].composition is always required and uses its four atomic fields (position, pose, actions, gaze), rendered in that exact order. Each phrase is concise, comma-free, independently visual, and never repeats a fact from another field. Never use names; say viewer, left girl, right boy, foreground character, or background character. Never put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle, appearance, attire, or facial-expression adjectives in any composition field." : "In supplement, describe visible details in concise objective telegraphic sentences: composition, framing, positions, interactions, unusual vantage points, or objective atmosphere/lighting. Separate phrases with commas, never semicolons. No names, no smell, sound, internal sensation, invisible emotion, or prose narration.",
+    structuredAnima ? "### Camera values" : "",
+    structuredAnima ? "- camera.framing must be empty or exactly one of: portrait, close-up, medium close-up, upper body, medium shot, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, body-part focus. camera.angle must be empty or exactly one of: eye level, low angle, high angle, dutch angle. camera.perspective must be empty or exactly one of: straight-on, from above, from behind, from below, from side, sideways, three-quarter view, pov. camera.focus may contain at most two of: shallow depth of field, deep focus, background blur, foreground blur, motion blur, fisheye, wide-angle lens, telephoto lens. Do not add any other camera keys or values." : "- Framing tags: portrait, upper body, cowboy shot, feet out of frame, full body, wide shot, lower body, head out of frame, eyes out of frame, close-up, body-part focus. Perspective tags: from above, from behind, from below, from side, high up, sideways, straight-on, upside-down, pov.",
+    structuredAnima ? "### Atomic Natural Composition" : config.supplement ? "### Natural Language Supplement" : "Do not include supplement text.",
+    structuredAnima ? "characters[].composition is always required and uses its four atomic fields (position, pose, actions, gaze), rendered in that exact order. Each phrase is concise, comma-free, independently visual, and never repeats a fact from another field. Never use names; say viewer, left girl, right boy, foreground character, or background character. Never put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle, appearance, attire, or facial-expression adjectives in any composition field." : config.supplement ? "In supplement, describe visible details in concise objective telegraphic sentences: composition, framing, positions, interactions, unusual vantage points, or objective atmosphere/lighting. Separate phrases with commas, never semicolons. No names, no smell, sound, internal sensation, invisible emotion, or prose narration." : "Do not write supplement.",
     structuredAnima ? "Use sharedComposition.interaction for shared contact or combined actions only, and spatialRelation for one spatial relationship phrase. Do not repeat individual character actions." : "",
     structuredAnima ? config.supplement ? "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements. Prefer the source's exact concrete noun phrase over a generic paraphrase; never add a plausible prop the current paragraph does not establish." : staticBackgroundPossible ? "Environment target budget: exactly one location, exactly one time/weather phrase, empty lightingMood, and 2-3 backgroundElements for every scene containing a Static shot. Prefer the source's exact concrete noun phrase; never add a prop the paragraph does not establish." : "Environment target budget: exactly one location, exactly one time/weather phrase, empty lightingMood and backgroundElements. Prefer the source's exact concrete noun phrase; never add a prop the paragraph does not establish." : "",
     "## Data Priority",
@@ -3432,7 +3434,12 @@ function parserInstructionFast(config, options = {}) {
     "- Double-quoted keys and values. No trailing commas. Validate bracket balance: every { has }, every [ has ].",
     "- Positive tags only unless client says otherwise. English only.",
     "## Character Names",
-    "Use names only for the JSON name field as private memory keys. Names will not be included in final prompts. If the narrative provides a multi-word name, copy that full name exactly in characters[].name. If unnamed, use a consistent identifier such as girl A, boy B, shopkeeper, guard, or stranger. Never empty; this is used for cross-message appearance tracking."
+    "Use names only for the JSON name field as private memory keys. Names will not be included in final prompts. If the narrative provides a multi-word name, copy that full name exactly in characters[].name. If unnamed, use a consistent identifier such as girl A, boy B, shopkeeper, guard, or stranger. Never empty; this is used for cross-message appearance tracking.",
+    ...config.originalReference ? [
+      "Original Creation Tag:",
+      config.originalCreationName || "(empty)",
+      "Use full character names ONLY for the JSON name field. Output the character's name only: no parentheses, no creation tag, no source/work title, and no aliases. The extension adds the creation tag programmatically afterward. Do not include any parenthetical, source name, creation reference, title, or alias in name or any other field."
+    ] : []
   ].join(`
 
 `);
@@ -4839,14 +4846,16 @@ async function parseAndSelectPrompts(input) {
         if (config.fastMode) {
           logStage(config, "creative_ideation_skipped", { reason: "fast_mode", mode: "manual_creative" });
           conceptSelections = new Map;
-        } else if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
-          const previousConcepts = conceptCandidates.filter((concept) => usedConceptIds.has(concept.id)).map((concept) => concept.concept);
-          conceptCandidates = await generateCreativeConcepts(parserConnection, config, paragraphs, formatTargetParagraphs(paragraphs), context, previousConcepts, userId, signal);
-          ideationAttempted = true;
-        }
-        conceptSelections = chooseCreativeConcepts(conceptCandidates, usedConceptIds);
-        if (conceptSelections.size === 0 && conceptCandidates.length > 0) {
-          conceptSelections = chooseCreativeConcepts(conceptCandidates);
+        } else {
+          if (!hasUnusedCreativeConcepts(conceptCandidates, usedConceptIds) && !ideationAttempted) {
+            const previousConcepts = conceptCandidates.filter((concept) => usedConceptIds.has(concept.id)).map((concept) => concept.concept);
+            conceptCandidates = await generateCreativeConcepts(parserConnection, config, paragraphs, formatTargetParagraphs(paragraphs), context, previousConcepts, userId, signal);
+            ideationAttempted = true;
+          }
+          conceptSelections = chooseCreativeConcepts(conceptCandidates, usedConceptIds);
+          if (conceptSelections.size === 0 && conceptCandidates.length > 0) {
+            conceptSelections = chooseCreativeConcepts(conceptCandidates);
+          }
         }
       }
       if (creativePipeline && creativeTargetSource === null) {

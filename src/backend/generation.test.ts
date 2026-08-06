@@ -397,6 +397,36 @@ describe("Fast Mode parser call sequencing", () => {
     expect((requests[0].messages as Array<{ content: string }>)[0].content).not.toContain("Creative Illustration Concept Ideator");
   });
 
+  test("manual Creative Fast Mode ignores stored concept candidates instead of filtering parsed shots", async () => {
+    const config = effectiveGenerationConfig({
+      ...baseConfig,
+      adaptiveMode: false,
+      perspectiveMode: "creative" as const
+    });
+    responses.push({ content: JSON.stringify(creativePayload("creative")) });
+
+    const result = await parseAndSelectPrompts({
+      chatId: "chat-1", messageId: "message-1", messages, paragraphs,
+      state, config,
+      creativeCandidates: [{
+        id: "candidate-1",
+        paragraph: 1,
+        subjectType: "shadow",
+        anchor: "long shadow",
+        concept: "a long shadow crosses the pavement",
+        renderScope: "shadow and pavement only",
+        camera: "low oblique detail",
+        visibleCues: ["long shadow", "pavement"],
+        score: 92
+      }]
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(result.selected).toHaveLength(1);
+    expect(result.selected[0]?.perspectiveMode).toBe("creative");
+    expect(result.selected[0]?.creativeConcept).toBeUndefined();
+  });
+
   test("Adaptive Fast Mode keeps a Creative shot without an ideation call instead of downgrading it", async () => {
     const config = effectiveGenerationConfig({ ...baseConfig, adaptiveMode: true });
     responses.push({ content: JSON.stringify(creativePayload("creative")) });
