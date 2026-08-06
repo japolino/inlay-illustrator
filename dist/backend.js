@@ -850,16 +850,282 @@ function assembleCharacterBlock(character, config, replacements, includeAction, 
   }
   return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", stripOrReplaceNames(cleanString2(character.age), replacements, true), stripOrReplaceNames(cleanString2(character.identity), replacements, true), stripOrReplaceNames(cleanString2(character.appearance), replacements, true), stripOrReplaceNames(cleanString2(character.body), replacements, true), stripOrReplaceNames(cleanString2(character.attire), replacements, true), stripOrReplaceNames(cleanString2(character.expression), replacements, true), includeAction ? stripOrReplaceNames(cleanString2(character.action), replacements, true) : "")).join(", ");
 }
-function assembleProjectedCharacterBlock(character, config, replacements) {
-  const projection = stripOrReplaceNames(cleanString2(character.visibleTags), replacements, true);
-  if (!projection)
-    return assembleCharacterBlock(character, config, replacements, false, "dynamic");
-  const excludesReadableFace = isFragmentRenderScope(character.renderScope);
-  return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", excludesReadableFace ? "" : stripOrReplaceNames(cleanString2(character.age), replacements, true), projection, excludesReadableFace ? "" : stripOrReplaceNames(cleanString2(character.expression), replacements, true))).join(", ");
-}
 function isFragmentRenderScope(value) {
   const scope = cleanString2(value).toLowerCase();
-  return /\b(?:head|face|eyes)\s+out\s+of\s+frame\b|\b(?:hand|hands|feet|foot|lower body|torso|back|shoulder|silhouette|shadow)\s+(?:only|detail|focus)\b|\bonly\s+(?:the\s+)?(?:hand|hands|feet|foot|lower body|torso|back|shoulder|silhouette|shadow)\b/.test(scope);
+  const subject = "(?:head|face|eye|eyes|mouth|hair|hand|hands|finger|fingers|arm|arms|sleeve|sleeves|feet|foot|leg|legs|lower body|torso|chest|back|shoulder|tail|wing|silhouette|shadow)";
+  return new RegExp([
+    "\\b(?:head|face|eyes)\\s+out\\s+of\\s+frame\\b",
+    `\\b${subject}\\s+(?:only|detail|focus)\\b`,
+    `\\bonly\\s+(?:the\\s+)?${subject}\\b`,
+    `\\b(?:close(?:-up)?|tight|crop(?:ped)?)\\s+(?:view|crop|focus)(?:\\s+(?:on|of))?\\s+(?:the\\s+|her\\s+|his\\s+|their\\s+)?${subject}\\b`,
+    `\\b(?:focus|detail|close(?:-up)?|crop|view)\\s+(?:on|of)\\s+(?:the\\s+|her\\s+|his\\s+|their\\s+)?(?:[a-z-]+\\s+){0,2}${subject}\\b`,
+    `\\b${subject}\\s+(?:fills?|filling)\\s+(?:the\\s+)?frame\\b`
+  ].join("|"), "i").test(scope);
+}
+var ALL_VISIBILITY_REGIONS = ["head", "face", "neck", "shoulders", "torso", "arms", "hands", "hips", "legs", "feet", "figure"];
+var FRAMING_VISIBILITY_REGIONS = {
+  portrait: ["head", "face", "neck", "shoulders"],
+  "close-up": ["head", "face", "neck", "shoulders"],
+  "medium close-up": ["head", "face", "neck", "shoulders", "torso"],
+  "upper body": ["head", "face", "neck", "shoulders", "torso", "arms", "hands"],
+  "medium shot": ["head", "face", "neck", "shoulders", "torso", "arms", "hands"],
+  "cowboy shot": ["head", "face", "neck", "shoulders", "torso", "arms", "hands", "hips", "legs"],
+  "feet out of frame": ["head", "face", "neck", "shoulders", "torso", "arms", "hands", "hips", "legs"],
+  "full body": ALL_VISIBILITY_REGIONS,
+  "wide shot": ALL_VISIBILITY_REGIONS,
+  "lower body": ["hips", "legs", "feet"],
+  "head out of frame": ["torso", "arms", "hands", "hips", "legs", "feet"],
+  "eyes out of frame": ["head", "face", "neck", "shoulders"],
+  "body-part focus": []
+};
+var REGION_TAG_PATTERNS = [
+  [["feet"], /\b(?:feet|foot|ankles?|shoes?|boots?|sneakers?|sandals?|loafers?|slippers?|heels?|footwear|barefoot|toes?|socks?|stocking feet)\b/],
+  [["legs"], /\b(?:legs?|thighs?|knees?|calves?|thigh[- ]?highs?|stockings?|tights|pantyhose|leggings?|leg warmers?|garters?)\b/],
+  [["hips"], /\b(?:hips?|waists?|waistbands?|belts?|crotches?|genitals?|pubis|penis|vulva|vagina|pussy|butts?|buttocks|asses?|mini[- ]?skirts?|skirts?|pants|trousers|slacks|shorts|jeans|underwear|panties|briefs|thongs?|bottomless)\b/],
+  [["hands", "feet"], /\b(?:paws?|claws?)\b/],
+  [["hands"], /\b(?:hands?|fingers?|fingernails?|palms?|wrists?|gloves?|mittens?|rings?|watches|bracelets?)\b/],
+  [["arms"], /\b(?:arms?|sleeves?|elbows?|forearms?|biceps|triceps)\b/],
+  [["shoulders"], /\b(?:shoulders?|shoulder pads)\b/],
+  [["shoulders", "torso"], /\b(?:shirts?|blouses?|tank tops?|sweaters?|sweatshirts?|cardigans?|hoodies?|jackets?|blazers?|coats?|vests?|jerseys?|suits?|dresses?|robes?|gowns?|overalls|aprons?|uniforms?|ribbons?|capes?|cloaks?|tunics?|waistcoats?|suspenders?|sash(?:es)?|shirtless|topless)\b/],
+  [["shoulders", "torso", "arms"], /\b(?:sleeveless|oversized|unzipped|unbuttoned|open front)\b/],
+  [["hips", "legs"], /\b(?:side slit|high slit|pleated|high[- ]?waisted|low[- ]?rise)\b/],
+  [["shoulders", "torso", "arms", "hips", "legs"], /\b(?:torn clothes|wet clothes)\b/],
+  [["shoulders", "torso", "hips", "legs", "feet"], /\b(?:nude|naked)\b/],
+  [["torso"], /\b(?:torsos?|chests?|breasts?|busts?|nipples?|bellies?|stomachs?|midriffs?|abdomens?|backs?|spines?|corsets?|bras?|binders?|collarbones?|cleavage|necklines?)\b/],
+  [["neck"], /\b(?:necks?|necklaces?|chokers?|scarves?|ties?|neckties?|bow ?ties?|collars?|brooch(?:es)?|badges?|medals?)\b/],
+  [["face"], /\b(?:eyes?|eyebrows?|brows|eyelashes?|lashes|pupils|irises?|heterochromia|tareme|tsurime|jitome|sanpaku|empty eyes|dashed eyes|symbol in eye|faces?|facial|freckles|beauty marks?|moles?|blush|cheeks?|chins?|jaws?|foreheads?|noses?|lips?|mouths?|teeth|tongues?|smiles?|frowns?|grins?|fangs?|tusks?|muzzles?|snouts?|eyepatches?|eye patches?|masks?|glasses|eyeglasses|goggles|monocles?|beards?|mustaches?|moustaches?|makeup)\b/],
+  [["head"], /\b(?:hair|hairstyles?|bangs|fringe|ponytails?|braids?|buns?|bald|horns?|ears?|elf ears|earrings?|ear piercings?|antennae|halos?|hats?|caps?|hoods?|headbands?|tiaras?|veils?|hairpins?|hair clips?|hair ornaments?)\b/],
+  [["shoulders", "torso"], /\b(?:wings?|winged)\b/],
+  [["hips"], /\b(?:tails?|tail feathers?)\b/],
+  [ALL_VISIBILITY_REGIONS, /\b(?:skin|fur|scales?|feathers?|furry|human|elf|elven|demon|demonic|angel|angelic|android|robot|robotic|cyborg|oni|vampire|orc|goblin|mermaid|alien|androgynous|kemonomimi|cat girl|wolf girl|fox girl|monster girl)\b/],
+  [["figure"], /\b(?:tall|short|petite|giant|dwarf(?:ed)?|full[- ]?figure)\b/],
+  [["shoulders", "torso", "arms"], /\b(?:muscular|toned|stocky|athletic)\b/],
+  [["torso", "hips", "legs"], /\b(?:skinny|slim|lean|plump|fat|curvy|build|physique|pear[- ]?shaped|hourglass)\b/],
+  [["legs"], /\b(?:long legs?|short legs?|thick thighs?)\b/]
+];
+var EYE_TAG = /\b(?:eyes?|eyebrows?|brows|eyelashes?|lashes|pupils|irises?|heterochromia|tareme|tsurime|jitome|sanpaku|empty eyes|dashed eyes|symbol in eye|eyepatches?|eye patches?)\b/;
+function fallbackVisibilityRegions(source) {
+  if (source === "identity")
+    return ALL_VISIBILITY_REGIONS;
+  if (source === "appearance")
+    return ["face"];
+  if (source === "attire")
+    return ["shoulders", "torso"];
+  return ["figure"];
+}
+function tagVisibilityRegions(tag, source) {
+  const normalized = tag.toLowerCase();
+  for (const [regions, pattern] of REGION_TAG_PATTERNS) {
+    if (pattern.test(normalized))
+      return regions;
+  }
+  return fallbackVisibilityRegions(source);
+}
+function visibilityModifiersFor(framing, angle, perspective, renderScope) {
+  const scopeText = `${angle} ${perspective} ${renderScope}`.toLowerCase();
+  return {
+    hideFace: /\bfrom behind\b|\bfrom the back\b|\bback (?:view|only|to (?:the )?(?:viewer|camera))\b|\bseen from behind\b|\bfacing away\b|\bface (?:hidden|out of frame)\b/.test(scopeText),
+    hideEyes: framing === "eyes out of frame" || /\beyes? (?:hidden|out of frame|cropped out|outside (?:the )?frame)\b/.test(scopeText)
+  };
+}
+function cameraViewOf(camera) {
+  const record = asRecord(camera);
+  const framing = cleanString2(record.framing).toLowerCase();
+  const angle = cleanString2(record.angle).toLowerCase();
+  const perspective = cleanString2(record.perspective).toLowerCase();
+  if (framing || angle || perspective)
+    return { framing, angle, perspective };
+  const text = cleanString2(camera).toLowerCase();
+  const byLengthDesc = (values) => [...values].sort((left, right) => right.length - left.length);
+  return {
+    framing: byLengthDesc(CAMERA_FRAMING_VALUES).find((value) => text.includes(value)) || "",
+    angle: byLengthDesc(CAMERA_ANGLE_VALUES).find((value) => text.includes(value)) || "",
+    perspective: byLengthDesc(CAMERA_PERSPECTIVE_VALUES).find((value) => text.includes(value)) || ""
+  };
+}
+function criticalVisibilityText(shot) {
+  const shotPlan = asRecord(shot.shotPlan);
+  const structuredShotPlan = hasAtomicField(shotPlan, ["primaryAction", "secondaryCue", "staging"]);
+  const shared = asRecord(shot.sharedComposition);
+  const values = [
+    structuredShotPlan ? "" : shot.action,
+    typeof shot.shotPlan === "string" ? shot.shotPlan : "",
+    shotPlan.primaryAction,
+    shotPlan.secondaryCue,
+    shotPlan.staging,
+    typeof shot.sharedComposition === "string" ? shot.sharedComposition : "",
+    shared.interaction,
+    shared.spatialRelation
+  ];
+  for (const character of cleanArray(shot.characters)) {
+    const composition = asRecord(character.composition);
+    const structuredComposition = hasAtomicField(composition, ["position", "pose", "actions", "gaze"]);
+    values.push(structuredComposition ? "" : character.action, typeof character.composition === "string" ? character.composition : "", composition.pose, composition.actions, composition.gaze);
+  }
+  return values.flatMap((value) => Array.isArray(value) ? csvParts(value) : [cleanString2(value)]).filter(Boolean).join(" ").toLowerCase();
+}
+function requiredCriticalRegions(shot) {
+  const text = criticalVisibilityText(shot);
+  const regions = new Set;
+  const add = (region, pattern) => {
+    if (pattern.test(text))
+      regions.add(region);
+  };
+  add("feet", /\b(?:feet|foot|ankles?|toes?|shoes?|boots?|sneakers?|sandals?|loafers?|slippers?|heels?|kick(?:s|ed|ing)?|stomp(?:s|ed|ing)?)\b/);
+  add("legs", /\b(?:legs?|thighs?|knees?|calves?|leggings?|stockings?|tights|pantyhose)\b/);
+  add("hips", /\b(?:hips?|waists?|skirts?|pants|trousers|slacks|shorts|jeans|underwear|panties)\b/);
+  add("hands", /\b(?:hands?|fingers?|palms?|wrists?|gloves?|grip(?:s|ped|ping)?|punch(?:es|ed|ing)?)\b/);
+  add("arms", /\b(?:arms?|sleeves?|elbows?|forearms?)\b/);
+  add("torso", /\b(?:torsos?|chests?|breasts?|stomachs?|midriffs?|backs?|shirts?|jackets?|coats?|dresses?)\b/);
+  add("face", /\b(?:face|expression|eyes?|eyebrows?|pupils?|irises?|heterochromia|tareme|tsurime|jitome|gaze|gazing|look(?:s|ed|ing)?|glare(?:s|d|ing)?|wink(?:s|ed|ing)?|blink(?:s|ed|ing)?|mouth|lips?|tears?|blush(?:es|ed|ing)?|smile(?:s|d|ing)?|grin(?:s|ned|ning)?|frown(?:s|ed|ing)?|cry(?:ing|ies|ied)?)\b/);
+  add("head", /\b(?:head|hair|bangs|ponytails?|braids?|horns?|ears?|hats?|caps?)\b/);
+  const requiresEyes = /\b(?:eyes?|eyebrows?|pupils?|irises?|heterochromia|tareme|tsurime|jitome|gaze|gazing|look(?:s|ed|ing)?|glare(?:s|d|ing)?|wink(?:s|ed|ing)?|blink(?:s|ed|ing)?)\b/.test(text);
+  return { regions, requiresEyes };
+}
+function cameraValueWithView(camera, view) {
+  const record = asRecord(camera);
+  if (Object.keys(record).length > 0) {
+    return { ...record, framing: view.framing, angle: view.angle, perspective: view.perspective };
+  }
+  const text = cleanString2(camera).toLowerCase();
+  return {
+    framing: view.framing,
+    angle: view.angle,
+    perspective: view.perspective,
+    focus: CAMERA_FOCUS_VALUES.filter((value) => text.includes(value))
+  };
+}
+function smallestCompatibleFraming(required) {
+  const candidates = ["portrait", "medium close-up", "upper body", "cowboy shot", "full body"];
+  return candidates.find((candidate) => {
+    const regions = new Set(FRAMING_VISIBILITY_REGIONS[candidate]);
+    return [...required].every((region) => regions.has(region));
+  }) || "full body";
+}
+function fragmentProjectionRegions(shot) {
+  const regions = new Set;
+  for (const character of cleanArray(shot.characters)) {
+    for (const tag of csvParts(cleanString2(character.visibleTags))) {
+      for (const region of tagVisibilityRegions(tag, "projection")) {
+        if (region !== "figure")
+          regions.add(region);
+      }
+    }
+  }
+  return regions;
+}
+function resolveDynamicCamera(shot) {
+  const original = cameraViewOf(shot.camera);
+  if (!original.framing) {
+    return { value: shot.camera, view: original, adjusted: false, originalFraming: "" };
+  }
+  const critical = requiredCriticalRegions(shot);
+  const rearView = /\bfrom behind\b|\bfrom the back\b|\bback view\b/.test(original.perspective);
+  const repairedPerspective = critical.regions.has("face") && rearView ? "three-quarter view" : original.perspective;
+  if (original.framing === "body-part focus") {
+    const visibleRegions = fragmentProjectionRegions(shot);
+    const missesCritical = [...critical.regions].some((region) => !visibleRegions.has(region));
+    if (!missesCritical && repairedPerspective === original.perspective) {
+      return { value: shot.camera, view: original, adjusted: false, originalFraming: original.framing };
+    }
+    const required2 = new Set([...visibleRegions, ...critical.regions]);
+    const view2 = { ...original, framing: smallestCompatibleFraming(required2), perspective: repairedPerspective };
+    return {
+      value: cameraValueWithView(shot.camera, view2),
+      view: view2,
+      adjusted: true,
+      originalFraming: original.framing
+    };
+  }
+  const originalRegions = new Set(FRAMING_VISIBILITY_REGIONS[original.framing] || ALL_VISIBILITY_REGIONS);
+  const required = new Set([...originalRegions, ...critical.regions]);
+  let framing = original.framing;
+  const framingMissesCritical = [...critical.regions].some((region) => !originalRegions.has(region));
+  if (framingMissesCritical || critical.requiresEyes && original.framing === "eyes out of frame") {
+    framing = smallestCompatibleFraming(required);
+  }
+  const view = { ...original, framing, perspective: repairedPerspective };
+  const adjusted = framing !== original.framing || repairedPerspective !== original.perspective;
+  return {
+    value: adjusted ? cameraValueWithView(shot.camera, view) : shot.camera,
+    view,
+    adjusted,
+    originalFraming: original.framing
+  };
+}
+function isFragmentCameraFraming(framing) {
+  return framing === "body-part focus" || framing === "head out of frame" || framing === "eyes out of frame";
+}
+function baselineTags(character) {
+  const fields = [
+    ["identity", character.identity],
+    ["appearance", character.appearance],
+    ["body", character.body],
+    ["attire", character.attire]
+  ];
+  const seen = new Set;
+  const output = [];
+  for (const [source, value] of fields) {
+    for (const tag of csvParts(cleanString2(value))) {
+      const key = tag.toLowerCase();
+      if (seen.has(key))
+        continue;
+      seen.add(key);
+      output.push({ tag, source });
+    }
+  }
+  return output;
+}
+function adultAgeMarker(character, shot) {
+  const nsfw = csvParts(shot.situation).some((tag) => tag.toLowerCase() === "nsfw");
+  const age = cleanString2(character.age);
+  return nsfw && /\b(?:adult|mature|aged up|old|elderly)\b/i.test(age) ? age : "";
+}
+function assembleFragmentCharacterBlock(character, config, replacements, camera, shot) {
+  const renderScope = cleanString2(character.renderScope).toLowerCase();
+  const modifiers = visibilityModifiersFor(camera.framing, camera.angle, camera.perspective, renderScope);
+  const hideHead = camera.framing === "head out of frame" || /\bhead\s+out\s+of\s+frame\b/.test(renderScope);
+  const hideFace = hideHead || modifiers.hideFace || /\bface\s+out\s+of\s+frame\b/.test(renderScope);
+  const hideEyes = hideFace || modifiers.hideEyes || /\beyes?\s+out\s+of\s+frame\b/.test(renderScope);
+  const projection = csvParts(stripOrReplaceNames(cleanString2(character.visibleTags), replacements, true)).filter((tag) => {
+    const tagRegions = tagVisibilityRegions(tag, "projection");
+    if (hideHead && tagRegions.some((region) => region === "head" || region === "face"))
+      return false;
+    if (hideFace && tagRegions.includes("face"))
+      return false;
+    if (hideEyes && EYE_TAG.test(tag.toLowerCase()))
+      return false;
+    return true;
+  });
+  return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", stripOrReplaceNames(adultAgeMarker(character, shot), replacements, true), projection.join(", "))).join(", ");
+}
+function assembleVisibilityTierCharacterBlock(character, config, replacements, camera, shot, ignoreOcclusionScope, ignoreFragmentScope) {
+  const renderScope = cleanString2(character.renderScope);
+  const fragment = isFragmentCameraFraming(camera.framing) || !ignoreFragmentScope && isFragmentRenderScope(renderScope);
+  if (fragment)
+    return assembleFragmentCharacterBlock(character, config, replacements, camera, shot);
+  const modifierScope = ignoreOcclusionScope ? "" : renderScope;
+  const modifiers = visibilityModifiersFor(camera.framing, camera.angle, camera.perspective, modifierScope);
+  const regions = new Set(FRAMING_VISIBILITY_REGIONS[camera.framing] || ALL_VISIBILITY_REGIONS);
+  if (modifiers.hideFace)
+    regions.delete("face");
+  const faceReadable = regions.has("face");
+  const projected = [];
+  for (const { tag, source } of baselineTags(character)) {
+    if (modifiers.hideEyes && EYE_TAG.test(tag.toLowerCase()))
+      continue;
+    if (tagVisibilityRegions(tag, source).some((region) => regions.has(region)))
+      projected.push(tag);
+  }
+  for (const tag of csvParts(stripOrReplaceNames(cleanString2(character.visibleTags), replacements, true))) {
+    if (projected.some((candidate) => candidate.toLowerCase() === tag.toLowerCase()))
+      continue;
+    if (modifiers.hideEyes && EYE_TAG.test(tag.toLowerCase()))
+      continue;
+    if (tagVisibilityRegions(tag, "projection").some((region) => regions.has(region)))
+      projected.push(tag);
+  }
+  return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", stripOrReplaceNames(faceReadable ? cleanString2(character.age) : adultAgeMarker(character, shot), replacements, true), projected.map((tag) => stripOrReplaceNames(tag, replacements, true)).join(", "), faceReadable ? stripOrReplaceNames(cleanString2(character.expression), replacements, true) : "")).join(", ");
 }
 function resolveShotPerspective(shot, config) {
   if (!config.adaptiveMode)
@@ -1032,6 +1298,8 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode,
   const bindingCreative = perspectiveMode === "creative" && Boolean(creativeConcept);
   const characters = bindingCreative ? allCharacters.slice(0, 1) : allCharacters;
   const dynamicShotPlan = perspectiveMode === "dynamic" ? assembleDynamicShotPlan(shot.shotPlan, replacements) : { text: "", structured: false };
+  const dynamicCamera = perspectiveMode === "dynamic" ? resolveDynamicCamera(shot) : { value: shot.camera, view: { framing: "", angle: "", perspective: "" }, adjusted: false, originalFraming: "" };
+  const cameraView = dynamicCamera.view;
   const compactDynamic = perspectiveMode === "dynamic" && dynamicShotPlan.structured && Boolean(dynamicShotPlan.text);
   const hybridDynamic = compactDynamic && dynamicLayout === "hybrid";
   const conceptScope = perspectiveMode === "creative" ? sanitizeComposition(cleanString2(creativeConcept?.renderScope), replacements) : "";
@@ -1043,7 +1311,7 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode,
     })() : "";
     const compositionText = perspectiveMode === "creative" ? scope : composition.text;
     const conceptTags = perspectiveMode === "creative" && index === 0 ? stripOrReplaceNames(creativeCueTags(creativeConcept?.anchor, creativeConcept?.visibleCues, character.visibleTags), replacements, true) : "";
-    const baseTags = conceptTags || (compactDynamic ? isFragmentRenderScope(character.renderScope) ? assembleProjectedCharacterBlock(character, config, replacements) : hybridDynamic ? assembleCharacterBlock(character, config, replacements, false, "dynamic") : assembleProjectedCharacterBlock(character, config, replacements) : assembleCharacterBlock(character, config, replacements, false, perspectiveMode));
+    const baseTags = conceptTags || (perspectiveMode === "dynamic" ? assembleVisibilityTierCharacterBlock(character, config, replacements, cameraView, shot, dynamicCamera.adjusted, dynamicCamera.adjusted && isFragmentCameraFraming(dynamicCamera.originalFraming) && characters.length === 1) : assembleCharacterBlock(character, config, replacements, false, perspectiveMode));
     const uncoveredActions = composition.structured ? "" : stripOrReplaceNames(uncoveredActionTags(character.action, compositionText), replacements, true);
     const tags = unique(csvParts(baseTags, uncoveredActions)).join(", ");
     return {
@@ -1060,7 +1328,7 @@ function assembleAnimaPrompt(scene, shot, config, replacements, perspectiveMode,
   const filteredSharedInteraction = sharedComposition.structured ? uncoveredActionTags(sharedComposition.interaction, individualComposition) : sharedComposition.interaction;
   const filteredSharedText = sharedComposition.structured ? unique(csvParts(filteredSharedInteraction, sharedComposition.relation)).join(", ") : sharedComposition.text;
   const sharedAction = sharedComposition.structured ? config.supplement ? "" : filteredSharedInteraction : stripOrReplaceNames(uncoveredActionTags(shot.action, config.supplement ? sharedComposition.text : ""), replacements, true);
-  const camera = perspectiveMode === "asset" ? { text: "portrait, cowboy shot", structured: false } : perspectiveMode === "static" ? { text: "medium shot, eye level, straight-on, deep focus", structured: true } : perspectiveMode === "creative" && cleanString2(creativeConcept?.camera) ? { text: cleanString2(creativeConcept?.camera), structured: false } : assembleStructuredCamera(shot.camera);
+  const camera = perspectiveMode === "asset" ? { text: "portrait, cowboy shot", structured: false } : perspectiveMode === "static" ? { text: "medium shot, eye level, straight-on, deep focus", structured: true } : perspectiveMode === "creative" && cleanString2(creativeConcept?.camera) ? { text: cleanString2(creativeConcept?.camera), structured: false } : assembleStructuredCamera(perspectiveMode === "dynamic" ? dynamicCamera.value : shot.camera);
   const environment = scene.environment || {};
   const location = structuredSnippets(environment.location, 1);
   const timeWeather = structuredSnippets(environment.timeWeather, 1);
@@ -2603,9 +2871,10 @@ function dynamicDirectionContract() {
     "Every shotPlan string is one atomic phrase with no comma, semicolon, or terminal punctuation. Combine closely related words inside one clause instead of listing clauses.",
     "shotPlan is a rendering projection of facts still owned by composition and sharedComposition. It may restate the selected facts for priority, but it never changes them and is never persisted as memory.",
     "Every Dynamic character must have a non-empty renderScope even for an ordinary full-body or upper-body view. renderScope describes what the chosen framing actually contains. Never leave it empty because the character is fully visible.",
-    "For ordinary portrait through full-body Dynamic framing, the renderer preserves the complete known appearance, body, and attire baseline; visibleTags must still list the traits actually visible so framing can be audited. For a true body-part or head-out-of-frame fragment, visibleTags becomes the rendered identity projection and must omit traits outside the crop.",
+    "For ordinary portrait through full-body Dynamic framing, the structured Anima renderer projects the complete baseline through visibility tiers: portrait and close-up keep head, face, neck, shoulders, and upper garments visible at the shoulders; medium close-up adds torso; upper-body and medium framings add arms and hands; cowboy shot adds hips and upper legs; full body and wide shot keep everything including footwear. visibleTags must still list the traits actually visible so framing can be audited, but for ordinary framings the renderer's tier projection is authoritative — never pad visibleTags with out-of-crop traits. For body-part focus, head-out-of-frame, eyes-out-of-frame, or another true fragment, visibleTags is the complete rendered identity projection and must omit every trait outside the crop.",
     "Per-character composition remains required after shot planning. Preserve position, body arrangement, gaze, and any secondary action not already represented by shotPlan. Do not duplicate the primary action merely to add emphasis.",
-    "Choose framing that contains every source-critical visible fact. Use cowboy shot or full body when lower-body movement or specifically required lower attire must be verified; never crop away an explicit action, partial threat, transformation, or attire transition.",
+    "Choose framing that contains every source-critical visible fact. The renderer never injects a trait that is incompatible with the selected crop or viewing direction and may deterministically turn or widen an incompatible camera as a safety fallback. Use cowboy shot or full body when lower-body movement, a transformed limb, or specifically required lower attire must be verified; turn or widen the camera when a required face, eye, or body region would otherwise be hidden.",
+    "Choose framing for the action and source-critical facts alone. Portrait or close-up is acceptable for face-and-shoulder beats, and decorative out-of-crop attire must remain omitted rather than forcing a wider camera.",
     "Camera direction must be compatible with the facts the image must prove. If an explicit facial expression, gaze, eye trait, or eye transformation is important, keep the face readable and do not use from behind. Do not combine a required face-visible fact with a camera that hides it.",
     "Preserve source-critical modifiers in the projection, especially material, color, partial visibility, and out-of-frame status. A partial bronze mechanical hand must not become a generic mechanical hand or a complete character.",
     "Choose a camera that clearly contains the primary action. Prefer a repeated suitable camera over a novel camera that crops out or obscures the action. Camera variety is secondary to action readability."
@@ -4795,7 +5064,8 @@ async function prepareAndDispatchImages(chatId, selected, config, userId, prepar
       model: config.imageModel || undefined,
       parameters: job.parameters,
       owner_chat_id: chatId,
-      userId
+      userId,
+      includeDataUrl: false
     }).then((result) => {
       logStage(config, "image_generation_completed", {
         index: job.index + 1,
@@ -4919,7 +5189,8 @@ async function rerunStoredImage(request, rerunSidecar, userId, preparedConfig) {
         model: config.imageModel || undefined,
         parameters,
         owner_chat_id: request.chatId,
-        userId
+        userId,
+        includeDataUrl: false
       });
       const imageId = result.imageId || "";
       const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");

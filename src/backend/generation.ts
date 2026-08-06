@@ -800,7 +800,10 @@ async function prepareAndDispatchImages(
       model: config.imageModel || undefined,
       parameters: job.parameters,
       owner_chat_id: chatId,
-      userId
+      userId,
+      // The host persists the image and returns imageId/imageUrl; the base64
+      // data URL is the largest per-image RPC payload and is never consumed.
+      includeDataUrl: false
     }).then((result) => {
       logStage(config, "image_generation_completed", {
         index: job.index + 1,
@@ -948,7 +951,8 @@ export async function rerunStoredImage(
         model: config.imageModel || undefined,
         parameters,
         owner_chat_id: request.chatId,
-        userId
+        userId,
+        includeDataUrl: false
       });
       const imageId = result.imageId || "";
       const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");

@@ -294,3 +294,17 @@ export type GeneratedRecord = {
 
 export type GenerationSlotStatus = "pending" | "generating" | "completed" | "failed" | "cancelled";
 export type GenerationStatus = "pending" | "completed" | "failed" | "cancelled";
+
+
+// ─── Spindle type augmentation ─────────────────────────────────────────
+// lumiverse-spindle-types@0.6.2 predates the host's includeDataUrl option.
+// Declared here so generation.ts can opt out of the base64 imageDataUrl RPC
+// payload (host-side: Lumiverse spindle worker-host-image-gen-api, commit
+// "feat(spindle): let extensions opt out of the base64 imageDataUrl payload").
+// Remove once the published types include the field.
+declare module "lumiverse-spindle-types" {
+  interface ImageGenRequestDTO {
+    /** Ask the host to omit the base64 imageDataUrl from the result. The host still persists the image and returns imageId/imageUrl. */
+    includeDataUrl?: boolean;
+  }
+}
