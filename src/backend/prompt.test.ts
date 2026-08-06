@@ -124,7 +124,7 @@ describe("ordered Anima prompt composition", () => {
     }, config, 1, 1);
 
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe(
-      "1girl, foreground, leaning across the platform edge, girl, black hair, reaching for another, railway platform, foggy dawn, close-up"
+      "1girl, foreground, leaning across the platform edge, girl, black hair, reaching for another, railway platform, foggy dawn, upper body"
     );
   });
 
@@ -279,7 +279,7 @@ describe("ordered Anima prompt composition", () => {
     expect(rendered).toBe([
       "1girl",
       "center frame, leaning forward with both hands clasped behind her back, mid-turn toward the viewer, looking directly at the viewer",
-      "girl, short golden blonde hair, red eyes, white pupils, fair skin, round face, petite, small breasts, black sailor uniform, red sailor ribbon, black pleated skirt, white pantyhose, brown loafers, suspicious, narrowed eyes, parted lips",
+      "girl, short golden blonde hair, red eyes, white pupils, fair skin, round face, small breasts, black sailor uniform, red sailor ribbon, suspicious, narrowed eyes, parted lips",
       "quiet residential road, dusk with falling cherry blossom petals, warm amber streetlamp rim light, soft evening glow, cherry blossom trees, lamplit pavement",
       "medium shot, eye level, pov, shallow depth of field"
     ].join(",\n\n"));
@@ -467,7 +467,7 @@ describe("perspective selection and projection", () => {
     expect(entry).toMatchObject({ perspectiveMode: "dynamic", perspectiveSource: "adaptive" });
   });
 
-  test("projects Dynamic into one prioritized action block with spatial context and complete non-fragment identity", () => {
+  test("projects Dynamic into one prioritized action block with spatial context and framing-projected identity", () => {
     const config = {
       ...DEFAULT_CONFIG,
       adaptiveMode: false,
@@ -540,14 +540,17 @@ describe("perspective selection and projection", () => {
       "medium shot, eye level, from side, motion blur",
       "left man pulls right woman forward by her wrist while running left, right woman looks backward at the partial bronze mechanical hand, left man leads with right woman one step behind",
       "right side, running, looking backward",
-      "girl, mature female, tan skin, long white braid, golden eyes, scar through left eyebrow, tall, navy officer coat, white shirt, red sash, black trousers, knee-high black boots, tense",
+      "girl, mature female, tan skin, long white braid, golden eyes, scar through left eyebrow, navy officer coat, white shirt, red sash, tense",
       "left side, running, looking forward",
-      "boy, mature male, messy short black hair, green eyes, freckles, lean build, gray hooded jacket, dark jeans, white sneakers, urgent",
+      "boy, mature male, messy short black hair, green eyes, freckles, lean build, gray hooded jacket, urgent",
       "inside a train corridor, rainy evening, cold rainy light, closing doorway, partial bronze mechanical hand, brass handrail"
     ].join(",\n\n"));
     expect(rendered.match(/pulls|pulling/g)).toHaveLength(1);
     expect(rendered).toContain("golden eyes");
-    expect(rendered).toContain("black trousers");
+    expect(rendered).not.toContain("black trousers");
+    expect(rendered).not.toContain("knee-high black boots");
+    expect(rendered).not.toContain("dark jeans");
+    expect(rendered).not.toContain("white sneakers");
     expect(rendered).not.toContain("holding wrists");
     expect(rendered).toContain("brass handrail");
     expect(entry.corePrompt.sections).toHaveLength(8);
@@ -748,8 +751,359 @@ describe("perspective selection and projection", () => {
   });
 });
 
+describe("visibility tier projection", () => {
+  const dynamicConfig = {
+    ...DEFAULT_CONFIG,
+    adaptiveMode: false,
+    perspectiveMode: "dynamic" as const,
+    promptSyntax: "comfyui" as const
+  };
+
+  const baselineCharacter = {
+    name: "Rhea Calder",
+    label: "girl",
+    age: "mature female",
+    appearance: "black hair, blue eyes",
+    body: "tall",
+    attire: "red jacket, black skirt, white thighhighs, brown boots",
+    expression: "tense"
+  };
+
+  const dynamicShot = (camera: unknown, extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+    perspectiveMode: "dynamic",
+    situation: "1girl",
+    camera,
+    shotPlan: { primaryAction: "girl stands in the center", secondaryCue: "", staging: "the girl fills the frame" },
+    characters: [baselineCharacter],
+    sharedComposition: { interaction: [], spatialRelation: "" },
+    ...extra
+  });
+
+  function renderCharacter(camera: unknown, extra: Record<string, unknown> = {}): string {
+    const entry = assemblePrompt(
+      { environment: { location: "courtyard", timeWeather: "sunny", lightingMood: [], backgroundElements: [] } },
+      dynamicShot(camera, extra) as never,
+      dynamicConfig,
+      1,
+      1
+    );
+    return renderPrompt(entry.prompt, dynamicConfig.promptSyntax);
+  }
+
+  test("projection and camera repair do not mutate the parsed baseline or shot", () => {
+    const shot = dynamicShot(
+      { framing: "portrait", angle: "eye level", perspective: "straight-on", focus: [] },
+      { shotPlan: { primaryAction: "the girl kicks with her brown boot", secondaryCue: "", staging: "the girl fills the frame" } }
+    );
+    const before = JSON.stringify(shot);
+    assemblePrompt(
+      { environment: { location: "courtyard", timeWeather: "sunny", lightingMood: [], backgroundElements: [] } },
+      shot as never,
+      dynamicConfig,
+      1,
+      1
+    );
+    expect(JSON.stringify(shot)).toBe(before);
+    expect(shot.characters).toEqual([baselineCharacter]);
+  });
+
+  test("portrait projection drops lower-body and footwear traits", () => {
+    const rendered = renderCharacter({ framing: "portrait", angle: "eye level", perspective: "straight-on", focus: [] });
+    expect(rendered).toContain("black hair, blue eyes, red jacket");
+    expect(rendered).not.toContain("tall");
+    expect(rendered).not.toContain("curvy");
+    expect(rendered).not.toContain("black skirt");
+    expect(rendered).not.toContain("thighhighs");
+    expect(rendered).not.toContain("brown boots");
+  });
+
+  test("cowboy shot keeps hips and legs but drops footwear", () => {
+    const rendered = renderCharacter({ framing: "cowboy shot", angle: "eye level", perspective: "straight-on", focus: [] });
+    expect(rendered).toContain("black skirt");
+    expect(rendered).toContain("white thighhighs");
+    expect(rendered).not.toContain("brown boots");
+  });
+
+  test("full body keeps the complete baseline including footwear", () => {
+    const rendered = renderCharacter({ framing: "full body", angle: "eye level", perspective: "straight-on", focus: [] });
+    expect(rendered).toContain("red jacket, black skirt, white thighhighs, brown boots");
+  });
+
+  test("from behind hides face traits but keeps hair and upper-body attire", () => {
+    const rendered = renderCharacter({ framing: "upper body", angle: "eye level", perspective: "from behind", focus: [] });
+    expect(rendered).toContain("black hair");
+    expect(rendered).toContain("red jacket");
+    expect(rendered).not.toContain("blue eyes");
+    expect(rendered).not.toContain("tense");
+  });
+
+  test("eyes-out-of-frame fragments use visibleTags without restoring eye traits", () => {
+    const rendered = renderCharacter(
+      { framing: "eyes out of frame", angle: "eye level", perspective: "straight-on", focus: [] },
+      { characters: [{ ...baselineCharacter, renderScope: "eyes out of frame", visibleTags: "black hair, blue eyes, red jacket" }] }
+    );
+    expect(rendered).toContain("black hair, red jacket");
+    expect(rendered).not.toContain("blue eyes");
+    expect(rendered).not.toContain("tense");
+  });
+
+  test("head-out-of-frame fragments reject contradictory head and face visibleTags", () => {
+    const rendered = renderCharacter(
+      { framing: "head out of frame", angle: "eye level", perspective: "straight-on", focus: [] },
+      { characters: [{ ...baselineCharacter, renderScope: "head out of frame", visibleTags: "black hair, blue eyes, red jacket, brown boots" }] }
+    );
+    expect(rendered).toContain("red jacket, brown boots");
+    expect(rendered).not.toContain("black hair");
+    expect(rendered).not.toContain("blue eyes");
+    expect(rendered).not.toContain("tense");
+  });
+
+  test("source-critical lower-body action widens the camera instead of injecting into a portrait", () => {
+    const rendered = renderCharacter(
+      { framing: "portrait", angle: "eye level", perspective: "straight-on", focus: [] },
+      { shotPlan: { primaryAction: "the girl kicks with her brown boot", secondaryCue: "", staging: "the girl faces the viewer" } }
+    );
+    expect(rendered).toContain("full body, eye level, straight-on");
+    expect(rendered).toContain("brown boots");
+    expect(rendered).toContain("black skirt");
+    expect(rendered).not.toContain("portrait, eye level");
+  });
+
+  test("stale legacy action cannot widen a structured Dynamic shot", () => {
+    const rendered = renderCharacter(
+      { framing: "portrait", angle: "eye level", perspective: "straight-on", focus: [] },
+      {
+        action: "the girl kicks with her brown boot",
+        shotPlan: { primaryAction: "the girl smiles", secondaryCue: "", staging: "the girl fills the frame" }
+      }
+    );
+    expect(rendered).toContain("portrait, eye level, straight-on");
+    expect(rendered).not.toContain("brown boots");
+    expect(rendered).not.toContain("kicks with her brown boot");
+  });
+
+  test("keeps global identity traits while dropping a localized tail from portraits", () => {
+    const rendered = renderCharacter(
+      { framing: "portrait", angle: "eye level", perspective: "straight-on", focus: [] },
+      { characters: [{ ...baselineCharacter, identity: "furry, wolf girl, fluffy tail", attire: "blue jacket, black skirt, brown boots" }] }
+    );
+    expect(rendered).toContain("furry, wolf girl");
+    expect(rendered).not.toContain("fluffy tail");
+    expect(rendered).toContain("blue jacket");
+    expect(rendered).not.toContain("black skirt");
+  });
+
+  test("missing framing keeps the complete baseline", () => {
+    const rendered = renderCharacter({ angle: "eye level", perspective: "straight-on", focus: [] });
+    expect(rendered).toContain("red jacket, black skirt, white thighhighs, brown boots");
+  });
+
+  test("parser visibleTags add in-crop traits but cannot defeat the crop", () => {
+    const rendered = renderCharacter(
+      { framing: "medium shot", angle: "eye level", perspective: "straight-on", focus: [] },
+      { characters: [{ ...baselineCharacter, visibleTags: "black hair, red jacket, brown boots" }] }
+    );
+    expect(rendered).toContain("red jacket");
+    expect(rendered).not.toContain("brown boots");
+  });
+
+  test("from behind removes standalone facial appearance vocabulary", () => {
+    const rendered = renderCharacter(
+      { framing: "upper body", angle: "eye level", perspective: "from behind", focus: [] },
+      { characters: [{ ...baselineCharacter, appearance: "black hair, heterochromia, tareme, beauty mark" }] }
+    );
+    expect(rendered).toContain("black hair");
+    expect(rendered).not.toContain("heterochromia");
+    expect(rendered).not.toContain("tareme");
+    expect(rendered).not.toContain("beauty mark");
+  });
+
+  test("portrait retains common upper garments and face accessories", () => {
+    const rendered = renderCharacter(
+      { framing: "portrait", angle: "eye level", perspective: "straight-on", focus: [] },
+      { characters: [{ ...baselineCharacter, attire: "red blazer, gold earrings, black eyepatch, gold brooch" }] }
+    );
+    expect(rendered).toContain("red blazer");
+    expect(rendered).toContain("gold earrings");
+    expect(rendered).toContain("black eyepatch");
+    expect(rendered).toContain("gold brooch");
+  });
+
+  test("explicit adult marker survives face occlusion in an NSFW shot", () => {
+    const rendered = renderCharacter(
+      { framing: "full body", angle: "eye level", perspective: "from behind", focus: [] },
+      { situation: "1girl, nsfw" }
+    );
+    expect(rendered).toContain("girl, mature female, black hair");
+    expect(rendered).not.toContain("blue eyes");
+    expect(rendered).not.toContain("tense");
+  });
+
+  test("shared color words cannot make cropped attire source-critical", () => {
+    const rendered = renderCharacter(
+      { framing: "portrait", angle: "eye level", perspective: "straight-on", focus: [] },
+      { shotPlan: { primaryAction: "the black-haired girl smiles", secondaryCue: "", staging: "she stands before a black doorway" } }
+    );
+    expect(rendered).toContain("black hair");
+    expect(rendered).not.toContain("black skirt");
+  });
+
+  test("source-critical eyes turn a rear camera instead of emitting an incompatible view", () => {
+    const rendered = renderCharacter(
+      { framing: "upper body", angle: "eye level", perspective: "from behind", focus: [] },
+      { shotPlan: { primaryAction: "her blue eyes flash", secondaryCue: "", staging: "the girl fills the frame" } }
+    );
+    expect(rendered).toContain("upper body, eye level, three-quarter view");
+    expect(rendered.match(/blue eyes/g)).toHaveLength(2);
+    expect(rendered).toContain("tense");
+    expect(rendered).not.toContain("from behind");
+  });
+
+  test("body-part focus widens when its projection cannot show the critical action", () => {
+    const rendered = renderCharacter(
+      { framing: "body-part focus", angle: "eye level", perspective: "from side", focus: [] },
+      {
+        shotPlan: { primaryAction: "the girl kicks with her brown boot", secondaryCue: "", staging: "the girl fills the frame" },
+        characters: [{ ...baselineCharacter, renderScope: "close view of her gloved hand", visibleTags: "black glove, red sleeve" }]
+      }
+    );
+    expect(rendered).toContain("full body, eye level, from side");
+    expect(rendered).toContain("brown boots");
+    expect(rendered).not.toContain("body-part focus");
+  });
+
+  test("global camera repair does not broaden another character's fragment scope", () => {
+    const entry = assemblePrompt(
+      { environment: { location: "courtyard", timeWeather: "sunny", lightingMood: [], backgroundElements: [] } },
+      {
+        perspectiveMode: "dynamic",
+        situation: "1girl, 1boy",
+        camera: { framing: "upper body", angle: "eye level", perspective: "from behind", focus: [] },
+        shotPlan: { primaryAction: "the girl's blue eyes flash", secondaryCue: "the boy raises one hand", staging: "the girl stands ahead of the boy" },
+        characters: [baselineCharacter, {
+          label: "boy",
+          age: "mature male",
+          appearance: "short red hair, green eyes",
+          body: "lean build",
+          attire: "blue jacket, black trousers, brown boots",
+          expression: "worried",
+          renderScope: "close view of his gloved hand",
+          visibleTags: "black glove, blue sleeve"
+        }],
+        sharedComposition: { interaction: [], spatialRelation: "" }
+      } as never,
+      dynamicConfig,
+      1,
+      1
+    );
+    const rendered = renderPrompt(entry.prompt, dynamicConfig.promptSyntax);
+    expect(rendered).toContain("upper body, eye level, three-quarter view");
+    expect(rendered).toContain("boy, black glove, blue sleeve");
+    expect(rendered).not.toContain("short red hair");
+    expect(rendered).not.toContain("green eyes");
+    expect(rendered).not.toContain("blue jacket");
+  });
+
+  test("body-part focus treats natural renderScope prose as a strict fragment", () => {
+    const rendered = renderCharacter(
+      { framing: "body-part focus", angle: "eye level", perspective: "from side", focus: [] },
+      { characters: [{ ...baselineCharacter, renderScope: "close view of her gloved hand", visibleTags: "black glove, red sleeve" }] }
+    );
+    expect(rendered).toContain("girl, black glove, red sleeve");
+    expect(rendered).not.toContain("black hair");
+    expect(rendered).not.toContain("blue eyes");
+    expect(rendered).not.toContain("black skirt");
+    expect(rendered).not.toContain("brown boots");
+    expect(rendered).not.toContain("tense");
+  });
+
+  test("body-part focus with missing visibleTags fails closed instead of leaking the baseline", () => {
+    const rendered = renderCharacter(
+      { framing: "body-part focus", angle: "eye level", perspective: "from side", focus: [] },
+      { characters: [{ ...baselineCharacter, renderScope: "close crop of her hand", visibleTags: "" }] }
+    );
+    expect(rendered).toContain("girl");
+    expect(rendered).not.toContain("black hair");
+    expect(rendered).not.toContain("blue eyes");
+    expect(rendered).not.toContain("red jacket");
+    expect(rendered).not.toContain("brown boots");
+    expect(rendered).not.toContain("tense");
+  });
+
+  test("compound footwear remains footwear in cowboy shots", () => {
+    const rendered = renderCharacter(
+      { framing: "cowboy shot", angle: "eye level", perspective: "straight-on", focus: [] },
+      { characters: [{ ...baselineCharacter, attire: "red jacket, black skirt, white thighhighs, knee-high brown boots" }] }
+    );
+    expect(rendered).toContain("black skirt");
+    expect(rendered).toContain("white thighhighs");
+    expect(rendered).not.toContain("knee-high brown boots");
+  });
+
+  test("portrait keeps shoulders but drops full-figure proportions", () => {
+    const rendered = renderCharacter(
+      { framing: "portrait", angle: "eye level", perspective: "straight-on", focus: [] },
+      { characters: [{ ...baselineCharacter, body: "broad shoulders, tall, curvy" }] }
+    );
+    expect(rendered).toContain("broad shoulders");
+    expect(rendered).not.toContain("tall");
+    expect(rendered).not.toContain("curvy");
+  });
+
+  test("legacy string cameras receive the same projection", () => {
+    const rendered = renderCharacter("portrait, eye level, straight-on");
+    expect(rendered).toContain("black hair");
+    expect(rendered).toContain("red jacket");
+    expect(rendered).not.toContain("black skirt");
+    expect(rendered).not.toContain("brown boots");
+  });
+
+  test("feet-out and lower-body masks project complementary regions", () => {
+    const feetOut = renderCharacter({ framing: "feet out of frame", angle: "eye level", perspective: "straight-on", focus: [] });
+    expect(feetOut).toContain("black skirt");
+    expect(feetOut).toContain("white thighhighs");
+    expect(feetOut).not.toContain("brown boots");
+
+    const lowerBody = renderCharacter({ framing: "lower body", angle: "eye level", perspective: "straight-on", focus: [] });
+    expect(lowerBody).toContain("black skirt, white thighhighs, brown boots");
+    expect(lowerBody).not.toContain("black hair");
+    expect(lowerBody).not.toContain("blue eyes");
+    expect(lowerBody).not.toContain("tense");
+  });
+
+  test("fragment renderScope still uses the parser projection as authority", () => {
+    const entry = assemblePrompt(
+      { environment: { location: "courtyard", timeWeather: "sunny", lightingMood: [], backgroundElements: [] } },
+      {
+        perspectiveMode: "dynamic",
+        situation: "1girl",
+        camera: { framing: "body-part focus", angle: "eye level", perspective: "from side", focus: [] },
+        shotPlan: { primaryAction: "the hand grips a rail", secondaryCue: "", staging: "the hand fills the foreground" },
+        characters: [{
+          label: "girl",
+          age: "mature female",
+          appearance: "black hair, blue eyes",
+          attire: "navy coat, black leather gloves",
+          expression: "furious",
+          renderScope: "only the hand detail",
+          visibleTags: "black leather glove, navy sleeve",
+          composition: { position: "foreground", pose: "arm extended", actions: ["gripping the rail"], gaze: "" }
+        }],
+        sharedComposition: { interaction: [], spatialRelation: "" }
+      } as never,
+      dynamicConfig,
+      1,
+      1
+    );
+    const rendered = renderPrompt(entry.prompt, dynamicConfig.promptSyntax);
+    expect(rendered).toContain("black leather glove, navy sleeve");
+    expect(rendered).not.toContain("blue eyes");
+    expect(rendered).not.toContain("furious");
+  });
+});
+
 describe("prompt compatibility and normalization", () => {
-  test("renders legacy identity traits so furry details cannot disappear before memory repair", () => {
+  test("retains in-frame legacy identity traits while projecting localized details", () => {
     const config = { ...DEFAULT_CONFIG, perspectiveMode: "dynamic" as const };
     const entry = assemblePrompt({}, {
       paragraph: 1,
@@ -766,9 +1120,11 @@ describe("prompt compatibility and normalization", () => {
       }]
     }, config, 1, 1);
 
-    expect(renderPrompt(entry.prompt, config.promptSyntax)).toContain(
-      "girl, furry, wolf girl, gray fur, white muzzle, wolf ears, fluffy tail, amber eyes, slim, blue jacket"
+    const rendered = renderPrompt(entry.prompt, config.promptSyntax);
+    expect(rendered).toContain(
+      "girl, furry, wolf girl, gray fur, white muzzle, wolf ears, amber eyes, slim, blue jacket"
     );
+    expect(rendered).not.toContain("fluffy tail");
   });
 
   test("normalizes camera-facing subject orientation to viewer-facing composition", () => {
@@ -888,6 +1244,9 @@ describe("Anima parser contract and visual distinctness", () => {
     expect(instruction).toContain('"primaryAction": "string"');
     expect(instruction).toContain('"renderScope": "string"');
     expect(instruction).toContain('"visibleTags": "string"');
+    expect(instruction).toContain("renderer never injects a trait that is incompatible with the selected crop or viewing direction");
+    expect(instruction).toContain("turn or widen the camera when a required face, eye, or body region would otherwise be hidden");
+    expect(instruction).toContain("body-part focus, head-out-of-frame, eyes-out-of-frame, or another true fragment");
     expect(instruction).toContain("exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements");
     expect(instruction).toContain("Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone");
     expect(instruction).toContain("Do not put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle");
