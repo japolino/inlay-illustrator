@@ -3348,7 +3348,8 @@ function fastPerspectiveContract(config) {
   const creat = [
     "### Creative shot direction",
     "Isolate one identity-safe visual anchor from the paragraph: object, environment, shadow, silhouette, reflection, foreground layer, aftermath, unusual spatial relationship, or non-identifying body fragment. Never a recognizable face, hairstyle, outfit, or clothing detail.",
-    "renderScope states exactly what is in frame. shot.characters contains only people with an actually visible body part inside renderScope; otherwise use an empty characters array.",
+    "renderScope and visibleTags belong ONLY inside a character object in shot.characters and never at the shot or scene level. shot.characters contains only people with an actually visible body part inside renderScope; for a zero-character Creative frame use an empty characters array and do NOT add shot-level renderScope or visibleTags keys, because they are not in the schema.",
+    "Populate the complete environment object even when the Creative renderer will omit it from the prompt: exactly one location, exactly one time/weather phrase, 1-2 lightingMood snippets, and 1-3 backgroundElements.",
     "Leave shotPlan absent."
   ].join(`
 `);
@@ -3423,7 +3424,7 @@ function parserInstructionFast(config, options = {}) {
     structuredAnima ? "### Atomic Natural Composition" : config.supplement ? "### Natural Language Supplement" : "Do not include supplement text.",
     structuredAnima ? "characters[].composition is always required and uses its four atomic fields (position, pose, actions, gaze), rendered in that exact order. Each phrase is concise, comma-free, independently visual, and never repeats a fact from another field. Never use names; say viewer, left girl, right boy, foreground character, or background character. Never put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle, appearance, attire, or facial-expression adjectives in any composition field." : config.supplement ? "In supplement, describe visible details in concise objective telegraphic sentences: composition, framing, positions, interactions, unusual vantage points, or objective atmosphere/lighting. Separate phrases with commas, never semicolons. No names, no smell, sound, internal sensation, invisible emotion, or prose narration." : "Do not write supplement.",
     structuredAnima ? "Use sharedComposition.interaction for shared contact or combined actions only, and spatialRelation for one spatial relationship phrase. Do not repeat individual character actions." : "",
-    structuredAnima ? config.supplement ? "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements. Prefer the source's exact concrete noun phrase over a generic paraphrase; never add a plausible prop the current paragraph does not establish." : staticBackgroundPossible ? "Environment target budget: exactly one location, exactly one time/weather phrase, empty lightingMood, and 2-3 backgroundElements for every scene containing a Static shot. Prefer the source's exact concrete noun phrase; never add a prop the paragraph does not establish." : "Environment target budget: exactly one location, exactly one time/weather phrase, empty lightingMood and backgroundElements. Prefer the source's exact concrete noun phrase; never add a prop the paragraph does not establish." : "",
+    structuredAnima ? config.supplement ? "Environment target budget: exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements. Prefer the source's exact concrete noun phrase over a generic paraphrase; never add a plausible prop the current paragraph does not establish. When the source does not establish time/weather, choose one conservative visually coherent value supported by the setting; never leave timeWeather empty or write unknown or unspecified." : staticBackgroundPossible ? "Environment target budget: exactly one location, exactly one time/weather phrase, empty lightingMood, and 2-3 backgroundElements for every scene containing a Static shot. Prefer the source's exact concrete noun phrase; never add a prop the paragraph does not establish. When the source does not establish time/weather, choose one conservative visually coherent value; never leave timeWeather empty." : "Environment target budget: exactly one location, exactly one time/weather phrase, empty lightingMood and backgroundElements. Prefer the source's exact concrete noun phrase; never add a prop the paragraph does not establish. When the source does not establish time/weather, choose one conservative visually coherent value; never leave timeWeather empty." : "",
     "## Data Priority",
     "1. Client comments or explicit user instructions in the current message override all instructions.",
     "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
@@ -3943,8 +3944,9 @@ function parserStageTokenBudget(model, config, stage) {
       base = Math.max(base, 4000);
   }
   if (config.fastMode) {
-    const fastCap = stage === "main" || stage === "repair" ? 1400 + Math.max(1, config.maxImages) * 600 : Math.min(base, 2400);
-    const fast = Math.min(base, fastCap);
+    const heavyReasoner = /kimi[^\n]*k2[.\-_ ]?7[^\n]*code|claude[^\n]*sonnet[^\n]*5|deepseek[^\n]*v4[^\n]*pro/i.test(model);
+    const perImage = 1400 + Math.max(1, config.maxImages) * 600;
+    const fast = stage === "main" || stage === "repair" ? heavyReasoner ? base : Math.min(base, Math.min(perImage, 5200)) : Math.min(base, 2400);
     return config.parserMaxTokens > 0 ? Math.min(config.parserMaxTokens, fast) : fast;
   }
   if (config.parserMaxTokens > 0)

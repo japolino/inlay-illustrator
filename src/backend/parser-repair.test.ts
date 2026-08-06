@@ -586,11 +586,30 @@ describe("Fast Mode parser budgets", () => {
     expect(parserStageTokenBudget("base-model", fast, "camera")).toBe(1800);
   });
 
-  test("does not let reasoning-heavy model bumps escape the Fast Mode cap", () => {
+  test("keeps a strict reduction even at large image counts", () => {
+    const normal = { ...DEFAULT_CONFIG, maxImages: 12 };
+    const fast = { ...DEFAULT_CONFIG, fastMode: true, maxImages: 12 };
+    expect(parserStageTokenBudget("base-model", normal, "main")).toBe(7000);
+    expect(parserStageTokenBudget("base-model", fast, "main")).toBe(5200);
+    expect(parserStageTokenBudget("base-model", normal, "repair")).toBe(6000);
+    expect(parserStageTokenBudget("base-model", fast, "repair")).toBe(5200);
+  });
+
+  test("keeps the normal main/repair budget for reasoning-heavy models in Fast Mode", () => {
+    // Output truncation forces repair or failure for these models, which is
+    // slower than the saved output tokens; their Fast Mode win is stage
+    // skipping and compact input, not output caps.
     const fast = { ...DEFAULT_CONFIG, fastMode: true, maxImages: 1 };
-    expect(parserStageTokenBudget("DeepSeek-A/deepseek-v4-pro", fast, "main")).toBe(2000);
-    expect(parserStageTokenBudget("Moonshot/kimi-k2.7-code-highspeed", fast, "main")).toBe(2000);
-    expect(parserStageTokenBudget("AROMA/claude-sonnet-5", fast, "repair")).toBe(2000);
+    expect(parserStageTokenBudget("DeepSeek-A/deepseek-v4-pro", fast, "main")).toBe(9000);
+    expect(parserStageTokenBudget("Moonshot/kimi-k2.7-code-highspeed", fast, "main")).toBe(16000);
+    expect(parserStageTokenBudget("AROMA/claude-sonnet-5", fast, "repair")).toBe(7000);
+    expect(parserStageTokenBudget("DeepSeek-A/deepseek-v4-pro", fast, "ideation")).toBe(2400);
+    expect(parserStageTokenBudget("AROMA/claude-sonnet-5", fast, "camera")).toBe(2400);
+  });
+
+  test("non-reasoning models keep the tight Fast budget formula", () => {
+    const fast = { ...DEFAULT_CONFIG, fastMode: true, maxImages: 1 };
+    expect(parserStageTokenBudget("base-model", fast, "main")).toBe(2000);
   });
 });
 

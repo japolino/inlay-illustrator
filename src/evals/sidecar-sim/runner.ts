@@ -20,6 +20,7 @@ import { prepareParagraphs } from "../../backend/paragraphs.js";
 import { dedupeExactShotCharacters, recoverSceneParagraphs, normalizeScenePayload, selectPromptEntries } from "../../backend/scenes.js";
 import { auditDynamicCameraDiversity, repairDynamicCameraDiversityLocally } from "../../backend/camera-diversity.js";
 import { parserInstruction } from "../../backend/instructions.js";
+import { effectiveGenerationConfig } from "../../shared/config.js";
 import { applyPreviousVisualState, formatPreviousVisualState } from "../../backend/visual-state.js";
 import type { CreativeConcept, ParsedPayload, PreparedParagraph } from "../../backend/types.js";
 import { cleanString } from "../../backend/utils.js";
@@ -46,6 +47,7 @@ const modelFilter = cleanString(args.get("model")).toLowerCase();
 const modelIdOverride = cleanString(args.get("model-id"));
 const modelLabelOverride = cleanString(args.get("model-label"));
 const reportLabel = cleanString(args.get("report-label")).toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, "");
+const fastMode = args.get("fast") === "true";
 const suite = cleanString(args.get("suite") || "general").toLowerCase();
 if (suite !== "general" && suite !== "nsfw" && suite !== "expanded") throw new Error("--suite must be general, nsfw, or expanded.");
 const maxRequests = Math.max(1, Math.min(200, Number(args.get("max-requests") || 120)));
@@ -245,6 +247,12 @@ function productionTransform(
 }
 
 async function runScenario(model: string, scenario: SidecarScenario): Promise<SidecarResult> {
+  if (fastMode) {
+    // Fast Mode runs the same scenario through the effective runtime config:
+    // compact instruction, reduced budgets, no preprocessing/ideation/remote
+    // camera repair, and the fast context policy.
+    scenario = { ...scenario, config: effectiveGenerationConfig({ ...scenario.config, fastMode: true }) };
+  }
   const paragraphs = prepareParagraphs(scenario.paragraphs.join("\n\n"), scenario.config);
   const targetSource = formatTargetParagraphs(paragraphs);
   const reference = continuityReference(referenceContext(scenario), scenario.recentContext || "");
@@ -253,7 +261,7 @@ async function runScenario(model: string, scenario: SidecarScenario): Promise<Si
   let completion: Completion | undefined;
   let requestMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
   try {
-    if (!scenario.config.adaptiveMode && scenario.config.perspectiveMode === "creative") {
+    if (!scenario.config.fastMode && !scenario.config.adaptiveMode && scenario.config.perspectiveMode === "creative") {
       const generated = await ideate(model, scenario, paragraphs, targetSource, reference);
       concepts = generated.concepts;
       ideation = generated.detail;
@@ -271,7 +279,7 @@ async function runScenario(model: string, scenario: SidecarScenario): Promise<Si
     completion = await complete(model, requestMessages, mainMaxTokens);
     const rawJson = strictJson(completion.text);
     let transformed = productionTransform(completion.text, scenario, paragraphs, concepts);
-    if (scenario.config.adaptiveMode) {
+    if (scenario.config.adaptiveMode && !scenario.config.fastMode) {
       const creativeParagraphs = new Set(normalizeScenePayload(transformed.payload)
         .filter((entry) => cleanString(entry.shot.perspectiveMode).toLowerCase() === "creative")
         .map((entry) => entry.parserParagraph));
@@ -417,7 +425,8 @@ const reportStem = suite === "nsfw"
   : suite === "expanded"
     ? "latest-expanded-summary"
     : "latest-sidecar-summary";
-const reportName = `${reportStem}${reportLabel ? `-${reportLabel}` : ""}.md`;
+const effectiveReportLabel = [reportLabel, fastMode ? "fast" : ""].filter(Boolean).join("-");
+const reportName = `${reportStem}${effectiveReportLabel ? `-${effectiveReportLabel}` : ""}.md`;
 await Bun.write(join("eval-results", reportName), `${report}\n`);
 process.stdout.write(`\n${report.split("## Case details", 1)[0]}\nRaw artifacts: ${rawRoot}\n`);
 if (results.some((result) => !result.passed)) process.exitCode = 1;

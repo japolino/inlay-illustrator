@@ -1433,6 +1433,14 @@ describe("Fast Mode parser instruction", () => {
     expect(defaultStyle).toContain("Perspective tags:");
   });
 
+  test("keeps Creative renderScope placement and environment budget rules in Fast Mode", () => {
+    const instruction = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true, perspectiveMode: "creative" });
+    expect(instruction).toContain("renderScope and visibleTags belong ONLY inside a character object");
+    expect(instruction).toContain("do NOT add shot-level renderScope or visibleTags keys");
+    expect(instruction).toContain("Populate the complete environment object even when the Creative renderer will omit it");
+    expect(instruction).toContain("never leave timeWeather empty");
+  });
+
   test("retains the mode-specific direction contract for Static and Dynamic requirements", () => {
     const staticFast = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true, perspectiveMode: "static" });
     expect(staticFast).toContain("Static shot direction");

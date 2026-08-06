@@ -6,6 +6,7 @@ import {
   locateGeneratedImage,
   matchesGenerationSource,
   parseAndSelectPrompts,
+  rerunStoredImage,
   sourceContentFingerprint
 } from "./generation.js";
 import type { LorebookContextSnapshot } from "./context.js";
@@ -452,5 +453,155 @@ describe("Fast Mode parser call sequencing", () => {
 
     expect(requests).toHaveLength(1);
     expect(result.selected[0]?.perspectiveMode).toBe("dynamic");
+  });
+});
+
+
+describe("Fast Mode sidecar rerun", () => {
+  test("reruns a stored Creative image end-to-end with one compact call, no ideation, and persisted replacement", async () => {
+    const files = new Map<string, unknown>();
+    const requests: Array<Record<string, unknown>> = [];
+    const message: { id: string; role: string; content: string; metadata: Record<string, unknown>; swipe_id: number } = {
+      id: "message-1",
+      role: "assistant",
+      content: "A creative beat.",
+      metadata: {
+        inlayIllustratorImageIds: ["old-id"],
+        inlayIllustratorParagraphs: [1],
+        inlayIllustratorGeneratedAt: "2026-07-18T00:00:00.000Z",
+        inlayIllustratorOperationId: "op-1",
+        inlayIllustratorGenerationStatus: "completed"
+      },
+      swipe_id: 0
+    };
+    const storedCandidate = {
+      id: "candidate-1",
+      paragraph: 1,
+      subjectType: "shadow",
+      anchor: "long shadow",
+      concept: "a long shadow crosses the pavement",
+      renderScope: "shadow and pavement only",
+      camera: "low oblique detail",
+      visibleCues: ["long shadow", "pavement"],
+      score: 92
+    };
+    const record = {
+      chatId: "fast-chat",
+      messageId: "message-1",
+      swipeId: 0,
+      prompts: ["a long shadow crosses the pavement"],
+      negativePrompts: [""],
+      perspectiveModes: ["creative"],
+      perspectiveSources: ["manual"],
+      imageParameters: [{}],
+      corePrompts: ["a long shadow crosses the pavement"],
+      shotNegatives: [""],
+      promptFormats: ["ordered"],
+      creativeConcepts: [storedCandidate],
+      creativeConceptCandidates: [[storedCandidate]],
+      creativeConceptHistory: [[]],
+      paragraphs: [1],
+      imageIds: ["old-id"],
+      imageUrls: ["/old.png"],
+      slotStatuses: ["completed"],
+      slotErrors: [""],
+      operationId: "op-1",
+      generationStatus: "completed",
+      sourceFingerprint: "abc",
+      rawJson: { scenes: [] },
+      createdAt: "2026-07-18T00:00:00.000Z"
+    };
+    files.set("states/fast-chat.json", {
+      characterAppearance: { Elara: "silver hair" },
+      generated: { "fast-chat:message-1:0": record }
+    });
+
+    const generationConfig = {
+      ...DEFAULT_CONFIG,
+      fastMode: true,
+      parserConnectionId: "fast-parser",
+      imageConnectionId: "fast-comfy",
+      includeCharacterInfo: false,
+      includeUserInfo: false,
+      includeLorebook: false,
+      userInstructionsEnabled: false,
+      previousVisualStateEnabled: false,
+      adaptiveMode: false,
+      perspectiveMode: "creative" as const,
+      minImages: 1,
+      maxImages: 1
+    };
+    (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
+      connections: {
+        get: async () => ({ id: "fast-parser", name: "Fast", provider: "openai", model: "gpt-test" })
+      },
+      generate: {
+        raw: async (request: Record<string, unknown>) => {
+          requests.push(request);
+          return { content: JSON.stringify({
+            scenes: [{
+              place: "street",
+              environment: { location: "street", timeWeather: "day" },
+              shots: [{
+                paragraph: 1,
+                perspectiveMode: "creative",
+                camera: { framing: "body-part focus", angle: "eye level", perspective: "from side" },
+                renderScope: "shadow and pavement",
+                visibleTags: ["shadow", "pavement"],
+                characters: []
+              }]
+            }],
+            terminalState: {
+              paragraph: 1,
+              place: "street",
+              environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: [] },
+              environmentChanges: [],
+              characters: []
+            }
+          }) }
+        }
+      },
+      imageGen: {
+        getConnection: async () => ({ id: "fast-comfy", name: "Comfy", provider: "comfyui", model: "workflow" }),
+        generate: async () => ({ imageId: "rerun-id", imageUrl: "/rerun.png", imageDataUrl: "", model: "workflow", provider: "comfyui" })
+      },
+      userStorage: {
+        getJson: async <T>(path: string, options: { fallback: T }) => (files.has(path) ? files.get(path) : options.fallback) as T,
+        setJson: async (path: string, value: unknown) => { files.set(path, structuredClone(value)); },
+        exists: async (path: string) => files.has(path),
+        read: async (path: string) => JSON.stringify(files.get(path)),
+        write: async (path: string, value: string) => { files.set(path, JSON.parse(value)); },
+        mkdir: async () => undefined
+      },
+      chat: {
+        getMessages: async () => [message],
+        updateMessage: async (_chatId: string, _messageId: string, patch: { content?: string; metadata?: Record<string, unknown> }) => {
+          if (patch.content) message.content = patch.content;
+          if (patch.metadata) message.metadata = patch.metadata;
+        }
+      },
+      sendToFrontend: () => undefined,
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+
+    const committed = await rerunStoredImage(
+      { chatId: "fast-chat", messageId: "message-1", swipeId: 0, imageIndex: 0, imageId: "old-id" },
+      true,
+      "fast-user",
+      generationConfig
+    );
+
+    expect(requests).toHaveLength(1);
+    expect((requests[0].messages as Array<{ content: string }>)[0].content).toContain("# Image Tagging System");
+    expect((requests[0].messages as Array<{ content: string }>)[0].content).not.toContain("Creative Illustration Concept Ideator");
+    expect(committed.index).toBe(0);
+    expect(committed.record.imageUrls[0]).toBe("/rerun.png");
+    expect(committed.record.imageIds[0]).toBe("rerun-id");
+    expect(committed.record.perspectiveModes[0]).toBe("creative");
+    expect(committed.record.creativeConcepts?.[0]).toBeNull();
+    expect(message.metadata.inlayIllustratorImageIds).toEqual(["rerun-id"]);
+    // The replacement must be persisted through the record file, not just in memory.
+    const storedState = files.get("states/fast-chat.json") as { generated: Record<string, unknown> };
+    expect(storedState.generated["fast-chat:message-1:0"]).toMatchObject({ storageVersion: 2 });
   });
 });

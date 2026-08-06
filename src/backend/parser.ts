@@ -458,11 +458,25 @@ export function parserStageTokenBudget(model: string, config: Config, stage: Par
   }
   if (config.fastMode) {
     // Fast Mode caps the single-pass stages; ideation/preprocess/camera should
-    // not normally run, so their cap is the only bound that matters.
-    const fastCap = stage === "main" || stage === "repair"
-      ? 1400 + Math.max(1, config.maxImages) * 600
+    // not normally run, so their cap is the only bound that matters. The 5200
+    // hard ceiling keeps the Fast budget strictly below the normal stage
+    // ceiling (7000 main / 6000 repair) even at large image counts where the
+    // per-image formula alone would converge with the normal budget.
+    //
+    // Reasoning-heavy models burn completion budget on reasoning_content
+    // before emitting any JSON. The sidecar harness measured this directly:
+    // a 2600-token cap produced zero content for DeepSeek V4 Pro and a
+    // 6000-token cap still truncated Adaptive batches, forcing repair or
+    // failure (slower than the saved output tokens). Those models keep their
+    // normal main/repair budget in Fast Mode; their latency win comes from
+    // skipped stages and the compact input, not from output truncation.
+    const heavyReasoner = /kimi[^\n]*k2[.\-_ ]?7[^\n]*code|claude[^\n]*sonnet[^\n]*5|deepseek[^\n]*v4[^\n]*pro/i.test(model);
+    const perImage = 1400 + Math.max(1, config.maxImages) * 600;
+    const fast = stage === "main" || stage === "repair"
+      ? heavyReasoner
+        ? base
+        : Math.min(base, Math.min(perImage, 5200))
       : Math.min(base, 2400);
-    const fast = Math.min(base, fastCap);
     return config.parserMaxTokens > 0 ? Math.min(config.parserMaxTokens, fast) : fast;
   }
   if (config.parserMaxTokens > 0) return config.parserMaxTokens;
