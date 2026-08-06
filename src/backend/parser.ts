@@ -336,8 +336,49 @@ function dynamicRepairInstruction(issues: string[]): string {
   ].join("\n");
 }
 
+function coverPayloadIssues(payload: ParsedPayload, config: Config): string[] {
+  if (!config.coverImageEnabled) return [];
+  const cover = asRecord(payload.cover);
+  if (Object.keys(cover).length === 0) return ["cover is missing or is not an object"];
+  const issues: string[] = [];
+  const camera = cover.camera;
+  if (config.promptStyle === "anima") {
+    if (!camera || typeof camera !== "object" || Array.isArray(camera) || Object.keys(asRecord(camera)).length === 0) {
+      issues.push("cover.camera must be a populated structured camera object");
+    }
+    if (!cover.environment || typeof cover.environment !== "object" || Array.isArray(cover.environment)) {
+      issues.push("cover.environment must be an object");
+    }
+    if (!cover.shotPlan || typeof cover.shotPlan !== "object" || Array.isArray(cover.shotPlan)) {
+      issues.push("cover.shotPlan must be an object");
+    }
+  } else if (!cleanString(camera)) {
+    issues.push("cover.camera must be a non-empty string");
+  }
+  if (!cleanString(cover.situation)) issues.push("cover.situation must be a non-empty visual prompt");
+  if (!Array.isArray(cover.characters)) issues.push("cover.characters must be an array");
+  return issues;
+}
+
+function coverRepairInstruction(issues: string[], config: Config): string {
+  return [
+    "Repair or add only the top-level cover key visual while preserving every existing numbered Scene and terminalState exactly. Return the complete JSON object and no other text.",
+    "The cover is a whole-message promotional prompt with no paragraph field. Capture the current message's overall theme or emotional core rather than recreating one Scene.",
+    "Use bold magazine-cover or album-art composition, source-grounded symbolic synthesis, and a camera and focal arrangement distinct from every numbered Scene. Do not add readable text, logos, captions, or watermarks.",
+    config.promptStyle === "anima"
+      ? "Use exactly the structured cover fields shown in the original schema: environment, camera, shotPlan, situation, characters, sharedComposition, and optional negative."
+      : "Use exactly the flat cover fields shown in the original schema: place, camera, situation, action, characters, supplement, and optional negative.",
+    `Problems to repair:
+- ${issues.join("\n- ")}`
+  ].join("\n");
+}
+
 function modePayloadIssues(payload: ParsedPayload, config: Config, requireDynamicProjection = true): string[] {
-  return [...staticPayloadIssues(payload, config), ...dynamicPayloadIssues(payload, config, requireDynamicProjection)];
+  return [
+    ...coverPayloadIssues(payload, config),
+    ...staticPayloadIssues(payload, config),
+    ...dynamicPayloadIssues(payload, config, requireDynamicProjection)
+  ];
 }
 
 function modeRepairInstruction(
@@ -346,14 +387,19 @@ function modeRepairInstruction(
   issues: string[],
   requireDynamicProjection = true
 ): string {
-  const hasDynamic = dynamicPayloadIssues(payload, config, requireDynamicProjection).length > 0;
-  const hasStatic = staticPayloadIssues(payload, config).length > 0;
-  if (hasDynamic && !hasStatic) return dynamicRepairInstruction(issues);
-  if (hasStatic && !hasDynamic) return staticRepairInstruction(issues);
+  const coverIssues = coverPayloadIssues(payload, config);
+  const dynamicIssues = dynamicPayloadIssues(payload, config, requireDynamicProjection);
+  const staticIssues = staticPayloadIssues(payload, config);
+  const hasDynamic = dynamicIssues.length > 0;
+  const hasStatic = staticIssues.length > 0;
+  if (coverIssues.length > 0 && !hasDynamic && !hasStatic) return coverRepairInstruction(coverIssues, config);
+  if (coverIssues.length === 0 && hasDynamic && !hasStatic) return dynamicRepairInstruction(issues);
+  if (coverIssues.length === 0 && hasStatic && !hasDynamic) return staticRepairInstruction(issues);
   return [
-    "Repair this valid JSON so its Static and Dynamic shots satisfy the listed mode-specific semantic requirements. Return only valid JSON and preserve all source facts and continuity values.",
-    staticRepairInstruction(staticPayloadIssues(payload, config)),
-    dynamicRepairInstruction(dynamicPayloadIssues(payload, config, requireDynamicProjection))
+    "Repair this valid JSON so its cover, Static shots, and Dynamic shots satisfy the listed semantic requirements. Return only valid JSON and preserve all source facts and continuity values.",
+    ...(coverIssues.length > 0 ? [coverRepairInstruction(coverIssues, config)] : []),
+    ...(staticIssues.length > 0 ? [staticRepairInstruction(staticIssues)] : []),
+    ...(dynamicIssues.length > 0 ? [dynamicRepairInstruction(dynamicIssues)] : [])
   ].join("\n\n");
 }
 
@@ -431,11 +477,12 @@ const unsupportedStructuredOutput = new Set<string>();
 
 /** Matches production output budgets while reserving room for reasoning-heavy compatible models. */
 export function parserStageTokenBudget(model: string, config: Config, stage: ParserStage): number {
+  const promptCount = Math.max(1, config.maxImages) + (config.coverImageEnabled ? 1 : 0);
   const budgets: Record<ParserStage, number> = {
-    main: Math.min(7000, 1800 + Math.max(1, config.maxImages) * 900),
+    main: Math.min(config.coverImageEnabled ? 7900 : 7000, 1800 + promptCount * 900),
     ideation: Math.min(5000, 1200 + Math.max(1, config.maxImages) * 700),
     preprocess: 2400,
-    repair: Math.min(6000, 1600 + Math.max(1, config.maxImages) * 800),
+    repair: Math.min(config.coverImageEnabled ? 6800 : 6000, 1600 + promptCount * 800),
     camera: 1800
   };
   let base = budgets[stage];
@@ -460,8 +507,8 @@ export function parserStageTokenBudget(model: string, config: Config, stage: Par
     // Fast Mode caps the single-pass stages; ideation/preprocess/camera should
     // not normally run, so their cap is the only bound that matters. The 5200
     // hard ceiling keeps the Fast budget strictly below the normal stage
-    // ceiling (7000 main / 6000 repair) even at large image counts where the
-    // per-image formula alone would converge with the normal budget.
+    // ceiling (7000/6000 normally, or 7900/6800 with the extra cover prompt)
+    // even at large image counts where the per-image formula would converge.
     //
     // Reasoning-heavy models burn completion budget on reasoning_content
     // before emitting any JSON. The sidecar harness measured this directly:
@@ -471,7 +518,7 @@ export function parserStageTokenBudget(model: string, config: Config, stage: Par
     // normal main/repair budget in Fast Mode; their latency win comes from
     // skipped stages and the compact input, not from output truncation.
     const heavyReasoner = /kimi[^\n]*k2[.\-_ ]?7[^\n]*code|claude[^\n]*sonnet[^\n]*5|deepseek[^\n]*v4[^\n]*pro/i.test(model);
-    const perImage = 1400 + Math.max(1, config.maxImages) * 600;
+    const perImage = 1400 + promptCount * 600;
     const fast = stage === "main" || stage === "repair"
       ? heavyReasoner
         ? base
@@ -868,7 +915,9 @@ export async function parsePayloadWithRepair(
     }
     if (issues.length > 0) {
       repairSystem = modeRepairInstruction(parsed, config, issues, requireDynamicProjection);
-      repairInput = JSON.stringify(parsed);
+      repairInput = coverPayloadIssues(parsed, config).length > 0
+        ? payloadRepairInput(parsed, messages, true)
+        : JSON.stringify(parsed);
       throw new Error("Mode-specific payload is incomplete.");
     }
     logStage(config, "json_parse_done", { repair: false });

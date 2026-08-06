@@ -40,6 +40,7 @@ describe("parser output budgets", () => {
     expect(parserStageTokenBudget("DeepSeek-A/deepseek-v4-pro", singleImage, "repair")).toBe(7000);
     expect(parserStageTokenBudget("Gemini/gcli-gemini-3.1-pro-preview", singleImage, "main")).toBe(2700);
     expect(parserStageTokenBudget("CODEX/gpt-5.6-luna", singleImage, "main")).toBe(2700);
+    expect(parserStageTokenBudget("CODEX/gpt-5.6-luna", { ...singleImage, coverImageEnabled: true }, "main")).toBe(3600);
     expect(parserStageTokenBudget("AROMA/claude-sonnet-5", singleImage, "main")).toBe(9000);
     expect(parserStageTokenBudget("AROMA/claude-sonnet-5", singleImage, "repair")).toBe(7000);
     expect(parserStageTokenBudget("Moonshot/kimi-k2.7-code-highspeed", singleImage, "main")).toBe(16000);

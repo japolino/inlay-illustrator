@@ -1372,6 +1372,29 @@ describe("Anima parser contract and visual distinctness", () => {
 });
 
 
+describe("Cover image parser contract", () => {
+  test("gates the whole-message key visual schema and direction behind the toggle", () => {
+    const disabled = parserInstruction(DEFAULT_CONFIG);
+    const enabled = parserInstruction({ ...DEFAULT_CONFIG, coverImageEnabled: true, minImages: 2, maxImages: 4 });
+
+    expect(disabled).not.toContain('"cover": {');
+    expect(disabled).not.toContain("## Cover Image / Key Visual");
+    expect(enabled).toContain('"cover": {');
+    expect(enabled).toContain("## Cover Image / Key Visual");
+    expect(enabled).toContain("overall theme or emotional core");
+    expect(enabled).toContain("does not count toward minImages or maxImages");
+    expect(enabled).toContain("has no paragraph field");
+    expect(enabled).toContain("magazine-cover or album-art photography");
+  });
+
+  test("keeps the key visual contract in Fast Mode", () => {
+    const instruction = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true, coverImageEnabled: true });
+    expect(instruction).toContain('"cover": {');
+    expect(instruction).toContain("## Cover Image / Key Visual");
+    expect(instruction).toContain("one additional whole-message promotional prompt");
+  });
+});
+
 describe("Fast Mode parser instruction", () => {
   test("keeps every required heading and schema element in the compact form", () => {
     const instruction = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true });

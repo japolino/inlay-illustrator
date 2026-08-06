@@ -1083,6 +1083,7 @@ export function assemblePrompt(
         replacements,
         true
       ),
+    placement: "paragraph",
     paragraph: originalParagraph,
     parserParagraph,
     perspectiveMode: perspective.mode,

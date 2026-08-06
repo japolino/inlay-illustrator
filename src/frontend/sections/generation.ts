@@ -6,6 +6,12 @@ export function renderGenerationSection({ ui, config, actions, rerender }: Secti
   ui.addSwitch(section, "autoGenerate", "Auto generate");
   ui.addSwitch(
     section,
+    "coverImageEnabled",
+    "Cover image",
+    "Generate one additional cinematic key visual for the whole message and place it above the first paragraph."
+  );
+  ui.addSwitch(
+    section,
     "adaptiveMode",
     "Adaptive Mode",
     "Let the parser choose a balanced perspective mix, using Creative only for identity-safe details when appropriate.",

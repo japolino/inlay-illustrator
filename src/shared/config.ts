@@ -11,6 +11,8 @@ export type Config = {
   enabled: boolean;
   autoGenerate: boolean;
   debugLogging: boolean;
+  /** Generate one additional cinematic key visual and place it above the message. */
+  coverImageEnabled: boolean;
   adaptiveMode: boolean;
   /** Fast Mode: single compact parser pass with reduced context. Never changes minImages/maxImages. */
   fastMode: boolean;
@@ -71,6 +73,7 @@ export const DEFAULT_CONFIG: Config = {
   enabled: true,
   autoGenerate: true,
   debugLogging: false,
+  coverImageEnabled: false,
   adaptiveMode: false,
   fastMode: false,
   perspectiveMode: "dynamic",
@@ -168,6 +171,7 @@ export function normalizeConfig(raw: RawConfig): Config {
   return {
     ...DEFAULT_CONFIG,
     ...current,
+    coverImageEnabled: raw.coverImageEnabled === true,
     adaptiveMode: raw.adaptiveMode === true,
     fastMode: raw.fastMode === true,
     perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" || raw.perspectiveMode === "asset"

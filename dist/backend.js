@@ -3,6 +3,7 @@ var DEFAULT_CONFIG = {
   enabled: true,
   autoGenerate: true,
   debugLogging: false,
+  coverImageEnabled: false,
   adaptiveMode: false,
   fastMode: false,
   perspectiveMode: "dynamic",
@@ -97,6 +98,7 @@ function normalizeConfig(raw) {
   return {
     ...DEFAULT_CONFIG,
     ...current,
+    coverImageEnabled: raw.coverImageEnabled === true,
     adaptiveMode: raw.adaptiveMode === true,
     fastMode: raw.fastMode === true,
     perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" || raw.perspectiveMode === "asset" ? raw.perspectiveMode : raw.mode === "asset" ? "asset" : "dynamic",
@@ -1408,6 +1410,7 @@ function assemblePrompt(scene, shot, config, parserParagraph, originalParagraph,
     corePrompt,
     shotNegative,
     negative: format === "ordered" ? normalizePromptSection(stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shotNegative)).join(", "), replacements, true)) : stripOrReplaceNames(unique(csvParts(preset?.negativePrefix, config.customNegative, shotNegative)).join(", "), replacements, true),
+    placement: "paragraph",
     paragraph: originalParagraph,
     parserParagraph,
     perspectiveMode: perspective.mode,
@@ -1477,8 +1480,10 @@ function dedupeCharacters(characters) {
 }
 function dedupeExactShotCharacters(payload) {
   const terminalState = payload.terminalState && Array.isArray(payload.terminalState.characters) ? { ...payload.terminalState, characters: dedupeCharacters(payload.terminalState.characters) } : payload.terminalState;
+  const cover = payload.cover && Array.isArray(payload.cover.characters) ? { ...payload.cover, characters: dedupeCharacters(payload.cover.characters) } : payload.cover;
   return {
     ...payload,
+    ...cover ? { cover } : {},
     ...terminalState ? { terminalState } : {},
     scenes: cleanArray(payload.scenes).map((scene) => {
       const next = { ...scene };
@@ -1508,8 +1513,13 @@ function normalizeAtomicCompositionTerms(payload) {
     ...character,
     ...character.composition === undefined ? {} : { composition: normalizeCompositionTerm(character.composition) }
   })) : characters;
+  const cover = payload.cover ? {
+    ...payload.cover,
+    ...Array.isArray(payload.cover.characters) ? { characters: normalizeCharacters(payload.cover.characters) } : {}
+  } : payload.cover;
   return {
     ...payload,
+    ...cover ? { cover } : {},
     scenes: cleanArray(payload.scenes).map((scene) => ({
       ...scene,
       ...Array.isArray(scene.characters) ? { characters: normalizeCharacters(scene.characters) } : {},
@@ -1587,6 +1597,19 @@ function exactVisualKey(entry) {
       backgroundElements: cleanArray(environment.backgroundElements).map(normalizedVisualValue)
     }
   });
+}
+function selectCoverPromptEntry(payload, paragraphs, config) {
+  if (!config.coverImageEnabled || !payload.cover || paragraphs.length === 0)
+    return null;
+  const source = paragraphs[0];
+  const cover = payload.cover;
+  const coverConfig = {
+    ...config,
+    adaptiveMode: true,
+    perspectiveMode: "dynamic"
+  };
+  const entry = assemblePrompt(cover, { ...cover, perspectiveMode: "dynamic" }, coverConfig, source.parserIndex, source.originalIndex);
+  return renderPrompt(entry.prompt, config.promptSyntax) ? { ...entry, placement: "cover", perspectiveSource: "manual" } : null;
 }
 function selectPromptEntries(payload, paragraphs, config, creativeConcepts = new Map, creativeCandidates = []) {
   const normalized = normalizeScenePayload(payload);
@@ -2945,6 +2968,22 @@ function assetDirectionContract() {
   ].join(`
 `);
 }
+function coverDirectionContract(config) {
+  if (!config.coverImageEnabled)
+    return "";
+  return [
+    "## Cover Image / Key Visual",
+    "cover is required and is one additional whole-message promotional prompt. It does not count toward minImages or maxImages and has no paragraph field because it is placed above the prose rather than beside any paragraph.",
+    "Capture the current message's overall theme or emotional core, not a recreation of any specific scene or paragraph. Treat it like bold magazine-cover or album-art photography.",
+    "Be daring. Unconventional framing, symbolic juxtaposition, foreground devices, reflections, silhouettes, extreme scale, or other narrative devices are encouraged even when that exact composition would never occur as a Scene.",
+    "Keep every depicted identity, appearance trait, object, and thematic motif grounded in the current message or supplied continuity. Cinematic synthesis may rearrange source-supported visual elements, but it must not invent a new event, character identity, outfit, prop, location, or relationship.",
+    "Make cover unmistakably distinct from every numbered Scene in composition, camera, focal arrangement, character selection, and environment treatment. Do not copy a Scene and merely change its angle.",
+    "Do not add typography, titles, captions, logos, borders, watermarks, or readable text unless the client explicitly requests them.",
+    "Use the same visible-only character detail, camera vocabulary, name privacy, negative-tag, and maximum-character rules as Scenes.",
+    config.promptStyle === "anima" ? "Fill cover with the displayed structured cover fields. Its shotPlan is a concise rendering hierarchy for the promotional composition: primaryAction names the dominant visible relationship, secondaryCue is optional, and staging states the spatial arrangement. Cover has no perspectiveMode, paragraph, environmentChanges, or visualChanges." : "Fill cover with the displayed flat cover fields. Use supplement only for concise objective composition details that tags cannot express. Cover has no perspectiveMode, paragraph, or environmentChanges."
+  ].join(`
+`);
+}
 function perspectiveContract(config) {
   if (!config.adaptiveMode) {
     const contract = config.perspectiveMode === "creative" ? creativeDirectionContract() : config.perspectiveMode === "static" ? staticDirectionContract() : config.perspectiveMode === "asset" ? assetDirectionContract() : dynamicDirectionContract();
@@ -2971,12 +3010,93 @@ function perspectiveContract(config) {
   ].join(`
 `);
 }
+function coverSchema(config) {
+  if (!config.coverImageEnabled)
+    return [];
+  if (config.promptStyle === "anima") {
+    return [
+      '  "cover": {',
+      '    "environment": {',
+      '      "location": "string",',
+      '      "timeWeather": "string",',
+      '      "lightingMood": ["string"],',
+      '      "backgroundElements": ["string"]',
+      "    },",
+      '    "camera": {',
+      '      "framing": "string",',
+      '      "angle": "string",',
+      '      "perspective": "string",',
+      '      "focus": ["string"]',
+      "    },",
+      '    "shotPlan": {',
+      '      "primaryAction": "string",',
+      '      "secondaryCue": "string",',
+      '      "staging": "string"',
+      "    },",
+      '    "situation": "string",',
+      '    "characters": [',
+      "      {",
+      '        "name": "string",',
+      '        "label": "string",',
+      '        "age": "string",',
+      '        "identity": "string",',
+      '        "appearance": "string",',
+      '        "body": "string",',
+      '        "attire": "string",',
+      '        "attireInferred": false,',
+      '        "expression": "string",',
+      '        "renderScope": "string",',
+      '        "visibleTags": "string",',
+      '        "composition": {',
+      '          "position": "string",',
+      '          "pose": "string",',
+      '          "actions": ["string"],',
+      '          "gaze": "string"',
+      "        }",
+      "      }",
+      "    ],",
+      '    "sharedComposition": {',
+      '      "interaction": ["string"],',
+      '      "spatialRelation": "string"',
+      "    },",
+      '    "negative": "string"',
+      "  },"
+    ];
+  }
+  return [
+    '  "cover": {',
+    '    "place": "string",',
+    '    "camera": "string",',
+    '    "situation": "string",',
+    '    "action": "string",',
+    '    "characters": [',
+    "      {",
+    '        "name": "string",',
+    '        "label": "string",',
+    '        "age": "string",',
+    '        "identity": "string",',
+    '        "appearance": "string",',
+    '        "body": "string",',
+    '        "attire": "string",',
+    '        "attireInferred": false,',
+    '        "expression": "string",',
+    '        "renderScope": "string",',
+    '        "visibleTags": "string",',
+    '        "action": "string"',
+    "      }",
+    "    ],",
+    '    "supplement": "string",',
+    '    "negative": "string"',
+    "  },"
+  ];
+}
 function parserSchema(config) {
   const structuredAnima = config.promptStyle === "anima";
   const dynamicPossible = config.adaptiveMode || config.perspectiveMode === "dynamic";
   const perspectiveSchemaValue = config.adaptiveMode ? "creative | static | dynamic" : config.perspectiveMode;
   return structuredAnima ? [
     "{",
+    ...coverSchema(config),
     '  "scenes": [',
     "    {",
     '      "environment": {',
@@ -3060,6 +3180,7 @@ function parserSchema(config) {
     "}"
   ] : [
     "{",
+    ...coverSchema(config),
     '  "scenes": [',
     "    {",
     '      "place": "string",',
@@ -3199,6 +3320,7 @@ function parserInstruction(config, options = {}) {
 `),
     structuredAnima ? `- negative is optional. All other displayed fields and nested objects are required except shotPlan, which is required only for Dynamic and must be absent for Static or Creative. Use empty strings or arrays inside required objects when a field does not apply; never collapse an object into a string.` : "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
     "- These are the ONLY allowed fields. Adding any unlisted field is a schema violation.",
+    coverDirectionContract(config),
     "## Scenes & Shots",
     "Scene = shots sharing one physical location.",
     "- Same location means same scene, multiple shots.",
@@ -3396,6 +3518,7 @@ function parserInstructionFast(config, options = {}) {
 `),
     structuredAnima ? "- negative is optional. All other displayed fields and nested objects are required except shotPlan, which is required only for Dynamic and must be absent for Static or Creative. Use empty strings or arrays inside required objects when a field does not apply; never collapse an object into a string." : "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
     "- These are the ONLY allowed fields. Adding any unlisted field is a schema violation.",
+    coverDirectionContract(config),
     "## Scenes & Shots",
     "Scene = shots sharing one physical location.",
     "- Same location means same scene, multiple shots.",
@@ -3822,20 +3945,69 @@ function dynamicRepairInstruction(issues) {
   ].join(`
 `);
 }
+function coverPayloadIssues(payload, config) {
+  if (!config.coverImageEnabled)
+    return [];
+  const cover = asRecord(payload.cover);
+  if (Object.keys(cover).length === 0)
+    return ["cover is missing or is not an object"];
+  const issues = [];
+  const camera = cover.camera;
+  if (config.promptStyle === "anima") {
+    if (!camera || typeof camera !== "object" || Array.isArray(camera) || Object.keys(asRecord(camera)).length === 0) {
+      issues.push("cover.camera must be a populated structured camera object");
+    }
+    if (!cover.environment || typeof cover.environment !== "object" || Array.isArray(cover.environment)) {
+      issues.push("cover.environment must be an object");
+    }
+    if (!cover.shotPlan || typeof cover.shotPlan !== "object" || Array.isArray(cover.shotPlan)) {
+      issues.push("cover.shotPlan must be an object");
+    }
+  } else if (!cleanString2(camera)) {
+    issues.push("cover.camera must be a non-empty string");
+  }
+  if (!cleanString2(cover.situation))
+    issues.push("cover.situation must be a non-empty visual prompt");
+  if (!Array.isArray(cover.characters))
+    issues.push("cover.characters must be an array");
+  return issues;
+}
+function coverRepairInstruction(issues, config) {
+  return [
+    "Repair or add only the top-level cover key visual while preserving every existing numbered Scene and terminalState exactly. Return the complete JSON object and no other text.",
+    "The cover is a whole-message promotional prompt with no paragraph field. Capture the current message's overall theme or emotional core rather than recreating one Scene.",
+    "Use bold magazine-cover or album-art composition, source-grounded symbolic synthesis, and a camera and focal arrangement distinct from every numbered Scene. Do not add readable text, logos, captions, or watermarks.",
+    config.promptStyle === "anima" ? "Use exactly the structured cover fields shown in the original schema: environment, camera, shotPlan, situation, characters, sharedComposition, and optional negative." : "Use exactly the flat cover fields shown in the original schema: place, camera, situation, action, characters, supplement, and optional negative.",
+    `Problems to repair:
+- ${issues.join(`
+- `)}`
+  ].join(`
+`);
+}
 function modePayloadIssues(payload, config, requireDynamicProjection = true) {
-  return [...staticPayloadIssues(payload, config), ...dynamicPayloadIssues(payload, config, requireDynamicProjection)];
+  return [
+    ...coverPayloadIssues(payload, config),
+    ...staticPayloadIssues(payload, config),
+    ...dynamicPayloadIssues(payload, config, requireDynamicProjection)
+  ];
 }
 function modeRepairInstruction(payload, config, issues, requireDynamicProjection = true) {
-  const hasDynamic = dynamicPayloadIssues(payload, config, requireDynamicProjection).length > 0;
-  const hasStatic = staticPayloadIssues(payload, config).length > 0;
-  if (hasDynamic && !hasStatic)
+  const coverIssues = coverPayloadIssues(payload, config);
+  const dynamicIssues = dynamicPayloadIssues(payload, config, requireDynamicProjection);
+  const staticIssues = staticPayloadIssues(payload, config);
+  const hasDynamic = dynamicIssues.length > 0;
+  const hasStatic = staticIssues.length > 0;
+  if (coverIssues.length > 0 && !hasDynamic && !hasStatic)
+    return coverRepairInstruction(coverIssues, config);
+  if (coverIssues.length === 0 && hasDynamic && !hasStatic)
     return dynamicRepairInstruction(issues);
-  if (hasStatic && !hasDynamic)
+  if (coverIssues.length === 0 && hasStatic && !hasDynamic)
     return staticRepairInstruction(issues);
   return [
-    "Repair this valid JSON so its Static and Dynamic shots satisfy the listed mode-specific semantic requirements. Return only valid JSON and preserve all source facts and continuity values.",
-    staticRepairInstruction(staticPayloadIssues(payload, config)),
-    dynamicRepairInstruction(dynamicPayloadIssues(payload, config, requireDynamicProjection))
+    "Repair this valid JSON so its cover, Static shots, and Dynamic shots satisfy the listed semantic requirements. Return only valid JSON and preserve all source facts and continuity values.",
+    ...coverIssues.length > 0 ? [coverRepairInstruction(coverIssues, config)] : [],
+    ...staticIssues.length > 0 ? [staticRepairInstruction(staticIssues)] : [],
+    ...dynamicIssues.length > 0 ? [dynamicRepairInstruction(dynamicIssues)] : []
   ].join(`
 
 `);
@@ -3905,11 +4077,12 @@ async function resolveParserConnection(config, userId) {
 }
 var unsupportedStructuredOutput = new Set;
 function parserStageTokenBudget(model, config, stage) {
+  const promptCount = Math.max(1, config.maxImages) + (config.coverImageEnabled ? 1 : 0);
   const budgets = {
-    main: Math.min(7000, 1800 + Math.max(1, config.maxImages) * 900),
+    main: Math.min(config.coverImageEnabled ? 7900 : 7000, 1800 + promptCount * 900),
     ideation: Math.min(5000, 1200 + Math.max(1, config.maxImages) * 700),
     preprocess: 2400,
-    repair: Math.min(6000, 1600 + Math.max(1, config.maxImages) * 800),
+    repair: Math.min(config.coverImageEnabled ? 6800 : 6000, 1600 + promptCount * 800),
     camera: 1800
   };
   let base = budgets[stage];
@@ -3945,7 +4118,7 @@ function parserStageTokenBudget(model, config, stage) {
   }
   if (config.fastMode) {
     const heavyReasoner = /kimi[^\n]*k2[.\-_ ]?7[^\n]*code|claude[^\n]*sonnet[^\n]*5|deepseek[^\n]*v4[^\n]*pro/i.test(model);
-    const perImage = 1400 + Math.max(1, config.maxImages) * 600;
+    const perImage = 1400 + promptCount * 600;
     const fast = stage === "main" || stage === "repair" ? heavyReasoner ? base : Math.min(base, Math.min(perImage, 5200)) : Math.min(base, 2400);
     return config.parserMaxTokens > 0 ? Math.min(config.parserMaxTokens, fast) : fast;
   }
@@ -4269,7 +4442,7 @@ async function parsePayloadWithRepair(parserConnection, config, messages, userId
     }
     if (issues.length > 0) {
       repairSystem = modeRepairInstruction(parsed, config, issues, requireDynamicProjection);
-      repairInput = JSON.stringify(parsed);
+      repairInput = coverPayloadIssues(parsed, config).length > 0 ? payloadRepairInput(parsed, messages, true) : JSON.stringify(parsed);
       throw new Error("Mode-specific payload is incomplete.");
     }
     logStage(config, "json_parse_done", { repair: false });
@@ -4377,22 +4550,24 @@ function imageUrlFromId(imageId) {
 function htmlAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r\n?|\n/g, "&#10;");
 }
-function renderInlayBlock(url, _prompt, _negativePrompt, perspectiveMode, _perspectiveSource, _creativeConcept, imageId, chatId, messageId, swipeId, index, config) {
-  const label = `Inlay ${index + 1}`;
+function renderInlayBlock(url, _prompt, _negativePrompt, perspectiveMode, _perspectiveSource, _creativeConcept, imageId, chatId, messageId, swipeId, index, config, placement = "paragraph", illustrationNumber = index + 1) {
+  const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
   const asset = perspectiveMode === "asset";
   const width = clampInt2(asset ? config.assetImageWidth : config.inlayImageWidth, 120, 2400, asset ? DEFAULT_CONFIG.assetImageWidth : DEFAULT_CONFIG.inlayImageWidth);
   const maxHeight = clampInt2(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
   return `${MARKER}
 <div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
 }
-function renderSlotPlaceholder(status, index) {
-  const label = status === "failed" ? `Illustration ${index + 1} failed. Use Generate latest to retry.` : status === "cancelled" ? `Illustration ${index + 1} cancelled.` : `Generating illustration ${index + 1}…`;
+function renderSlotPlaceholder(status, index, placement = "paragraph", illustrationNumber = index + 1) {
+  const subject = placement === "cover" ? "Cover image" : `Illustration ${illustrationNumber}`;
+  const label = status === "failed" ? `${subject} failed. Use Generate latest to retry.` : status === "cancelled" ? `${subject} cancelled.` : `Generating ${subject.toLowerCase()}…`;
   return `${MARKER}
 <div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-image-index="${index}" role="status">${htmlAttr(label)}</div>`;
 }
 function renderInlaidMessage(original, record, config) {
   const cleanOriginal = stripInlayContent(original);
   const blocks = new Map;
+  const coverBlocks = [];
   const count = Math.max(1, paragraphCount(cleanOriginal));
   const slotCount = Math.max(record.imageUrls.length, record.paragraphs.length, record.slotStatuses?.length || 0);
   for (let index = 0;index < slotCount; index += 1) {
@@ -4400,14 +4575,23 @@ function renderInlaidMessage(original, record, config) {
     const status = record.slotStatuses?.[index];
     if (!url && !status)
       continue;
+    const placement = record.placements?.[index] === "cover" ? "cover" : "paragraph";
+    const illustrationNumber = record.placements ? record.placements.slice(0, index + 1).filter((candidate) => candidate !== "cover").length : index + 1;
     const paragraph2 = clampInt2(record.paragraphs[index], 1, count, Math.min(index + 1, count));
-    const existing = blocks.get(paragraph2) || [];
-    existing.push(url ? renderInlayBlock(url, record.prompts[index] || "", record.negativePrompts?.[index] || "", record.perspectiveModes?.[index], record.perspectiveSources?.[index], record.creativeConcepts?.[index], record.imageIds?.[index] || "", record.chatId || "", record.messageId || "", record.swipeId || 0, index, config) : renderSlotPlaceholder(status || "pending", index));
-    blocks.set(paragraph2, existing);
+    const existing = placement === "cover" ? coverBlocks : blocks.get(paragraph2) || [];
+    existing.push(url ? renderInlayBlock(url, record.prompts[index] || "", record.negativePrompts?.[index] || "", record.perspectiveModes?.[index], record.perspectiveSources?.[index], record.creativeConcepts?.[index], record.imageIds?.[index] || "", record.chatId || "", record.messageId || "", record.swipeId || 0, index, config, placement, illustrationNumber) : renderSlotPlaceholder(status || "pending", index, placement, illustrationNumber));
+    if (placement === "paragraph")
+      blocks.set(paragraph2, existing);
   }
   const tokens = cleanOriginal.trimEnd().split(/(\r?\n\s*\r?\n)/);
   let paragraph = 0;
   const output = [];
+  if (coverBlocks.length)
+    output.push(`${coverBlocks.join(`
+
+`)}
+
+`);
   for (const token of tokens) {
     if (!token.trim()) {
       output.push(token);
@@ -4933,6 +5117,9 @@ async function parseAndSelectPrompts(input) {
       }
       if (selected.length === 0)
         throw new Error("No usable prompts were parsed.");
+      const cover = selectCoverPromptEntry(parsed, paragraphs, config);
+      if (cover)
+        selected = [cover, ...selected];
       if (attempt === 0 && config.parserRetries > 0 && compactLorebookNeedsFullRetry(parsed, lorebookSnapshot)) {
         throw new Error("Compact lorebook context did not produce durable character tags; retrying with full lorebook context.");
       }
@@ -4967,6 +5154,7 @@ function logParsedSelection(parsed, selected, paragraphs, config) {
     selectedCount: selected.length,
     parserParagraphs: selected.map((entry) => entry.parserParagraph),
     originalParagraphs: selected.map((entry) => entry.paragraph),
+    placements: selected.map((entry) => entry.placement || "paragraph"),
     promptLengths: selected.map((entry) => renderPrompt(entry.prompt, config.promptSyntax).length),
     negativeLengths: selected.map((entry) => entry.negative.length),
     perspectives: selected.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource }))
@@ -5041,6 +5229,7 @@ function pendingGenerationRecord(context, selected, parsed) {
     creativeConcepts: selected.map((entry) => entry.creativeConcept || null),
     creativeConceptCandidates: selected.map((entry) => entry.creativeCandidates || []),
     creativeConceptHistory: selected.map((entry) => entry.creativeConcept ? [entry.creativeConcept.id] : []),
+    placements: selected.map((entry) => entry.placement || "paragraph"),
     paragraphs: selected.map((entry) => entry.paragraph),
     imageIds: selected.map(() => ""),
     imageUrls: selected.map(() => ""),
@@ -5148,6 +5337,7 @@ async function commitProgressiveSlot(context, job, settlement) {
     promptFormats: replaceAt(record.promptFormats, job.index, job.promptFormat || "ordered", "ordered"),
     creativeConcepts: replaceAt(record.creativeConcepts, job.index, job.creativeConcept || null, null),
     creativeConceptCandidates: replaceAt(record.creativeConceptCandidates, job.index, job.creativeCandidates || [], []),
+    placements: replaceAt(record.placements, job.index, job.placement || "paragraph", "paragraph"),
     paragraphs: replaceAt(record.paragraphs, job.index, job.paragraph, 1),
     imageIds: replaceAt(record.imageIds, job.index, imageId, ""),
     imageUrls: replaceAt(record.imageUrls, job.index, imageUrl, ""),
@@ -5201,6 +5391,7 @@ async function prepareAndDispatchImages(chatId, selected, config, userId, prepar
       corePrompt,
       shotNegative: entry.shotNegative,
       promptFormat,
+      placement: entry.placement || "paragraph",
       paragraph: entry.paragraph,
       parserParagraph: entry.parserParagraph,
       perspectiveMode: entry.perspectiveMode,
@@ -5397,17 +5588,22 @@ async function rerunStoredImage(request, rerunSidecar, userId, preparedConfig) {
       if (!target)
         throw new Error("The source assistant message no longer exists.");
       const originalParagraph = located.record.paragraphs[located.index] || 1;
-      const sourceParagraph = prepareParagraphs(String(target.content || ""), config).find((paragraph) => paragraph.originalIndex === originalParagraph);
-      if (!sourceParagraph)
+      const isCover = located.record.placements?.[located.index] === "cover";
+      const allParagraphs = prepareParagraphs(String(target.content || ""), config);
+      const sourceParagraph = allParagraphs.find((paragraph) => paragraph.originalIndex === originalParagraph);
+      if (!isCover && !sourceParagraph)
         throw new Error("The source paragraph for this image no longer exists.");
+      if (isCover && allParagraphs.length === 0)
+        throw new Error("The source message has no usable paragraphs for a cover prompt.");
       const singleConfig = {
         ...effectiveGenerationConfig(config),
+        coverImageEnabled: isCover,
         minImages: 1,
         maxImages: 1,
         preprocessingEnabled: false,
         previousVisualStateEnabled: false
       };
-      const paragraphs = [{ ...sourceParagraph, parserIndex: 1 }];
+      const paragraphs = isCover ? allParagraphs : [{ ...sourceParagraph, parserIndex: 1 }];
       const storedCandidates = rebaseCreativeConcepts(located.record.creativeConceptCandidates?.[located.index] || [], 1);
       const previousConceptHistory = located.record.creativeConceptHistory?.[located.index] || [];
       const selection = await parseAndSelectPrompts({
@@ -5423,9 +5619,9 @@ async function rerunStoredImage(request, rerunSidecar, userId, preparedConfig) {
         fastBootstrapCharacter: singleConfig.fastMode && singleConfig.includeCharacterInfo && Object.keys(initialState.characterAppearance).length === 0
       });
       selectionForMemory = selection.parsed;
-      const entry = selection.selected[0];
+      const entry = isCover ? selection.selected.find((candidate) => candidate.placement === "cover") : selection.selected.find((candidate) => candidate.placement !== "cover");
       if (!entry)
-        throw new Error("The sidecar returned no usable replacement prompt.");
+        throw new Error(isCover ? "The sidecar returned no usable replacement cover prompt." : "The sidecar returned no usable replacement prompt.");
       const stage = await prepareAndDispatchImages(request.chatId, [entry], singleConfig, userId, Promise.resolve(imageConnection));
       const job = stage.jobs[0];
       const result = stage.results[0];
@@ -5587,10 +5783,13 @@ async function runGenerationForMessage(chatId, messageId, content, operation, us
         try {
           await initializationPromise;
           const completed = await commitProgressiveSlot(context, job, settlement);
-          if (completed && Number.isFinite(job.parserParagraph))
+          if (completed && job.placement !== "cover" && Number.isFinite(job.parserParagraph)) {
             successfulParserParagraphs.push(job.parserParagraph);
+          }
           operation.completed += 1;
-          reportGenerationProgress(operation, "generating", userId, completed ? `Illustration ${job.index + 1} ready.` : `Illustration ${job.index + 1} did not complete.`);
+          const illustrationNumber = selected[0]?.placement === "cover" ? job.index : job.index + 1;
+          const subject = job.placement === "cover" ? "Cover image" : `Illustration ${illustrationNumber}`;
+          reportGenerationProgress(operation, "generating", userId, completed ? `${subject} ready.` : `${subject} did not complete.`);
           if (settlement.status === "fulfilled" && !completed && !signal.aborted) {
             throw new Error("The image provider returned no image.");
           }

@@ -93,6 +93,8 @@ export type TerminalVisualStateJson = {
 };
 
 export type ParsedPayload = {
+  /** Optional whole-message promotional key visual. It is rendered above the prose, not assigned to a paragraph. */
+  cover?: SceneJson;
   scenes?: SceneJson[];
   terminalState?: TerminalVisualStateJson;
 };
@@ -122,6 +124,8 @@ export type PromptEntry = {
   corePrompt: AssembledPrompt;
   shotNegative: string;
   negative: string;
+  /** Cover entries render above the message; paragraph entries keep their numbered source placement. */
+  placement?: "cover" | "paragraph";
   paragraph: number;
   parserParagraph: number;
   perspectiveMode: PerspectiveMode;
@@ -187,6 +191,7 @@ export type PreparedImageJob = {
   corePrompt?: string;
   shotNegative?: string;
   promptFormat?: NonNullable<AssembledPrompt["format"]>;
+  placement?: "cover" | "paragraph";
   paragraph: number;
   parserParagraph?: number;
   perspectiveMode?: PerspectiveMode;
@@ -278,6 +283,8 @@ export type GeneratedRecord = {
   creativeConceptCandidates?: CreativeConcept[][];
   /** IDs of Creative concepts already used for each image slot. */
   creativeConceptHistory?: string[][];
+  /** Placement per image. Missing entries on older records are treated as paragraph inlays. */
+  placements?: Array<"cover" | "paragraph">;
   paragraphs: number[];
   imageIds: string[];
   imageUrls: string[];

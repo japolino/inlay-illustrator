@@ -52,6 +52,23 @@ function assetDirectionContract(): string {
   ].join("\n");
 }
 
+function coverDirectionContract(config: Config): string {
+  if (!config.coverImageEnabled) return "";
+  return [
+    "## Cover Image / Key Visual",
+    "cover is required and is one additional whole-message promotional prompt. It does not count toward minImages or maxImages and has no paragraph field because it is placed above the prose rather than beside any paragraph.",
+    "Capture the current message's overall theme or emotional core, not a recreation of any specific scene or paragraph. Treat it like bold magazine-cover or album-art photography.",
+    "Be daring. Unconventional framing, symbolic juxtaposition, foreground devices, reflections, silhouettes, extreme scale, or other narrative devices are encouraged even when that exact composition would never occur as a Scene.",
+    "Keep every depicted identity, appearance trait, object, and thematic motif grounded in the current message or supplied continuity. Cinematic synthesis may rearrange source-supported visual elements, but it must not invent a new event, character identity, outfit, prop, location, or relationship.",
+    "Make cover unmistakably distinct from every numbered Scene in composition, camera, focal arrangement, character selection, and environment treatment. Do not copy a Scene and merely change its angle.",
+    "Do not add typography, titles, captions, logos, borders, watermarks, or readable text unless the client explicitly requests them.",
+    "Use the same visible-only character detail, camera vocabulary, name privacy, negative-tag, and maximum-character rules as Scenes.",
+    config.promptStyle === "anima"
+      ? "Fill cover with the displayed structured cover fields. Its shotPlan is a concise rendering hierarchy for the promotional composition: primaryAction names the dominant visible relationship, secondaryCue is optional, and staging states the spatial arrangement. Cover has no perspectiveMode, paragraph, environmentChanges, or visualChanges."
+      : "Fill cover with the displayed flat cover fields. Use supplement only for concise objective composition details that tags cannot express. Cover has no perspectiveMode, paragraph, or environmentChanges."
+  ].join("\n");
+}
+
 function perspectiveContract(config: Config): string {
   if (!config.adaptiveMode) {
     const contract = config.perspectiveMode === "creative"
@@ -87,6 +104,86 @@ export type ParserInstructionOptions = {
   hasPreviousVisualState?: boolean;
 };
 
+function coverSchema(config: Config): string[] {
+  if (!config.coverImageEnabled) return [];
+  if (config.promptStyle === "anima") {
+    return [
+      '  "cover": {',
+      '    "environment": {',
+      '      "location": "string",',
+      '      "timeWeather": "string",',
+      '      "lightingMood": ["string"],',
+      '      "backgroundElements": ["string"]',
+      "    },",
+      '    "camera": {',
+      '      "framing": "string",',
+      '      "angle": "string",',
+      '      "perspective": "string",',
+      '      "focus": ["string"]',
+      "    },",
+      '    "shotPlan": {',
+      '      "primaryAction": "string",',
+      '      "secondaryCue": "string",',
+      '      "staging": "string"',
+      "    },",
+      '    "situation": "string",',
+      '    "characters": [',
+      "      {",
+      '        "name": "string",',
+      '        "label": "string",',
+      '        "age": "string",',
+      '        "identity": "string",',
+      '        "appearance": "string",',
+      '        "body": "string",',
+      '        "attire": "string",',
+      '        "attireInferred": false,',
+      '        "expression": "string",',
+      '        "renderScope": "string",',
+      '        "visibleTags": "string",',
+      '        "composition": {',
+      '          "position": "string",',
+      '          "pose": "string",',
+      '          "actions": ["string"],',
+      '          "gaze": "string"',
+      "        }",
+      "      }",
+      "    ],",
+      '    "sharedComposition": {',
+      '      "interaction": ["string"],',
+      '      "spatialRelation": "string"',
+      "    },",
+      '    "negative": "string"',
+      "  },"
+    ];
+  }
+  return [
+    '  "cover": {',
+    '    "place": "string",',
+    '    "camera": "string",',
+    '    "situation": "string",',
+    '    "action": "string",',
+    '    "characters": [',
+    "      {",
+    '        "name": "string",',
+    '        "label": "string",',
+    '        "age": "string",',
+    '        "identity": "string",',
+    '        "appearance": "string",',
+    '        "body": "string",',
+    '        "attire": "string",',
+    '        "attireInferred": false,',
+    '        "expression": "string",',
+    '        "renderScope": "string",',
+    '        "visibleTags": "string",',
+    '        "action": "string"',
+    "      }",
+    "    ],",
+    '    "supplement": "string",',
+    '    "negative": "string"',
+    "  },"
+  ];
+}
+
 function parserSchema(config: Config): string[] {
   const structuredAnima = config.promptStyle === "anima";
   const dynamicPossible = config.adaptiveMode || config.perspectiveMode === "dynamic";
@@ -95,6 +192,7 @@ function parserSchema(config: Config): string[] {
     : config.perspectiveMode;
   return structuredAnima ? [
     "{",
+    ...coverSchema(config),
     '  "scenes": [',
     "    {",
     '      "environment": {',
@@ -178,6 +276,7 @@ function parserSchema(config: Config): string[] {
     "}"
   ] : [
     "{",
+    ...coverSchema(config),
     '  "scenes": [',
     "    {",
     '      "place": "string",',
@@ -343,6 +442,7 @@ export function parserInstruction(config: Config, options: ParserInstructionOpti
       ? `- negative is optional. All other displayed fields and nested objects are required except shotPlan, which is required only for Dynamic and must be absent for Static or Creative. Use empty strings or arrays inside required objects when a field does not apply; never collapse an object into a string.`
       : "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
     "- These are the ONLY allowed fields. Adding any unlisted field is a schema violation.",
+    coverDirectionContract(config),
     "## Scenes & Shots",
     "Scene = shots sharing one physical location.",
     "- Same location means same scene, multiple shots.",
@@ -611,6 +711,7 @@ export function parserInstructionFast(config: Config, options: ParserInstruction
       ? "- negative is optional. All other displayed fields and nested objects are required except shotPlan, which is required only for Dynamic and must be absent for Static or Creative. Use empty strings or arrays inside required objects when a field does not apply; never collapse an object into a string."
       : "- negative is optional. All other fields are required, though values may be empty strings when a field does not apply.",
     "- These are the ONLY allowed fields. Adding any unlisted field is a schema violation.",
+    coverDirectionContract(config),
     "## Scenes & Shots",
     "Scene = shots sharing one physical location.",
     "- Same location means same scene, multiple shots.",

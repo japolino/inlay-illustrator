@@ -40,7 +40,7 @@ import {
 } from "./parser.js";
 import { renderNegativeWithCurrentSelection, renderPrompt, renderPromptWithCurrentAffixes } from "./prompt.js";
 import { imageUrlFromId, renderInlaidMessage } from "./rendering.js";
-import { normalizeScenePayload, selectPromptEntries } from "./scenes.js";
+import { normalizeScenePayload, selectCoverPromptEntry, selectPromptEntries } from "./scenes.js";
 import {
   getConfig,
   getState,
@@ -422,6 +422,8 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
         selected = selected.filter((entry) => Boolean(entry.creativeConcept));
       }
       if (selected.length === 0) throw new Error("No usable prompts were parsed.");
+      const cover = selectCoverPromptEntry(parsed, paragraphs, config);
+      if (cover) selected = [cover, ...selected];
       if (attempt === 0 && config.parserRetries > 0 && compactLorebookNeedsFullRetry(parsed, lorebookSnapshot)) {
         throw new Error("Compact lorebook context did not produce durable character tags; retrying with full lorebook context.");
       }
@@ -464,6 +466,7 @@ function logParsedSelection(
     selectedCount: selected.length,
     parserParagraphs: selected.map((entry) => entry.parserParagraph),
     originalParagraphs: selected.map((entry) => entry.paragraph),
+    placements: selected.map((entry) => entry.placement || "paragraph"),
     promptLengths: selected.map((entry) => renderPrompt(entry.prompt, config.promptSyntax).length),
     negativeLengths: selected.map((entry) => entry.negative.length),
     perspectives: selected.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource }))
@@ -565,6 +568,7 @@ function pendingGenerationRecord(
     creativeConcepts: selected.map((entry) => entry.creativeConcept || null),
     creativeConceptCandidates: selected.map((entry) => entry.creativeCandidates || []),
     creativeConceptHistory: selected.map((entry) => entry.creativeConcept ? [entry.creativeConcept.id] : []),
+    placements: selected.map((entry) => entry.placement || "paragraph"),
     paragraphs: selected.map((entry) => entry.paragraph),
     imageIds: selected.map(() => ""),
     imageUrls: selected.map(() => ""),
@@ -701,6 +705,7 @@ async function commitProgressiveSlot(
     promptFormats: replaceAt(record.promptFormats, job.index, job.promptFormat || "ordered", "ordered"),
     creativeConcepts: replaceAt(record.creativeConcepts, job.index, job.creativeConcept || null, null),
     creativeConceptCandidates: replaceAt(record.creativeConceptCandidates, job.index, job.creativeCandidates || [], []),
+    placements: replaceAt(record.placements, job.index, job.placement || "paragraph", "paragraph"),
     paragraphs: replaceAt(record.paragraphs, job.index, job.paragraph, 1),
     imageIds: replaceAt(record.imageIds, job.index, imageId, ""),
     imageUrls: replaceAt(record.imageUrls, job.index, imageUrl, ""),
@@ -773,6 +778,7 @@ async function prepareAndDispatchImages(
       corePrompt,
       shotNegative: entry.shotNegative,
       promptFormat,
+      placement: entry.placement || "paragraph",
       paragraph: entry.paragraph,
       parserParagraph: entry.parserParagraph,
       perspectiveMode: entry.perspectiveMode,
@@ -993,17 +999,22 @@ export async function rerunStoredImage(
       const target = messages.find((message) => message.id === located.record.messageId);
       if (!target) throw new Error("The source assistant message no longer exists.");
       const originalParagraph = located.record.paragraphs[located.index] || 1;
-      const sourceParagraph = prepareParagraphs(String(target.content || ""), config)
-        .find((paragraph) => paragraph.originalIndex === originalParagraph);
-      if (!sourceParagraph) throw new Error("The source paragraph for this image no longer exists.");
+      const isCover = located.record.placements?.[located.index] === "cover";
+      const allParagraphs = prepareParagraphs(String(target.content || ""), config);
+      const sourceParagraph = allParagraphs.find((paragraph) => paragraph.originalIndex === originalParagraph);
+      if (!isCover && !sourceParagraph) throw new Error("The source paragraph for this image no longer exists.");
+      if (isCover && allParagraphs.length === 0) throw new Error("The source message has no usable paragraphs for a cover prompt.");
       const singleConfig: Config = {
         ...effectiveGenerationConfig(config),
+        coverImageEnabled: isCover,
         minImages: 1,
         maxImages: 1,
         preprocessingEnabled: false,
         previousVisualStateEnabled: false
       };
-      const paragraphs: PreparedParagraph[] = [{ ...sourceParagraph, parserIndex: 1 }];
+      const paragraphs: PreparedParagraph[] = isCover
+        ? allParagraphs
+        : [{ ...(sourceParagraph as PreparedParagraph), parserIndex: 1 }];
       const storedCandidates = rebaseCreativeConcepts(
         located.record.creativeConceptCandidates?.[located.index] || [],
         1
@@ -1023,8 +1034,12 @@ export async function rerunStoredImage(
           && Object.keys(initialState.characterAppearance).length === 0
       });
       selectionForMemory = selection.parsed;
-      const entry = selection.selected[0];
-      if (!entry) throw new Error("The sidecar returned no usable replacement prompt.");
+      const entry = isCover
+        ? selection.selected.find((candidate) => candidate.placement === "cover")
+        : selection.selected.find((candidate) => candidate.placement !== "cover");
+      if (!entry) throw new Error(isCover
+        ? "The sidecar returned no usable replacement cover prompt."
+        : "The sidecar returned no usable replacement prompt.");
       const stage = await prepareAndDispatchImages(
         request.chatId,
         [entry],
@@ -1206,11 +1221,15 @@ async function runGenerationForMessage(
         try {
           await initializationPromise;
           const completed = await commitProgressiveSlot(context as ProgressiveGenerationContext, job, settlement);
-          if (completed && Number.isFinite(job.parserParagraph)) successfulParserParagraphs.push(job.parserParagraph as number);
+          if (completed && job.placement !== "cover" && Number.isFinite(job.parserParagraph)) {
+            successfulParserParagraphs.push(job.parserParagraph as number);
+          }
           operation.completed += 1;
+          const illustrationNumber = selected[0]?.placement === "cover" ? job.index : job.index + 1;
+          const subject = job.placement === "cover" ? "Cover image" : `Illustration ${illustrationNumber}`;
           reportGenerationProgress(operation, "generating", userId, completed
-            ? `Illustration ${job.index + 1} ready.`
-            : `Illustration ${job.index + 1} did not complete.`);
+            ? `${subject} ready.`
+            : `${subject} did not complete.`);
           if (settlement.status === "fulfilled" && !completed && !signal.aborted) {
             throw new Error("The image provider returned no image.");
           }

@@ -60,8 +60,12 @@ export function dedupeExactShotCharacters(payload: ParsedPayload): ParsedPayload
   const terminalState = payload.terminalState && Array.isArray(payload.terminalState.characters)
     ? { ...payload.terminalState, characters: dedupeCharacters(payload.terminalState.characters) }
     : payload.terminalState;
+  const cover = payload.cover && Array.isArray(payload.cover.characters)
+    ? { ...payload.cover, characters: dedupeCharacters(payload.cover.characters) }
+    : payload.cover;
   return {
     ...payload,
+    ...(cover ? { cover } : {}),
     ...(terminalState ? { terminalState } : {}),
     scenes: cleanArray<SceneJson>(payload.scenes).map((scene) => {
       const next: SceneJson = { ...scene };
@@ -105,8 +109,17 @@ export function normalizeAtomicCompositionTerms(payload: ParsedPayload): ParsedP
           : { composition: normalizeCompositionTerm(character.composition) as CharacterJson["composition"] })
       }))
       : characters;
+  const cover = payload.cover
+    ? {
+      ...payload.cover,
+      ...(Array.isArray(payload.cover.characters)
+        ? { characters: normalizeCharacters(payload.cover.characters) }
+        : {})
+    }
+    : payload.cover;
   return {
     ...payload,
+    ...(cover ? { cover } : {}),
     scenes: cleanArray<SceneJson>(payload.scenes).map((scene) => ({
       ...scene,
       ...(Array.isArray(scene.characters) ? { characters: normalizeCharacters(scene.characters) } : {}),
@@ -188,6 +201,32 @@ export function exactVisualKey(entry: NormalizedScene): string {
       backgroundElements: cleanArray<unknown>(environment.backgroundElements).map(normalizedVisualValue)
     }
   });
+}
+
+/** Builds the optional whole-message key visual without consuming a numbered illustration slot. */
+export function selectCoverPromptEntry(
+  payload: ParsedPayload,
+  paragraphs: PreparedParagraph[],
+  config: Config
+): PromptEntry | null {
+  if (!config.coverImageEnabled || !payload.cover || paragraphs.length === 0) return null;
+  const source = paragraphs[0];
+  const cover = payload.cover;
+  const coverConfig: Config = {
+    ...config,
+    adaptiveMode: true,
+    perspectiveMode: "dynamic"
+  };
+  const entry = assemblePrompt(
+    cover,
+    { ...cover, perspectiveMode: "dynamic" },
+    coverConfig,
+    source.parserIndex,
+    source.originalIndex
+  );
+  return renderPrompt(entry.prompt, config.promptSyntax)
+    ? { ...entry, placement: "cover", perspectiveSource: "manual" }
+    : null;
 }
 
 export function selectPromptEntries(

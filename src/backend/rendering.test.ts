@@ -40,6 +40,24 @@ describe("inlay rendering", () => {
     expect(rendered.split(MARKER)).toHaveLength(4);
   });
 
+  test("places cover images above all prose regardless of image-array order", () => {
+    const original = "First paragraph.\n\nSecond paragraph.";
+    const record = {
+      imageUrls: ["/paragraph.png", "/cover.png"],
+      prompts: ["paragraph", "cover"],
+      placements: ["paragraph", "cover"] as Array<"cover" | "paragraph">,
+      paragraphs: [2, 1]
+    };
+    const rendered = renderInlaidMessage(original, record, DEFAULT_CONFIG);
+
+    expect(rendered.indexOf("/cover.png")).toBeLessThan(rendered.indexOf("First paragraph."));
+    expect(rendered.indexOf("First paragraph.")).toBeLessThan(rendered.indexOf("/paragraph.png"));
+    expect(rendered.indexOf("/paragraph.png")).toBeLessThan(rendered.indexOf("Second paragraph."));
+    expect(rendered).toContain('alt="Cover image"');
+    expect(rendered.split(MARKER)).toHaveLength(3);
+    expect(renderInlaidMessage(rendered, record, DEFAULT_CONFIG)).toBe(rendered);
+  });
+
   test("clamps invalid paragraph targets and applies configured dimensions", () => {
     const rendered = renderInlaidMessage(
       "First.\n\nSecond.",

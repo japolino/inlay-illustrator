@@ -3,6 +3,7 @@ var DEFAULT_CONFIG = {
   enabled: true,
   autoGenerate: true,
   debugLogging: false,
+  coverImageEnabled: false,
   adaptiveMode: false,
   fastMode: false,
   perspectiveMode: "dynamic",
@@ -97,6 +98,7 @@ function normalizeConfig(raw) {
   return {
     ...DEFAULT_CONFIG,
     ...current,
+    coverImageEnabled: raw.coverImageEnabled === true,
     adaptiveMode: raw.adaptiveMode === true,
     fastMode: raw.fastMode === true,
     perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" || raw.perspectiveMode === "asset" ? raw.perspectiveMode : raw.mode === "asset" ? "asset" : "dynamic",
@@ -317,6 +319,7 @@ function renderGenerationSection({ ui, config, actions, rerender }) {
   const section = ui.section("Generation", true);
   ui.addSwitch(section, "enabled", "Power");
   ui.addSwitch(section, "autoGenerate", "Auto generate");
+  ui.addSwitch(section, "coverImageEnabled", "Cover image", "Generate one additional cinematic key visual for the whole message and place it above the first paragraph.");
   ui.addSwitch(section, "adaptiveMode", "Adaptive Mode", "Let the parser choose a balanced perspective mix, using Creative only for identity-safe details when appropriate.", rerender);
   ui.addRangeChoice(section, "perspectiveMode", "Perspective", [
     { value: "creative", label: "Creative" },

@@ -114,6 +114,13 @@ describe("shared configuration", () => {
     expect(migrated.assetImageWidth).toBe(812);
   });
 
+  test("keeps cover images opt-in and accepts only an explicit true value", () => {
+    expect(DEFAULT_CONFIG.coverImageEnabled).toBe(false);
+    expect(normalizeConfig({ coverImageEnabled: true }).coverImageEnabled).toBe(true);
+    expect(normalizeConfig({ coverImageEnabled: false }).coverImageEnabled).toBe(false);
+    expect(normalizeConfig({ coverImageEnabled: "true" as never }).coverImageEnabled).toBe(false);
+  });
+
   test("enables previous visual state by default and preserves an explicit opt-out", () => {
     expect(normalizeConfig({}).previousVisualStateEnabled).toBe(true);
     expect(normalizeConfig({ previousVisualStateEnabled: false }).previousVisualStateEnabled).toBe(false);

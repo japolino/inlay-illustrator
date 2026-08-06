@@ -316,6 +316,140 @@ describe("progressive ComfyUI delivery", () => {
 });
 
 
+describe("optional cover image generation", () => {
+  test("generates one extra key visual and renders it above the message", async () => {
+    const files = new Map<string, unknown>();
+    const updates: string[] = [];
+    const frontend: Array<Record<string, unknown>> = [];
+    const prompts: string[] = [];
+    const message = {
+      id: "cover-message",
+      role: "assistant",
+      content: "First visual beat.\n\nSecond visual beat.",
+      metadata: {},
+      swipe_id: 0
+    };
+    const generationConfig = {
+      ...DEFAULT_CONFIG,
+      coverImageEnabled: true,
+      parserConnectionId: "cover-parser",
+      imageConnectionId: "cover-comfy",
+      includeCharacterInfo: false,
+      includeUserInfo: false,
+      includeLorebook: false,
+      userInstructionsEnabled: false,
+      previousVisualStateEnabled: false,
+      preprocessingEnabled: false,
+      parserRetries: 0,
+      adaptiveMode: false,
+      perspectiveMode: "dynamic" as const,
+      minImages: 1,
+      maxImages: 1
+    };
+    (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
+      connections: {
+        get: async () => ({ id: "cover-parser", name: "Parser", provider: "openai", model: "test" })
+      },
+      generate: {
+        raw: async () => ({ content: JSON.stringify({
+          cover: {
+            environment: {
+              location: "abstract mirrored void",
+              timeWeather: "timeless darkness",
+              lightingMood: ["dramatic rim light"],
+              backgroundElements: ["fractured mirror", "floating paper"]
+            },
+            camera: { framing: "wide shot", angle: "dutch angle", perspective: "from below", focus: ["deep focus"] },
+            shotPlan: {
+              primaryAction: "solitary girl faces her fractured reflection",
+              secondaryCue: "floating paper surrounds her",
+              staging: "girl and reflection divide the frame"
+            },
+            situation: "1girl, symbolic fractured reflection",
+            characters: [{
+              name: "girl A",
+              label: "girl",
+              age: "adolescent",
+              identity: "",
+              appearance: "long black hair, blue eyes",
+              body: "pale skin",
+              attire: "red coat",
+              attireInferred: false,
+              visualChanges: [],
+              expression: "determined",
+              renderScope: "full figure",
+              visibleTags: "long black hair, blue eyes, pale skin, red coat",
+              composition: {
+                position: "left of center",
+                pose: "upright stance",
+                actions: ["facing her fractured reflection"],
+                gaze: "looking at reflection"
+              }
+            }],
+            sharedComposition: { interaction: [], spatialRelation: "reflection fills the right half" },
+            negative: ""
+          },
+          scenes: [{
+            environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: [] },
+            shots: [{
+              paragraph: 2,
+              situation: "windblown paper",
+              shotPlan: { primaryAction: "wind moves paper", secondaryCue: "", staging: "paper crosses foreground" },
+              characters: [],
+              camera: { framing: "close-up", angle: "low angle", perspective: "from side", focus: [] }
+            }]
+          }],
+          terminalState: {
+            paragraph: 2,
+            environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: [] },
+            environmentChanges: [],
+            characters: []
+          }
+        }) })
+      },
+      imageGen: {
+        getConnection: async () => ({ id: "cover-comfy", name: "Comfy", provider: "comfyui", model: "workflow" }),
+        generate: async (request: { prompt: string }) => {
+          const index = prompts.length;
+          prompts.push(request.prompt);
+          return { imageId: `image-${index}`, imageUrl: index === 0 ? "/cover.png" : "/scene.png", model: "workflow", provider: "comfyui" };
+        }
+      },
+      userStorage: {
+        getJson: async <T>(storagePath: string, options: { fallback: T }) => (files.has(storagePath) ? files.get(storagePath) : options.fallback) as T,
+        setJson: async (storagePath: string, value: unknown) => { files.set(storagePath, structuredClone(value)); },
+        exists: async (storagePath: string) => files.has(storagePath),
+        read: async (storagePath: string) => JSON.stringify(files.get(storagePath)),
+        write: async (storagePath: string, value: string) => { files.set(storagePath, JSON.parse(value)); },
+        mkdir: async () => undefined
+      },
+      chat: {
+        getMessages: async () => [message],
+        updateMessage: async (_chatId: string, _messageId: string, patch: { content?: string; metadata?: Record<string, unknown> }) => {
+          if (patch.content) message.content = patch.content;
+          if (patch.metadata) message.metadata = patch.metadata;
+          updates.push(message.content);
+        }
+      },
+      sendToFrontend: (payload: Record<string, unknown>) => frontend.push(payload),
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+
+    await generateForMessage("cover-chat", message.id, message.content, "cover-user", {
+      config: generationConfig,
+      messages: [message]
+    });
+
+    expect(prompts).toHaveLength(2);
+    expect(updates.some((content) => content.includes("Generating cover image"))).toBe(true);
+    expect(message.content.indexOf("/cover.png")).toBeLessThan(message.content.indexOf("First visual beat."));
+    expect(message.content.indexOf("First visual beat.")).toBeLessThan(message.content.indexOf("/scene.png"));
+    expect(message.content.indexOf("/scene.png")).toBeLessThan(message.content.indexOf("Second visual beat."));
+    const completed = frontend.find((payload) => payload.type === "status" && payload.status === "Generated");
+    expect((completed?.record as { placements?: string[] })?.placements).toEqual(["cover", "paragraph"]);
+  });
+});
+
 describe("Fast Mode parser call sequencing", () => {
   const requests: Array<Record<string, unknown>> = [];
   const responses: unknown[] = [];

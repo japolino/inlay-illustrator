@@ -7,6 +7,7 @@ Lumiverse extension for persistent, context-aware character image generation.
 - Persistent character image generation across a chat
 - Dynamic visual memory for returning characters, including base attire
 - Image prompts generated from current and recent chat context
+- Optional cinematic cover/key-visual prompt generated for the whole message and rendered above the prose
 - Progressive illustration slots that fill as each image finishes without changing paragraph order
 - Per-chat FIFO scheduling, scoped progress, duplicate suppression, and cooperative cancellation
 - Manual Creative concept exploration, visual-novel-style Static, action-focused Dynamic, or Original-style single-character Asset generation
