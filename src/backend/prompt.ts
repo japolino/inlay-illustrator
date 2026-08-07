@@ -518,8 +518,31 @@ function resolveDynamicCamera(shot: ShotJson): DynamicCameraResolution {
   };
 }
 
-function isFragmentCameraFraming(framing: string): boolean {
+export function isFragmentCameraFraming(framing: string): boolean {
   return framing === "body-part focus" || framing === "head out of frame" || framing === "eyes out of frame";
+}
+
+/**
+ * Projects a Dynamic character's complete baseline into the tags actually
+ * visible in the given camera framing (the same visibility-tier projection the
+ * renderer audits). Used by the parser when a model omits visibleTags: for
+ * ordinary framings the tier projection is authoritative, so the projected tags
+ * are the correct audit value. Returns "" for fragment framings, where a
+ * baseline projection would leak out-of-crop traits; the renderer fails closed
+ * there instead.
+ */
+export function projectDynamicVisibleTags(character: CharacterJson, camera: unknown, renderScope = ""): string {
+  const view = cameraViewOf(camera);
+  if (isFragmentCameraFraming(view.framing)) return "";
+  const modifiers = visibilityModifiersFor(view.framing, view.angle, view.perspective, renderScope);
+  const regions = new Set(FRAMING_VISIBILITY_REGIONS[view.framing] || ALL_VISIBILITY_REGIONS);
+  if (modifiers.hideFace) regions.delete("face");
+  const projected: string[] = [];
+  for (const { tag, source } of baselineTags(character)) {
+    if (modifiers.hideEyes && EYE_TAG.test(tag.toLowerCase())) continue;
+    if (tagVisibilityRegions(tag, source).some((region) => regions.has(region))) projected.push(tag);
+  }
+  return unique(projected).join(", ");
 }
 
 type BaselineTag = { tag: string; source: VisibilityTagSource };

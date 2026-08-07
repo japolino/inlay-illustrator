@@ -1074,6 +1074,23 @@ function resolveDynamicCamera(shot) {
 function isFragmentCameraFraming(framing) {
   return framing === "body-part focus" || framing === "head out of frame" || framing === "eyes out of frame";
 }
+function projectDynamicVisibleTags(character, camera, renderScope = "") {
+  const view = cameraViewOf(camera);
+  if (isFragmentCameraFraming(view.framing))
+    return "";
+  const modifiers = visibilityModifiersFor(view.framing, view.angle, view.perspective, renderScope);
+  const regions = new Set(FRAMING_VISIBILITY_REGIONS[view.framing] || ALL_VISIBILITY_REGIONS);
+  if (modifiers.hideFace)
+    regions.delete("face");
+  const projected = [];
+  for (const { tag, source } of baselineTags(character)) {
+    if (modifiers.hideEyes && EYE_TAG.test(tag.toLowerCase()))
+      continue;
+    if (tagVisibilityRegions(tag, source).some((region) => regions.has(region)))
+      projected.push(tag);
+  }
+  return unique(projected).join(", ");
+}
 function baselineTags(character) {
   const fields = [
     ["identity", character.identity],
@@ -3922,12 +3939,13 @@ function dynamicPayloadIssues(payload, config, required = true) {
           issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} shotPlan.${field} must be one atomic comma-free phrase`);
         }
       }
+      const fragment = isFragmentCameraFraming(framingOf(shot.camera));
       const characters = Array.isArray(shot.characters) ? shot.characters : [];
       characters.forEach((character, characterIndex) => {
-        if (!cleanString2(character.renderScope)) {
+        if (!fragment && !cleanString2(character.renderScope)) {
           issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} character ${characterIndex + 1} needs renderScope`);
         }
-        if (!cleanString2(character.visibleTags)) {
+        if (!fragment && !cleanString2(character.visibleTags)) {
           issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} character ${characterIndex + 1} needs visibleTags`);
         }
       });
@@ -3948,6 +3966,130 @@ function dynamicRepairInstruction(issues) {
 - `)}`
   ].join(`
 `);
+}
+function framingOf(camera) {
+  const record = asRecord(camera);
+  const framing = cleanString2(record.framing).toLowerCase();
+  if (framing)
+    return framing;
+  const text = cleanString2(camera).toLowerCase();
+  const byLengthDesc = [...CAMERA_FRAMING_VALUES].sort((left, right) => right.length - left.length);
+  return byLengthDesc.find((value) => text.includes(value)) || "";
+}
+var FRAGMENT_RENDER_SCOPE_DEFAULTS = {
+  portrait: "head and shoulders visible",
+  "close-up": "head and shoulders visible",
+  "medium close-up": "head and torso visible",
+  "upper body": "upper body visible",
+  "medium shot": "upper body visible",
+  "cowboy shot": "hips and upper legs visible",
+  "feet out of frame": "full body with feet cropped out of frame",
+  "full body": "full body visible",
+  "wide shot": "full body visible",
+  "lower body": "lower body visible"
+};
+function defaultRenderScopeForFraming(framing) {
+  return FRAGMENT_RENDER_SCOPE_DEFAULTS[framing] || "full body visible";
+}
+function atomicPhrase(value) {
+  const text = cleanString2(Array.isArray(value) ? value[0] : value);
+  if (!text)
+    return "";
+  return text.split(/[,;]/)[0].replace(ATOMIC_DIRECTION_END, "").trim();
+}
+function primaryActionCandidates(shot) {
+  const candidates = [];
+  if (typeof shot.shotPlan === "string") {
+    const plan = atomicPhrase(shot.shotPlan);
+    if (plan)
+      candidates.push(plan);
+  }
+  const action = atomicPhrase(shot.action);
+  if (action)
+    candidates.push(action);
+  for (const character of cleanArray(shot.characters)) {
+    const composition = asRecord(character.composition);
+    const actions = Array.isArray(composition.actions) ? composition.actions : [composition.actions];
+    for (const value of actions) {
+      const phrase = atomicPhrase(value);
+      if (phrase)
+        candidates.push(phrase);
+    }
+  }
+  return candidates;
+}
+function repairDynamicProjectionLocally(payload, config, required) {
+  if (config.promptStyle !== "anima" || !required)
+    return payload;
+  const repaired = JSON.parse(JSON.stringify(payload));
+  let shotPlanSanitized = 0;
+  let primaryActionsSynthesized = 0;
+  let renderScopesDefaulted = 0;
+  let visibleTagsSynthesized = 0;
+  for (const scene of cleanArray(repaired.scenes)) {
+    const shots = Array.isArray(scene.shots) ? scene.shots : [scene];
+    for (const shot of shots) {
+      if (!dynamicShot(shot, config))
+        continue;
+      const framing = framingOf(shot.camera);
+      const fragment = isFragmentCameraFraming(framing);
+      const plan = asRecord(shot.shotPlan);
+      const nextPlan = { ...plan };
+      let planChanged = false;
+      for (const field of ["primaryAction", "secondaryCue", "staging"]) {
+        if (!cleanString2(nextPlan[field]))
+          continue;
+        const phrase = atomicPhrase(nextPlan[field]);
+        if (phrase !== cleanString2(nextPlan[field])) {
+          nextPlan[field] = phrase;
+          planChanged = true;
+          shotPlanSanitized += 1;
+        }
+      }
+      if (!cleanString2(nextPlan.primaryAction)) {
+        const candidate = primaryActionCandidates(shot).find(Boolean);
+        if (candidate) {
+          nextPlan.primaryAction = candidate;
+          planChanged = true;
+          primaryActionsSynthesized += 1;
+        }
+      }
+      if (planChanged)
+        shot.shotPlan = nextPlan;
+      if (fragment)
+        continue;
+      const characters = Array.isArray(shot.characters) ? shot.characters : [];
+      characters.forEach((character, characterIndex) => {
+        const nextCharacter = { ...character };
+        let characterChanged = false;
+        if (!cleanString2(nextCharacter.renderScope)) {
+          nextCharacter.renderScope = defaultRenderScopeForFraming(framing);
+          characterChanged = true;
+          renderScopesDefaulted += 1;
+        }
+        if (!cleanString2(nextCharacter.visibleTags)) {
+          const tags = projectDynamicVisibleTags(nextCharacter, shot.camera, cleanString2(nextCharacter.renderScope));
+          if (tags) {
+            nextCharacter.visibleTags = tags;
+            characterChanged = true;
+            visibleTagsSynthesized += 1;
+          }
+        }
+        if (characterChanged)
+          characters[characterIndex] = nextCharacter;
+      });
+    }
+  }
+  if (shotPlanSanitized > 0 || primaryActionsSynthesized > 0 || renderScopesDefaulted > 0 || visibleTagsSynthesized > 0) {
+    logStage(config, "dynamic_projection_repaired", {
+      method: "local",
+      shotPlanSanitized,
+      primaryActionsSynthesized,
+      renderScopesDefaulted,
+      visibleTagsSynthesized
+    });
+  }
+  return repaired;
 }
 function coverPayloadIssues(payload, config) {
   if (!config.coverImageEnabled)
@@ -4433,7 +4575,8 @@ async function parsePayloadWithRepair(parserConnection, config, messages, userId
       repairInput = payloadRepairInput(parsed, messages, terminalIssues.length > 0);
       throw new Error("Parser payload has no usable numbered shots.");
     }
-    const issues = modePayloadIssues(parsed, config, requireDynamicProjection);
+    const locallyRepaired = repairDynamicProjectionLocally(parsed, config, requireDynamicProjection);
+    const issues = modePayloadIssues(locallyRepaired, config, requireDynamicProjection);
     if (terminalIssues.length > 0) {
       repairSystem = [
         terminalStateRepairInstruction(terminalIssues, config, currentParagraphs),
@@ -4450,7 +4593,7 @@ async function parsePayloadWithRepair(parserConnection, config, messages, userId
       throw new Error("Mode-specific payload is incomplete.");
     }
     logStage(config, "json_parse_done", { repair: false });
-    return parsed;
+    return locallyRepaired;
   } catch {
     logStage(config, "json_parse_failed", { rawLength: raw.length, repairWillRun: true }, "warn");
     const repaired = await generateParserText(parserConnection, config, [
@@ -4464,13 +4607,14 @@ async function parsePayloadWithRepair(parserConnection, config, messages, userId
     if (structuralIssues.length > 0) {
       throw new Error(`Parser did not return usable numbered scenes: ${structuralIssues.join("; ")}`);
     }
-    const remainingIssues = modePayloadIssues(parsed, config, requireDynamicProjection);
+    const locallyRepaired = repairDynamicProjectionLocally(parsed, config, requireDynamicProjection);
+    const remainingIssues = modePayloadIssues(locallyRepaired, config, requireDynamicProjection);
     const remainingTerminalIssues = terminalStateIssues(parsed, config, currentParagraphs, requireTerminalState);
     if (remainingIssues.length > 0 || remainingTerminalIssues.length > 0) {
       throw new Error(`Parser did not return a complete payload: ${[...remainingIssues, ...remainingTerminalIssues].join("; ")}`);
     }
     logStage(config, "json_parse_done", { repair: true });
-    return parsed;
+    return locallyRepaired;
   }
 }
 async function repairDynamicCameraDiversity(parserConnection, config, payload, targetSource, userId, signal) {

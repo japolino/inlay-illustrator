@@ -4,6 +4,7 @@ import { DEFAULT_CONFIG, normalizeConfig } from "../shared/config.js";
 import { parserInstruction } from "./instructions.js";
 import {
   assemblePrompt,
+  projectDynamicVisibleTags,
   renderNegativeWithCurrentSelection,
   renderPrompt,
   renderPromptWithCurrentAffixes
@@ -1028,6 +1029,49 @@ describe("visibility tier projection", () => {
     expect(rendered).not.toContain("red jacket");
     expect(rendered).not.toContain("brown boots");
     expect(rendered).not.toContain("tense");
+  });
+
+  test("projectDynamicVisibleTags projects the baseline through the framing visibility tiers", () => {
+    const character = {
+      label: "girl",
+      appearance: "long white braid, blue eyes, pale skin",
+      body: "tall, curvy",
+      attire: "red jacket, black skirt, knee-high brown boots"
+    };
+    expect(projectDynamicVisibleTags(character, { framing: "portrait", angle: "eye level", perspective: "straight-on", focus: [] }))
+      .toBe("long white braid, blue eyes, pale skin, red jacket");
+    expect(projectDynamicVisibleTags(character, { framing: "medium shot", angle: "eye level", perspective: "straight-on", focus: [] }))
+      .toBe("long white braid, blue eyes, pale skin, curvy, red jacket");
+    expect(projectDynamicVisibleTags(character, { framing: "full body", angle: "eye level", perspective: "straight-on", focus: [] }))
+      .toBe("long white braid, blue eyes, pale skin, tall, curvy, red jacket, black skirt, knee-high brown boots");
+  });
+
+  test("projectDynamicVisibleTags returns empty for fragment framings so nothing leaks out of crop", () => {
+    const character = {
+      label: "girl",
+      appearance: "long white braid, blue eyes",
+      body: "tall",
+      attire: "red jacket, black skirt"
+    };
+    expect(projectDynamicVisibleTags(character, { framing: "body-part focus", angle: "eye level", perspective: "from side", focus: [] })).toBe("");
+    expect(projectDynamicVisibleTags(character, { framing: "head out of frame", angle: "eye level", perspective: "straight-on", focus: [] })).toBe("");
+    expect(projectDynamicVisibleTags(character, { framing: "eyes out of frame", angle: "eye level", perspective: "straight-on", focus: [] })).toBe("");
+  });
+
+  test("projectDynamicVisibleTags respects from-behind occlusions and eye hiding", () => {
+    const character = {
+      label: "girl",
+      appearance: "long white braid, blue eyes",
+      attire: "red jacket"
+    };
+    const fromBehind = projectDynamicVisibleTags(
+      character,
+      { framing: "medium shot", angle: "eye level", perspective: "from behind", focus: [] },
+      "upper body visible from behind"
+    );
+    expect(fromBehind).not.toContain("blue eyes");
+    expect(fromBehind).toContain("long white braid");
+    expect(fromBehind).toContain("red jacket");
   });
 
   test("compound footwear remains footwear in cowboy shots", () => {

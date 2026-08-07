@@ -405,29 +405,174 @@ describe("parser JSON recovery", () => {
         }]
       }]
     };
-    const repaired = structuredClone(incomplete) as typeof incomplete & {
-      scenes: Array<{ shots: Array<{
-        shotPlan?: Record<string, string>;
-        characters: Array<{ renderScope?: string; visibleTags?: string }>;
-      }> }>;
+    responses.push({ content: JSON.stringify(incomplete) });
+
+    const parsed = await parsePayloadWithRepair(connection, config, dynamicMessages);
+
+    // The deterministic local repair now resolves the omission in the main
+    // pass, so no LLM repair round trip is needed.
+    expect(requests).toHaveLength(1);
+    const shot = parsed.scenes?.[0].shots?.[0];
+    expect(shot?.shotPlan).toMatchObject({ primaryAction: "pulling the man left" });
+    expect(shot?.characters?.[0]).toMatchObject({
+      renderScope: "upper body visible",
+      visibleTags: "long white braid, navy coat"
+    });
+  });
+
+  test("locally repairs a Dynamic response that omits visibleTags and writes multi-clause shotPlan phrases", async () => {
+    const dynamicMessages: ParserGenerationRequest["messages"] = [{
+      role: "system",
+      content: "Dynamic shots require shotPlan.primaryAction plus renderScope and visibleTags."
+    }, {
+      role: "user",
+      content: "## Current Numbered Paragraph Source\n[P1]\nA woman pulls a man left through a train corridor."
+    }];
+    const incomplete = {
+      scenes: [{
+        environment: {
+          location: "inside train corridor",
+          timeWeather: "rainy evening",
+          lightingMood: ["cold window light"],
+          backgroundElements: ["closing doorway"]
+        },
+        shots: [{
+          paragraph: 1,
+          perspectiveMode: "dynamic",
+          camera: { framing: "medium shot", angle: "eye level", perspective: "from side", focus: [] },
+          shotPlan: {
+            primaryAction: "woman pulls man left",
+            secondaryCue: "",
+            staging: "woman leads beside the window, man follows behind"
+          },
+          situation: "1girl, 1boy",
+          characters: [{
+            name: "woman",
+            label: "girl",
+            appearance: "long white braid",
+            body: "tall",
+            attire: "navy coat, black skirt",
+            renderScope: "upper body visible",
+            composition: { position: "left side", pose: "running", actions: ["pulling the man left"], gaze: "looking forward" }
+          }, {
+            name: "man",
+            label: "boy",
+            appearance: "short black hair",
+            attire: "gray jacket",
+            renderScope: "upper body visible",
+            composition: { position: "right side", pose: "stumbling", actions: [], gaze: "looking forward" }
+          }]
+        }]
+      }]
     };
-    repaired.scenes[0].shots[0].shotPlan = {
-      primaryAction: "left woman pulls right man left",
-      secondaryCue: "",
-      staging: "left woman leads beside the closing doorway"
+    responses.push({ content: JSON.stringify(incomplete) });
+
+    const parsed = await parsePayloadWithRepair(connection, config, dynamicMessages);
+
+    // The deterministic local repair resolves everything: no LLM repair round trip.
+    expect(requests).toHaveLength(1);
+    const shot = parsed.scenes?.[0].shots?.[0];
+    expect(shot?.shotPlan).toMatchObject({ staging: "woman leads beside the window" });
+    expect(shot?.characters?.[0]).toMatchObject({
+      visibleTags: "long white braid, navy coat",
+      renderScope: "upper body visible"
+    });
+    expect(shot?.characters?.[1]).toMatchObject({
+      visibleTags: "short black hair, gray jacket",
+      renderScope: "upper body visible"
+    });
+    // Projection must respect the framing: hips/legs attire never leaks into a medium shot.
+    expect(shot?.characters?.[0]?.visibleTags).not.toContain("skirt");
+  });
+
+  test("locally repairs the LLM repair response when it still omits visibleTags", async () => {
+    const dynamicMessages: ParserGenerationRequest["messages"] = [{
+      role: "system",
+      content: "Dynamic shots require shotPlan.primaryAction plus renderScope and visibleTags."
+    }, {
+      role: "user",
+      content: "## Current Numbered Paragraph Source\n[P1]\nA woman pulls a man left through a train corridor."
+    }];
+    const broken = {
+      scenes: [{
+        environment: {
+          location: "inside train corridor",
+          timeWeather: "rainy evening",
+          lightingMood: ["cold window light"],
+          backgroundElements: ["closing doorway"]
+        },
+        shots: [{
+          paragraph: 1,
+          perspectiveMode: "dynamic",
+          camera: { framing: "medium shot", angle: "eye level", perspective: "from side", focus: [] },
+          shotPlan: { primaryAction: "", secondaryCue: "", staging: "woman leads beside the window, man follows behind" },
+          situation: "1girl, 1boy",
+          characters: [{
+            name: "woman",
+            label: "girl",
+            appearance: "long white braid",
+            attire: "navy coat",
+            composition: { position: "left side", pose: "running", actions: [], gaze: "looking forward" }
+          }]
+        }]
+      }]
     };
-    repaired.scenes[0].shots[0].characters[0].renderScope = "upper body visible at the left";
-    repaired.scenes[0].shots[0].characters[0].visibleTags = "long white braid, navy coat";
-    responses.push({ content: JSON.stringify(incomplete) }, { content: JSON.stringify(repaired) });
+    // Main call still fails after the local pass because primaryAction has no
+    // local source; the LLM repair adds primaryAction but again omits
+    // visibleTags, which the local pass then synthesizes.
+    const repairedByModel = structuredClone(broken);
+    repairedByModel.scenes[0].shots[0].shotPlan.primaryAction = "woman pulls man left";
+    responses.push({ content: JSON.stringify(broken) }, { content: JSON.stringify(repairedByModel) });
 
     const parsed = await parsePayloadWithRepair(connection, config, dynamicMessages);
 
     expect(requests).toHaveLength(2);
-    expect(requests[1].messages[0].content).toContain("compact rendering projection");
-    expect(requests[1].messages[0].content).toContain("shotPlan.primaryAction");
-    expect(parsed.scenes?.[0].shots?.[0].shotPlan).toMatchObject({
-      primaryAction: "left woman pulls right man left"
+    const shot = parsed.scenes?.[0].shots?.[0];
+    expect(shot?.shotPlan).toMatchObject({ primaryAction: "woman pulls man left", staging: "woman leads beside the window" });
+    expect(shot?.characters?.[0]).toMatchObject({
+      renderScope: "upper body visible",
+      visibleTags: "long white braid, navy coat"
     });
+  });
+
+  test("accepts fragment framings whose characters omit renderScope and visibleTags", async () => {
+    const dynamicMessages: ParserGenerationRequest["messages"] = [{
+      role: "system",
+      content: "Dynamic shots require shotPlan.primaryAction plus renderScope and visibleTags."
+    }, {
+      role: "user",
+      content: "## Current Numbered Paragraph Source\n[P1]\nHer hand reaches out."
+    }];
+    responses.push({ content: JSON.stringify({
+      scenes: [{
+        environment: {
+          location: "inside train corridor",
+          timeWeather: "rainy evening",
+          lightingMood: ["cold window light"],
+          backgroundElements: ["closing doorway"]
+        },
+        shots: [{
+          paragraph: 1,
+          perspectiveMode: "dynamic",
+          camera: { framing: "body-part focus", angle: "eye level", perspective: "from side", focus: [] },
+          shotPlan: { primaryAction: "hand reaches out", secondaryCue: "", staging: "hand extends" },
+          situation: "1girl",
+          characters: [{
+            name: "woman",
+            label: "girl",
+            appearance: "long white braid",
+            attire: "navy coat",
+            composition: { position: "left", pose: "reaching", actions: [], gaze: "" }
+          }]
+        }]
+      }]
+    }) });
+
+    const parsed = await parsePayloadWithRepair(connection, config, dynamicMessages);
+
+    expect(requests).toHaveLength(1);
+    // The renderer fails closed for fragment framings; the parser must not block generation.
+    expect(parsed.scenes?.[0].shots?.[0].characters?.[0]).not.toHaveProperty("visibleTags");
   });
 
   test("logs numeric parser usage without logging response content", async () => {

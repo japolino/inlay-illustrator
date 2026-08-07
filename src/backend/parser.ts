@@ -7,11 +7,13 @@ import {
 import { parserInstruction } from "./instructions.js";
 import {
   auditDynamicCameraDiversity,
+  CAMERA_FRAMING_VALUES,
   cameraRepairInstruction,
   mergeDynamicCameraRepair,
   repairDynamicCameraDiversityLocally
 } from "./camera-diversity.js";
 import { logStage } from "./logging.js";
+import { isFragmentCameraFraming, projectDynamicVisibleTags } from "./prompt.js";
 import { abortError, throwIfAborted } from "./operation-manager.js";
 import {
   dedupeExactShotCharacters,
@@ -19,8 +21,8 @@ import {
   normalizeScenePayload,
   recoverSceneParagraphs
 } from "./scenes.js";
-import type { CreativeConcept, ParsedPayload, ParserConnection, ParserContext, ParserGenerationRequest, PreparedParagraph, SceneJson, ShotJson } from "./types.js";
-import { asRecord, cleanString, compactBlock, keysOf } from "./utils.js";
+import type { CharacterJson, CreativeConcept, ParsedPayload, ParserConnection, ParserContext, ParserGenerationRequest, PreparedParagraph, SceneJson, ShotJson } from "./types.js";
+import { asRecord, cleanArray, cleanString, compactBlock, keysOf } from "./utils.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
@@ -310,12 +312,17 @@ function dynamicPayloadIssues(payload: ParsedPayload, config: Config, required =
           issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} shotPlan.${field} must be one atomic comma-free phrase`);
         }
       }
+      const fragment = isFragmentCameraFraming(framingOf(shot.camera));
       const characters = Array.isArray(shot.characters) ? shot.characters : [];
       characters.forEach((character, characterIndex) => {
-        if (!cleanString(character.renderScope)) {
+        // Fragment framings (body-part focus, head/eyes out of frame) are
+        // exempt: visibleTags cannot be derived from the baseline without
+        // leaking out-of-crop traits, and the renderer fails closed when the
+        // projection is absent. Ordinary framings are repaired locally.
+        if (!fragment && !cleanString(character.renderScope)) {
           issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} character ${characterIndex + 1} needs renderScope`);
         }
-        if (!cleanString(character.visibleTags)) {
+        if (!fragment && !cleanString(character.visibleTags)) {
           issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} character ${characterIndex + 1} needs visibleTags`);
         }
       });
@@ -334,6 +341,152 @@ function dynamicRepairInstruction(issues: string[]): string {
     "Do not add a character, action, contact, emotion, outfit, prop, or event.",
     `Problems to repair:\n- ${issues.join("\n- ")}`
   ].join("\n");
+}
+
+function framingOf(camera: unknown): string {
+  const record = asRecord(camera);
+  const framing = cleanString(record.framing).toLowerCase();
+  if (framing) return framing;
+  const text = cleanString(camera).toLowerCase();
+  const byLengthDesc = [...CAMERA_FRAMING_VALUES].sort((left, right) => right.length - left.length);
+  return byLengthDesc.find((value) => text.includes(value)) || "";
+}
+
+const FRAGMENT_RENDER_SCOPE_DEFAULTS: Record<string, string> = {
+  portrait: "head and shoulders visible",
+  "close-up": "head and shoulders visible",
+  "medium close-up": "head and torso visible",
+  "upper body": "upper body visible",
+  "medium shot": "upper body visible",
+  "cowboy shot": "hips and upper legs visible",
+  "feet out of frame": "full body with feet cropped out of frame",
+  "full body": "full body visible",
+  "wide shot": "full body visible",
+  "lower body": "lower body visible"
+};
+
+/** Restates the camera framing as the renderScope the parser contract requires. */
+function defaultRenderScopeForFraming(framing: string): string {
+  return FRAGMENT_RENDER_SCOPE_DEFAULTS[framing] || "full body visible";
+}
+
+/**
+ * Reduces a shotPlan field to one atomic comma-free phrase. The renderer keeps
+ * only the first comma/semicolon-separated snippet of each shotPlan field, so
+ * this makes the parser's audit match what is actually rendered instead of
+ * failing the whole batch on phrasing the model cannot produce.
+ */
+function atomicPhrase(value: unknown): string {
+  const text = cleanString(Array.isArray(value) ? value[0] : value);
+  if (!text) return "";
+  return text.split(/[,;]/)[0].replace(ATOMIC_DIRECTION_END, "").trim();
+}
+
+/**
+ * Sources the renderer falls back to when shotPlan.primaryAction is missing:
+ * a legacy string shotPlan, then the shot-level action, then per-character
+ * composition actions.
+ */
+function primaryActionCandidates(shot: ShotJson): string[] {
+  const candidates: string[] = [];
+  if (typeof shot.shotPlan === "string") {
+    const plan = atomicPhrase(shot.shotPlan);
+    if (plan) candidates.push(plan);
+  }
+  const action = atomicPhrase(shot.action);
+  if (action) candidates.push(action);
+  for (const character of cleanArray<CharacterJson>(shot.characters)) {
+    const composition = asRecord(character.composition);
+    const actions = Array.isArray(composition.actions) ? composition.actions : [composition.actions];
+    for (const value of actions) {
+      const phrase = atomicPhrase(value);
+      if (phrase) candidates.push(phrase);
+    }
+  }
+  return candidates;
+}
+
+/**
+ * Deterministic repair for Dynamic shots whose model omits the compact
+ * rendering projection (visibleTags / renderScope) or writes multi-clause
+ * shotPlan phrases. This mirrors the renderer's own behavior:
+ * - visibleTags are projected from the complete baseline through the camera's
+ *   visibility tiers for ordinary framings;
+ * - renderScope is restated from the framing;
+ * - shotPlan fields are reduced to the first atomic clause the renderer keeps.
+ * Fragment framings are left alone: a baseline projection would leak
+ * out-of-crop traits, and the renderer fails closed when visibleTags are absent.
+ */
+export function repairDynamicProjectionLocally(
+  payload: ParsedPayload,
+  config: Config,
+  required: boolean
+): ParsedPayload {
+  if (config.promptStyle !== "anima" || !required) return payload;
+  const repaired = JSON.parse(JSON.stringify(payload)) as ParsedPayload;
+  let shotPlanSanitized = 0;
+  let primaryActionsSynthesized = 0;
+  let renderScopesDefaulted = 0;
+  let visibleTagsSynthesized = 0;
+  for (const scene of cleanArray<SceneJson>(repaired.scenes)) {
+    const shots = Array.isArray(scene.shots) ? scene.shots : [scene];
+    for (const shot of shots) {
+      if (!dynamicShot(shot, config)) continue;
+      const framing = framingOf(shot.camera);
+      const fragment = isFragmentCameraFraming(framing);
+      const plan = asRecord(shot.shotPlan);
+      const nextPlan = { ...plan };
+      let planChanged = false;
+      for (const field of ["primaryAction", "secondaryCue", "staging"] as const) {
+        if (!cleanString(nextPlan[field])) continue;
+        const phrase = atomicPhrase(nextPlan[field]);
+        if (phrase !== cleanString(nextPlan[field])) {
+          nextPlan[field] = phrase;
+          planChanged = true;
+          shotPlanSanitized += 1;
+        }
+      }
+      if (!cleanString(nextPlan.primaryAction)) {
+        const candidate = primaryActionCandidates(shot).find(Boolean);
+        if (candidate) {
+          nextPlan.primaryAction = candidate;
+          planChanged = true;
+          primaryActionsSynthesized += 1;
+        }
+      }
+      if (planChanged) shot.shotPlan = nextPlan;
+      if (fragment) continue;
+      const characters = Array.isArray(shot.characters) ? shot.characters : [];
+      characters.forEach((character, characterIndex) => {
+        const nextCharacter = { ...character };
+        let characterChanged = false;
+        if (!cleanString(nextCharacter.renderScope)) {
+          nextCharacter.renderScope = defaultRenderScopeForFraming(framing);
+          characterChanged = true;
+          renderScopesDefaulted += 1;
+        }
+        if (!cleanString(nextCharacter.visibleTags)) {
+          const tags = projectDynamicVisibleTags(nextCharacter, shot.camera, cleanString(nextCharacter.renderScope));
+          if (tags) {
+            nextCharacter.visibleTags = tags;
+            characterChanged = true;
+            visibleTagsSynthesized += 1;
+          }
+        }
+        if (characterChanged) characters[characterIndex] = nextCharacter;
+      });
+    }
+  }
+  if (shotPlanSanitized > 0 || primaryActionsSynthesized > 0 || renderScopesDefaulted > 0 || visibleTagsSynthesized > 0) {
+    logStage(config, "dynamic_projection_repaired", {
+      method: "local",
+      shotPlanSanitized,
+      primaryActionsSynthesized,
+      renderScopesDefaulted,
+      visibleTagsSynthesized
+    });
+  }
+  return repaired;
 }
 
 function coverPayloadIssues(payload: ParsedPayload, config: Config): string[] {
@@ -904,7 +1057,8 @@ export async function parsePayloadWithRepair(
       repairInput = payloadRepairInput(parsed, messages, terminalIssues.length > 0);
       throw new Error("Parser payload has no usable numbered shots.");
     }
-    const issues = modePayloadIssues(parsed, config, requireDynamicProjection);
+    const locallyRepaired = repairDynamicProjectionLocally(parsed, config, requireDynamicProjection);
+    const issues = modePayloadIssues(locallyRepaired, config, requireDynamicProjection);
     if (terminalIssues.length > 0) {
       repairSystem = [
         terminalStateRepairInstruction(terminalIssues, config, currentParagraphs),
@@ -921,7 +1075,7 @@ export async function parsePayloadWithRepair(
       throw new Error("Mode-specific payload is incomplete.");
     }
     logStage(config, "json_parse_done", { repair: false });
-    return parsed;
+    return locallyRepaired;
   } catch {
     logStage(config, "json_parse_failed", { rawLength: raw.length, repairWillRun: true }, "warn");
     const repaired = await generateParserText(parserConnection, config, [
@@ -936,13 +1090,14 @@ export async function parsePayloadWithRepair(
     if (structuralIssues.length > 0) {
       throw new Error(`Parser did not return usable numbered scenes: ${structuralIssues.join("; ")}`);
     }
-    const remainingIssues = modePayloadIssues(parsed, config, requireDynamicProjection);
+    const locallyRepaired = repairDynamicProjectionLocally(parsed, config, requireDynamicProjection);
+    const remainingIssues = modePayloadIssues(locallyRepaired, config, requireDynamicProjection);
     const remainingTerminalIssues = terminalStateIssues(parsed, config, currentParagraphs, requireTerminalState);
     if (remainingIssues.length > 0 || remainingTerminalIssues.length > 0) {
       throw new Error(`Parser did not return a complete payload: ${[...remainingIssues, ...remainingTerminalIssues].join("; ")}`);
     }
     logStage(config, "json_parse_done", { repair: true });
-    return parsed;
+    return locallyRepaired;
   }
 }
 
