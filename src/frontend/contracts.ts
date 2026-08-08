@@ -32,6 +32,8 @@ export type BackendMessage = {
   config?: Config;
   parserConnections?: ParserConnection[];
   characterAppearance?: Record<string, string>;
+  avatarVisualSupplements?: Record<string, unknown>;
+  avatarVisionAttempts?: Record<string, unknown>;
   status?: string;
   error?: string;
   record?: { imageUrls?: string[] };

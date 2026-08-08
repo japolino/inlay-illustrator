@@ -151,6 +151,47 @@ function effectiveGenerationConfig(config) {
   };
 }
 
+// src/frontend/avatar-image.ts
+var MAX_AVATAR_BYTES = 8000000;
+function bytesToBase64(bytes) {
+  let binary = "";
+  const chunkSize = 32768;
+  for (let offset = 0;offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+async function respondToAvatarImageRequest(message, sendToBackend, fetchFn = fetch) {
+  const requestId = String(message.requestId || "");
+  const imageUrl = String(message.imageUrl || "");
+  const chatId = String(message.chatId || "");
+  const respond = (payload) => sendToBackend({
+    type: "avatar_image_response",
+    requestId,
+    chatId,
+    ...payload
+  });
+  if (!requestId || !/^\/api\/v1\/images\//.test(imageUrl)) {
+    respond({ error: "Invalid avatar image request." });
+    return;
+  }
+  try {
+    const response = await fetchFn(imageUrl, { credentials: "include", headers: { Accept: "image/*" } });
+    if (!response.ok)
+      throw new Error(`Avatar fetch failed (${response.status}).`);
+    const blob = await response.blob();
+    const mimeType = String(blob.type || response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (!/^image\/(?:png|jpe?g|webp|gif)$/.test(mimeType))
+      throw new Error("Avatar response was not a supported image.");
+    if (blob.size <= 0 || blob.size > MAX_AVATAR_BYTES)
+      throw new Error("Avatar image is empty or too large.");
+    const data = bytesToBase64(new Uint8Array(await blob.arrayBuffer()));
+    respond({ data, mimeType });
+  } catch (error) {
+    respond({ error: error instanceof Error ? error.message.slice(0, 300) : "Avatar fetch failed." });
+  }
+}
+
 // src/frontend/api.ts
 var JSON_HEADERS = { Accept: "application/json" };
 async function fetchImageGenerationSettings() {
@@ -1174,7 +1215,12 @@ function setup(ctx) {
     } catch {}
   }
   const unsub = ctx.onBackendMessage((payload) => {
-    routeBackendMessage(payload, activeChatId, {
+    const message = payload;
+    if (message.type === "avatar_image_request") {
+      respondToAvatarImageRequest(message, (response) => ctx.sendToBackend(response));
+      return;
+    }
+    routeBackendMessage(message, activeChatId, {
       replaceConfig: (next) => {
         config = next;
       },

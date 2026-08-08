@@ -1,4 +1,5 @@
 import { effectiveGenerationConfig, type Config, type PerspectiveMode } from "../shared/config.js";
+import { applyAvatarVisualSupplements, ensureAvatarVisualSupplement } from "./avatar-vision.js";
 import {
   buildLorebookContextSnapshot,
   buildParserContext,
@@ -268,6 +269,16 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
       fastBootstrapCharacter: input.fastBootstrapCharacter === true
     })
   ]);
+  await ensureAvatarVisualSupplement({
+    chatId,
+    character: contextSources.character,
+    canonicalTags: state.characterAppearance,
+    connection: parserConnection,
+    config,
+    state,
+    userId,
+    signal
+  });
 
   for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
     try {
@@ -379,6 +390,7 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
         config.previousVisualStateEnabled ? state.previousVisualState : undefined
       );
       parsed = await repairDynamicCameraDiversity(parserConnection, config, parsed, targetSource, userId, signal);
+      parsed = applyAvatarVisualSupplements(parsed, state.avatarVisualSupplements);
       if (config.adaptiveMode && config.fastMode) {
         logStage(config, "creative_ideation_skipped", { reason: "fast_mode", mode: "adaptive" });
         conceptSelections = new Map();

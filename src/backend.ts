@@ -1,4 +1,5 @@
 import { DEFAULT_CONFIG, normalizeConfig, type Config } from "./shared/config.js";
+import { acceptAvatarImageResponse } from "./backend/avatar-image-bridge.js";
 import { isOwnMessage } from "./backend/context.js";
 import {
   generateForMessage,
@@ -83,6 +84,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
   const message = payload as Record<string, unknown>;
   let configForError: Config | null = null;
   try {
+    if (acceptAvatarImageResponse(message)) return;
     if (message.type === "get_state") {
       const config = await getConfig(userId);
       configForError = config;

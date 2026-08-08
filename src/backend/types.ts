@@ -47,6 +47,12 @@ export type CharacterJson = {
   appearance?: unknown;
   body?: unknown;
   attire?: unknown;
+  /** Avatar-observed complement used only while rendering. Never persisted into canonical character memory. */
+  avatarAppearance?: unknown;
+  /** Avatar-observed body complement used only while rendering. */
+  avatarBody?: unknown;
+  /** Avatar-observed attire complement used only while rendering. */
+  avatarAttire?: unknown;
   /** True when attire was plausibly inferred for this scene instead of sourced from durable character facts. */
   attireInferred?: unknown;
   /** Provenance for durable visual fields. Missing only on legacy parser output. */
@@ -170,6 +176,7 @@ export type ParserConnection = {
   name: string;
   provider: string;
   model: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type ImageConnection = {
@@ -212,6 +219,27 @@ export type PreparedImageJob = {
   parameters: Record<string, unknown>;
 };
 
+export type AvatarVisualSupplement = {
+  characterId: string;
+  imageId: string;
+  characterName: string;
+  appearance: string;
+  body: string;
+  attire: string;
+  provider: string;
+  model: string;
+  createdAt: string;
+};
+
+export type AvatarVisionAttempt = {
+  characterId: string;
+  imageId: string;
+  provider: string;
+  model: string;
+  status: "unsupported" | "failed" | "completed";
+  attemptedAt: string;
+};
+
 export type State = {
   characterAppearance: Record<string, string>;
   /**
@@ -219,6 +247,10 @@ export type State = {
    * characterAppearance entries, but it must never replace these values.
    */
   manualCharacterAppearance?: Record<string, string>;
+  /** One-time avatar observations, separate from factual card-derived character memory. */
+  avatarVisualSupplements?: Record<string, AvatarVisualSupplement>;
+  /** Per avatar/model attempt records prevent repeated unsupported vision calls. */
+  avatarVisionAttempts?: Record<string, AvatarVisionAttempt>;
   generated: Record<string, unknown>;
   /** Compact lookup for records stored outside the continuity-state document. */
   generatedImageIndex?: Record<string, { key: string; index: number }>;

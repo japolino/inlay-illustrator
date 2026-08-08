@@ -272,6 +272,8 @@ export async function sendState(userId?: string, chatId?: string, preparedConfig
     config,
     parserConnections,
     chatId: chatId || "",
-    characterAppearance: state?.characterAppearance || {}
+    characterAppearance: state?.characterAppearance || {},
+    avatarVisualSupplements: state?.avatarVisualSupplements || {},
+    avatarVisionAttempts: state?.avatarVisionAttempts || {}
   }, userId);
 }

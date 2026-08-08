@@ -620,7 +620,13 @@ export async function resolveParserConnection(config: Config, userId?: string): 
     connectionModel: connection.model,
     effectiveModel: config.parserModel || connection.model
   });
-  const resolved = { id: connection.id, name: connection.name, provider: connection.provider, model: connection.model };
+  const resolved = {
+    id: connection.id,
+    name: connection.name,
+    provider: connection.provider,
+    model: connection.model,
+    metadata: connection.metadata
+  };
   cacheParserConnection(cacheKey, resolved);
   return resolved;
 }

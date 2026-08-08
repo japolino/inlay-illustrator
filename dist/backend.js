@@ -151,6 +151,71 @@ function effectiveGenerationConfig(config) {
   };
 }
 
+// src/backend/avatar-image-bridge.ts
+var pending = new Map;
+var MAX_BASE64_LENGTH = 12000000;
+function finish(requestId) {
+  const entry = pending.get(requestId);
+  if (!entry)
+    return null;
+  pending.delete(requestId);
+  clearTimeout(entry.timer);
+  if (entry.signal && entry.abort)
+    entry.signal.removeEventListener("abort", entry.abort);
+  return entry;
+}
+async function requestAvatarImage(imageId, chatId, userId, signal, timeoutMs = 8000) {
+  const image = await spindle.images.get(imageId, { specificity: "lg", userId });
+  if (!image?.url)
+    throw new Error("Character avatar image is unavailable.");
+  if (signal?.aborted)
+    throw new DOMException("Avatar request aborted.", "AbortError");
+  const requestId = crypto.randomUUID();
+  const response = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      const entry2 = finish(requestId);
+      entry2?.reject(new Error("Timed out waiting for the character avatar."));
+    }, timeoutMs);
+    const entry = { resolve, reject, timer, signal };
+    if (signal) {
+      entry.abort = () => {
+        const current = finish(requestId);
+        current?.reject(new DOMException("Avatar request aborted.", "AbortError"));
+      };
+      signal.addEventListener("abort", entry.abort, { once: true });
+    }
+    pending.set(requestId, entry);
+  });
+  spindle.sendToFrontend({
+    type: "avatar_image_request",
+    chatId,
+    requestId,
+    imageUrl: image.url
+  }, userId);
+  return response;
+}
+function acceptAvatarImageResponse(message) {
+  if (message.type !== "avatar_image_response")
+    return false;
+  const requestId = String(message.requestId || "");
+  const entry = finish(requestId);
+  if (!entry)
+    return true;
+  const error = String(message.error || "").trim();
+  if (error) {
+    entry.reject(new Error(error));
+    return true;
+  }
+  const data = String(message.data || "").trim();
+  const mimeType = String(message.mimeType || "").trim().toLowerCase();
+  if (!data || data.length > MAX_BASE64_LENGTH || !/^image\/(?:png|jpe?g|webp|gif)$/.test(mimeType)) {
+    entry.reject(new Error("The frontend returned an invalid avatar image."));
+    return true;
+  }
+  entry.resolve({ data, mimeType });
+  return true;
+}
+
 // src/backend/constants.ts
 var EXTENSION_ID = "inlay_illustrator";
 var MARKER = "<!-- inlay_illustrator -->";
@@ -866,7 +931,7 @@ function assembleCharacterBlock(character, config, replacements, includeAction, 
   if (perspectiveMode === "creative") {
     return unique(csvParts(stripOrReplaceNames(cleanString2(character.visibleTags), replacements, true))).join(", ");
   }
-  return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", stripOrReplaceNames(cleanString2(character.age), replacements, true), stripOrReplaceNames(cleanString2(character.identity), replacements, true), stripOrReplaceNames(cleanString2(character.appearance), replacements, true), stripOrReplaceNames(cleanString2(character.body), replacements, true), stripOrReplaceNames(cleanString2(character.attire), replacements, true), stripOrReplaceNames(cleanString2(character.expression), replacements, true), includeAction ? stripOrReplaceNames(cleanString2(character.action), replacements, true) : "")).join(", ");
+  return unique(csvParts(stripOrReplaceNames(cleanString2(character.label), replacements, true), shouldIncludeCharacterNames(config) ? displayName(cleanString2(character.name), config) : "", stripOrReplaceNames(cleanString2(character.age), replacements, true), stripOrReplaceNames(cleanString2(character.identity), replacements, true), stripOrReplaceNames(cleanString2(character.appearance), replacements, true), stripOrReplaceNames(cleanString2(character.avatarAppearance), replacements, true), stripOrReplaceNames(cleanString2(character.body), replacements, true), stripOrReplaceNames(cleanString2(character.avatarBody), replacements, true), stripOrReplaceNames(cleanString2(character.attire), replacements, true), stripOrReplaceNames(cleanString2(character.avatarAttire), replacements, true), stripOrReplaceNames(cleanString2(character.expression), replacements, true), includeAction ? stripOrReplaceNames(cleanString2(character.action), replacements, true) : "")).join(", ");
 }
 function isFragmentRenderScope(value) {
   const scope = cleanString2(value).toLowerCase();
@@ -1095,8 +1160,11 @@ function baselineTags(character) {
   const fields = [
     ["identity", character.identity],
     ["appearance", character.appearance],
+    ["appearance", character.avatarAppearance],
     ["body", character.body],
-    ["attire", character.attire]
+    ["body", character.avatarBody],
+    ["attire", character.attire],
+    ["attire", character.avatarAttire]
   ];
   const seen = new Set;
   const output = [];
@@ -2354,6 +2422,724 @@ Use these as a baseline for returning characters (including their base attire). 
   };
 }
 
+// src/backend/memory.ts
+var VOLATILE_MEMORY_TERMS = [
+  "sitting",
+  "standing",
+  "leaning",
+  "guided",
+  "guiding",
+  "holding",
+  "pulling",
+  "looking",
+  "gaze",
+  "smug",
+  "flustered",
+  "blush",
+  "smile",
+  "angry",
+  "crying",
+  "grin",
+  "embarrassed",
+  "annoyed",
+  "chair",
+  "bed",
+  "sofa",
+  "couch",
+  "desk",
+  "table",
+  "from above",
+  "from below",
+  "from behind",
+  "close-up",
+  "wide shot",
+  "portrait",
+  "upper body",
+  "full body",
+  "cowboy shot",
+  "pov"
+];
+var TRANSIENT_ATTIRE_MEMORY_TERMS = [
+  "torn clothes",
+  "open shirt",
+  "shirt lift",
+  "panty pull",
+  "clothes pull",
+  "undressing"
+];
+var PLACEHOLDER_TERM2 = /\b(?:unknown|unspecified|not specified|not stated|unmentioned|undetermined|n\/?a)\b/i;
+function sanitizeMemoryTags(tags) {
+  return normalizeReferenceTags(csvParts(tags).filter((tag) => {
+    const normalized = tag.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!normalized)
+      return false;
+    if (PLACEHOLDER_TERM2.test(normalized))
+      return false;
+    if (TRANSIENT_ATTIRE_MEMORY_TERMS.some((term) => normalized === term || normalized.includes(term)))
+      return false;
+    return !VOLATILE_MEMORY_TERMS.some((term) => normalized === term || normalized.includes(term));
+  }).join(", "));
+}
+function baselineCharacterTags(character) {
+  const attireInferred = character.attireInferred === true || String(character.attireInferred).toLowerCase() === "true";
+  const sources = character.sources && typeof character.sources === "object" ? character.sources : undefined;
+  const durable = (field, value) => {
+    if (!sources)
+      return field === "attire" && attireInferred ? "" : value;
+    const source = sources[field];
+    return source === "card_explicit" || source === "previous_memory" ? value : "";
+  };
+  const label = sources ? "" : character.label;
+  return sanitizeMemoryTags(unique(csvParts(label, durable("age", character.age), sources ? "" : character.identity, durable("appearance", character.appearance), durable("body", character.body), durable("attire", character.attire))).join(", "));
+}
+function hasTransientProvenance(character) {
+  const sources = character.sources;
+  if (!sources || typeof sources !== "object")
+    return false;
+  const values = [
+    ["age", character.age],
+    ["appearance", character.appearance],
+    ["body", character.body],
+    ["attire", character.attire]
+  ];
+  return values.some(([field, value]) => {
+    if (!String(value ?? "").trim())
+      return false;
+    const source = sources[field];
+    return source !== "card_explicit" && source !== "previous_memory";
+  });
+}
+function matchingKey(map, name) {
+  if (!map)
+    return;
+  return Object.keys(map).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+}
+function updateCache(cache, payload, manualCharacterAppearance) {
+  for (const { shot } of normalizeScenePayload(payload)) {
+    for (const character of cleanArray(shot.characters)) {
+      const name = normalizeCharacterName(character.name);
+      if (!name)
+        continue;
+      const manualKey = matchingKey(manualCharacterAppearance, name);
+      if (manualKey) {
+        const cacheKey2 = matchingKey(cache, name);
+        if (cacheKey2 && cacheKey2 !== manualKey)
+          delete cache[cacheKey2];
+        cache[manualKey] = manualCharacterAppearance[manualKey];
+        continue;
+      }
+      const cacheKey = matchingKey(cache, name);
+      if (cacheKey && hasTransientProvenance(character))
+        continue;
+      const tags = baselineCharacterTags(character);
+      if (!tags)
+        continue;
+      if (cacheKey && cacheKey !== name)
+        delete cache[cacheKey];
+      cache[name] = tags;
+    }
+  }
+}
+function updateCharacterMemory(state, payload) {
+  updateCache(state.characterAppearance, payload, state.manualCharacterAppearance);
+}
+function invalidatePreviousVisualCharacters(state, names) {
+  if (!state.previousVisualState || names.length === 0)
+    return;
+  const targets = new Set(names.map((name) => normalizeCharacterName(name).toLowerCase()).filter(Boolean));
+  state.previousVisualState.characters = cleanArray(state.previousVisualState.characters).filter((character) => !targets.has(normalizeCharacterName(character.name).toLowerCase()));
+}
+function upsertCharacterTag(state, oldName, nextName, nextTags) {
+  const previous = normalizeCharacterName(oldName);
+  const name = normalizeCharacterName(nextName);
+  const tags = sanitizeMemoryTags(normalizeReferenceTags(nextTags));
+  if (!name)
+    throw new Error("Character name is required.");
+  if (!tags)
+    throw new Error("Character appearance tags must include at least one durable tag.");
+  const entries = Object.keys(state.characterAppearance);
+  const sourceKey = previous ? entries.find((candidate) => candidate.toLowerCase() === previous.toLowerCase()) : undefined;
+  const destinationCollision = entries.find((candidate) => candidate.toLowerCase() === name.toLowerCase() && candidate !== sourceKey);
+  if (destinationCollision)
+    throw new Error(`A character named "${name}" already exists.`);
+  if (sourceKey && sourceKey !== name)
+    delete state.characterAppearance[sourceKey];
+  state.characterAppearance[name] = tags;
+  const manual = state.manualCharacterAppearance || {};
+  const manualSourceKey = previous ? matchingKey(manual, previous) : undefined;
+  const manualDestinationKey = matchingKey(manual, name);
+  if (manualSourceKey && manualSourceKey !== name)
+    delete manual[manualSourceKey];
+  if (manualDestinationKey && manualDestinationKey !== name)
+    delete manual[manualDestinationKey];
+  manual[name] = tags;
+  state.manualCharacterAppearance = manual;
+  invalidatePreviousVisualCharacters(state, [previous, name]);
+}
+function deleteCharacterTag(state, name) {
+  const target = normalizeCharacterName(name);
+  if (!target)
+    return;
+  const key = Object.keys(state.characterAppearance).find((candidate) => candidate.toLowerCase() === target.toLowerCase()) || target;
+  delete state.characterAppearance[key];
+  const manualKey = matchingKey(state.manualCharacterAppearance, target);
+  if (manualKey)
+    delete state.manualCharacterAppearance[manualKey];
+  if (state.manualCharacterAppearance && Object.keys(state.manualCharacterAppearance).length === 0) {
+    delete state.manualCharacterAppearance;
+  }
+  invalidatePreviousVisualCharacters(state, [target]);
+}
+
+// src/backend/storage.ts
+var stateUpdateQueues = new Map;
+var configUpdateQueues = new Map;
+async function readJson(path, fallback, userId) {
+  try {
+    if (typeof spindle.userStorage.getJson === "function") {
+      const value2 = await spindle.userStorage.getJson(path, { fallback, userId });
+      return value2 && typeof value2 === "object" && fallback && typeof fallback === "object" ? { ...fallback, ...value2 } : value2 ?? fallback;
+    }
+    if (!await spindle.userStorage.exists(path, userId))
+      return fallback;
+    const text = await spindle.userStorage.read(path, userId);
+    const value = JSON.parse(text);
+    return value && typeof value === "object" && fallback && typeof fallback === "object" ? { ...fallback, ...value } : value ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+async function writeJson(path, value, userId) {
+  if (typeof spindle.userStorage.setJson === "function") {
+    await spindle.userStorage.setJson(path, value, { indent: 0, userId });
+    return;
+  }
+  const slash = path.lastIndexOf("/");
+  if (slash > 0)
+    await spindle.userStorage.mkdir(path.slice(0, slash), userId).catch(() => {
+      return;
+    });
+  await spindle.userStorage.write(path, JSON.stringify(value), userId);
+}
+async function getConfig(userId) {
+  return normalizeConfig(await readJson("config.json", DEFAULT_CONFIG, userId));
+}
+async function setConfig(patch, userId) {
+  const queueKey = userId ?? "";
+  const previous = configUpdateQueues.get(queueKey) || Promise.resolve();
+  const operation = previous.then(async () => {
+    const next = normalizeConfig({ ...await getConfig(userId), ...patch });
+    await writeJson("config.json", next, userId);
+    return next;
+  });
+  const tail = operation.then(() => {
+    return;
+  }, () => {
+    return;
+  });
+  configUpdateQueues.set(queueKey, tail);
+  try {
+    return await operation;
+  } finally {
+    if (configUpdateQueues.get(queueKey) === tail)
+      configUpdateQueues.delete(queueKey);
+  }
+}
+async function getState(chatId, userId) {
+  return readJson(`states/${chatId}.json`, { characterAppearance: {}, generated: {} }, userId);
+}
+async function getStateForUpdate(chatId, userId) {
+  const fallback = { characterAppearance: {}, generated: {} };
+  const path = `states/${chatId}.json`;
+  if (typeof spindle.userStorage.getJson === "function") {
+    const value = await spindle.userStorage.getJson(path, { fallback, userId });
+    return { ...fallback, ...value };
+  }
+  if (!await spindle.userStorage.exists(path, userId))
+    return fallback;
+  return { ...fallback, ...JSON.parse(await spindle.userStorage.read(path, userId)) };
+}
+function safePathPart(value) {
+  return encodeURIComponent(value).replace(/%/g, "_");
+}
+function recordPath(chatId, key) {
+  return `records/${safePathPart(chatId)}/${safePathPart(key)}.json`;
+}
+function workflowPath(hash) {
+  return `workflows/${hash}.json`;
+}
+async function contentHash(value) {
+  const bytes = new TextEncoder().encode(value);
+  if (globalThis.crypto?.subtle) {
+    const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(digest)].map((entry) => entry.toString(16).padStart(2, "0")).join("");
+  }
+  let left = 2166136261;
+  let right = 2246822519;
+  for (const byte of bytes) {
+    left = Math.imul(left ^ byte, 16777619);
+    right = Math.imul(right ^ byte, 3266489917);
+  }
+  return `${(left >>> 0).toString(16).padStart(8, "0")}${(right >>> 0).toString(16).padStart(8, "0")}`;
+}
+var WORKFLOW_REFERENCE_KEY = "__inlayIllustratorWorkflowRef";
+var storedWorkflowWrites = new Map;
+async function ensureWorkflowStored(hash, workflow, userId) {
+  const cacheKey = JSON.stringify([userId ?? null, hash]);
+  const existing = storedWorkflowWrites.get(cacheKey);
+  if (existing)
+    return existing;
+  const operation = (async () => {
+    const path = workflowPath(hash);
+    if (!await spindle.userStorage.exists(path, userId))
+      await writeJson(path, workflow, userId);
+  })();
+  if (storedWorkflowWrites.size >= 64) {
+    const oldest = storedWorkflowWrites.keys().next().value;
+    if (typeof oldest === "string")
+      storedWorkflowWrites.delete(oldest);
+  }
+  storedWorkflowWrites.set(cacheKey, operation);
+  try {
+    await operation;
+  } catch (error) {
+    if (storedWorkflowWrites.get(cacheKey) === operation)
+      storedWorkflowWrites.delete(cacheKey);
+    throw error;
+  }
+}
+async function compactParameters(parameters, userId) {
+  const workflow = parameters.workflow;
+  if (!workflow || typeof workflow !== "object")
+    return parameters;
+  if (!Array.isArray(workflow) && typeof workflow[WORKFLOW_REFERENCE_KEY] === "string") {
+    return parameters;
+  }
+  const serialized = JSON.stringify(workflow);
+  const hash = await contentHash(serialized);
+  await ensureWorkflowStored(hash, workflow, userId);
+  const compact = { ...parameters };
+  compact.workflow = { [WORKFLOW_REFERENCE_KEY]: hash };
+  return compact;
+}
+async function hydrateParameters(parameters, userId) {
+  const workflow = parameters.workflow;
+  if (!workflow || typeof workflow !== "object" || Array.isArray(workflow))
+    return parameters;
+  const hash = workflow[WORKFLOW_REFERENCE_KEY];
+  if (typeof hash !== "string" || !hash)
+    return parameters;
+  const hydrated = await readJson(workflowPath(hash), {}, userId);
+  if (Object.keys(hydrated).length === 0)
+    throw new Error(`Stored ComfyUI workflow ${hash} is unavailable.`);
+  return { ...parameters, workflow: hydrated };
+}
+function isGeneratedRecordReference(value) {
+  if (!value || typeof value !== "object")
+    return false;
+  const record = value;
+  return record.storageVersion === 2 && typeof record.recordPath === "string" && typeof record.messageId === "string";
+}
+function generatedRecordReference(record, path) {
+  return {
+    storageVersion: 2,
+    recordPath: path,
+    chatId: record.chatId,
+    messageId: record.messageId,
+    swipeId: record.swipeId,
+    paragraphs: record.paragraphs,
+    imageIds: record.imageIds,
+    imageUrls: record.imageUrls,
+    createdAt: record.createdAt,
+    operationId: record.operationId,
+    generationStatus: record.generationStatus
+  };
+}
+async function storeGeneratedRecord(chatId, key, record, userId) {
+  const path = recordPath(chatId, key);
+  const imageParameters = record.imageParameters ? await Promise.all(record.imageParameters.map((parameters) => compactParameters(parameters, userId))) : undefined;
+  await writeJson(path, { ...record, imageParameters }, userId);
+  return generatedRecordReference(record, path);
+}
+async function loadGeneratedRecord(value, userId, hydrateWorkflows = true) {
+  let record = value;
+  if (isGeneratedRecordReference(value)) {
+    record = await readJson(value.recordPath, null, userId);
+  }
+  if (!record || typeof record !== "object")
+    return null;
+  const candidate = record;
+  if (!Array.isArray(candidate.prompts) || !Array.isArray(candidate.paragraphs) || !Array.isArray(candidate.imageUrls) || typeof candidate.messageId !== "string")
+    return null;
+  if (hydrateWorkflows && candidate.imageParameters) {
+    candidate.imageParameters = await Promise.all(candidate.imageParameters.map((parameters) => hydrateParameters(parameters, userId)));
+  }
+  return candidate;
+}
+async function migrateLegacyGeneratedRecords(chatId, state, userId) {
+  for (const [key, value] of Object.entries(state.generated)) {
+    if (isGeneratedRecordReference(value) || !value || typeof value !== "object")
+      continue;
+    const candidate = value;
+    if (typeof candidate.messageId !== "string" || !Array.isArray(candidate.prompts) || !Array.isArray(candidate.paragraphs) || !Array.isArray(candidate.imageUrls))
+      continue;
+    state.generated[key] = await storeGeneratedRecord(chatId, key, candidate, userId);
+  }
+}
+function rebuildGeneratedImageIndex(state) {
+  const index = {};
+  for (const [key, value] of Object.entries(state.generated)) {
+    if (!value || typeof value !== "object")
+      continue;
+    const record = value;
+    const ids = Array.isArray(record.imageIds) ? record.imageIds : [];
+    const urls = Array.isArray(record.imageUrls) ? record.imageUrls : [];
+    ids.forEach((id, imageIndex) => {
+      if (id)
+        index[`id:${id}`] = { key, index: imageIndex };
+    });
+    urls.forEach((url, imageIndex) => {
+      if (url)
+        index[`url:${url}`] = { key, index: imageIndex };
+    });
+  }
+  state.generatedImageIndex = index;
+}
+async function updateState(chatId, userId, mutator) {
+  const queueKey = JSON.stringify([userId ?? null, chatId]);
+  const previous = stateUpdateQueues.get(queueKey) || Promise.resolve();
+  const operation = previous.then(async () => {
+    const state = await getStateForUpdate(chatId, userId);
+    await mutator(state);
+    await writeJson(`states/${chatId}.json`, state, userId);
+    return state;
+  });
+  const tail = operation.then(() => {
+    return;
+  }, () => {
+    return;
+  });
+  stateUpdateQueues.set(queueKey, tail);
+  try {
+    return await operation;
+  } finally {
+    if (stateUpdateQueues.get(queueKey) === tail)
+      stateUpdateQueues.delete(queueKey);
+  }
+}
+async function getParserConnections(userId) {
+  try {
+    return (await spindle.connections.list(userId)).map((connection) => ({
+      id: connection.id,
+      name: connection.name,
+      provider: connection.provider,
+      model: connection.model
+    }));
+  } catch (error) {
+    spindle.log.warn(`Parser connection list unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
+  }
+}
+async function sendState(userId, chatId, preparedConfig) {
+  const [state, config, parserConnections] = await Promise.all([
+    chatId ? getState(chatId, userId) : Promise.resolve(null),
+    preparedConfig ? Promise.resolve(preparedConfig) : getConfig(userId),
+    getParserConnections(userId)
+  ]);
+  spindle.sendToFrontend({
+    type: "state",
+    config,
+    parserConnections,
+    chatId: chatId || "",
+    characterAppearance: state?.characterAppearance || {},
+    avatarVisualSupplements: state?.avatarVisualSupplements || {},
+    avatarVisionAttempts: state?.avatarVisionAttempts || {}
+  }, userId);
+}
+
+// src/backend/avatar-vision.ts
+var MAX_CARD_CONTEXT = 7000;
+var MAX_SUPPLEMENT_FIELD = 700;
+var GENERIC_TAGS = new Set(["girl", "boy", "woman", "man", "1girl", "1boy", "solo", "character"]);
+function avatarSupplementKey(characterId) {
+  return characterId.trim();
+}
+function avatarVisionAttemptKey(characterId, imageId, provider, model) {
+  return JSON.stringify([characterId, imageId, provider, model]);
+}
+function explicitBoolean(root, keys) {
+  const record = asRecord(root);
+  for (const key of keys) {
+    if (typeof record[key] === "boolean")
+      return record[key];
+  }
+  return null;
+}
+function declaredVisionSupport(metadata) {
+  const record = asRecord(metadata);
+  const direct = explicitBoolean(record, ["vision", "supportsVision", "supports_vision", "multimodal", "supportsImages", "supports_images"]);
+  if (direct !== null)
+    return direct;
+  const capabilities = asRecord(record.capabilities);
+  const nested = explicitBoolean(capabilities, ["vision", "image", "images", "multimodal"]);
+  if (nested !== null)
+    return nested;
+  const modalities = [record.input_modalities, record.inputModalities, capabilities.input_modalities, capabilities.inputModalities].flatMap((value) => cleanArray(value).map((item) => cleanString2(item).toLowerCase()));
+  if (modalities.includes("image") || modalities.includes("vision"))
+    return true;
+  if (modalities.length > 0 && modalities.every((value) => value === "text"))
+    return false;
+  return null;
+}
+function unsupportedVisionError(error) {
+  const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return /(?:image|vision|multimodal).*(?:unsupported|not supported|not allowed|invalid)|(?:unsupported|invalid|does not support|doesn't support).*(?:image|vision|content.*array|input modality)|text[- ]only/.test(message);
+}
+function textParts(value) {
+  if (typeof value === "string")
+    return value;
+  return cleanArray(value).map((part) => cleanString2(asRecord(part).text || asRecord(part).content)).filter(Boolean).join(`
+`);
+}
+function resultText(result) {
+  if (typeof result === "string")
+    return result;
+  const root = asRecord(result);
+  for (const key of ["content", "text", "output", "message"]) {
+    const text = textParts(root[key]);
+    if (text)
+      return text;
+  }
+  const choice = asRecord(cleanArray(root.choices)[0]);
+  return textParts(asRecord(choice.message).content);
+}
+function jsonObject(text) {
+  const stripped = text.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+  try {
+    return asRecord(JSON.parse(stripped));
+  } catch {
+    const start = stripped.indexOf("{");
+    const end = stripped.lastIndexOf("}");
+    if (start < 0 || end <= start)
+      throw new Error("Avatar vision returned no JSON object.");
+    return asRecord(JSON.parse(stripped.slice(start, end + 1)));
+  }
+}
+function sanitizeVisionTags(value) {
+  const clean = sanitizeMemoryTags(cleanString2(value));
+  return unique(csvParts(clean).filter((tag) => {
+    const normalized = tag.toLowerCase();
+    if (GENERIC_TAGS.has(normalized))
+      return false;
+    return !/\b(?:smil(?:e|es|ing)|grin(?:s|ning)?|frown(?:s|ing)?|crying|blushing|standing|sitting|posing|looking at viewer)\b/.test(normalized);
+  })).join(", ").slice(0, MAX_SUPPLEMENT_FIELD).replace(/,\s*$/, "");
+}
+function parseAvatarVisualSupplement(raw, identity, createdAt = new Date().toISOString()) {
+  const parsed = jsonObject(raw);
+  return {
+    ...identity,
+    appearance: sanitizeVisionTags(parsed.appearance),
+    body: sanitizeVisionTags(parsed.body),
+    attire: sanitizeVisionTags(parsed.attire),
+    createdAt
+  };
+}
+function cardContext(character, canonicalTags) {
+  const rows = [
+    `Name: ${cleanString2(character.name)}`,
+    cleanString2(character.description) ? `Description: ${cleanString2(character.description)}` : "",
+    cleanString2(character.personality) ? `Personality: ${cleanString2(character.personality)}` : "",
+    cleanString2(character.scenario) ? `Scenario: ${cleanString2(character.scenario)}` : "",
+    Array.isArray(character.tags) && character.tags.length ? `Card tags: ${character.tags.map(cleanString2).filter(Boolean).join(", ")}` : "",
+    canonicalTags ? `Existing canonical visual tags: ${canonicalTags}` : ""
+  ].filter(Boolean).join(`
+`);
+  return rows.slice(0, MAX_CARD_CONTEXT);
+}
+function visionInstruction(characterName, context) {
+  return [
+    "Inspect the supplied character profile picture against the supplied character-card text.",
+    "The text is authoritative. Return only directly visible, stable visual details that complement details missing from the text and existing canonical tags.",
+    "Never contradict or repeat an explicitly stated text attribute. Do not infer hidden anatomy, personality, ethnicity, age, or conventional species traits.",
+    "Prioritize missing colors and stable shapes for hair, eyes, skin or fur, markings, species features, recurring accessories, and visible default clothing.",
+    "Ignore expression, pose, gesture, camera, crop, background, lighting, art style, image quality, and temporary effects.",
+    "For attire, if the card names a garment, add only missing visible properties of that garment; do not replace it with an unrelated portrait outfit. Add a new default garment only when the text establishes no attire.",
+    "Use short comma-separated image-generation tags. If no safe complement exists for a field, return an empty string.",
+    'Return exactly one JSON object: {"appearance":"...","body":"...","attire":"..."}.',
+    `Character: ${characterName}`,
+    "## Character Card",
+    context
+  ].join(`
+
+`);
+}
+async function analyzeAvatar(character, canonicalTags, connection, config, chatId, userId, signal) {
+  const characterId = cleanString2(character.id);
+  const imageId = cleanString2(character.image_id);
+  const characterName = cleanString2(character.name);
+  const model = config.parserModel || connection.model;
+  const avatar = await requestAvatarImage(imageId, chatId, userId, signal);
+  const parameters = { ...config.parserParameters };
+  if (parameters.max_tokens === undefined && parameters.max_completion_tokens === undefined)
+    parameters.max_tokens = 1000;
+  if (parameters.temperature === undefined)
+    parameters.temperature = 0;
+  const result = await spindle.generate.raw({
+    type: "raw",
+    provider: connection.provider,
+    model,
+    connection_id: connection.id,
+    messages: [{
+      role: "user",
+      content: [
+        { type: "text", text: visionInstruction(characterName, cardContext(character, canonicalTags)) },
+        { type: "image", data: avatar.data, mime_type: avatar.mimeType }
+      ]
+    }],
+    parameters,
+    reasoning: { source: "off" },
+    userId,
+    signal
+  });
+  const raw = resultText(result);
+  if (!raw)
+    throw new Error("Avatar vision returned no output.");
+  return parseAvatarVisualSupplement(raw, {
+    characterId,
+    imageId,
+    characterName,
+    provider: connection.provider,
+    model
+  });
+}
+function applyLocalAttempt(state, key, attempt, supplement) {
+  state.avatarVisionAttempts ||= {};
+  state.avatarVisionAttempts[key] = attempt;
+  const supplementKey = avatarSupplementKey(attempt.characterId);
+  const stale = state.avatarVisualSupplements?.[supplementKey];
+  if (stale && stale.imageId !== attempt.imageId)
+    delete state.avatarVisualSupplements?.[supplementKey];
+  if (supplement) {
+    state.avatarVisualSupplements ||= {};
+    state.avatarVisualSupplements[supplementKey] = supplement;
+  }
+}
+async function persistAttempt(chatId, key, attempt, supplement, userId) {
+  await updateState(chatId, userId, (current) => applyLocalAttempt(current, key, attempt, supplement));
+}
+async function ensureAvatarVisualSupplement(input) {
+  const character = input.character;
+  if (!character)
+    return null;
+  const characterId = cleanString2(character.id);
+  const imageId = cleanString2(character.image_id);
+  const characterName = cleanString2(character.name);
+  if (!characterId || !imageId || !characterName)
+    return null;
+  const supplementKey = avatarSupplementKey(characterId);
+  const existing = input.state.avatarVisualSupplements?.[supplementKey];
+  if (existing?.imageId === imageId)
+    return existing;
+  const model = input.config.parserModel || input.connection.model;
+  const attemptKey = avatarVisionAttemptKey(characterId, imageId, input.connection.provider, model);
+  const previousAttempt = input.state.avatarVisionAttempts?.[attemptKey];
+  if (previousAttempt) {
+    applyLocalAttempt(input.state, attemptKey, previousAttempt);
+    try {
+      await persistAttempt(input.chatId, attemptKey, previousAttempt, undefined, input.userId);
+    } catch {}
+    return null;
+  }
+  if (declaredVisionSupport(input.connection.metadata) === false) {
+    const attempt = {
+      characterId,
+      imageId,
+      provider: input.connection.provider,
+      model,
+      status: "unsupported",
+      attemptedAt: new Date().toISOString()
+    };
+    applyLocalAttempt(input.state, attemptKey, attempt);
+    try {
+      await persistAttempt(input.chatId, attemptKey, attempt, undefined, input.userId);
+    } catch {}
+    return null;
+  }
+  const canonicalKey = Object.keys(input.canonicalTags).find((name) => normalizeCharacterName(name).toLowerCase() === normalizeCharacterName(characterName).toLowerCase());
+  const canonicalTags = canonicalKey ? input.canonicalTags[canonicalKey] : "";
+  try {
+    logStage(input.config, "avatar_vision_start", { characterId, imageId, provider: input.connection.provider, model });
+    const supplement = await analyzeAvatar(character, canonicalTags, input.connection, input.config, input.chatId, input.userId, input.signal);
+    const attempt = {
+      characterId,
+      imageId,
+      provider: input.connection.provider,
+      model,
+      status: "completed",
+      attemptedAt: supplement.createdAt
+    };
+    applyLocalAttempt(input.state, attemptKey, attempt, supplement);
+    try {
+      await persistAttempt(input.chatId, attemptKey, attempt, supplement, input.userId);
+    } catch {}
+    logStage(input.config, "avatar_vision_done", {
+      characterId,
+      appearanceTags: csvParts(supplement.appearance).length,
+      bodyTags: csvParts(supplement.body).length,
+      attireTags: csvParts(supplement.attire).length
+    });
+    return supplement;
+  } catch (error) {
+    if (input.signal?.aborted)
+      throw error;
+    const status = unsupportedVisionError(error) ? "unsupported" : "failed";
+    const attempt = {
+      characterId,
+      imageId,
+      provider: input.connection.provider,
+      model,
+      status,
+      attemptedAt: new Date().toISOString()
+    };
+    applyLocalAttempt(input.state, attemptKey, attempt);
+    try {
+      await persistAttempt(input.chatId, attemptKey, attempt, undefined, input.userId);
+    } catch {}
+    logStage(input.config, "avatar_vision_skipped", {
+      characterId,
+      status,
+      error: error instanceof Error ? error.message : String(error)
+    }, "warn");
+    return null;
+  }
+}
+function changed(character, field) {
+  const changes = cleanArray(character.visualChanges).map((value) => cleanString2(value).toLowerCase());
+  return changes.includes(field) || character.sources?.[field] === "narrative_explicit";
+}
+function applyAvatarVisualSupplements(payload, supplements) {
+  const profiles = Object.values(supplements || {});
+  if (profiles.length === 0)
+    return payload;
+  for (const { shot } of normalizeScenePayload(payload)) {
+    for (const character of cleanArray(shot.characters)) {
+      const name = normalizeCharacterName(cleanString2(character.name)).toLowerCase();
+      const profile = profiles.find((candidate) => normalizeCharacterName(candidate.characterName).toLowerCase() === name);
+      if (!profile)
+        continue;
+      if (!changed(character, "appearance"))
+        character.avatarAppearance = profile.appearance;
+      if (!changed(character, "body"))
+        character.avatarBody = profile.body;
+      const attireSource = character.sources?.attire;
+      const attireWins = cleanString2(character.attire) && attireSource !== "card_explicit";
+      if (!changed(character, "attire") && !attireWins)
+        character.avatarAttire = profile.attire;
+    }
+  }
+  return payload;
+}
+
 // src/backend/operation-manager.ts
 function operationKey(userId, chatId, messageId) {
   return JSON.stringify([userId ?? null, chatId, messageId]);
@@ -2725,175 +3511,6 @@ async function prepareAndDispatchImageJobs(inputs, eager, prepare, generate, opt
     jobs: successfulJobs,
     results: successfulResults
   };
-}
-
-// src/backend/memory.ts
-var VOLATILE_MEMORY_TERMS = [
-  "sitting",
-  "standing",
-  "leaning",
-  "guided",
-  "guiding",
-  "holding",
-  "pulling",
-  "looking",
-  "gaze",
-  "smug",
-  "flustered",
-  "blush",
-  "smile",
-  "angry",
-  "crying",
-  "grin",
-  "embarrassed",
-  "annoyed",
-  "chair",
-  "bed",
-  "sofa",
-  "couch",
-  "desk",
-  "table",
-  "from above",
-  "from below",
-  "from behind",
-  "close-up",
-  "wide shot",
-  "portrait",
-  "upper body",
-  "full body",
-  "cowboy shot",
-  "pov"
-];
-var TRANSIENT_ATTIRE_MEMORY_TERMS = [
-  "torn clothes",
-  "open shirt",
-  "shirt lift",
-  "panty pull",
-  "clothes pull",
-  "undressing"
-];
-var PLACEHOLDER_TERM2 = /\b(?:unknown|unspecified|not specified|not stated|unmentioned|undetermined|n\/?a)\b/i;
-function sanitizeMemoryTags(tags) {
-  return normalizeReferenceTags(csvParts(tags).filter((tag) => {
-    const normalized = tag.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-    if (!normalized)
-      return false;
-    if (PLACEHOLDER_TERM2.test(normalized))
-      return false;
-    if (TRANSIENT_ATTIRE_MEMORY_TERMS.some((term) => normalized === term || normalized.includes(term)))
-      return false;
-    return !VOLATILE_MEMORY_TERMS.some((term) => normalized === term || normalized.includes(term));
-  }).join(", "));
-}
-function baselineCharacterTags(character) {
-  const attireInferred = character.attireInferred === true || String(character.attireInferred).toLowerCase() === "true";
-  const sources = character.sources && typeof character.sources === "object" ? character.sources : undefined;
-  const durable = (field, value) => {
-    if (!sources)
-      return field === "attire" && attireInferred ? "" : value;
-    const source = sources[field];
-    return source === "card_explicit" || source === "previous_memory" ? value : "";
-  };
-  const label = sources ? "" : character.label;
-  return sanitizeMemoryTags(unique(csvParts(label, durable("age", character.age), sources ? "" : character.identity, durable("appearance", character.appearance), durable("body", character.body), durable("attire", character.attire))).join(", "));
-}
-function hasTransientProvenance(character) {
-  const sources = character.sources;
-  if (!sources || typeof sources !== "object")
-    return false;
-  const values = [
-    ["age", character.age],
-    ["appearance", character.appearance],
-    ["body", character.body],
-    ["attire", character.attire]
-  ];
-  return values.some(([field, value]) => {
-    if (!String(value ?? "").trim())
-      return false;
-    const source = sources[field];
-    return source !== "card_explicit" && source !== "previous_memory";
-  });
-}
-function matchingKey(map, name) {
-  if (!map)
-    return;
-  return Object.keys(map).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
-}
-function updateCache(cache, payload, manualCharacterAppearance) {
-  for (const { shot } of normalizeScenePayload(payload)) {
-    for (const character of cleanArray(shot.characters)) {
-      const name = normalizeCharacterName(character.name);
-      if (!name)
-        continue;
-      const manualKey = matchingKey(manualCharacterAppearance, name);
-      if (manualKey) {
-        const cacheKey2 = matchingKey(cache, name);
-        if (cacheKey2 && cacheKey2 !== manualKey)
-          delete cache[cacheKey2];
-        cache[manualKey] = manualCharacterAppearance[manualKey];
-        continue;
-      }
-      const cacheKey = matchingKey(cache, name);
-      if (cacheKey && hasTransientProvenance(character))
-        continue;
-      const tags = baselineCharacterTags(character);
-      if (!tags)
-        continue;
-      if (cacheKey && cacheKey !== name)
-        delete cache[cacheKey];
-      cache[name] = tags;
-    }
-  }
-}
-function updateCharacterMemory(state, payload) {
-  updateCache(state.characterAppearance, payload, state.manualCharacterAppearance);
-}
-function invalidatePreviousVisualCharacters(state, names) {
-  if (!state.previousVisualState || names.length === 0)
-    return;
-  const targets = new Set(names.map((name) => normalizeCharacterName(name).toLowerCase()).filter(Boolean));
-  state.previousVisualState.characters = cleanArray(state.previousVisualState.characters).filter((character) => !targets.has(normalizeCharacterName(character.name).toLowerCase()));
-}
-function upsertCharacterTag(state, oldName, nextName, nextTags) {
-  const previous = normalizeCharacterName(oldName);
-  const name = normalizeCharacterName(nextName);
-  const tags = sanitizeMemoryTags(normalizeReferenceTags(nextTags));
-  if (!name)
-    throw new Error("Character name is required.");
-  if (!tags)
-    throw new Error("Character appearance tags must include at least one durable tag.");
-  const entries = Object.keys(state.characterAppearance);
-  const sourceKey = previous ? entries.find((candidate) => candidate.toLowerCase() === previous.toLowerCase()) : undefined;
-  const destinationCollision = entries.find((candidate) => candidate.toLowerCase() === name.toLowerCase() && candidate !== sourceKey);
-  if (destinationCollision)
-    throw new Error(`A character named "${name}" already exists.`);
-  if (sourceKey && sourceKey !== name)
-    delete state.characterAppearance[sourceKey];
-  state.characterAppearance[name] = tags;
-  const manual = state.manualCharacterAppearance || {};
-  const manualSourceKey = previous ? matchingKey(manual, previous) : undefined;
-  const manualDestinationKey = matchingKey(manual, name);
-  if (manualSourceKey && manualSourceKey !== name)
-    delete manual[manualSourceKey];
-  if (manualDestinationKey && manualDestinationKey !== name)
-    delete manual[manualDestinationKey];
-  manual[name] = tags;
-  state.manualCharacterAppearance = manual;
-  invalidatePreviousVisualCharacters(state, [previous, name]);
-}
-function deleteCharacterTag(state, name) {
-  const target = normalizeCharacterName(name);
-  if (!target)
-    return;
-  const key = Object.keys(state.characterAppearance).find((candidate) => candidate.toLowerCase() === target.toLowerCase()) || target;
-  delete state.characterAppearance[key];
-  const manualKey = matchingKey(state.manualCharacterAppearance, target);
-  if (manualKey)
-    delete state.manualCharacterAppearance[manualKey];
-  if (state.manualCharacterAppearance && Object.keys(state.manualCharacterAppearance).length === 0) {
-    delete state.manualCharacterAppearance;
-  }
-  invalidatePreviousVisualCharacters(state, [target]);
 }
 
 // src/backend/paragraphs.ts
@@ -4273,7 +4890,13 @@ async function resolveParserConnection(config, userId) {
     connectionModel: connection.model,
     effectiveModel: config.parserModel || connection.model
   });
-  const resolved = { id: connection.id, name: connection.name, provider: connection.provider, model: connection.model };
+  const resolved = {
+    id: connection.id,
+    name: connection.name,
+    provider: connection.provider,
+    model: connection.model,
+    metadata: connection.metadata
+  };
   cacheParserConnection(cacheKey, resolved);
   return resolved;
 }
@@ -4821,270 +5444,6 @@ ${unused.join(`
   return output.join("");
 }
 
-// src/backend/storage.ts
-var stateUpdateQueues = new Map;
-var configUpdateQueues = new Map;
-async function readJson(path, fallback, userId) {
-  try {
-    if (typeof spindle.userStorage.getJson === "function") {
-      const value2 = await spindle.userStorage.getJson(path, { fallback, userId });
-      return value2 && typeof value2 === "object" && fallback && typeof fallback === "object" ? { ...fallback, ...value2 } : value2 ?? fallback;
-    }
-    if (!await spindle.userStorage.exists(path, userId))
-      return fallback;
-    const text = await spindle.userStorage.read(path, userId);
-    const value = JSON.parse(text);
-    return value && typeof value === "object" && fallback && typeof fallback === "object" ? { ...fallback, ...value } : value ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-async function writeJson(path, value, userId) {
-  if (typeof spindle.userStorage.setJson === "function") {
-    await spindle.userStorage.setJson(path, value, { indent: 0, userId });
-    return;
-  }
-  const slash = path.lastIndexOf("/");
-  if (slash > 0)
-    await spindle.userStorage.mkdir(path.slice(0, slash), userId).catch(() => {
-      return;
-    });
-  await spindle.userStorage.write(path, JSON.stringify(value), userId);
-}
-async function getConfig(userId) {
-  return normalizeConfig(await readJson("config.json", DEFAULT_CONFIG, userId));
-}
-async function setConfig(patch, userId) {
-  const queueKey = userId ?? "";
-  const previous = configUpdateQueues.get(queueKey) || Promise.resolve();
-  const operation = previous.then(async () => {
-    const next = normalizeConfig({ ...await getConfig(userId), ...patch });
-    await writeJson("config.json", next, userId);
-    return next;
-  });
-  const tail = operation.then(() => {
-    return;
-  }, () => {
-    return;
-  });
-  configUpdateQueues.set(queueKey, tail);
-  try {
-    return await operation;
-  } finally {
-    if (configUpdateQueues.get(queueKey) === tail)
-      configUpdateQueues.delete(queueKey);
-  }
-}
-async function getState(chatId, userId) {
-  return readJson(`states/${chatId}.json`, { characterAppearance: {}, generated: {} }, userId);
-}
-async function getStateForUpdate(chatId, userId) {
-  const fallback = { characterAppearance: {}, generated: {} };
-  const path = `states/${chatId}.json`;
-  if (typeof spindle.userStorage.getJson === "function") {
-    const value = await spindle.userStorage.getJson(path, { fallback, userId });
-    return { ...fallback, ...value };
-  }
-  if (!await spindle.userStorage.exists(path, userId))
-    return fallback;
-  return { ...fallback, ...JSON.parse(await spindle.userStorage.read(path, userId)) };
-}
-function safePathPart(value) {
-  return encodeURIComponent(value).replace(/%/g, "_");
-}
-function recordPath(chatId, key) {
-  return `records/${safePathPart(chatId)}/${safePathPart(key)}.json`;
-}
-function workflowPath(hash) {
-  return `workflows/${hash}.json`;
-}
-async function contentHash(value) {
-  const bytes = new TextEncoder().encode(value);
-  if (globalThis.crypto?.subtle) {
-    const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
-    return [...new Uint8Array(digest)].map((entry) => entry.toString(16).padStart(2, "0")).join("");
-  }
-  let left = 2166136261;
-  let right = 2246822519;
-  for (const byte of bytes) {
-    left = Math.imul(left ^ byte, 16777619);
-    right = Math.imul(right ^ byte, 3266489917);
-  }
-  return `${(left >>> 0).toString(16).padStart(8, "0")}${(right >>> 0).toString(16).padStart(8, "0")}`;
-}
-var WORKFLOW_REFERENCE_KEY = "__inlayIllustratorWorkflowRef";
-var storedWorkflowWrites = new Map;
-async function ensureWorkflowStored(hash, workflow, userId) {
-  const cacheKey = JSON.stringify([userId ?? null, hash]);
-  const existing = storedWorkflowWrites.get(cacheKey);
-  if (existing)
-    return existing;
-  const operation = (async () => {
-    const path = workflowPath(hash);
-    if (!await spindle.userStorage.exists(path, userId))
-      await writeJson(path, workflow, userId);
-  })();
-  if (storedWorkflowWrites.size >= 64) {
-    const oldest = storedWorkflowWrites.keys().next().value;
-    if (typeof oldest === "string")
-      storedWorkflowWrites.delete(oldest);
-  }
-  storedWorkflowWrites.set(cacheKey, operation);
-  try {
-    await operation;
-  } catch (error) {
-    if (storedWorkflowWrites.get(cacheKey) === operation)
-      storedWorkflowWrites.delete(cacheKey);
-    throw error;
-  }
-}
-async function compactParameters(parameters, userId) {
-  const workflow = parameters.workflow;
-  if (!workflow || typeof workflow !== "object")
-    return parameters;
-  if (!Array.isArray(workflow) && typeof workflow[WORKFLOW_REFERENCE_KEY] === "string") {
-    return parameters;
-  }
-  const serialized = JSON.stringify(workflow);
-  const hash = await contentHash(serialized);
-  await ensureWorkflowStored(hash, workflow, userId);
-  const compact = { ...parameters };
-  compact.workflow = { [WORKFLOW_REFERENCE_KEY]: hash };
-  return compact;
-}
-async function hydrateParameters(parameters, userId) {
-  const workflow = parameters.workflow;
-  if (!workflow || typeof workflow !== "object" || Array.isArray(workflow))
-    return parameters;
-  const hash = workflow[WORKFLOW_REFERENCE_KEY];
-  if (typeof hash !== "string" || !hash)
-    return parameters;
-  const hydrated = await readJson(workflowPath(hash), {}, userId);
-  if (Object.keys(hydrated).length === 0)
-    throw new Error(`Stored ComfyUI workflow ${hash} is unavailable.`);
-  return { ...parameters, workflow: hydrated };
-}
-function isGeneratedRecordReference(value) {
-  if (!value || typeof value !== "object")
-    return false;
-  const record = value;
-  return record.storageVersion === 2 && typeof record.recordPath === "string" && typeof record.messageId === "string";
-}
-function generatedRecordReference(record, path) {
-  return {
-    storageVersion: 2,
-    recordPath: path,
-    chatId: record.chatId,
-    messageId: record.messageId,
-    swipeId: record.swipeId,
-    paragraphs: record.paragraphs,
-    imageIds: record.imageIds,
-    imageUrls: record.imageUrls,
-    createdAt: record.createdAt,
-    operationId: record.operationId,
-    generationStatus: record.generationStatus
-  };
-}
-async function storeGeneratedRecord(chatId, key, record, userId) {
-  const path = recordPath(chatId, key);
-  const imageParameters = record.imageParameters ? await Promise.all(record.imageParameters.map((parameters) => compactParameters(parameters, userId))) : undefined;
-  await writeJson(path, { ...record, imageParameters }, userId);
-  return generatedRecordReference(record, path);
-}
-async function loadGeneratedRecord(value, userId, hydrateWorkflows = true) {
-  let record = value;
-  if (isGeneratedRecordReference(value)) {
-    record = await readJson(value.recordPath, null, userId);
-  }
-  if (!record || typeof record !== "object")
-    return null;
-  const candidate = record;
-  if (!Array.isArray(candidate.prompts) || !Array.isArray(candidate.paragraphs) || !Array.isArray(candidate.imageUrls) || typeof candidate.messageId !== "string")
-    return null;
-  if (hydrateWorkflows && candidate.imageParameters) {
-    candidate.imageParameters = await Promise.all(candidate.imageParameters.map((parameters) => hydrateParameters(parameters, userId)));
-  }
-  return candidate;
-}
-async function migrateLegacyGeneratedRecords(chatId, state, userId) {
-  for (const [key, value] of Object.entries(state.generated)) {
-    if (isGeneratedRecordReference(value) || !value || typeof value !== "object")
-      continue;
-    const candidate = value;
-    if (typeof candidate.messageId !== "string" || !Array.isArray(candidate.prompts) || !Array.isArray(candidate.paragraphs) || !Array.isArray(candidate.imageUrls))
-      continue;
-    state.generated[key] = await storeGeneratedRecord(chatId, key, candidate, userId);
-  }
-}
-function rebuildGeneratedImageIndex(state) {
-  const index = {};
-  for (const [key, value] of Object.entries(state.generated)) {
-    if (!value || typeof value !== "object")
-      continue;
-    const record = value;
-    const ids = Array.isArray(record.imageIds) ? record.imageIds : [];
-    const urls = Array.isArray(record.imageUrls) ? record.imageUrls : [];
-    ids.forEach((id, imageIndex) => {
-      if (id)
-        index[`id:${id}`] = { key, index: imageIndex };
-    });
-    urls.forEach((url, imageIndex) => {
-      if (url)
-        index[`url:${url}`] = { key, index: imageIndex };
-    });
-  }
-  state.generatedImageIndex = index;
-}
-async function updateState(chatId, userId, mutator) {
-  const queueKey = JSON.stringify([userId ?? null, chatId]);
-  const previous = stateUpdateQueues.get(queueKey) || Promise.resolve();
-  const operation = previous.then(async () => {
-    const state = await getStateForUpdate(chatId, userId);
-    await mutator(state);
-    await writeJson(`states/${chatId}.json`, state, userId);
-    return state;
-  });
-  const tail = operation.then(() => {
-    return;
-  }, () => {
-    return;
-  });
-  stateUpdateQueues.set(queueKey, tail);
-  try {
-    return await operation;
-  } finally {
-    if (stateUpdateQueues.get(queueKey) === tail)
-      stateUpdateQueues.delete(queueKey);
-  }
-}
-async function getParserConnections(userId) {
-  try {
-    return (await spindle.connections.list(userId)).map((connection) => ({
-      id: connection.id,
-      name: connection.name,
-      provider: connection.provider,
-      model: connection.model
-    }));
-  } catch (error) {
-    spindle.log.warn(`Parser connection list unavailable: ${error instanceof Error ? error.message : String(error)}`);
-    return [];
-  }
-}
-async function sendState(userId, chatId, preparedConfig) {
-  const [state, config, parserConnections] = await Promise.all([
-    chatId ? getState(chatId, userId) : Promise.resolve(null),
-    preparedConfig ? Promise.resolve(preparedConfig) : getConfig(userId),
-    getParserConnections(userId)
-  ]);
-  spindle.sendToFrontend({
-    type: "state",
-    config,
-    parserConnections,
-    chatId: chatId || "",
-    characterAppearance: state?.characterAppearance || {}
-  }, userId);
-}
-
 // src/backend/runtime-lock.ts
 var REGISTRY_KEY2 = Symbol.for("inlay-illustrator.runtime-locks");
 var globalRegistry2 = globalThis;
@@ -5228,6 +5587,16 @@ async function parseAndSelectPrompts(input) {
       fastBootstrapCharacter: input.fastBootstrapCharacter === true
     })
   ]);
+  await ensureAvatarVisualSupplement({
+    chatId,
+    character: contextSources.character,
+    canonicalTags: state.characterAppearance,
+    connection: parserConnection,
+    config,
+    state,
+    userId,
+    signal
+  });
   for (let attempt = 0;attempt <= config.parserRetries; attempt += 1) {
     try {
       throwIfAborted(signal);
@@ -5295,6 +5664,7 @@ async function parseAndSelectPrompts(input) {
       parsed = await parsePayloadWithRepair(parserConnection, config, parserMessages(instruction, referenceContext, userRequest, context.override), userId, signal);
       parsed = applyPreviousVisualState(parsed, config.previousVisualStateEnabled ? state.previousVisualState : undefined);
       parsed = await repairDynamicCameraDiversity(parserConnection, config, parsed, targetSource, userId, signal);
+      parsed = applyAvatarVisualSupplements(parsed, state.avatarVisualSupplements);
       if (config.adaptiveMode && config.fastMode) {
         logStage(config, "creative_ideation_skipped", { reason: "fast_mode", mode: "adaptive" });
         conceptSelections = new Map;
@@ -6100,6 +6470,8 @@ spindle.onFrontendMessage(async (payload, userId) => {
   const message = payload;
   let configForError = null;
   try {
+    if (acceptAvatarImageResponse(message))
+      return;
     if (message.type === "get_state") {
       const config = await getConfig(userId);
       configForError = config;

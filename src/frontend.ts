@@ -1,5 +1,6 @@
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
 import { DEFAULT_CONFIG, type Config } from "./shared/config.js";
+import { respondToAvatarImageRequest } from "./frontend/avatar-image.js";
 import { fetchImageGenerationSettings, fetchParserConnections } from "./frontend/api.js";
 import { CLEANUP_KEY, DRAWER_TAB_OPTIONS, PANEL_STYLES } from "./frontend/constants.js";
 import type { BackendMessage, FrontendActions, ParserConnection } from "./frontend/contracts.js";
@@ -96,7 +97,12 @@ export function setup(ctx: SpindleFrontendContext) {
   }
 
   const unsub = ctx.onBackendMessage((payload: unknown) => {
-    routeBackendMessage(payload as BackendMessage, activeChatId, {
+    const message = payload as BackendMessage & Record<string, unknown>;
+    if (message.type === "avatar_image_request") {
+      void respondToAvatarImageRequest(message, (response) => ctx.sendToBackend(response));
+      return;
+    }
+    routeBackendMessage(message, activeChatId, {
       replaceConfig: (next) => {
         config = next;
       },

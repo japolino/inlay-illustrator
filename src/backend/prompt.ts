@@ -261,8 +261,11 @@ function assembleCharacterBlock(
     stripOrReplaceNames(cleanString(character.age), replacements, true),
     stripOrReplaceNames(cleanString(character.identity), replacements, true),
     stripOrReplaceNames(cleanString(character.appearance), replacements, true),
+    stripOrReplaceNames(cleanString(character.avatarAppearance), replacements, true),
     stripOrReplaceNames(cleanString(character.body), replacements, true),
+    stripOrReplaceNames(cleanString(character.avatarBody), replacements, true),
     stripOrReplaceNames(cleanString(character.attire), replacements, true),
+    stripOrReplaceNames(cleanString(character.avatarAttire), replacements, true),
     stripOrReplaceNames(cleanString(character.expression), replacements, true),
     includeAction ? stripOrReplaceNames(cleanString(character.action), replacements, true) : ""
   )).join(", ");
@@ -551,8 +554,11 @@ function baselineTags(character: CharacterJson): BaselineTag[] {
   const fields: Array<[VisibilityTagSource, unknown]> = [
     ["identity", character.identity],
     ["appearance", character.appearance],
+    ["appearance", character.avatarAppearance],
     ["body", character.body],
-    ["attire", character.attire]
+    ["body", character.avatarBody],
+    ["attire", character.attire],
+    ["attire", character.avatarAttire]
   ];
   const seen = new Set<string>();
   const output: BaselineTag[] = [];
