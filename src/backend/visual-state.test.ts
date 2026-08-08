@@ -45,6 +45,34 @@ describe("previous visual state", () => {
     );
   });
 
+  test("preserves field origin across rolling continuity instead of promoting narrative facts", () => {
+    const rolling: PreviousVisualState = {
+      ...previous,
+      characters: [{
+        ...previous.characters[0],
+        attire: "borrowed red coat",
+        attireInferred: false,
+        sources: {
+          appearance: "card_explicit",
+          body: "card_explicit",
+          attire: "narrative_explicit"
+        }
+      }]
+    };
+    const applied = applyPreviousVisualState({ scenes: [{ shots: [{
+      paragraph: 1,
+      characters: [{ name: "Jay", appearance: "", body: "", attire: "" }]
+    }] }] }, rolling);
+    const character = applied.scenes?.[0]?.shots?.[0]?.characters?.[0];
+    expect(character?.attire).toBe("borrowed red coat");
+    expect(character?.sources).toEqual({
+      age: "previous_memory",
+      appearance: "card_explicit",
+      body: "card_explicit",
+      attire: "narrative_explicit"
+    });
+  });
+
   test("removes placeholders and fills only missing character and environment fields", () => {
     const applied = applyPreviousVisualState({ scenes: [{
       environment: {

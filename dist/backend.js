@@ -1751,7 +1751,8 @@ function visualCharacter(character) {
     appearance: cleanTagField(unique(csvParts(character.identity, character.appearance)).join(", ")),
     body: cleanTagField(character.body),
     attire: cleanTagField(character.attire),
-    attireInferred: inferred(character.attireInferred)
+    attireInferred: inferred(character.attireInferred),
+    ...character.sources ? { sources: { ...character.sources } } : {}
   };
 }
 function inheritCharacter(raw, previousCharacters, explicitCurrentWins = false) {
@@ -1776,7 +1777,13 @@ function inheritCharacter(raw, previousCharacters, explicitCurrentWins = false) 
     appearance: stableField("appearance", cleanTagField(raw.appearance), previous?.appearance),
     body: stableField("body", cleanTagField(raw.body), previous?.body),
     attire: stableField("attire", currentAttire, previous?.attire),
-    attireInferred: !previous ? inferred(raw.attireInferred) : (explicitCurrentWins || changes.has("attire")) && currentAttire ? inferred(raw.attireInferred) : previous.attireInferred
+    attireInferred: !previous ? inferred(raw.attireInferred) : (explicitCurrentWins || changes.has("attire")) && currentAttire ? inferred(raw.attireInferred) : previous.attireInferred,
+    sources: {
+      age: previous && !changes.has("age") ? previous.sources?.age ?? "previous_memory" : raw.sources?.age,
+      appearance: previous && !changes.has("appearance") ? previous.sources?.appearance ?? "previous_memory" : raw.sources?.appearance,
+      body: previous && !changes.has("body") ? previous.sources?.body ?? "previous_memory" : raw.sources?.body,
+      attire: previous && !changes.has("attire") ? previous.sources?.attire ?? "previous_memory" : raw.sources?.attire
+    }
   };
   const remembered = visualCharacter(next);
   if (remembered)
@@ -1888,7 +1895,8 @@ function formatPreviousVisualState(previous) {
       appearance: cleanTagField(character.appearance),
       body: cleanTagField(character.body),
       attire: cleanTagField(character.attire),
-      attireInferred: character.attireInferred === true
+      attireInferred: character.attireInferred === true,
+      ...character.sources ? { sources: character.sources } : {}
     })).filter((character) => character.name),
     environment: cleanEnvironment(previous.environment),
     place: cleanTagField(previous.place)
@@ -2779,7 +2787,32 @@ function sanitizeMemoryTags(tags) {
 }
 function baselineCharacterTags(character) {
   const attireInferred = character.attireInferred === true || String(character.attireInferred).toLowerCase() === "true";
-  return sanitizeMemoryTags(unique(csvParts(character.label, character.age, character.identity, character.appearance, character.body, attireInferred ? "" : character.attire)).join(", "));
+  const sources = character.sources && typeof character.sources === "object" ? character.sources : undefined;
+  const durable = (field, value) => {
+    if (!sources)
+      return field === "attire" && attireInferred ? "" : value;
+    const source = sources[field];
+    return source === "card_explicit" || source === "previous_memory" ? value : "";
+  };
+  const label = sources ? "" : character.label;
+  return sanitizeMemoryTags(unique(csvParts(label, durable("age", character.age), sources ? "" : character.identity, durable("appearance", character.appearance), durable("body", character.body), durable("attire", character.attire))).join(", "));
+}
+function hasTransientProvenance(character) {
+  const sources = character.sources;
+  if (!sources || typeof sources !== "object")
+    return false;
+  const values = [
+    ["age", character.age],
+    ["appearance", character.appearance],
+    ["body", character.body],
+    ["attire", character.attire]
+  ];
+  return values.some(([field, value]) => {
+    if (!String(value ?? "").trim())
+      return false;
+    const source = sources[field];
+    return source !== "card_explicit" && source !== "previous_memory";
+  });
 }
 function matchingKey(map, name) {
   if (!map)
@@ -2790,8 +2823,7 @@ function updateCache(cache, payload, manualCharacterAppearance) {
   for (const { shot } of normalizeScenePayload(payload)) {
     for (const character of cleanArray(shot.characters)) {
       const name = normalizeCharacterName(character.name);
-      const tags = baselineCharacterTags(character);
-      if (!name || !tags)
+      if (!name)
         continue;
       const manualKey = matchingKey(manualCharacterAppearance, name);
       if (manualKey) {
@@ -2802,6 +2834,11 @@ function updateCache(cache, payload, manualCharacterAppearance) {
         continue;
       }
       const cacheKey = matchingKey(cache, name);
+      if (cacheKey && hasTransientProvenance(character))
+        continue;
+      const tags = baselineCharacterTags(character);
+      if (!tags)
+        continue;
       if (cacheKey && cacheKey !== name)
         delete cache[cacheKey];
       cache[name] = tags;
@@ -3065,6 +3102,7 @@ function coverSchema(config) {
       '        "body": "string",',
       '        "attire": "string",',
       '        "attireInferred": false,',
+      '        "sources": {"age": "card_explicit | previous_memory | narrative_explicit | inferred", "appearance": "card_explicit | previous_memory | narrative_explicit | inferred", "body": "card_explicit | previous_memory | narrative_explicit | inferred", "attire": "card_explicit | previous_memory | narrative_explicit | inferred"},',
       '        "expression": "string",',
       '        "renderScope": "string",',
       '        "visibleTags": "string",',
@@ -3100,6 +3138,7 @@ function coverSchema(config) {
     '        "body": "string",',
     '        "attire": "string",',
     '        "attireInferred": false,',
+    '        "sources": {"age": "card_explicit | previous_memory | narrative_explicit | inferred", "appearance": "card_explicit | previous_memory | narrative_explicit | inferred", "body": "card_explicit | previous_memory | narrative_explicit | inferred", "attire": "card_explicit | previous_memory | narrative_explicit | inferred"},',
     '        "expression": "string",',
     '        "renderScope": "string",',
     '        "visibleTags": "string",',
@@ -3155,6 +3194,7 @@ function parserSchema(config) {
     '              "body": "string",',
     '              "attire": "string",',
     '              "attireInferred": false,',
+    '              "sources": {"age": "card_explicit | previous_memory | narrative_explicit | inferred", "appearance": "card_explicit | previous_memory | narrative_explicit | inferred", "body": "card_explicit | previous_memory | narrative_explicit | inferred", "attire": "card_explicit | previous_memory | narrative_explicit | inferred"},',
     '              "visualChanges": ["age | appearance | body | attire"],',
     '              "expression": "string",',
     '              "renderScope": "string",',
@@ -3194,6 +3234,7 @@ function parserSchema(config) {
     '        "body": "string",',
     '        "attire": "string",',
     '        "attireInferred": false,',
+    '        "sources": {"age": "card_explicit | previous_memory | narrative_explicit | inferred", "appearance": "card_explicit | previous_memory | narrative_explicit | inferred", "body": "card_explicit | previous_memory | narrative_explicit | inferred", "attire": "card_explicit | previous_memory | narrative_explicit | inferred"},',
     '        "visualChanges": ["age | appearance | body | attire"]',
     "      }",
     "    ]",
@@ -3223,6 +3264,7 @@ function parserSchema(config) {
     '              "body": "string",',
     '              "attire": "string",',
     '              "attireInferred": false,',
+    '              "sources": {"age": "card_explicit | previous_memory | narrative_explicit | inferred", "appearance": "card_explicit | previous_memory | narrative_explicit | inferred", "body": "card_explicit | previous_memory | narrative_explicit | inferred", "attire": "card_explicit | previous_memory | narrative_explicit | inferred"},',
     '              "visualChanges": ["age | appearance | body | attire"],',
     '              "expression": "string",',
     '              "renderScope": "string",',
@@ -3249,6 +3291,7 @@ function parserSchema(config) {
     '        "body": "string",',
     '        "attire": "string",',
     '        "attireInferred": false,',
+    '        "sources": {"age": "card_explicit | previous_memory | narrative_explicit | inferred", "appearance": "card_explicit | previous_memory | narrative_explicit | inferred", "body": "card_explicit | previous_memory | narrative_explicit | inferred", "attire": "card_explicit | previous_memory | narrative_explicit | inferred"},',
     '        "visualChanges": ["age | appearance | body | attire"]',
     "      }",
     "    ]",
@@ -3414,6 +3457,8 @@ function parserInstruction(config, options = {}) {
     "Eyes: color, shape, and visual modifiers such as heterochromia, tareme, tsurime, jitome, empty eyes, or dashed eyes. Always include when known.",
     "Skin: color and visible texture, such as dark skin, tan, red skin, metal skin, see-through body, or patchwork skin.",
     "Other: freckles, facial hair, scars, tattoos with location, symbol in eye, elf, demon, furry, androgynous, and other persistent identity traits.",
+    "Completeness rule: preserve every explicitly paired or enumerated species feature. If a source states ears and tail, horns and tail, wings and halo, multiple tails, or another explicit set, include every stated member with its stated color/count/type. Never infer an unstated companion trait merely from species conventions.",
+    "Evidence rule: never invent hair length/style, eye modifiers, clothing colors/items, jewelry, pupil shape, or species anatomy from genre, nationality, occupation, school setting, or species stereotypes. Unstated specificity is inferred, not fact.",
     "A current-source transformation that remains visibly present after the final paragraph belongs in the complete appearance or body baseline and terminalState even when described as magical or temporary. Do not leave wings, changed eyes, horns, tails, or transformed limbs only in composition, visibleTags, or shotPlan.",
     structuredAnima ? "Do not include names, attire, expression, pose, action, camera, place, supplement, blush, flushed cheeks, tears, sweat, or any other transient state in appearance." : "Do not include names, attire, expression, pose, action, camera, place, or supplement in appearance.",
     "### body",
@@ -3429,6 +3474,12 @@ function parserInstruction(config, options = {}) {
     "If a visible character has no established attire in the current source, previous visual state, or durable baseline, choose one conservative visually coherent outfit supported by their role and setting. Set attireInferred to true. Copy attireInferred from previous visual state when retaining that inferred outfit; otherwise set it to false.",
     "Inferred attire is scene continuity only and must not become durable character memory.",
     "Do not include body traits, expressions, actions, camera, place, or names in attire.",
+    "### sources - required provenance for durable fields",
+    "Set sources.age, sources.appearance, sources.body, and sources.attire independently to exactly one of: card_explicit, previous_memory, narrative_explicit, inferred.",
+    "Use card_explicit only when the field's tags are directly stated in {{char}} Info. Use previous_memory only when copied unchanged from Character Tag History. When Previous Visual State is enabled, leave unchanged fields empty so backend inheritance preserves their original provenance. Use narrative_explicit only when directly stated by the current numbered source. Use inferred for any role-, setting-, genre-, species-, or plausibility-based completion.",
+    "A field combining explicit and inferred tags must be split conservatively: remove the inferred tags or mark the entire field inferred. Never label a field card_explicit merely because some of its tags are supported.",
+    "For narrative_explicit fields, list the field in visualChanges only when the source visibly changes the rolling baseline; otherwise it remains scene-only and is not durable memory.",
+    "Explicit base attire from {{char}} Info must use sources.attire=card_explicit and attireInferred=false so the final prompt and durable memory stay consistent. Chosen role- or setting-based clothing must use sources.attire=inferred and attireInferred=true.",
     "### expression",
     "Visible facial emotions and facial/eye states only: annoyed, angry, embarrassed, blush, grin, smile, crying, empty eyes, closed eyes.",
     structuredAnima ? "Prefer the current source's explicit visible emotion over inferred genre mood. Convert irritation or anger into concrete visible tags such as annoyed, angry, furrowed brows, glaring, clenched teeth, or open mouth when supported." : "",
@@ -3455,7 +3506,7 @@ function parserInstruction(config, options = {}) {
     hasPreviousVisualState ? "3. Previous Visual State is the immediate visual continuity layer. Leave unchanged raw character baseline values empty so the backend injects them exactly, and copy unchanged environment values explicitly; it never overrides an explicit current-source change or a final user-instruction baseline change marked in visualChanges." : "",
     config.characterTagContextEnabled ? `${hasPreviousVisualState ? "4" : "3"}. Character tag history is the durable visual baseline for returning characters: label, age, appearance, body, and explicit base attire.` : "",
     config.characterTagContextEnabled ? "Use previous character tags as a baseline for returning characters, including base attire. Preserve specific baseline tags when not contradicted, such as short cut, white pupils, small breasts, black high school uniform, red sailor ribbon, black skirt, and white pantyhose." : "",
-    config.characterTagContextEnabled ? "The current message is authoritative for the character's present visual state. It can update the baseline when it clearly changes clothing, lack of clothing, appearance, or body traits." : "",
+    config.characterTagContextEnabled ? "The current message is authoritative for the character's present visual state. Explicit changes update rolling Previous Visual State, but do not rewrite canonical Character Tag History." : "",
     "## Weights",
     "Weights such as {tag}, [tag], N::tag::, and (tag:N) control emphasis. Never add, remove, or modify client-specified weights. Copy them exactly when they are present in the source text.",
     "## Output Format",
@@ -3552,7 +3603,7 @@ function parserInstructionFast(config, options = {}) {
     "## Terminal Visual State",
     "terminalState is required, is never rendered, and never changes camera, composition, perspective, shot selection, or prompt content.",
     "Set terminalState.paragraph to the final original numbered paragraph, even when that paragraph is not selected for illustration.",
-    structuredAnima ? "Read every original paragraph in order and record the physical environment and stable baselines (label, age, appearance, body, attire) of characters still present after the final paragraph. Use only environment, environmentChanges, and the listed stable character fields; never include action, expression, pose, camera, shotPlan, renderScope, visibleTags, or supplement." : "Read every original paragraph in order and record the final place and stable baselines of characters still present after the final paragraph. Use only place, environmentChanges, and the listed stable character fields; never include action, expression, pose, camera, renderScope, visibleTags, or supplement.",
+    structuredAnima ? "Read every original paragraph in order and record the physical environment and stable baselines (label, age, appearance, body, attire, sources) of characters still present after the final paragraph. Use only environment, environmentChanges, and the listed stable character fields; never include action, expression, pose, camera, shotPlan, renderScope, visibleTags, or supplement." : "Read every original paragraph in order and record the final place and stable baselines of characters still present after the final paragraph. Use only place, environmentChanges, and the listed stable character fields; never include action, expression, pose, camera, renderScope, visibleTags, or supplement.",
     "Apply explicit location, attire, appearance, and body changes from unselected paragraphs to terminalState. Do not let an earlier illustrated paragraph overwrite a later narrative change.",
     "## Tag Rules",
     "Use common, objective, visualizable Danbooru-style English tags. Never fabricate tag vocabulary; use simpler well-known equivalents if unsure. Never output placeholder tags or phrases such as unknown, unspecified, not specified, unmentioned, undetermined, default clothing, or unspecified time; leave genuinely nonvisual fields empty instead.",
@@ -3560,6 +3611,10 @@ function parserInstructionFast(config, options = {}) {
     "Character names are private memory keys. Outside characters[].name, never write a full name or first name in any field, including situation, renderScope, visibleTags, composition, sharedComposition, camera, environment, place, supplement, or negative. Use visual descriptors such as left woman, right man, foreground character, or background character.",
     `Character limit: max ${maxCharacters} character object(s) per shot. Do not add another character object beyond this limit; refer to an additional anonymous out-of-frame person only through visible composition when the source requires it.`,
     hasPreviousVisualState ? "Previous Visual State is injected after parsing. For an unchanged returning character, leave age, appearance, body, and attire empty and leave visualChanges empty; the backend restores the exact stored baseline before rendering and persistence. For a new character, or when no matching previous character exists, output the complete baseline. For an explicit current-source change or a final user instruction that adds or replaces durable character tags, list that field in visualChanges and output its complete new value." : "Repeat stable appearance, body, and attire tags for returning characters across all shots unless the current message clearly changes their present visual state.",
+    "Set sources.age/appearance/body/attire independently to card_explicit, previous_memory, narrative_explicit, or inferred. Card facts must be directly stated in {{char}} Info; scene facts must be directly stated in [P#]; role-, genre-, species-, school-, or setting-based completion is inferred.",
+    "Preserve every explicitly paired species feature (for example ears and tail) with stated color/count/type, but never infer an unstated companion feature.",
+    "Never invent hair length/style, eye modifiers, clothing color/items, jewelry, pupil shape, or anatomy from conventions. Explicit card attire uses attireInferred=false and card_explicit; chosen clothing uses attireInferred=true and inferred.",
+    "Only card_explicit and previous_memory fields may enter durable character memory. narrative_explicit fields remain in rolling Previous Visual State when visualChanges marks them, but never rewrite the canonical character-card baseline.",
     "Continuity does not require repeating camera angle, framing, composition, depth, or occlusion. Vary those deliberately between shots while preserving narrative facts.",
     "Before returning the batch, compare Dynamic cameras as a soft camera ledger. When two equally suitable cameras would contain their focal actions, prefer different framing + angle + perspective tuples. Never choose a worse, more extreme, or action-cropping camera merely to create variety.",
     fastPerspectiveContract(config),
@@ -3573,7 +3628,7 @@ function parserInstructionFast(config, options = {}) {
     "1. Client comments or explicit user instructions in the current message override all instructions.",
     "2. Current message [P#] paragraphs are authoritative for scene content. Never restore outdated clothing, props, location, or actions from context.",
     hasPreviousVisualState ? "3. Previous Visual State is the immediate visual continuity layer. It never overrides an explicit current-source change or a final user-instruction baseline change marked in visualChanges." : "",
-    config.characterTagContextEnabled ? "4. Character tag history is the durable visual baseline for returning characters: label, age, appearance, body, and explicit base attire. The current message can update the baseline when it clearly changes clothing, lack of clothing, appearance, or body traits." : "",
+    config.characterTagContextEnabled ? "4. Character tag history is the durable visual baseline for returning characters: label, age, appearance, body, and explicit base attire. Current narrative changes update rolling Previous Visual State, not this canonical baseline." : "",
     "## Output Format",
     "- Output raw JSON only. One JSON object. No XML, HTML, YAML, markdown fences, comments, or prose.",
     "- Double-quoted keys and values. No trailing commas. Validate bracket balance: every { has }, every [ has ].",
@@ -3694,6 +3749,7 @@ var FUZZY_KEYS = [
   "body",
   "attire",
   "attireInferred",
+  "sources",
   "visualChanges",
   "expression",
   "action",
@@ -4528,7 +4584,7 @@ function terminalStateRepairInstruction(issues, config, currentParagraphs) {
     "Repair or add only the non-rendered terminalState object while preserving every existing scene and shot exactly. Return the complete JSON object and no other text.",
     finalParagraph ? `Set terminalState.paragraph to P${finalParagraph}, the final original numbered paragraph.` : "Use the final original numbered paragraph for terminalState.paragraph.",
     config.promptStyle === "anima" ? "terminalState contains paragraph, a complete environment object, environmentChanges, and characters still present after all source paragraphs." : "terminalState contains paragraph, place, environmentChanges, and characters still present after all source paragraphs.",
-    "Terminal characters contain only name, label, age, appearance, body, attire, attireInferred, and visualChanges. Never add actions, expressions, camera, composition, or rendering fields.",
+    "Terminal characters contain only name, label, age, appearance, body, attire, attireInferred, sources, and visualChanges. Never add actions, expressions, camera, composition, or rendering fields.",
     "Use the full current source chronology. Later source changes override earlier illustrated scenes.",
     `Problems to repair:
 - ${issues.join(`

@@ -30,6 +30,15 @@ export type ShotPlanJson = {
   staging?: unknown;
 };
 
+export type CharacterFieldSource = "card_explicit" | "previous_memory" | "narrative_explicit" | "inferred";
+
+export type CharacterFieldSources = {
+  age?: CharacterFieldSource;
+  appearance?: CharacterFieldSource;
+  body?: CharacterFieldSource;
+  attire?: CharacterFieldSource;
+};
+
 export type CharacterJson = {
   name?: unknown;
   label?: unknown;
@@ -40,6 +49,8 @@ export type CharacterJson = {
   attire?: unknown;
   /** True when attire was plausibly inferred for this scene instead of sourced from durable character facts. */
   attireInferred?: unknown;
+  /** Provenance for durable visual fields. Missing only on legacy parser output. */
+  sources?: CharacterFieldSources;
   /** Stable visual fields explicitly changed by the current numbered source. */
   visualChanges?: unknown;
   expression?: unknown;
@@ -236,6 +247,7 @@ export type PreviousVisualCharacter = {
   body: string;
   attire: string;
   attireInferred: boolean;
+  sources?: CharacterFieldSources;
 };
 
 export type PreviousVisualState = {

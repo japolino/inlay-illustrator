@@ -105,7 +105,8 @@ function visualCharacter(character: CharacterJson): PreviousVisualCharacter | nu
     appearance: cleanTagField(unique(csvParts(character.identity, character.appearance)).join(", ")),
     body: cleanTagField(character.body),
     attire: cleanTagField(character.attire),
-    attireInferred: inferred(character.attireInferred)
+    attireInferred: inferred(character.attireInferred),
+    ...(character.sources ? { sources: { ...character.sources } } : {})
   };
 }
 
@@ -136,7 +137,15 @@ function inheritCharacter(
       ? inferred(raw.attireInferred)
       : (explicitCurrentWins || changes.has("attire")) && currentAttire
         ? inferred(raw.attireInferred)
-        : previous.attireInferred
+        : previous.attireInferred,
+    sources: {
+      // Preserve origin across rolling continuity. A narrative override does
+      // not become canonical merely because it survived into the next turn.
+      age: previous && !changes.has("age") ? (previous.sources?.age ?? "previous_memory") : raw.sources?.age,
+      appearance: previous && !changes.has("appearance") ? (previous.sources?.appearance ?? "previous_memory") : raw.sources?.appearance,
+      body: previous && !changes.has("body") ? (previous.sources?.body ?? "previous_memory") : raw.sources?.body,
+      attire: previous && !changes.has("attire") ? (previous.sources?.attire ?? "previous_memory") : raw.sources?.attire
+    }
   };
   const remembered = visualCharacter(next);
   if (remembered) previousCharacters.set(remembered.name.toLowerCase(), remembered);
@@ -290,7 +299,8 @@ export function formatPreviousVisualState(previous: PreviousVisualState): string
       appearance: cleanTagField(character.appearance),
       body: cleanTagField(character.body),
       attire: cleanTagField(character.attire),
-      attireInferred: character.attireInferred === true
+      attireInferred: character.attireInferred === true,
+      ...(character.sources ? { sources: character.sources } : {})
     })).filter((character) => character.name),
     environment: cleanEnvironment(previous.environment),
     place: cleanTagField(previous.place)

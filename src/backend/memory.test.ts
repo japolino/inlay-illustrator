@@ -82,6 +82,87 @@ describe("character memory", () => {
     expect(cache.Jay).toBe("boy, straight black hair, slim");
   });
 
+  test("persists only provenance-approved durable fields and drops generic labels", () => {
+    const cache: Record<string, string> = {};
+    updateCache(cache, { scenes: [{ shots: [{
+      paragraph: 1,
+      characters: [{
+        name: "Saki",
+        label: "girl",
+        age: "young woman",
+        appearance: "black hair, brown eyes, pale skin",
+        body: "slender",
+        attire: "navy blazer, pleated skirt, white socks",
+        attireInferred: true,
+        sources: { age: "inferred", appearance: "card_explicit", body: "card_explicit", attire: "inferred" }
+      }]
+    }] }] });
+    expect(cache.Saki).toBe("black hair, brown eyes, pale skin, slender");
+    expect(cache.Saki).not.toContain("girl");
+    expect(cache.Saki).not.toContain("blazer");
+  });
+
+  test("persists explicit card attire but not scene-only current-source attire", () => {
+    const cache: Record<string, string> = {};
+    updateCache(cache, { scenes: [{ shots: [{
+      paragraph: 1,
+      characters: [{
+        name: "Narcissa",
+        label: "girl",
+        appearance: "blonde hair, pink eyes, spiral horns",
+        body: "voluptuous",
+        attire: "frilly white apron, black dress, thigh-highs",
+        attireInferred: false,
+        sources: { appearance: "card_explicit", body: "card_explicit", attire: "card_explicit" }
+      }, {
+        name: "Miyoko",
+        label: "girl",
+        appearance: "long black hair, hime cut",
+        body: "wide hips",
+        attire: "blue convenience store uniform",
+        attireInferred: false,
+        sources: { appearance: "card_explicit", body: "card_explicit", attire: "narrative_explicit" },
+        visualChanges: []
+      }]
+    }] }] });
+    expect(cache.Narcissa).toBe("blonde hair, pink eyes, spiral horns, voluptuous, frilly white apron, black dress, thigh-highs");
+    expect(cache.Miyoko).toBe("long black hair, hime cut, wide hips");
+  });
+
+  test("keeps a current-source baseline change out of canonical memory", () => {
+    const cache: Record<string, string> = {};
+    updateCache(cache, { scenes: [{ shots: [{
+      paragraph: 1,
+      characters: [{
+        name: "Mira",
+        appearance: "silver hair, blue eyes",
+        body: "tall",
+        attire: "red coat",
+        sources: { appearance: "previous_memory", body: "previous_memory", attire: "narrative_explicit" },
+        visualChanges: ["attire"]
+      }]
+    }] }] });
+    expect(cache.Mira).toBe("silver hair, blue eyes, tall");
+  });
+
+  test("preserves an existing canonical baseline during a rolling narrative override", () => {
+    const cache: Record<string, string> = {
+      Mira: "silver hair, blue eyes, tall, white dress"
+    };
+    updateCache(cache, { scenes: [{ shots: [{
+      paragraph: 1,
+      characters: [{
+        name: "Mira",
+        appearance: "silver hair, blue eyes",
+        body: "tall",
+        attire: "borrowed red coat",
+        sources: { appearance: "previous_memory", body: "previous_memory", attire: "narrative_explicit" },
+        visualChanges: ["attire"]
+      }]
+    }] }] });
+    expect(cache.Mira).toBe("silver hair, blue eyes, tall, white dress");
+  });
+
   test("keeps full baseline memory independent from Creative render scope and visible tags", () => {
     const cache: Record<string, string> = {};
     updateCache(cache, { scenes: [{ shots: [{

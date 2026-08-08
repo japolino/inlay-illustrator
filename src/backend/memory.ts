@@ -30,16 +30,41 @@ export function sanitizeMemoryTags(tags: string): string {
 
 function baselineCharacterTags(character: CharacterJson): string {
   const attireInferred = character.attireInferred === true || String(character.attireInferred).toLowerCase() === "true";
+  const sources = character.sources && typeof character.sources === "object" ? character.sources : undefined;
+  const durable = (field: "age" | "appearance" | "body" | "attire", value: unknown): unknown => {
+    if (!sources) return field === "attire" && attireInferred ? "" : value; // legacy payload compatibility
+    const source = sources[field];
+    return source === "card_explicit" || source === "previous_memory" ? value : "";
+  };
+  // For provenance-aware output, situation already carries the image-model
+  // count tag (1girl/1boy). Do not pollute semantic memory with generic labels.
+  const label = sources ? "" : character.label;
   return sanitizeMemoryTags(unique(csvParts(
-    character.label,
-    character.age,
-    // Keep the legacy identity field as a compatibility input so species,
-    // fur, tails, scars, and similar durable traits cannot disappear.
-    character.identity,
-    character.appearance,
-    character.body,
-    attireInferred ? "" : character.attire
+    label,
+    durable("age", character.age),
+    // Keep legacy identity only for legacy output. New parser output places
+    // every durable recognition trait in provenance-aware appearance/body.
+    sources ? "" : character.identity,
+    durable("appearance", character.appearance),
+    durable("body", character.body),
+    durable("attire", character.attire)
   )).join(", "));
+}
+
+function hasTransientProvenance(character: CharacterJson): boolean {
+  const sources = character.sources;
+  if (!sources || typeof sources !== "object") return false;
+  const values: Array<[keyof typeof sources, unknown]> = [
+    ["age", character.age],
+    ["appearance", character.appearance],
+    ["body", character.body],
+    ["attire", character.attire]
+  ];
+  return values.some(([field, value]) => {
+    if (!String(value ?? "").trim()) return false;
+    const source = sources[field];
+    return source !== "card_explicit" && source !== "previous_memory";
+  });
 }
 
 function matchingKey(map: Record<string, string> | undefined, name: string): string | undefined {
@@ -55,8 +80,7 @@ export function updateCache(
   for (const { shot } of normalizeScenePayload(payload)) {
     for (const character of cleanArray<CharacterJson>(shot.characters)) {
       const name = normalizeCharacterName(character.name);
-      const tags = baselineCharacterTags(character);
-      if (!name || !tags) continue;
+      if (!name) continue;
       const manualKey = matchingKey(manualCharacterAppearance, name);
       if (manualKey) {
         const cacheKey = matchingKey(cache, name);
@@ -65,6 +89,11 @@ export function updateCache(
         continue;
       }
       const cacheKey = matchingKey(cache, name);
+      // A rolling narrative override belongs in Previous Visual State, not in
+      // canonical character memory. Preserve an existing baseline verbatim.
+      if (cacheKey && hasTransientProvenance(character)) continue;
+      const tags = baselineCharacterTags(character);
+      if (!tags) continue;
       if (cacheKey && cacheKey !== name) delete cache[cacheKey];
       cache[name] = tags;
     }

@@ -102,7 +102,7 @@ function extractFinishReason(result: unknown): string {
 }
 
 const FUZZY_KEYS = [
-  "scenes", "place", "environmentChanges", "shots", "paragraph", "camera", "situation", "characters", "label", "age", "identity", "appearance", "body", "attire", "attireInferred", "visualChanges",
+  "scenes", "place", "environmentChanges", "shots", "paragraph", "camera", "situation", "characters", "label", "age", "identity", "appearance", "body", "attire", "attireInferred", "sources", "visualChanges",
   "expression", "action", "composition", "sharedComposition", "environment", "location", "timeWeather", "lightingMood", "backgroundElements",
   "framing", "angle", "perspective", "focus", "position", "pose", "actions", "gaze", "interaction", "spatialRelation",
   "negative", "name", "scene", "positive", "quote", "supplement", "perspectiveMode", "renderScope", "visibleTags",
@@ -999,7 +999,7 @@ function terminalStateRepairInstruction(issues: string[], config: Config, curren
     config.promptStyle === "anima"
       ? "terminalState contains paragraph, a complete environment object, environmentChanges, and characters still present after all source paragraphs."
       : "terminalState contains paragraph, place, environmentChanges, and characters still present after all source paragraphs.",
-    "Terminal characters contain only name, label, age, appearance, body, attire, attireInferred, and visualChanges. Never add actions, expressions, camera, composition, or rendering fields.",
+    "Terminal characters contain only name, label, age, appearance, body, attire, attireInferred, sources, and visualChanges. Never add actions, expressions, camera, composition, or rendering fields.",
     "Use the full current source chronology. Later source changes override earlier illustrated scenes.",
     `Problems to repair:\n- ${issues.join("\n- ")}`
   ].join("\n");

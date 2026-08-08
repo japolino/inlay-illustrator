@@ -1416,6 +1416,25 @@ describe("Anima parser contract and visual distinctness", () => {
 });
 
 
+describe("Character-field provenance contract", () => {
+  test("requires evidence provenance, paired species completeness, and no conventional inventions", () => {
+    const instruction = parserInstruction(DEFAULT_CONFIG);
+    expect(instruction).toContain('"sources": {"age": "card_explicit | previous_memory | narrative_explicit | inferred"');
+    expect(instruction).toContain("sources.age, sources.appearance, sources.body, and sources.attire");
+    expect(instruction).toContain("If a source states ears and tail");
+    expect(instruction).toContain("never invent hair length/style");
+    expect(instruction).toContain("Explicit base attire from {{char}} Info");
+  });
+
+  test("retains the same provenance and completeness policy in Fast Mode", () => {
+    const instruction = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true });
+    expect(instruction).toContain('"sources": {"age": "card_explicit | previous_memory | narrative_explicit | inferred"');
+    expect(instruction).toContain("Set sources.age/appearance/body/attire independently");
+    expect(instruction).toContain("Preserve every explicitly paired species feature");
+    expect(instruction).toContain("Only card_explicit and previous_memory");
+  });
+});
+
 describe("Cover image parser contract", () => {
   test("gates the whole-message key visual schema and direction behind the toggle", () => {
     const disabled = parserInstruction(DEFAULT_CONFIG);
