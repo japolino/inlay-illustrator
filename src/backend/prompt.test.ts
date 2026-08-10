@@ -2,13 +2,16 @@ import { describe, expect, test } from "bun:test";
 import archivedCard from "../../references/original-module/card.json";
 import { DEFAULT_CONFIG, normalizeConfig } from "../shared/config.js";
 import { parserInstruction } from "./instructions.js";
+import { resolveIllustrationPlan } from "./shot-resolution.js";
 import {
   assemblePrompt,
+  compilePrompt,
   projectDynamicVisibleTags,
   renderNegativeWithCurrentSelection,
   renderPrompt,
   renderPromptWithCurrentAffixes
 } from "./prompt.js";
+import type { IllustrationInput, PlannedShot } from "./domain.js";
 import { exactVisualKey, normalizeAtomicCompositionTerms, normalizeScenePayload } from "./scenes.js";
 
 describe("ordered Anima prompt composition", () => {
@@ -1535,5 +1538,85 @@ describe("Fast Mode parser instruction", () => {
     const dynamicFast = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true, perspectiveMode: "dynamic" });
     expect(dynamicFast).toContain("Dynamic shot direction");
     expect(dynamicFast).toContain("shotPlan.primaryAction");
+  });
+});
+
+
+describe("canonical compilePrompt boundary", () => {
+  const input: IllustrationInput = {
+    initialContinuity: {
+      characters: [{
+        name: "Asha Fen",
+        label: "woman",
+        age: "adult woman",
+        appearance: "dark skin, curly black hair",
+        body: "slim",
+        attire: "purple travel coat",
+        attireInferred: false
+      }],
+      environment: {
+        location: "forest clearing",
+        timeWeather: "moonlit twilight",
+        lightingMood: ["soft moonlight"],
+        backgroundElements: ["ancient trees"]
+      },
+      place: "beside an ancient oak"
+    },
+    shots: [{
+      paragraph: 1,
+      plan: {
+        mode: "dynamic",
+        primaryAction: "woman raises a crystal seed",
+        staging: "woman centered in the clearing"
+      },
+      camera: { framing: "medium shot", angle: "eye level", perspective: "three-quarter view", focus: [] },
+      situation: "1girl, solo, forest",
+      characters: [{
+        name: "Asha Fen",
+        expression: "focused",
+        composition: {
+          position: "center frame",
+          pose: "standing upright",
+          actions: ["raising a crystal seed"],
+          gaze: "looking at crystal seed"
+        },
+        renderScope: "upper body visible",
+        visibleTags: ["dark skin", "curly black hair", "purple travel coat"]
+      }],
+      sharedComposition: { interaction: [], spatialRelation: "" },
+      negative: ""
+    } satisfies PlannedShot]
+  };
+
+  test("compiles a resolved shot to the same prompt as the legacy assembler", () => {
+    const plan = resolveIllustrationPlan(input);
+    const resolved = plan.shots[0];
+    const legacy = assemblePrompt(
+      {
+        place: resolved.place,
+        environment: resolved.environment,
+        shots: [{
+          paragraph: resolved.paragraph,
+          perspectiveMode: "dynamic",
+          camera: resolved.camera,
+          shotPlan: { primaryAction: "woman raises a crystal seed", staging: "woman centered in the clearing" },
+          situation: resolved.situation,
+          characters: resolved.characters.map((character) => ({
+            ...character,
+            visibleTags: character.visibleTags.join(", ")
+          })),
+          sharedComposition: resolved.sharedComposition,
+          negative: resolved.negative
+        }]
+      },
+      { paragraph: resolved.paragraph, perspectiveMode: "dynamic", camera: resolved.camera, shotPlan: { primaryAction: "woman raises a crystal seed", staging: "woman centered in the clearing" }, situation: resolved.situation, characters: resolved.characters.map((character) => ({ ...character, visibleTags: character.visibleTags.join(", ") })), sharedComposition: resolved.sharedComposition, negative: resolved.negative },
+      { ...DEFAULT_CONFIG, promptStyle: "anima" },
+      resolved.paragraph,
+      resolved.paragraph
+    );
+
+    const compiled = compilePrompt(resolved, { ...DEFAULT_CONFIG, promptStyle: "anima" });
+    expect(renderPrompt(compiled.prompt, "nai")).toBe(renderPrompt(legacy.prompt, "nai"));
+    expect(compiled.paragraph).toBe(resolved.paragraph);
   });
 });

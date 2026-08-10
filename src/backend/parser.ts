@@ -13,7 +13,7 @@ import {
   repairDynamicCameraDiversityLocally
 } from "./camera-diversity.js";
 import { logStage } from "./logging.js";
-import { isFragmentCameraFraming, projectDynamicVisibleTags } from "./prompt.js";
+import { isFragmentCameraFraming, projectDynamicVisibleTags } from "./shot-resolution.js";
 import { abortError, throwIfAborted } from "./operation-manager.js";
 import {
   dedupeExactShotCharacters,
@@ -317,7 +317,7 @@ function dynamicPayloadIssues(payload: ParsedPayload, config: Config, required =
       characters.forEach((character, characterIndex) => {
         // Fragment framings (body-part focus, head/eyes out of frame) are
         // exempt: visibleTags cannot be derived from the baseline without
-        // leaking out-of-crop traits, and the renderer fails closed when the
+        // leaking out-of-crop traits, and prompt compilation fails closed when the
         // projection is absent. Ordinary framings are repaired locally.
         if (!fragment && !cleanString(character.renderScope)) {
           issues.push(`scene ${sceneIndex + 1} Dynamic shot ${shotIndex + 1} character ${characterIndex + 1} needs renderScope`);
@@ -371,7 +371,7 @@ function defaultRenderScopeForFraming(framing: string): string {
 }
 
 /**
- * Reduces a shotPlan field to one atomic comma-free phrase. The renderer keeps
+ * Reduces a shotPlan field to one atomic comma-free phrase. Prompt compilation keeps
  * only the first comma/semicolon-separated snippet of each shotPlan field, so
  * this makes the parser's audit match what is actually rendered instead of
  * failing the whole batch on phrasing the model cannot produce.
@@ -383,7 +383,7 @@ function atomicPhrase(value: unknown): string {
 }
 
 /**
- * Sources the renderer falls back to when shotPlan.primaryAction is missing:
+ * Sources prompt compilation falls back to when shotPlan.primaryAction is missing:
  * a legacy string shotPlan, then the shot-level action, then per-character
  * composition actions.
  */
@@ -409,7 +409,8 @@ function primaryActionCandidates(shot: ShotJson): string[] {
 /**
  * Deterministic repair for Dynamic shots whose model omits the compact
  * rendering projection (visibleTags / renderScope) or writes multi-clause
- * shotPlan phrases. This mirrors the renderer's own behavior:
+ * shotPlan phrases. Visibility is delegated to the shared deterministic shot
+ * resolver, so parser normalization and prompt compilation use one policy:
  * - visibleTags are projected from the complete baseline through the camera's
  *   visibility tiers for ordinary framings;
  * - renderScope is restated from the framing;
@@ -554,6 +555,33 @@ function modeRepairInstruction(
     ...(staticIssues.length > 0 ? [staticRepairInstruction(staticIssues)] : []),
     ...(dynamicIssues.length > 0 ? [dynamicRepairInstruction(dynamicIssues)] : [])
   ].join("\n\n");
+}
+
+export type ParserPayloadContext = {
+  /** Original numbered narrative, without router notes or creative constraints. */
+  currentSource: string;
+  /** Every paragraph in the original source, in narrative order. */
+  currentParagraphs: number[];
+  /** Paragraphs the shot router selected. */
+  allowedParagraphs: number[];
+  requireDynamicProjection: boolean;
+  requireTerminalState: boolean;
+};
+
+export function validateParserPayloadContext(context: ParserPayloadContext): ParserPayloadContext {
+  const validParagraphs = (values: number[], label: string): number[] => {
+    if (values.length === 0 || values.some((value) => !Number.isSafeInteger(value) || value <= 0)) {
+      throw new Error(`${label} must contain positive source paragraph numbers.`);
+    }
+    if (new Set(values).size !== values.length) throw new Error(`${label} must not contain duplicates.`);
+    return [...values];
+  };
+  const currentParagraphs = validParagraphs(context.currentParagraphs, "currentParagraphs");
+  const allowedParagraphs = validParagraphs(context.allowedParagraphs, "allowedParagraphs");
+  if (allowedParagraphs.some((paragraph) => !currentParagraphs.includes(paragraph))) {
+    throw new Error("allowedParagraphs must be a subset of currentParagraphs.");
+  }
+  return { ...context, currentParagraphs, allowedParagraphs };
 }
 
 function currentSourceText(messages: ParserGenerationRequest["messages"]): string {
@@ -885,6 +913,13 @@ export function preprocessingUserRequest(rawTarget: string): string {
 
 export type PreprocessedSelection = { summary: string; selectedParagraphs: number[]; cameraNotes: string[] };
 
+/** Typed shot-router result. Core orchestration carries paragraph selection as data
+ * instead of parsing it back out of the prompt prose. */
+export type PreprocessedTarget = {
+  source: string;
+  selectedParagraphs: number[];
+};
+
 export function routedTargetSource(rawTarget: string, selection: PreprocessedSelection): string {
   return [
     rawTarget,
@@ -926,16 +961,17 @@ export function validatePreprocessedTarget(
   return { summary: compactBlock(summary, 12000), selectedParagraphs, cameraNotes };
 }
 
-export async function preprocessTargetParagraphs(
+export async function preprocessTarget(
   parserConnection: ParserConnection,
   config: Config,
   paragraphs: PreparedParagraph[],
   context: ParserContext,
   userId?: string,
   signal?: AbortSignal
-): Promise<string> {
+): Promise<PreprocessedTarget> {
   const rawTarget = formatTargetParagraphs(paragraphs);
-  if (!config.preprocessingEnabled) return rawTarget;
+  const allParagraphs = paragraphs.map((paragraph) => paragraph.parserIndex);
+  if (!config.preprocessingEnabled) return { source: rawTarget, selectedParagraphs: allParagraphs };
   try {
     const summary = await generateParserText(parserConnection, config, parserMessages(
       preprocessingInstruction(paragraphs, config),
@@ -953,14 +989,29 @@ export async function preprocessTargetParagraphs(
         selectedParagraphs: selection.selectedParagraphs,
         cameraNotes: selection.cameraNotes
       });
-      return routedTargetSource(rawTarget, selection);
+      return {
+        source: routedTargetSource(rawTarget, selection),
+        selectedParagraphs: selection.selectedParagraphs
+      };
     }
     logStage(config, "preprocessing_fallback", { reason: "invalid_selection", summaryLength: cleanString(summary).length }, "warn");
   } catch (error) {
     throwIfAborted(signal);
     logStage(config, "preprocessing_fallback", { reason: error instanceof Error ? error.message : String(error) }, "warn");
   }
-  return rawTarget;
+  return { source: rawTarget, selectedParagraphs: allParagraphs };
+}
+
+/** Compatibility wrapper for callers that only need the prompt text. */
+export async function preprocessTargetParagraphs(
+  parserConnection: ParserConnection,
+  config: Config,
+  paragraphs: PreparedParagraph[],
+  context: ParserContext,
+  userId?: string,
+  signal?: AbortSignal
+): Promise<string> {
+  return (await preprocessTarget(parserConnection, config, paragraphs, context, userId, signal)).source;
 }
 
 function terminalParagraphNumber(value: unknown): number | null {
@@ -1013,13 +1064,13 @@ function terminalStateRepairInstruction(issues: string[], config: Config, curren
 
 function payloadRepairInput(
   payload: ParsedPayload,
-  messages: ParserGenerationRequest["messages"],
+  currentSource: string,
   includeCurrentSource: boolean
 ): string {
   if (!includeCurrentSource) return JSON.stringify(payload);
   return [
     "## Current Numbered Paragraph Source",
-    currentSourceText(messages),
+    currentSource,
     "## JSON to Repair",
     JSON.stringify(payload)
   ].join("\n\n");
@@ -1030,19 +1081,26 @@ export async function parsePayloadWithRepair(
   config: Config,
   messages: ParserGenerationRequest["messages"],
   userId?: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  payloadContext?: ParserPayloadContext
 ): Promise<ParsedPayload> {
+  const validatedContext = payloadContext ? validateParserPayloadContext(payloadContext) : undefined;
   const raw = await generateParserText(parserConnection, config, messages, userId, "main", signal);
   if (!raw.trim()) throw new Error("Parser returned an empty response.");
-  const requireDynamicProjection = messages.some((message) =>
+  // Legacy direct callers may omit typed context. Production orchestration
+  // always supplies it, so control flow no longer depends on parsing prompt prose.
+  const inferredCurrentParagraphs = validatedContext ? [] : currentParagraphReferences(messages);
+  const inferredRoutedParagraphs = validatedContext ? [] : routedParagraphReferences(messages);
+  const currentSource = validatedContext?.currentSource ?? currentSourceText(messages);
+  const currentParagraphs = validatedContext?.currentParagraphs ?? inferredCurrentParagraphs;
+  const allowedParagraphs = validatedContext?.allowedParagraphs
+    ?? (inferredRoutedParagraphs.length > 0 ? inferredRoutedParagraphs : inferredCurrentParagraphs);
+  const requireDynamicProjection = validatedContext?.requireDynamicProjection ?? messages.some((message) =>
     message.role === "system" && message.content.includes("shotPlan.primaryAction")
   );
-  const requireTerminalState = messages.some((message) =>
+  const requireTerminalState = validatedContext?.requireTerminalState ?? messages.some((message) =>
     message.role === "system" && message.content.includes("## Terminal Visual State")
   );
-  const currentParagraphs = currentParagraphReferences(messages);
-  const routedParagraphs = routedParagraphReferences(messages);
-  const allowedParagraphs = routedParagraphs.length > 0 ? routedParagraphs : currentParagraphs;
   const fallbackParagraph = allowedParagraphs.length === 1 ? allowedParagraphs[0] : undefined;
   let repairSystem = "Repair malformed JSON. Return only valid JSON.";
   let repairInput = raw;
@@ -1060,7 +1118,7 @@ export async function parsePayloadWithRepair(
           ? [terminalStateRepairInstruction(terminalIssues, config, currentParagraphs)]
           : [])
       ].join("\n\n");
-      repairInput = payloadRepairInput(parsed, messages, terminalIssues.length > 0);
+      repairInput = payloadRepairInput(parsed, currentSource, terminalIssues.length > 0);
       throw new Error("Parser payload has no usable numbered shots.");
     }
     const locallyRepaired = repairDynamicProjectionLocally(parsed, config, requireDynamicProjection);
@@ -1070,13 +1128,13 @@ export async function parsePayloadWithRepair(
         terminalStateRepairInstruction(terminalIssues, config, currentParagraphs),
         ...(issues.length > 0 ? [modeRepairInstruction(parsed, config, issues, requireDynamicProjection)] : [])
       ].join("\n\n");
-      repairInput = payloadRepairInput(parsed, messages, true);
+      repairInput = payloadRepairInput(parsed, currentSource, true);
       throw new Error("Terminal visual state is incomplete.");
     }
     if (issues.length > 0) {
       repairSystem = modeRepairInstruction(parsed, config, issues, requireDynamicProjection);
       repairInput = coverPayloadIssues(parsed, config).length > 0
-        ? payloadRepairInput(parsed, messages, true)
+        ? payloadRepairInput(parsed, currentSource, true)
         : JSON.stringify(parsed);
       throw new Error("Mode-specific payload is incomplete.");
     }

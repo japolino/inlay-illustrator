@@ -1,5 +1,18 @@
 import { DEFAULT_CONFIG, normalizeConfig, type Config, type RawConfig } from "../shared/config.js";
-import type { GeneratedRecord, GeneratedRecordReference, ParserConnection, State } from "./types.js";
+import {
+  adaptGeneratedRecord,
+  isGeneratedRecordReferenceV3,
+  toGeneratedRecordReferenceV3,
+  toGeneratedRecordV3,
+  type GeneratedRecordReferenceV3,
+  type GeneratedRecordV3
+} from "./generated-record.js";
+import type {
+  GeneratedRecord as LegacyGeneratedRecord,
+  GeneratedRecordReference as LegacyGeneratedRecordReference,
+  ParserConnection,
+  State
+} from "./types.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
@@ -149,22 +162,25 @@ async function hydrateParameters(parameters: Record<string, unknown>, userId?: s
   return { ...parameters, workflow: hydrated };
 }
 
-export function isGeneratedRecordReference(value: unknown): value is GeneratedRecordReference {
-  if (!value || typeof value !== "object") return false;
-  const record = value as Partial<GeneratedRecordReference>;
-  return record.storageVersion === 2 && typeof record.recordPath === "string" && typeof record.messageId === "string";
+export function isGeneratedRecordReference(
+  value: unknown
+): value is LegacyGeneratedRecordReference | GeneratedRecordReferenceV3 {
+  return toGeneratedRecordReferenceV3(value) !== null;
 }
 
-export function generatedRecordReference(record: GeneratedRecord, path: string): GeneratedRecordReference {
+export function generatedRecordReference(record: GeneratedRecordV3, path: string): GeneratedRecordReferenceV3 {
   return {
-    storageVersion: 2,
+    storageVersion: 3,
     recordPath: path,
     chatId: record.chatId,
     messageId: record.messageId,
     swipeId: record.swipeId,
-    paragraphs: record.paragraphs,
-    imageIds: record.imageIds,
-    imageUrls: record.imageUrls,
+    slots: record.slots.map((slot) => ({
+      paragraph: slot.paragraph,
+      imageId: slot.imageId,
+      imageUrl: slot.imageUrl,
+      status: slot.status
+    })),
     createdAt: record.createdAt,
     operationId: record.operationId,
     generationStatus: record.generationStatus
@@ -174,55 +190,68 @@ export function generatedRecordReference(record: GeneratedRecord, path: string):
 export async function storeGeneratedRecord(
   chatId: string,
   key: string,
-  record: GeneratedRecord,
+  record: GeneratedRecordV3 | LegacyGeneratedRecord,
   userId?: string
-): Promise<GeneratedRecordReference> {
+): Promise<GeneratedRecordReferenceV3> {
+  const canonical = toGeneratedRecordV3(record);
+  if (!canonical) throw new Error("Cannot store an invalid or ragged generated record.");
   const path = recordPath(chatId, key);
-  const imageParameters = record.imageParameters
-    ? await Promise.all(record.imageParameters.map((parameters) => compactParameters(parameters, userId)))
-    : undefined;
-  await writeJson(path, { ...record, imageParameters }, userId);
-  return generatedRecordReference(record, path);
+  const slots = await Promise.all(canonical.slots.map(async (slot) => ({
+    ...slot,
+    ...(slot.imageParameters
+      ? { imageParameters: await compactParameters(slot.imageParameters, userId) }
+      : {})
+  })));
+  await writeJson(path, { ...canonical, slots }, userId);
+  return generatedRecordReference(canonical, path);
 }
 
 export async function loadGeneratedRecord(
   value: unknown,
   userId?: string,
   hydrateWorkflows = true
-): Promise<GeneratedRecord | null> {
-  let record = value;
+): Promise<GeneratedRecordV3 | null> {
+  let stored = value;
   if (isGeneratedRecordReference(value)) {
-    record = await readJson<GeneratedRecord | null>(value.recordPath, null, userId);
+    stored = await readJson<unknown>(value.recordPath, null, userId);
   }
-  if (!record || typeof record !== "object") return null;
-  const candidate = record as GeneratedRecord;
-  if (!Array.isArray(candidate.prompts) || !Array.isArray(candidate.paragraphs)
-    || !Array.isArray(candidate.imageUrls) || typeof candidate.messageId !== "string") return null;
-  if (hydrateWorkflows && candidate.imageParameters) {
-    candidate.imageParameters = await Promise.all(candidate.imageParameters.map((parameters) => hydrateParameters(parameters, userId)));
-  }
-  return candidate;
+  const record = toGeneratedRecordV3(stored);
+  if (!record) return null;
+  if (!hydrateWorkflows) return record;
+  return {
+    ...record,
+    slots: await Promise.all(record.slots.map(async (slot) => ({
+      ...slot,
+      ...(slot.imageParameters
+        ? { imageParameters: await hydrateParameters(slot.imageParameters, userId) }
+        : {})
+    })))
+  };
 }
 
+/** Move legacy inline records and compact V2 references to the V3 slot boundary. */
 export async function migrateLegacyGeneratedRecords(chatId: string, state: State, userId?: string): Promise<void> {
   for (const [key, value] of Object.entries(state.generated)) {
-    if (isGeneratedRecordReference(value) || !value || typeof value !== "object") continue;
-    const candidate = value as Partial<GeneratedRecord>;
-    if (typeof candidate.messageId !== "string" || !Array.isArray(candidate.prompts)
-      || !Array.isArray(candidate.paragraphs) || !Array.isArray(candidate.imageUrls)) continue;
-    state.generated[key] = await storeGeneratedRecord(chatId, key, candidate as GeneratedRecord, userId);
+    if (isGeneratedRecordReferenceV3(value)) continue;
+    const reference = toGeneratedRecordReferenceV3(value);
+    if (reference) {
+      state.generated[key] = reference;
+      continue;
+    }
+    const record = toGeneratedRecordV3(value);
+    if (record) state.generated[key] = await storeGeneratedRecord(chatId, key, record, userId);
   }
 }
 
 export function rebuildGeneratedImageIndex(state: State): void {
   const index: NonNullable<State["generatedImageIndex"]> = {};
   for (const [key, value] of Object.entries(state.generated)) {
-    if (!value || typeof value !== "object") continue;
-    const record = value as Partial<GeneratedRecordReference & GeneratedRecord>;
-    const ids = Array.isArray(record.imageIds) ? record.imageIds : [];
-    const urls = Array.isArray(record.imageUrls) ? record.imageUrls : [];
-    ids.forEach((id, imageIndex) => { if (id) index[`id:${id}`] = { key, index: imageIndex }; });
-    urls.forEach((url, imageIndex) => { if (url) index[`url:${url}`] = { key, index: imageIndex }; });
+    const adapted = adaptGeneratedRecord(value);
+    if (!adapted) continue;
+    adapted.slots.forEach((slot, imageIndex) => {
+      if (slot.imageId) index[`id:${slot.imageId}`] = { key, index: imageIndex };
+      if (slot.imageUrl) index[`url:${slot.imageUrl}`] = { key, index: imageIndex };
+    });
   }
   state.generatedImageIndex = index;
 }

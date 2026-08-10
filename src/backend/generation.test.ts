@@ -446,7 +446,12 @@ describe("optional cover image generation", () => {
     expect(message.content.indexOf("First visual beat.")).toBeLessThan(message.content.indexOf("/scene.png"));
     expect(message.content.indexOf("/scene.png")).toBeLessThan(message.content.indexOf("Second visual beat."));
     const completed = frontend.find((payload) => payload.type === "status" && payload.status === "Generated");
-    expect((completed?.record as { placements?: string[] })?.placements).toEqual(["cover", "paragraph"]);
+    expect((completed?.record as { slots?: Array<{ placement?: string }> })?.slots?.map((slot) => slot.placement))
+      .toEqual(["cover", "paragraph"]);
+    // The canonical typed boundary must be exercised end-to-end and persisted.
+    const persistedPlan = (completed?.record as { illustrationPlan?: unknown })?.illustrationPlan;
+    expect(persistedPlan).toBeDefined();
+    expect((persistedPlan as { shots?: unknown[] } | undefined)?.shots).toHaveLength(1);
   });
 });
 
@@ -729,13 +734,13 @@ describe("Fast Mode sidecar rerun", () => {
     expect((requests[0].messages as Array<{ content: string }>)[0].content).toContain("# Image Tagging System");
     expect((requests[0].messages as Array<{ content: string }>)[0].content).not.toContain("Creative Illustration Concept Ideator");
     expect(committed.index).toBe(0);
-    expect(committed.record.imageUrls[0]).toBe("/rerun.png");
-    expect(committed.record.imageIds[0]).toBe("rerun-id");
-    expect(committed.record.perspectiveModes[0]).toBe("creative");
-    expect(committed.record.creativeConcepts?.[0]).toBeNull();
+    expect(committed.record.slots[0]?.imageUrl).toBe("/rerun.png");
+    expect(committed.record.slots[0]?.imageId).toBe("rerun-id");
+    expect(committed.record.slots[0]?.perspectiveMode).toBe("creative");
+    expect(committed.record.slots[0]?.creativeConcept).toBeNull();
     expect(message.metadata.inlayIllustratorImageIds).toEqual(["rerun-id"]);
     // The replacement must be persisted through the record file, not just in memory.
     const storedState = files.get("states/fast-chat.json") as { generated: Record<string, unknown> };
-    expect(storedState.generated["fast-chat:message-1:0"]).toMatchObject({ storageVersion: 2 });
+    expect(storedState.generated["fast-chat:message-1:0"]).toMatchObject({ storageVersion: 3 });
   });
 });

@@ -1,4 +1,7 @@
 import type { PerspectiveMode } from "../shared/config.js";
+import type { CharacterContinuityState, CharacterFieldSources, ContinuityState } from "./domain.js";
+
+export type { CharacterFieldSource, CharacterFieldSources } from "./domain.js";
 
 export type CharacterCompositionJson = {
   position?: unknown;
@@ -28,15 +31,6 @@ export type ShotPlanJson = {
   primaryAction?: unknown;
   secondaryCue?: unknown;
   staging?: unknown;
-};
-
-export type CharacterFieldSource = "card_explicit" | "previous_memory" | "narrative_explicit" | "inferred";
-
-export type CharacterFieldSources = {
-  age?: CharacterFieldSource;
-  appearance?: CharacterFieldSource;
-  body?: CharacterFieldSource;
-  attire?: CharacterFieldSource;
 };
 
 export type CharacterJson = {
@@ -271,28 +265,8 @@ export type GeneratedRecordReference = {
   generationStatus?: GenerationStatus;
 };
 
-export type PreviousVisualCharacter = {
-  name: string;
-  label: string;
-  age: string;
-  appearance: string;
-  body: string;
-  attire: string;
-  attireInferred: boolean;
-  sources?: CharacterFieldSources;
-};
-
-export type PreviousVisualState = {
-  characters: PreviousVisualCharacter[];
-  environment: {
-    location: string;
-    timeWeather: string;
-    lightingMood: string[];
-    backgroundElements: string[];
-  };
-  place: string;
-  updatedAt: string;
-};
+export type PreviousVisualCharacter = CharacterContinuityState;
+export type PreviousVisualState = ContinuityState & { updatedAt: string };
 
 export type ParserGenerationRequest = {
   type: "raw";

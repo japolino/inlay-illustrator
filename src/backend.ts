@@ -203,7 +203,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         chatId,
         messageId: result.record.messageId,
         imageIndex: result.index,
-        imageUrl: result.record.imageUrls[result.index] || ""
+        imageUrl: result.record.slots[result.index]?.imageUrl || ""
       }, userId);
       spindle.sendToFrontend({ type: "status", chatId, status: rerunSidecar ? "Sidecar rerun complete" : "Image rerolled", record: result.record }, userId);
     }

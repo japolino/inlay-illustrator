@@ -6,7 +6,24 @@ import {
   CAMERA_PERSPECTIVE_VALUES
 } from "./camera-diversity.js";
 import { isIdentitySafeCreativeCue } from "./creative.js";
+import {
+  ALL_VISIBILITY_REGIONS,
+  EYE_TAG,
+  FRAMING_VISIBILITY_REGIONS,
+  baselineTags,
+  cameraViewOf,
+  isFragmentCameraFraming,
+  isFragmentRenderScope,
+  resolveShotPerspective,
+  tagVisibilityRegions,
+  visibilityModifiersFor,
+  type VisibilityRegion
+} from "./shot-resolution.js";
+import type { ResolvedShot } from "./domain.js";
 import type { AssembledPrompt, CharacterJson, CreativeConcept, PromptEntry, SceneJson, ShotJson } from "./types.js";
+
+// Compatibility export; ownership lives in the deterministic resolver.
+export { projectDynamicVisibleTags, resolveShotPerspective } from "./shot-resolution.js";
 import { asRecord, cleanArray, cleanString, csvParts, escapeRegExp, unique } from "./utils.js";
 
 export function normalizeReferenceTags(tagString: unknown): string {
@@ -271,127 +288,6 @@ function assembleCharacterBlock(
   )).join(", ");
 }
 
-function isFragmentRenderScope(value: unknown): boolean {
-  const scope = cleanString(value).toLowerCase();
-  const subject = "(?:head|face|eye|eyes|mouth|hair|hand|hands|finger|fingers|arm|arms|sleeve|sleeves|feet|foot|leg|legs|lower body|torso|chest|back|shoulder|tail|wing|silhouette|shadow)";
-  return new RegExp([
-    "\\b(?:head|face|eyes)\\s+out\\s+of\\s+frame\\b",
-    `\\b${subject}\\s+(?:only|detail|focus)\\b`,
-    `\\bonly\\s+(?:the\\s+)?${subject}\\b`,
-    `\\b(?:close(?:-up)?|tight|crop(?:ped)?)\\s+(?:view|crop|focus)(?:\\s+(?:on|of))?\\s+(?:the\\s+|her\\s+|his\\s+|their\\s+)?${subject}\\b`,
-    `\\b(?:focus|detail|close(?:-up)?|crop|view)\\s+(?:on|of)\\s+(?:the\\s+|her\\s+|his\\s+|their\\s+)?(?:[a-z-]+\\s+){0,2}${subject}\\b`,
-    `\\b${subject}\\s+(?:fills?|filling)\\s+(?:the\\s+)?frame\\b`
-  ].join("|"), "i").test(scope);
-}
-
-// ---------------------------------------------------------------------------
-// Visibility-tier projection
-//
-// Character continuity retains the complete baseline. Prompt rendering is a
-// separate, deterministic projection through the selected Dynamic framing.
-// Crop and occlusion rules are hard constraints: incompatible traits are not
-// injected into the prompt. The parser must instead choose a camera that can
-// show every source-critical fact. Fragment framings use visibleTags as their
-// authoritative projection, subject to hard camera occlusions.
-// ---------------------------------------------------------------------------
-
-type VisibilityRegion = "head" | "face" | "neck" | "shoulders" | "torso" | "arms" | "hands" | "hips" | "legs" | "feet" | "figure";
-type VisibilityTagSource = "identity" | "appearance" | "body" | "attire" | "projection";
-
-const ALL_VISIBILITY_REGIONS: VisibilityRegion[] = ["head", "face", "neck", "shoulders", "torso", "arms", "hands", "hips", "legs", "feet", "figure"];
-
-/** Body regions each Dynamic framing value normally contains. Empty/unknown framings fail open to the complete figure for legacy compatibility. */
-const FRAMING_VISIBILITY_REGIONS: Record<string, VisibilityRegion[]> = {
-  portrait: ["head", "face", "neck", "shoulders"],
-  "close-up": ["head", "face", "neck", "shoulders"],
-  "medium close-up": ["head", "face", "neck", "shoulders", "torso"],
-  "upper body": ["head", "face", "neck", "shoulders", "torso", "arms", "hands"],
-  "medium shot": ["head", "face", "neck", "shoulders", "torso", "arms", "hands"],
-  "cowboy shot": ["head", "face", "neck", "shoulders", "torso", "arms", "hands", "hips", "legs"],
-  "feet out of frame": ["head", "face", "neck", "shoulders", "torso", "arms", "hands", "hips", "legs"],
-  "full body": ALL_VISIBILITY_REGIONS,
-  "wide shot": ALL_VISIBILITY_REGIONS,
-  "lower body": ["hips", "legs", "feet"],
-  "head out of frame": ["torso", "arms", "hands", "hips", "legs", "feet"],
-  "eyes out of frame": ["head", "face", "neck", "shoulders"],
-  "body-part focus": []
-};
-
-/**
- * Ordered, first-match classifier. Specific garment nouns precede anatomy so
- * compound tags such as "knee-high boots" remain footwear instead of being
- * accepted merely because the framing contains knees.
- */
-const REGION_TAG_PATTERNS: Array<[VisibilityRegion[], RegExp]> = [
-  [["feet"], /\b(?:feet|foot|ankles?|shoes?|boots?|sneakers?|sandals?|loafers?|slippers?|heels?|footwear|barefoot|toes?|socks?|stocking feet)\b/],
-  [["legs"], /\b(?:legs?|thighs?|knees?|calves?|thigh[- ]?highs?|stockings?|tights|pantyhose|leggings?|leg warmers?|garters?)\b/],
-  [["hips"], /\b(?:hips?|waists?|waistbands?|belts?|crotches?|genitals?|pubis|penis|vulva|vagina|pussy|butts?|buttocks|asses?|mini[- ]?skirts?|skirts?|pants|trousers|slacks|shorts|jeans|underwear|panties|briefs|thongs?|bottomless)\b/],
-  [["hands", "feet"], /\b(?:paws?|claws?)\b/],
-  [["hands"], /\b(?:hands?|fingers?|fingernails?|palms?|wrists?|gloves?|mittens?|rings?|watches|bracelets?)\b/],
-  [["arms"], /\b(?:arms?|sleeves?|elbows?|forearms?|biceps|triceps)\b/],
-  [["shoulders"], /\b(?:shoulders?|shoulder pads)\b/],
-  [["shoulders", "torso"], /\b(?:shirts?|blouses?|tank tops?|sweaters?|sweatshirts?|cardigans?|hoodies?|jackets?|blazers?|coats?|vests?|jerseys?|suits?|dresses?|robes?|gowns?|overalls|aprons?|uniforms?|ribbons?|capes?|cloaks?|tunics?|waistcoats?|suspenders?|sash(?:es)?|shirtless|topless)\b/],
-  [["shoulders", "torso", "arms"], /\b(?:sleeveless|oversized|unzipped|unbuttoned|open front)\b/],
-  [["hips", "legs"], /\b(?:side slit|high slit|pleated|high[- ]?waisted|low[- ]?rise)\b/],
-  [["shoulders", "torso", "arms", "hips", "legs"], /\b(?:torn clothes|wet clothes)\b/],
-  [["shoulders", "torso", "hips", "legs", "feet"], /\b(?:nude|naked)\b/],
-  [["torso"], /\b(?:torsos?|chests?|breasts?|busts?|nipples?|bellies?|stomachs?|midriffs?|abdomens?|backs?|spines?|corsets?|bras?|binders?|collarbones?|cleavage|necklines?)\b/],
-  [["neck"], /\b(?:necks?|necklaces?|chokers?|scarves?|ties?|neckties?|bow ?ties?|collars?|brooch(?:es)?|badges?|medals?)\b/],
-  [["face"], /\b(?:eyes?|eyebrows?|brows|eyelashes?|lashes|pupils|irises?|heterochromia|tareme|tsurime|jitome|sanpaku|empty eyes|dashed eyes|symbol in eye|faces?|facial|freckles|beauty marks?|moles?|blush|cheeks?|chins?|jaws?|foreheads?|noses?|lips?|mouths?|teeth|tongues?|smiles?|frowns?|grins?|fangs?|tusks?|muzzles?|snouts?|eyepatches?|eye patches?|masks?|glasses|eyeglasses|goggles|monocles?|beards?|mustaches?|moustaches?|makeup)\b/],
-  [["head"], /\b(?:hair|hairstyles?|bangs|fringe|ponytails?|braids?|buns?|bald|horns?|ears?|elf ears|earrings?|ear piercings?|antennae|halos?|hats?|caps?|hoods?|headbands?|tiaras?|veils?|hairpins?|hair clips?|hair ornaments?)\b/],
-  [["shoulders", "torso"], /\b(?:wings?|winged)\b/],
-  [["hips"], /\b(?:tails?|tail feathers?)\b/],
-  [ALL_VISIBILITY_REGIONS, /\b(?:skin|fur|scales?|feathers?|furry|human|elf|elven|demon|demonic|angel|angelic|android|robot|robotic|cyborg|oni|vampire|orc|goblin|mermaid|alien|androgynous|kemonomimi|cat girl|wolf girl|fox girl|monster girl)\b/],
-  [["figure"], /\b(?:tall|short|petite|giant|dwarf(?:ed)?|full[- ]?figure)\b/],
-  [["shoulders", "torso", "arms"], /\b(?:muscular|toned|stocky|athletic)\b/],
-  [["torso", "hips", "legs"], /\b(?:skinny|slim|lean|plump|fat|curvy|build|physique|pear[- ]?shaped|hourglass)\b/],
-  [["legs"], /\b(?:long legs?|short legs?|thick thighs?)\b/]
-];
-
-/** Eye traits are a hard exclusion when the selected framing hides the eyes. */
-const EYE_TAG = /\b(?:eyes?|eyebrows?|brows|eyelashes?|lashes|pupils|irises?|heterochromia|tareme|tsurime|jitome|sanpaku|empty eyes|dashed eyes|symbol in eye|eyepatches?|eye patches?)\b/;
-
-function fallbackVisibilityRegions(source: VisibilityTagSource): VisibilityRegion[] {
-  // Legacy identity remains global. Unknown appearance is conservatively
-  // treated as face-local, unknown attire as an upper garment, and unknown
-  // body/parser-only tags require a complete figure.
-  if (source === "identity") return ALL_VISIBILITY_REGIONS;
-  if (source === "appearance") return ["face"];
-  if (source === "attire") return ["shoulders", "torso"];
-  return ["figure"];
-}
-
-function tagVisibilityRegions(tag: string, source: VisibilityTagSource): VisibilityRegion[] {
-  const normalized = tag.toLowerCase();
-  for (const [regions, pattern] of REGION_TAG_PATTERNS) {
-    if (pattern.test(normalized)) return regions;
-  }
-  return fallbackVisibilityRegions(source);
-}
-
-function visibilityModifiersFor(framing: string, angle: string, perspective: string, renderScope: string): { hideFace: boolean; hideEyes: boolean } {
-  const scopeText = `${angle} ${perspective} ${renderScope}`.toLowerCase();
-  return {
-    hideFace: /\bfrom behind\b|\bfrom the back\b|\bback (?:view|only|to (?:the )?(?:viewer|camera))\b|\bseen from behind\b|\bfacing away\b|\bface (?:hidden|out of frame)\b/.test(scopeText),
-    hideEyes: framing === "eyes out of frame" || /\beyes? (?:hidden|out of frame|cropped out|outside (?:the )?frame)\b/.test(scopeText)
-  };
-}
-
-function cameraViewOf(camera: unknown): { framing: string; angle: string; perspective: string } {
-  const record = asRecord(camera);
-  const framing = cleanString(record.framing).toLowerCase();
-  const angle = cleanString(record.angle).toLowerCase();
-  const perspective = cleanString(record.perspective).toLowerCase();
-  if (framing || angle || perspective) return { framing, angle, perspective };
-  const text = cleanString(camera).toLowerCase();
-  const byLengthDesc = (values: readonly string[]) => [...values].sort((left, right) => right.length - left.length);
-  return {
-    framing: byLengthDesc(CAMERA_FRAMING_VALUES).find((value) => text.includes(value)) || "",
-    angle: byLengthDesc(CAMERA_ANGLE_VALUES).find((value) => text.includes(value)) || "",
-    perspective: byLengthDesc(CAMERA_PERSPECTIVE_VALUES).find((value) => text.includes(value)) || ""
-  };
-}
-
 type DynamicCameraResolution = {
   value: unknown;
   view: { framing: string; angle: string; perspective: string };
@@ -521,58 +417,6 @@ function resolveDynamicCamera(shot: ShotJson): DynamicCameraResolution {
   };
 }
 
-export function isFragmentCameraFraming(framing: string): boolean {
-  return framing === "body-part focus" || framing === "head out of frame" || framing === "eyes out of frame";
-}
-
-/**
- * Projects a Dynamic character's complete baseline into the tags actually
- * visible in the given camera framing (the same visibility-tier projection the
- * renderer audits). Used by the parser when a model omits visibleTags: for
- * ordinary framings the tier projection is authoritative, so the projected tags
- * are the correct audit value. Returns "" for fragment framings, where a
- * baseline projection would leak out-of-crop traits; the renderer fails closed
- * there instead.
- */
-export function projectDynamicVisibleTags(character: CharacterJson, camera: unknown, renderScope = ""): string {
-  const view = cameraViewOf(camera);
-  if (isFragmentCameraFraming(view.framing)) return "";
-  const modifiers = visibilityModifiersFor(view.framing, view.angle, view.perspective, renderScope);
-  const regions = new Set(FRAMING_VISIBILITY_REGIONS[view.framing] || ALL_VISIBILITY_REGIONS);
-  if (modifiers.hideFace) regions.delete("face");
-  const projected: string[] = [];
-  for (const { tag, source } of baselineTags(character)) {
-    if (modifiers.hideEyes && EYE_TAG.test(tag.toLowerCase())) continue;
-    if (tagVisibilityRegions(tag, source).some((region) => regions.has(region))) projected.push(tag);
-  }
-  return unique(projected).join(", ");
-}
-
-type BaselineTag = { tag: string; source: VisibilityTagSource };
-
-function baselineTags(character: CharacterJson): BaselineTag[] {
-  const fields: Array<[VisibilityTagSource, unknown]> = [
-    ["identity", character.identity],
-    ["appearance", character.appearance],
-    ["appearance", character.avatarAppearance],
-    ["body", character.body],
-    ["body", character.avatarBody],
-    ["attire", character.attire],
-    ["attire", character.avatarAttire]
-  ];
-  const seen = new Set<string>();
-  const output: BaselineTag[] = [];
-  for (const [source, value] of fields) {
-    for (const tag of csvParts(cleanString(value))) {
-      const key = tag.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      output.push({ tag, source });
-    }
-  }
-  return output;
-}
-
 function adultAgeMarker(character: CharacterJson, shot: ShotJson): string {
   const nsfw = csvParts(shot.situation).some((tag) => tag.toLowerCase() === "nsfw");
   const age = cleanString(character.age);
@@ -644,17 +488,6 @@ function assembleVisibilityTierCharacterBlock(
     projected.map((tag) => stripOrReplaceNames(tag, replacements, true)).join(", "),
     faceReadable ? stripOrReplaceNames(cleanString(character.expression), replacements, true) : ""
   )).join(", ");
-}
-
-export function resolveShotPerspective(
-  shot: ShotJson,
-  config: Config
-): { mode: PerspectiveMode; source: "adaptive" | "manual" } {
-  if (!config.adaptiveMode) return { mode: config.perspectiveMode, source: "manual" };
-  const candidate = cleanString(shot.perspectiveMode).toLowerCase();
-  return candidate === "creative" || candidate === "static" || candidate === "dynamic"
-    ? { mode: candidate, source: "adaptive" }
-    : { mode: "dynamic", source: "adaptive" };
 }
 
 function structuredSnippets(value: unknown, cap: number): string[] {
@@ -1119,4 +952,67 @@ export function assemblePrompt(
     perspectiveSource: perspective.source,
     creativeConcept: perspective.mode === "creative" ? creativeConcept : undefined
   };
+}
+
+
+/**
+ * Pure compiler entry point over a validated ResolvedShot. The canonical
+ * pipeline never touches untrusted parser shapes after this boundary. Until
+ * the legacy assembler is replaced field-by-field, this reconstructs the
+ * renderable legacy shape and delegates to assemblePrompt; the reconstruction
+ * is validated by round-trip tests so the canonical path cannot drift from
+ * rendered behavior.
+ */
+export function compilePrompt(
+  resolved: ResolvedShot,
+  config: Config,
+  options?: { dynamicLayout?: "hybrid" | "compact" }
+): PromptEntry {
+  const plan = resolved.plan;
+  const shot: ShotJson = {
+    paragraph: resolved.paragraph,
+    perspectiveMode: plan.mode === "asset" ? "dynamic" : plan.mode,
+    camera: resolved.camera,
+    ...(plan.mode === "dynamic"
+      ? {
+        shotPlan: {
+          ...(plan.primaryAction ? { primaryAction: plan.primaryAction } : {}),
+          ...(plan.secondaryCue ? { secondaryCue: plan.secondaryCue } : {}),
+          ...(plan.staging ? { staging: plan.staging } : {})
+        }
+      }
+      : {}),
+    situation: resolved.situation,
+    characters: resolved.characters.map((character) => ({
+      name: character.name,
+      label: character.label,
+      age: character.age,
+      appearance: character.appearance,
+      body: character.body,
+      attire: character.attire,
+      attireInferred: character.attireInferred,
+      ...(character.sources ? { sources: character.sources } : {}),
+      expression: character.expression,
+      composition: character.composition,
+      renderScope: character.renderScope,
+      visibleTags: character.visibleTags.join(", ")
+    })),
+    sharedComposition: resolved.sharedComposition,
+    negative: resolved.negative
+  };
+  const scene: SceneJson = {
+    place: resolved.place,
+    environment: resolved.environment,
+    shots: [shot]
+  };
+  const concept = plan.mode === "creative" ? plan.concept : undefined;
+  return assemblePrompt(
+    scene,
+    shot,
+    config,
+    resolved.paragraph,
+    resolved.paragraph,
+    concept,
+    options ? { dynamicLayout: options.dynamicLayout } : undefined
+  );
 }

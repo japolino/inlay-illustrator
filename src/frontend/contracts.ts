@@ -36,7 +36,7 @@ export type BackendMessage = {
   avatarVisionAttempts?: Record<string, unknown>;
   status?: string;
   error?: string;
-  record?: { imageUrls?: string[] };
+  record?: { imageUrls?: string[]; slots?: Array<{ imageUrl?: string }> };
   operationId?: string;
   messageId?: string;
   stage?: "queued" | "loading" | "parsing" | "preparing" | "generating" | "persisting" | "completed" | "failed" | "cancelled";

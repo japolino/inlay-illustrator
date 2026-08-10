@@ -340,7 +340,7 @@ describe("compact generated-record storage", () => {
     expect(workflowFiles).toHaveLength(1);
 
     const hydrated = await loadGeneratedRecord(reference, "user-1");
-    expect(hydrated?.imageParameters).toEqual(original.imageParameters);
+    expect(hydrated?.slots.map((slot) => slot.imageParameters)).toEqual(original.imageParameters);
   });
 
   test("re-saves progressive records without nesting compact workflow references", async () => {
@@ -349,12 +349,12 @@ describe("compact generated-record storage", () => {
     const compact = await loadGeneratedRecord(firstReference, "user-progress", false);
     expect(compact).not.toBeNull();
     if (!compact) return;
-    compact.imageUrls[0] = "/progressive-result.png";
+    compact.slots[0]!.imageUrl = "/progressive-result.png";
     const secondReference = await storeGeneratedRecord("chat-progress", "progress-key", compact, "user-progress");
     const hydrated = await loadGeneratedRecord(secondReference, "user-progress");
 
-    expect(hydrated?.imageParameters?.[0]).toEqual(original.imageParameters?.[0]);
-    expect(hydrated?.imageUrls[0]).toBe("/progressive-result.png");
+    expect(hydrated?.slots[0]?.imageParameters).toEqual(original.imageParameters?.[0]);
+    expect(hydrated?.slots[0]?.imageUrl).toBe("/progressive-result.png");
   });
 
   test("migrates legacy records into compact references and builds direct image indexes", async () => {
@@ -363,6 +363,13 @@ describe("compact generated-record storage", () => {
     rebuildGeneratedImageIndex(state);
 
     expect(isGeneratedRecordReference(state.generated.legacy)).toBe(true);
+    expect(state.generated.legacy).toMatchObject({
+      storageVersion: 3,
+      slots: [
+        { paragraph: 1, imageId: "image-1", imageUrl: "/one" },
+        { paragraph: 2, imageId: "image-2", imageUrl: "/two" }
+      ]
+    });
     expect(state.generatedImageIndex?.["id:image-2"]).toEqual({ key: "legacy", index: 1 });
     expect((state.generated.legacy as Record<string, unknown>).prompts).toBeUndefined();
   });

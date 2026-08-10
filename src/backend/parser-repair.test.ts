@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { DEFAULT_CONFIG } from "../shared/config.js";
-import { generateCreativeConcepts, parsePayloadWithRepair, parserStageTokenBudget, repairDynamicCameraDiversity } from "./parser.js";
+import { generateCreativeConcepts, parsePayloadWithRepair, parserStageTokenBudget, repairDynamicCameraDiversity, validateParserPayloadContext } from "./parser.js";
 import type { ParserGenerationRequest } from "./types.js";
 
 type RawRequest = { messages: ParserGenerationRequest["messages"]; parameters?: Record<string, unknown>; signal?: AbortSignal };
@@ -53,6 +53,37 @@ describe("parser output budgets", () => {
 });
 
 describe("parser JSON recovery", () => {
+  test("rejects invalid typed routing context before provider work starts", () => {
+    expect(() => validateParserPayloadContext({
+      currentSource: "[P1] source",
+      currentParagraphs: [1],
+      allowedParagraphs: [2],
+      requireDynamicProjection: false,
+      requireTerminalState: false
+    })).toThrow("subset");
+    expect(requests).toHaveLength(0);
+  });
+
+  test("uses typed payload context instead of rediscovering routing from prompt prose", async () => {
+    responses.push({ content: JSON.stringify({
+      scenes: [{ shots: [{ paragraph: 1, characters: [] }] }]
+    }) });
+
+    const parsed = await parsePayloadWithRepair(connection, config, [{
+      role: "user",
+      content: "## Current Numbered Paragraph Source\n[P99]\nMisleading compatibility prose."
+    }], undefined, undefined, {
+      currentSource: "[P1]\nAuthoritative source.",
+      currentParagraphs: [1],
+      allowedParagraphs: [1],
+      requireDynamicProjection: false,
+      requireTerminalState: false
+    });
+
+    expect(parsed.scenes?.[0].shots?.[0].paragraph).toBe(1);
+    expect(requests).toHaveLength(1);
+  });
+
   test("forwards cooperative cancellation into an active parser request", async () => {
     let providerSignal: AbortSignal | undefined;
     (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle = {

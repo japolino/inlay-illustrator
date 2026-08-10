@@ -113,10 +113,12 @@ describe("frontend backend-message routing", () => {
 
   test("formats normal and error statuses and reports generated image counts", () => {
     routeBackendMessage({ type: "status", status: "Generated", record: { imageUrls: ["one", "two"] } }, () => "", actions);
+    routeBackendMessage({ type: "status", status: "Generated", record: { slots: [{ imageUrl: "/a.png" }, { imageUrl: "" }, { imageUrl: "/b.png" }] } }, () => "", actions);
     routeBackendMessage({ type: "status", status: "Error", error: "provider failed" }, () => "", actions);
     routeBackendMessage({ type: "status", record: { imageUrls: [] } }, () => "", actions);
 
     expect(statuses).toEqual([
+      "Generated\n2 image(s) generated.",
       "Generated\n2 image(s) generated.",
       "Error: provider failed",
       "Ready\n0 image(s) generated."

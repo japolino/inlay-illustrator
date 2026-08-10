@@ -75,8 +75,11 @@ export function routeBackendMessage(
     let status = message.error
       ? `${message.status}: ${message.error}`
       : String(message.status || "Ready");
-    if (message.record?.imageUrls) {
-      status += `\n${message.record.imageUrls.filter(Boolean).length} image(s) generated.`;
+    const recordImages = message.record?.slots
+      ? message.record.slots.filter((slot) => Boolean(slot.imageUrl)).length
+      : message.record?.imageUrls?.filter(Boolean).length;
+    if (recordImages !== undefined) {
+      status += `\n${recordImages} image(s) generated.`;
     }
     actions.updateStatus(status);
     return;

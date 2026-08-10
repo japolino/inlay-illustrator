@@ -5,21 +5,57 @@ import { paragraphCount } from "./paragraphs.js";
 import type { CreativeConcept, GenerationSlotStatus } from "./types.js";
 import { clampInt } from "./utils.js";
 
+type InlaySlot = {
+  imageId?: string;
+  imageUrl?: string;
+  prompt?: string;
+  negativePrompt?: string;
+  perspectiveMode?: PerspectiveMode;
+  perspectiveSource?: "adaptive" | "manual";
+  creativeConcept?: CreativeConcept | null;
+  placement?: "cover" | "paragraph";
+  paragraph?: number;
+  status?: GenerationSlotStatus;
+};
+
 type InlayRecord = {
   chatId?: string;
   messageId?: string;
   swipeId?: number;
+  slots?: InlaySlot[];
+  /** V2 compatibility fields. New records use slots exclusively. */
   imageIds?: string[];
-  imageUrls: string[];
-  prompts: string[];
+  imageUrls?: string[];
+  prompts?: string[];
   negativePrompts?: string[];
   perspectiveModes?: PerspectiveMode[];
   perspectiveSources?: Array<"adaptive" | "manual">;
   creativeConcepts?: Array<CreativeConcept | null>;
   placements?: Array<"cover" | "paragraph">;
-  paragraphs: number[];
+  paragraphs?: number[];
   slotStatuses?: GenerationSlotStatus[];
 };
+
+function normalizedInlaySlots(record: InlayRecord): InlaySlot[] {
+  if (record.slots) return record.slots;
+  const count = Math.max(
+    record.imageUrls?.length || 0,
+    record.paragraphs?.length || 0,
+    record.slotStatuses?.length || 0
+  );
+  return Array.from({ length: count }, (_value, index) => ({
+    imageId: record.imageIds?.[index] || "",
+    imageUrl: record.imageUrls?.[index] || "",
+    prompt: record.prompts?.[index] || "",
+    negativePrompt: record.negativePrompts?.[index] || "",
+    perspectiveMode: record.perspectiveModes?.[index],
+    perspectiveSource: record.perspectiveSources?.[index],
+    creativeConcept: record.creativeConcepts?.[index],
+    placement: record.placements?.[index] || "paragraph",
+    paragraph: record.paragraphs?.[index],
+    status: record.slotStatuses?.[index]
+  }));
+}
 
 export function imageUrlFromId(imageId: string): string {
   return `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
@@ -87,26 +123,26 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
   const blocks = new Map<number, string[]>();
   const coverBlocks: string[] = [];
   const count = Math.max(1, paragraphCount(cleanOriginal));
-  const slotCount = Math.max(record.imageUrls.length, record.paragraphs.length, record.slotStatuses?.length || 0);
-  for (let index = 0; index < slotCount; index += 1) {
-    const url = record.imageUrls[index] || "";
-    const status = record.slotStatuses?.[index];
+  const slots = normalizedInlaySlots(record);
+  for (const [index, slot] of slots.entries()) {
+    const url = slot.imageUrl || "";
+    const status = slot.status;
     if (!url && !status) continue;
-    const placement = record.placements?.[index] === "cover" ? "cover" : "paragraph";
-    const illustrationNumber = record.placements
-      ? record.placements.slice(0, index + 1).filter((candidate) => candidate !== "cover").length
-      : index + 1;
-    const paragraph = clampInt(record.paragraphs[index], 1, count, Math.min(index + 1, count));
+    const placement = slot.placement === "cover" ? "cover" : "paragraph";
+    const illustrationNumber = slots
+      .slice(0, index + 1)
+      .filter((candidate) => candidate.placement !== "cover").length;
+    const paragraph = clampInt(slot.paragraph, 1, count, Math.min(index + 1, count));
     const existing = placement === "cover" ? coverBlocks : blocks.get(paragraph) || [];
     existing.push(url
       ? renderInlayBlock(
         url,
-        record.prompts[index] || "",
-        record.negativePrompts?.[index] || "",
-        record.perspectiveModes?.[index],
-        record.perspectiveSources?.[index],
-        record.creativeConcepts?.[index],
-        record.imageIds?.[index] || "",
+        slot.prompt || "",
+        slot.negativePrompt || "",
+        slot.perspectiveMode,
+        slot.perspectiveSource,
+        slot.creativeConcept,
+        slot.imageId || "",
         record.chatId || "",
         record.messageId || "",
         record.swipeId || 0,

@@ -218,4 +218,16 @@ describe("inlay rendering", () => {
     expect(progressive).toContain("/second.png");
     expect(progressive.split(MARKER)).toHaveLength(3);
   });
+  test("renders canonical V3 slots without reconstructing parallel arrays", () => {
+    const rendered = renderInlaidMessage("First.\n\nSecond.", {
+      slots: [
+        { imageUrl: "/cover-v3.png", placement: "cover", paragraph: 1, status: "completed" },
+        { imageUrl: "/second-v3.png", placement: "paragraph", paragraph: 2, status: "completed", perspectiveMode: "dynamic" }
+      ]
+    }, DEFAULT_CONFIG);
+
+    expect(rendered.indexOf("/cover-v3.png")).toBeLessThan(rendered.indexOf("First."));
+    expect(rendered.indexOf("/second-v3.png")).toBeLessThan(rendered.indexOf("Second."));
+  });
+
 });

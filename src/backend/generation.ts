@@ -13,6 +13,10 @@ import {
   hasUnusedCreativeConcepts,
   rebaseCreativeConcepts
 } from "./creative.js";
+import { ContinuityStateSchema, reconcileContinuityState, type IllustrationPlan } from "./domain.js";
+import { planFromParsedPayload } from "./plan-adapter.js";
+import { resolveIllustrationPlan } from "./shot-resolution.js";
+import { type GeneratedRecordV3 as GeneratedRecord, toGeneratedRecordV3 } from "./generated-record.js";
 import { buildImageParameters, prepareAndDispatchImageJobs, rerollImageParameters, resolveImageConnection } from "./images.js";
 import { logStage } from "./logging.js";
 import { updateCharacterMemory } from "./memory.js";
@@ -34,12 +38,12 @@ import {
   parserInstruction,
   parserMessages,
   parserUserRequest,
-  preprocessTargetParagraphs,
+  preprocessTarget,
   repairDynamicCameraDiversity,
   routedTargetSource,
   resolveParserConnection
 } from "./parser.js";
-import { renderNegativeWithCurrentSelection, renderPrompt, renderPromptWithCurrentAffixes } from "./prompt.js";
+import { compilePrompt, renderNegativeWithCurrentSelection, renderPrompt, renderPromptWithCurrentAffixes } from "./prompt.js";
 import { imageUrlFromId, renderInlaidMessage } from "./rendering.js";
 import { normalizeScenePayload, selectCoverPromptEntry, selectPromptEntries } from "./scenes.js";
 import {
@@ -56,7 +60,6 @@ import type {
   CharacterJson,
   ChatMessage,
   CreativeConcept,
-  GeneratedRecord,
   ImageConnection,
   ParsedPayload,
   ParserConnection,
@@ -71,7 +74,7 @@ import { applyPreviousVisualState, buildPreviousVisualState } from "./visual-sta
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
 type ImageGenerationResult = Awaited<ReturnType<typeof spindle.imageGen.generate>>;
-type ParsedSelection = { parsed: ParsedPayload; selected: PromptEntry[] };
+type ParsedSelection = { parsed: ParsedPayload; selected: PromptEntry[]; plan?: IllustrationPlan | null };
 type PreparedImageStage = { jobs: PreparedImageJob[]; results: ImageGenerationResult[] };
 
 export type ParseStageInput = {
@@ -110,12 +113,7 @@ export type StoredImageDetails = {
 type LocatedGeneratedImage = { key: string; record: GeneratedRecord; index: number };
 
 function generatedRecord(value: unknown): GeneratedRecord | null {
-  if (!value || typeof value !== "object") return null;
-  const candidate = value as Partial<GeneratedRecord>;
-  return Array.isArray(candidate.prompts) && Array.isArray(candidate.paragraphs) && Array.isArray(candidate.imageUrls)
-    && typeof candidate.messageId === "string"
-    ? candidate as GeneratedRecord
-    : null;
+  return toGeneratedRecordV3(value);
 }
 
 function sameImageUrl(stored: string, requested: string): boolean {
@@ -130,14 +128,15 @@ export function locateGeneratedImage(state: State, request: StoredImageActionReq
     if (request.messageId && record.messageId !== request.messageId) continue;
     if (request.swipeId !== undefined && record.swipeId !== request.swipeId) continue;
     const explicitIndex = request.imageIndex;
-    if (explicitIndex !== undefined && Number.isInteger(explicitIndex) && explicitIndex >= 0 && explicitIndex < record.imageUrls.length) {
-      const idMatches = !request.imageId || record.imageIds?.[explicitIndex] === request.imageId;
-      const urlMatches = !request.imageUrl || sameImageUrl(record.imageUrls[explicitIndex] || "", request.imageUrl);
+    if (explicitIndex !== undefined && Number.isInteger(explicitIndex) && explicitIndex >= 0 && explicitIndex < record.slots.length) {
+      const slot = record.slots[explicitIndex];
+      const idMatches = !request.imageId || slot.imageId === request.imageId;
+      const urlMatches = !request.imageUrl || sameImageUrl(slot.imageUrl, request.imageUrl);
       if (idMatches && urlMatches) return { key, record, index: explicitIndex };
     }
-    const matchedIndex = record.imageUrls.findIndex((url, index) =>
-      (request.imageId && record.imageIds?.[index] === request.imageId)
-      || (request.imageUrl && sameImageUrl(url, request.imageUrl))
+    const matchedIndex = record.slots.findIndex((slot) =>
+      (request.imageId && slot.imageId === request.imageId)
+      || (request.imageUrl && sameImageUrl(slot.imageUrl, request.imageUrl))
     );
     if (matchedIndex >= 0) return { key, record, index: matchedIndex };
   }
@@ -168,14 +167,15 @@ async function locateStoredGeneratedImage(
     if (request.swipeId !== undefined && record.swipeId !== request.swipeId) continue;
     const preferredIndex = direct?.key === key ? direct.index : request.imageIndex;
     if (preferredIndex !== undefined && Number.isInteger(preferredIndex)
-      && preferredIndex >= 0 && preferredIndex < record.imageUrls.length) {
-      const idMatches = !request.imageId || record.imageIds?.[preferredIndex] === request.imageId;
-      const urlMatches = !request.imageUrl || sameImageUrl(record.imageUrls[preferredIndex] || "", request.imageUrl);
+      && preferredIndex >= 0 && preferredIndex < record.slots.length) {
+      const slot = record.slots[preferredIndex];
+      const idMatches = !request.imageId || slot.imageId === request.imageId;
+      const urlMatches = !request.imageUrl || sameImageUrl(slot.imageUrl, request.imageUrl);
       if (idMatches && urlMatches) return { key, record, index: preferredIndex };
     }
-    const matchedIndex = record.imageUrls.findIndex((url, index) =>
-      (request.imageId && record.imageIds?.[index] === request.imageId)
-      || (request.imageUrl && sameImageUrl(url, request.imageUrl))
+    const matchedIndex = record.slots.findIndex((slot) =>
+      (request.imageId && slot.imageId === request.imageId)
+      || (request.imageUrl && sameImageUrl(slot.imageUrl, request.imageUrl))
     );
     if (matchedIndex >= 0) return { key, record, index: matchedIndex };
   }
@@ -188,21 +188,15 @@ export async function getStoredImageDetails(
 ): Promise<StoredImageDetails> {
   const state = await getState(request.chatId, userId);
   const located = await locateStoredGeneratedImage(state, request, userId, false);
-  const concept = located.record.creativeConcepts?.[located.index];
+  const slot = located.record.slots[located.index];
+  const concept = slot.creativeConcept;
   return {
-    prompt: located.record.prompts[located.index] || "",
-    negativePrompt: located.record.negativePrompts?.[located.index] || "",
-    perspectiveMode: located.record.perspectiveModes?.[located.index] || null,
-    perspectiveSource: located.record.perspectiveSources?.[located.index] || null,
+    prompt: slot.prompt,
+    negativePrompt: slot.negativePrompt,
+    perspectiveMode: slot.perspectiveMode || null,
+    perspectiveSource: slot.perspectiveSource || null,
     creativeConcept: concept ? `${concept.anchor}: ${concept.concept}` : ""
   };
-}
-
-function replaceAt<T>(values: T[] | undefined, index: number, value: T, fallback: T): T[] {
-  const next = [...(values || [])];
-  while (next.length <= index) next.push(fallback);
-  next[index] = value;
-  return next;
 }
 
 export function compactLorebookNeedsFullRetry(payload: ParsedPayload, snapshot: LorebookContextSnapshot): boolean {
@@ -253,7 +247,8 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
   let conceptCandidates = [...(input.creativeCandidates || [])];
   let conceptSelections: Map<number, CreativeConcept> | null = null;
   let ideationAttempted = false;
-  let creativeTargetSource: string | null = null;
+  let creativeTarget: { source: string; selectedParagraphs: number[] } | null = null;
+  let canonicalPlan: IllustrationPlan | null = null;
   const usedConceptIds = new Set(input.usedCreativeConceptIds || []);
   const manualCreative = !config.adaptiveMode && config.perspectiveMode === "creative";
   const creativePipeline = manualCreative || config.adaptiveMode;
@@ -325,7 +320,7 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
           }
         }
       }
-      if (creativePipeline && creativeTargetSource === null) {
+      if (creativePipeline && creativeTarget === null) {
         const candidateParagraphs = new Set(conceptCandidates.map((concept) => concept.paragraph));
         if (manualCreative && config.preprocessingEnabled && candidateParagraphs.size > 0) {
           const selectedParagraphs = [...candidateParagraphs].sort((left, right) => left - right);
@@ -334,26 +329,33 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
               || conceptCandidates.find((candidate) => candidate.paragraph === paragraph);
             return `[P${paragraph}]: Visual thesis: ${concept?.concept || concept?.anchor || "selected Creative focal beat"}; Camera intent: ${concept?.camera || "identity-safe Creative framing"}`;
           });
-          creativeTargetSource = routedTargetSource(formatTargetParagraphs(paragraphs), {
-            summary: notes.join("\n"),
-            selectedParagraphs,
-            cameraNotes: selectedParagraphs.map((paragraph) =>
-              conceptSelections?.get(paragraph)?.camera
-              || conceptCandidates.find((candidate) => candidate.paragraph === paragraph)?.camera
-              || "identity-safe Creative framing"
-            )
-          });
+          creativeTarget = {
+            source: routedTargetSource(formatTargetParagraphs(paragraphs), {
+              summary: notes.join("\n"),
+              selectedParagraphs,
+              cameraNotes: selectedParagraphs.map((paragraph) =>
+                conceptSelections?.get(paragraph)?.camera
+                || conceptCandidates.find((candidate) => candidate.paragraph === paragraph)?.camera
+                || "identity-safe Creative framing"
+              )
+            }),
+            selectedParagraphs
+          };
           logStage(config, "creative_preprocessing_done", {
             candidateCount: conceptCandidates.length,
             selectedParagraphs
           });
         } else {
-          creativeTargetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId, signal);
+          creativeTarget = await preprocessTarget(parserConnection, config, paragraphs, context, userId, signal);
         }
       }
-      const targetSource = creativePipeline
-        ? creativeTargetSource || formatTargetParagraphs(paragraphs)
-        : await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId, signal);
+      const target = creativePipeline
+        ? creativeTarget || {
+          source: formatTargetParagraphs(paragraphs),
+          selectedParagraphs: paragraphs.map((paragraph) => paragraph.parserIndex)
+        }
+        : await preprocessTarget(parserConnection, config, paragraphs, context, userId, signal);
+      const targetSource = target.source;
       const instruction = parserInstruction(config, {
         hasPreviousVisualState: Boolean(config.previousVisualStateEnabled && state.previousVisualState)
       });
@@ -383,7 +385,15 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
         config,
         parserMessages(instruction, referenceContext, userRequest, context.override),
         userId,
-        signal
+        signal,
+        {
+          currentSource: formatTargetParagraphs(paragraphs),
+          currentParagraphs: paragraphs.map((paragraph) => paragraph.parserIndex),
+          allowedParagraphs: target.selectedParagraphs,
+          requireDynamicProjection: config.promptStyle === "anima"
+            && (config.adaptiveMode || config.perspectiveMode === "dynamic"),
+          requireTerminalState: true
+        }
       );
       parsed = applyPreviousVisualState(
         parsed,
@@ -429,7 +439,44 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
           conceptSelections = new Map();
         }
       }
+      try {
+        const illustrationInput = planFromParsedPayload(
+          parsed,
+          config.previousVisualStateEnabled ? state.previousVisualState : undefined,
+          paragraphs,
+          config,
+          conceptSelections || new Map()
+        );
+        canonicalPlan = resolveIllustrationPlan(illustrationInput);
+        logStage(config, "canonical_plan_resolved", {
+          shots: canonicalPlan.shots.length,
+          characters: canonicalPlan.shots.reduce((total, shot) => total + shot.characters.length, 0),
+          paragraphs: [...new Set(canonicalPlan.shots.map((shot) => shot.paragraph))],
+          terminalCharacters: canonicalPlan.terminalContinuity.characters.length
+        });
+      } catch (error) {
+        logStage(config, "canonical_plan_failed", {
+          error: error instanceof Error ? error.message : String(error)
+        }, "warn");
+      }
       selected = selectPromptEntries(parsed, paragraphs, config, conceptSelections || new Map(), conceptCandidates);
+      if (canonicalPlan) {
+        const byParagraph = new Map(canonicalPlan.shots.map((shot) => [shot.paragraph, shot]));
+        const mismatches: string[] = [];
+        for (const entry of selected) {
+          if (entry.placement === "cover") continue;
+          const resolved = byParagraph.get(entry.parserParagraph);
+          if (!resolved) continue;
+          const canonical = renderPrompt(compilePrompt(resolved, config).prompt, config.promptSyntax);
+          const legacy = renderPrompt(entry.prompt, config.promptSyntax);
+          if (canonical !== legacy) mismatches.push(`P${entry.parserParagraph}`);
+        }
+        logStage(config, "canonical_compile_verified", {
+          checked: selected.filter((entry) => entry.placement !== "cover").length,
+          matched: selected.filter((entry) => entry.placement !== "cover").length - mismatches.length,
+          mismatchedParagraphs: mismatches
+        }, mismatches.length > 0 ? "warn" : undefined);
+      }
       if (!config.adaptiveMode && config.perspectiveMode === "creative" && (conceptSelections?.size || 0) > 0) {
         selected = selected.filter((entry) => Boolean(entry.creativeConcept));
       }
@@ -455,7 +502,7 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
     }
   }
   if (!parsed) throw new Error(lastParserError instanceof Error ? lastParserError.message : "Parser did not return usable prompts.");
-  return { parsed, selected };
+  return { parsed, selected, plan: canonicalPlan };
 }
 
 function logParsedSelection(
@@ -563,33 +610,37 @@ function reportGenerationProgress(
 function pendingGenerationRecord(
   context: ProgressiveGenerationContext,
   selected: PromptEntry[],
-  parsed: ParsedPayload
+  parsed: ParsedPayload,
+  plan?: IllustrationPlan | null
 ): GeneratedRecord {
   return {
+    schemaVersion: 3,
     chatId: context.chatId,
     messageId: context.messageId,
     swipeId: context.swipeId,
-    prompts: selected.map((entry) => renderPrompt(entry.prompt, context.config.promptSyntax)),
-    negativePrompts: selected.map((entry) => entry.negative || ""),
-    perspectiveModes: selected.map((entry) => entry.perspectiveMode),
-    perspectiveSources: selected.map((entry) => entry.perspectiveSource),
-    imageParameters: selected.map(() => ({})),
-    corePrompts: selected.map((entry) => renderPrompt(entry.corePrompt, context.config.promptSyntax)),
-    shotNegatives: selected.map((entry) => entry.shotNegative),
-    promptFormats: selected.map((entry) => entry.corePrompt.format || "ordered"),
-    creativeConcepts: selected.map((entry) => entry.creativeConcept || null),
-    creativeConceptCandidates: selected.map((entry) => entry.creativeCandidates || []),
-    creativeConceptHistory: selected.map((entry) => entry.creativeConcept ? [entry.creativeConcept.id] : []),
-    placements: selected.map((entry) => entry.placement || "paragraph"),
-    paragraphs: selected.map((entry) => entry.paragraph),
-    imageIds: selected.map(() => ""),
-    imageUrls: selected.map(() => ""),
-    slotStatuses: selected.map(() => "pending"),
-    slotErrors: selected.map(() => ""),
+    slots: selected.map((entry) => ({
+      prompt: renderPrompt(entry.prompt, context.config.promptSyntax),
+      negativePrompt: entry.negative || "",
+      perspectiveMode: entry.perspectiveMode,
+      perspectiveSource: entry.perspectiveSource,
+      paragraph: entry.paragraph,
+      imageId: "",
+      imageUrl: "",
+      imageParameters: {},
+      corePrompt: renderPrompt(entry.corePrompt, context.config.promptSyntax),
+      shotNegative: entry.shotNegative,
+      promptFormat: entry.corePrompt.format || "ordered",
+      creativeConcept: entry.creativeConcept || null,
+      creativeConceptCandidates: entry.creativeCandidates || [],
+      creativeConceptHistory: entry.creativeConcept ? [entry.creativeConcept.id] : [],
+      placement: entry.placement || "paragraph",
+      status: "pending"
+    })),
     operationId: context.operation.id,
     generationStatus: "pending",
     sourceFingerprint: context.sourceFingerprint,
     rawJson: parsed,
+    ...(plan ? { illustrationPlan: plan } : {}),
     createdAt: new Date().toISOString()
   };
 }
@@ -615,8 +666,8 @@ function assertCurrentSource(message: ChatMessage | undefined, context: Progress
 function recordMetadata(message: ChatMessage, record: GeneratedRecord): Record<string, unknown> {
   return {
     ...(message.metadata || {}),
-    inlayIllustratorImageIds: record.imageIds,
-    inlayIllustratorParagraphs: record.paragraphs,
+    inlayIllustratorImageIds: record.slots.map((slot) => slot.imageId),
+    inlayIllustratorParagraphs: record.slots.map((slot) => slot.paragraph),
     inlayIllustratorGeneratedAt: record.createdAt,
     inlayIllustratorOperationId: record.operationId,
     inlayIllustratorGenerationStatus: record.generationStatus
@@ -707,22 +758,25 @@ async function commitProgressiveSlot(
     : completed ? "" : "The image provider returned no image.";
   await mutateProgressiveGeneration(context, (record) => ({
     ...record,
-    prompts: replaceAt(record.prompts, job.index, job.prompt, ""),
-    negativePrompts: replaceAt(record.negativePrompts, job.index, job.negative, ""),
-    perspectiveModes: replaceAt(record.perspectiveModes, job.index, job.perspectiveMode || context.config.perspectiveMode, "dynamic"),
-    perspectiveSources: replaceAt(record.perspectiveSources, job.index, job.perspectiveSource || "manual", "manual"),
-    imageParameters: replaceAt(record.imageParameters, job.index, job.parameters, {}),
-    corePrompts: replaceAt(record.corePrompts, job.index, job.corePrompt || "", ""),
-    shotNegatives: replaceAt(record.shotNegatives, job.index, job.shotNegative || "", ""),
-    promptFormats: replaceAt(record.promptFormats, job.index, job.promptFormat || "ordered", "ordered"),
-    creativeConcepts: replaceAt(record.creativeConcepts, job.index, job.creativeConcept || null, null),
-    creativeConceptCandidates: replaceAt(record.creativeConceptCandidates, job.index, job.creativeCandidates || [], []),
-    placements: replaceAt(record.placements, job.index, job.placement || "paragraph", "paragraph"),
-    paragraphs: replaceAt(record.paragraphs, job.index, job.paragraph, 1),
-    imageIds: replaceAt(record.imageIds, job.index, imageId, ""),
-    imageUrls: replaceAt(record.imageUrls, job.index, imageUrl, ""),
-    slotStatuses: replaceAt(record.slotStatuses, job.index, status, "pending"),
-    slotErrors: replaceAt(record.slotErrors, job.index, reason.slice(0, 500), "")
+    slots: record.slots.map((slot, index) => index === job.index ? {
+      ...slot,
+      prompt: job.prompt,
+      negativePrompt: job.negative,
+      perspectiveMode: job.perspectiveMode || context.config.perspectiveMode,
+      perspectiveSource: job.perspectiveSource || "manual",
+      imageParameters: job.parameters,
+      corePrompt: job.corePrompt || "",
+      shotNegative: job.shotNegative || "",
+      promptFormat: job.promptFormat || "ordered",
+      creativeConcept: job.creativeConcept || null,
+      creativeConceptCandidates: job.creativeCandidates || [],
+      placement: job.placement || "paragraph",
+      paragraph: job.paragraph,
+      imageId,
+      imageUrl,
+      status,
+      error: reason.slice(0, 500)
+    } : slot)
   }));
   return completed;
 }
@@ -736,19 +790,34 @@ async function finalizeProgressiveGeneration(
   const visualState = successfulParserParagraphs.length > 0
     ? buildPreviousVisualState(parsed, successfulParserParagraphs)
     : null;
+  const validatedVisualState = visualState ? ContinuityStateSchema.parse(visualState) : null;
+  const terminalParagraphMatch = String(parsed.terminalState?.paragraph ?? "").match(/\d+/);
+  const continuityParagraph = terminalParagraphMatch
+    ? Number(terminalParagraphMatch[0])
+    : Math.max(1, ...successfulParserParagraphs);
   return mutateProgressiveGeneration(context, (record) => {
-    const slotStatuses = (record.slotStatuses || record.imageUrls.map((url) => url ? "completed" : "pending"))
-      .map((status) => status === "pending" || status === "generating" ? (cancelled ? "cancelled" : "failed") : status);
-    const hasSuccess = slotStatuses.includes("completed");
+    const slots = record.slots.map((slot) => slot.status === "pending" || slot.status === "generating"
+      ? { ...slot, status: cancelled ? "cancelled" as const : "failed" as const }
+      : slot);
+    const hasSuccess = slots.some((slot) => slot.status === "completed");
     return {
       ...record,
-      slotStatuses,
+      slots,
       generationStatus: cancelled ? "cancelled" : hasSuccess ? "completed" : "failed"
     };
   }, (state) => {
     if (successfulParserParagraphs.length > 0) {
-      if (visualState) state.previousVisualState = visualState;
-      else delete state.previousVisualState;
+      if (validatedVisualState) {
+        const terminal = {
+          ...validatedVisualState,
+          updatedAt: validatedVisualState.updatedAt || new Date().toISOString()
+        };
+        state.previousVisualState = reconcileContinuityState(
+          state.previousVisualState,
+          terminal,
+          continuityParagraph
+        ) as typeof state.previousVisualState;
+      } else delete state.previousVisualState;
     }
   });
 }
@@ -896,20 +965,25 @@ async function commitImageReplacement(
     const record = located.record;
     committedRecord = {
       ...record,
-      prompts: replaceAt(record.prompts, located.index, replacement.prompt, ""),
-      negativePrompts: replaceAt(record.negativePrompts, located.index, replacement.negative, ""),
-      perspectiveModes: replaceAt(record.perspectiveModes, located.index, replacement.perspectiveMode, "dynamic"),
-      perspectiveSources: replaceAt(record.perspectiveSources, located.index, replacement.perspectiveSource, "manual"),
-      imageParameters: replaceAt(record.imageParameters, located.index, replacement.parameters, {}),
-      corePrompts: replaceAt(record.corePrompts, located.index, replacement.corePrompt, ""),
-      shotNegatives: replaceAt(record.shotNegatives, located.index, replacement.shotNegative, ""),
-      promptFormats: replaceAt(record.promptFormats, located.index, replacement.promptFormat, "ordered"),
-      creativeConcepts: replaceAt(record.creativeConcepts, located.index, replacement.creativeConcept, null),
-      creativeConceptCandidates: replaceAt(record.creativeConceptCandidates, located.index, replacement.creativeCandidates, []),
-      creativeConceptHistory: replaceAt(record.creativeConceptHistory, located.index, replacement.creativeConceptHistory, []),
-      paragraphs: replaceAt(record.paragraphs, located.index, replacement.paragraph, 1),
-      imageIds: replaceAt(record.imageIds, located.index, replacement.imageId, ""),
-      imageUrls: replaceAt(record.imageUrls, located.index, replacement.imageUrl, "")
+      slots: record.slots.map((slot, index) => index === located.index ? {
+        ...slot,
+        prompt: replacement.prompt,
+        negativePrompt: replacement.negative,
+        perspectiveMode: replacement.perspectiveMode,
+        perspectiveSource: replacement.perspectiveSource,
+        imageParameters: replacement.parameters,
+        corePrompt: replacement.corePrompt,
+        shotNegative: replacement.shotNegative,
+        promptFormat: replacement.promptFormat,
+        creativeConcept: replacement.creativeConcept,
+        creativeConceptCandidates: replacement.creativeCandidates,
+        creativeConceptHistory: replacement.creativeConceptHistory,
+        paragraph: replacement.paragraph,
+        imageId: replacement.imageId,
+        imageUrl: replacement.imageUrl,
+        status: "completed",
+        error: ""
+      } : slot)
     } satisfies GeneratedRecord;
     current.generated[located.key] = await storeGeneratedRecord(request.chatId, located.key, committedRecord, userId);
     if (parsedForMemory) updateCharacterMemory(current, parsedForMemory);
@@ -926,12 +1000,7 @@ async function commitImageReplacement(
     if (!target) throw new Error("The source assistant message no longer exists.");
     await spindle.chat.updateMessage(request.chatId, record.messageId, {
       content: renderInlaidMessage(String(target.content || ""), latestRecord, config),
-      metadata: {
-        ...(target.metadata || {}),
-        inlayIllustratorImageIds: latestRecord.imageIds,
-        inlayIllustratorParagraphs: latestRecord.paragraphs,
-        inlayIllustratorGeneratedAt: latestRecord.createdAt
-      },
+      metadata: recordMetadata(target, latestRecord),
       skipChunkRebuild: true
     });
   });
@@ -964,17 +1033,20 @@ export async function rerunStoredImage(
     let replacement: ImageReplacement;
     let selectionForMemory: ParsedPayload | undefined;
 
+    const originalSlot = located.record.slots[located.index];
+    if (!originalSlot) throw new Error("The selected image slot no longer exists.");
+
     if (!rerunSidecar) {
-      const corePrompt = located.record.corePrompts?.[located.index] || "";
-      const promptFormat = located.record.promptFormats?.[located.index]
+      const corePrompt = originalSlot.corePrompt || "";
+      const promptFormat = originalSlot.promptFormat
         || (config.promptStyle === "default" ? "legacy" : "ordered");
       const prompt = corePrompt
         ? renderPromptWithCurrentAffixes(corePrompt, promptFormat, config)
-        : located.record.prompts[located.index] || "";
+        : originalSlot.prompt || "";
       if (!prompt) throw new Error("The selected image has no stored prompt to reroll.");
-      const shotNegative = located.record.shotNegatives?.[located.index] || "";
+      const shotNegative = originalSlot.shotNegative || "";
       const negative = renderNegativeWithCurrentSelection(shotNegative, promptFormat, config);
-      const originalParameters = located.record.imageParameters?.[located.index]
+      const originalParameters = originalSlot.imageParameters
         || await buildImageParameters(config, imageConnection, prompt, negative);
       const parameters = rerollImageParameters(originalParameters, imageConnection, prompt, negative);
       const result = await spindle.imageGen.generate({
@@ -996,12 +1068,12 @@ export async function rerunStoredImage(
         corePrompt,
         shotNegative,
         promptFormat,
-        paragraph: located.record.paragraphs[located.index] || 1,
-        perspectiveMode: located.record.perspectiveModes?.[located.index] || "dynamic",
-        perspectiveSource: located.record.perspectiveSources?.[located.index] || "manual",
-        creativeConcept: located.record.creativeConcepts?.[located.index] || null,
-        creativeCandidates: located.record.creativeConceptCandidates?.[located.index] || [],
-        creativeConceptHistory: located.record.creativeConceptHistory?.[located.index] || [],
+        paragraph: originalSlot.paragraph || 1,
+        perspectiveMode: originalSlot.perspectiveMode || "dynamic",
+        perspectiveSource: originalSlot.perspectiveSource || "manual",
+        creativeConcept: originalSlot.creativeConcept || null,
+        creativeCandidates: originalSlot.creativeConceptCandidates || [],
+        creativeConceptHistory: originalSlot.creativeConceptHistory || [],
         parameters,
         imageId,
         imageUrl
@@ -1010,8 +1082,8 @@ export async function rerunStoredImage(
       const messages = await spindle.chat.getMessages(request.chatId) as ChatMessage[];
       const target = messages.find((message) => message.id === located.record.messageId);
       if (!target) throw new Error("The source assistant message no longer exists.");
-      const originalParagraph = located.record.paragraphs[located.index] || 1;
-      const isCover = located.record.placements?.[located.index] === "cover";
+      const originalParagraph = originalSlot.paragraph || 1;
+      const isCover = originalSlot.placement === "cover";
       const allParagraphs = prepareParagraphs(String(target.content || ""), config);
       const sourceParagraph = allParagraphs.find((paragraph) => paragraph.originalIndex === originalParagraph);
       if (!isCover && !sourceParagraph) throw new Error("The source paragraph for this image no longer exists.");
@@ -1028,10 +1100,10 @@ export async function rerunStoredImage(
         ? allParagraphs
         : [{ ...(sourceParagraph as PreparedParagraph), parserIndex: 1 }];
       const storedCandidates = rebaseCreativeConcepts(
-        located.record.creativeConceptCandidates?.[located.index] || [],
+        originalSlot.creativeConceptCandidates || [],
         1
       );
-      const previousConceptHistory = located.record.creativeConceptHistory?.[located.index] || [];
+      const previousConceptHistory = originalSlot.creativeConceptHistory || [];
       const selection = await parseAndSelectPrompts({
         chatId: request.chatId,
         messageId: located.record.messageId,
@@ -1172,7 +1244,7 @@ async function runGenerationForMessage(
     }
     if (state.generated[key]) {
       const existing = await loadGeneratedRecord(state.generated[key], userId, false);
-      const hasIncompleteSlot = existing?.slotStatuses?.some((status) => status !== "completed") || false;
+      const hasIncompleteSlot = existing?.slots.some((slot) => slot.status !== "completed") || false;
       if (!existing?.generationStatus || (existing.generationStatus === "completed" && !hasIncompleteSlot)) {
         logStage(config, "request_skipped", { reason: "already_generated", key });
         return;
@@ -1220,7 +1292,7 @@ async function runGenerationForMessage(
     reportGenerationProgress(operation, "preparing", userId);
     initializationPromise = initializeProgressiveGeneration(
       context,
-      pendingGenerationRecord(context, selected, parsed)
+      pendingGenerationRecord(context, selected, parsed, selection.plan)
     ).then(() => { initialized = true; });
     void initializationPromise.catch(() => undefined);
     reportGenerationProgress(operation, "generating", userId);
@@ -1260,7 +1332,7 @@ async function runGenerationForMessage(
     logStage(config, "generation_pipeline_done", {
       chatId,
       messageId,
-      imageCount: record.imageUrls.filter(Boolean).length,
+      imageCount: record.slots.filter((slot) => Boolean(slot.imageUrl)).length,
       elapsedMs: Date.now() - generationStartedAt
     });
   } catch (error) {
