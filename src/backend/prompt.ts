@@ -896,18 +896,18 @@ function assembleDefaultPrompt(
   return { sections: [...tagSections, supplement].filter(Boolean), format: "legacy" };
 }
 
-export function assemblePrompt(
+function assemblePromptForPerspective(
   scene: SceneJson,
   shot: ShotJson,
   config: Config,
   parserParagraph: number,
   originalParagraph: number,
+  perspective: ReturnType<typeof resolveShotPerspective>,
   creativeConcept?: CreativeConcept,
   evaluationOptions?: { dynamicLayout?: "hybrid" | "compact" }
 ): PromptEntry {
   const characters = cleanArray<CharacterJson>(shot.characters);
   const replacements = buildNameReplacementMap(characters);
-  const perspective = resolveShotPerspective(shot, config);
   const core = config.promptStyle === "anima"
     ? assembleAnimaPrompt(
       scene,
@@ -955,13 +955,32 @@ export function assemblePrompt(
 }
 
 
+export function assemblePrompt(
+  scene: SceneJson,
+  shot: ShotJson,
+  config: Config,
+  parserParagraph: number,
+  originalParagraph: number,
+  creativeConcept?: CreativeConcept,
+  evaluationOptions?: { dynamicLayout?: "hybrid" | "compact" }
+): PromptEntry {
+  return assemblePromptForPerspective(
+    scene,
+    shot,
+    config,
+    parserParagraph,
+    originalParagraph,
+    resolveShotPerspective(shot, config),
+    creativeConcept,
+    evaluationOptions
+  );
+}
+
+
 /**
- * Pure compiler entry point over a validated ResolvedShot. The canonical
- * pipeline never touches untrusted parser shapes after this boundary. Until
- * the legacy assembler is replaced field-by-field, this reconstructs the
- * renderable legacy shape and delegates to assemblePrompt; the reconstruction
- * is validated by round-trip tests so the canonical path cannot drift from
- * rendered behavior.
+ * Direct compiler over a validated ResolvedShot. It projects canonical values
+ * only into the renderer's small input view; it does not rebuild parser
+ * objects, resolve perspective a second time, or call the legacy assembler.
  */
 export function compilePrompt(
   resolved: ResolvedShot,
@@ -969,9 +988,7 @@ export function compilePrompt(
   options?: { dynamicLayout?: "hybrid" | "compact" }
 ): PromptEntry {
   const plan = resolved.plan;
-  const shot: ShotJson = {
-    paragraph: resolved.paragraph,
-    perspectiveMode: plan.mode === "asset" ? "dynamic" : plan.mode,
+  const renderShot = {
     camera: resolved.cameraText || resolved.camera,
     ...(plan.mode === "dynamic"
       ? {
@@ -985,41 +1002,30 @@ export function compilePrompt(
     situation: resolved.situation,
     action: resolved.action,
     characters: resolved.characters.map((character) => ({
-      name: character.name,
-      label: character.label,
-      age: character.age,
-      identity: character.identity,
-      appearance: character.appearance,
-      avatarAppearance: character.avatarAppearance,
-      body: character.body,
-      avatarBody: character.avatarBody,
-      attire: character.attire,
-      avatarAttire: character.avatarAttire,
-      attireInferred: character.attireInferred,
-      ...(character.sources ? { sources: character.sources } : {}),
-      expression: character.expression,
-      action: character.action,
-      composition: character.composition,
-      renderScope: character.renderScope,
+      ...character,
       visibleTags: character.visibleTags.join(", ")
     })),
     sharedComposition: resolved.sharedComposition,
     supplement: resolved.supplement,
     negative: resolved.negative
   };
-  const scene: SceneJson = {
+  const renderScene = {
     place: resolved.place,
-    environment: resolved.environment,
-    shots: [shot]
+    environment: resolved.environment
+  };
+  const perspective: ReturnType<typeof resolveShotPerspective> = {
+    mode: plan.mode,
+    source: config.adaptiveMode ? "adaptive" : "manual"
   };
   const concept = plan.mode === "creative" ? plan.concept : undefined;
-  return assemblePrompt(
-    scene,
-    shot,
+  return assemblePromptForPerspective(
+    renderScene,
+    renderShot,
     config,
     resolved.paragraph,
     resolved.paragraph,
+    perspective,
     concept,
-    options ? { dynamicLayout: options.dynamicLayout } : undefined
+    options
   );
 }

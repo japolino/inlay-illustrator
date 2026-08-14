@@ -16239,10 +16239,9 @@ function assembleDefaultPrompt(scene, shot, config2, replacements, perspectiveMo
   ]);
   return { sections: [...tagSections, supplement].filter(Boolean), format: "legacy" };
 }
-function assemblePrompt(scene, shot, config2, parserParagraph, originalParagraph, creativeConcept, evaluationOptions) {
+function assemblePromptForPerspective(scene, shot, config2, parserParagraph, originalParagraph, perspective, creativeConcept, evaluationOptions) {
   const characters = cleanArray(shot.characters);
   const replacements = buildNameReplacementMap(characters);
-  const perspective = resolveShotPerspective(shot, config2);
   const core2 = config2.promptStyle === "anima" ? assembleAnimaPrompt(scene, shot, config2, replacements, perspective.mode, creativeConcept, evaluationOptions?.dynamicLayout || "hybrid") : assembleDefaultPrompt(scene, shot, config2, replacements, perspective.mode, creativeConcept);
   const preset = activePromptPreset(config2);
   const presetPrefix = stripOrReplaceNames(preset?.positivePrefix || "", replacements, true);
@@ -16268,11 +16267,12 @@ function assemblePrompt(scene, shot, config2, parserParagraph, originalParagraph
     creativeConcept: perspective.mode === "creative" ? creativeConcept : undefined
   };
 }
+function assemblePrompt(scene, shot, config2, parserParagraph, originalParagraph, creativeConcept, evaluationOptions) {
+  return assemblePromptForPerspective(scene, shot, config2, parserParagraph, originalParagraph, resolveShotPerspective(shot, config2), creativeConcept, evaluationOptions);
+}
 function compilePrompt(resolved, config2, options) {
   const plan = resolved.plan;
-  const shot = {
-    paragraph: resolved.paragraph,
-    perspectiveMode: plan.mode === "asset" ? "dynamic" : plan.mode,
+  const renderShot = {
     camera: resolved.cameraText || resolved.camera,
     ...plan.mode === "dynamic" ? {
       shotPlan: {
@@ -16284,35 +16284,23 @@ function compilePrompt(resolved, config2, options) {
     situation: resolved.situation,
     action: resolved.action,
     characters: resolved.characters.map((character) => ({
-      name: character.name,
-      label: character.label,
-      age: character.age,
-      identity: character.identity,
-      appearance: character.appearance,
-      avatarAppearance: character.avatarAppearance,
-      body: character.body,
-      avatarBody: character.avatarBody,
-      attire: character.attire,
-      avatarAttire: character.avatarAttire,
-      attireInferred: character.attireInferred,
-      ...character.sources ? { sources: character.sources } : {},
-      expression: character.expression,
-      action: character.action,
-      composition: character.composition,
-      renderScope: character.renderScope,
+      ...character,
       visibleTags: character.visibleTags.join(", ")
     })),
     sharedComposition: resolved.sharedComposition,
     supplement: resolved.supplement,
     negative: resolved.negative
   };
-  const scene = {
+  const renderScene = {
     place: resolved.place,
-    environment: resolved.environment,
-    shots: [shot]
+    environment: resolved.environment
+  };
+  const perspective = {
+    mode: plan.mode,
+    source: config2.adaptiveMode ? "adaptive" : "manual"
   };
   const concept = plan.mode === "creative" ? plan.concept : undefined;
-  return assemblePrompt(scene, shot, config2, resolved.paragraph, resolved.paragraph, concept, options ? { dynamicLayout: options.dynamicLayout } : undefined);
+  return assemblePromptForPerspective(renderScene, renderShot, config2, resolved.paragraph, resolved.paragraph, perspective, concept, options);
 }
 
 // src/backend/logging.ts
