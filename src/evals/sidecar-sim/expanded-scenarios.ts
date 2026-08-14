@@ -211,7 +211,7 @@ export const expandedSidecarScenarios: SidecarScenario[] = [
     expectedPerspectives: { 1: ["static"], 2: ["dynamic"], 3: ["creative"] },
     expectations: [
       { paragraph: 1, field: "location", anyOf: ["glass conservatory", "conservatory"], critical: true },
-      { paragraph: 2, character: "Tovan Reed", field: "appearance", anyOf: ["luminous moth wings", "moth wings"], critical: true },
+      { paragraph: 2, character: "Tovan Reed", field: "identityTraits", anyOf: ["luminous moth wings", "moth wings"], critical: true },
       { paragraph: 2, character: "Tovan Reed", field: "attire", anyOf: ["brown coat", "cream shirt", "dark trousers"], critical: true },
       { paragraph: 3, field: "prompt", anyOf: ["moth wing scale", "wet leaf", "fading silver root", "violet light"], critical: true }
     ]
@@ -299,7 +299,7 @@ export const expandedSidecarScenarios: SidecarScenario[] = [
     expectations: [
       { paragraph: 1, character: "Asha Fen", field: "action", anyOf: ["raising", "raises", "holding crystal seed", "holds the crystal seed"], critical: true },
       { paragraph: 2, character: "Asha Fen", field: "appearance", anyOf: ["luminous green eyes", "glowing green eyes"], critical: true },
-      { paragraph: 2, character: "Asha Fen", field: "terminalAppearance", anyOf: ["leaf-shaped wings", "translucent leaf wings", "translucent wings"], critical: true },
+      { paragraph: 2, character: "Asha Fen", field: "terminalIdentityTraits", anyOf: ["leaf-shaped wings", "translucent leaf wings", "translucent wings"], critical: true },
       { paragraph: 2, character: "Asha Fen", field: "appearance", anyOf: ["black curls", "black curly hair"], critical: true },
       { paragraph: 2, character: "Asha Fen", field: "attire", anyOf: ["purple travel coat", "cream tunic", "black leggings", "brown boots"], critical: true }
     ]
@@ -335,6 +335,57 @@ export const expandedSidecarScenarios: SidecarScenario[] = [
       { paragraph: 1, field: "prompt", anyOf: ["pov", "foreground"], critical: true },
       { paragraph: 1, field: "payload", anyOf: ["gloved hand", "metal pipe", "partial hand"], critical: true },
       { paragraph: 1, field: "payload", noneOf: ["complete attacker", "attacker face", "second character"], critical: true }
+    ]
+  },
+  {
+    id: "dynamic_monster_magic_sword",
+    description: "A sword-versus-magic monster beat must preserve weapon ownership, spell color, anatomy, and movement direction.",
+    config: config(),
+    paragraphs: [
+      "At midnight in a shattered temple, adult knight Iona Vey steps forward on the left and raises a silver longsword in both hands to block a violet lightning bolt. On the right, the hulking basalt monster Ash Maw fires the bolt from the single crystal horn in its forehead; it has four stone arms, no wings, and a cracked glowing chest. Iona wears black plate armor over a crimson gambeson."
+    ],
+    expectedParagraphs: [1],
+    expectedCharacters: { 1: ["Iona Vey", "Ash Maw"] },
+    expectations: [
+      { paragraph: 1, character: "Iona Vey", field: "action", anyOf: ["raises a silver longsword", "raises silver longsword", "blocking", "block violet lightning", "blocks violet lightning", "steps forward"], critical: true },
+      { paragraph: 1, character: "Ash Maw", field: "action", anyOf: ["fires", "violet lightning", "lightning bolt"], critical: true },
+      { paragraph: 1, character: "Ash Maw", field: "identityTraits", anyOf: ["single crystal horn", "crystal horn"], critical: true },
+      { paragraph: 1, character: "Ash Maw", field: "body", anyOf: ["four stone arms", "four arms"], critical: true },
+      { paragraph: 1, field: "prompt", noneOf: ["bird wings", "bat wings", "feathered wings"], critical: true }
+    ]
+  },
+  {
+    id: "static_kemonomimi_corporate",
+    description: "A corporate kemonomimi portrait must retain human anatomy plus explicit ears and tail without becoming a full furry.",
+    config: config({ perspectiveMode: "static" }),
+    paragraphs: [
+      "In a glass corporate boardroom at noon, adult cat kemonomimi executive Mina Kade stands slightly forward beside a presentation table. She has human skin, a human face, short black hair, green eyes, black cat ears, and one black cat tail, with no muzzle and no body fur. She wears a charcoal business suit, white collared shirt, narrow green tie, and black loafers."
+    ],
+    expectedParagraphs: [1],
+    expectedCharacters: { 1: ["Mina Kade"] },
+    expectations: [
+      { paragraph: 1, field: "location", anyOf: ["corporate boardroom", "glass boardroom", "boardroom"], critical: true },
+      { paragraph: 1, character: "Mina Kade", field: "identityTraits", anyOf: ["black cat ears", "cat ears"], critical: true },
+      { paragraph: 1, character: "Mina Kade", field: "identityTraits", anyOf: ["black cat tail", "cat tail"], critical: true },
+      { paragraph: 1, character: "Mina Kade", field: "attire", anyOf: ["charcoal business suit", "white collared shirt", "green tie"], critical: true },
+      { paragraph: 1, field: "payload", noneOf: ["muzzle", "body fur", "fur-covered"], critical: true }
+    ]
+  },
+  {
+    id: "dynamic_furry_streetwear",
+    description: "A full furry streetwear action shot must preserve species anatomy and layered modern clothing without collapsing into kemonomimi.",
+    config: config(),
+    paragraphs: [
+      "At dusk on a neon pedestrian overpass, adult anthropomorphic fox courier Rook Sable vaults rightward over a concrete barrier while clutching a parcel under his left arm. He has orange fur, a white muzzle, black fox ears, digitigrade legs, and one bushy orange tail. He wears an oversized teal bomber jacket, black graphic hoodie, gray cargo shorts, striped crew socks, and red high-top sneakers."
+    ],
+    expectedParagraphs: [1],
+    expectedCharacters: { 1: ["Rook Sable"] },
+    expectations: [
+      { paragraph: 1, character: "Rook Sable", field: "action", anyOf: ["vaults rightward", "vaulting right", "clutching a parcel", "parcel under his left arm"], critical: true },
+      { paragraph: 1, character: "Rook Sable", field: "identityTraits", anyOf: ["orange fur", "white muzzle", "black fox ears", "bushy orange tail"], critical: true },
+      { paragraph: 1, character: "Rook Sable", field: "body", anyOf: ["digitigrade legs", "digitigrade"], critical: true },
+      { paragraph: 1, character: "Rook Sable", field: "attire", anyOf: ["teal bomber jacket", "black graphic hoodie", "gray cargo shorts", "red high-top sneakers"], critical: true },
+      { paragraph: 1, field: "location", anyOf: ["pedestrian overpass", "neon overpass", "overpass"], critical: true }
     ]
   }
 ];

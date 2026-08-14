@@ -43,10 +43,15 @@ function hasAny(text: string, values: string[]): boolean {
   return values.some((value) => text.includes(normalize(value)));
 }
 
-function hasWholePhrase(text: string, value: string): boolean {
+function hasNonNegatedWholePhrase(text: string, value: string): boolean {
   const phrase = normalize(value);
   if (!phrase) return false;
-  return new RegExp(`(?:^|\\s)${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:$|\\s)`).test(text);
+  const pattern = new RegExp(`(?:^|\\s)${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=$|\\s)`, "g");
+  for (const match of text.matchAll(pattern)) {
+    const before = text.slice(Math.max(0, (match.index || 0) - 32), match.index || 0).trimEnd();
+    if (!/(?:^|\s)(?:no|not|never|without|omit|omits|excluding|exclude|do not show)\s*$/i.test(before)) return true;
+  }
+  return false;
 }
 
 function withoutNegatedTone(value: string): string {
@@ -68,9 +73,10 @@ function expectedField(payload: ParsedPayload, rendered: Map<number, string>, sc
   if (field === "terminalLocation") {
     return searchable(scenario.config.promptStyle === "anima" ? asRecord(terminal.environment).location : terminal.place);
   }
-  if (field === "terminalAppearance" || field === "terminalAttire") {
+  if (field === "terminalAppearance" || field === "terminalIdentityTraits" || field === "terminalAttire") {
     const terminalCharacter = cleanArray<CharacterJson>(terminal.characters)
       .find((candidate) => normalize(candidate.name) === normalize(character));
+    if (field === "terminalIdentityTraits") return searchable([terminalCharacter?.appearance, terminalCharacter?.body]);
     return searchable(field === "terminalAppearance" ? terminalCharacter?.appearance : terminalCharacter?.attire);
   }
   if (field === "payload") return searchable(withoutNegativeFields(payload));
@@ -79,6 +85,7 @@ function expectedField(payload: ParsedPayload, rendered: Map<number, string>, sc
   if (!character) return "";
   const found = characterFor(payload, paragraph, character);
   if (!found.character) return "";
+  if (field === "identityTraits") return searchable([found.character.appearance, found.character.body]);
   if (field === "action") {
     const shotPlan = asRecord(found.shot?.shotPlan);
     return searchable([
@@ -168,7 +175,7 @@ function validateAnima(
       exactFields(shared, ["interaction", "spatialRelation"], "sharedComposition", issues);
       const sharedActions = atomicValues(shared.interaction).map(normalize);
       cleanArray<Record<string, unknown>>(shot.characters).forEach((character, characterIndex) => {
-        exactFields(character, ["name", "label", "age", "identity", "appearance", "body", "attire", "attireInferred", "visualChanges", "expression", "renderScope", "visibleTags", "composition"], `characters[${characterIndex}]`, issues);
+        exactFields(character, ["name", "label", "age", "identity", "appearance", "body", "attire", "attireInferred", "sources", "visualChanges", "expression", "renderScope", "visibleTags", "composition"], `characters[${characterIndex}]`, issues);
         const name = cleanString(character.name);
         if (name) names.push(name);
         if (perspectiveMode === "dynamic" && requireModeProjection) {
@@ -249,7 +256,7 @@ export function evaluateQuality(
     cleanArray<Record<string, unknown>>(terminal.characters).forEach((character, index) => {
       exactFields(
         character,
-        ["name", "label", "age", "appearance", "body", "attire", "attireInferred", "visualChanges"],
+        ["name", "label", "age", "appearance", "body", "attire", "attireInferred", "sources", "visualChanges"],
         `terminalState.characters[${index}]`,
         issues
       );
@@ -310,7 +317,7 @@ export function evaluateQuality(
       issues.push(issue("continuity", "required_fact", `${scenario.id} P${expectation.paragraph} ${expectation.character || expectation.field} misses: ${expectation.anyOf.join(" | ")}`, expectation.critical !== false));
     }
     const safeText = withoutNegatedTone(text);
-    const prohibited = expectation.noneOf?.find((value) => hasWholePhrase(safeText, value));
+    const prohibited = expectation.noneOf?.find((value) => hasNonNegatedWholePhrase(safeText, value));
     if (prohibited) issues.push(issue("continuity", "stale_or_invented_fact", `${scenario.id} P${expectation.paragraph} contains prohibited: ${prohibited}`, expectation.critical !== false));
   }
   renderedEntries.forEach((entry) => {

@@ -4,8 +4,8 @@ import type { ParsedPayload, PreviousVisualState } from "../../backend/types.js"
 export type ScenarioExpectation = {
   paragraph: number;
   character?: string;
-  field: "payload" | "location" | "appearance" | "body" | "attire" | "expression" | "action" | "prompt"
-    | "terminalLocation" | "terminalAppearance" | "terminalAttire";
+  field: "payload" | "location" | "appearance" | "body" | "identityTraits" | "attire" | "expression" | "action" | "prompt"
+    | "terminalLocation" | "terminalAppearance" | "terminalIdentityTraits" | "terminalAttire";
   anyOf?: string[];
   noneOf?: string[];
   critical?: boolean;

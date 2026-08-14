@@ -1268,7 +1268,7 @@ describe("prompt compatibility and normalization", () => {
     expect(renderPrompt(entry.prompt, config.promptSyntax)).toBe(
       "1girl, studio; night., girl, blue hair, Seen through a mirror, framed by flowers"
     );
-    expect(parserInstruction(config)).toContain("Separate supplement phrases with commas, never semicolons");
+    expect(parserInstruction(config)).toContain("Separate phrases with commas, never semicolons");
   });
 });
 
@@ -1281,8 +1281,8 @@ describe("Anima parser contract and visual distinctness", () => {
     expect(instruction).toContain('"actions": ["string"]');
     expect(instruction).toContain('"sharedComposition": {');
     expect(instruction).toContain("Outside characters[].name, never write a full name or first name in any field");
-    expect(instruction).toContain("Preserve each distinctive visible action verb and its visible object or trigger");
-    expect(instruction).toContain("rising water around boots");
+    expect(instruction).toContain("Never romanticize conflict or replace a distinctive action with a generic pose");
+    expect(instruction).toContain("water around boots");
     expect(instruction).toContain('"interaction": ["string"]');
     expect(instruction).toContain('"camera": {');
     expect(instruction).toContain('"environment": {');
@@ -1291,29 +1291,31 @@ describe("Anima parser contract and visual distinctness", () => {
     expect(instruction).toContain('"primaryAction": "string"');
     expect(instruction).toContain('"renderScope": "string"');
     expect(instruction).toContain('"visibleTags": "string"');
-    expect(instruction).toContain("renderer never injects a trait that is incompatible with the selected crop or viewing direction");
-    expect(instruction).toContain("turn or widen the camera when a required face, eye, or body region would otherwise be hidden");
-    expect(instruction).toContain("body-part focus, head-out-of-frame, eyes-out-of-frame, or another true fragment");
+    expect(instruction).toContain("Choose a camera that contains the facts the image must prove");
+    expect(instruction).toContain("A required face or eye must stay visible");
+    expect(instruction).toContain("a true fragment must omit every out-of-crop identity trait");
     expect(instruction).toContain("exactly one location, exactly one time/weather phrase, 1-2 lighting/mood snippets, and 1-3 background elements");
-    expect(instruction).toContain("Preserve the source's explicit action, direction of movement, visible emotional state, and interpersonal tone");
-    expect(instruction).toContain("Do not put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle");
-    expect(instruction).toContain("Do not output legacy shot.action or characters[].action fields");
+    expect(instruction).toContain("Preserve explicit source facts exactly: action owner and target, movement direction, visible emotion, interpersonal tone");
+    expect(instruction).toContain("Never put lighting, atmosphere, background, depth of field, lens effects, framing, camera angle");
+    expect(instruction).toContain("Individual actions belong in that character's composition.actions");
     expect(instruction).toContain("camera.framing must be empty or exactly one of");
-    expect(instruction).toContain("A fact must have exactly one owner");
-    expect(instruction).toContain("one visible action or interaction");
+    expect(instruction).toContain("Never swap them: from above and from side are perspectives");
+    expect(instruction).toContain("gaze contains direction only");
+    expect(instruction).toContain("Give every visible action exactly one owner");
+    expect(instruction).toContain("one concise comma-free role-bound subject-verb-object clause");
     expect(instruction).not.toContain("### Static shot direction");
     expect(instruction).not.toContain("### Creative shot direction");
     expect(instruction).toContain("never collapse an object into a string");
-    expect(instruction).toContain("never infer romance, calm, menace, or another emotional tone from lighting alone");
-    expect(instruction).toContain("unless Creative deliberately isolates a smaller visual anchor");
-    expect(instruction).toContain("Never copy a later paragraph's transformation, prop, attire, action, or environment detail backward into an earlier shot");
+    expect(instruction).toContain("Do not infer romance, calm, menace or another emotional tone");
+    expect(instruction).toContain("Never copy a later transformation, prop, attire, action or environment backward into an earlier shot");
     expect(instruction).toContain("Prefer the source's exact concrete noun phrase over a generic paraphrase");
     const adaptiveInstruction = parserInstruction({ ...DEFAULT_CONFIG, adaptiveMode: true });
-    expect(adaptiveInstruction).toContain("Include a named source character in shot.characters only when some part of that person is actually visible");
-    expect(adaptiveInstruction).toContain("a required visible action or movement chooses Dynamic");
-    expect(adaptiveInstruction).toContain("It must be exactly creative, static, or dynamic");
+    expect(adaptiveInstruction).toContain("shot.characters contains only people with an actually visible body part");
+    expect(adaptiveInstruction).toContain("a faithful identity-safe anchor");
+    expect(adaptiveInstruction).toContain("A required visible action chooses Dynamic");
+    expect(adaptiveInstruction).toContain("exactly creative, static, or dynamic");
     expect(adaptiveInstruction).not.toContain("### Asset shot direction");
-    expect(instruction).toContain("adult marker exception applies to every shot in an adult sexual sequence");
+    expect(instruction).toContain("give every visible participant mature female, mature male, aged up");
     expect(instruction).not.toContain("never removes the source character object");
     expect(instruction).not.toContain('"supplement": "string"');
   });
@@ -1423,10 +1425,10 @@ describe("Character-field provenance contract", () => {
   test("requires evidence provenance, paired species completeness, and no conventional inventions", () => {
     const instruction = parserInstruction(DEFAULT_CONFIG);
     expect(instruction).toContain('"sources": {"age": "card_explicit | previous_memory | narrative_explicit | inferred"');
-    expect(instruction).toContain("sources.age, sources.appearance, sources.body, and sources.attire");
-    expect(instruction).toContain("If a source states ears and tail");
-    expect(instruction).toContain("never invent hair length/style");
-    expect(instruction).toContain("Explicit base attire from {{char}} Info");
+    expect(instruction).toContain("Set sources.age/appearance/body/attire independently");
+    expect(instruction).toContain("Preserve every explicitly paired species feature");
+    expect(instruction).toContain("Never invent hair length/style");
+    expect(instruction).toContain("Explicit card attire uses attireInferred=false and card_explicit");
   });
 
   test("retains the same provenance and completeness policy in Fast Mode", () => {
@@ -1435,6 +1437,9 @@ describe("Character-field provenance contract", () => {
     expect(instruction).toContain("Set sources.age/appearance/body/attire independently");
     expect(instruction).toContain("Preserve every explicitly paired species feature");
     expect(instruction).toContain("Only card_explicit and previous_memory");
+    expect(instruction).toContain("label is exactly girl, boy, or other");
+    expect(instruction).toContain("Leave legacy identity empty");
+    expect(instruction).toContain("Never output numeric ages");
   });
 });
 
@@ -1486,10 +1491,12 @@ describe("Fast Mode parser instruction", () => {
     expect(instruction).toContain("attireInferred");
   });
 
-  test("is meaningfully shorter than the full instruction while sharing the schema", () => {
+  test("keeps Normal within the compact budget while Fast remains smaller", () => {
     const full = parserInstruction(DEFAULT_CONFIG);
     const fast = parserInstruction({ ...DEFAULT_CONFIG, fastMode: true });
-    expect(fast.length).toBeLessThan(full.length * 0.6);
+    expect(fast.length).toBeLessThan(full.length);
+    expect(full.length).toBeLessThan(18_000);
+    expect(fast.length).toBeLessThan(14_000);
     expect(fast).toContain('"terminalState"');
   });
 

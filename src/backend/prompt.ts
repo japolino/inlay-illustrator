@@ -972,7 +972,7 @@ export function compilePrompt(
   const shot: ShotJson = {
     paragraph: resolved.paragraph,
     perspectiveMode: plan.mode === "asset" ? "dynamic" : plan.mode,
-    camera: resolved.camera,
+    camera: resolved.cameraText || resolved.camera,
     ...(plan.mode === "dynamic"
       ? {
         shotPlan: {
@@ -983,21 +983,28 @@ export function compilePrompt(
       }
       : {}),
     situation: resolved.situation,
+    action: resolved.action,
     characters: resolved.characters.map((character) => ({
       name: character.name,
       label: character.label,
       age: character.age,
+      identity: character.identity,
       appearance: character.appearance,
+      avatarAppearance: character.avatarAppearance,
       body: character.body,
+      avatarBody: character.avatarBody,
       attire: character.attire,
+      avatarAttire: character.avatarAttire,
       attireInferred: character.attireInferred,
       ...(character.sources ? { sources: character.sources } : {}),
       expression: character.expression,
+      action: character.action,
       composition: character.composition,
       renderScope: character.renderScope,
       visibleTags: character.visibleTags.join(", ")
     })),
     sharedComposition: resolved.sharedComposition,
+    supplement: resolved.supplement,
     negative: resolved.negative
   };
   const scene: SceneJson = {

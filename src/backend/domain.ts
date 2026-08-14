@@ -15,10 +15,16 @@ export type ShotMode = z.infer<typeof ShotModeSchema>;
 
 export const DynamicShotPlanSchema = z.object({
   mode: z.literal("dynamic"),
-  primaryAction: NonEmptyStringSchema,
+  primaryAction: NonEmptyStringSchema.optional(),
   secondaryCue: z.string().optional(),
-  staging: z.string().optional()
-}).strict();
+  staging: z.string().optional(),
+  /** Deterministic Adaptive fallback when a Creative shot has no usable concept. */
+  degradedFromCreative: z.literal(true).optional()
+}).strict().superRefine((plan, context) => {
+  if (!plan.primaryAction && !plan.degradedFromCreative) {
+    context.addIssue({ code: "custom", path: ["primaryAction"], message: "Dynamic plans require a primary action." });
+  }
+});
 
 /**
  * Static composition is carried by the resolved character poses and setting.
@@ -191,6 +197,8 @@ export type EnvironmentContinuityDelta = z.infer<typeof EnvironmentContinuityDel
 /** Changes caused by one numbered source paragraph. Null place explicitly clears it. */
 export const ContinuityDeltaSchema = z.object({
   paragraph: ParagraphSchema,
+  /** Same-paragraph terminal changes can occur after the illustrated moment. */
+  timing: z.enum(["before_shot", "after_shot"]).optional(),
   characters: z.array(CharacterContinuityDeltaSchema).optional(),
   removeCharacters: z.array(NonEmptyStringSchema).optional(),
   environment: EnvironmentContinuityDeltaSchema.optional(),
@@ -227,7 +235,13 @@ export const SharedCompositionSchema = z.object({
 
 /** A continuity-resolved character plus fields that exist only for this shot. */
 export const ResolvedCharacterSchema = CharacterContinuityStateSchema.extend({
+  /** Legacy/render-only fields retained for exact prompt compatibility. */
+  identity: z.string(),
+  avatarAppearance: z.string(),
+  avatarBody: z.string(),
+  avatarAttire: z.string(),
   expression: z.string(),
+  action: z.string(),
   composition: CharacterCompositionSchema,
   renderScope: z.string(),
   visibleTags: StringListSchema
@@ -239,9 +253,12 @@ export const ResolvedShotSchema = z.object({
   paragraph: ParagraphSchema,
   plan: ShotPlanSchema,
   camera: CameraSchema,
+  cameraText: z.string(),
   situation: z.string(),
+  action: z.string(),
   characters: z.array(ResolvedCharacterSchema),
   sharedComposition: SharedCompositionSchema,
+  supplement: z.string(),
   environment: EnvironmentContinuityStateSchema,
   place: z.string(),
   negative: z.string()
@@ -271,11 +288,16 @@ export const IllustrationPlanSchema = z.object({
     }
   }
   for (let index = 1; index < plan.continuityDeltas.length; index += 1) {
-    if (plan.continuityDeltas[index].paragraph <= plan.continuityDeltas[index - 1].paragraph) {
+    const previous = plan.continuityDeltas[index - 1];
+    const current = plan.continuityDeltas[index];
+    const previousPhase = previous.timing === "after_shot" ? 1 : 0;
+    const currentPhase = current.timing === "after_shot" ? 1 : 0;
+    if (current.paragraph < previous.paragraph
+      || (current.paragraph === previous.paragraph && currentPhase <= previousPhase)) {
       context.addIssue({
         code: "custom",
         path: ["continuityDeltas"],
-        message: "Continuity deltas must be ordered by strictly increasing paragraph."
+        message: "Continuity deltas must be ordered by paragraph and before/after-shot phase."
       });
       break;
     }
@@ -359,13 +381,17 @@ export function resolveContinuity(
 ): ContinuityState {
   let resolved = ContinuityStateSchema.parse(initial);
   let previousParagraph = 0;
+  let previousPhase = -1;
   for (const delta of deltas) {
     const validated = ContinuityDeltaSchema.parse(delta);
-    if (validated.paragraph < previousParagraph) {
-      throw new Error("Continuity deltas must be ordered by source paragraph.");
+    const phase = validated.timing === "after_shot" ? 1 : 0;
+    if (validated.paragraph < previousParagraph
+      || (validated.paragraph === previousParagraph && phase <= previousPhase)) {
+      throw new Error("Continuity deltas must be ordered by source paragraph and phase.");
     }
     resolved = applyContinuityDelta(resolved, validated);
     previousParagraph = validated.paragraph;
+    previousPhase = phase;
   }
   return resolved;
 }
@@ -382,7 +408,8 @@ function sameDomainValue(left: unknown, right: unknown): boolean {
 export function continuityDeltaBetween(
   previousInput: ContinuityState,
   terminalInput: ContinuityState,
-  paragraph: number
+  paragraph: number,
+  timing?: ContinuityDelta["timing"]
 ): ContinuityDelta | null {
   const previous = ContinuityStateSchema.parse(previousInput);
   const terminal = ContinuityStateSchema.parse(terminalInput);
@@ -412,12 +439,13 @@ export function continuityDeltaBetween(
   }
   const candidate = {
     paragraph,
+    ...(timing ? { timing } : {}),
     ...(characters.length > 0 ? { characters } : {}),
     ...(removeCharacters.length > 0 ? { removeCharacters } : {}),
     ...(Object.keys(environmentSet).length > 0 ? { environment: { set: environmentSet } } : {}),
     ...(previous.place !== terminal.place ? { place: terminal.place || null } : {})
   };
-  return Object.keys(candidate).length === 1
+  return Object.keys(candidate).every((key) => key === "paragraph" || key === "timing")
     ? null
     : ContinuityDeltaSchema.parse(candidate);
 }
@@ -454,7 +482,12 @@ export function reconcileContinuityState(
  */
 export const PlannedCharacterSchema = z.object({
   name: NonEmptyStringSchema,
+  identity: z.string().optional(),
+  avatarAppearance: z.string().optional(),
+  avatarBody: z.string().optional(),
+  avatarAttire: z.string().optional(),
   expression: z.string().optional(),
+  action: z.string().optional(),
   composition: CharacterCompositionSchema.optional(),
   renderScope: z.string().optional(),
   visibleTags: StringListSchema.optional()
@@ -465,9 +498,12 @@ export const PlannedShotSchema = z.object({
   paragraph: ParagraphSchema,
   plan: ShotPlanSchema,
   camera: CameraSchema.partial(),
+  cameraText: z.string().optional(),
   situation: z.string().optional(),
+  action: z.string().optional(),
   characters: z.array(PlannedCharacterSchema).optional(),
   sharedComposition: SharedCompositionSchema.optional(),
+  supplement: z.string().optional(),
   negative: z.string().optional(),
   place: z.string().optional()
 }).strict();

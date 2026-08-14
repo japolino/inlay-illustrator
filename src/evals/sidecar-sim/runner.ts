@@ -15,7 +15,9 @@ import {
   parserMessages,
   parserUserRequest
 } from "../../backend/parser.js";
-import { buildCharacterTagReference, renderPrompt } from "../../backend/prompt.js";
+import { buildCharacterTagReference, compilePrompt, renderPrompt } from "../../backend/prompt.js";
+import { planFromParsedPayload } from "../../backend/plan-adapter.js";
+import { resolveIllustrationPlan } from "../../backend/shot-resolution.js";
 import { prepareParagraphs } from "../../backend/paragraphs.js";
 import { dedupeExactShotCharacters, recoverSceneParagraphs, normalizeScenePayload, selectPromptEntries } from "../../backend/scenes.js";
 import { auditDynamicCameraDiversity, repairDynamicCameraDiversityLocally } from "../../backend/camera-diversity.js";
@@ -55,7 +57,7 @@ let requestCount = 0;
 
 type ModelTarget = { label: string; preferredIds: string[]; preferredPrefixes?: string[]; basename: string };
 const TARGETS: ModelTarget[] = [
-  { label: "DeepSeek V4 Pro", preferredIds: ["DeepSeek-A/deepseek-v4-pro"], basename: "deepseek-v4-pro" },
+  { label: "DeepSeek V4 Pro", preferredIds: ["DeepSeek/deepseek-v4-pro", "ALIBABA/deepseek-v4-pro", "DeepSeek-A/deepseek-v4-pro"], basename: "deepseek-v4-pro" },
   { label: "Gemini 3.1 Pro Preview", preferredIds: ["Gemini/gcli-gemini-3.1-pro-preview"], basename: "gcli-gemini-3.1-pro-preview" },
   { label: "Claude Sonnet 5", preferredIds: ["AROMA/claude-sonnet-5"], basename: "claude-sonnet-5" },
   {
@@ -102,14 +104,17 @@ async function resolveModels(): Promise<Array<{ label: string; id: string }>> {
     if (!id) throw new Error(`Requested --model-id was not returned by /v1/models: ${modelIdOverride}`);
     return [{ label: modelLabelOverride || id.split("/").at(-1) || id, id }];
   }
-  return TARGETS.map((target) => {
+  const targets = TARGETS.filter((target) => !modelFilter
+    || target.label.toLowerCase().includes(modelFilter)
+    || target.basename.includes(modelFilter));
+  return targets.map((target) => {
     const candidates = ids.filter((id) => id.toLowerCase().split("/").at(-1) === target.basename);
     const preferred = target.preferredIds.find((preferredId) => ids.includes(preferredId))
       || target.preferredPrefixes?.flatMap((prefix) => candidates.filter((id) => id.startsWith(prefix)))[0];
     const id = preferred || (candidates.length === 1 ? candidates[0] : "");
     if (!id) throw new Error(`Could not unambiguously resolve ${target.label} from /v1/models.`);
     return { label: target.label, id };
-  }).filter((target) => !modelFilter || target.label.toLowerCase().includes(modelFilter) || target.id.toLowerCase().includes(modelFilter));
+  });
 }
 
 type Completion = {
@@ -234,7 +239,21 @@ function productionTransform(
   const localCameraRepair = repairDynamicCameraDiversityLocally(payload, scenario.config, auditDynamicCameraDiversity(payload, scenario.config));
   if (localCameraRepair) payload = localCameraRepair;
   const selectedConcepts = chooseCreativeConcepts(concepts, [], () => 0);
-  const selected = selectPromptEntries(payload, paragraphs, scenario.config, selectedConcepts, concepts);
+  const legacySelected = selectPromptEntries(payload, paragraphs, scenario.config, selectedConcepts, concepts);
+  const plan = resolveIllustrationPlan(planFromParsedPayload(
+    payload,
+    scenario.previousVisualState,
+    paragraphs,
+    scenario.config,
+    selectedConcepts,
+    legacySelected
+  ));
+  const resolvedByParagraph = new Map(plan.shots.map((shot) => [shot.paragraph, shot]));
+  const selected = legacySelected.map((entry) => {
+    const resolved = resolvedByParagraph.get(entry.parserParagraph);
+    if (!resolved) throw new Error(`Canonical plan omitted selected paragraph P${entry.parserParagraph}.`);
+    return compilePrompt(resolved, scenario.config);
+  });
   return {
     payload,
     rendered: selected.map((entry) => ({

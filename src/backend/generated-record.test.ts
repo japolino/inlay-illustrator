@@ -219,9 +219,12 @@ describe("GeneratedRecord V3 migration adapter", () => {
         paragraph: 1,
         plan: { mode: "dynamic", primaryAction: "she runs" },
         camera: { framing: "wide shot", angle: "eye level", perspective: "", focus: [] },
+        cameraText: "",
         situation: "",
+        action: "",
         characters: [],
         sharedComposition: { interaction: [], spatialRelation: "" },
+        supplement: "",
         environment: { location: "", timeWeather: "", lightingMood: [], backgroundElements: [] },
         place: "",
         negative: ""

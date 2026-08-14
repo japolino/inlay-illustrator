@@ -141,6 +141,8 @@ describe("Adaptive parser call sequencing", () => {
     });
 
     expect(result.selected[0]?.perspectiveMode).toBe("dynamic");
+    expect(result.plan?.shots).toHaveLength(1);
+    expect(result.plan?.continuityDeltas.some((delta) => delta.timing === "before_shot")).toBe(true);
     expect(requests).toHaveLength(1);
   });
 
@@ -312,6 +314,10 @@ describe("progressive ComfyUI delivery", () => {
     expect(message.content.indexOf("/second.png")).toBeLessThan(message.content.indexOf("Second visual beat."));
     expect(frontend.some((payload) => payload.type === "generation_progress" && payload.stage === "completed")).toBe(true);
     expect(updates.length).toBeGreaterThanOrEqual(3);
+    const savedState = files.get("states/progress-chat.json") as { generated?: Record<string, { recordPath?: string }> } | undefined;
+    const recordReference = savedState?.generated?.["progress-chat:progress-message:0"];
+    const fullRecord = recordReference?.recordPath ? files.get(recordReference.recordPath) as { illustrationPlan?: unknown } : undefined;
+    expect(fullRecord?.illustrationPlan).toBeDefined();
   });
 });
 

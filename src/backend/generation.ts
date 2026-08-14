@@ -277,6 +277,7 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
 
   for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
     try {
+      canonicalPlan = null;
       throwIfAborted(signal);
       const context = await buildParserContext(
         chatId,
@@ -439,48 +440,42 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
           conceptSelections = new Map();
         }
       }
-      try {
-        const illustrationInput = planFromParsedPayload(
-          parsed,
-          config.previousVisualStateEnabled ? state.previousVisualState : undefined,
-          paragraphs,
-          config,
-          conceptSelections || new Map()
-        );
-        canonicalPlan = resolveIllustrationPlan(illustrationInput);
-        logStage(config, "canonical_plan_resolved", {
-          shots: canonicalPlan.shots.length,
-          characters: canonicalPlan.shots.reduce((total, shot) => total + shot.characters.length, 0),
-          paragraphs: [...new Set(canonicalPlan.shots.map((shot) => shot.paragraph))],
-          terminalCharacters: canonicalPlan.terminalContinuity.characters.length
-        });
-      } catch (error) {
-        logStage(config, "canonical_plan_failed", {
-          error: error instanceof Error ? error.message : String(error)
-        }, "warn");
-      }
       selected = selectPromptEntries(parsed, paragraphs, config, conceptSelections || new Map(), conceptCandidates);
-      if (canonicalPlan) {
-        const byParagraph = new Map(canonicalPlan.shots.map((shot) => [shot.paragraph, shot]));
-        const mismatches: string[] = [];
-        for (const entry of selected) {
-          if (entry.placement === "cover") continue;
-          const resolved = byParagraph.get(entry.parserParagraph);
-          if (!resolved) continue;
-          const canonical = renderPrompt(compilePrompt(resolved, config).prompt, config.promptSyntax);
-          const legacy = renderPrompt(entry.prompt, config.promptSyntax);
-          if (canonical !== legacy) mismatches.push(`P${entry.parserParagraph}`);
-        }
-        logStage(config, "canonical_compile_verified", {
-          checked: selected.filter((entry) => entry.placement !== "cover").length,
-          matched: selected.filter((entry) => entry.placement !== "cover").length - mismatches.length,
-          mismatchedParagraphs: mismatches
-        }, mismatches.length > 0 ? "warn" : undefined);
-      }
       if (!config.adaptiveMode && config.perspectiveMode === "creative" && (conceptSelections?.size || 0) > 0) {
         selected = selected.filter((entry) => Boolean(entry.creativeConcept));
       }
       if (selected.length === 0) throw new Error("No usable prompts were parsed.");
+
+      const legacySelected = selected;
+      const illustrationInput = planFromParsedPayload(
+        parsed,
+        config.previousVisualStateEnabled ? state.previousVisualState : undefined,
+        paragraphs,
+        config,
+        conceptSelections || new Map(),
+        legacySelected
+      );
+      canonicalPlan = resolveIllustrationPlan(illustrationInput);
+      const resolvedByParagraph = new Map(canonicalPlan.shots.map((shot) => [shot.paragraph, shot]));
+      selected = legacySelected.map((legacy) => {
+        const resolved = resolvedByParagraph.get(legacy.parserParagraph);
+        if (!resolved) throw new Error(`Canonical plan omitted selected paragraph P${legacy.parserParagraph}.`);
+        const compiled = compilePrompt(resolved, config);
+        return {
+          ...compiled,
+          placement: legacy.placement || "paragraph",
+          paragraph: legacy.paragraph,
+          parserParagraph: legacy.parserParagraph,
+          creativeCandidates: legacy.creativeCandidates
+        };
+      });
+      logStage(config, "canonical_plan_resolved", {
+        shots: canonicalPlan.shots.length,
+        characters: canonicalPlan.shots.reduce((total, shot) => total + shot.characters.length, 0),
+        paragraphs: [...new Set(canonicalPlan.shots.map((shot) => shot.paragraph))],
+        terminalCharacters: canonicalPlan.terminalContinuity.characters.length,
+        renderer: "canonical"
+      });
       const cover = selectCoverPromptEntry(parsed, paragraphs, config);
       if (cover) selected = [cover, ...selected];
       if (attempt === 0 && config.parserRetries > 0 && compactLorebookNeedsFullRetry(parsed, lorebookSnapshot)) {
@@ -785,12 +780,15 @@ async function finalizeProgressiveGeneration(
   context: ProgressiveGenerationContext,
   parsed: ParsedPayload,
   successfulParserParagraphs: number[],
-  cancelled: boolean
+  cancelled: boolean,
+  plan?: IllustrationPlan | null
 ): Promise<GeneratedRecord> {
-  const visualState = successfulParserParagraphs.length > 0
+  const visualState = successfulParserParagraphs.length > 0 && !plan
     ? buildPreviousVisualState(parsed, successfulParserParagraphs)
     : null;
-  const validatedVisualState = visualState ? ContinuityStateSchema.parse(visualState) : null;
+  const validatedVisualState = plan
+    ? ContinuityStateSchema.parse(plan.terminalContinuity)
+    : visualState ? ContinuityStateSchema.parse(visualState) : null;
   const terminalParagraphMatch = String(parsed.terminalState?.paragraph ?? "").match(/\d+/);
   const continuityParagraph = terminalParagraphMatch
     ? Number(terminalParagraphMatch[0])
@@ -812,11 +810,13 @@ async function finalizeProgressiveGeneration(
           ...validatedVisualState,
           updatedAt: validatedVisualState.updatedAt || new Date().toISOString()
         };
-        state.previousVisualState = reconcileContinuityState(
-          state.previousVisualState,
-          terminal,
-          continuityParagraph
-        ) as typeof state.previousVisualState;
+        state.previousVisualState = plan
+          ? ContinuityStateSchema.parse(terminal) as typeof state.previousVisualState
+          : reconcileContinuityState(
+            state.previousVisualState,
+            terminal,
+            continuityParagraph
+          ) as typeof state.previousVisualState;
       } else delete state.previousVisualState;
     }
   });
@@ -1189,6 +1189,7 @@ async function runGenerationForMessage(
   let config: Config | null = null;
   let context: ProgressiveGenerationContext | null = null;
   let parsed: ParsedPayload | null = null;
+  let canonicalPlan: IllustrationPlan | null = null;
   let initialized = false;
   let initializationPromise: Promise<void> | null = null;
   let releaseGeneration: (() => void) | null = null;
@@ -1286,6 +1287,7 @@ async function runGenerationForMessage(
         && Object.keys(state.characterAppearance).length === 0
     });
     parsed = selection.parsed;
+    canonicalPlan = selection.plan || null;
     const selected = selection.selected;
     logParsedSelection(parsed, selected, paragraphs, config);
     operation.total = selected.length;
@@ -1326,7 +1328,7 @@ async function runGenerationForMessage(
     await initializationPromise;
     throwIfAborted(signal);
     reportGenerationProgress(operation, "persisting", userId);
-    const record = await finalizeProgressiveGeneration(context, parsed, successfulParserParagraphs, false);
+    const record = await finalizeProgressiveGeneration(context, parsed, successfulParserParagraphs, false, canonicalPlan);
     reportGenerationProgress(operation, "completed", userId);
     spindle.sendToFrontend({ type: "status", chatId, operationId: operation.id, status: "Generated", record }, userId);
     logStage(config, "generation_pipeline_done", {
@@ -1346,7 +1348,7 @@ async function runGenerationForMessage(
     }
     if (initialized && context && parsed) {
       try {
-        await finalizeProgressiveGeneration(context, parsed, successfulParserParagraphs, cancelled);
+        await finalizeProgressiveGeneration(context, parsed, successfulParserParagraphs, cancelled, canonicalPlan);
       } catch (finalizeError) {
         logStage(config || { debugLogging: true }, "progressive_finalize_error", {
           error: finalizeError instanceof Error ? finalizeError.message : String(finalizeError)

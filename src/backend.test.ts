@@ -368,24 +368,24 @@ describe("illustration parser construction", () => {
     expect(guidance).toContain("at least two of these dimensions");
     expect(guidance).toContain("Every shot must reference a different source paragraph");
     expect(guidance).toContain("Never return two shots for the same paragraph");
-    expect(guidance).toContain("Repeat stable appearance, body, and attire tags");
-    expect(guidance).not.toContain("backend restores the exact stored baseline");
+    expect(guidance).toContain("repeat complete stable character baselines");
+    expect(guidance).not.toContain("deterministic inheritance preserves them");
     expect(guidance).toContain("Continuity does not require repeating camera angle");
     expect(guidance).toContain("compare Dynamic cameras as a soft camera ledger");
     expect(guidance).toContain("shotPlan.primaryAction");
-    expect(guidance).toContain("one visible action or interaction");
+    expect(guidance).toContain("one concise comma-free role-bound subject-verb-object clause");
     expect(guidance).not.toContain("### Static shot direction");
     expect(guidance).not.toContain("### Creative shot direction");
-    expect(guidance).toContain("continuous pov only when the narrative establishes");
+    expect(guidance).toContain("Never copy a later transformation");
     expect(guidance).toContain("Set perspectiveMode to exactly dynamic");
     expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, adaptiveMode: true })).toContain(
       "Choose perspectiveMode independently for every shot"
     );
     expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, adaptiveMode: true })).toContain(
-      "do not choose Creative for every shot"
+      "Do not choose Creative for every shot"
     );
     expect(helpers.parserInstruction({ ...helpers.DEFAULT_CONFIG, adaptiveMode: true })).toContain(
-      "must not focus on a recognizable face"
+      "Never a recognizable face"
     );
   });
 
@@ -393,10 +393,10 @@ describe("illustration parser construction", () => {
     const withoutSnapshot = helpers.parserInstruction(helpers.DEFAULT_CONFIG);
     const withSnapshot = helpers.parserInstruction(helpers.DEFAULT_CONFIG, { hasPreviousVisualState: true });
 
-    expect(withoutSnapshot).toContain("Repeat stable appearance, body, and attire tags");
-    expect(withoutSnapshot).not.toContain("leave age, appearance, body, and attire empty");
-    expect(withSnapshot).toContain("leave age, appearance, body, and attire empty");
-    expect(withSnapshot).toContain("backend restores the exact stored baseline");
+    expect(withoutSnapshot).toContain("repeat complete stable character baselines");
+    expect(withoutSnapshot).not.toContain("unchanged character baseline fields stay empty");
+    expect(withSnapshot).toContain("unchanged character baseline fields stay empty");
+    expect(withSnapshot).toContain("deterministic inheritance preserves them");
   });
 
   test("defines Static as fixed visual-novel framing with simple stable poses", () => {
@@ -406,14 +406,14 @@ describe("illustration parser construction", () => {
       perspectiveMode: "static"
     });
 
-    expect(guidance).toContain("Static uses a visual-novel composition");
-    expect(guidance).toContain("one primary character slightly forward on a shallow foreground plane");
+    expect(guidance).toContain("One Static character sits slightly forward from a readable background");
+    expect(guidance).toContain("two characters are left and right on the same shallow plane");
     expect(guidance).toContain("medium shot at eye level, straight-on, with deep focus");
-    expect(guidance).toContain("a concrete source-supported resting body arrangement as the pose");
-    expect(guidance).toContain("an empty actions array");
-    expect(guidance).toContain("standing upright with arms relaxed at sides");
+    expect(guidance).toContain("one concrete source-supported resting body arrangement");
+    expect(guidance).toContain("composition.actions is an empty array");
+    expect(guidance).toContain("never an abstract phrase such as simple pose");
     expect(guidance).toContain("2-3 concrete backgroundElements");
-    expect(guidance).toContain("override requests for cinematography variation");
+    expect(guidance).toContain("No close-ups, wide shots, body-part crops");
     expect(guidance).toContain("Keep the visual-novel framing fixed across Static shots");
     expect(guidance).toContain("return fewer shots");
     expect(guidance).not.toContain("### Dynamic shot direction");

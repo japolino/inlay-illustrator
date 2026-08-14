@@ -61,6 +61,11 @@ describe("sidecar simulation quality rubric", () => {
     expect(ids.filter((id) => id.startsWith("medieval_"))).toHaveLength(3);
     expect(ids.filter((id) => id.startsWith("magic_"))).toHaveLength(2);
     expect(ids.filter((id) => id.startsWith("fight_"))).toHaveLength(2);
+    expect(ids).toEqual(expect.arrayContaining([
+      "dynamic_monster_magic_sword",
+      "static_kemonomimi_corporate",
+      "dynamic_furry_streetwear"
+    ]));
     for (const candidate of expandedSidecarScenarios.filter((entry) => entry.id.startsWith("nsfw_"))) {
       expect(candidate.paragraphs.every((paragraph) => /\badult/i.test(paragraph))).toBe(true);
     }
@@ -91,6 +96,37 @@ describe("sidecar simulation quality rubric", () => {
     const result = evaluateQuality(payload, wordBoundaryScenario, [{ paragraph: 1, positive: "valid prompt" }], true);
     expect(result.issues.some((entry) => entry.code === "stale_or_invented_fact")).toBe(false);
   });
+  test("does not flag an explicitly negated prohibited trait as invented", () => {
+    const negatedTraitScenario = {
+      ...scenario,
+      expectations: [{ paragraph: 1, character: "Evan Dorne", field: "body" as const, noneOf: ["wings"], critical: true }]
+    };
+    const payload = validPayload();
+    payload.scenes![0].shots![0].characters![1].body = "lean build, no wings";
+    const result = evaluateQuality(payload, negatedTraitScenario, [{ paragraph: 1, positive: "valid prompt" }], true);
+    expect(result.issues.some((entry) => entry.code === "stale_or_invented_fact")).toBe(false);
+  });
+
+  test("accepts durable identity traits from either appearance or body", () => {
+    const identityScenario = {
+      ...scenario,
+      expectations: [
+        { paragraph: 1, character: "Evan Dorne", field: "identityTraits" as const, anyOf: ["luminous wings"], critical: true },
+        { paragraph: 1, character: "Evan Dorne", field: "terminalIdentityTraits" as const, anyOf: ["luminous wings"], critical: true }
+      ]
+    };
+    const payload = validPayload();
+    payload.scenes![0].shots![0].characters![1].body = "lean build, luminous wings";
+    payload.terminalState = {
+      paragraph: 1,
+      environment: payload.scenes![0].environment,
+      environmentChanges: [],
+      characters: payload.scenes![0].shots![0].characters
+    };
+    const result = evaluateQuality(payload, identityScenario, [{ paragraph: 1, positive: "valid prompt" }], true);
+    expect(result.issues.some((entry) => entry.code === "required_fact")).toBe(false);
+  });
+
   test("accepts a production-shaped prompt that preserves source facts", () => {
     const result = evaluateQuality(validPayload(), scenario, [{ paragraph: 1, positive: "2people, tense confrontation, medium shot" }], true);
     expect(result.issues).toEqual([]);

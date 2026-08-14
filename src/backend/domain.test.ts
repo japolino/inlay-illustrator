@@ -47,10 +47,17 @@ const resolvedShot = {
     perspective: "three-quarter view",
     focus: ["shallow depth of field"]
   },
+  cameraText: "",
   situation: "1girl, solo, forest",
+  action: "",
   characters: [{
     ...continuity.characters[0],
+    identity: "",
+    avatarAppearance: "",
+    avatarBody: "",
+    avatarAttire: "",
     expression: "focused",
+    action: "",
     composition: {
       position: "center frame",
       pose: "standing upright",
@@ -61,6 +68,7 @@ const resolvedShot = {
     visibleTags: ["dark skin", "curly black hair", "purple travel coat"]
   }],
   sharedComposition: { interaction: [], spatialRelation: "" },
+  supplement: "",
   environment: continuity.environment,
   place: continuity.place,
   negative: ""

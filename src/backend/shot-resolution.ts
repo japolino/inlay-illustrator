@@ -235,7 +235,12 @@ function resolveShotAgainstState(state: ContinuityState, planned: PlannedShot): 
     }
     return ResolvedCharacterSchema.parse({
       ...baseline,
+      identity: reference.identity ?? "",
+      avatarAppearance: reference.avatarAppearance ?? "",
+      avatarBody: reference.avatarBody ?? "",
+      avatarAttire: reference.avatarAttire ?? "",
       expression: reference.expression ?? "",
+      action: reference.action ?? "",
       composition: { ...EMPTY_COMPOSITION, ...(reference.composition || {}) },
       renderScope: reference.renderScope ?? "",
       visibleTags: reference.visibleTags ?? []
@@ -245,9 +250,12 @@ function resolveShotAgainstState(state: ContinuityState, planned: PlannedShot): 
     paragraph: planned.paragraph,
     plan: planned.plan,
     camera: { ...EMPTY_CAMERA, ...planned.camera },
+    cameraText: planned.cameraText ?? "",
     situation: planned.situation ?? "",
+    action: planned.action ?? "",
     characters,
     sharedComposition: { ...EMPTY_SHARED, ...(planned.sharedComposition || {}) },
+    supplement: planned.supplement ?? "",
     environment: state.environment,
     place: planned.place ?? state.place,
     negative: planned.negative ?? ""
@@ -266,11 +274,23 @@ export function resolveIllustrationPlan(input: IllustrationInput): IllustrationP
   let state = initialContinuity;
   let deltaIndex = 0;
   for (const planned of shots) {
-    while (deltaIndex < deltas.length && deltas[deltaIndex].paragraph <= planned.paragraph) {
+    while (deltaIndex < deltas.length && deltas[deltaIndex].paragraph < planned.paragraph) {
+      state = applyContinuityDelta(state, deltas[deltaIndex]);
+      deltaIndex += 1;
+    }
+    while (deltaIndex < deltas.length
+      && deltas[deltaIndex].paragraph === planned.paragraph
+      && deltas[deltaIndex].timing !== "after_shot") {
       state = applyContinuityDelta(state, deltas[deltaIndex]);
       deltaIndex += 1;
     }
     resolvedShots.push(resolveShotAgainstState(state, planned));
+    while (deltaIndex < deltas.length
+      && deltas[deltaIndex].paragraph === planned.paragraph
+      && deltas[deltaIndex].timing === "after_shot") {
+      state = applyContinuityDelta(state, deltas[deltaIndex]);
+      deltaIndex += 1;
+    }
   }
   while (deltaIndex < deltas.length) {
     state = applyContinuityDelta(state, deltas[deltaIndex]);
