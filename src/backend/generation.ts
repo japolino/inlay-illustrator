@@ -13,9 +13,8 @@ import {
   hasUnusedCreativeConcepts,
   rebaseCreativeConcepts
 } from "./creative.js";
+import { planAndCompilePrompts } from "./canonical-planning.js";
 import { ContinuityStateSchema, reconcileContinuityState, type IllustrationPlan } from "./domain.js";
-import { planFromParsedPayload } from "./plan-adapter.js";
-import { resolveIllustrationPlan } from "./shot-resolution.js";
 import { type GeneratedRecordV3 as GeneratedRecord, toGeneratedRecordV3 } from "./generated-record.js";
 import { buildImageParameters, prepareAndDispatchImageJobs, rerollImageParameters, resolveImageConnection } from "./images.js";
 import { logStage } from "./logging.js";
@@ -43,9 +42,9 @@ import {
   routedTargetSource,
   resolveParserConnection
 } from "./parser.js";
-import { compilePrompt, renderNegativeWithCurrentSelection, renderPrompt, renderPromptWithCurrentAffixes } from "./prompt.js";
+import { renderNegativeWithCurrentSelection, renderPrompt, renderPromptWithCurrentAffixes } from "./prompt.js";
 import { imageUrlFromId, renderInlaidMessage } from "./rendering.js";
-import { normalizeScenePayload, selectCoverPromptEntry, selectPromptEntries } from "./scenes.js";
+import { normalizeScenePayload, selectCoverPromptEntry } from "./scenes.js";
 import {
   getConfig,
   getState,
@@ -440,35 +439,17 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
           conceptSelections = new Map();
         }
       }
-      selected = selectPromptEntries(parsed, paragraphs, config, conceptSelections || new Map(), conceptCandidates);
-      if (!config.adaptiveMode && config.perspectiveMode === "creative" && (conceptSelections?.size || 0) > 0) {
-        selected = selected.filter((entry) => Boolean(entry.creativeConcept));
-      }
-      if (selected.length === 0) throw new Error("No usable prompts were parsed.");
-
-      const legacySelected = selected;
-      const illustrationInput = planFromParsedPayload(
+      const canonicalSelection = planAndCompilePrompts(
         parsed,
         config.previousVisualStateEnabled ? state.previousVisualState : undefined,
         paragraphs,
         config,
         conceptSelections || new Map(),
-        legacySelected
+        conceptCandidates
       );
-      canonicalPlan = resolveIllustrationPlan(illustrationInput);
-      const resolvedByParagraph = new Map(canonicalPlan.shots.map((shot) => [shot.paragraph, shot]));
-      selected = legacySelected.map((legacy) => {
-        const resolved = resolvedByParagraph.get(legacy.parserParagraph);
-        if (!resolved) throw new Error(`Canonical plan omitted selected paragraph P${legacy.parserParagraph}.`);
-        const compiled = compilePrompt(resolved, config);
-        return {
-          ...compiled,
-          placement: legacy.placement || "paragraph",
-          paragraph: legacy.paragraph,
-          parserParagraph: legacy.parserParagraph,
-          creativeCandidates: legacy.creativeCandidates
-        };
-      });
+      canonicalPlan = canonicalSelection.plan;
+      selected = canonicalSelection.selected;
+      if (selected.length === 0) throw new Error("No usable prompts were parsed.");
       logStage(config, "canonical_plan_resolved", {
         shots: canonicalPlan.shots.length,
         characters: canonicalPlan.shots.reduce((total, shot) => total + shot.characters.length, 0),

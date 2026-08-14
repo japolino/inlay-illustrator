@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_CONFIG } from "../shared/config.js";
+import { planAndCompilePrompts } from "./canonical-planning.js";
 import { planFromParsedPayload } from "./plan-adapter.js";
 import { compilePrompt, renderPrompt } from "./prompt.js";
 import { selectPromptEntries } from "./scenes.js";
@@ -64,12 +65,15 @@ describe("legacy payload to canonical plan adapter", () => {
       }
     };
     const legacy = selectPromptEntries(payload, paragraphs, config);
-    const plan = resolveIllustrationPlan(planFromParsedPayload(payload, undefined, paragraphs, config, new Map(), legacy));
-    const compiled = compilePrompt(plan.shots[0], config);
+    const canonical = planAndCompilePrompts(payload, undefined, paragraphs, config);
+    const plan = canonical.plan;
+    const compiled = canonical.selected[0];
 
     expect(renderPrompt(compiled.prompt, config.promptSyntax)).toBe(renderPrompt(legacy[0].prompt, config.promptSyntax));
     expect(renderPrompt(compiled.corePrompt, config.promptSyntax)).toBe(renderPrompt(legacy[0].corePrompt, config.promptSyntax));
     expect(compiled.negative).toBe(legacy[0].negative);
+    expect(compiled.paragraph).toBe(4);
+    expect(compiled.parserParagraph).toBe(1);
     expect(plan.shots[0]).toMatchObject({
       cameraText: "full body, low angle, from side, motion blur",
       action: "vaulting rightward over a barrier",
@@ -153,9 +157,9 @@ describe("legacy payload to canonical plan adapter", () => {
     };
     const legacy = selectPromptEntries(payload, paragraphs, config, new Map());
     expect(legacy[0].perspectiveMode).toBe("dynamic");
-    const plan = resolveIllustrationPlan(planFromParsedPayload(payload, undefined, paragraphs, config, new Map(), legacy));
-    expect(plan.shots[0].plan).toEqual({ mode: "dynamic", degradedFromCreative: true });
-    const compiled = compilePrompt(plan.shots[0], config);
-    expect(renderPrompt(compiled.prompt, config.promptSyntax)).toBe(renderPrompt(legacy[0].prompt, config.promptSyntax));
+    const canonical = planAndCompilePrompts(payload, undefined, paragraphs, config, new Map());
+    expect(canonical.plan.shots[0].plan).toEqual({ mode: "dynamic", degradedFromCreative: true });
+    expect(canonical.selected[0].perspectiveMode).toBe("dynamic");
+    expect(renderPrompt(canonical.selected[0].prompt, config.promptSyntax)).toBe(renderPrompt(legacy[0].prompt, config.promptSyntax));
   });
 });

@@ -26,3 +26,25 @@ The command resolves exact IDs from `/v1/models`, runs models sequentially, writ
 To benchmark one additional proxy model without changing the default target set, pass its exact discovered ID through `--model-id=`, an optional display name through `--model-label=`, and a safe summary suffix through `--report-label=`.
 
 To evaluate the already-rendered prompts as actual Anima images without making new sidecar calls, use the paired ComfyUI harness documented in `../image-prompt-study/README.md` or run `bun run eval:images` for a dry-run plan.
+
+## Offline replay
+
+Re-run saved raw sidecar responses through the current local normalization,
+canonical planning, and prompt compilation path without making model or image
+requests:
+
+```text
+bun run src/evals/sidecar-sim/replay-runner.ts --source-root=eval-results/raw/expanded/<run-id>
+```
+
+Use `--scenario=`, `--model=`, and `--max-files=` to narrow a replay.
+Differences or pipeline errors return a non-zero exit code; pass
+`--allow-differences` only for exploratory audits. New live-run artifacts embed
+the effective config, source paragraphs, and previous visual state so future
+replays do not silently inherit changed fixtures. Older artifacts fall back to
+the current scenario registry.
+
+Replay covers the deterministic local half of the harness. It deliberately does
+not claim coverage of production remote repair, remote camera repair, avatar
+vision, lorebook retry, or host persistence; those stages require separate
+instrumented or integration evaluation.

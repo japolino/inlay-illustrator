@@ -2,7 +2,8 @@ import type { Config } from "../shared/config.js";
 import { isIdentitySafeCreativeConcept } from "./creative.js";
 import { logStage } from "./logging.js";
 import { assemblePrompt, renderPrompt } from "./prompt.js";
-import type { CharacterJson, CreativeConcept, NormalizedScene, ParsedPayload, PreparedParagraph, PromptEntry, SceneJson, ShotJson } from "./types.js";
+import { resolveShotPerspective } from "./shot-resolution.js";
+import type { CharacterJson, CreativeConcept, NormalizedScene, ParsedPayload, PreparedParagraph, PromptEntry, SceneJson, SelectedShotDecision, ShotJson } from "./types.js";
 import { cleanArray, cleanString } from "./utils.js";
 
 function parseParagraphNumber(value: unknown): number | null {
@@ -229,13 +230,13 @@ export function selectCoverPromptEntry(
     : null;
 }
 
-export function selectPromptEntries(
+export function selectShotDecisions(
   payload: ParsedPayload,
   paragraphs: PreparedParagraph[],
   config: Config,
   creativeConcepts: Map<number, CreativeConcept> = new Map(),
   creativeCandidates: CreativeConcept[] = []
-): PromptEntry[] {
+): SelectedShotDecision[] {
   const normalized = normalizeScenePayload(payload);
   const paragraphMap = new Map(paragraphs.map((paragraph) => [paragraph.parserIndex, paragraph]));
   const valid = normalized.filter((entry) => paragraphMap.has(entry.parserParagraph));
@@ -253,9 +254,8 @@ export function selectPromptEntries(
     seenParagraphs.add(sourceParagraph);
     return true;
   });
-  const limit = config.maxImages;
   const selected = uniqueParagraphs
-    .slice(0, limit)
+    .slice(0, config.maxImages)
     .map((entry, modelPriority) => ({ entry, modelPriority }))
     .sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority)
     .map(({ entry }) => entry);
@@ -268,7 +268,7 @@ export function selectPromptEntries(
         - (safeCreativeConcepts.get(left.parserParagraph)?.score || 0))
       .slice(0, maxAdaptiveCreative)
     : []);
-  const prompts: PromptEntry[] = [];
+  const decisions: SelectedShotDecision[] = [];
   for (const entry of selected) {
     const paragraph = paragraphMap.get(entry.parserParagraph);
     if (!paragraph) continue;
@@ -281,19 +281,51 @@ export function selectPromptEntries(
       && (!concept || !adaptiveCreativeAllowed.has(entry))
       ? { ...entry.shot, perspectiveMode: "dynamic" }
       : entry.shot;
-    const prompt = assemblePrompt(entry.scene, shot, config, entry.parserParagraph, paragraph.originalIndex, concept);
-    prompt.creativeCandidates = creativeCandidates.filter((candidate) => candidate.paragraph === entry.parserParagraph);
-    if (renderPrompt(prompt.prompt, config.promptSyntax)) prompts.push(prompt);
+    const perspective = resolveShotPerspective(shot, config);
+    decisions.push({
+      scene: entry.scene,
+      shot,
+      parserParagraph: entry.parserParagraph,
+      paragraph: paragraph.originalIndex,
+      perspectiveMode: perspective.mode,
+      perspectiveSource: perspective.source,
+      ...(perspective.mode === "creative" && concept ? { creativeConcept: concept } : {}),
+      creativeCandidates: creativeCandidates.filter((candidate) => candidate.paragraph === entry.parserParagraph)
+    });
   }
   logStage(config, "illustration_candidates_selected", {
     candidateCount: normalized.length,
     validCandidateCount: valid.length,
     distinctCandidateCount: distinct.length,
     uniqueParagraphCandidateCount: uniqueParagraphs.length,
-    selectedCount: prompts.length,
-    selectedParagraphs: selected.map((entry) => entry.parserParagraph),
-    perspectives: prompts.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource })),
+    selectedCount: decisions.length,
+    selectedParagraphs: decisions.map((entry) => entry.parserParagraph),
+    perspectives: decisions.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource })),
     cameraTags: selected.map((entry) => normalizedVisualValue(entry.shot.camera))
   });
-  return prompts;
+  return decisions;
+}
+
+/** Compatibility wrapper for direct legacy callers; production plans before compiling. */
+export function selectPromptEntries(
+  payload: ParsedPayload,
+  paragraphs: PreparedParagraph[],
+  config: Config,
+  creativeConcepts: Map<number, CreativeConcept> = new Map(),
+  creativeCandidates: CreativeConcept[] = []
+): PromptEntry[] {
+  return selectShotDecisions(payload, paragraphs, config, creativeConcepts, creativeCandidates)
+    .map((decision) => {
+      const prompt = assemblePrompt(
+        decision.scene,
+        decision.shot,
+        config,
+        decision.parserParagraph,
+        decision.paragraph,
+        decision.creativeConcept
+      );
+      prompt.creativeCandidates = decision.creativeCandidates;
+      return prompt;
+    })
+    .filter((entry) => Boolean(renderPrompt(entry.prompt, config.promptSyntax)));
 }

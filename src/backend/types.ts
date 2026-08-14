@@ -145,6 +145,23 @@ export type PromptEntry = {
   creativeCandidates?: CreativeConcept[];
 };
 
+/** Prompt-independent result of paragraph, perspective, and Creative selection. */
+export type ShotSelection = {
+  parserParagraph: number;
+  paragraph: number;
+  placement?: "cover" | "paragraph";
+  perspectiveMode: PerspectiveMode;
+  perspectiveSource: "adaptive" | "manual";
+  creativeConcept?: CreativeConcept;
+  creativeCandidates?: CreativeConcept[];
+};
+
+/** Selection metadata plus the legacy parser shapes retained at the ingress boundary. */
+export type SelectedShotDecision = ShotSelection & {
+  scene: SceneJson;
+  shot: ShotJson;
+};
+
 export type PreparedParagraph = { parserIndex: number; originalIndex: number; text: string };
 export type NormalizedScene = { scene: SceneJson; shot: ShotJson; parserParagraph: number };
 

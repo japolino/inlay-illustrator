@@ -3849,7 +3849,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
             })));
           }
         }
-
+        
         if (${id}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
@@ -3857,7 +3857,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
         } else {
           newResult[${k}] = ${id}.value;
         }
-
+        
       `);
       } else if (!isOptionalIn) {
         doc.write(`
@@ -3894,7 +3894,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
             path: iss.path ? [${k}, ...iss.path] : [${k}]
           })));
         }
-
+        
         if (${id}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
@@ -3902,7 +3902,7 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
         } else {
           newResult[${k}] = ${id}.value;
         }
-
+        
       `);
       }
     }
@@ -16507,7 +16507,7 @@ function selectCoverPromptEntry(payload, paragraphs, config2) {
   const entry = assemblePrompt(cover, { ...cover, perspectiveMode: "dynamic" }, coverConfig, source.parserIndex, source.originalIndex);
   return renderPrompt(entry.prompt, config2.promptSyntax) ? { ...entry, placement: "cover", perspectiveSource: "manual" } : null;
 }
-function selectPromptEntries(payload, paragraphs, config2, creativeConcepts = new Map, creativeCandidates = []) {
+function selectShotDecisions(payload, paragraphs, config2, creativeConcepts = new Map, creativeCandidates = []) {
   const normalized = normalizeScenePayload(payload);
   const paragraphMap = new Map(paragraphs.map((paragraph) => [paragraph.parserIndex, paragraph]));
   const valid = normalized.filter((entry) => paragraphMap.has(entry.parserParagraph));
@@ -16527,12 +16527,11 @@ function selectPromptEntries(payload, paragraphs, config2, creativeConcepts = ne
     seenParagraphs.add(sourceParagraph);
     return true;
   });
-  const limit = config2.maxImages;
-  const selected = uniqueParagraphs.slice(0, limit).map((entry, modelPriority) => ({ entry, modelPriority })).sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority).map(({ entry }) => entry);
+  const selected = uniqueParagraphs.slice(0, config2.maxImages).map((entry, modelPriority) => ({ entry, modelPriority })).sort((left, right) => left.entry.parserParagraph - right.entry.parserParagraph || left.modelPriority - right.modelPriority).map(({ entry }) => entry);
   const maxAdaptiveCreative = selected.length > 1 ? Math.ceil(selected.length / 2) : 1;
   const safeCreativeConcepts = new Map([...creativeConcepts].filter(([, concept]) => isIdentitySafeCreativeConcept(concept)));
   const adaptiveCreativeAllowed = new Set(config2.adaptiveMode ? selected.filter((entry) => cleanString2(entry.shot.perspectiveMode).toLowerCase() === "creative" && safeCreativeConcepts.has(entry.parserParagraph)).sort((left, right) => (safeCreativeConcepts.get(right.parserParagraph)?.score || 0) - (safeCreativeConcepts.get(left.parserParagraph)?.score || 0)).slice(0, maxAdaptiveCreative) : []);
-  const prompts = [];
+  const decisions = [];
   for (const entry of selected) {
     const paragraph = paragraphMap.get(entry.parserParagraph);
     if (!paragraph)
@@ -16540,22 +16539,36 @@ function selectPromptEntries(payload, paragraphs, config2, creativeConcepts = ne
     const concept = safeCreativeConcepts.get(entry.parserParagraph);
     const requestedPerspective = cleanString2(entry.shot.perspectiveMode).toLowerCase();
     const shot = config2.adaptiveMode && !config2.fastMode && requestedPerspective === "creative" && (!concept || !adaptiveCreativeAllowed.has(entry)) ? { ...entry.shot, perspectiveMode: "dynamic" } : entry.shot;
-    const prompt = assemblePrompt(entry.scene, shot, config2, entry.parserParagraph, paragraph.originalIndex, concept);
-    prompt.creativeCandidates = creativeCandidates.filter((candidate) => candidate.paragraph === entry.parserParagraph);
-    if (renderPrompt(prompt.prompt, config2.promptSyntax))
-      prompts.push(prompt);
+    const perspective = resolveShotPerspective(shot, config2);
+    decisions.push({
+      scene: entry.scene,
+      shot,
+      parserParagraph: entry.parserParagraph,
+      paragraph: paragraph.originalIndex,
+      perspectiveMode: perspective.mode,
+      perspectiveSource: perspective.source,
+      ...perspective.mode === "creative" && concept ? { creativeConcept: concept } : {},
+      creativeCandidates: creativeCandidates.filter((candidate) => candidate.paragraph === entry.parserParagraph)
+    });
   }
   logStage(config2, "illustration_candidates_selected", {
     candidateCount: normalized.length,
     validCandidateCount: valid.length,
     distinctCandidateCount: distinct.length,
     uniqueParagraphCandidateCount: uniqueParagraphs.length,
-    selectedCount: prompts.length,
-    selectedParagraphs: selected.map((entry) => entry.parserParagraph),
-    perspectives: prompts.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource })),
+    selectedCount: decisions.length,
+    selectedParagraphs: decisions.map((entry) => entry.parserParagraph),
+    perspectives: decisions.map((entry) => ({ mode: entry.perspectiveMode, source: entry.perspectiveSource })),
     cameraTags: selected.map((entry) => normalizedVisualValue(entry.shot.camera))
   });
-  return prompts;
+  return decisions;
+}
+function selectPromptEntries(payload, paragraphs, config2, creativeConcepts = new Map, creativeCandidates = []) {
+  return selectShotDecisions(payload, paragraphs, config2, creativeConcepts, creativeCandidates).map((decision) => {
+    const prompt = assemblePrompt(decision.scene, decision.shot, config2, decision.parserParagraph, decision.paragraph, decision.creativeConcept);
+    prompt.creativeCandidates = decision.creativeCandidates;
+    return prompt;
+  }).filter((entry) => Boolean(renderPrompt(entry.prompt, config2.promptSyntax)));
 }
 
 // src/backend/visual-state.ts
@@ -18331,6 +18344,38 @@ function sharedCompositionInput(shot) {
   const interaction = Array.isArray(record2.interaction) ? cleanArray(record2.interaction).map(cleanString2) : cleanString2(record2.interaction) ? csvParts(record2.interaction) : [];
   const spatialRelation = cleanString2(record2.spatialRelation);
   return { interaction, spatialRelation };
+}
+
+// src/backend/canonical-planning.ts
+function compileDecisions(payload, previousState, paragraphs, config2, conceptSelections, decisions) {
+  const plan = resolveIllustrationPlan(planFromParsedPayload(payload, previousState, paragraphs, config2, conceptSelections, decisions));
+  const resolvedByParagraph = new Map(plan.shots.map((shot) => [shot.paragraph, shot]));
+  const selected = decisions.map((decision) => {
+    const resolved = resolvedByParagraph.get(decision.parserParagraph);
+    if (!resolved)
+      throw new Error(`Canonical plan omitted selected paragraph P${decision.parserParagraph}.`);
+    return {
+      ...compilePrompt(resolved, config2),
+      placement: "paragraph",
+      paragraph: decision.paragraph,
+      parserParagraph: decision.parserParagraph,
+      creativeCandidates: decision.creativeCandidates
+    };
+  });
+  return { plan, selected, decisions };
+}
+function planAndCompilePrompts(payload, previousState, paragraphs, config2, conceptSelections = new Map, creativeCandidates = []) {
+  let decisions = selectShotDecisions(payload, paragraphs, config2, conceptSelections, creativeCandidates);
+  if (!config2.adaptiveMode && config2.perspectiveMode === "creative" && conceptSelections.size > 0) {
+    decisions = decisions.filter((decision) => Boolean(decision.creativeConcept));
+  }
+  let compiled = compileDecisions(payload, previousState, paragraphs, config2, conceptSelections, decisions);
+  const usable = compiled.selected.map((entry) => Boolean(renderPrompt(entry.prompt, config2.promptSyntax)));
+  if (usable.every(Boolean))
+    return compiled;
+  decisions = decisions.filter((_decision, index) => usable[index]);
+  compiled = compileDecisions(payload, previousState, paragraphs, config2, conceptSelections, decisions);
+  return compiled;
 }
 
 // src/backend/operation-manager.ts
@@ -20653,29 +20698,11 @@ async function parseAndSelectPrompts(input) {
           conceptSelections = new Map;
         }
       }
-      selected = selectPromptEntries(parsed, paragraphs, config2, conceptSelections || new Map, conceptCandidates);
-      if (!config2.adaptiveMode && config2.perspectiveMode === "creative" && (conceptSelections?.size || 0) > 0) {
-        selected = selected.filter((entry) => Boolean(entry.creativeConcept));
-      }
+      const canonicalSelection = planAndCompilePrompts(parsed, config2.previousVisualStateEnabled ? state.previousVisualState : undefined, paragraphs, config2, conceptSelections || new Map, conceptCandidates);
+      canonicalPlan = canonicalSelection.plan;
+      selected = canonicalSelection.selected;
       if (selected.length === 0)
         throw new Error("No usable prompts were parsed.");
-      const legacySelected = selected;
-      const illustrationInput = planFromParsedPayload(parsed, config2.previousVisualStateEnabled ? state.previousVisualState : undefined, paragraphs, config2, conceptSelections || new Map, legacySelected);
-      canonicalPlan = resolveIllustrationPlan(illustrationInput);
-      const resolvedByParagraph = new Map(canonicalPlan.shots.map((shot) => [shot.paragraph, shot]));
-      selected = legacySelected.map((legacy) => {
-        const resolved = resolvedByParagraph.get(legacy.parserParagraph);
-        if (!resolved)
-          throw new Error(`Canonical plan omitted selected paragraph P${legacy.parserParagraph}.`);
-        const compiled = compilePrompt(resolved, config2);
-        return {
-          ...compiled,
-          placement: legacy.placement || "paragraph",
-          paragraph: legacy.paragraph,
-          parserParagraph: legacy.parserParagraph,
-          creativeCandidates: legacy.creativeCandidates
-        };
-      });
       logStage(config2, "canonical_plan_resolved", {
         shots: canonicalPlan.shots.length,
         characters: canonicalPlan.shots.reduce((total, shot) => total + shot.characters.length, 0),

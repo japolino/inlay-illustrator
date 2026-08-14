@@ -19,8 +19,8 @@ import type {
   CreativeConcept,
   ParsedPayload,
   PreparedParagraph,
-  PromptEntry,
   SceneJson,
+  ShotSelection,
   ShotJson,
   TerminalVisualStateJson
 } from "./types.js";
@@ -44,7 +44,7 @@ export function planFromParsedPayload(
   paragraphs: PreparedParagraph[],
   config: Config,
   conceptSelections: Map<number, CreativeConcept> = new Map(),
-  selectedEntries?: PromptEntry[]
+  selectedEntries?: ShotSelection[]
 ): IllustrationInput {
   const validParagraphs = new Set(paragraphs.map((paragraph) => paragraph.parserIndex));
   const selectedByParagraph = selectedEntries

@@ -10,26 +10,23 @@ import {
 import {
   continuityReference,
   formatTargetParagraphs,
-  parseParserJson,
   parserStageTokenBudget,
   parserMessages,
   parserUserRequest
 } from "../../backend/parser.js";
-import { buildCharacterTagReference, compilePrompt, renderPrompt } from "../../backend/prompt.js";
-import { planFromParsedPayload } from "../../backend/plan-adapter.js";
-import { resolveIllustrationPlan } from "../../backend/shot-resolution.js";
+import { buildCharacterTagReference } from "../../backend/prompt.js";
 import { prepareParagraphs } from "../../backend/paragraphs.js";
-import { dedupeExactShotCharacters, recoverSceneParagraphs, normalizeScenePayload, selectPromptEntries } from "../../backend/scenes.js";
-import { auditDynamicCameraDiversity, repairDynamicCameraDiversityLocally } from "../../backend/camera-diversity.js";
+import { normalizeScenePayload } from "../../backend/scenes.js";
 import { parserInstruction } from "../../backend/instructions.js";
 import { effectiveGenerationConfig } from "../../shared/config.js";
-import { applyPreviousVisualState, formatPreviousVisualState } from "../../backend/visual-state.js";
+import { formatPreviousVisualState } from "../../backend/visual-state.js";
 import type { CreativeConcept, ParsedPayload, PreparedParagraph } from "../../backend/types.js";
 import { cleanString } from "../../backend/utils.js";
 import { evaluateQuality, isCensoredEmptyResponse } from "./quality.js";
 import { sidecarScenarios } from "./scenarios.js";
 import { nsfwSidecarScenarios } from "./nsfw-scenarios.js";
 import { expandedSidecarScenarios } from "./expanded-scenarios.js";
+import { transformSidecarResponse } from "./transform.js";
 import type { SidecarResult, SidecarScenario } from "./types.js";
 
 const endpoint = cleanString(process.env.INLAY_SIDECAR_ENDPOINT);
@@ -227,44 +224,6 @@ async function ideate(
   };
 }
 
-function productionTransform(
-  raw: string,
-  scenario: SidecarScenario,
-  paragraphs: PreparedParagraph[],
-  concepts: CreativeConcept[]
-): { payload: ParsedPayload; rendered: SidecarResult["rendered"] } {
-  const fallback = paragraphs.length === 1 ? paragraphs[0].parserIndex : undefined;
-  let payload = dedupeExactShotCharacters(recoverSceneParagraphs(parseParserJson(raw), fallback));
-  payload = applyPreviousVisualState(payload, scenario.previousVisualState);
-  const localCameraRepair = repairDynamicCameraDiversityLocally(payload, scenario.config, auditDynamicCameraDiversity(payload, scenario.config));
-  if (localCameraRepair) payload = localCameraRepair;
-  const selectedConcepts = chooseCreativeConcepts(concepts, [], () => 0);
-  const legacySelected = selectPromptEntries(payload, paragraphs, scenario.config, selectedConcepts, concepts);
-  const plan = resolveIllustrationPlan(planFromParsedPayload(
-    payload,
-    scenario.previousVisualState,
-    paragraphs,
-    scenario.config,
-    selectedConcepts,
-    legacySelected
-  ));
-  const resolvedByParagraph = new Map(plan.shots.map((shot) => [shot.paragraph, shot]));
-  const selected = legacySelected.map((entry) => {
-    const resolved = resolvedByParagraph.get(entry.parserParagraph);
-    if (!resolved) throw new Error(`Canonical plan omitted selected paragraph P${entry.parserParagraph}.`);
-    return compilePrompt(resolved, scenario.config);
-  });
-  return {
-    payload,
-    rendered: selected.map((entry) => ({
-      paragraph: entry.parserParagraph,
-      perspective: entry.perspectiveMode,
-      positive: renderPrompt(entry.prompt, scenario.config.promptSyntax),
-      negative: entry.negative
-    }))
-  };
-}
-
 async function runScenario(model: string, scenario: SidecarScenario): Promise<SidecarResult> {
   if (fastMode) {
     // Fast Mode runs the same scenario through the effective runtime config:
@@ -297,7 +256,7 @@ async function runScenario(model: string, scenario: SidecarScenario): Promise<Si
     const mainMaxTokens = parserStageTokenBudget(model, scenario.config, "main");
     completion = await complete(model, requestMessages, mainMaxTokens);
     const rawJson = strictJson(completion.text);
-    let transformed = productionTransform(completion.text, scenario, paragraphs, concepts);
+    let transformed = transformSidecarResponse(completion.text, scenario, paragraphs, concepts);
     if (scenario.config.adaptiveMode && !scenario.config.fastMode) {
       const creativeParagraphs = new Set(normalizeScenePayload(transformed.payload)
         .filter((entry) => cleanString(entry.shot.perspectiveMode).toLowerCase() === "creative")
@@ -307,7 +266,7 @@ async function runScenario(model: string, scenario: SidecarScenario): Promise<Si
         const generated = await ideate(model, scenario, creativeSourceParagraphs, formatTargetParagraphs(creativeSourceParagraphs), reference);
         concepts = generated.concepts;
         ideation = generated.detail;
-        transformed = productionTransform(completion.text, scenario, paragraphs, concepts);
+        transformed = transformSidecarResponse(completion.text, scenario, paragraphs, concepts);
       }
     }
     const quality = evaluateQuality(
@@ -432,7 +391,18 @@ for (let round = 1; round <= rounds; round += 1) {
       const result = await runScenario(model.id, scenario);
       results.push(result);
       const file = join(rawRoot, `${String(round).padStart(2, "0")}-${slug(scenario.id)}-${slug(model.id)}.json`);
-      await Bun.write(file, `${JSON.stringify({ round, ...result }, null, 2)}\n`);
+      const replayConfig = fastMode
+        ? effectiveGenerationConfig({ ...scenario.config, fastMode: true })
+        : scenario.config;
+      await Bun.write(file, `${JSON.stringify({
+        round,
+        ...result,
+        replayContext: {
+          config: replayConfig,
+          paragraphs: scenario.paragraphs,
+          previousVisualState: scenario.previousVisualState
+        }
+      }, null, 2)}\n`);
       process.stdout.write(`${result.passed ? "PASS" : "FAIL"} ${model.label} ${scenario.id} score=${result.score}\n`);
     }
   }

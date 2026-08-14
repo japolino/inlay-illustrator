@@ -1,3 +1,18 @@
+var __defProp = Object.defineProperty;
+var __returnValue = (v) => v;
+function __exportSetter(name, newValue) {
+  this[name] = __returnValue.bind(null, newValue);
+}
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, {
+      get: all[name],
+      enumerable: true,
+      configurable: true,
+      set: __exportSetter.bind(all, name)
+    });
+};
+
 // src/shared/config.ts
 var DEFAULT_CONFIG = {
   enabled: true,
@@ -336,9 +351,10 @@ ${message.detail}` : labels[message.stage]);
     if (message.chatId && message.chatId !== getActiveChatId())
       return;
     let status = message.error ? `${message.status}: ${message.error}` : String(message.status || "Ready");
-    if (message.record?.imageUrls) {
+    const recordImages = message.record?.slots ? message.record.slots.filter((slot) => Boolean(slot.imageUrl)).length : message.record?.imageUrls?.filter(Boolean).length;
+    if (recordImages !== undefined) {
       status += `
-${message.record.imageUrls.filter(Boolean).length} image(s) generated.`;
+${recordImages} image(s) generated.`;
     }
     actions.updateStatus(status);
     return;
