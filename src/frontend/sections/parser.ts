@@ -1,15 +1,24 @@
+import { parserSummary } from "../view-model.js";
 import type { SectionContext } from "./section-context.js";
 
-export function renderParserSection({ ui, config, parserConnections, actions }: SectionContext): void {
-  const section = ui.section("Parser and context", false);
+export function renderParserSection({ ui, config, parserConnections, actions, rerender }: SectionContext): void {
+  const section = ui.section("Parser and context", false, {
+    description: "Configure the sidecar model and continuity sources.",
+    badge: parserSummary(config, parserConnections)
+  });
   ui.addSwitch(
     section,
     "fastMode",
     "Fast mode",
-    "Use a compact single-pass sidecar with reduced context. Skips lorebook, history, shot routing, Creative ideation, and remote camera repair. Keeps your configured image count but may reduce prompt detail, continuity, and shot variety."
+    "Use a compact single-pass sidecar with reduced context. Skips lorebook, history, shot routing, Creative ideation, and remote camera repair. Keeps your configured image count but may reduce prompt detail, continuity, and shot variety.",
+    rerender
   );
 
   const selectedParser = parserConnections.find((connection) => connection.id === config.parserConnectionId);
+  if (parserConnections.length === 0) {
+    ui.addNotice(section, "No parser connections are available. Add a connection in Lumiverse, then refresh state.", "warning");
+  }
+
   const parserOptions = parserConnections.map((connection) => ({
     value: connection.id,
     label: `${connection.name} (${connection.provider}${connection.model ? ` / ${connection.model}` : ""})`
@@ -34,18 +43,37 @@ export function renderParserSection({ ui, config, parserConnections, actions }: 
     selectedParser?.model ? `Leave empty to use ${selectedParser.model}.` : "Leave empty to use the connection default."
   );
 
-  const parserParameterTarget = ui.row(section, "Parser parameters", "JSON parameters sent to the parser connection.");
+  const parserParameterTarget = ui.row(section, "Parser parameters", "JSON parameters sent to the parser connection.", true);
+  parserParameterTarget.classList.add("inlay-json-field");
   const parserParameterInput = document.createElement("textarea");
   parserParameterInput.value = JSON.stringify(config.parserParameters || {}, null, 2);
   parserParameterInput.spellcheck = false;
-  parserParameterInput.addEventListener("change", () => {
+  parserParameterInput.setAttribute("aria-label", "Parser parameters JSON");
+  const parserParameterValidation = document.createElement("div");
+  parserParameterValidation.className = "inlay-field-message";
+  const validateParameters = (): Record<string, unknown> | null => {
     try {
-      actions.patchConfig({ parserParameters: JSON.parse(parserParameterInput.value || "{}") as Record<string, unknown> });
+      const parsed = JSON.parse(parserParameterInput.value || "{}") as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Expected an object");
+      parserParameterInput.setAttribute("aria-invalid", "false");
+      parserParameterValidation.dataset.tone = "success";
+      parserParameterValidation.textContent = "Valid JSON object";
+      return parsed as Record<string, unknown>;
     } catch {
-      actions.updateStatus("Parser parameters must be valid JSON.");
+      parserParameterInput.setAttribute("aria-invalid", "true");
+      parserParameterValidation.dataset.tone = "error";
+      parserParameterValidation.textContent = "Enter a valid JSON object before leaving this field.";
+      return null;
     }
+  };
+  parserParameterInput.addEventListener("input", validateParameters);
+  parserParameterInput.addEventListener("change", () => {
+    const parsed = validateParameters();
+    if (parsed) actions.patchConfig({ parserParameters: parsed });
+    else actions.updateStatus("Parser parameters must be a valid JSON object.");
   });
-  parserParameterTarget.append(parserParameterInput);
+  validateParameters();
+  parserParameterTarget.append(parserParameterInput, parserParameterValidation);
 
   ui.addNumber(
     section,

@@ -250,11 +250,34 @@ var DRAWER_TAB_OPTIONS = {
   iconSvg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="2"/><path d="M21 16l-5-5L5 19"/></svg>'
 };
 var PANEL_STYLES = `
-  .inlay-panel{width:100%;padding:12px;color:var(--lumiverse-text);display:flex;flex-direction:column;gap:10px;min-width:0;max-width:100%;box-sizing:border-box}
+  .inlay-panel{width:100%;padding:12px;color:var(--lumiverse-text);display:flex;flex-direction:column;gap:12px;min-width:0;max-width:100%;box-sizing:border-box}
+  .inlay-overview{position:relative;overflow:hidden;padding:14px;border:1px solid var(--lumiverse-border);border-radius:12px;background:linear-gradient(145deg,var(--lumiverse-fill-subtle),var(--lumiverse-fill));box-shadow:0 10px 28px rgba(0,0,0,.08)}
+  .inlay-overview::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--lumiverse-primary)}
+  .inlay-overview-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+  .inlay-overview h2{margin:2px 0 4px;font-size:18px;line-height:1.2;color:var(--lumiverse-text)}
+  .inlay-overview p{max-width:42ch;margin:0;color:var(--lumiverse-text-muted);font-size:12px;line-height:1.45}
+  .inlay-eyebrow{color:var(--lumiverse-primary);font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+  .inlay-power-button{flex:none;min-width:62px;border:1px solid var(--lumiverse-border);border-radius:999px;padding:6px 10px;background:var(--lumiverse-fill);color:var(--lumiverse-text-muted);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+  .inlay-power-button[data-enabled="true"]{border-color:var(--lumiverse-primary);background:var(--lumiverse-primary);color:var(--lumiverse-primary-contrast)}
+  .inlay-overview-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .inlay-overview-meta span,.inlay-section-badge{border:1px solid var(--lumiverse-border);border-radius:999px;background:var(--lumiverse-fill);color:var(--lumiverse-text-muted);font-size:10px;line-height:1;padding:5px 7px;white-space:nowrap}
+  .inlay-overview-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:12px}
+  .inlay-overview-actions button,.inlay-memory-card button{border:1px solid var(--lumiverse-border);border-radius:7px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:8px 11px;cursor:pointer;font:inherit;font-size:12px;font-weight:600}
+  .inlay-overview-actions button:hover:not(:disabled),.inlay-memory-card button:hover:not(:disabled){background:var(--lumiverse-fill-hover)}
+  .inlay-overview-actions button:disabled,.inlay-memory-card button:disabled,.inlay-actions button:disabled{opacity:.48;cursor:not-allowed}
+  .inlay-status{display:flex;align-items:flex-start;gap:9px;padding:10px 11px;border:1px solid var(--lumiverse-border);border-radius:9px;background:var(--lumiverse-fill-subtle);font-size:12px;color:var(--lumiverse-text);white-space:pre-wrap;min-height:20px}
+  .inlay-status-dot{flex:none;width:8px;height:8px;margin-top:4px;border-radius:50%;background:var(--lumiverse-text-muted);box-shadow:0 0 0 3px color-mix(in srgb,var(--lumiverse-text-muted) 15%,transparent)}
+  .inlay-status-label{display:block;margin-bottom:2px;color:var(--lumiverse-text-muted);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+  .inlay-status-text{display:block;line-height:1.4;overflow-wrap:anywhere}
+  .inlay-status[data-tone="active"] .inlay-status-dot{background:var(--lumiverse-primary);animation:inlay-pulse 1.5s ease-in-out infinite}
+  .inlay-status[data-tone="success"] .inlay-status-dot{background:#34a853}.inlay-status[data-tone="warning"] .inlay-status-dot{background:#e2a93b}.inlay-status[data-tone="error"] .inlay-status-dot{background:#d9534f}
+  @keyframes inlay-pulse{50%{opacity:.4;transform:scale(.8)}}
   .inlay-sections,.inlay-section-host,.inlay-section-body,.inlay-row,.inlay-control{min-width:0;max-width:100%;box-sizing:border-box}
   .inlay-sections{display:flex;flex-direction:column;gap:8px}
   .inlay-section-host{width:100%;contain:inline-size;overflow:hidden;border:1px solid var(--lumiverse-border);border-radius:8px;background:var(--lumiverse-fill-subtle)}
-  .inlay-section-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:10px 12px;border:0;background:transparent;color:var(--lumiverse-text);font:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
+  .inlay-section-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:11px 12px;border:0;background:transparent;color:var(--lumiverse-text);font:inherit;text-align:left;cursor:pointer}
+  .inlay-section-heading{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}.inlay-section-title{font-size:13px;font-weight:700}.inlay-section-description{color:var(--lumiverse-text-muted);font-size:11px;font-weight:400;line-height:1.3}
+  .inlay-section-trailing{display:flex;align-items:center;gap:6px;min-width:0}
   .inlay-section-toggle:hover{background:var(--lumiverse-fill-hover)}
   .inlay-section-toggle:focus-visible{outline:2px solid var(--lumiverse-primary);outline-offset:-2px}
   .inlay-section-chevron{flex:none;font-size:20px;line-height:1;transform:rotate(0deg);transition:transform .15s ease}
@@ -263,6 +286,7 @@ var PANEL_STYLES = `
   .inlay-section-body[hidden]{display:none}
   .inlay-row{display:grid;grid-template-columns:minmax(116px,.9fr) minmax(0,1.1fr);align-items:center;gap:8px;font-size:13px}
   .inlay-row>*{min-width:0;max-width:100%;box-sizing:border-box}
+  .inlay-row-full{grid-template-columns:1fr}.inlay-row-full .inlay-control,.inlay-row-full .inlay-hint{grid-column:1}.inlay-row-full>label{font-weight:600;color:var(--lumiverse-text)}
   .inlay-row label{color:var(--lumiverse-text-muted)}
   .inlay-select-control,.inlay-select-trigger,.inlay-native-select{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
   .inlay-row input,.inlay-row textarea,.inlay-row select{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:7px 9px;font:inherit}
@@ -276,11 +300,17 @@ var PANEL_STYLES = `
   .inlay-hint{grid-column:2;color:var(--lumiverse-text-muted);font-size:12px;line-height:1.35}
   .inlay-actions{display:flex;flex-wrap:wrap;gap:8px}
   .inlay-actions button{border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:8px 10px;cursor:pointer;font:inherit}
-  .inlay-actions button:hover{background:var(--lumiverse-fill-hover)}
+  .inlay-actions button:hover:not(:disabled){background:var(--lumiverse-fill-hover)}
+  .inlay-panel button:focus-visible,.inlay-panel input:focus-visible,.inlay-panel textarea:focus-visible,.inlay-panel select:focus-visible{outline:2px solid var(--lumiverse-primary);outline-offset:2px}
   .inlay-primary{background:var(--lumiverse-primary)!important;color:var(--lumiverse-primary-contrast)!important;border-color:var(--lumiverse-primary)!important}
   .inlay-subtitle{font-size:13px;font-weight:600;margin:2px 0}
   .inlay-parser-summary{font-size:12px;color:var(--lumiverse-text-muted);line-height:1.4}
-  .inlay-status{padding:9px 10px;border:1px solid var(--lumiverse-border);border-radius:7px;background:var(--lumiverse-fill-subtle);font-size:12px;color:var(--lumiverse-text-muted);white-space:pre-wrap;min-height:18px}
+  .inlay-notice{padding:9px 10px;border:1px solid var(--lumiverse-border);border-radius:7px;background:var(--lumiverse-fill);color:var(--lumiverse-text-muted);font-size:11px;line-height:1.45}.inlay-notice[data-tone="warning"]{border-color:#b78a32;color:var(--lumiverse-text)}.inlay-notice[data-tone="error"]{border-color:#b94a48;color:var(--lumiverse-text)}
+  .inlay-field-message{margin-top:5px;color:var(--lumiverse-text-muted);font-size:10px;line-height:1.35}.inlay-field-message[data-tone="success"]{color:#4cae6a}.inlay-field-message[data-tone="error"]{color:#e06b67}.inlay-json-field textarea[aria-invalid="true"]{border-color:#d9534f}
+  .inlay-memory-list{display:flex;flex-direction:column;gap:8px}.inlay-memory-card{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--lumiverse-border);border-radius:8px;background:var(--lumiverse-fill)}.inlay-memory-card-new{border-style:dashed;background:transparent}
+  .inlay-memory-card-header{display:flex;align-items:center;gap:8px}.inlay-memory-name{font-weight:700}.inlay-memory-card input,.inlay-memory-card textarea{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill-subtle);color:var(--lumiverse-text);padding:7px 9px;font:inherit}.inlay-memory-card textarea{resize:vertical;font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}
+  .inlay-memory-field{display:flex;flex-direction:column;gap:5px;color:var(--lumiverse-text-muted);font-size:11px}.inlay-memory-card-header .inlay-icon-button{flex:none;padding:7px 9px}.inlay-danger{color:#e06b67!important}.inlay-memory-save{align-self:flex-start}
+  [data-inlay-illustrator="true"] img[role="button"]{cursor:zoom-in}[data-inlay-illustrator="true"] img[role="button"]:focus-visible{outline:3px solid var(--lumiverse-primary);outline-offset:3px}
   .inlay-illustrator-placeholder{box-sizing:border-box;margin:10px auto;width:min(100%,720px);padding:12px 14px;border:1px dashed currentColor;border-radius:8px;text-align:center;opacity:.72}
   .inlay-lightbox-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);gap:16px;align-items:start;min-width:0}
   .inlay-lightbox-image{display:block;width:100%;height:auto;max-height:calc(100vh - 150px);object-fit:contain;border-radius:8px;background:#080808}
@@ -290,7 +320,8 @@ var PANEL_STYLES = `
   .inlay-lightbox-meta span{padding:4px 8px;border:1px solid var(--lumiverse-border);border-radius:999px;background:var(--lumiverse-fill);font-size:11px;color:var(--lumiverse-text-muted)}
   .inlay-lightbox-prompt-block{min-width:0;padding:12px 14px 0}
   .inlay-lightbox-prompt-block:last-child{padding-bottom:14px}
-  .inlay-lightbox-prompt-block h4{margin:0 0 6px;font-size:12px;color:var(--lumiverse-text-muted)}
+  .inlay-lightbox-prompt-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px}.inlay-lightbox-prompt-block h4{margin:0;font-size:12px;color:var(--lumiverse-text-muted)}
+  .inlay-lightbox-prompt-heading button{border:0;background:transparent;color:var(--lumiverse-primary);padding:3px 5px;cursor:pointer;font:inherit;font-size:11px;font-weight:600}
   .inlay-lightbox-prompt{min-height:80px;margin:0;padding:10px;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--lumiverse-text)}
   .inlay-lightbox-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px}
   .inlay-lightbox-actions button{border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:8px 10px;cursor:pointer;font:inherit}
@@ -298,6 +329,9 @@ var PANEL_STYLES = `
   .inlay-lightbox-actions button:disabled{opacity:.55;cursor:wait}
   .inlay-lightbox-action-status{grid-column:1/-1;min-height:16px;color:var(--lumiverse-text-muted);font-size:11px;line-height:1.35}
   @media(max-width:800px){.inlay-lightbox-layout{grid-template-columns:1fr}.inlay-lightbox-image{max-height:55vh}.inlay-lightbox-prompt-panel{max-height:35vh}}
+  @media(max-width:520px){.inlay-panel{padding:9px}.inlay-row{grid-template-columns:1fr;gap:5px}.inlay-hint{grid-column:1}.inlay-section-description{display:none}.inlay-section-badge{max-width:140px;overflow:hidden;text-overflow:ellipsis}.inlay-overview-heading{gap:8px}}
+  @media(max-width:340px){.inlay-overview-actions{grid-template-columns:1fr}.inlay-overview-actions button{width:100%}}
+  @media(prefers-reduced-motion:reduce){.inlay-section-chevron,.inlay-status-dot{transition:none!important;animation:none!important}}
 `;
 
 // src/frontend/message-router.ts
@@ -363,8 +397,11 @@ ${recordImages} image(s) generated.`;
 
 // src/frontend/sections/diagnostics.ts
 function renderDiagnosticsSection({ ui, actions }) {
-  const section = ui.section("Diagnostics", false);
-  ui.addSwitch(section, "debugLogging", "Debug logging");
+  const section = ui.section("Diagnostics", false, {
+    description: "Inspect activity and refresh extension state.",
+    badge: "Advanced"
+  });
+  ui.addSwitch(section, "debugLogging", "Debug logging", "Write detailed parser and image-stage events to the Lumiverse server log.");
   ui.addSummary(section, "Status appears below this section and updates after parser, image, and endpoint operations.");
   ui.addActions(section, [{
     label: "Refresh state",
@@ -375,11 +412,50 @@ function renderDiagnosticsSection({ ui, actions }) {
   }]);
 }
 
+// src/frontend/view-model.ts
+function statusTone(status) {
+  const normalized = status.toLowerCase();
+  if (/error|failed|invalid|must be|required|unavailable/.test(normalized))
+    return "error";
+  if (/cancelled|canceled|paused|disabled/.test(normalized))
+    return "warning";
+  if (/complete|ready|saved|updated|generated/.test(normalized))
+    return "success";
+  if (/loading|parsing|preparing|generating|saving|deleting|queued|requesting|refreshing/.test(normalized))
+    return "active";
+  return "neutral";
+}
+function isBusyStatus(status) {
+  return /queued|loading chat context|parsing illustration prompts|preparing image jobs|generating|saving illustrations|requesting cancellation/i.test(status);
+}
+function generationSummary(config) {
+  const mode = config.adaptiveMode ? "Adaptive" : `${config.perspectiveMode.slice(0, 1).toUpperCase()}${config.perspectiveMode.slice(1)}`;
+  const count = config.minImages === config.maxImages ? `${config.maxImages} image${config.maxImages === 1 ? "" : "s"}` : `${config.minImages}–${config.maxImages} images`;
+  return `${mode} · ${count}`;
+}
+function parserSummary(config, connections) {
+  if (config.fastMode)
+    return "Fast mode";
+  const selected = connections.find((connection) => connection.id === config.parserConnectionId);
+  return selected?.name || (config.parserConnectionId ? "Missing connection" : "Not configured");
+}
+function promptSummary(config) {
+  const style = config.promptStyle === "anima" ? "Anima" : "Default";
+  const syntax = config.promptSyntax === "nai" ? "NovelAI" : "ComfyUI";
+  return `${style} · ${syntax}`;
+}
+function outputSummary(config) {
+  const asset = !config.adaptiveMode && config.perspectiveMode === "asset";
+  return `${asset ? config.assetImageWidth : config.inlayImageWidth}px · ${config.inlayImageMaxHeightVh}vh`;
+}
+
 // src/frontend/sections/generation.ts
-function renderGenerationSection({ ui, config, actions, rerender }) {
-  const section = ui.section("Generation", true);
-  ui.addSwitch(section, "enabled", "Power");
-  ui.addSwitch(section, "autoGenerate", "Auto generate");
+function renderGenerationSection({ ui, config, rerender }) {
+  const section = ui.section("Generation", true, {
+    description: "Choose when and how many illustrations are created.",
+    badge: generationSummary(config)
+  });
+  ui.addSwitch(section, "autoGenerate", "Auto generate", "Automatically illustrate completed assistant messages. You can always use Generate latest above.");
   ui.addSwitch(section, "coverImageEnabled", "Cover image", "Generate one additional cinematic key visual for the whole message and place it above the first paragraph.", rerender);
   if (config.coverImageEnabled) {
     ui.addNumber(section, "coverImageWidth", "Cover image width", 120, 2400);
@@ -397,25 +473,11 @@ function renderGenerationSection({ ui, config, actions, rerender }) {
   if (config.perspectiveMode !== "asset" || config.adaptiveMode) {
     ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 8);
   }
-  ui.addActions(section, [{
-    label: "Generate latest",
-    primary: true,
-    onClick: () => {
-      actions.updateStatus("Generating...");
-      actions.sendToBackend({ type: "generate_latest", chatId: actions.activeChatId() });
-    }
-  }, {
-    label: "Cancel generation",
-    onClick: () => {
-      actions.updateStatus("Requesting cancellation...");
-      actions.sendToBackend({ type: "cancel_generation", chatId: actions.activeChatId() });
-    }
-  }]);
 }
 
 // src/frontend/sections/memory-actions.ts
 function sendCharacterMemoryMutation(actions, mutation) {
-  actions.updateStatus("Saving character baseline…");
+  actions.updateStatus(mutation.type === "character_tags_delete" ? "Deleting character baseline…" : "Saving character baseline…");
   actions.sendToBackend({ ...mutation, chatId: actions.activeChatId() });
 }
 
@@ -428,60 +490,109 @@ function createTextInput(ariaLabel, value = "", placeholder = "") {
   input.placeholder = placeholder;
   return input;
 }
+function createTagsInput(ariaLabel, value = "", placeholder = "") {
+  const input = document.createElement("textarea");
+  input.ariaLabel = ariaLabel;
+  input.value = value;
+  input.placeholder = placeholder;
+  input.rows = 3;
+  return input;
+}
 function renderMemorySection({ ui, characterAppearance, actions }) {
-  const section = ui.section("Character memory", true);
-  ui.addSwitch(section, "characterTagContextEnabled", "Use character visual baseline");
-  ui.addSubtitle(section, "Current-chat visual baseline");
   const entries = Object.entries(characterAppearance).filter(([name, tags]) => name.trim() && tags.trim()).sort(([left], [right]) => left.localeCompare(right));
+  const section = ui.section("Character memory", false, {
+    description: "Review exact visual baselines saved for the active chat.",
+    badge: `${entries.length} saved`
+  });
+  ui.addSwitch(section, "characterTagContextEnabled", "Use visual baselines", "Provide these tags to the parser for returning characters. Current narrative changes remain authoritative.");
+  if (entries.length === 0) {
+    ui.addNotice(section, "No visual baseline is saved for this chat yet. Add one below or let a generation discover characters automatically.");
+  }
+  const list = document.createElement("div");
+  list.className = "inlay-memory-list";
   for (const [name, tags] of entries) {
+    const card = document.createElement("article");
+    card.className = "inlay-memory-card";
+    const header = document.createElement("div");
+    header.className = "inlay-memory-card-header";
     const nameInput = createTextInput("Character name", name);
-    ui.row(section, "Character name").append(nameInput);
-    const tagsInput = createTextInput("Character appearance tags", tags);
-    ui.row(section, "Appearance tags").append(tagsInput);
-    const actionTarget = ui.row(section, "");
-    actionTarget.classList.add("inlay-actions");
-    const save = document.createElement("button");
-    save.type = "button";
-    save.textContent = "Save";
-    save.addEventListener("click", () => sendCharacterMemoryMutation(actions, {
-      type: "character_tags_update",
-      oldName: name,
-      name: nameInput.value,
-      tags: tagsInput.value
-    }));
+    nameInput.className = "inlay-memory-name";
     const remove = document.createElement("button");
     remove.type = "button";
+    remove.className = "inlay-icon-button inlay-danger";
     remove.textContent = "Delete";
-    remove.addEventListener("click", () => sendCharacterMemoryMutation(actions, {
-      type: "character_tags_delete",
-      name
-    }));
-    actionTarget.append(save, remove);
+    remove.setAttribute("aria-label", `Delete ${name} visual baseline`);
+    remove.addEventListener("click", () => {
+      (async () => {
+        const confirmed = await ui.confirmDestructive("Delete character baseline?", `Delete the saved visual baseline for "${name}"? This cannot be undone.`, "Delete baseline");
+        if (!confirmed)
+          return;
+        sendCharacterMemoryMutation(actions, {
+          type: "character_tags_delete",
+          name
+        });
+      })();
+    });
+    header.append(nameInput, remove);
+    const label = document.createElement("label");
+    label.className = "inlay-memory-field";
+    const labelText = document.createElement("span");
+    labelText.textContent = "Appearance tags";
+    const tagsInput = createTagsInput("Character appearance tags", tags, "hair, eyes, body, attire");
+    label.append(labelText, tagsInput);
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "inlay-memory-save";
+    save.textContent = "Save changes";
+    save.addEventListener("click", () => {
+      if (!nameInput.value.trim() || !tagsInput.value.trim()) {
+        actions.updateStatus("Character name and appearance tags are required.");
+        return;
+      }
+      sendCharacterMemoryMutation(actions, {
+        type: "character_tags_update",
+        oldName: name,
+        name: nameInput.value,
+        tags: tagsInput.value
+      });
+    });
+    card.append(header, label, save);
+    list.append(card);
   }
-  if (entries.length === 0) {
-    ui.addSummary(section, "No character baseline is saved for this chat yet.");
-  }
-  const newNameInput = createTextInput("New character name", "", "Name");
-  ui.row(section, "Character name").append(newNameInput);
-  const newTagsInput = createTextInput("New character appearance tags", "", "Appearance tags");
-  ui.row(section, "Appearance tags").append(newTagsInput);
-  const addTarget = ui.row(section, "");
-  addTarget.classList.add("inlay-actions");
+  section.append(list);
+  const addCard = document.createElement("article");
+  addCard.className = "inlay-memory-card inlay-memory-card-new";
+  const addTitle = document.createElement("div");
+  addTitle.className = "inlay-subtitle";
+  addTitle.textContent = "Add a character";
+  const newNameInput = createTextInput("New character name", "", "Character name");
+  const newTagsInput = createTagsInput("New character appearance tags", "", "hair, eyes, body, attire");
   const add = document.createElement("button");
   add.type = "button";
-  add.textContent = "Add character";
-  add.addEventListener("click", () => sendCharacterMemoryMutation(actions, {
-    type: "character_tags_update",
-    oldName: "",
-    name: newNameInput.value,
-    tags: newTagsInput.value
-  }));
-  addTarget.append(add);
+  add.className = "inlay-primary";
+  add.textContent = "Add baseline";
+  add.addEventListener("click", () => {
+    if (!newNameInput.value.trim() || !newTagsInput.value.trim()) {
+      actions.updateStatus("Character name and appearance tags are required.");
+      return;
+    }
+    sendCharacterMemoryMutation(actions, {
+      type: "character_tags_update",
+      oldName: "",
+      name: newNameInput.value,
+      tags: newTagsInput.value
+    });
+  });
+  addCard.append(addTitle, newNameInput, newTagsInput, add);
+  section.append(addCard);
 }
 
 // src/frontend/sections/output.ts
 function renderOutputSection({ ui, config }) {
-  const section = ui.section("Image output", false);
+  const section = ui.section("Image output", false, {
+    description: "Set in-chat image dimensions and output filtering.",
+    badge: outputSummary(config)
+  });
   if (!config.adaptiveMode && config.perspectiveMode === "asset") {
     ui.addNumber(section, "assetImageWidth", "Asset width", 120, 2400);
   } else {
@@ -492,10 +603,16 @@ function renderOutputSection({ ui, config }) {
 }
 
 // src/frontend/sections/parser.ts
-function renderParserSection({ ui, config, parserConnections, actions }) {
-  const section = ui.section("Parser and context", false);
-  ui.addSwitch(section, "fastMode", "Fast mode", "Use a compact single-pass sidecar with reduced context. Skips lorebook, history, shot routing, Creative ideation, and remote camera repair. Keeps your configured image count but may reduce prompt detail, continuity, and shot variety.");
+function renderParserSection({ ui, config, parserConnections, actions, rerender }) {
+  const section = ui.section("Parser and context", false, {
+    description: "Configure the sidecar model and continuity sources.",
+    badge: parserSummary(config, parserConnections)
+  });
+  ui.addSwitch(section, "fastMode", "Fast mode", "Use a compact single-pass sidecar with reduced context. Skips lorebook, history, shot routing, Creative ideation, and remote camera repair. Keeps your configured image count but may reduce prompt detail, continuity, and shot variety.", rerender);
   const selectedParser = parserConnections.find((connection) => connection.id === config.parserConnectionId);
+  if (parserConnections.length === 0) {
+    ui.addNotice(section, "No parser connections are available. Add a connection in Lumiverse, then refresh state.", "warning");
+  }
   const parserOptions = parserConnections.map((connection) => ({
     value: connection.id,
     label: `${connection.name} (${connection.provider}${connection.model ? ` / ${connection.model}` : ""})`
@@ -505,18 +622,40 @@ function renderParserSection({ ui, config, parserConnections, actions }) {
   }
   ui.addSelect(section, "parserConnectionId", "Parser connection", parserOptions, selectedParser ? `Selected: ${selectedParser.name} / ${selectedParser.provider}` : "Choose the model that turns chat text into image prompts.");
   ui.addText(section, "parserModel", "Parser model", selectedParser?.model ? `Leave empty to use ${selectedParser.model}.` : "Leave empty to use the connection default.");
-  const parserParameterTarget = ui.row(section, "Parser parameters", "JSON parameters sent to the parser connection.");
+  const parserParameterTarget = ui.row(section, "Parser parameters", "JSON parameters sent to the parser connection.", true);
+  parserParameterTarget.classList.add("inlay-json-field");
   const parserParameterInput = document.createElement("textarea");
   parserParameterInput.value = JSON.stringify(config.parserParameters || {}, null, 2);
   parserParameterInput.spellcheck = false;
-  parserParameterInput.addEventListener("change", () => {
+  parserParameterInput.setAttribute("aria-label", "Parser parameters JSON");
+  const parserParameterValidation = document.createElement("div");
+  parserParameterValidation.className = "inlay-field-message";
+  const validateParameters = () => {
     try {
-      actions.patchConfig({ parserParameters: JSON.parse(parserParameterInput.value || "{}") });
+      const parsed = JSON.parse(parserParameterInput.value || "{}");
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+        throw new Error("Expected an object");
+      parserParameterInput.setAttribute("aria-invalid", "false");
+      parserParameterValidation.dataset.tone = "success";
+      parserParameterValidation.textContent = "Valid JSON object";
+      return parsed;
     } catch {
-      actions.updateStatus("Parser parameters must be valid JSON.");
+      parserParameterInput.setAttribute("aria-invalid", "true");
+      parserParameterValidation.dataset.tone = "error";
+      parserParameterValidation.textContent = "Enter a valid JSON object before leaving this field.";
+      return null;
     }
+  };
+  parserParameterInput.addEventListener("input", validateParameters);
+  parserParameterInput.addEventListener("change", () => {
+    const parsed = validateParameters();
+    if (parsed)
+      actions.patchConfig({ parserParameters: parsed });
+    else
+      actions.updateStatus("Parser parameters must be a valid JSON object.");
   });
-  parserParameterTarget.append(parserParameterInput);
+  validateParameters();
+  parserParameterTarget.append(parserParameterInput, parserParameterValidation);
   ui.addNumber(section, "parserMaxTokens", "Maximum token budget", 0, 32768, "0 uses the automatic model and parser-stage budget. Explicit max_tokens or max_completion_tokens in Parser parameters takes precedence.");
   ui.addSwitch(section, "preprocessingEnabled", "Illustration preprocessing");
   ui.addNumber(section, "includeMinMessages", "Minimum context", 0, 32);
@@ -538,7 +677,10 @@ function createPresetId() {
   return `preset-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 function renderPromptSection({ ui, config, actions, rerender }) {
-  const section = ui.section("Prompt output", false);
+  const section = ui.section("Prompt output", false, {
+    description: "Control renderer syntax, reusable presets, and prompt affixes.",
+    badge: promptSummary(config)
+  });
   ui.addSelect(section, "promptStyle", "Prompt style", [
     { value: "default", label: "Default" },
     { value: "anima", label: "Anima" }
@@ -546,11 +688,15 @@ function renderPromptSection({ ui, config, actions, rerender }) {
   ui.addSelect(section, "promptSyntax", "Prompt syntax", [
     { value: "nai", label: "NovelAI" },
     { value: "comfyui", label: "ComfyUI" }
-  ]);
-  ui.addSwitch(section, "originalReference", "Source reference");
-  ui.addText(section, "originalCreationName", "Creation name");
+  ], "", rerender);
+  ui.addSwitch(section, "originalReference", "Source reference", "Include the configured creation name as an explicit source-style reference.", rerender);
+  if (config.originalReference)
+    ui.addText(section, "originalCreationName", "Creation name");
   ui.addSwitch(section, "supplement", config.promptStyle === "anima" ? "Natural/shared detail" : "Natural supplement");
   ui.addSubtitle(section, "Prompt presets");
+  if (config.promptPresets.length === 0) {
+    ui.addSummary(section, "Save a preset to reuse positive and negative quality tags.");
+  }
   const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
   const presetSelectTarget = ui.row(section, "Active preset", "Preset prefixes are inserted before the custom prompt fields below.");
   const presetSelect = document.createElement("select");
@@ -621,6 +767,7 @@ function renderPromptSection({ ui, config, actions, rerender }) {
     },
     {
       label: "Update selected",
+      disabled: !selectedPreset,
       onClick: () => {
         if (!selectedPreset) {
           actions.updateStatus("Select a preset to update.");
@@ -638,6 +785,7 @@ function renderPromptSection({ ui, config, actions, rerender }) {
     },
     {
       label: "Rename",
+      disabled: !selectedPreset,
       onClick: () => {
         if (!selectedPreset) {
           actions.updateStatus("Select a preset to rename.");
@@ -662,11 +810,16 @@ function renderPromptSection({ ui, config, actions, rerender }) {
     },
     {
       label: "Delete",
-      onClick: () => {
+      danger: true,
+      disabled: !selectedPreset,
+      onClick: async () => {
         if (!selectedPreset) {
           actions.updateStatus("Select a preset to delete.");
           return;
         }
+        const confirmed = await ui.confirmDestructive("Delete prompt preset?", `Delete "${selectedPreset.name}"? This cannot be undone.`, "Delete preset");
+        if (!confirmed)
+          return;
         actions.patchConfig({
           promptPresets: config.promptPresets.filter((preset) => preset.id !== selectedPreset.id),
           activePromptPresetId: null
@@ -708,19 +861,38 @@ class UiBuilder {
     this.expandedSections = expandedSections;
     this.track = track;
   }
-  section(title, defaultExpanded) {
+  section(title, defaultExpanded, options = {}) {
     const host = document.createElement("section");
     host.className = "inlay-section-host";
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "inlay-section-toggle";
+    const heading = document.createElement("span");
+    heading.className = "inlay-section-heading";
     const label = document.createElement("span");
+    label.className = "inlay-section-title";
     label.textContent = title;
+    heading.append(label);
+    if (options.description) {
+      const description = document.createElement("span");
+      description.className = "inlay-section-description";
+      description.textContent = options.description;
+      heading.append(description);
+    }
+    const trailing = document.createElement("span");
+    trailing.className = "inlay-section-trailing";
+    if (options.badge) {
+      const badge = document.createElement("span");
+      badge.className = "inlay-section-badge";
+      badge.textContent = options.badge;
+      trailing.append(badge);
+    }
     const chevron = document.createElement("span");
     chevron.className = "inlay-section-chevron";
     chevron.setAttribute("aria-hidden", "true");
     chevron.textContent = "›";
-    toggle.append(label, chevron);
+    trailing.append(chevron);
+    toggle.append(heading, trailing);
     const body = document.createElement("div");
     body.className = "inlay-section-body";
     body.id = `inlay-section-body-${++this.sectionSequence}`;
@@ -741,9 +913,11 @@ class UiBuilder {
     this.sections.append(host);
     return body;
   }
-  row(parent, label, hint = "") {
+  row(parent, label, hint = "", fullWidth = false) {
     const wrapper = document.createElement("div");
     wrapper.className = "inlay-row";
+    if (fullWidth)
+      wrapper.classList.add("inlay-row-full");
     const labelNode = document.createElement("label");
     labelNode.textContent = label;
     const target = document.createElement("div");
@@ -784,6 +958,7 @@ class UiBuilder {
     input.value = String(selectedIndex);
     const labels = document.createElement("div");
     labels.className = "inlay-range-labels";
+    labels.style.gridTemplateColumns = `repeat(${Math.max(1, choices.length)}, minmax(0, 1fr))`;
     const labelNodes = choices.map((choice) => {
       const node = document.createElement("span");
       node.textContent = choice.label;
@@ -793,6 +968,7 @@ class UiBuilder {
     const update = () => {
       const index = Number(input.value);
       labelNodes.forEach((node, candidate) => node.classList.toggle("is-active", candidate === index));
+      input.setAttribute("aria-valuetext", choices[index]?.label || String(index));
     };
     input.addEventListener("input", update);
     input.addEventListener("change", () => {
@@ -813,6 +989,7 @@ class UiBuilder {
       min,
       max,
       integer: true,
+      ariaLabel: label,
       onChange: (value) => {
         if (value !== null)
           this.patchConfig({ [key]: value });
@@ -824,6 +1001,9 @@ class UiBuilder {
     this.track(this.ctx.components.mountSelect(target, {
       value: String(this.config[key] || ""),
       options,
+      placeholder: `Select ${label.toLowerCase()}`,
+      emptyMessage: "No options available",
+      ariaLabel: label,
       className: "inlay-select-control",
       triggerClassName: "inlay-select-trigger",
       portal: true,
@@ -856,9 +1036,16 @@ class UiBuilder {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = action.label;
+      button.disabled = action.disabled === true;
+      if (action.title)
+        button.title = action.title;
       if (action.primary)
         button.classList.add("inlay-primary");
-      button.addEventListener("click", action.onClick);
+      if (action.danger)
+        button.classList.add("inlay-danger");
+      button.addEventListener("click", () => {
+        action.onClick();
+      });
       container.append(button);
     }
     parent.append(container);
@@ -868,6 +1055,25 @@ class UiBuilder {
     subtitle.className = "inlay-subtitle";
     subtitle.textContent = text;
     parent.append(subtitle);
+  }
+  async confirmDestructive(title, message, confirmLabel = "Delete") {
+    if (typeof this.ctx.ui.showConfirm !== "function")
+      return window.confirm(message);
+    const result = await this.ctx.ui.showConfirm({
+      title,
+      message,
+      variant: "danger",
+      confirmLabel,
+      cancelLabel: "Cancel"
+    });
+    return result.confirmed;
+  }
+  addNotice(parent, text, tone = "info") {
+    const notice = document.createElement("div");
+    notice.className = "inlay-notice";
+    notice.dataset.tone = tone;
+    notice.textContent = text;
+    parent.append(notice);
   }
   addSummary(parent, text) {
     const summary = document.createElement("div");
@@ -893,11 +1099,65 @@ class SettingsRenderer {
   }
   render() {
     this.destroyMountedComponents();
-    this.root.innerHTML = '<div class="inlay-panel"><div class="inlay-sections"></div><div class="inlay-status"></div></div>';
-    const sections = this.root.querySelector(".inlay-sections");
-    const statusNode = this.root.querySelector(".inlay-status");
+    this.root.innerHTML = `
+      <div class="inlay-panel">
+        <header class="inlay-overview">
+          <div class="inlay-overview-heading">
+            <div>
+              <div class="inlay-eyebrow">Illustration sidecar</div>
+              <h2>Inlay Illustrator</h2>
+              <p>Turn the latest assistant response into source-faithful illustrations.</p>
+            </div>
+            <button type="button" class="inlay-power-button"></button>
+          </div>
+          <div class="inlay-overview-meta"></div>
+          <div class="inlay-overview-actions">
+            <button type="button" class="inlay-primary inlay-generate-action">Generate latest</button>
+            <button type="button" class="inlay-cancel-action">Cancel</button>
+          </div>
+        </header>
+        <div class="inlay-status" role="status" aria-live="polite" aria-atomic="true">
+          <span class="inlay-status-dot" aria-hidden="true"></span>
+          <div><span class="inlay-status-label">Status</span><span class="inlay-status-text"></span></div>
+        </div>
+        <div class="inlay-sections"></div>
+      </div>`;
     const snapshot = this.getSnapshot();
-    statusNode.textContent = snapshot.status;
+    const sections = this.root.querySelector(".inlay-sections");
+    const power = this.root.querySelector(".inlay-power-button");
+    const generate = this.root.querySelector(".inlay-generate-action");
+    const cancel = this.root.querySelector(".inlay-cancel-action");
+    const meta = this.root.querySelector(".inlay-overview-meta");
+    power.textContent = snapshot.config.enabled ? "On" : "Paused";
+    power.setAttribute("aria-pressed", String(snapshot.config.enabled));
+    power.setAttribute("aria-label", snapshot.config.enabled ? "Pause Inlay Illustrator" : "Enable Inlay Illustrator");
+    power.dataset.enabled = String(snapshot.config.enabled);
+    power.addEventListener("click", () => {
+      this.actions.patchConfig({ enabled: !snapshot.config.enabled });
+      this.render();
+    });
+    for (const label of [
+      generationSummary(snapshot.config),
+      snapshot.config.autoGenerate ? "Auto generation" : "Manual generation",
+      snapshot.config.fastMode ? "Fast mode" : "Full context"
+    ]) {
+      const chip = document.createElement("span");
+      chip.textContent = label;
+      meta.append(chip);
+    }
+    const chatId = this.actions.activeChatId();
+    generate.disabled = !chatId || isBusyStatus(snapshot.status);
+    generate.title = chatId ? "Generate illustrations for the latest assistant response" : "Open a chat to generate illustrations";
+    generate.addEventListener("click", () => {
+      this.actions.updateStatus("Generating…");
+      this.actions.sendToBackend({ type: "generate_latest", chatId: this.actions.activeChatId() });
+    });
+    cancel.disabled = !isBusyStatus(snapshot.status);
+    cancel.addEventListener("click", () => {
+      this.actions.updateStatus("Requesting cancellation…");
+      this.actions.sendToBackend({ type: "cancel_generation", chatId: this.actions.activeChatId() });
+    });
+    this.updateStatus(snapshot.status);
     const ui = new UiBuilder(this.ctx, sections, snapshot.config, this.actions.patchConfig, this.expandedSections, (component) => this.mountedComponents.push(component));
     renderSettingsSections({
       ui,
@@ -907,6 +1167,21 @@ class SettingsRenderer {
       actions: this.actions,
       rerender: () => this.render()
     });
+  }
+  updateStatus(status) {
+    const host = this.root.querySelector(".inlay-status");
+    const text = this.root.querySelector(".inlay-status-text");
+    if (!host || !text)
+      return;
+    host.dataset.tone = statusTone(status);
+    text.textContent = status || "Ready";
+    const busy = isBusyStatus(status);
+    const cancel = this.root.querySelector(".inlay-cancel-action");
+    const generate = this.root.querySelector(".inlay-generate-action");
+    if (cancel)
+      cancel.disabled = !busy || /requesting cancellation/i.test(status);
+    if (generate)
+      generate.disabled = busy || !this.actions.activeChatId();
   }
   destroy() {
     this.destroyMountedComponents();
@@ -922,7 +1197,15 @@ class SettingsRenderer {
 var INLAY_IMAGE_SELECTOR = '[data-inlay-illustrator="true"] img';
 var INLAY_WRAPPER_SELECTOR = '[data-inlay-illustrator="true"]';
 function disableNativeInlayLightboxes(root) {
-  root.querySelectorAll(`${INLAY_WRAPPER_SELECTOR} img[data-lightbox]`).forEach((image) => image.removeAttribute("data-lightbox"));
+  root.querySelectorAll(INLAY_IMAGE_SELECTOR).forEach((image) => {
+    image.removeAttribute("data-lightbox");
+    if (!image.hasAttribute("tabindex"))
+      image.setAttribute("tabindex", "0");
+    if (!image.hasAttribute("role"))
+      image.setAttribute("role", "button");
+    if (!image.hasAttribute("aria-label"))
+      image.setAttribute("aria-label", "Open illustration details");
+  });
 }
 function resolveInlayPrompt(attributePrompt, fallbackPrompt) {
   return (attributePrompt || fallbackPrompt || "").trim();
@@ -982,12 +1265,34 @@ function actionTargetForImage(image) {
 function promptBlock(label, value, fallback) {
   const block = document.createElement("section");
   block.className = "inlay-lightbox-prompt-block";
+  const headingRow = document.createElement("div");
+  headingRow.className = "inlay-lightbox-prompt-heading";
   const heading = document.createElement("h4");
   heading.textContent = label;
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.textContent = "Copy";
+  copy.setAttribute("aria-label", `Copy ${label.toLowerCase()}`);
   const content = document.createElement("pre");
   content.className = "inlay-lightbox-prompt";
   content.textContent = value || fallback;
-  block.append(heading, content);
+  copy.addEventListener("click", () => {
+    const pending = navigator.clipboard?.writeText(content.textContent || "");
+    if (!pending) {
+      copy.textContent = "Select text";
+      return;
+    }
+    pending.then(() => {
+      copy.textContent = "Copied";
+      window.setTimeout(() => {
+        copy.textContent = "Copy";
+      }, 1400);
+    }).catch(() => {
+      copy.textContent = "Select text";
+    });
+  });
+  headingRow.append(heading, copy);
+  block.append(headingRow, content);
   return block;
 }
 function appendLightboxContent(root, image, details, onAction) {
@@ -1145,11 +1450,22 @@ function installInlayLightbox(ctx) {
     event.stopImmediatePropagation();
     event.stopPropagation();
   };
+  const onKeyDown = (event) => {
+    if (event.key !== "Enter" && event.key !== " ")
+      return;
+    const image = findInlayImage(event.target);
+    if (!image)
+      return;
+    event.preventDefault();
+    image.click();
+  };
   window.addEventListener("click", onClick, true);
+  window.addEventListener("keydown", onKeyDown, true);
   return () => {
     observer.disconnect();
     unsubscribeResults();
     window.removeEventListener("click", onClick, true);
+    window.removeEventListener("keydown", onKeyDown, true);
     activeModal?.dismiss();
     activeModal = null;
   };
@@ -1166,6 +1482,7 @@ function setup(ctx) {
   let status = "Loading...";
   let triedImageGenerationParserDefault = false;
   let drawerWasActive = false;
+  let renderer = null;
   const tab = ctx.ui.registerDrawerTab(DRAWER_TAB_OPTIONS);
   const removeStyle = ctx.dom.addStyle(PANEL_STYLES);
   const removeLightbox = installInlayLightbox(ctx);
@@ -1181,9 +1498,7 @@ function setup(ctx) {
   }
   function updateStatus(next) {
     status = next;
-    const node = tab.root.querySelector(".inlay-status");
-    if (node)
-      node.textContent = status;
+    renderer?.updateStatus(next);
   }
   function patchConfig(patch) {
     config = { ...config, ...patch };
@@ -1196,7 +1511,7 @@ function setup(ctx) {
     sendToBackend: (payload) => ctx.sendToBackend(payload),
     updateStatus
   };
-  const renderer = new SettingsRenderer(ctx, tab.root, () => ({ config, parserConnections, characterAppearance, status }), actions);
+  renderer = new SettingsRenderer(ctx, tab.root, () => ({ config, parserConnections, characterAppearance, status }), actions);
   async function applyImageGenerationDefaults() {
     if (triedImageGenerationParserDefault)
       return;
@@ -1227,7 +1542,7 @@ function setup(ctx) {
         return;
       const seen = new Set(parserConnections.map((connection) => connection.id));
       parserConnections = [...parserConnections, ...next.filter((connection) => !seen.has(connection.id))];
-      renderer.render();
+      renderer?.render();
     } catch {}
   }
   const unsub = ctx.onBackendMessage((payload) => {
@@ -1245,12 +1560,12 @@ function setup(ctx) {
         parserConnections = next.parserConnections;
         characterAppearance = next.characterAppearance;
         status = next.status;
-        renderer.render();
+        renderer?.render();
       },
       replaceCharacterMemory: (nextAppearance, nextStatus) => {
         characterAppearance = nextAppearance;
         status = nextStatus;
-        renderer.render();
+        renderer?.render();
       },
       updateStatus,
       refreshParserConnections: () => {
@@ -1271,14 +1586,14 @@ function setup(ctx) {
     const chatId = payload?.chatId;
     requestState(typeof chatId === "string" ? chatId : "");
   });
-  renderer.render();
+  renderer?.render();
   requestState();
   ctx.ready();
   const cleanup = () => {
     unsub();
     unsubDrawer();
     unsubChatSwitched();
-    renderer.destroy();
+    renderer?.destroy();
     removeLightbox();
     removeStyle();
     tab.destroy();

@@ -49,7 +49,7 @@ describe("character-memory mutations", () => {
     });
 
     expect(events).toEqual([
-      { status: "Saving character baseline…" },
+      { status: "Deleting character baseline…" },
       {
         payload: {
           type: "character_tags_delete",

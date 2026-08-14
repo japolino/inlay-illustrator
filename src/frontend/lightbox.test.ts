@@ -53,12 +53,22 @@ describe("Inlay prompt lightbox", () => {
 
   test("removes the host image-only lightbox trigger from existing Inlay images", () => {
     const removed: string[] = [];
+    const attributes = new Map<string, string>();
     const root = {
-      querySelectorAll: () => [{ removeAttribute: (name: string) => removed.push(name) }]
+      querySelectorAll: () => [{
+        removeAttribute: (name: string) => removed.push(name),
+        hasAttribute: (name: string) => attributes.has(name),
+        setAttribute: (name: string, value: string) => attributes.set(name, value)
+      }]
     } as unknown as ParentNode;
 
     disableNativeInlayLightboxes(root);
     expect(removed).toEqual(["data-lightbox"]);
+    expect(Object.fromEntries(attributes)).toEqual({
+      tabindex: "0",
+      role: "button",
+      "aria-label": "Open illustration details"
+    });
   });
 
   test("recovers image IDs from legacy result URLs for reroll lookup", () => {

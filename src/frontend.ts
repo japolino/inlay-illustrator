@@ -18,6 +18,7 @@ export function setup(ctx: SpindleFrontendContext) {
   let status = "Loading...";
   let triedImageGenerationParserDefault = false;
   let drawerWasActive = false;
+  let renderer: SettingsRenderer | null = null;
 
   const tab = ctx.ui.registerDrawerTab(DRAWER_TAB_OPTIONS);
   const removeStyle = ctx.dom.addStyle(PANEL_STYLES);
@@ -37,8 +38,7 @@ export function setup(ctx: SpindleFrontendContext) {
 
   function updateStatus(next: string): void {
     status = next;
-    const node = tab.root.querySelector<HTMLElement>(".inlay-status");
-    if (node) node.textContent = status;
+    renderer?.updateStatus(next);
   }
 
   function patchConfig(patch: Partial<Config>): void {
@@ -53,7 +53,7 @@ export function setup(ctx: SpindleFrontendContext) {
     sendToBackend: (payload) => ctx.sendToBackend(payload),
     updateStatus
   };
-  const renderer = new SettingsRenderer(
+  renderer = new SettingsRenderer(
     ctx,
     tab.root,
     () => ({ config, parserConnections, characterAppearance, status }),
@@ -90,7 +90,7 @@ export function setup(ctx: SpindleFrontendContext) {
       if (next.length === 0) return;
       const seen = new Set(parserConnections.map((connection) => connection.id));
       parserConnections = [...parserConnections, ...next.filter((connection) => !seen.has(connection.id))];
-      renderer.render();
+      renderer?.render();
     } catch {
       // The backend connection list remains the primary source.
     }
@@ -111,12 +111,12 @@ export function setup(ctx: SpindleFrontendContext) {
         parserConnections = next.parserConnections;
         characterAppearance = next.characterAppearance;
         status = next.status;
-        renderer.render();
+        renderer?.render();
       },
       replaceCharacterMemory: (nextAppearance, nextStatus) => {
         characterAppearance = nextAppearance;
         status = nextStatus;
-        renderer.render();
+        renderer?.render();
       },
       updateStatus,
       refreshParserConnections: () => { void refreshParserConnectionsFromApi(); },
@@ -134,7 +134,7 @@ export function setup(ctx: SpindleFrontendContext) {
     requestState(typeof chatId === "string" ? chatId : "");
   });
 
-  renderer.render();
+  renderer?.render();
   requestState();
   ctx.ready();
 
@@ -142,7 +142,7 @@ export function setup(ctx: SpindleFrontendContext) {
     unsub();
     unsubDrawer();
     unsubChatSwitched();
-    renderer.destroy();
+    renderer?.destroy();
     removeLightbox();
     removeStyle();
     tab.destroy();

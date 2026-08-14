@@ -5,7 +5,15 @@ import type { MountedComponent } from "./contracts.js";
 type Action = {
   label: string;
   primary?: boolean;
-  onClick(): void;
+  danger?: boolean;
+  disabled?: boolean;
+  title?: string;
+  onClick(): void | Promise<void>;
+};
+
+type SectionOptions = {
+  description?: string;
+  badge?: string;
 };
 
 type SelectOption = {
@@ -27,7 +35,7 @@ export class UiBuilder {
     private readonly track: (component: MountedComponent) => void
   ) {}
 
-  section(title: string, defaultExpanded: boolean): HTMLElement {
+  section(title: string, defaultExpanded: boolean, options: SectionOptions = {}): HTMLElement {
     const host = document.createElement("section");
     host.className = "inlay-section-host";
 
@@ -35,13 +43,32 @@ export class UiBuilder {
     toggle.type = "button";
     toggle.className = "inlay-section-toggle";
 
+    const heading = document.createElement("span");
+    heading.className = "inlay-section-heading";
     const label = document.createElement("span");
+    label.className = "inlay-section-title";
     label.textContent = title;
+    heading.append(label);
+    if (options.description) {
+      const description = document.createElement("span");
+      description.className = "inlay-section-description";
+      description.textContent = options.description;
+      heading.append(description);
+    }
+    const trailing = document.createElement("span");
+    trailing.className = "inlay-section-trailing";
+    if (options.badge) {
+      const badge = document.createElement("span");
+      badge.className = "inlay-section-badge";
+      badge.textContent = options.badge;
+      trailing.append(badge);
+    }
     const chevron = document.createElement("span");
     chevron.className = "inlay-section-chevron";
     chevron.setAttribute("aria-hidden", "true");
     chevron.textContent = "›";
-    toggle.append(label, chevron);
+    trailing.append(chevron);
+    toggle.append(heading, trailing);
 
     const body = document.createElement("div");
     body.className = "inlay-section-body";
@@ -66,9 +93,10 @@ export class UiBuilder {
     return body;
   }
 
-  row(parent: HTMLElement, label: string, hint = ""): HTMLElement {
+  row(parent: HTMLElement, label: string, hint = "", fullWidth = false): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "inlay-row";
+    if (fullWidth) wrapper.classList.add("inlay-row-full");
     const labelNode = document.createElement("label");
     labelNode.textContent = label;
     const target = document.createElement("div");
@@ -120,6 +148,7 @@ export class UiBuilder {
 
     const labels = document.createElement("div");
     labels.className = "inlay-range-labels";
+    labels.style.gridTemplateColumns = `repeat(${Math.max(1, choices.length)}, minmax(0, 1fr))`;
     const labelNodes = choices.map((choice) => {
       const node = document.createElement("span");
       node.textContent = choice.label;
@@ -129,6 +158,7 @@ export class UiBuilder {
     const update = (): void => {
       const index = Number(input.value);
       labelNodes.forEach((node, candidate) => node.classList.toggle("is-active", candidate === index));
+      input.setAttribute("aria-valuetext", choices[index]?.label || String(index));
     };
     input.addEventListener("input", update);
     input.addEventListener("change", () => {
@@ -150,6 +180,7 @@ export class UiBuilder {
       min,
       max,
       integer: true,
+      ariaLabel: label,
       onChange: (value) => {
         if (value !== null) this.patchConfig({ [key]: value } as Partial<Config>);
       }
@@ -168,6 +199,9 @@ export class UiBuilder {
     this.track(this.ctx.components.mountSelect(target, {
       value: String(this.config[key] || ""),
       options,
+      placeholder: `Select ${label.toLowerCase()}`,
+      emptyMessage: "No options available",
+      ariaLabel: label,
       className: "inlay-select-control",
       triggerClassName: "inlay-select-trigger",
       portal: true,
@@ -203,8 +237,11 @@ export class UiBuilder {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = action.label;
+      button.disabled = action.disabled === true;
+      if (action.title) button.title = action.title;
       if (action.primary) button.classList.add("inlay-primary");
-      button.addEventListener("click", action.onClick);
+      if (action.danger) button.classList.add("inlay-danger");
+      button.addEventListener("click", () => { void action.onClick(); });
       container.append(button);
     }
     parent.append(container);
@@ -215,6 +252,26 @@ export class UiBuilder {
     subtitle.className = "inlay-subtitle";
     subtitle.textContent = text;
     parent.append(subtitle);
+  }
+
+  async confirmDestructive(title: string, message: string, confirmLabel = "Delete"): Promise<boolean> {
+    if (typeof this.ctx.ui.showConfirm !== "function") return window.confirm(message);
+    const result = await this.ctx.ui.showConfirm({
+      title,
+      message,
+      variant: "danger",
+      confirmLabel,
+      cancelLabel: "Cancel"
+    });
+    return result.confirmed;
+  }
+
+  addNotice(parent: HTMLElement, text: string, tone: "info" | "warning" | "error" = "info"): void {
+    const notice = document.createElement("div");
+    notice.className = "inlay-notice";
+    notice.dataset.tone = tone;
+    notice.textContent = text;
+    parent.append(notice);
   }
 
   addSummary(parent: HTMLElement, text: string): void {

@@ -4,8 +4,12 @@ const INLAY_IMAGE_SELECTOR = '[data-inlay-illustrator="true"] img';
 const INLAY_WRAPPER_SELECTOR = '[data-inlay-illustrator="true"]';
 
 export function disableNativeInlayLightboxes(root: ParentNode): void {
-  root.querySelectorAll<HTMLImageElement>(`${INLAY_WRAPPER_SELECTOR} img[data-lightbox]`)
-    .forEach((image) => image.removeAttribute("data-lightbox"));
+  root.querySelectorAll<HTMLImageElement>(INLAY_IMAGE_SELECTOR).forEach((image) => {
+    image.removeAttribute("data-lightbox");
+    if (!image.hasAttribute("tabindex")) image.setAttribute("tabindex", "0");
+    if (!image.hasAttribute("role")) image.setAttribute("role", "button");
+    if (!image.hasAttribute("aria-label")) image.setAttribute("aria-label", "Open illustration details");
+  });
 }
 
 export type InlayGenerationDetails = {
@@ -107,12 +111,30 @@ function actionTargetForImage(image: HTMLImageElement): InlayActionTarget {
 function promptBlock(label: string, value: string, fallback: string): HTMLElement {
   const block = document.createElement("section");
   block.className = "inlay-lightbox-prompt-block";
+  const headingRow = document.createElement("div");
+  headingRow.className = "inlay-lightbox-prompt-heading";
   const heading = document.createElement("h4");
   heading.textContent = label;
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.textContent = "Copy";
+  copy.setAttribute("aria-label", `Copy ${label.toLowerCase()}`);
   const content = document.createElement("pre");
   content.className = "inlay-lightbox-prompt";
   content.textContent = value || fallback;
-  block.append(heading, content);
+  copy.addEventListener("click", () => {
+    const pending = navigator.clipboard?.writeText(content.textContent || "");
+    if (!pending) {
+      copy.textContent = "Select text";
+      return;
+    }
+    void pending.then(() => {
+      copy.textContent = "Copied";
+      window.setTimeout(() => { copy.textContent = "Copy"; }, 1400);
+    }).catch(() => { copy.textContent = "Select text"; });
+  });
+  headingRow.append(heading, copy);
+  block.append(headingRow, content);
   return block;
 }
 
@@ -290,11 +312,21 @@ export function installInlayLightbox(ctx: SpindleFrontendContext): () => void {
     event.stopPropagation();
   };
 
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const image = findInlayImage(event.target);
+    if (!image) return;
+    event.preventDefault();
+    image.click();
+  };
+
   window.addEventListener("click", onClick, true);
+  window.addEventListener("keydown", onKeyDown, true);
   return () => {
     observer.disconnect();
     unsubscribeResults();
     window.removeEventListener("click", onClick, true);
+    window.removeEventListener("keydown", onKeyDown, true);
     activeModal?.dismiss();
     activeModal = null;
   };

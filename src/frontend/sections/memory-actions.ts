@@ -21,6 +21,8 @@ export function sendCharacterMemoryMutation(
   actions: CharacterMemoryActions,
   mutation: CharacterMemoryMutation
 ): void {
-  actions.updateStatus("Saving character baseline…");
+  actions.updateStatus(mutation.type === "character_tags_delete"
+    ? "Deleting character baseline…"
+    : "Saving character baseline…");
   actions.sendToBackend({ ...mutation, chatId: actions.activeChatId() });
 }

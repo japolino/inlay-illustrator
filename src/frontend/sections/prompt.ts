@@ -1,4 +1,5 @@
 import type { PromptPreset } from "../../shared/config.js";
+import { promptSummary } from "../view-model.js";
 import type { SectionContext } from "./section-context.js";
 
 function createPresetId(): string {
@@ -7,7 +8,10 @@ function createPresetId(): string {
 }
 
 export function renderPromptSection({ ui, config, actions, rerender }: SectionContext): void {
-  const section = ui.section("Prompt output", false);
+  const section = ui.section("Prompt output", false, {
+    description: "Control renderer syntax, reusable presets, and prompt affixes.",
+    badge: promptSummary(config)
+  });
   ui.addSelect(section, "promptStyle", "Prompt style", [
     { value: "default", label: "Default" },
     { value: "anima", label: "Anima" }
@@ -15,11 +19,20 @@ export function renderPromptSection({ ui, config, actions, rerender }: SectionCo
   ui.addSelect(section, "promptSyntax", "Prompt syntax", [
     { value: "nai", label: "NovelAI" },
     { value: "comfyui", label: "ComfyUI" }
-  ]);
-  ui.addSwitch(section, "originalReference", "Source reference");
-  ui.addText(section, "originalCreationName", "Creation name");
+  ], "", rerender);
+  ui.addSwitch(
+    section,
+    "originalReference",
+    "Source reference",
+    "Include the configured creation name as an explicit source-style reference.",
+    rerender
+  );
+  if (config.originalReference) ui.addText(section, "originalCreationName", "Creation name");
   ui.addSwitch(section, "supplement", config.promptStyle === "anima" ? "Natural/shared detail" : "Natural supplement");
   ui.addSubtitle(section, "Prompt presets");
+  if (config.promptPresets.length === 0) {
+    ui.addSummary(section, "Save a preset to reuse positive and negative quality tags.");
+  }
 
   const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
   const presetSelectTarget = ui.row(section, "Active preset", "Preset prefixes are inserted before the custom prompt fields below.");
@@ -98,6 +111,7 @@ export function renderPromptSection({ ui, config, actions, rerender }: SectionCo
     },
     {
       label: "Update selected",
+      disabled: !selectedPreset,
       onClick: () => {
         if (!selectedPreset) {
           actions.updateStatus("Select a preset to update.");
@@ -114,6 +128,7 @@ export function renderPromptSection({ ui, config, actions, rerender }: SectionCo
     },
     {
       label: "Rename",
+      disabled: !selectedPreset,
       onClick: () => {
         if (!selectedPreset) {
           actions.updateStatus("Select a preset to rename.");
@@ -141,16 +156,24 @@ export function renderPromptSection({ ui, config, actions, rerender }: SectionCo
     },
     {
       label: "Delete",
-      onClick: () => {
+      danger: true,
+      disabled: !selectedPreset,
+      onClick: async () => {
         if (!selectedPreset) {
           actions.updateStatus("Select a preset to delete.");
           return;
         }
+        const confirmed = await ui.confirmDestructive(
+          "Delete prompt preset?",
+          `Delete "${selectedPreset.name}"? This cannot be undone.`,
+          "Delete preset"
+        );
+        if (!confirmed) return;
         actions.patchConfig({
           promptPresets: config.promptPresets.filter((preset) => preset.id !== selectedPreset.id),
           activePromptPresetId: null
         });
-        actions.updateStatus(`Deleted preset \"${selectedPreset.name}\".`);
+        actions.updateStatus(`Deleted preset "${selectedPreset.name}".`);
         rerender();
       }
     }

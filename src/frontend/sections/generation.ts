@@ -1,9 +1,17 @@
+import { generationSummary } from "../view-model.js";
 import type { SectionContext } from "./section-context.js";
 
-export function renderGenerationSection({ ui, config, actions, rerender }: SectionContext): void {
-  const section = ui.section("Generation", true);
-  ui.addSwitch(section, "enabled", "Power");
-  ui.addSwitch(section, "autoGenerate", "Auto generate");
+export function renderGenerationSection({ ui, config, rerender }: SectionContext): void {
+  const section = ui.section("Generation", true, {
+    description: "Choose when and how many illustrations are created.",
+    badge: generationSummary(config)
+  });
+  ui.addSwitch(
+    section,
+    "autoGenerate",
+    "Auto generate",
+    "Automatically illustrate completed assistant messages. You can always use Generate latest above."
+  );
   ui.addSwitch(
     section,
     "coverImageEnabled",
@@ -37,18 +45,4 @@ export function renderGenerationSection({ ui, config, actions, rerender }: Secti
   if (config.perspectiveMode !== "asset" || config.adaptiveMode) {
     ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 8);
   }
-  ui.addActions(section, [{
-    label: "Generate latest",
-    primary: true,
-    onClick: () => {
-      actions.updateStatus("Generating...");
-      actions.sendToBackend({ type: "generate_latest", chatId: actions.activeChatId() });
-    }
-  }, {
-    label: "Cancel generation",
-    onClick: () => {
-      actions.updateStatus("Requesting cancellation...");
-      actions.sendToBackend({ type: "cancel_generation", chatId: actions.activeChatId() });
-    }
-  }]);
 }

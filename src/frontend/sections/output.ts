@@ -1,7 +1,11 @@
+import { outputSummary } from "../view-model.js";
 import type { SectionContext } from "./section-context.js";
 
 export function renderOutputSection({ ui, config }: SectionContext): void {
-  const section = ui.section("Image output", false);
+  const section = ui.section("Image output", false, {
+    description: "Set in-chat image dimensions and output filtering.",
+    badge: outputSummary(config)
+  });
   if (!config.adaptiveMode && config.perspectiveMode === "asset") {
     ui.addNumber(section, "assetImageWidth", "Asset width", 120, 2400);
   } else {
