@@ -2,10 +2,9 @@ import type { Config } from "../shared/config.js";
 import type { ActivatedWorldInfoEntryDTO, WorldBookEntryDTO, WorldBookSourceDTO } from "lumiverse-spindle-types";
 import { EXTENSION_ID } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
-import { buildCharacterTagReference } from "./prompt.js";
+import { buildContinuityContext } from "./continuity-context.js";
 import type { ChatMessage, ParserContext, PreviousVisualState } from "./types.js";
 import { asRecord, cleanString, compactBlock, unique } from "./utils.js";
-import { formatPreviousVisualState } from "./visual-state.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
@@ -447,19 +446,11 @@ export async function buildParserContext(
     Object.assign(diagnostics, snapshot.diagnostics, { lorebookMode: attempt === 0 ? "compact" : "full" });
   }
 
-  if (config.characterTagContextEnabled) {
-    const characterReference = buildCharacterTagReference(cache);
-    if (characterReference) {
-      pushBlock(`${characterReference}\nUse these as a baseline for returning characters (including their base attire). The current message always wins over this reference.`);
-    }
-    diagnostics.cacheCharacters = Object.keys(cache).length;
-  }
-
-  if (config.previousVisualStateEnabled && previousVisualState) {
-    const visualStateReference = formatPreviousVisualState(previousVisualState);
-    pushBlock(visualStateReference);
-    diagnostics.previousVisualState = Boolean(visualStateReference);
-  }
+  const continuity = buildContinuityContext(cache, previousVisualState, config);
+  continuity.blocks.forEach((block) => pushBlock(block));
+  Object.assign(diagnostics, continuity.diagnostics, {
+    continuityAuthorities: continuity.authorities
+  });
 
   if (config.userInstructionsEnabled) overrides.unshift(config.customParserInstructions);
   return {

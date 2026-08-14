@@ -16785,6 +16785,31 @@ function formatPreviousVisualState(previous) {
 `), 5000);
 }
 
+// src/backend/continuity-context.ts
+function buildContinuityContext(characterCache, previousVisualState, config2) {
+  const blocks = [];
+  const diagnostics = {};
+  const authorities = [];
+  if (config2.characterTagContextEnabled) {
+    const reference = buildCharacterTagReference(characterCache);
+    if (reference) {
+      blocks.push(`${reference}
+Use these as a baseline for returning characters (including their base attire). The current message always wins over this reference.`);
+      authorities.push("character_baseline");
+    }
+    diagnostics.cacheCharacters = Object.keys(characterCache).length;
+  }
+  if (config2.previousVisualStateEnabled && previousVisualState) {
+    const reference = formatPreviousVisualState(previousVisualState);
+    if (reference) {
+      blocks.push(reference);
+      authorities.push("previous_narrative_state");
+      diagnostics.previousVisualState = true;
+    }
+  }
+  return { blocks, diagnostics, authorities };
+}
+
 // src/backend/context.ts
 var MAX_ACTIVATED_LOREBOOK_ENTRIES = 24;
 var COMPACT_LOREBOOK_LENGTH = 4000;
@@ -17200,19 +17225,11 @@ async function buildParserContext(chatId, messages, targetIndex, cache, config2,
     pushBlock(block, false);
     Object.assign(diagnostics, snapshot.diagnostics, { lorebookMode: attempt === 0 ? "compact" : "full" });
   }
-  if (config2.characterTagContextEnabled) {
-    const characterReference = buildCharacterTagReference(cache);
-    if (characterReference) {
-      pushBlock(`${characterReference}
-Use these as a baseline for returning characters (including their base attire). The current message always wins over this reference.`);
-    }
-    diagnostics.cacheCharacters = Object.keys(cache).length;
-  }
-  if (config2.previousVisualStateEnabled && previousVisualState) {
-    const visualStateReference = formatPreviousVisualState(previousVisualState);
-    pushBlock(visualStateReference);
-    diagnostics.previousVisualState = Boolean(visualStateReference);
-  }
+  const continuity = buildContinuityContext(cache, previousVisualState, config2);
+  continuity.blocks.forEach((block) => pushBlock(block));
+  Object.assign(diagnostics, continuity.diagnostics, {
+    continuityAuthorities: continuity.authorities
+  });
   if (config2.userInstructionsEnabled)
     overrides.unshift(config2.customParserInstructions);
   return {
