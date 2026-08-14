@@ -10,7 +10,8 @@ import {
   storeGeneratedRecord,
   updateState
 } from "./storage.js";
-import type { GeneratedRecord, State } from "./types.js";
+import type { LegacyGeneratedRecord as GeneratedRecord } from "./generated-record-legacy.js";
+import type { State } from "./types.js";
 
 type Deferred<T> = {
   promise: Promise<T>;

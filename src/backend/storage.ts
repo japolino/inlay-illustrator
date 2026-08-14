@@ -7,12 +7,8 @@ import {
   type GeneratedRecordReferenceV3,
   type GeneratedRecordV3
 } from "./generated-record.js";
-import type {
-  GeneratedRecord as LegacyGeneratedRecord,
-  GeneratedRecordReference as LegacyGeneratedRecordReference,
-  ParserConnection,
-  State
-} from "./types.js";
+import type { LegacyGeneratedRecord, LegacyGeneratedRecordReference } from "./generated-record-legacy.js";
+import type { ParserConnection, State } from "./types.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 

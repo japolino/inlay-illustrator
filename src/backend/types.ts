@@ -268,20 +268,6 @@ export type State = {
   previousVisualState?: PreviousVisualState;
 };
 
-export type GeneratedRecordReference = {
-  storageVersion: 2;
-  recordPath: string;
-  chatId: string;
-  messageId: string;
-  swipeId: number;
-  paragraphs: number[];
-  imageIds: string[];
-  imageUrls: string[];
-  createdAt: string;
-  operationId?: string;
-  generationStatus?: GenerationStatus;
-};
-
 export type PreviousVisualCharacter = CharacterContinuityState;
 export type PreviousVisualState = ContinuityState & { updatedAt: string };
 
@@ -295,43 +281,6 @@ export type ParserGenerationRequest = {
   reasoning: { source: "off" };
   userId?: string;
   signal?: AbortSignal;
-};
-
-export type GeneratedRecord = {
-  chatId: string;
-  messageId: string;
-  swipeId: number;
-  prompts: string[];
-  negativePrompts: string[];
-  perspectiveModes: PerspectiveMode[];
-  perspectiveSources: Array<"adaptive" | "manual">;
-  /** Exact provider parameters used per image, retained for reproducible rerolls. */
-  imageParameters?: Array<Record<string, unknown>>;
-  /** Generated prompt layer without user-selectable prefixes or suffixes. */
-  corePrompts?: string[];
-  /** Parser-provided negative layer without user-selectable preset/custom negatives. */
-  shotNegatives?: string[];
-  promptFormats?: Array<NonNullable<AssembledPrompt["format"]>>;
-  /** Selected Creative concept per image, or null when the image did not use Creative. */
-  creativeConcepts?: Array<CreativeConcept | null>;
-  /** Candidate slate retained per image for conceptually varied sidecar reruns. */
-  creativeConceptCandidates?: CreativeConcept[][];
-  /** IDs of Creative concepts already used for each image slot. */
-  creativeConceptHistory?: string[][];
-  /** Placement per image. Missing entries on older records are treated as paragraph inlays. */
-  placements?: Array<"cover" | "paragraph">;
-  paragraphs: number[];
-  imageIds: string[];
-  imageUrls: string[];
-  /** Stable per-prompt slots allow results to be persisted in completion order without changing narrative order. */
-  slotStatuses?: GenerationSlotStatus[];
-  slotErrors?: string[];
-  operationId?: string;
-  generationStatus?: GenerationStatus;
-  /** Fingerprint of the narrative source, used to reject late results after an edit or swipe change. */
-  sourceFingerprint?: string;
-  rawJson: ParsedPayload;
-  createdAt: string;
 };
 
 export type GenerationSlotStatus = "pending" | "generating" | "completed" | "failed" | "cancelled";

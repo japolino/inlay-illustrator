@@ -1,10 +1,9 @@
 import type { PerspectiveMode } from "../shared/config.js";
 import { IllustrationPlanSchema } from "./domain.js";
 import type { IllustrationPlan } from "./domain.js";
+import type { LegacyGeneratedRecord, LegacyGeneratedRecordReference } from "./generated-record-legacy.js";
 import type {
   CreativeConcept,
-  GeneratedRecord as LegacyGeneratedRecord,
-  GeneratedRecordReference as LegacyGeneratedRecordReference,
   GenerationSlotStatus,
   GenerationStatus,
   ParsedPayload
