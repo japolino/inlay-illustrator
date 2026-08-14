@@ -2,7 +2,7 @@ import { parseCreativeConcepts } from "../../backend/creative.js";
 import { prepareParagraphs } from "../../backend/paragraphs.js";
 import type { Config } from "../../shared/config.js";
 import type { ParsedPayload, PreviousVisualState } from "../../backend/types.js";
-import { transformSidecarResponse, type SidecarTransform } from "./transform.js";
+import { transformSidecarResponse, type SidecarTransform, type SidecarTransformOptions } from "./transform.js";
 import type { SidecarResult, SidecarScenario } from "./types.js";
 
 export type SidecarReplayContext = {
@@ -37,7 +37,8 @@ function serialized(value: unknown): string {
 
 export function replaySidecarArtifact(
   artifact: SavedSidecarArtifact,
-  registeredScenario: SidecarScenario
+  registeredScenario: SidecarScenario,
+  options: SidecarTransformOptions = {}
 ): SidecarReplayResult {
   const replayScenario: SidecarScenario = artifact.replayContext
     ? {
@@ -51,7 +52,7 @@ export function replaySidecarArtifact(
   const concepts = artifact.ideation?.raw
     ? parseCreativeConcepts(artifact.ideation.raw, paragraphs, replayScenario.config)
     : [];
-  const current = transformSidecarResponse(artifact.raw, replayScenario, paragraphs, concepts);
+  const current = transformSidecarResponse(artifact.raw, replayScenario, paragraphs, concepts, options);
   const expectedRendered = artifact.rendered || [];
   return {
     scenario: artifact.scenario,

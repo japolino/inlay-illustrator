@@ -35,6 +35,17 @@ export type QualityIssue = {
   critical: boolean;
 };
 
+
+export type SidecarTransformDiagnostics = {
+  strictJson: boolean;
+  terminalStatePresent: boolean;
+  missingPrimaryActionCount: number;
+  cameraCollisionsBefore: number;
+  cameraCollisionsAfter: number;
+  localCameraRepairApplied: boolean;
+  renderedPromptCount: number;
+};
+
 export type SidecarResult = {
   scenario: string;
   model: string;
@@ -43,6 +54,7 @@ export type SidecarResult = {
   locallyRepaired: boolean;
   payload?: ParsedPayload;
   rendered: Array<{ paragraph: number; perspective: PerspectiveMode; positive: string; negative: string }>;
+  transformDiagnostics?: SidecarTransformDiagnostics;
   issues: QualityIssue[];
   score: number;
   passed: boolean;

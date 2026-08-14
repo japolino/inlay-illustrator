@@ -38,8 +38,11 @@ bun run src/evals/sidecar-sim/replay-runner.ts --source-root=eval-results/raw/ex
 ```
 
 Use `--scenario=`, `--model=`, and `--max-files=` to narrow a replay.
-Differences or pipeline errors return a non-zero exit code; pass
-`--allow-differences` only for exploratory audits. New live-run artifacts embed
+Use `--local-camera-repair=off --allow-differences` for a local-camera-repair
+ablation. The summary reports strict-JSON rate, terminal-state omissions,
+missing Dynamic `primaryAction` values, repair hits, and camera collisions
+before/after transformation. Differences or pipeline errors return a non-zero
+exit code; pass `--allow-differences` only for exploratory audits. New live-run artifacts embed
 the effective config, source paragraphs, and previous visual state so future
 replays do not silently inherit changed fixtures. Older artifacts fall back to
 the current scenario registry.

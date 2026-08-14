@@ -13,6 +13,7 @@ const scenarioFilter = String(args.get("scenario") || "").toLowerCase();
 const modelFilter = String(args.get("model") || "").toLowerCase();
 const maxFiles = Math.max(1, Math.min(5000, Number(args.get("max-files") || 200)));
 const allowDifferences = args.get("allow-differences") === "true";
+const localCameraRepair = args.get("local-camera-repair") !== "off";
 const scenarios = new Map([
   ...sidecarScenarios,
   ...nsfwSidecarScenarios,
@@ -29,6 +30,12 @@ let identical = 0;
 let different = 0;
 let failed = 0;
 let skipped = 0;
+let strictJson = 0;
+let missingTerminalState = 0;
+let missingPrimaryAction = 0;
+let cameraRepairHits = 0;
+let cameraCollisionsBefore = 0;
+let cameraCollisionsAfter = 0;
 const details: string[] = [];
 for (const relative of files) {
   if (matched >= maxFiles) break;
@@ -52,7 +59,13 @@ for (const relative of files) {
   }
   matched += 1;
   try {
-    const replay = replaySidecarArtifact(artifact, scenario);
+    const replay = replaySidecarArtifact(artifact, scenario, { localCameraRepair });
+    strictJson += replay.current.diagnostics.strictJson ? 1 : 0;
+    missingTerminalState += replay.current.diagnostics.terminalStatePresent ? 0 : 1;
+    missingPrimaryAction += replay.current.diagnostics.missingPrimaryActionCount;
+    cameraRepairHits += replay.current.diagnostics.localCameraRepairApplied ? 1 : 0;
+    cameraCollisionsBefore += replay.current.diagnostics.cameraCollisionsBefore;
+    cameraCollisionsAfter += replay.current.diagnostics.cameraCollisionsAfter;
     if (replay.payloadEqual && replay.renderedEqual) identical += 1;
     else {
       different += 1;
@@ -80,6 +93,12 @@ process.stdout.write([
   `Different: ${different}`,
   `Pipeline errors: ${failed}`,
   `Skipped: ${skipped}`,
+  `Strict JSON: ${strictJson}/${matched}`,
+  `Missing terminal state: ${missingTerminalState}`,
+  `Missing Dynamic primaryAction: ${missingPrimaryAction}`,
+  `Local camera repair: ${localCameraRepair ? "on" : "off"}`,
+  `Local camera repair hits: ${cameraRepairHits}`,
+  `Camera collisions: ${cameraCollisionsBefore} before / ${cameraCollisionsAfter} after`,
   ...details
 ].join("\n") + "\n");
 if (!allowDifferences && (different > 0 || failed > 0)) process.exitCode = 1;

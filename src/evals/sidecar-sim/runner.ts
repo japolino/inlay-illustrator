@@ -284,6 +284,7 @@ async function runScenario(model: string, scenario: SidecarScenario): Promise<Si
       locallyRepaired: !rawJson,
       payload: transformed.payload,
       rendered: transformed.rendered,
+      transformDiagnostics: transformed.diagnostics,
       issues: quality.issues,
       score: quality.score,
       passed: quality.passed && transformed.rendered.length > 0,
@@ -356,6 +357,29 @@ function summary(results: SidecarResult[], models: Array<{ label: string; id: st
     const tokens = own.reduce((sum, result) => sum + (result.usage.total_tokens || 0) + (result.ideation?.usage.total_tokens || 0), 0);
     lines.push(`| ${model.label} (${model.id}) | ${passed}/${own.length} | ${raw}/${own.length} | ${censored} | ${average.toFixed(1)} | ${critical} | ${tokens} |`);
   }
+  const transforms = results.flatMap((result) => result.transformDiagnostics ? [result.transformDiagnostics] : []);
+  const transformTotals = transforms.reduce((totals, diagnostics) => ({
+    missingTerminalState: totals.missingTerminalState + (diagnostics.terminalStatePresent ? 0 : 1),
+    missingPrimaryAction: totals.missingPrimaryAction + diagnostics.missingPrimaryActionCount,
+    cameraRepairHits: totals.cameraRepairHits + (diagnostics.localCameraRepairApplied ? 1 : 0),
+    cameraCollisionsBefore: totals.cameraCollisionsBefore + diagnostics.cameraCollisionsBefore,
+    cameraCollisionsAfter: totals.cameraCollisionsAfter + diagnostics.cameraCollisionsAfter
+  }), {
+    missingTerminalState: 0,
+    missingPrimaryAction: 0,
+    cameraRepairHits: 0,
+    cameraCollisionsBefore: 0,
+    cameraCollisionsAfter: 0
+  });
+  lines.push(
+    "",
+    "## Local transform telemetry",
+    "",
+    `- Missing terminal state: ${transformTotals.missingTerminalState}`,
+    `- Missing Dynamic primaryAction: ${transformTotals.missingPrimaryAction}`,
+    `- Local camera repair hits: ${transformTotals.cameraRepairHits}`,
+    `- Camera collisions: ${transformTotals.cameraCollisionsBefore} before / ${transformTotals.cameraCollisionsAfter} after`
+  );
   const grouped = new Map<string, number>();
   results.flatMap((result) => result.issues.map((entry) => ({ result, entry }))).forEach(({ entry }) => grouped.set(`${entry.category}.${entry.code}`, (grouped.get(`${entry.category}.${entry.code}`) || 0) + 1));
   lines.push("", "## Failure groups", "");
