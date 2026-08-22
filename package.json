@@ -15,11 +15,14 @@
     "eval:images": "bun run src/evals/image-prompt-study/runner.ts",
     "eval:images:vision": "bun run src/evals/image-prompt-study/vision-runner.ts",
     "eval:images:report": "bun run src/evals/image-prompt-study/report-runner.ts",
+    "dev:mcp": "bun run src/dev/lumiverse-mcp/server.ts",
+    "dev:mcp:smoke": "bun run src/dev/lumiverse-mcp/smoke.ts",
     "verify": "bun run test && bun run typecheck",
     "build": "bun run typecheck:build && bun build ./src/backend.ts ./src/frontend.ts --outdir ./dist --target browser --format esm"
   },
   "devDependencies": {
     "@google/genai": "^2.13.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "bun-types": "1.3.14",
     "lumiverse-spindle-types": "0.6.2",
     "typescript": "7.0.2",
