@@ -34,7 +34,7 @@ export async function resolveImageConnection(config: Config, userId?: string): P
       cacheImageConnection(cacheKey, configured);
       return configured;
     }
-    logStage(config, "image_connection_missing", { configuredConnectionId: config.imageConnectionId }, "warn");
+    throw new Error(`Image connection "${config.imageConnectionId}" not found. Select a valid image connection.`);
   }
   const connections = await spindle.imageGen.listConnections(userId) as ImageConnection[];
   const fallback = connections.find((connection) => connection.is_default) || connections[0] || null;

@@ -20,12 +20,15 @@ function storageKey(path: string, userId?: string): string {
   return JSON.stringify([userId ?? null, path]);
 }
 
+let generationEndedHandler: (payload: Record<string, unknown>, userId?: string) => Promise<void>;
 beforeAll(async () => {
   (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle = {
     registerInterceptor: (handler: PromptInterceptor) => {
       promptInterceptor = handler;
     },
-    on: () => undefined,
+    on: (event: string, handler: (payload: Record<string, unknown>, userId?: string) => Promise<void>) => {
+      if (event === "GENERATION_ENDED") generationEndedHandler = handler;
+    },
     onFrontendMessage: (handler: FrontendMessageHandler) => {
       frontendMessageHandler = handler;
     },
@@ -35,6 +38,21 @@ beforeAll(async () => {
         const value = storedFiles.get(storageKey(path, userId));
         if (value === undefined) throw new Error(`Missing test file: ${path}`);
         return value;
+      },
+      getJson: async (path: string, options: Record<string, unknown>, _userId?: string) => {
+        const effectiveUserId = (options as { userId?: string })?.userId ?? _userId;
+        const key = storageKey(path, effectiveUserId as string | undefined);
+        const fallback = (options as { fallback?: unknown })?.fallback;
+        if (storedFiles.has(key)) return JSON.parse(storedFiles.get(key)!) as unknown;
+        return fallback as unknown;
+      },
+      setJson: async (path: string, value: unknown, options: Record<string, unknown>, userId?: string) => {
+        let effectiveUserId: string | undefined = userId;
+        if (options && typeof options === "object" && "userId" in options) effectiveUserId = (options as { userId?: string }).userId;
+        const key = storageKey(path, effectiveUserId);
+        storageWrites.push(key);
+        if (path === rejectedWritePath) throw new Error("Storage unavailable.");
+        storedFiles.set(key, JSON.stringify(value));
       },
       mkdir: async () => undefined,
       write: async (path: string, value: string, userId?: string) => {
@@ -897,5 +915,71 @@ describe("image preparation and generation pipeline", () => {
     await expect(completed).rejects.toHaveProperty("name", "AbortError");
     generations[0].resolve("ignored-first");
     generations[1].resolve("ignored-second");
+  });
+});
+
+describe("automatic generation hardening", () => {
+  test("skips enqueue when parser connection is missing and sends setup-required status", async () => {
+    const configKey = JSON.stringify(["user-1", "config.json"]);
+    storedFiles.set(configKey, JSON.stringify({ enabled: true, autoGenerate: true, parserConnectionId: null, debugLogging: true }));
+    frontendMessages.splice(0);
+    let generateCalled = false;
+    const originalSpindle = (globalThis as unknown as { spindle: Record<string, unknown> }).spindle as Record<string, unknown>;
+    const originalGenerate = (originalSpindle.generate as Record<string, unknown>).raw;
+    (originalSpindle.generate as Record<string, unknown>).raw = async () => {
+      generateCalled = true;
+      return { content: "{}" };
+    };
+    (originalSpindle as Record<string, unknown>).imageGen = {
+      getConnection: async () => null,
+      listConnections: async () => []
+    };
+    (originalSpindle as Record<string, unknown>).chat = {
+      getMessages: async () => [],
+      updateMessage: async () => {}
+    };
+    await generationEndedHandler({
+      chatId: "chat-1",
+      messageId: "msg-1",
+      content: "A narrative paragraph for testing.",
+      generationType: "normal"
+    }, "user-1");
+    expect(generateCalled).toBe(false);
+    expect(frontendMessages).toHaveLength(1);
+    expect(frontendMessages[0]).toMatchObject({
+      type: "status",
+      chatId: "chat-1",
+      status: expect.stringMatching(/select a parser connection/i)
+    });
+    expect((frontendMessages[0] as Record<string, unknown>).error).toBeUndefined();
+    (originalSpindle.generate as Record<string, unknown>).raw = originalGenerate;
+  });
+  test("does not skip when parser connection is configured", async () => {
+    const configKey = JSON.stringify(["user-1", "config.json"]);
+    storedFiles.set(configKey, JSON.stringify({ enabled: true, autoGenerate: true, parserConnectionId: "parser-1", debugLogging: false }));
+    frontendMessages.splice(0);
+    const originalSpindle = (globalThis as unknown as { spindle: Record<string, unknown> }).spindle as Record<string, unknown>;
+    (originalSpindle as Record<string, unknown>).connections = { get: async () => ({ id: "parser-1", name: "Parser", provider: "openai", model: "test" }), list: async () => [] };
+    (originalSpindle as Record<string, unknown>).imageGen = {
+      getConnection: async () => ({ id: "img-1", name: "Img", provider: "comfyui", model: "m" }),
+      listConnections: async () => [{ id: "img-1", is_default: true, name: "Img", provider: "comfyui", model: "m" }],
+      generate: async () => ({ imageId: "id", imageUrl: "/img.png" })
+    };
+    (originalSpindle as Record<string, unknown>).chat = {
+      getMessages: async () => [{ id: "msg-1", role: "assistant", content: "Hello world.\n\nSecond paragraph.", swipe_id: 0 }],
+      updateMessage: async () => {}
+    };
+    (originalSpindle as Record<string, unknown>).generate = {
+      raw: async () => ({ content: JSON.stringify({ scenes: [{ place: "street", shots: [{ paragraph: 1, camera: "wide shot", situation: "1girl", action: "standing" }] }], terminalState: { paragraph: 1 } }) })
+    };
+    storedFiles.delete(JSON.stringify(["user-1", "states/chat-1.json"]));
+    await generationEndedHandler({
+      chatId: "chat-1",
+      messageId: "msg-1",
+      content: "Hello world.\n\nSecond paragraph.",
+      generationType: "normal"
+    }, "user-1");
+    const setupStatus = frontendMessages.find((m) => typeof (m as Record<string, unknown>).status === "string" && /select a parser connection/i.test(String((m as Record<string, unknown>).status)));
+    expect(setupStatus).toBeUndefined();
   });
 });

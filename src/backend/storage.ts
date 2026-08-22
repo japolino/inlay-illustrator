@@ -17,20 +17,24 @@ type StateMutator = (state: State) => void | Promise<void>;
 const stateUpdateQueues = new Map<string, Promise<void>>();
 const configUpdateQueues = new Map<string, Promise<void>>();
 
-async function readJson<T>(path: string, fallback: T, userId?: string): Promise<T> {
-  try {
-    if (typeof spindle.userStorage.getJson === "function") {
-      const value = await spindle.userStorage.getJson<T>(path, { fallback, userId });
-      return value && typeof value === "object" && fallback && typeof fallback === "object"
-        ? { ...fallback, ...value }
-        : value ?? fallback;
-    }
-    if (!(await spindle.userStorage.exists(path, userId))) return fallback;
-    const text = await spindle.userStorage.read(path, userId);
-    const value = JSON.parse(text) as T;
+async function readJsonStrict<T>(path: string, fallback: T, userId?: string): Promise<T> {
+  if (typeof spindle.userStorage.getJson === "function") {
+    const value = await spindle.userStorage.getJson<T>(path, { fallback, userId });
     return value && typeof value === "object" && fallback && typeof fallback === "object"
       ? { ...fallback, ...value }
       : value ?? fallback;
+  }
+  if (!(await spindle.userStorage.exists(path, userId))) return fallback;
+  const text = await spindle.userStorage.read(path, userId);
+  const value = JSON.parse(text) as T;
+  return value && typeof value === "object" && fallback && typeof fallback === "object"
+    ? { ...fallback, ...value }
+    : value ?? fallback;
+}
+
+async function readJson<T>(path: string, fallback: T, userId?: string): Promise<T> {
+  try {
+    return await readJsonStrict(path, fallback, userId);
   } catch {
     return fallback;
   }
@@ -50,11 +54,15 @@ export async function getConfig(userId?: string): Promise<Config> {
   return normalizeConfig(await readJson<RawConfig>("config.json", DEFAULT_CONFIG, userId));
 }
 
+async function getConfigForUpdate(userId?: string): Promise<Config> {
+  return normalizeConfig(await readJsonStrict<RawConfig>("config.json", DEFAULT_CONFIG, userId));
+}
+
 export async function setConfig(patch: Partial<Config>, userId?: string): Promise<Config> {
   const queueKey = userId ?? "";
   const previous = configUpdateQueues.get(queueKey) || Promise.resolve();
   const operation = previous.then(async () => {
-    const next = normalizeConfig({ ...(await getConfig(userId)), ...patch });
+    const next = normalizeConfig({ ...(await getConfigForUpdate(userId)), ...patch });
     await writeJson("config.json", next, userId);
     return next;
   });
@@ -153,7 +161,7 @@ async function hydrateParameters(parameters: Record<string, unknown>, userId?: s
   if (!workflow || typeof workflow !== "object" || Array.isArray(workflow)) return parameters;
   const hash = (workflow as Record<string, unknown>)[WORKFLOW_REFERENCE_KEY];
   if (typeof hash !== "string" || !hash) return parameters;
-  const hydrated = await readJson<Record<string, unknown>>(workflowPath(hash), {}, userId);
+  const hydrated = await readJsonStrict<Record<string, unknown>>(workflowPath(hash), {}, userId);
   if (Object.keys(hydrated).length === 0) throw new Error(`Stored ComfyUI workflow ${hash} is unavailable.`);
   return { ...parameters, workflow: hydrated };
 }

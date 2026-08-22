@@ -991,8 +991,19 @@ class UiBuilder {
       integer: true,
       ariaLabel: label,
       onChange: (value) => {
-        if (value !== null)
-          this.patchConfig({ [key]: value });
+        if (value === null)
+          return;
+        const patch = { [key]: value };
+        if (key === "minImages" && value > this.config.maxImages)
+          patch.maxImages = value;
+        else if (key === "maxImages" && value < this.config.minImages)
+          patch.minImages = value;
+        else if (key === "includeMinMessages" && value > this.config.includeMaxMessages)
+          patch.includeMaxMessages = value;
+        else if (key === "includeMaxMessages" && value < this.config.includeMinMessages)
+          patch.includeMinMessages = value;
+        Object.assign(this.config, patch);
+        this.patchConfig(patch);
       }
     }));
   }

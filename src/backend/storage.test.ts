@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import type { Config } from "../shared/config.js";
 import { updateCache, upsertCharacterTag } from "./memory.js";
 import {
+  getConfig,
   isGeneratedRecordReference,
   loadGeneratedRecord,
   migrateLegacyGeneratedRecords,
@@ -293,6 +294,17 @@ describe("serialized state updates", () => {
 });
 
 describe("serialized configuration updates", () => {
+  test("keeps display reads lenient but rejects updates after a storage read failure", async () => {
+    storage.files.set(JSON.stringify(["user-1", "config.json"]), JSON.stringify({ customParserInstructions: "original" }));
+    storage.failNextRead = new Error("config read failed");
+    await expect(getConfig("user-1")).resolves.toMatchObject({ customParserInstructions: "" });
+
+    storage.failNextRead = new Error("config read failed");
+    await expect(setConfig({ customParserInstructions: "replacement" }, "user-1")).rejects.toThrow("config read failed");
+    expect(storage.storedConfig("user-1").customParserInstructions).toBe("original");
+    expect(storage.writeCalls).toHaveLength(0);
+  });
+
   test("keeps the latest value when rapid field changes overlap", async () => {
     const firstWrite = storage.gateNextWrite();
     const first = setConfig({ customParserInstructions: "a" }, "user-1");
@@ -342,6 +354,26 @@ describe("compact generated-record storage", () => {
 
     const hydrated = await loadGeneratedRecord(reference, "user-1");
     expect(hydrated?.slots.map((slot) => slot.imageParameters)).toEqual(original.imageParameters);
+  });
+
+  test("distinguishes missing and corrupt stored workflows", async () => {
+    const original = record();
+    original.imageParameters = original.imageParameters?.map((parameters) => ({
+      ...parameters,
+      workflow: { "error-probe": { class_type: "WorkflowErrorProbe", inputs: {} } }
+    }));
+    const reference = await storeGeneratedRecord("chat-1", "workflow-errors", original, "user-1");
+    const workflowKey = [...storage.files.keys()].find((key) => key.includes("workflows/"));
+    expect(workflowKey).toBeDefined();
+    if (!workflowKey) return;
+
+    const workflow = storage.files.get(workflowKey)!;
+    storage.files.delete(workflowKey);
+    await expect(loadGeneratedRecord(reference, "user-1")).rejects.toThrow(/Stored ComfyUI workflow .* is unavailable/);
+
+    storage.files.set(workflowKey, "{not valid json");
+    await expect(loadGeneratedRecord(reference, "user-1")).rejects.toBeInstanceOf(SyntaxError);
+    storage.files.set(workflowKey, workflow);
   });
 
   test("re-saves progressive records without nesting compact workflow references", async () => {

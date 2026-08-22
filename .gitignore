@@ -4,3 +4,4 @@ node_modules/
 .env.*
 eval-results/raw/
 eval-results/image-study/raw/
+tmp-audit/

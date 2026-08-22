@@ -71,6 +71,11 @@ spindle.on("GENERATION_ENDED", async (payload, userId) => {
     });
     if (!config.enabled || !config.autoGenerate || payload.error || !payload.messageId || !payload.content) return;
     if (payload.generationType === "continue" || payload.generationType === "impersonate") return;
+    if (!config.parserConnectionId) {
+      logStage(config, "auto_generation_skipped", { reason: "setup_required", chatId: payload.chatId, messageId: payload.messageId }, "info");
+      spindle.sendToFrontend({ type: "status", chatId: payload.chatId, status: "Setup required — select a parser connection before generating." }, userId);
+      return;
+    }
     await generateForMessage(payload.chatId, payload.messageId, payload.content, userId, { config });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

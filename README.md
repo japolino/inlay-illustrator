@@ -29,6 +29,14 @@ data\extensions\inlay_illustrator\repo
 
 The built extension files are included in `dist/`, so no build step is required for normal installation.
 
+## Setup
+
+1. In **Parser and context**, select a parser connection. Leave the model field empty to use that connection's default model.
+2. Configure the image provider in Lumiverse's image-generation settings. When no extension-specific connection is saved, Inlay uses the account default or first available image connection.
+3. **Auto generate** is enabled by default after setup. Disable it for manual-only use with **Generate latest**. **Cancel** cooperatively stops queued or running work.
+
+If generation does not start, check the panel status first. A setup message means the parser connection is missing. A missing-connection error means a previously selected image connection was deleted or disconnected. Invalid parser parameters must be corrected to a JSON object. Enable **Debug logging** for detailed `[Inlay:stage]` entries.
+
 ## Development
 
 ```powershell

@@ -9,6 +9,7 @@ import {
   rerunStoredImage,
   sourceContentFingerprint
 } from "./generation.js";
+import { resolveImageConnection } from "./images.js";
 import type { LorebookContextSnapshot } from "./context.js";
 
 const compactedVisualSnapshot: LorebookContextSnapshot = {
@@ -748,5 +749,134 @@ describe("Fast Mode sidecar rerun", () => {
     // The replacement must be persisted through the record file, not just in memory.
     const storedState = files.get("states/fast-chat.json") as { generated: Record<string, unknown> };
     expect(storedState.generated["fast-chat:message-1:0"]).toMatchObject({ storageVersion: 3 });
+  });
+});
+
+describe("backend hardening - image connection resolution", () => {
+  test("fails fast when explicitly configured imageConnectionId is missing", async () => {
+    const config = { ...DEFAULT_CONFIG, imageConnectionId: "missing-id", debugLogging: true };
+    (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
+      imageGen: {
+        getConnection: async (id: string) => {
+          expect(id).toBe("missing-id");
+          return null;
+        },
+        listConnections: async () => [
+          { id: "fallback-id", is_default: true, name: "Fallback", provider: "comfyui", model: "m" } as unknown
+        ]
+      },
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+    await expect(resolveImageConnection(config, "user-hardening")).rejects.toThrow(/not found.*select a valid image connection/i);
+  });
+  test("uses default/first fallback only when no imageConnectionId is configured", async () => {
+    const config = { ...DEFAULT_CONFIG, imageConnectionId: null };
+    const fallback = { id: "fallback-id", is_default: true, name: "Fallback", provider: "comfyui", model: "m" , metadata: {} } as unknown;
+    let getConnectionCalled = false;
+    (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
+      imageGen: {
+        getConnection: async () => {
+          getConnectionCalled = true;
+          return null;
+        },
+        listConnections: async () => [fallback as unknown as never]
+      },
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+    const result = await resolveImageConnection(config, "user-hardening") as unknown as { id: string };
+    expect(result.id).toBe("fallback-id");
+    expect(getConnectionCalled).toBe(false);
+  });
+});
+describe("backend hardening - already generated skip", () => {
+  test("sends terminal completed progress/status when source is already fully generated", async () => {
+    const files = new Map<string, unknown>();
+    const frontend: Array<Record<string, unknown>> = [];
+    const message = {
+      id: "already-msg",
+      role: "assistant",
+      content: "Already generated narrative.\n\nSecond paragraph.",
+      metadata: {},
+      swipe_id: 0
+    };
+    const existingRecord = {
+      schemaVersion: 3 as const,
+      chatId: "already-chat",
+      messageId: "already-msg",
+      swipeId: 0,
+      slots: [
+        {
+          prompt: "prompt one",
+          negativePrompt: "",
+          perspectiveMode: "dynamic" as const,
+          perspectiveSource: "manual" as const,
+          paragraph: 1,
+          imageId: "img-1",
+          imageUrl: "/img-1.png",
+          placement: "paragraph" as const,
+          status: "completed" as const
+        }
+      ],
+      operationId: "op-1",
+      generationStatus: "completed" as const,
+      sourceFingerprint: "abc",
+      rawJson: { scenes: [] },
+      createdAt: "2026-07-18T00:00:00.000Z"
+    };
+    files.set("states/already-chat.json", {
+      characterAppearance: {},
+      generated: { "already-chat:already-msg:0": existingRecord }
+    });
+    const generationConfig = {
+      ...DEFAULT_CONFIG,
+      parserConnectionId: "already-parser",
+      imageConnectionId: "already-img",
+      includeCharacterInfo: false,
+      includeUserInfo: false,
+      includeLorebook: false,
+      userInstructionsEnabled: false,
+      previousVisualStateEnabled: false,
+      preprocessingEnabled: false,
+      parserRetries: 0,
+      minImages: 1,
+      maxImages: 1
+    };
+    (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
+      connections: {
+        get: async () => ({ id: "already-parser", name: "Parser", provider: "openai", model: "test" })
+      },
+      imageGen: {
+        getConnection: async () => ({ id: "already-img", name: "Img", provider: "comfyui", model: "workflow" }),
+        generate: async () => ({ imageId: "new", imageUrl: "/new.png" })
+      },
+      generate: {
+        raw: async () => ({ content: JSON.stringify({ scenes: [{ place: "street", shots: [{ paragraph: 1, camera: "wide", situation: "1girl", action: "standing" }] }], terminalState: { paragraph: 1 } }) })
+      },
+      userStorage: {
+        getJson: async <T>(path: string, options: { fallback: T }) => (files.has(path) ? files.get(path) : options.fallback) as T,
+        setJson: async (path: string, value: unknown) => { files.set(path, structuredClone(value)); },
+        exists: async (path: string) => files.has(path),
+        read: async (path: string) => JSON.stringify(files.get(path)),
+        write: async (path: string, value: string) => { files.set(path, JSON.parse(value)); },
+        mkdir: async () => undefined
+      },
+      chat: {
+        getMessages: async () => [message],
+        updateMessage: async () => {}
+      },
+      sendToFrontend: (payload: Record<string, unknown>) => frontend.push(payload),
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+    await generateForMessage("already-chat", message.id, message.content, "already-user", {
+      config: generationConfig,
+      messages: [message as unknown as never]
+    });
+    const completedProgress = frontend.find((p) => p.type === "generation_progress" && p.stage === "completed") as Record<string, unknown> | undefined;
+    expect(completedProgress).toBeDefined();
+    expect(String(completedProgress?.detail ?? "")).toMatch(/already generated/i);
+    const status = frontend.find((p) => p.type === "status" && String(p.status).toLowerCase().includes("already generated")) as Record<string, unknown> | undefined;
+    expect(status).toBeDefined();
+    expect(completedProgress?.total).toBe(1);
+    expect(completedProgress?.completed).toBe(1);
   });
 });

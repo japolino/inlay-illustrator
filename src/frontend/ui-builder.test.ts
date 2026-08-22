@@ -162,4 +162,55 @@ describe("settings collapsible sections", () => {
     }
   });
 
+  test("keeps paired numeric bounds aligned with the field the user changed", () => {
+    const previousDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
+    Object.defineProperty(globalThis, "document", {
+      configurable: true,
+      value: { createElement: () => new FakeElement() }
+    });
+    const handlers: Array<(value: number | null) => void> = [];
+    const patches: Array<Record<string, unknown>> = [];
+    const component = { destroy: () => undefined };
+    const ctx = {
+      components: {
+        mountNumericInput: (_target: unknown, options: { onChange(value: number | null): void }) => {
+          handlers.push(options.onChange);
+          return component;
+        }
+      }
+    };
+
+    try {
+      const sections = new FakeElement();
+      const config = { ...DEFAULT_CONFIG, includeMinMessages: 2, includeMaxMessages: 8 };
+      const ui = new UiBuilder(
+        ctx as never,
+        sections as unknown as HTMLElement,
+        config,
+        (patch) => patches.push(patch as Record<string, unknown>),
+        new Map(),
+        () => {}
+      );
+      ui.addNumber(sections as unknown as HTMLElement, "minImages", "Minimum images", 1, 12);
+      ui.addNumber(sections as unknown as HTMLElement, "maxImages", "Maximum images", 1, 12);
+      ui.addNumber(sections as unknown as HTMLElement, "includeMinMessages", "Minimum context", 0, 32);
+      ui.addNumber(sections as unknown as HTMLElement, "includeMaxMessages", "Maximum context", 0, 32);
+
+      handlers[0]!(7);
+      handlers[1]!(2);
+      handlers[2]!(10);
+      handlers[3]!(1);
+
+      expect(patches).toEqual([
+        { minImages: 7, maxImages: 7 },
+        { maxImages: 2, minImages: 2 },
+        { includeMinMessages: 10, includeMaxMessages: 10 },
+        { includeMaxMessages: 1, includeMinMessages: 1 }
+      ]);
+    } finally {
+      if (previousDocument) Object.defineProperty(globalThis, "document", previousDocument);
+      else Reflect.deleteProperty(globalThis, "document");
+    }
+  });
+
 });

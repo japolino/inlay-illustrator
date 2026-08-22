@@ -1229,6 +1229,12 @@ async function runGenerationForMessage(
       const hasIncompleteSlot = existing?.slots.some((slot) => slot.status !== "completed") || false;
       if (!existing?.generationStatus || (existing.generationStatus === "completed" && !hasIncompleteSlot)) {
         logStage(config, "request_skipped", { reason: "already_generated", key });
+        const total = existing?.slots.length ?? 0;
+        operation.total = total;
+        operation.completed = total;
+        const detail = "Already generated — no new images needed.";
+        reportGenerationProgress(operation, "completed", userId, detail);
+        spindle.sendToFrontend({ type: "status", chatId, operationId: operation.id, status: "Already generated", detail, record: existing ?? undefined }, userId);
         return;
       }
     }
