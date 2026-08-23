@@ -587,7 +587,8 @@ function pendingGenerationRecord(
   context: ProgressiveGenerationContext,
   selected: PromptEntry[],
   parsed: ParsedPayload,
-  plan?: IllustrationPlan | null
+  plan?: IllustrationPlan | null,
+  initialImageParameters: Record<string, unknown> = context.config.imageParameters
 ): GeneratedRecord {
   return {
     schemaVersion: 3,
@@ -602,7 +603,7 @@ function pendingGenerationRecord(
       paragraph: entry.paragraph,
       imageId: "",
       imageUrl: "",
-      imageParameters: {},
+      imageParameters: { ...initialImageParameters },
       corePrompt: renderPrompt(entry.corePrompt, context.config.promptSyntax),
       shotNegative: entry.shotNegative,
       promptFormat: entry.corePrompt.format || "ordered",
@@ -1279,14 +1280,19 @@ async function runGenerationForMessage(
     logParsedSelection(parsed, selected, paragraphs, config);
     operation.total = selected.length;
     reportGenerationProgress(operation, "preparing", userId);
+    const imageConnection = await imageConnectionPromise;
+    const initialImageParameters = {
+      ...(imageConnection?.default_parameters || {}),
+      ...config.imageParameters
+    };
     initializationPromise = initializeProgressiveGeneration(
       context,
-      pendingGenerationRecord(context, selected, parsed, selection.plan)
+      pendingGenerationRecord(context, selected, parsed, selection.plan, initialImageParameters)
     ).then(() => { initialized = true; });
     void initializationPromise.catch(() => undefined);
     reportGenerationProgress(operation, "generating", userId);
 
-    await prepareAndDispatchImages(chatId, selected, config, userId, imageConnectionPromise, {
+    await prepareAndDispatchImages(chatId, selected, config, userId, Promise.resolve(imageConnection), {
       signal,
       stopWaitingOnAbort: true,
       onSettled: async (job, settlement) => {

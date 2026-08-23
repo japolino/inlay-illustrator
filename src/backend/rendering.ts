@@ -13,6 +13,7 @@ type InlaySlot = {
   perspectiveMode?: PerspectiveMode;
   perspectiveSource?: "adaptive" | "manual";
   creativeConcept?: CreativeConcept | null;
+  imageParameters?: Record<string, unknown>;
   placement?: "cover" | "paragraph";
   paragraph?: number;
   status?: GenerationSlotStatus;
@@ -70,25 +71,19 @@ function htmlAttr(value: string): string {
     .replace(/\r\n?|\n/g, "&#10;");
 }
 
-function renderInlayBlock(
-  url: string,
-  _prompt: string,
-  _negativePrompt: string,
+function positiveDimension(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
+}
+
+function frameGeometry(
   perspectiveMode: PerspectiveMode | undefined,
-  _perspectiveSource: "adaptive" | "manual" | undefined,
-  _creativeConcept: CreativeConcept | null | undefined,
-  imageId: string,
-  chatId: string,
-  messageId: string,
-  swipeId: number,
-  index: number,
-  config: Config,
-  placement: "cover" | "paragraph" = "paragraph",
-  illustrationNumber = index + 1
-): string {
-  const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
+  imageParameters: Record<string, unknown> | undefined,
+  placement: "cover" | "paragraph",
+  config: Config
+): { style: string; intrinsicAttributes: string } {
   const asset = perspectiveMode === "asset";
-  const width = clampInt(
+  const displayWidth = clampInt(
     asset ? config.assetImageWidth : placement === "cover" ? config.coverImageWidth : config.inlayImageWidth,
     120,
     2400,
@@ -100,12 +95,49 @@ function renderInlayBlock(
     100,
     placement === "cover" ? DEFAULT_CONFIG.coverImageMaxHeightVh : DEFAULT_CONFIG.inlayImageMaxHeightVh
   );
-  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
+  const parameters = imageParameters && Object.keys(imageParameters).length > 0
+    ? imageParameters
+    : config.imageParameters;
+  const intrinsicWidth = positiveDimension(parameters.width);
+  const intrinsicHeight = positiveDimension(parameters.height);
+  const aspectWidth = intrinsicWidth || 1;
+  const aspectHeight = intrinsicHeight || 1;
+  return {
+    style: `display:flex;justify-content:center;align-items:center;margin:10px auto;box-sizing:border-box;width:min(100%, ${displayWidth}px);aspect-ratio:${aspectWidth} / ${aspectHeight};max-height:${maxHeight}vh;overflow:hidden;`,
+    intrinsicAttributes: intrinsicWidth && intrinsicHeight
+      ? ` width="${intrinsicWidth}" height="${intrinsicHeight}"`
+      : ""
+  };
+}
+
+function renderInlayBlock(
+  url: string,
+  _prompt: string,
+  _negativePrompt: string,
+  perspectiveMode: PerspectiveMode | undefined,
+  _perspectiveSource: "adaptive" | "manual" | undefined,
+  _creativeConcept: CreativeConcept | null | undefined,
+  imageParameters: Record<string, unknown> | undefined,
+  imageId: string,
+  chatId: string,
+  messageId: string,
+  swipeId: number,
+  index: number,
+  config: Config,
+  placement: "cover" | "paragraph" = "paragraph",
+  illustrationNumber = index + 1
+): string {
+  const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
+  const frame = frameGeometry(perspectiveMode, imageParameters, placement, config);
+  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="${frame.style}"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
 }
 
 function renderSlotPlaceholder(
   status: GenerationSlotStatus,
+  perspectiveMode: PerspectiveMode | undefined,
+  imageParameters: Record<string, unknown> | undefined,
   index: number,
+  config: Config,
   placement: "cover" | "paragraph" = "paragraph",
   illustrationNumber = index + 1
 ): string {
@@ -115,7 +147,8 @@ function renderSlotPlaceholder(
     : status === "cancelled"
       ? `${subject} cancelled.`
       : `Generating ${subject.toLowerCase()}…`;
-  return `${MARKER}\n<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-image-index="${index}" role="status">${htmlAttr(label)}</div>`;
+  const frame = frameGeometry(perspectiveMode, imageParameters, placement, config);
+  return `${MARKER}\n<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-image-index="${index}" role="status" style="${frame.style}">${htmlAttr(label)}</div>`;
 }
 
 export function renderInlaidMessage(original: string, record: InlayRecord, config: Config): string {
@@ -142,6 +175,7 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
         slot.perspectiveMode,
         slot.perspectiveSource,
         slot.creativeConcept,
+        slot.imageParameters,
         slot.imageId || "",
         record.chatId || "",
         record.messageId || "",
@@ -151,7 +185,15 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
         placement,
         illustrationNumber
       )
-      : renderSlotPlaceholder(status || "pending", index, placement, illustrationNumber));
+      : renderSlotPlaceholder(
+        status || "pending",
+        slot.perspectiveMode,
+        slot.imageParameters,
+        index,
+        config,
+        placement,
+        illustrationNumber
+      ));
     if (placement === "paragraph") blocks.set(paragraph, existing);
   }
 

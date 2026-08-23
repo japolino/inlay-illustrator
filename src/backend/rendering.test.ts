@@ -72,8 +72,10 @@ describe("inlay rendering", () => {
       placements: ["cover", "paragraph"] as Array<"cover" | "paragraph">,
       paragraphs: [1, 1]
     }, config);
-    const coverBlock = rendered.slice(rendered.indexOf("/cover.png"), rendered.indexOf("</div>", rendered.indexOf("/cover.png")));
-    const paragraphBlock = rendered.slice(rendered.indexOf("/first.png"), rendered.indexOf("</div>", rendered.indexOf("/first.png")));
+    const coverImage = rendered.indexOf("/cover.png");
+    const paragraphImage = rendered.indexOf("/first.png");
+    const coverBlock = rendered.slice(rendered.lastIndexOf('<div class="inlay-illustrator-image"', coverImage), rendered.indexOf("</div>", coverImage));
+    const paragraphBlock = rendered.slice(rendered.lastIndexOf('<div class="inlay-illustrator-image"', paragraphImage), rendered.indexOf("</div>", paragraphImage));
     expect(coverBlock).toContain("width:min(100%, 1500px)");
     expect(coverBlock).toContain("max-height:45vh");
     expect(paragraphBlock).toContain("width:min(100%, 640px)");
@@ -218,6 +220,34 @@ describe("inlay rendering", () => {
     expect(progressive).toContain("/second.png");
     expect(progressive.split(MARKER)).toHaveLength(3);
   });
+  test("reserves the same frame geometry before and after a progressive image loads", () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      imageParameters: { width: 768, height: 1024 },
+      inlayImageWidth: 640,
+      inlayImageMaxHeightVh: 70
+    };
+    const baseSlot = {
+      prompt: "scene",
+      perspectiveMode: "dynamic" as const,
+      imageParameters: { width: 768, height: 1024 },
+      placement: "paragraph" as const,
+      paragraph: 1
+    };
+    const pending = renderInlaidMessage("Paragraph.", {
+      slots: [{ ...baseSlot, status: "pending" }]
+    }, config);
+    const completed = renderInlaidMessage("Paragraph.", {
+      slots: [{ ...baseSlot, imageUrl: "/ready.png", status: "completed" }]
+    }, config);
+    const expectedFrame = "width:min(100%, 640px);aspect-ratio:768 / 1024;max-height:70vh";
+
+    expect(pending).toContain(expectedFrame);
+    expect(completed).toContain(expectedFrame);
+    expect(completed).toContain('width="768" height="1024"');
+    expect(completed).toContain("width:100%;height:100%;object-fit:contain");
+  });
+
   test("renders canonical V3 slots without reconstructing parallel arrays", () => {
     const rendered = renderInlaidMessage("First.\n\nSecond.", {
       slots: [

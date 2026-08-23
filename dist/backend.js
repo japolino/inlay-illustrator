@@ -20391,19 +20391,36 @@ function imageUrlFromId(imageId) {
 function htmlAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r\n?|\n/g, "&#10;");
 }
-function renderInlayBlock(url2, _prompt, _negativePrompt, perspectiveMode, _perspectiveSource, _creativeConcept, imageId, chatId, messageId, swipeId, index, config2, placement = "paragraph", illustrationNumber = index + 1) {
-  const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
-  const asset = perspectiveMode === "asset";
-  const width = clampInt2(asset ? config2.assetImageWidth : placement === "cover" ? config2.coverImageWidth : config2.inlayImageWidth, 120, 2400, asset ? DEFAULT_CONFIG.assetImageWidth : placement === "cover" ? DEFAULT_CONFIG.coverImageWidth : DEFAULT_CONFIG.inlayImageWidth);
-  const maxHeight = clampInt2(placement === "cover" ? config2.coverImageMaxHeightVh : config2.inlayImageMaxHeightVh, 10, 100, placement === "cover" ? DEFAULT_CONFIG.coverImageMaxHeightVh : DEFAULT_CONFIG.inlayImageMaxHeightVh);
-  return `${MARKER}
-<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img src="${htmlAttr(url2)}" alt="${htmlAttr(label)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:min(100%, ${width}px);max-height:${maxHeight}vh;height:auto;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
+function positiveDimension(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
 }
-function renderSlotPlaceholder(status, index, placement = "paragraph", illustrationNumber = index + 1) {
+function frameGeometry(perspectiveMode, imageParameters, placement, config2) {
+  const asset = perspectiveMode === "asset";
+  const displayWidth = clampInt2(asset ? config2.assetImageWidth : placement === "cover" ? config2.coverImageWidth : config2.inlayImageWidth, 120, 2400, asset ? DEFAULT_CONFIG.assetImageWidth : placement === "cover" ? DEFAULT_CONFIG.coverImageWidth : DEFAULT_CONFIG.inlayImageWidth);
+  const maxHeight = clampInt2(placement === "cover" ? config2.coverImageMaxHeightVh : config2.inlayImageMaxHeightVh, 10, 100, placement === "cover" ? DEFAULT_CONFIG.coverImageMaxHeightVh : DEFAULT_CONFIG.inlayImageMaxHeightVh);
+  const parameters = imageParameters && Object.keys(imageParameters).length > 0 ? imageParameters : config2.imageParameters;
+  const intrinsicWidth = positiveDimension(parameters.width);
+  const intrinsicHeight = positiveDimension(parameters.height);
+  const aspectWidth = intrinsicWidth || 1;
+  const aspectHeight = intrinsicHeight || 1;
+  return {
+    style: `display:flex;justify-content:center;align-items:center;margin:10px auto;box-sizing:border-box;width:min(100%, ${displayWidth}px);aspect-ratio:${aspectWidth} / ${aspectHeight};max-height:${maxHeight}vh;overflow:hidden;`,
+    intrinsicAttributes: intrinsicWidth && intrinsicHeight ? ` width="${intrinsicWidth}" height="${intrinsicHeight}"` : ""
+  };
+}
+function renderInlayBlock(url2, _prompt, _negativePrompt, perspectiveMode, _perspectiveSource, _creativeConcept, imageParameters, imageId, chatId, messageId, swipeId, index, config2, placement = "paragraph", illustrationNumber = index + 1) {
+  const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
+  const frame = frameGeometry(perspectiveMode, imageParameters, placement, config2);
+  return `${MARKER}
+<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="${frame.style}"><img src="${htmlAttr(url2)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
+}
+function renderSlotPlaceholder(status, perspectiveMode, imageParameters, index, config2, placement = "paragraph", illustrationNumber = index + 1) {
   const subject = placement === "cover" ? "Cover image" : `Illustration ${illustrationNumber}`;
   const label = status === "failed" ? `${subject} failed. Use Generate latest to retry.` : status === "cancelled" ? `${subject} cancelled.` : `Generating ${subject.toLowerCase()}…`;
+  const frame = frameGeometry(perspectiveMode, imageParameters, placement, config2);
   return `${MARKER}
-<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-image-index="${index}" role="status">${htmlAttr(label)}</div>`;
+<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-image-index="${index}" role="status" style="${frame.style}">${htmlAttr(label)}</div>`;
 }
 function renderInlaidMessage(original, record2, config2) {
   const cleanOriginal = stripInlayContent(original);
@@ -20420,7 +20437,7 @@ function renderInlaidMessage(original, record2, config2) {
     const illustrationNumber = slots.slice(0, index + 1).filter((candidate) => candidate.placement !== "cover").length;
     const paragraph2 = clampInt2(slot.paragraph, 1, count, Math.min(index + 1, count));
     const existing = placement === "cover" ? coverBlocks : blocks.get(paragraph2) || [];
-    existing.push(url2 ? renderInlayBlock(url2, slot.prompt || "", slot.negativePrompt || "", slot.perspectiveMode, slot.perspectiveSource, slot.creativeConcept, slot.imageId || "", record2.chatId || "", record2.messageId || "", record2.swipeId || 0, index, config2, placement, illustrationNumber) : renderSlotPlaceholder(status || "pending", index, placement, illustrationNumber));
+    existing.push(url2 ? renderInlayBlock(url2, slot.prompt || "", slot.negativePrompt || "", slot.perspectiveMode, slot.perspectiveSource, slot.creativeConcept, slot.imageParameters, slot.imageId || "", record2.chatId || "", record2.messageId || "", record2.swipeId || 0, index, config2, placement, illustrationNumber) : renderSlotPlaceholder(status || "pending", slot.perspectiveMode, slot.imageParameters, index, config2, placement, illustrationNumber));
     if (placement === "paragraph")
       blocks.set(paragraph2, existing);
   }
@@ -20817,7 +20834,7 @@ function reportGenerationProgress(operation, stage, userId, detail) {
     detail
   }, userId);
 }
-function pendingGenerationRecord(context, selected, parsed, plan) {
+function pendingGenerationRecord(context, selected, parsed, plan, initialImageParameters = context.config.imageParameters) {
   return {
     schemaVersion: 3,
     chatId: context.chatId,
@@ -20831,7 +20848,7 @@ function pendingGenerationRecord(context, selected, parsed, plan) {
       paragraph: entry.paragraph,
       imageId: "",
       imageUrl: "",
-      imageParameters: {},
+      imageParameters: { ...initialImageParameters },
       corePrompt: renderPrompt(entry.corePrompt, context.config.promptSyntax),
       shotNegative: entry.shotNegative,
       promptFormat: entry.corePrompt.format || "ordered",
@@ -21395,14 +21412,19 @@ async function runGenerationForMessage(chatId, messageId, content, operation, us
     logParsedSelection(parsed, selected, paragraphs, config2);
     operation.total = selected.length;
     reportGenerationProgress(operation, "preparing", userId);
-    initializationPromise = initializeProgressiveGeneration(context, pendingGenerationRecord(context, selected, parsed, selection.plan)).then(() => {
+    const imageConnection = await imageConnectionPromise;
+    const initialImageParameters = {
+      ...imageConnection?.default_parameters || {},
+      ...config2.imageParameters
+    };
+    initializationPromise = initializeProgressiveGeneration(context, pendingGenerationRecord(context, selected, parsed, selection.plan, initialImageParameters)).then(() => {
       initialized = true;
     });
     initializationPromise.catch(() => {
       return;
     });
     reportGenerationProgress(operation, "generating", userId);
-    await prepareAndDispatchImages(chatId, selected, config2, userId, imageConnectionPromise, {
+    await prepareAndDispatchImages(chatId, selected, config2, userId, Promise.resolve(imageConnection), {
       signal,
       stopWaitingOnAbort: true,
       onSettled: async (job, settlement) => {
