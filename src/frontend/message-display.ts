@@ -28,6 +28,24 @@ import { getDisplayMax, subscribeDisplaySettings } from "./display-settings.js";
 import { applyQuoteSettingsSnapshot, getQuoteSettings, splitOriginalQuoteCss } from "./caption-settings.js";
 
 const INLAY_WRAPPER_SELECTOR = '[data-inlay-illustrator="true"]';
+const INLAY_IMAGE_SELECTOR = '[data-inlay-illustrator="true"] img';
+
+/**
+ * Hydrate a single baked inlay image: the backend renders inlay `<img>` tags
+ * WITHOUT a `src` (the URL lives in data-inlay-illustrator-image-url) so a
+ * character card's asset display regex that rewrites `<img src="...">` cannot
+ * mangle them. This restores the `src` at render time.
+ * Returns true when the src was set or corrected.
+ */
+export function hydrateInlayImageSource(image: HTMLImageElement): boolean {
+  const url = image.getAttribute("data-inlay-illustrator-image-url");
+  if (!url) return false;
+  if (image.getAttribute("src") !== url) {
+    image.setAttribute("src", url);
+    return true;
+  }
+  return false;
+}
 
 export type ChatRole = "user" | "char" | "system";
 
@@ -282,6 +300,7 @@ export function installInlayMessageDisplay(ctx: SpindleFrontendContext): () => v
   }
 
   function decorate(): void {
+    hydrateInlayImageSources();
     const chatId = activeChatId();
     const quoteCss = splitOriginalQuoteCss(getQuoteSettings(chatId).quoteStyle);
     if (quoteCss.globalCss !== currentQuoteGlobalCss) {
@@ -361,7 +380,26 @@ export function installInlayMessageDisplay(ctx: SpindleFrontendContext): () => v
     }
   });
 
-  const observer = new MutationObserver(scheduleDecorate);
+  // Card display regex can rewrite `<img src="...">` in message content and
+  // break inlay images. We therefore bake the inlay `<img>` WITHOUT a `src`
+  // (the real URL lives in data-inlay-illustrator-image-url), so the regex
+  // never matches it, and hydrate the src here at render time. Keep the img
+  // hidden until its src is set so a partially-rendered box isn't shown.
+  const hydrateInlayImageSources = (): void => {
+    for (const mounted of ctx.dom.listMessageElements()) {
+      const images = mounted.element.querySelectorAll<HTMLImageElement>(INLAY_IMAGE_SELECTOR);
+      for (const image of images) {
+        hydrateInlayImageSource(image);
+      }
+    }
+  };
+
+  const onMutation = (): void => {
+    hydrateInlayImageSources();
+    scheduleDecorate();
+  };
+
+  const observer = new MutationObserver(onMutation);
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
   const unsubscribes: Array<() => void> = [

@@ -4,6 +4,7 @@ import {
   chatRoleFromRow,
   foldThresholdIndex,
   foldUidFor,
+  hydrateInlayImageSource,
   inlayUidIndex,
   isMessageFolded,
   type ChatRole
@@ -146,5 +147,37 @@ describe("fold uid scheme", () => {
   test("missing index0 falls back to a sanitized message id", () => {
     expect(foldUidFor(null, "abc/def", "0")).toBe("fold-ifs-r-abcdef-1");
     expect(foldUidFor(null, "", "0")).toBe("fold-ifs-r-x-1");
+  });
+});
+
+
+describe("inlay image src hydration (card-display-regex safety)", () => {
+  function fakeImg(attrs: Record<string, string>) {
+    const map = new Map(Object.entries(attrs));
+    return {
+      getAttribute(name: string) { return map.get(name) ?? null; },
+      setAttribute(name: string, value: string) { map.set(name, value); }
+    };
+  }
+
+  test("sets src from data-inlay-illustrator-image-url when src is absent", () => {
+    const img = fakeImg({ "data-inlay-illustrator-image-url": "/api/v1/image-gen/results/abc" });
+    const changed = hydrateInlayImageSource(img as unknown as HTMLImageElement);
+    expect(changed).toBeTrue();
+    expect(img.getAttribute("src")).toBe("/api/v1/image-gen/results/abc");
+  });
+
+  test("corrects a src mangled by a card asset regex", () => {
+    const img = fakeImg({ "data-inlay-illustrator-image-url": "/api/v1/image-gen/results/abc", src: "" });
+    const changed = hydrateInlayImageSource(img as unknown as HTMLImageElement);
+    expect(changed).toBeTrue();
+    expect(img.getAttribute("src")).toBe("/api/v1/image-gen/results/abc");
+  });
+
+  test("leaves a matching src alone and skips images without the data attribute", () => {
+    const img = fakeImg({ "data-inlay-illustrator-image-url": "/api/v1/image-gen/results/abc", src: "/api/v1/image-gen/results/abc" });
+    expect(hydrateInlayImageSource(img as unknown as HTMLImageElement)).toBeFalse();
+    const other = fakeImg({ src: "/api/v1/image-gen/results/other" });
+    expect(hydrateInlayImageSource(other as unknown as HTMLImageElement)).toBeFalse();
   });
 });

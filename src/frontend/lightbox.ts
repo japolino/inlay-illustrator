@@ -131,7 +131,7 @@ export function imageIdFromResultUrl(value: string): string | undefined {
 }
 
 function actionTargetForImage(image: HTMLImageElement): InlayActionTarget {
-  const imageUrl = image.getAttribute("src") || image.currentSrc || image.src;
+  const imageUrl = image.getAttribute("src") || image.currentSrc || image.src || image.getAttribute("data-inlay-illustrator-image-url") || "";
   return {
     chatId: image.getAttribute("data-inlay-illustrator-chat-id") || undefined,
     messageId: image.getAttribute("data-inlay-illustrator-message-id") || undefined,
@@ -267,7 +267,7 @@ function appendLightboxContent(
 
   const preview = document.createElement("img");
   preview.className = "inlay-lightbox-image";
-  preview.src = image.currentSrc || image.src;
+  preview.src = image.currentSrc || image.src || image.getAttribute("data-inlay-illustrator-image-url") || "";
   preview.alt = image.alt || "Generated illustration";
 
   const visual = document.createElement("div");
