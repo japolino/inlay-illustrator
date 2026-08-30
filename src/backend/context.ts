@@ -1,5 +1,5 @@
 import type { Config } from "../shared/config.js";
-import type { WorldBookDTO, WorldBookEntryDTO } from "lumiverse-spindle-types";
+import type { WorldBookEntryDTO } from "lumiverse-spindle-types";
 import { EXTENSION_ID } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
 import { buildCharacterTagReference } from "./prompt.js";
@@ -9,6 +9,9 @@ import { asRecord, cleanString, unique } from "./utils.js";
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
 const CHARACTER_VISUAL_PATTERN = /\b(?:appearance|attire|body|build|clothes?|clothing|coat|dress|eyes?|face|facial|freckles|hair|horns?|jacket|pants|robe|scar|shirt|shoes?|skin|skirt|species|suit|tail|tattoo|uniform|wears?|wearing|wings?)\b/i;
+
+// Host-ranked activated entries only (the host itself returns max 24 ranked entries).
+const MAX_ACTIVATED_LOREBOOK_ENTRIES = 24;
 
 export type LorebookEntrySnapshot = {
   id: string;
@@ -95,49 +98,39 @@ export async function buildFullLorebookSnapshot(
   userId?: string
 ): Promise<LorebookContextSnapshot> {
   try {
-    const books: WorldBookDTO[] = [];
-    const PAGE_LIMIT = 100;
-    let offset = 0;
-    while (true) {
-      const page = await spindle.world_books.list({ limit: PAGE_LIMIT, offset, userId });
-      const data = (page as any).data as WorldBookDTO[] | undefined;
-      const items = Array.isArray(data) ? data : Array.isArray(page as any) ? (page as any) as WorldBookDTO[] : [];
-      books.push(...items);
-      const total = (page as any).total as number | undefined;
-      if (items.length < PAGE_LIMIT) break;
-      if (typeof total === "number" && books.length >= total) break;
-      offset += PAGE_LIMIT;
-    }
+    // Activated entries only (host-ranked, max 24) — never the full library dump.
+    // The full dump pulled every entry from every imported card into memory and,
+    // when includeLorebook was on, into the parser prompt. Activation scoping is
+    // the Lumiverse equivalent of the host's own world-info injection.
+    const activatedPage = await (spindle.world_books.getActivated as unknown as (chatId: string, userId?: string) => Promise<unknown>)(chatId, userId);
+    const activatedData = (activatedPage as any)?.data;
+    const all: any[] = Array.isArray(activatedData) ? activatedData : Array.isArray(activatedPage) ? activatedPage as any[] : [];
+    const activated = all.slice(0, MAX_ACTIVATED_LOREBOOK_ENTRIES);
 
     const entries: LorebookEntrySnapshot[] = [];
     const blocks: string[] = [];
 
-    for (const book of books) {
-      let entryOffset = 0;
-      while (true) {
-        const page = await spindle.world_books.entries.list(book.id, { limit: PAGE_LIMIT, offset: entryOffset, userId });
-        const data = (page as any).data as WorldBookEntryDTO[] | undefined;
-        const items = Array.isArray(data) ? data : Array.isArray(page as any) ? (page as any) as WorldBookDTO[] : [];
-        for (const e of items as any[]) {
-          if ((e as any).disabled) continue;
-          const rawContent = typeof (e as any).content === "string" ? (e as any).content : "";
-          if (rawContent === "" || rawContent == null) continue;
-          const content = rawContent;
-          blocks.push(content);
-          entries.push({
-            id: (e as any).id,
-            world_book_id: (e as any).world_book_id,
-            comment: typeof (e as any).comment === "string" ? (e as any).comment : "",
-            content,
-            disabled: Boolean((e as any).disabled),
-            raw: e as any,
-          });
-        }
-        if (items.length < PAGE_LIMIT) break;
-        const total = (page as any).total as number | undefined;
-        if (typeof total === "number" && entryOffset + items.length >= total) break;
-        entryOffset += PAGE_LIMIT;
+    for (const a of activated) {
+      // ActivatedWorldInfoEntryDTO carries no content; fetch the full entry.
+      let dto: any = a;
+      try {
+        const full = await (spindle.world_books.entries.get as unknown as (id: string, userId?: string) => Promise<unknown>)(String((a as any).id), userId);
+        if (full) dto = full;
+      } catch {
+        // Fall back to the activated subset (which has no content) — entry skipped below.
       }
+      const rawContent = typeof (dto as any)?.content === "string" ? (dto as any).content : "";
+      if (rawContent === "" || rawContent == null) continue;
+      // Raw content only — the original never macro-resolved lorebook text.
+      blocks.push(rawContent);
+      entries.push({
+        id: String((dto as any).id ?? (a as any).id),
+        world_book_id: String((dto as any).world_book_id ?? (a as any).bookId ?? ""),
+        comment: typeof (dto as any).comment === "string" ? (dto as any).comment : typeof (a as any).comment === "string" ? (a as any).comment : "",
+        content: rawContent,
+        disabled: false,
+        raw: dto,
+      });
     }
 
     const fullJoined = blocks.join("\n\n");
@@ -150,7 +143,7 @@ export async function buildFullLorebookSnapshot(
       hasCharacterVisualReference: hasVisual,
       diagnostics: {
         lorebookEntries: entries.length,
-        lorebookBooks: books.length,
+        lorebookActivated: all.length,
       },
       blocks,
       entries,
@@ -302,19 +295,22 @@ export async function buildParserContext(
     }
   }
 
-  // Resolve full snapshot once for preset/override regardless of toggle; push only when includeLorebook true
+  // Activated-entry snapshot (cheap: 1 ranked call + per-entry fetch, max 24).
+  // Resolved regardless of the includeLorebook toggle because the Card.* instruction
+  // entries (Core/Image/Prefill/Preprocess) and the lb-xnai.lb.extra / Inlay.extra
+  // override entries live in it. The full library dump is gone: with the toggle off,
+  // no entry content is pushed into the prompt; with it on, only activated entries are.
   let fullSnapshot: LorebookContextSnapshot | undefined = lorebookSnapshot;
   if (!fullSnapshot) {
-    // Always resolve full snapshot once (no additional calls per attempt if passed in)
     fullSnapshot = await buildFullLorebookSnapshot(chatId, userId);
   }
   if (config.includeLorebook) {
     pushLorebookEntries(fullSnapshot);
-    Object.assign(diagnostics, fullSnapshot.diagnostics, { lorebookMode: "full" });
+    Object.assign(diagnostics, fullSnapshot.diagnostics, { lorebookMode: "activated" });
     (diagnostics as any)._lorebookSnapshot = fullSnapshot;
   } else {
-    // Not pushed, but still expose diagnostics count for preset resolution
-    Object.assign(diagnostics, { lorebookEntries: fullSnapshot.entries.length, lorebookMode: "off-but-fetched" });
+    // Not pushed into the prompt; diagnostics only.
+    Object.assign(diagnostics, { lorebookEntries: fullSnapshot.entries.length, lorebookMode: "off" });
     (diagnostics as any)._lorebookSnapshot = fullSnapshot;
   }
 

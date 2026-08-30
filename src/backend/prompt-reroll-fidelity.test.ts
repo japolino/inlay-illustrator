@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_CONFIG } from "../shared/config.js";
-import { extractLLMPrompts, normalizeCharacterData, getFinalPromptsForGeneration, extractPresetSections, buildAnimaPromptBody, resolvePresetContent } from "./prompt.js";
-import { BUNDLED_PRESETS } from "./original-presets.js";
+import { extractLLMPrompts, normalizeCharacterData, getFinalPromptsForGeneration, extractPresetSections, buildAnimaPromptBody } from "./prompt.js";
 import { normalizeScenePayload, selectPromptEntries } from "./scenes.js";
 import type { ParsedPayload, PreparedParagraph } from "./types.js";
 
@@ -71,9 +70,9 @@ describe("prompt-reroll fidelity golden", () => {
 
   test("applyPreset double-brace {{prompt}} leaves outer braces", () => {
     const raw = { setup: "a", charPos: "b", charNeg: "", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
-    const entries = [{ comment: "프리셋 99", content: "[Positive]\npre {{prompt}} suf\n[Negative]\nneg" }];
-    const [pos] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99", promptStyle: "default", promptSyntax: "nai", encodeMode: "0", supplement: false }), entries);
-    // "{{prompt}}" with promptBody "a, b" (actually setup a + charPos b with divider " | " for nai default)
+    const saved = { id:"p1", name:"P", positivePrefix:"pre {{prompt}} suf", negativePrefix:"neg" };
+    const [pos] = getFinalPromptsForGeneration(raw, cfg({ promptStyle: "default", promptSyntax: "nai", encodeMode: "0", supplement: false, promptPresets:[saved], activePromptPresetId:"p1" }));
+    // "{{prompt}}" with promptBody "a | b" for nai default
     expect(pos).toContain("{a | b}");
     expect(pos).toContain("pre {");
     expect(pos).toContain("} suf");
@@ -81,8 +80,8 @@ describe("prompt-reroll fidelity golden", () => {
 
   test("missing placeholders append", () => {
     const raw = { setup: "S", charPos: "C", charNeg: "", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
-    const entries = [{ comment: "프리셋 99", content: "[Positive]\nstatic\n[Negative]\nneg" }];
-    const [pos] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99", promptStyle: "default", promptSyntax: "nai", encodeMode: "0", supplement: false }), entries);
+    const saved = { id:"p1", name:"P", positivePrefix:"static", negativePrefix:"neg" };
+    const [pos] = getFinalPromptsForGeneration(raw, cfg({ promptStyle: "default", promptSyntax: "nai", encodeMode: "0", supplement: false, promptPresets:[saved], activePromptPresetId:"p1" }));
     // static has no placeholders, so should append promptBody with divider " | " for nai default
     expect(pos).toBe("static | S | C");
   });
@@ -91,13 +90,13 @@ describe("prompt-reroll fidelity golden", () => {
     const raw = { setup: "s", charPos: "(a)", charNeg: "(b)", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
     const entries = [{ comment: "프리셋 99", content: "[Positive]\n{prompt}\n[Negative]\n{prompt}" }];
     // noncompat (nai): positive escaped, negative not, pipe normalized
-    const [posNai, negNai] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99", promptStyle: "default", promptSyntax: "nai", encodeMode: "0" }), entries);
+    const [posNai, negNai] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99", promptStyle: "default", promptSyntax: "nai", encodeMode: "0" }));
     expect(posNai).toContain("\\(a\\)");
     expect(negNai).toBe("(b)");
     expect(negNai).not.toContain("\\(");
     // compat (comfy): brace conversion, newline cleanup, no escape
     const raw2 = { setup: "{s}", charPos: "", charNeg: "", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
-    const [posComfy] = getFinalPromptsForGeneration(raw2, cfg({ presetNumber: "99", promptSyntax: "comfyui" }), entries);
+    const [posComfy] = getFinalPromptsForGeneration(raw2, cfg({ presetNumber: "99", promptSyntax: "comfyui" }));
     expect(posComfy).toContain("(s)");
     expect(posComfy).not.toContain("{s}");
   });
@@ -105,7 +104,7 @@ describe("prompt-reroll fidelity golden", () => {
   test("protected ||...|| pipe normalization", () => {
     const raw = { setup: "a | b ||c|d|| e", charPos: "", charNeg: "", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
     const entries = [{ comment: "프리셋 99", content: "[Positive]\n{prompt}\n[Negative]\n{prompt}" }];
-    const [pos] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99", promptSyntax: "nai" }), entries);
+    const [pos] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99", promptSyntax: "nai" }));
     // outside protected, "a | b" should be normalized to "a | b", inside ||...|| preserved? Our logic protects ||c|d||
     expect(pos).toContain("||c|d||");
     expect(pos).toContain("a | b");
@@ -115,7 +114,7 @@ describe("prompt-reroll fidelity golden", () => {
     const raw = { setup: "s", charPos: "c", charNeg: "", supplement: "sup", situation: "", place: "", camera: "", action: "" } as any;
     const entries = [{ comment: "프리셋 99", content: "[Positive]\n{prompt}\n[Negative]\nneg" }];
     const base = cfg({ presetNumber: "99", promptStyle: "default", promptSyntax: "nai", customPositivePrefix: "pre", customNegative: "neg2", supplement: true, encodeMode: "0" });
-    const [pos] = getFinalPromptsForGeneration(raw, base, entries);
+    const [pos] = getFinalPromptsForGeneration(raw, base);
     // order: pre, s | c, neg2, sup
     const preIdx = pos.indexOf("pre");
     const sIdx = pos.indexOf("s");
@@ -128,14 +127,14 @@ describe("prompt-reroll fidelity golden", () => {
     expect(pos).toContain("neg2, sup");
     // anima divider would be ",\n" (no space after newline per original)
     const baseAnima = cfg({ presetNumber: "99", promptStyle: "anima", promptSyntax: "nai", customPositivePrefix: "pre", customNegative: "neg2", supplement: true });
-    const [posAnima] = getFinalPromptsForGeneration(raw, baseAnima, entries);
+    const [posAnima] = getFinalPromptsForGeneration(raw, baseAnima);
     expect(posAnima).toContain("neg2,\nsup");
   });
 
   test("asset injections order", () => {
     const raw = { setup: "s", charPos: "c", charNeg: "", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
     const entries = [{ comment: "프리셋 99", content: "[Positive]\n{prompt}\n[Negative]\nneg" }];
-    const [pos] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99", mode: "asset", promptStyle: "default", promptSyntax: "nai" }), entries);
+    const [pos] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99", mode: "asset", promptStyle: "default", promptSyntax: "nai" }));
     expect(pos.indexOf("portrait")).toBeLessThan(pos.indexOf("white background"));
     expect(pos.indexOf("portrait")).toBeLessThan(pos.indexOf("cowboy shot"));
     expect(pos).toContain("looking at viewer");
@@ -143,8 +142,8 @@ describe("prompt-reroll fidelity golden", () => {
 
   test("placeholder decode timing and Comfy brace conversion", () => {
     const raw = { setup: "BP3", charPos: "", charNeg: "BP3", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
-    const entries = [{ comment: "프리셋 99", content: "[Positive]\n{prompt} {x}\n[Negative]\n{prompt} {y}" }];
-    const [pos, neg] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99", encodeMode: "0", promptSyntax: "comfyui" }), entries);
+    const saved = { id:"p1", name:"P", positivePrefix:"{prompt} {x}", negativePrefix:"{prompt} {y}" };
+    const [pos, neg] = getFinalPromptsForGeneration(raw, cfg({ encodeMode: "0", promptSyntax: "comfyui", promptPresets:[saved], activePromptPresetId:"p1" }));
     expect(pos).toContain("pussy");
     expect(neg).toContain("pussy");
     expect(pos).toContain("(x)");
@@ -152,46 +151,38 @@ describe("prompt-reroll fidelity golden", () => {
     expect(pos).not.toContain("{x}");
   });
 
-  test("dynamic preset requested/fallback/bundled", () => {
-    const requested = [{ comment: "프리셋 2", content: "[Positive]\nreq\n[Negative]\nreqNeg" }, { comment: "프리셋 1", content: "[Positive]\nfb\n[Negative]\nfbNeg" }];
+  test("no saved preset falls back to a bare {prompt} template (no bundled preset injection)", () => {
     const raw = { setup: "s", charPos: "", charNeg: "", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
-    const [posReq] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "2" }), requested);
-    expect(posReq).toContain("req");
-    // missing requested -> fallback to 1
-    const [posFb] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99" }), requested);
-    expect(posFb).toContain("fb");
-    // no runtime at all -> bundled 1
-    const [posBundled] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99" }), []);
-    expect(posBundled).toContain("@k144d");
+    // No structured preset and no active selection: the former dynamic 프리셋 N / bundled
+    // preset source is intentionally removed, so we get a bare prompt body.
+    const [pos] = getFinalPromptsForGeneration(raw, cfg({ promptSyntax: "nai", encodeMode: "0", activePromptPresetId: null }));
+    expect(pos).toBe("s");
   });
 
-  test("saved Legacy preset selection overrides dynamic lorebook presets", () => {
+  test("saved preset applies when selected; bare fallback when cleared", () => {
     const raw = { setup: "scene", charPos: "character", charNeg: "shotNeg", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
-    const runtime = [{ comment: "프리셋 7", content: "[Positive]\nruntimePreset\n[Negative]\nruntimeNeg" }];
     const saved = { id: "saved-1", name: "Saved", positivePrefix: "savedPositive", negativePrefix: "savedNegative" };
     const [selectedPos, selectedNeg] = getFinalPromptsForGeneration(raw, cfg({
-      presetNumber: "7",
       promptPresets: [saved],
       activePromptPresetId: saved.id
-    }), runtime);
+    }));
     expect(selectedPos).toContain("savedPositive");
-    expect(selectedPos).not.toContain("runtimePreset");
     expect(selectedNeg).toContain("savedNegative");
     expect(selectedNeg).toContain("shotNeg");
 
-    const [dynamicPos] = getFinalPromptsForGeneration(raw, cfg({
-      presetNumber: "7",
+    // Clearing the selection returns to the bare {prompt} fallback (no dynamic/bundled preset).
+    const [clearedPos] = getFinalPromptsForGeneration(raw, cfg({
       promptPresets: [saved],
       activePromptPresetId: null
-    }), runtime);
-    expect(dynamicPos).toContain("runtimePreset");
-    expect(dynamicPos).not.toContain("savedPositive");
+    }));
+    expect(clearedPos).toContain("scene");
+    expect(clearedPos).not.toContain("savedPositive");
   });
 
   test("initial raw storage preserved", () => {
     const payload: ParsedPayload = { scenes: [{ place: "room", shots: [{ paragraph: 1, camera: "cam", situation: "sit", characters: [{ label: "girl", appearance: "red hair" }] }] }] };
     const paragraphs: PreparedParagraph[] = [{ parserIndex: 1, originalIndex: 1, text: "para1" }];
-    const selected = selectPromptEntries(payload, paragraphs, cfg({ presetNumber: "99", promptStyle: "default", supplement: false }), [{ comment: "프리셋 99", content: "[Positive]\n{prompt}\n[Negative]\n{prompt}" }]);
+    const selected = selectPromptEntries(payload, paragraphs, cfg({ presetNumber: "99", promptStyle: "default", supplement: false }));
     expect(selected[0].rawPromptData).toBeDefined();
     expect(selected[0].rawPromptData.situation).toBe("");
     expect(selected[0].rawPromptData.place).toBe("");
@@ -203,10 +194,10 @@ describe("prompt-reroll fidelity golden", () => {
     const raw = { setup: "s1", charPos: "c1", charNeg: "n1", supplement: "sup1", situation: "", place: "", camera: "", action: "" } as any;
     const entries = [{ comment: "프리셋 99", content: "[Positive]\n{prompt}\n[Negative]\n{prompt}" }];
     const cfg1 = cfg({ presetNumber: "99", customPositivePrefix: "pre1", supplement: false });
-    const [pos1] = getFinalPromptsForGeneration(raw, cfg1, entries);
+    const [pos1] = getFinalPromptsForGeneration(raw, cfg1);
     expect(pos1).toContain("pre1");
     const cfg2 = cfg({ presetNumber: "99", customPositivePrefix: "pre2", supplement: true });
-    const [pos2] = getFinalPromptsForGeneration(raw, cfg2, entries);
+    const [pos2] = getFinalPromptsForGeneration(raw, cfg2);
     expect(pos2).toContain("pre2");
     expect(pos2).not.toContain("pre1");
     expect(pos2).toContain("sup1");
@@ -216,12 +207,12 @@ describe("prompt-reroll fidelity golden", () => {
   test("comma cleanup and triple newline collapse", () => {
     const raw = { setup: "a,,  , b", charPos: ", c", charNeg: "", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
     const entries = [{ comment: "프리셋 99", content: "[Positive]\n{prompt}\n[Negative]\n{prompt}" }];
-    const [pos] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99" }), entries);
+    const [pos] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99" }));
     expect(pos).not.toContain(",,");
     expect(pos.startsWith(",")).toBe(false);
     // triple newline collapse: preset with \n\n\n
     const entries2 = [{ comment: "프리셋 99", content: "[Positive]\na\n\n\n\nb\n[Negative]\nneg" }];
-    const [pos2] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99" }), entries2);
+    const [pos2] = getFinalPromptsForGeneration(raw, cfg({ presetNumber: "99" }));
     expect(pos2).not.toContain("\n\n\n");
   });
 });

@@ -2,8 +2,6 @@ import type { Config } from "../shared/config.js";
 import type { RawPromptData, CharacterJson, SceneJson, ShotJson } from "./types.js";
 import { cleanString } from "./utils.js";
 import { decodePlaceholders } from "./encoding.js";
-import { BUNDLED_PRESETS, BUNDLED_PRESET_FALLBACK_KEY } from "./original-presets.js";
-
 // Keep existing helpers for backward compat where needed
 export function normalizeReferenceTags(tagString: unknown): string {
   // Not used in new pipeline, keep simple
@@ -240,51 +238,17 @@ export function extractLLMPrompts(scene: any, config: Config): RawPromptData {
   };
 }
 
-// Preset resolution with bundled fallback
-export function resolvePresetContent(presetNumber: string, lorebookEntries: Array<{ comment: string; content: string }>): string {
-  const rawNum = presetNumber == null ? "" : String(presetNumber);
-  const effective = rawNum !== "" && rawNum !== "null" ? rawNum : "1";
-  const targetComment = `프리셋 ${effective}`;
-  const fallbackComment = `프리셋 1`;
-  const targetEntry = lorebookEntries.find(e => e.comment === targetComment);
-  if (targetEntry !== undefined) return String(targetEntry.content ?? "");
-  if (effective !== "1") {
-    const fb = lorebookEntries.find(e => e.comment === fallbackComment);
-    if (fb !== undefined) return String(fb.content ?? "");
-  }
-  if (BUNDLED_PRESETS[effective] !== undefined) return BUNDLED_PRESETS[effective];
-  return BUNDLED_PRESETS[BUNDLED_PRESET_FALLBACK_KEY] ?? "";
-}
-
-// Helper to get preset content for prompt functions: takes config and snapshot entries
-function getPresetContentForConfig(config: Config, entries: Array<{ comment: string; content: string }> | undefined): string {
-  const num = normalizePresetNumber(config.presetNumber);
-  const snapshotEntries = entries ?? [];
-  return resolvePresetContent(num, snapshotEntries);
-}
-function normalizePresetNumber(v: unknown): string {
-  const raw = v == null ? "" : String(v);
-  if (raw === "" || raw === "null") return "1";
-  return raw;
-}
-
 // applyPreset exactly
-export function applyPreset(entry: RawPromptData, config: Config, lorebookEntries?: Array<{ comment: string; content: string }>): [string, string] {
+// Lorebook presets (프리셋 N) are intentionally not supported on Lumiverse: the
+// structured saved presets (config.promptPresets / activePromptPresetId) are the
+// only preset source. No saved preset → bare {prompt} template via the fallback
+// below, matching staging.
+export function applyPreset(entry: RawPromptData, config: Config): [string, string] {
   const compatMode = config.promptSyntax === "comfyui";
   const useAnima = config.promptStyle === "anima";
   const selectedPreset = activePromptPreset(config);
-  let positiveTemplate: string;
-  let negativeTemplate: string;
-  if (selectedPreset) {
-    // Keep the structured preset workflow used by pre-port Legacy/staging.
-    // A selected saved preset overrides the original dynamic 프리셋 N source;
-    // clearing the selection returns to the byte-exact lorebook/bundled path.
-    positiveTemplate = selectedPreset.positivePrefix;
-    negativeTemplate = selectedPreset.negativePrefix;
-  } else {
-    const presetContent = getPresetContentForConfig(config, lorebookEntries);
-    [positiveTemplate, negativeTemplate] = extractPresetSections(presetContent);
-  }
+  let positiveTemplate = selectedPreset?.positivePrefix ?? "";
+  let negativeTemplate = selectedPreset?.negativePrefix ?? "";
   if (positiveTemplate === "") positiveTemplate = "{prompt}";
   const hasPromptPlaceholder = positiveTemplate.includes("{prompt}") || positiveTemplate.includes("{setup}") || positiveTemplate.includes("{char}") || positiveTemplate.includes("{supplement}");
   if (!hasPromptPlaceholder) {
@@ -360,8 +324,8 @@ export function applyPreset(entry: RawPromptData, config: Config, lorebookEntrie
 }
 
 // getFinalPromptsForGeneration exactly
-export function getFinalPromptsForGeneration(entry: RawPromptData, config: Config, lorebookEntries?: Array<{ comment: string; content: string }>): [string, string] {
-  let [pos, neg] = applyPreset(entry, config, lorebookEntries);
+export function getFinalPromptsForGeneration(entry: RawPromptData, config: Config): [string, string] {
+  let [pos, neg] = applyPreset(entry, config);
 
   // asset injections
   if (config.mode === "asset") {
@@ -482,7 +446,7 @@ export function assemblePrompt(scene: SceneJson, shot: ShotJson, config: Config,
     }),
   };
   const raw = extractLLMPrompts(tmpScene, config);
-  const [finalPos, finalNeg] = getFinalPromptsForGeneration(raw, config, []);
+  const [finalPos, finalNeg] = getFinalPromptsForGeneration(raw, config);
   const adaptedShotNegative = raw.charNeg;
   // Build AssembledPrompt from finalPos (split? But original prompt is single string; we'll store as single section)
   // For PromptEntry, prompt sections should be final string? But keep sections as [finalPos]

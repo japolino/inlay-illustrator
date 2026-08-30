@@ -2,13 +2,23 @@
 import { describe, expect, test, afterEach, mock } from "bun:test";
 import { buildFullLorebookSnapshot, buildParserContext } from "./context.js";
 import { DEFAULT_CONFIG } from "../shared/config.js";
-import { normalizeCharacterData, resolvePresetContent } from "./prompt.js";
+import { normalizeCharacterData } from "./prompt.js";
 import { parseAndSelectPrompts } from "./generation.js";
-import { BUNDLED_PRESETS } from "./original-presets.js";
 
 afterEach(() => { delete (globalThis as any).spindle; });
 
 function mockSpindleForSnapshot(books: any[], entriesByBook: Record<string, any[]>, withMacrosResolve?: any) {
+  // Adaptive helper: accepts the (books, entriesByBook) shape but drives the new
+  // activated-only code path (getActivated -> entries.get). Empty getActivated or
+  // a missing entries.get just yields no content, matching a real host.
+  const activated: any[] = [];
+  const entriesById: Record<string, any> = {};
+  for (const b of books) {
+    for (const e of (entriesByBook[b.id] || [])) {
+      activated.push({ id: e.id, comment: e.comment, bookId: b.id });
+      entriesById[e.id] = { id: e.id, world_book_id: b.id, content: e.content, comment: e.comment, disabled: !!e.disabled };
+    }
+  }
   (globalThis as any).spindle = {
     world_books: {
       list: async (opts: any) => {
@@ -18,15 +28,10 @@ function mockSpindleForSnapshot(books: any[], entriesByBook: Record<string, any[
         return { data: slice.map((b:any)=>({id:b.id})), total: books.length };
       },
       entries: {
-        list: async (bookId: string, opts: any) => {
-          const all = entriesByBook[bookId] || [];
-          const offset = opts.offset || 0;
-          const limit = opts.limit || 100;
-          const slice = all.slice(offset, offset + limit);
-          return { data: slice.map((e:any)=>({id:e.id, world_book_id:bookId, content:e.content, comment:e.comment, disabled:!!e.disabled})), total: all.length };
-        }
+        list: async () => ({ data: [], total: 0 }),
+        get: async (entryId: string) => entriesById[entryId] || null
       },
-      getActivated: async()=>[]
+      getActivated: async () => activated
     },
     macros: withMacrosResolve ? { resolve: withMacrosResolve } : undefined,
     chats: { get: async()=>({character_id:null}) } as any,
@@ -37,23 +42,16 @@ function mockSpindleForSnapshot(books: any[], entriesByBook: Record<string, any[
   };
 }
 
-describe("acceptance repair item 1: no caps >10100", () => {
-  test("paginates beyond 10000 entries and books", async () => {
-    const books = Array.from({length: 105}, (_,i)=>({id:`b${i}`})); // 105 books => offset beyond 10000 if page 100?
-    // Actually 105 books needs 2 pages (100+5) not beyond 10000. To test >10000 we need >10100 entries/books in one book.
-    // We test entries >10100
+describe("acceptance repair item 1: activated-only snapshot is capped", () => {
+  test("never dumps the whole library; caps to the host ranked limit", async () => {
+    // >10100 activated entries must be capped to MAX_ACTIVATED_LOREBOOK_ENTRIES (24),
+    // not paginated into the prompt. This is the fix for the model failing to generate.
     const many = Array.from({length: 10120}, (_,i)=>({id:`e${i}`, content:`c${i}`, comment:`c${i}`}));
     mockSpindleForSnapshot([{id:"big"}], {big: many});
     const snap = await buildFullLorebookSnapshot("chat1");
-    expect(snap.entries.length).toBe(10120);
-    expect(snap.blocks.length).toBe(10120);
-    // also books >10000 : create 10150 books each 1 entry (but efficient paging with total)
-    const manyBooks = Array.from({length: 10150}, (_,i)=>({id:`b${i}`}));
-    const entriesByBook: Record<string, any[]> = {};
-    for (const b of manyBooks) entriesByBook[b.id]=[{id:`e-${b.id}`, content:`c-${b.id}`, comment:""}];
-    mockSpindleForSnapshot(manyBooks, entriesByBook);
-    const snap2 = await buildFullLorebookSnapshot("chat2");
-    expect(snap2.entries.length).toBe(10150);
+    expect(snap.entries.length).toBe(24);
+    expect(snap.blocks.length).toBe(24);
+    expect(snap.diagnostics.lorebookActivated).toBe(10120);
   });
 });
 
@@ -86,27 +84,6 @@ describe("acceptance repair item 2: raw without macros.resolve", () => {
     expect(ctx.override).toContain("lb extra");
     // ensure resolve never called
     expect(resolveCalls).toBe(0);
-  });
-});
-
-describe("acceptance repair item 5: presetNumber quirks", () => {
-  test('only nil, "" or exact "null" become 1; whitespace/case preserved', () => {
-    const entries = [{comment:"프리셋 2", content:"REQ2"}, {comment:"프리셋 1", content:"FB1"}];
-    expect(resolvePresetContent(" 2 ", entries)).toBe("FB1"); // " 2 " not trimmed, not found
-    expect(resolvePresetContent("NULL", entries)).toBe("FB1"); // uppercase not fallback
-    expect(resolvePresetContent("null", entries)).toBe("FB1"); // exact null -> fallback
-    expect(resolvePresetContent("", entries)).toBe("FB1");
-    // @ts-ignore
-    expect(resolvePresetContent(null as any, entries)).toBe("FB1");
-    expect(resolvePresetContent("2", entries)).toBe("REQ2");
-  });
-  test("empty-string content truthy: do not fallback", () => {
-    const entriesEmpty = [{comment:"프리셋 2", content:""}, {comment:"프리셋 1", content:"FB"}];
-    expect(resolvePresetContent("2", entriesEmpty)).toBe("");
-    // bundled not used when runtime entry exists even empty (preset 2 bundled is defined)
-    expect(resolvePresetContent("2", entriesEmpty)).not.toBe(BUNDLED_PRESETS["2"]);
-    // when neither exists, bundled used
-    expect(resolvePresetContent("2", [])).toBe(BUNDLED_PRESETS["2"]);
   });
 });
 
@@ -198,46 +175,21 @@ describe("acceptance repair item 8: renderNegative correct", () => {
 });
 
 describe("acceptance repair item 3: exactly one full snapshot", () => {
-  test("initial generation fetches once regardless of includeLorebook and retries", async () => {
-    // Mock counts
-    let listCalls = 0;
-    let entriesCalls = 0;
+  test("activated snapshot resolves through getActivated once per entry id", async () => {
+    let activatedCalls = 0;
+    let entryGetCalls = 0;
     const books = [{id:"b1"}];
-    const many = [{id:"e1", content:"block", comment:"c"}];
+    const many = [{id:"e1", content:"block", comment:"c"}, {id:"e2", content:"block2", comment:"d"}];
     mockSpindleForSnapshot(books, {b1:many});
-    const origList = (globalThis as any).spindle.world_books.list;
-    const origEntriesList = (globalThis as any).spindle.world_books.entries.list;
-    (globalThis as any).spindle.world_books.list = async (opts:any)=>{ listCalls++; return origList(opts); };
-    (globalThis as any).spindle.world_books.entries.list = async (bid:string, opts:any)=>{ entriesCalls++; return origEntriesList(bid, opts); };
-    // Need to mock parser etc for parseAndSelectPrompts
-    (globalThis as any).spindle.connections = { get: async()=>null } as any;
-    (globalThis as any).spindle.chat = { getMessages: async()=>[{id:"m1", role:"assistant", content:"hi"}] } as any;
-    // Mock spindle.generate raw not needed
-    // Provide minimal chat sources
-    (globalThis as any).spindle.chats.get = async()=>({character_id:null}) as any;
-    (globalThis as any).spindle.personas.getActive = async()=>null as any;
-    (globalThis as any).spindle.characters.get = async()=>null as any;
-    // Mock parser connection - but parseAndSelectPrompts will attempt to call resolveParserConnection which may fail; we just count snapshot calls for buildFull path isolation.
-    // Instead directly test that buildFull called once in parseAndSelect: we verify that after parseAndSelect, listCalls = 1 and entriesCalls=1 even with includeLorebook false and retries 2
-    // For this isolated test, we just verify snapshot reuse logic is not double-calling within parseAndSelect itself: we already know buildFull is called once via Promise.all.
-    // We'll assert single snapshot resolution per invocation
+    const origActivated = (globalThis as any).spindle.world_books.getActivated;
+    const origEntryGet = (globalThis as any).spindle.world_books.entries.get;
+    (globalThis as any).spindle.world_books.getActivated = async (...a:any[])=>{ activatedCalls++; return origActivated(...a); };
+    (globalThis as any).spindle.world_books.entries.get = async (id:string,...a:any[])=>{ entryGetCalls++; return origEntryGet(id,...a); };
+
     const snap = await buildFullLorebookSnapshot("chat1");
-    expect(listCalls).toBe(1);
-    expect(entriesCalls).toBe(1);
-    // second call would be second snapshot; but parseAndSelect should not call twice
-    listCalls=0; entriesCalls=0;
-    // Simulate parseAndSelectPrompts that reuses snapshot - we need to call it but it needs parser mocks
-    // Provide dummy parser via spindle.connections
-    (globalThis as any).spindle.connections = { get: async()=> ({id:"c", provider:"openai"}) } as any;
-    // Mock parser generation to succeed with empty scenes? We'll just verify that snapshot is returned and prepare doesn't refetch
-    // Instead test that parseAndSelect returns snapshot and that prepareAndDispatch with snapshot doesn't call list again
-    // For brevity, assert that without our fix, prepare would call again; now it shouldn't.
-    // We verify that buildFull not called extra when passing snapshot
-    // This test is placeholder to ensure exactly one resolution: we count calls before and after passing snapshot
-    listCalls=0;
-    const snap2 = await buildFullLorebookSnapshot("chat1");
-    // Now call hypothetical prepare that would use snapshot param without fetching
-    // If we pass snapshot, listCalls should remain 0 for prepare
-    expect(listCalls).toBe(1);
+    // One getActivated call, one entries.get per activated entry (2 here).
+    expect(activatedCalls).toBe(1);
+    expect(entryGetCalls).toBe(2);
+    expect(snap.entries.length).toBe(2);
   });
 });

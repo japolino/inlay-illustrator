@@ -199,14 +199,16 @@ function replaceAt<T>(values: T[] | undefined, index: number, value: T, fallback
 export async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSelection> {
   const { chatId, messageId, messages, paragraphs, state, config, userId } = input;
   const targetIndex = Math.max(0, messages.findIndex((message) => message.id === messageId));
-  // Resolve full lorebook snapshot once regardless of includeLorebook toggle — no extra world-book calls per attempt
+  // Resolve the activated-entry lorebook snapshot once (cheap: 1 ranked call + <=24
+  // entry fetches). Feeds Card.* instructions, the lb-xnai.lb.extra / Inlay.extra
+  // override, and — when includeLorebook is on — the parser context blocks.
   const fullSnapshotPromise = buildFullLorebookSnapshot(chatId, userId);
-  const [parserConnection, lorebookSnapshotForPreset, contextSources] = await Promise.all([
+  const [parserConnection, lorebookSnapshot, contextSources] = await Promise.all([
     resolveParserConnection(config, userId),
     fullSnapshotPromise,
     loadParserContextSources(chatId, config, userId)
   ]);
-  const effectiveSnapshotForContext = lorebookSnapshotForPreset;
+  const effectiveSnapshotForContext = lorebookSnapshot;
 
   const buildPreprocessingContextForAttempt = async (attempt: number) =>
     buildParserContext(
@@ -221,7 +223,7 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
       undefined,
       contextSources
     );
-  const preprocessingResult = await preprocessTargetParagraphs(null, config, paragraphs, buildPreprocessingContextForAttempt, userId, lorebookSnapshotForPreset);
+  const preprocessingResult = await preprocessTargetParagraphs(null, config, paragraphs, buildPreprocessingContextForAttempt, userId, lorebookSnapshot);
 
   let lastError: unknown = null;
   for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
@@ -239,7 +241,7 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
         contextSources
       );
       // Pass preprocessingResult (text+used) so header is chosen by used boolean, not shape
-      const parserMessagesList = buildParserMessages(config, context, preprocessingResult, userId, lorebookSnapshotForPreset);
+      const parserMessagesList = buildParserMessages(config, context, preprocessingResult, userId, lorebookSnapshot);
       logStage(config, "parser_prompt_built", {
         attempt,
         systemContextLength: context.systemContext.length,
@@ -264,10 +266,9 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
       );
       // Original success is scenes && #scenes>0 — parsePayloadWithRepair already enforces that.
       // Do NOT validate allowed-P or structural issues; do NOT retry merely because shots later select to zero.
-      const lorebookEntries = lorebookSnapshotForPreset.entries.map(e => ({ comment: e.comment, content: e.content }));
-      const selected = selectPromptEntries(parsed, paragraphs, config, lorebookEntries);
+      const selected = selectPromptEntries(parsed, paragraphs, config);
       // For main pipeline, empty selected is allowed (preserves original no-image completion); sidecar caller will handle empty honestly.
-      return { parsed, selected, snapshot: lorebookSnapshotForPreset };
+      return { parsed, selected, snapshot: lorebookSnapshot };
     } catch (error) {
       lastError = error;
       logStage(config, "parser_attempt_failed", {
@@ -345,16 +346,7 @@ async function prepareAndDispatchImages(
     connectionId: imageConnection?.id || null
   });
   const submissionStartedAt = Date.now();
-  // Resolve lorebook entries once for preset recomposition during initial generation
-  let lorebookEntries: Array<{ comment: string; content: string }> | undefined;
-  if (!lorebookSnapshot) {
-    try {
-      const snap = await buildFullLorebookSnapshot(chatId, userId);
-      lorebookEntries = snap.entries.map(e => ({ comment: e.comment, content: e.content }));
-    } catch { lorebookEntries = []; }
-  } else {
-    lorebookEntries = lorebookSnapshot.entries.map(e => ({ comment: e.comment, content: e.content }));
-  }
+
   return prepareAndDispatchImageJobs(selected, async (entry, index) => {
     const jobStartedAt = Date.now();
     logStage(config, "image_generation_preparation_job_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
@@ -364,7 +356,7 @@ async function prepareAndDispatchImages(
     let finalNegative: string;
     if (raw) {
       // Use current config + lorebook entries at generation time
-      [finalPrompt, finalNegative] = getFinalPromptsForGeneration(raw, config, lorebookEntries);
+      [finalPrompt, finalNegative] = getFinalPromptsForGeneration(raw, config);
     } else {
       // Legacy fallback: use stored assembled prompt directly
       finalPrompt = entry.prompt.sections.join("");
@@ -669,9 +661,7 @@ export async function rerunStoredImage(
       let promptFormat: "legacy" | "ordered";
       let parameters: Record<string, unknown>;
       if (raw) {
-        const snapshot = await buildFullLorebookSnapshot(request.chatId, userId);
-        const entries = snapshot.entries.map(e => ({ comment: e.comment, content: e.content }));
-        [prompt, negative] = getFinalPromptsForGeneration(raw, config, entries);
+        [prompt, negative] = getFinalPromptsForGeneration(raw, config);
         corePrompt = raw.setup + (raw.charPos ? ", " + raw.charPos : "");
         shotNegative = raw.charNeg;
         promptFormat = config.promptStyle === "default" ? "legacy" : "ordered";
@@ -843,9 +833,7 @@ export async function generateRerollCandidates(
     let negative: string;
     const raw = located.record.rawPromptData?.[located.index];
     if (raw) {
-      const snap = await buildFullLorebookSnapshot(request.chatId, userId);
-      const entries = snap.entries.map(e => ({ comment: e.comment, content: e.content }));
-      [prompt, negative] = getFinalPromptsForGeneration(raw, config, entries);
+      [prompt, negative] = getFinalPromptsForGeneration(raw, config);
     } else {
       prompt = located.record.prompts[located.index] || "";
       negative = located.record.negativePrompts?.[located.index] || "";
@@ -911,9 +899,7 @@ export async function applyRerollCandidate(
     let prompt: string;
     let negative: string;
     if (raw) {
-      const snap = await buildFullLorebookSnapshot(request.chatId, userId);
-      const entries = snap.entries.map(e => ({ comment: e.comment, content: e.content }));
-      [prompt, negative] = getFinalPromptsForGeneration(raw, config, entries);
+      [prompt, negative] = getFinalPromptsForGeneration(raw, config);
     } else {
       prompt = located.record.prompts[located.index] || "";
       negative = located.record.negativePrompts?.[located.index] || "";
@@ -966,8 +952,7 @@ export async function rerunAllStoredImages(
     })();
     if (!record) throw new Error("No generated record found for that message.");
     const imageConnection = await resolveImageConnection(config, userId);
-    const snapshot = await buildFullLorebookSnapshot(chatId, userId);
-    const lorebookEntries = snapshot.entries.map(e => ({ comment: e.comment, content: e.content }));
+
     const imageIds = [...record.imageIds];
     const imageUrls = [...record.imageUrls];
     const imageParameters = [...(record.imageParameters || [])];
@@ -979,7 +964,7 @@ export async function rerunAllStoredImages(
       let prompt: string;
       let negative: string;
       if (rawData) {
-        [prompt, negative] = getFinalPromptsForGeneration(rawData, config, lorebookEntries);
+        [prompt, negative] = getFinalPromptsForGeneration(rawData, config);
       } else {
         // Legacy fallback: frozen strings
         prompt = record.prompts[i] || "";

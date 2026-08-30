@@ -8,41 +8,19 @@ import { buildParserMessages } from "./parser.js";
 import { CORE_PREAMBLE } from "./instructions.js";
 
 function mockSpindleForContext(
-  books: Array<{ id: string }>,
-  entriesByBook: Record<string, Array<{ id: string; content: string; comment: string; disabled?: boolean }>>,
+  activated: Array<{ id: string; comment: string; bookId?: string }>,
+  entriesById: Record<string, { id: string; content: string; comment: string; disabled?: boolean; world_book_id?: string }>,
   personaDesc: string | null,
   charDesc: string | null
 ) {
   (globalThis as any).spindle = {
     world_books: {
-      list: async (opts: any) => {
-        const offset = opts.offset || 0;
-        const limit = opts.limit || 100;
-        const slice = books.slice(offset, offset + limit);
-        return { data: slice.map(b => ({ id: b.id, name: b.id, description: "", metadata: {}, created_at: 0, updated_at: 0 })), total: books.length };
-      },
+      list: async () => ({ data: [], total: 0 }),
       entries: {
-        list: async (bookId: string, opts: any) => {
-          const all = entriesByBook[bookId] || [];
-          const offset = opts.offset || 0;
-          const limit = opts.limit || 100;
-          const slice = all.slice(offset, offset + limit);
-          return {
-            data: slice.map(e => ({
-              id: e.id,
-              world_book_id: bookId,
-              content: e.content,
-              comment: e.comment,
-              disabled: !!e.disabled,
-              key: [],
-              keysecondary: [],
-            })),
-            total: all.length
-          };
-        },
-        get: async () => null
+        list: async () => ({ data: [], total: 0 }),
+        get: async (entryId: string) => entriesById[entryId] || null
       },
-      getActivated: async () => []
+      getActivated: async () => activated
     },
     macros: { resolve: async (t: string) => ({ text: t, diagnostics: [] }) },
     chats: { get: async () => ({ character_id: charDesc ? "char1" : null, metadata: {} } as any) },
@@ -54,57 +32,58 @@ function mockSpindleForContext(
 }
 
 describe("context lorebook full dump fidelity", () => {
-  test("raw content only, no ### header, preserved API order, no trimming caps", async () => {
-    const books = [{ id: "bookA" }, { id: "bookB" }];
-    const entriesByBook = {
-      bookA: [
-        { id: "e1", content: "alpha", comment: "c1" },
-        { id: "e2", content: "beta", comment: "c2" }
-      ],
-      bookB: [
-        { id: "e3", content: "gamma", comment: "c3" }
-      ]
+  test("raw content only, no ### header, preserved activation order, no trimming caps", async () => {
+    const activated = [
+      { id: "e1", comment: "c1", bookId: "bookA" },
+      { id: "e2", comment: "c2", bookId: "bookA" },
+      { id: "e3", comment: "c3", bookId: "bookB" }
+    ];
+    const entriesById = {
+      e1: { id: "e1", content: "alpha", comment: "c1", world_book_id: "bookA" },
+      e2: { id: "e2", content: "beta", comment: "c2", world_book_id: "bookA" },
+      e3: { id: "e3", content: "gamma", comment: "c3", world_book_id: "bookB" }
     };
-    mockSpindleForContext(books, entriesByBook, null, null);
+    mockSpindleForContext(activated, entriesById, null, null);
     const snap = await buildLorebookContextSnapshot("chat1", "target", { includeLorebook: true });
-    // Each raw content is its own block, no headers
+    // Each raw content is its own block, no headers; activation order preserved.
     expect(snap.blocks).toEqual(["alpha", "beta", "gamma"]);
     expect(snap.blocks.join("\n")).not.toContain("###");
     expect(snap.blocks.join("\n")).not.toContain("Keys:");
-    // API order: bookA entries then bookB entries
     expect(snap.blocks[0]).toBe("alpha");
     expect(snap.blocks[2]).toBe("gamma");
-    // disabled or empty filtered
-    const books2 = [{ id: "bookA" }];
-    const entries2 = {
-      bookA: [
-        { id: "e1", content: "keep", comment: "" },
-        { id: "e2", content: "", comment: "" },
-        { id: "e3", content: "   ", comment: "" },
-        { id: "e4", content: "skip-disabled", comment: "", disabled: true }
-      ]
+    // Activated entries with empty/whitespace content: empty is filtered, whitespace kept.
+    const activated2 = [
+      { id: "e1", comment: "" }, { id: "e2", comment: "" }, { id: "e3", comment: "" }
+    ];
+    const entriesById2 = {
+      e1: { id: "e1", content: "keep", comment: "" },
+      e2: { id: "e2", content: "", comment: "" },
+      e3: { id: "e3", content: "   ", comment: "" }
     };
-    mockSpindleForContext(books2, entries2 as any, null, null);
+    mockSpindleForContext(activated2, entriesById2, null, null);
     const snap2 = await buildLorebookContextSnapshot("chat1", "target", { includeLorebook: true });
     expect(snap2.blocks).toEqual(["keep", "   "]);
   });
 
-  test("full pagination until total exhausted", async () => {
-    // Create 250 entries across one book to test pagination (PAGE_LIMIT 100)
-    const books = [{ id: "bigBook" }];
-    const many = Array.from({ length: 250 }, (_, i) => ({ id: `e${i}`, content: `content${i}`, comment: `c${i}` }));
-    mockSpindleForContext(books, { bigBook: many }, null, null);
+  test("activated-only snapshot is capped to the host's ranked limit", async () => {
+    // The host returns activated entries ranked; the snapshot must not dump every
+    // library entry. Cap is MAX_ACTIVATED_LOREBOOK_ENTRIES = 24.
+    const activated = Array.from({ length: 250 }, (_, i) => ({ id: `e${i}`, comment: `c${i}`, bookId: "bigBook" }));
+    const entriesById: Record<string, any> = {};
+    for (let i = 0; i < 250; i += 1) entriesById[`e${i}`] = { id: `e${i}`, content: `content${i}`, comment: `c${i}`, world_book_id: "bigBook" };
+    mockSpindleForContext(activated, entriesById, null, null);
     const snap = await buildLorebookContextSnapshot("chat1", "t", { includeLorebook: true });
-    expect(snap.blocks.length).toBe(250);
+    expect(snap.blocks.length).toBe(24);
     expect(snap.blocks[0]).toBe("content0");
-    expect(snap.blocks[249]).toBe("content249");
-    expect(snap.diagnostics.lorebookEntries).toBe(250);
+    expect(snap.blocks[23]).toBe("content23");
+    expect(snap.diagnostics.lorebookEntries).toBe(24);
+    expect(snap.diagnostics.lorebookActivated).toBe(250);
   });
 
-  test("preprocessing includes every lorebook block (false flag wrong)", async () => {
-    const books = [{ id: "b1" }];
-    const entries = { b1: [{ id: "e1", content: "loreA", comment: "" }, { id: "e2", content: "loreB", comment: "" }] };
-    mockSpindleForContext(books, entries, "userDesc", "charDesc");
+  test("preprocessing includes every activated lorebook block", async () => {
+    const activated = [{ id: "e1", comment: "" }, { id: "e2", comment: "" }];
+    const entries = { e1: { id: "e1", content: "loreA", comment: "" }, e2: { id: "e2", content: "loreB", comment: "" } };
+    mockSpindleForContext(activated, entries, "userDesc", "charDesc");
     const chatMessages = [{ id: "m1", role: "assistant", content: "hi" }] as any;
     const ctx = await buildParserContext("chat1", chatMessages, 0, {}, { ...DEFAULT_CONFIG, includeLorebook: true, includeUserInfo: true, includeCharacterInfo: true, characterTagContextEnabled: false }, 0);
     // baseBlocks should contain lore entries
@@ -141,19 +120,21 @@ describe("context lorebook full dump fidelity", () => {
   });
 
   test("exact named overrides order and single header/footer, same on all main attempts not preprocessing", async () => {
-    const books = [{ id: "book1" }, { id: "book2" }];
+    const activated = [
+      { id: "e1", comment: "lb-xnai.lb.extra", bookId: "book1" },
+      { id: "e2", comment: "Inlay.extra", bookId: "book1" },
+      { id: "e3", comment: "Other", bookId: "book1" },
+      { id: "e4", comment: "lb-xnai.lb.extra", bookId: "book2" },
+      { id: "e5", comment: "Inlay.extra", bookId: "book2" }
+    ];
     const entries = {
-      book1: [
-        { id: "e1", content: "lb-extra-1", comment: "lb-xnai.lb.extra" },
-        { id: "e2", content: "inlay-extra-1", comment: "Inlay.extra" },
-        { id: "e3", content: "other", comment: "Other" }
-      ],
-      book2: [
-        { id: "e4", content: "lb-extra-2", comment: "lb-xnai.lb.extra" },
-        { id: "e5", content: "inlay-extra-2", comment: "Inlay.extra" }
-      ]
+      e1: { id: "e1", content: "lb-extra-1", comment: "lb-xnai.lb.extra", world_book_id: "book1" },
+      e2: { id: "e2", content: "inlay-extra-1", comment: "Inlay.extra", world_book_id: "book1" },
+      e3: { id: "e3", content: "other", comment: "Other", world_book_id: "book1" },
+      e4: { id: "e4", content: "lb-extra-2", comment: "lb-xnai.lb.extra", world_book_id: "book2" },
+      e5: { id: "e5", content: "inlay-extra-2", comment: "Inlay.extra", world_book_id: "book2" }
     };
-    mockSpindleForContext(books, entries, null, null);
+    mockSpindleForContext(activated, entries, null, null);
     const cfg = { ...DEFAULT_CONFIG, includeLorebook: true, userInstructionsEnabled: true, customParserInstructions: "customInst", prefillEnabled: false, encodeMode: "0" as const };
     const chatMessages = [{ id: "m1", role: "assistant", content: "hi" }] as any;
     const ctx0 = await buildParserContext("chat1", chatMessages, 0, {}, cfg, 0);
@@ -187,11 +168,10 @@ describe("context lorebook full dump fidelity", () => {
     expect(ctxDisabled.override).toContain("customInst");
   });
 
-  test("lorebook snapshot preserves comment/content for override even when disabled/empty filtered for blocks", async () => {
-    // Ensure snapshot entries retain comment/content for override building even if disabled filtering applies to blocks
-    const books = [{ id: "b1" }];
-    const entries = { b1: [{ id: "e1", content: "lb-content", comment: "lb-xnai.lb.extra" }] };
-    mockSpindleForContext(books, entries, null, null);
+  test("lorebook snapshot preserves comment/content for the .extra override", async () => {
+    const activated = [{ id: "e1", comment: "lb-xnai.lb.extra", bookId: "b1" }];
+    const entries = { e1: { id: "e1", content: "lb-content", comment: "lb-xnai.lb.extra", world_book_id: "b1" } };
+    mockSpindleForContext(activated, entries, null, null);
     const snap = await buildLorebookContextSnapshot("chat1", "t", { includeLorebook: true });
     expect(snap.entries[0].comment).toBe("lb-xnai.lb.extra");
     expect(snap.entries[0].content).toBe("lb-content");

@@ -195,8 +195,7 @@ export function exactVisualKey(entry: NormalizedScene): string {
 export function selectPromptEntries(
   payload: ParsedPayload,
   paragraphs: PreparedParagraph[],
-  config: Config,
-  lorebookEntries?: Array<{ comment: string; content: string }>
+  config: Config
 ): PromptEntry[] {
   const paragraphMap = new Map(paragraphs.map((p) => [p.parserIndex, p]));
   const byParagraph = new Map<number, NormalizedScene>();
@@ -213,7 +212,7 @@ export function selectPromptEntries(
     if (!paragraph) continue;
     // Build raw prompt data via extractLLMPrompts
     const raw = extractLLMPrompts(entry.shot as any, config);
-    const [finalPos, finalNeg] = getFinalPromptsForGeneration(raw, config, lorebookEntries);
+    const [finalPos, finalNeg] = getFinalPromptsForGeneration(raw, config);
     const isAnima = config.promptStyle === "anima";
     const prompt = { sections: [finalPos], format: (isAnima ? "ordered" : "legacy") as "ordered" | "legacy" };
     const corePrompt = { sections: [ [raw.setup, raw.charPos].filter(Boolean).join(", ") ], format: (isAnima ? "ordered" : "legacy") as "ordered" | "legacy" };

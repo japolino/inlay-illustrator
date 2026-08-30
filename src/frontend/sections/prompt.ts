@@ -26,11 +26,11 @@ export function renderPromptSection({ ui, config, actions, rerender }: SectionCo
 
   ui.addSubtitle(section, "Prompt presets");
   const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
-  const presetSelectTarget = ui.row(section, "Active preset", "Saved presets override the original dynamic lorebook preset. Select the dynamic option to use 프리셋 N again.");
+  const presetSelectTarget = ui.row(section, "Active preset", "Preset prefixes are inserted before the custom prompt fields below.");
   const presetSelect = document.createElement("select");
   presetSelect.className = "inlay-native-select";
   presetSelect.setAttribute("aria-label", "Active prompt preset");
-  presetSelect.innerHTML = '<option value="">Original dynamic preset (프리셋 N)</option>';
+  presetSelect.innerHTML = '<option value="">No preset</option>';
   for (const preset of config.promptPresets) {
     const option = document.createElement("option");
     option.value = preset.id;
@@ -160,9 +160,6 @@ export function renderPromptSection({ ui, config, actions, rerender }: SectionCo
     }
   ]);
 
-  if (!selectedPreset) {
-    ui.addText(section, "presetNumber", "Dynamic preset number (lorebook comment 프리셋 N, fallback 1)");
-  }
   ui.addText(section, "imageRerollCount", "Image reroll count (1..8, used for multi-candidate reroll)");
   ui.addText(section, "customPositivePrefix", "Positive prefix (customPos front)");
   ui.addText(section, "customNegative", "Negative additions (customNeg appended to positive - original defect)");

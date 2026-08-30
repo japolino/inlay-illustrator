@@ -240,6 +240,15 @@ function extractText(result: unknown): string {
   return "";
 }
 
+
+function extractFinishReason(result: unknown): string {
+  const object = asRecord(result);
+  if (typeof object.finish_reason === "string") return object.finish_reason;
+  const choices = Array.isArray(object.choices) ? object.choices : [];
+  const first = asRecord(choices[0]);
+  return typeof first.finish_reason === "string" ? first.finish_reason : "";
+}
+
 async function generateParserText(
   connection: ParserConnection,
   config: Config,
@@ -277,7 +286,11 @@ async function generateParserText(
     const rawText = extractText(result);
     // Decode exactly once per response
     const text = decodeResponse(rawText, (config.encodeMode as "0" | "1" | "2") ?? "0");
-    logStage(config, "parser_llm_done", { stage: _stage, outputLength: text.length });
+    const finishReason = extractFinishReason(result);
+    logStage(config, "parser_llm_done", { stage: _stage, outputLength: text.length, ...(finishReason ? { finishReason } : {}) });
+    if (finishReason === "length" && !text.trim()) {
+      throw new Error("Parser response was truncated before producing JSON.");
+    }
     return text;
   } catch (error) {
     throw new Error(`Parser generation failed: ${error instanceof Error ? error.message : String(error)}`);

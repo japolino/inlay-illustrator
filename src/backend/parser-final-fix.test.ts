@@ -79,7 +79,10 @@ describe("A: distinct base system blocks not merged", () => {
           ], total: 2 }),
           get: async (id: string) => ({ id, content: `Content ${id}`, comment: `Comment ${id}`, key: [`key${id}`], priority: 0 } as any)
         },
-        getActivated: async () => []
+        getActivated: async () => [
+          { id: "1", comment: "Comment 1", bookId: "book1" },
+          { id: "2", comment: "Comment 2", bookId: "book1" }
+        ] as any
       },
       macros: { resolve: async (t: string) => ({ text: t, diagnostics: [] }) },
       chats: { get: async () => ({ character_id: "char1", metadata: {} }) as any },
@@ -277,12 +280,12 @@ describe("D: prompt exactness", () => {
     expect(finalizePromptText("BP3 and SE1", cfg)).toBe("pussy and nsfw");
     // positive decode via character appearance
     const rawPos = { setup: "BP3", charPos: "SE1", charNeg: "", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
-    const [pos] = getFinalPromptsForGeneration(rawPos, cfg, emptyEntries);
+    const [pos] = getFinalPromptsForGeneration(rawPos, cfg);
     expect(pos).toContain("pussy");
     expect(pos).toContain("nsfw");
     // negative via character negative
     const rawNeg = { setup: "", charPos: "", charNeg: "BP3", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
-    const [, neg] = getFinalPromptsForGeneration(rawNeg, cfg, emptyEntries);
+    const [, neg] = getFinalPromptsForGeneration(rawNeg, cfg);
     expect(neg).toContain("pussy");
   });
     test("Anima divider always ,\n, non-Anima divider ,\n for Comfy and ' | ' otherwise (raw defect: situation/place empty)", () => {
@@ -291,13 +294,13 @@ describe("D: prompt exactness", () => {
     const defaultCfgComfy = { ...DEFAULT_CONFIG, promptStyle:"default" as const, promptSyntax:"comfyui" as const, encodeMode:"0" as const, customNegative:"", customPositivePrefix:"", supplement:false, presetNumber: "99" as any };
     const emptyEntries: any = [{ comment: "프리셋 99", content: "[Positive]\n{prompt}\n[Negative]\n{prompt}" }];
     const rawAnima = { setup: "cam, sit, placeA", charPos: "girl", charNeg: "", supplement: "", situation: "", place: "", camera: "cam", action: "" } as any;
-    const [animaPos] = getFinalPromptsForGeneration(rawAnima, animaCfg, emptyEntries);
+    const [animaPos] = getFinalPromptsForGeneration(rawAnima, animaCfg);
     expect(animaPos).toContain(",\n");
     expect(animaPos).not.toContain(" | ");
     const rawDefault = { setup: "cam, placeA", charPos: "girl", charNeg: "", supplement: "", situation: "", place: "", camera: "cam", action: "" } as any;
-    const [defaultNaiPos] = getFinalPromptsForGeneration(rawDefault, defaultCfgNai, emptyEntries);
+    const [defaultNaiPos] = getFinalPromptsForGeneration(rawDefault, defaultCfgNai);
     expect(defaultNaiPos).toContain(" | ");
-    const [defaultComfyPos] = getFinalPromptsForGeneration(rawDefault, defaultCfgComfy, emptyEntries);
+    const [defaultComfyPos] = getFinalPromptsForGeneration(rawDefault, defaultCfgComfy);
     expect(defaultComfyPos).toContain(",\n");
   });
   test("null literal custom positive/negative treated as empty", () => {
@@ -347,41 +350,41 @@ describe("E: raw core UNFINALIZED + current-affix helper", () => {
     expect(promptJoined).not.toContain("{");
   });
   test("renderPromptWithCurrentAffixes is deprecated helper - now just placeholder/compat transform, preset/custom via getFinal", async () => {
-    const cfg1 = { ...DEFAULT_CONFIG, promptSyntax:"nai" as const, encodeMode:"0" as const, customNegative:" currNeg ", customPositivePrefix:"pre", presetNumber: "99" as any, promptStyle: "default" as const } as any;
-    const entries = [{ comment: "프리셋 99", content: "[Positive]\npresetPre {prompt}\n[Negative]\npresetNeg" }];
+    const saved = { id:"p1", name:"P", positivePrefix:"presetPre {prompt}", negativePrefix:"presetNeg" };
+    const cfg1 = { ...DEFAULT_CONFIG, promptSyntax:"nai" as const, encodeMode:"0" as const, customNegative:" currNeg ", customPositivePrefix:"pre", promptStyle: "default" as const, promptPresets:[saved], activePromptPresetId:"p1" } as any;
     const rawCore = { setup: "BP3 hair (tag)", charPos: "", charNeg: "", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
-    // getFinal should apply preset, customPos front, customNeg at positive end, decode and escape positive
-    const [pos] = getFinalPromptsForGeneration(rawCore, { ...cfg1, customPositivePrefix:"pre" } as any, entries);
+    // getFinal should apply the structured preset, customPos front, customNeg at positive end, decode and escape positive
+    const [pos] = getFinalPromptsForGeneration(rawCore, { ...cfg1, customPositivePrefix:"pre" } as any);
     expect(pos).toContain("pussy");
     expect(pos).toContain("\\(tag\\)");
     expect(pos).toContain("presetPre");
     expect(pos).toContain("pre");
     // customNegative goes to positive end (defect)
     const raw2 = { setup: "a", charPos: "", charNeg: "", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
-    const [pos2] = getFinalPromptsForGeneration(raw2, { ...cfg1, customNegative:"currNeg" } as any, entries);
+    const [pos2] = getFinalPromptsForGeneration(raw2, { ...cfg1, customNegative:"currNeg" } as any);
     expect(pos2).toContain("currNeg");
     // suffix should be ignored (non-original)
-    const [pos3] = getFinalPromptsForGeneration(rawCore, { ...cfg1, customPositiveSuffix:"suf" } as any, entries);
+    const [pos3] = getFinalPromptsForGeneration(rawCore, { ...cfg1, customPositiveSuffix:"suf" } as any);
     expect(pos3).not.toContain("suf");
     // comfy braces
     const cfgComfy = { ...cfg1, promptSyntax:"comfyui" as const };
     const rawBrace = { setup: "BP3 hair {tag}", charPos: "", charNeg: "", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
-    const [posBrace] = getFinalPromptsForGeneration(rawBrace, cfgComfy, entries);
+    const [posBrace] = getFinalPromptsForGeneration(rawBrace, cfgComfy);
     expect(posBrace).toContain("(tag)");
     expect(posBrace).not.toContain("\\(");
   });
   test("negative helper via getFinal applies current preset + shot negative, no paren escape for NAI", async () => {
-    const cfg = { ...DEFAULT_CONFIG, promptSyntax:"nai" as const, encodeMode:"0" as const, presetNumber: "99" as any } as any;
-    const entries = [{ comment: "프리셋 99", content: "[Positive]\n{prompt}\n[Negative]\npresetNeg, {prompt}" }];
+    const saved = { id:"p1", name:"P", positivePrefix:"{prompt}", negativePrefix:"presetNeg, {prompt}" };
+    const cfg = { ...DEFAULT_CONFIG, promptSyntax:"nai" as const, encodeMode:"0" as const, promptPresets:[saved], activePromptPresetId:"p1" } as any;
     const raw = { setup: "", charPos: "", charNeg: "BP3 (bad)", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
-    const [, neg] = getFinalPromptsForGeneration(raw, cfg, entries);
+    const [, neg] = getFinalPromptsForGeneration(raw, cfg);
     expect(neg).toContain("pussy");
     expect(neg).toContain("(bad)");
     expect(neg).not.toContain("\\(bad\\)");
     expect(neg).toContain("presetNeg");
     // customNegative should NOT appear in negative (defect preserved)
     const cfgWithCustomNeg = { ...cfg, customNegative:"shouldNotAppear" } as any;
-    const [, neg2] = getFinalPromptsForGeneration(raw, cfgWithCustomNeg, entries);
+    const [, neg2] = getFinalPromptsForGeneration(raw, cfgWithCustomNeg);
     expect(neg2).not.toContain("shouldNotAppear");
   });
 });

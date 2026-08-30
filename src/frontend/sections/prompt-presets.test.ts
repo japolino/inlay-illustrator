@@ -155,11 +155,11 @@ function clickButton(root: FakeElement, label: string): void {
 }
 
 describe("prompt preset selection UI", () => {
-  test("renders the dynamic fallback option plus structured preset CRUD actions", () => {
+  test("renders a no-preset option plus structured preset CRUD actions", () => {
     const view = renderPromptSectionFor({ promptPresets: [savedPreset], activePromptPresetId: "saved-1" });
     const select = flatten(view.root).find((node) => node.className === "inlay-native-select");
     expect(select).toBeDefined();
-    expect(select!.innerHTML).toContain('<option value="">Original dynamic preset (프리셋 N)</option>');
+    expect(select!.innerHTML).toContain('<option value="">No preset</option>');
     const savedOptions = select!.children.filter((node) => node.tagName === "OPTION");
     expect(savedOptions.map((node) => node.textContent)).toEqual(["Cinematic"]);
     expect(savedOptions[0].selected).toBe(true);
@@ -171,9 +171,10 @@ describe("prompt preset selection UI", () => {
     ]);
   });
 
-  test("hides the dynamic presetNumber field while a saved preset is selected", () => {
-    const dynamic = renderPromptSectionFor();
-    expect(dynamic.textInputAriaLabels()).toContain("Dynamic preset number (lorebook comment 프리셋 N, fallback 1)");
+  test("never renders a dynamic presetNumber field; structured preset sources are the only preset source", () => {
+    const empty = renderPromptSectionFor();
+    expect(empty.textInputAriaLabels()).not.toContain("Dynamic preset number (lorebook comment 프리셋 N, fallback 1)");
+    expect(empty.textInputAriaLabels()).toContain("Image reroll count (1..8, used for multi-candidate reroll)");
     const structured = renderPromptSectionFor({ promptPresets: [savedPreset], activePromptPresetId: "saved-1" });
     expect(structured.textInputAriaLabels()).not.toContain("Dynamic preset number (lorebook comment 프리셋 N, fallback 1)");
     expect(structured.textInputAriaLabels()).toContain("Image reroll count (1..8, used for multi-candidate reroll)");
