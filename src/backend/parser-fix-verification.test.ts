@@ -76,8 +76,11 @@ describe("fix: parser message order and encoding", () => {
     // override
     expect(decodeResponse(msgs[6].content, "1")).toContain("custom override");
   });
-
-  test("runtime empty Core and Image entries remain two distinct system messages", () => {
+test("bundled Core and Image assets are always two distinct system messages", () => {
+    // Instructions come from the bundled original assets, never lorebook
+    // entries. Core renders empty for encodeMode 0 (no encoding protocol);
+    // Image always carries the bundled tagging instruction. Both are inserted
+    // as separate system messages with the user request immediately after.
     const context: ParserContext = {
       systemContext: CORE_PREAMBLE,
       baseBlocks: [CORE_PREAMBLE],
@@ -86,22 +89,13 @@ describe("fix: parser message order and encoding", () => {
       override: "",
       diagnostics: {},
     };
-    const snapshot = {
-      entries: [
-        { comment: "Card.Core.axLLM", content: "" },
-        { comment: "Card.Image.axLLM", content: "" }
-      ],
-      blocks: [], diagnostics: {}, compact: "", full: "", compacted: false,
-      hasCharacterVisualReference: false
-    } as any;
-    const msgs = buildParserMessages({ ...DEFAULT_CONFIG, encodeMode: "0", prefillEnabled: false }, context, "[P1]\nHi", undefined, snapshot);
-    expect(msgs.slice(1, 3)).toEqual([
-      { role: "system", content: "" },
-      { role: "system", content: "" }
-    ]);
+    const msgs = buildParserMessages({ ...DEFAULT_CONFIG, encodeMode: "0", prefillEnabled: false }, context, "[P1]\nHi");
+    expect(msgs[1].role).toBe("system");
+    expect(msgs[1].content).toBe(""); // Core from bundled asset, encodeMode 0 -> no protocol
+    expect(msgs[2].role).toBe("system");
+    expect(msgs[2].content).toContain("# Image Tagging System"); // bundled Image asset
     expect(msgs[3].role).toBe("user");
   });
-
   test("prefill messages at absolute end when enabled, roles adapted to system/user/assistant", () => {
     const context: ParserContext = {
       systemContext: CORE_PREAMBLE,

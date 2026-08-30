@@ -1,17 +1,14 @@
 import type { Config, ParserEngine, PreprocessingMode } from "../shared/config.js";
 import { CORE_PREAMBLE } from "./instructions.js";
 import { logStage } from "./logging.js";
-import { renderCoreInstructionSource, renderImageInstructionSource, renderOriginalCoreInstruction, renderOriginalImageInstruction, renderPreprocessInstructionSource } from "./original-instructions.js";
+import { renderOriginalCoreInstruction, renderOriginalImageInstruction, renderPreprocessInstructionSource } from "./original-instructions.js";
 import {
-  ORIGINAL_CORE_INSTRUCTION_SOURCE,
-  ORIGINAL_IMAGE_INSTRUCTION_SOURCE,
   ORIGINAL_PREFILL_INSTRUCTION_SOURCE,
   ORIGINAL_PREPROCESS_INSTRUCTION_SOURCE,
 } from "./original-instruction-assets.js";
 import type { ParsedPayload, ParserConnection, ParserContext, PreparedParagraph, SceneJson } from "./types.js";
 import { asRecord } from "./utils.js";
 import { decodeResponse, encodePrompt } from "./encoding.js";
-import type { LorebookContextSnapshot } from "./context.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
@@ -362,43 +359,22 @@ export function parsePrefillMessages(text: string): PrefillMessage[] {
   }));
 }
 
-export function getPrefillMessages(config: Config, snapshot?: LorebookContextSnapshot): PrefillMessage[] {
+export function getPrefillMessages(config: Config): PrefillMessage[] {
   if (!config.prefillEnabled) return [];
-  // Dynamic exact named source: Card.Prefill.Prompt from snapshot, fallback to bundled asset
-  let raw: string | undefined;
-  if (snapshot) {
-    const entry = snapshot.entries.find((e) => e.comment === "Card.Prefill.Prompt");
-    if (entry) raw = entry.content;
-    else raw = undefined;
-  }
-  if (raw === undefined) raw = ORIGINAL_PREFILL_INSTRUCTION_SOURCE;
+  const raw = ORIGINAL_PREFILL_INSTRUCTION_SOURCE;
   if (raw === undefined || raw === "") return [];
   return parsePrefillMessages(raw);
 }
 
-// Helpers for dynamic instruction sources
-function getFirstEntryContent(snapshot: LorebookContextSnapshot | undefined, comment: string): string | undefined {
-  if (!snapshot) return undefined;
-  const entry = snapshot.entries.find((e) => e.comment === comment);
-  if (!entry) return undefined;
-  return entry.content;
-}
-
-function resolveCoreInstruction(snapshot: LorebookContextSnapshot | undefined, config: Config): string {
-  const raw = getFirstEntryContent(snapshot, "Card.Core.axLLM");
-  if (raw !== undefined) return renderCoreInstructionSource(raw, config, false);
-  return renderOriginalCoreInstruction(config);
-}
-
-function resolveImageInstruction(snapshot: LorebookContextSnapshot | undefined, config: Config): string {
-  const raw = getFirstEntryContent(snapshot, "Card.Image.axLLM");
-  if (raw !== undefined) return renderImageInstructionSource(raw, config, false);
-  return renderOriginalImageInstruction(config);
-}
-
-export function resolvePreprocessInstruction(snapshot: LorebookContextSnapshot | undefined, config: Config): string {
-  const raw = getFirstEntryContent(snapshot, "Card.Preprocess.Prompt");
-  return renderPreprocessInstructionSource(raw !== undefined ? raw : ORIGINAL_PREPROCESS_INSTRUCTION_SOURCE, config);
+// The extension's own instructions (Card.Core.axLLM, Card.Image.axLLM,
+// Card.Preprocess.Prompt, Card.Prefill.Prompt) always come from the bundled
+// byte-exact original assets, rendered with the config-driven macros. They
+// are never resolved from lorebook entries: activated-only lorebook scoping
+// could silently drop them and change the parser prompt. Runtime lorebook
+// snapshots still feed the context blocks (lb-xnai.lb.extra / Inlay.extra
+// overrides and, when enabled, lorebook entry content).
+export function resolvePreprocessInstruction(config: Config): string {
+  return renderPreprocessInstructionSource(ORIGINAL_PREPROCESS_INSTRUCTION_SOURCE, config);
 }
 
 // ---------------------------------------------------------------------------
@@ -414,8 +390,7 @@ export function buildParserMessages(
   config: Config,
   context: ParserContext,
   targetSource: string | { text: string; used: boolean },
-  _userId?: string,
-  snapshot?: LorebookContextSnapshot
+  _userId?: string
 ): Array<{ role: "system" | "user" | "assistant"; content: string }> {
   const method = (config.encodeMode as "0" | "1" | "2") ?? "0";
   const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
@@ -445,10 +420,10 @@ export function buildParserMessages(
     messages.push({ role: "system", content: encodePrompt(context.recentContext, method) });
   }
 
-  // 4) Original always inserts both Core and Image system messages, even
-  // when either runtime lorebook entry is the exact empty string.
-  const coreRaw = resolveCoreInstruction(snapshot, config);
-  const imageRaw = resolveImageInstruction(snapshot, config);
+  // 4) Core and Image system messages always come from the bundled original
+  // assets with config-driven macro rendering (never from lorebook entries).
+  const coreRaw = renderOriginalCoreInstruction(config);
+  const imageRaw = renderOriginalImageInstruction(config);
   messages.push({ role: "system", content: encodePrompt(coreRaw, method) });
   messages.push({ role: "system", content: encodePrompt(imageRaw, method) });
 
@@ -461,7 +436,7 @@ export function buildParserMessages(
     userRequest = parserUserRequest(pr.text, config, pr.used);
   } else if (typeof targetSource === "string") {
     // Backward compat: string may already be full request or raw target
-    // If it already contains header markers, encode as is; otherwise build via parserUserRequest with used flag from snapshot? Use fallback regex.
+    // If it already contains header markers, encode as is; otherwise build via parserUserRequest with used flag from the preprocessing result. Use fallback regex.
     // Heuristic: if string contains "## Preprocessed Analysis" or "## Current Message", it's already full request
     if (targetSource.includes("## Preprocessed Analysis") || targetSource.includes("## Current Message")) {
       userRequest = targetSource;
@@ -484,7 +459,7 @@ export function buildParserMessages(
   }
 
   // 7) Enabled prefill messages at absolute end, each content encoded exactly once, roles adapted
-  const prefill = getPrefillMessages(config, snapshot);
+  const prefill = getPrefillMessages(config);
   for (const pm of prefill) {
     messages.push({ role: pm.role, content: encodePrompt(pm.content, method) });
   }
@@ -492,8 +467,8 @@ export function buildParserMessages(
   return messages;
 }
 
-export function preprocessingInstruction(_paragraphs: PreparedParagraph[], config: Config, snapshot?: LorebookContextSnapshot): string {
-  return resolvePreprocessInstruction(snapshot, config);
+export function preprocessingInstruction(_paragraphs: PreparedParagraph[], config: Config): string {
+  return resolvePreprocessInstruction(config);
 }
 
 export function preprocessingUserRequest(rawTarget: string): string {
@@ -514,13 +489,12 @@ export async function preprocessTargetParagraphs(
   config: Config,
   paragraphs: PreparedParagraph[],
   contextOrBuilder: ParserContext | ((attempt: number) => Promise<ParserContext> | ParserContext),
-  userId?: string,
-  snapshot?: LorebookContextSnapshot
+  userId?: string
 ): Promise<PreprocessingResult> {
   const rawTarget = formatTargetParagraphs(paragraphs);
   const mode: PreprocessingMode = (config.preprocessingMode as PreprocessingMode) ?? "off";
   if (mode === "off") return { text: rawTarget, used: false };
-  const templateRaw = preprocessingInstruction(paragraphs, config, snapshot);
+  const templateRaw = preprocessingInstruction(paragraphs, config);
   if (!templateRaw || templateRaw === "") return { text: rawTarget, used: false };
 
   // Resolve the selected preprocessing engine independently. A missing
@@ -563,7 +537,7 @@ export async function preprocessTargetParagraphs(
     }
     const preprocessInput = `${templateRaw}\n\n${rawTarget}`;
     messages.push({ role: "user", content: encodePrompt(preprocessInput, method) });
-    const prefill = getPrefillMessages(config, snapshot);
+    const prefill = getPrefillMessages(config);
     for (const pm of prefill) {
       messages.push({ role: pm.role, content: encodePrompt(pm.content, method) });
     }
@@ -591,10 +565,9 @@ export async function preprocessTargetParagraphsString(
   config: Config,
   paragraphs: PreparedParagraph[],
   contextOrBuilder: ParserContext | ((attempt: number) => Promise<ParserContext> | ParserContext),
-  userId?: string,
-  snapshot?: LorebookContextSnapshot
+  userId?: string
 ): Promise<string> {
-  const res = await preprocessTargetParagraphs(parserConnection, config, paragraphs, contextOrBuilder, userId, snapshot);
+  const res = await preprocessTargetParagraphs(parserConnection, config, paragraphs, contextOrBuilder, userId);
   return res.text;
 }
 

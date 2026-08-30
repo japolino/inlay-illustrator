@@ -223,7 +223,7 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
       undefined,
       contextSources
     );
-  const preprocessingResult = await preprocessTargetParagraphs(null, config, paragraphs, buildPreprocessingContextForAttempt, userId, lorebookSnapshot);
+  const preprocessingResult = await preprocessTargetParagraphs(null, config, paragraphs, buildPreprocessingContextForAttempt, userId);
 
   let lastError: unknown = null;
   for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
@@ -241,7 +241,7 @@ export async function parseAndSelectPrompts(input: ParseStageInput): Promise<Par
         contextSources
       );
       // Pass preprocessingResult (text+used) so header is chosen by used boolean, not shape
-      const parserMessagesList = buildParserMessages(config, context, preprocessingResult, userId, lorebookSnapshot);
+      const parserMessagesList = buildParserMessages(config, context, preprocessingResult, userId);
       logStage(config, "parser_prompt_built", {
         attempt,
         systemContextLength: context.systemContext.length,
