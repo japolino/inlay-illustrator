@@ -334,8 +334,27 @@ export async function listInlayGallery(
     statePaths = [];
   }
 
-  // Do not enumerate unrelated storage: only consider states/ prefix
-  const filtered = statePaths.filter((p) => p.startsWith("states/") && p.endsWith(".json"));
+  // Host `userStorage.list("states/")` returns paths relative to the prefix
+  // directory (e.g. "<chatId>.json"); other list implementations may return the
+  // full prefixed path. Normalize both shapes so the gallery finds state files
+  // regardless of which surface runs underneath.
+  const filtered: string[] = [];
+  const seenPaths = new Set<string>();
+  for (const raw of statePaths) {
+    if (typeof raw !== "string" || !raw) continue;
+    const normalized = raw.replace(/\\/g, "/").replace(/^\/+/, "");
+    let path = normalized;
+    if (path.startsWith("states/")) {
+      // already full
+    } else {
+      // prefix-relative listing or nested artifact: treat as relative to states/
+      path = `states/${path}`;
+    }
+    if (!path.endsWith(".json")) continue;
+    if (seenPaths.has(path)) continue;
+    seenPaths.add(path);
+    filtered.push(path);
+  }
 
   const grouped = new Map<string, InlayGalleryImage[]>();
   const quoteStyles = new Map<string, string>();

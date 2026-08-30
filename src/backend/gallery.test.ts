@@ -310,3 +310,30 @@ describe("inlay gallery backend", () => {
     expect(JSON.stringify(result)).not.toContain("fake");
   });
 });
+
+test("gallery lists chats when host list returns prefix-relative paths", async () => {
+  // Real Lumiverse host: userStorage.list("states/") returns entries relative to the
+  // prefix directory ("<chatId>.json"), not full "states/<chatId>.json" paths.
+  const chatId = "rel-chat-1";
+  const record = makeRecord(chatId, "msg-rel-1", 0, [1]);
+  storage.seedState(chatId, "user-1", {
+    characterAppearance: {},
+    generated: { key1: makeReference(record, `records/${chatId}/key1.json`) }
+  });
+  storage.seedRecord(chatId, "key1", record, "user-1");
+  const originalList = storage.list.bind(storage);
+  (storage as unknown as { list: (prefix?: string, userId?: string) => Promise<string[]> }).list =
+    async (prefix, userId) => {
+      const full = await originalList(prefix, userId);
+      return full.map((p) => (prefix && p.startsWith(prefix) ? p.slice(prefix.length) : p));
+    };
+  try {
+    const result = await listInlayGallery("user-1", 1);
+    expect(result.chatIds).toEqual([chatId]);
+    expect(result.chats.length).toBe(1);
+    expect(result.chats[0].images.length).toBe(1);
+    expect(result.chats[0].images[0].imageId).toBe(record.imageIds[0]);
+  } finally {
+    (storage as unknown as { list: (prefix?: string, userId?: string) => Promise<string[]> }).list = originalList;
+  }
+});
