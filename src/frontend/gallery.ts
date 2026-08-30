@@ -184,33 +184,38 @@ export function createInlayGallery(ctx: SpindleFrontendContext): GalleryControll
   function renderNav(): void {
     if (!navRoot) return;
     navRoot.replaceChildren();
-    const allButton = document.createElement("button");
-    allButton.type = "button";
-    allButton.textContent = "All";
-    allButton.setAttribute("aria-label", "Show all chats");
-    const isAll = selectedChatId === null;
-    allButton.setAttribute("aria-current", String(isAll));
-    if (isAll) allButton.classList.add("is-active");
-    allButton.addEventListener("click", () => {
-      selectedChatId = null;
-      requestGallery(savedAllPage, null);
-    });
-    navRoot.append(allButton);
+    // A single compact dropdown replaces a potentially huge row of chat tabs
+    // (100+ chats would otherwise overflow the top of the modal). The host
+    // select supports type-ahead and scrolls its own list.
+    const select = document.createElement("select");
+    select.className = "inlay-gallery-chat-select";
+    select.setAttribute("aria-label", "Filter gallery by chat");
+
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = "All chats";
+    select.append(allOption);
+
     for (const cid of chatIds) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      const label = chatLabels.get(cid) || `#${cid}`;
-      btn.textContent = label;
-      btn.setAttribute("aria-label", `Show ${label}`);
-      const isSelected = selectedChatId === cid;
-      btn.setAttribute("aria-current", String(isSelected));
-      if (isSelected) btn.classList.add("is-active");
-      btn.addEventListener("click", () => {
-        selectedChatId = cid;
-        requestGallery(1, cid);
-      });
-      navRoot.append(btn);
+      const option = document.createElement("option");
+      option.value = cid;
+      option.textContent = chatLabels.get(cid) || `#${cid}`;
+      select.append(option);
     }
+
+    select.value = selectedChatId || "";
+    select.addEventListener("change", () => {
+      const next = select.value;
+      if (next === "") {
+        selectedChatId = null;
+        requestGallery(savedAllPage, null);
+      } else {
+        selectedChatId = next;
+        requestGallery(1, next);
+      }
+    });
+
+    navRoot.append(select);
     navRoot.setAttribute("role", "navigation");
     navRoot.setAttribute("aria-label", "Chat gallery navigation");
   }

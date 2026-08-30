@@ -205,12 +205,21 @@ describe("Inlay gallery frontend", () => {
     const root = modals[0].root;
     const nav = root.findByClass("inlay-gallery-nav");
     expect(nav).toBeTruthy();
-    const navButtons = nav.findButtons();
-    // All + 2 chats =3
-    expect(navButtons.length).toBe(3);
-    expect(navButtons[0].textContent).toBe("All");
-    expect(navButtons[0].getAttribute("aria-current")).toBe("true");
-    expect(navButtons[1].textContent).toBe("#1");
+    // The chat filter is a single dropdown (not a huge row of chat tabs).
+    const select = nav.querySelector?.("select") || (() => {
+      let found: any = null;
+      const walk = (n: any) => { if (n.tagName === "SELECT" && !found) found = n; for (const ch of n.children) walk(ch); };
+      walk(nav);
+      return found;
+    })();
+    expect(select).toBeTruthy();
+    expect(select.tagName).toBe("SELECT");
+    // All chats + 2 chat options
+    expect(select.children.length).toBe(3);
+    expect(select.children[0].textContent).toBe("All chats");
+    expect(select.children[1].value).toBe("1");
+    expect(select.children[1].textContent).toBe("#1");
+    expect(select.children[2].value).toBe("2");
 
     const headings = root.findByClass("inlay-gallery-content");
     expect(headings).toBeTruthy();
@@ -325,10 +334,16 @@ describe("Inlay gallery frontend", () => {
       chatIds: ["1","2","3","4","5","6"],
       chats: [{ chatId: "6", images: [chatImage("6", 1)] }]
     });
-    // click chat #2
+    // select chat #2 from the dropdown
     const nav = modals[0].root.findByClass("inlay-gallery-nav");
-    const chat2Btn = nav.findButtons().find((b: any) => b.textContent === "#2");
-    chat2Btn.click();
+    const select = (() => {
+      let found: any = null;
+      const walk = (n: any) => { if (n.tagName === "SELECT" && !found) found = n; for (const ch of n.children) walk(ch); };
+      walk(nav);
+      return found;
+    })();
+    select.value = "2";
+    select.dispatchEvent("change", {});
     expect(sent.length).toBe(2);
     expect((sent[1] as Record<string, unknown>).selectedChatId).toBe("2");
     expect((sent[1] as Record<string, unknown>).page).toBe(1);
@@ -347,8 +362,14 @@ describe("Inlay gallery frontend", () => {
     // pagination hidden in per-chat view
     expect(modals[0].root.findByClass("inlay-gallery-pagination").hidden).toBe(true);
     // All returns current page (which was 2 before selecting)
-    const allBtn = nav.findButtons().find((b: any) => b.textContent === "All");
-    allBtn.click();
+    const allSelect = (() => {
+      let found: any = null;
+      const walk = (n: any) => { if (n.tagName === "SELECT" && !found) found = n; for (const ch of n.children) walk(ch); };
+      walk(nav);
+      return found;
+    })();
+    allSelect.value = "";
+    allSelect.dispatchEvent("change", {});
     expect(sent.length).toBe(3);
     expect((sent[2] as Record<string, unknown>).selectedChatId).toBeFalsy();
     expect((sent[2] as Record<string, unknown>).page).toBe(2);

@@ -60,7 +60,8 @@ describe("inlay rendering", () => {
     expect(rendered).toContain("/valid.png");
     expect(rendered.indexOf("/valid.png")).toBeLessThan(rendered.indexOf("Second."));
     expect(rendered).toContain("width:min(100%, 812px)");
-    expect(rendered).toContain("max-height:63vh");
+    expect(rendered).toContain("height:63vh");
+    expect(rendered).toContain("object-fit:cover");
   });
 
   test("escapes image metadata without embedding prompt text in the chat", () => {

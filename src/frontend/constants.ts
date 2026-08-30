@@ -83,7 +83,8 @@ export const PANEL_STYLES = `
   .inlay-lightbox-actions button:disabled{opacity:.55;cursor:wait}
   .inlay-lightbox-action-status{grid-column:1/-1;min-height:16px;color:var(--lumiverse-text-muted);font-size:11px;line-height:1.35}
   .inlay-gallery{width:100%;display:flex;flex-direction:column;gap:12px;min-width:0}
-  .inlay-gallery-nav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;border:1px solid var(--lumiverse-border);border-radius:8px;background:var(--lumiverse-fill-subtle)}
+  .inlay-gallery-nav{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px;border:1px solid var(--lumiverse-border);border-radius:8px;background:var(--lumiverse-fill-subtle)}
+  .inlay-gallery-chat-select{flex:1 1 auto;min-width:180px;max-width:320px;padding:6px 8px;border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);font:inherit;font-size:12px;cursor:pointer}
   .inlay-gallery-nav button{border:1px solid var(--lumiverse-border);border-radius:6px;background:var(--lumiverse-fill);color:var(--lumiverse-text);padding:6px 8px;font:inherit;font-size:12px;cursor:pointer}
   .inlay-gallery-nav button[aria-current="true"],.inlay-gallery-nav button.is-active{background:var(--lumiverse-primary);color:var(--lumiverse-primary-contrast);border-color:var(--lumiverse-primary)}
   .inlay-gallery-nav button:hover:not(:disabled){background:var(--lumiverse-fill-hover)}
