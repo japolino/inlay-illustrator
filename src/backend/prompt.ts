@@ -272,9 +272,19 @@ function normalizePresetNumber(v: unknown): string {
 export function applyPreset(entry: RawPromptData, config: Config, lorebookEntries?: Array<{ comment: string; content: string }>): [string, string] {
   const compatMode = config.promptSyntax === "comfyui";
   const useAnima = config.promptStyle === "anima";
-  const presetContent = getPresetContentForConfig(config, lorebookEntries);
-
-  let [positiveTemplate, negativeTemplate] = extractPresetSections(presetContent);
+  const selectedPreset = activePromptPreset(config);
+  let positiveTemplate: string;
+  let negativeTemplate: string;
+  if (selectedPreset) {
+    // Keep the structured preset workflow used by pre-port Legacy/staging.
+    // A selected saved preset overrides the original dynamic 프리셋 N source;
+    // clearing the selection returns to the byte-exact lorebook/bundled path.
+    positiveTemplate = selectedPreset.positivePrefix;
+    negativeTemplate = selectedPreset.negativePrefix;
+  } else {
+    const presetContent = getPresetContentForConfig(config, lorebookEntries);
+    [positiveTemplate, negativeTemplate] = extractPresetSections(presetContent);
+  }
   if (positiveTemplate === "") positiveTemplate = "{prompt}";
   const hasPromptPlaceholder = positiveTemplate.includes("{prompt}") || positiveTemplate.includes("{setup}") || positiveTemplate.includes("{char}") || positiveTemplate.includes("{supplement}");
   if (!hasPromptPlaceholder) {

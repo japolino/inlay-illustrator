@@ -165,6 +165,29 @@ describe("prompt-reroll fidelity golden", () => {
     expect(posBundled).toContain("@k144d");
   });
 
+  test("saved Legacy preset selection overrides dynamic lorebook presets", () => {
+    const raw = { setup: "scene", charPos: "character", charNeg: "shotNeg", supplement: "", situation: "", place: "", camera: "", action: "" } as any;
+    const runtime = [{ comment: "프리셋 7", content: "[Positive]\nruntimePreset\n[Negative]\nruntimeNeg" }];
+    const saved = { id: "saved-1", name: "Saved", positivePrefix: "savedPositive", negativePrefix: "savedNegative" };
+    const [selectedPos, selectedNeg] = getFinalPromptsForGeneration(raw, cfg({
+      presetNumber: "7",
+      promptPresets: [saved],
+      activePromptPresetId: saved.id
+    }), runtime);
+    expect(selectedPos).toContain("savedPositive");
+    expect(selectedPos).not.toContain("runtimePreset");
+    expect(selectedNeg).toContain("savedNegative");
+    expect(selectedNeg).toContain("shotNeg");
+
+    const [dynamicPos] = getFinalPromptsForGeneration(raw, cfg({
+      presetNumber: "7",
+      promptPresets: [saved],
+      activePromptPresetId: null
+    }), runtime);
+    expect(dynamicPos).toContain("runtimePreset");
+    expect(dynamicPos).not.toContain("savedPositive");
+  });
+
   test("initial raw storage preserved", () => {
     const payload: ParsedPayload = { scenes: [{ place: "room", shots: [{ paragraph: 1, camera: "cam", situation: "sit", characters: [{ label: "girl", appearance: "red hair" }] }] }] };
     const paragraphs: PreparedParagraph[] = [{ parserIndex: 1, originalIndex: 1, text: "para1" }];
