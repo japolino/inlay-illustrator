@@ -45,6 +45,14 @@ export type GalleryImageDTO = {
 
 export type GalleryChatDTO = {
   chatId: string;
+  /** Best-effort chat display name. */
+  name?: string;
+  /** Best-effort character card name. */
+  cardName?: string;
+  /** Number of distinct assistant messages with inlay records. */
+  messageCount?: number;
+  /** Number of distinct non-default swipe branches recorded for this chat. */
+  branchCount?: number;
   quoteStyle?: string;
   images: GalleryImageDTO[];
 };

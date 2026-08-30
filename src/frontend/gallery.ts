@@ -12,7 +12,7 @@ function makeRequestId(): string {
 }
 
 export type GalleryController = {
-  open(): void;
+  open(initialChatId?: string | null): void;
   destroy(): void;
 };
 
@@ -41,6 +41,7 @@ export function createInlayGallery(ctx: SpindleFrontendContext): GalleryControll
   let selectedChatId: string | null = null;
   let savedAllPage = 1;
   let chatIds: string[] = [];
+  const chatLabels = new Map<string, string>();
   let totalChats = 0;
   let totalPages = 1;
   let isDismissed = false;
@@ -141,8 +142,28 @@ export function createInlayGallery(ctx: SpindleFrontendContext): GalleryControll
     if (showHeading) {
       const heading = document.createElement("div");
       heading.className = "inlay-gallery-chat-heading";
-      heading.textContent = `💬 Chat #${chat.chatId}`;
+      heading.textContent = `💬 ${chat.cardName || chat.name || `Chat #${chat.chatId}`}`;
       section.append(heading);
+
+      const metaBits: string[] = [];
+      if (typeof chat.messageCount === "number") {
+        metaBits.push(`${chat.messageCount} message${chat.messageCount === 1 ? "" : "s"}`);
+      }
+      if (chat.images && chat.images.length) {
+        metaBits.push(`${chat.images.length} image${chat.images.length === 1 ? "" : "s"}`);
+      }
+      if (typeof chat.branchCount === "number" && chat.branchCount > 0) {
+        metaBits.push(`${chat.branchCount} branch${chat.branchCount === 1 ? "" : "es"}`);
+      }
+      if (chat.cardName && chat.name && chat.name !== chat.cardName) {
+        metaBits.unshift(chat.name);
+      }
+      if (metaBits.length) {
+        const meta = document.createElement("div");
+        meta.className = "inlay-gallery-chat-meta";
+        meta.textContent = metaBits.join(" · ");
+        section.append(meta);
+      }
     }
     const parsedQuoteCss = splitOriginalQuoteCss(chat.quoteStyle || "");
     if (parsedQuoteCss.globalCss.trim()) {
@@ -178,8 +199,9 @@ export function createInlayGallery(ctx: SpindleFrontendContext): GalleryControll
     for (const cid of chatIds) {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.textContent = `#${cid}`;
-      btn.setAttribute("aria-label", `Show chat ${cid}`);
+      const label = chatLabels.get(cid) || `#${cid}`;
+      btn.textContent = label;
+      btn.setAttribute("aria-label", `Show ${label}`);
       const isSelected = selectedChatId === cid;
       btn.setAttribute("aria-current", String(isSelected));
       if (isSelected) btn.classList.add("is-active");
@@ -280,6 +302,10 @@ export function createInlayGallery(ctx: SpindleFrontendContext): GalleryControll
     currentPage = typeof msg.page === "number" && msg.page >= 1 ? msg.page : currentPage;
     if (selectedChatId === null) savedAllPage = currentPage;
     const chats = Array.isArray(msg.chats) ? msg.chats : Array.isArray(msg.records) ? msg.records : [];
+    for (const chat of chats) {
+      if (!chat || typeof chat.chatId !== "string") continue;
+      chatLabels.set(chat.chatId, chat.cardName || chat.name || `#${chat.chatId}`);
+    }
     renderNav();
     renderPagination();
     renderGalleryData(chats);
@@ -309,14 +335,15 @@ export function createInlayGallery(ctx: SpindleFrontendContext): GalleryControll
     activeRoot.append(wrapper);
   }
 
-  function open(): void {
+  function open(initialChatId?: string | null): void {
     if (activeModal) {
       try { activeModal.dismiss(); } catch {}
       activeModal = null;
     }
     isDismissed = false;
+    const scopeChatId = typeof initialChatId === "string" && initialChatId ? initialChatId : null;
     const modal = ctx.ui.showModal({
-      title: "Inlay gallery",
+      title: scopeChatId ? "Current chat gallery" : "Inlay gallery",
       width: 900,
       maxHeight: 700
     });
@@ -324,14 +351,15 @@ export function createInlayGallery(ctx: SpindleFrontendContext): GalleryControll
     activeRoot = modal.root;
     ensureStructure();
     chatIds = [];
+    chatLabels.clear();
     totalChats = 0;
     totalPages = 1;
     currentPage = 1;
     savedAllPage = 1;
-    selectedChatId = null;
+    selectedChatId = scopeChatId;
     pendingRequestId = null;
     renderLoading();
-    requestGallery(1, null);
+    requestGallery(1, scopeChatId);
     modal.onDismiss(() => {
       isDismissed = true;
       activeModal = null;

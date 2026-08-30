@@ -337,3 +337,81 @@ test("gallery lists chats when host list returns prefix-relative paths", async (
     (storage as unknown as { list: (prefix?: string, userId?: string) => Promise<string[]> }).list = originalList;
   }
 });
+
+
+describe("inlay gallery chat enrichment", () => {
+  test("names entries with the card/chat name and reports message/branch counts", async () => {
+    // Host chat/character APIs resolve display metadata for each gallery chat.
+    const chats = new Map<string, { name: string; character_id: string }>([
+      ["1", { name: "Alice chat", character_id: "char-1" }],
+      ["2", { name: "Bob chat", character_id: "char-2" }]
+    ]);
+    const characters = new Map<string, { name: string }>([
+      ["char-1", { name: "Alice" }],
+      ["char-2", { name: "Bob" }]
+    ]);
+    const baseSpindle = (globalThis as unknown as { spindle: Record<string, unknown> }).spindle;
+    (globalThis as unknown as { spindle: unknown }).spindle = {
+      ...baseSpindle,
+      chats: { get: async (id: string) => chats.get(id) || null },
+      characters: { get: async (id: string) => characters.get(id) || null }
+    };
+
+    // Chat 1: two messages, one of which has a non-default swipe branch.
+    const recordA = makeRecord("1", "msg-1", 0, [1, 2]);
+    const recordB = makeRecord("1", "msg-1", 1, [1]); // branch swipe
+    const recordC = makeRecord("1", "msg-2", 0, [1]);
+    for (const [key, rec] of [["a", recordA], ["b", recordB], ["c", recordC]] as const) {
+      const recordPath = `records/1/${key}.json`;
+      storage.seedRecord("1", key, rec);
+      storage.files.set(JSON.stringify(["user-1", recordPath]), JSON.stringify(rec));
+    }
+    storage.seedState("1", "user-1", {
+      characterAppearance: {},
+      generated: { a: makeReference(recordA, "records/1/a.json"), b: makeReference(recordB, "records/1/b.json"), c: makeReference(recordC, "records/1/c.json") }
+    });
+
+    // Chat 2: a single message.
+    const recordD = makeRecord("2", "msg-x", 0, [1]);
+    const recordPathD = "records/2/d.json";
+    storage.seedRecord("2", "d", recordD);
+    storage.files.set(JSON.stringify(["user-1", recordPathD]), JSON.stringify(recordD));
+    storage.seedState("2", "user-1", { characterAppearance: {}, generated: { d: makeReference(recordD, recordPathD) } });
+
+    const result = await listInlayGallery("user-1", 1);
+    const chat1 = result.chats.find((c) => c.chatId === "1");
+    const chat2 = result.chats.find((c) => c.chatId === "2");
+
+    expect(chat1?.cardName).toBe("Alice");
+    expect(chat1?.name).toBe("Alice chat");
+    expect(chat1?.messageCount).toBe(2); // msg-1, msg-2
+    expect(chat1?.branchCount).toBe(1); // msg-1 swipe 1
+    expect(chat1?.images.length).toBe(4); // recordA(2) + recordB(1) + recordC(1)
+
+    expect(chat2?.cardName).toBe("Bob");
+    expect(chat2?.name).toBe("Bob chat");
+    expect(chat2?.messageCount).toBe(1);
+    expect(chat2?.branchCount).toBe(0);
+    expect(chat2?.images.length).toBe(1);
+  });
+
+  test("falls back to raw chat ids when the host chat API is unavailable", async () => {
+    // Simulate a host without chats/characters APIs (older host or limited permissions).
+    const spindle = (globalThis as unknown as { spindle: unknown }).spindle as Record<string, unknown>;
+    delete spindle.chats;
+    delete spindle.characters;
+
+    const record = makeRecord("7", "msg-7", 0, [1]);
+    const recordPath = "records/7/seven.json";
+    storage.seedRecord("7", "seven", record);
+    storage.files.set(JSON.stringify(["user-1", recordPath]), JSON.stringify(record));
+    storage.seedState("7", "user-1", { characterAppearance: {}, generated: { seven: makeReference(record, recordPath) } });
+
+    const result = await listInlayGallery("user-1", 1);
+    const chat = result.chats.find((c) => c.chatId === "7");
+    expect(chat?.cardName).toBeUndefined();
+    expect(chat?.name).toBeUndefined();
+    expect(chat?.messageCount).toBe(1);
+    expect(chat?.branchCount).toBe(0);
+  });
+});

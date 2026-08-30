@@ -29,7 +29,7 @@ export function setup(ctx: SpindleFrontendContext) {
   const removeLightbox = installInlayLightbox(ctx);
   const removeMessageDisplay = installInlayMessageDisplay(ctx);
   const gallery = createInlayGallery(ctx);
-  const removeFab = installInlayFab(ctx, { getCorner: () => config.fabCorner, openGallery: () => gallery.open() });
+  const removeFab = installInlayFab(ctx, { getCorner: () => config.fabCorner, openGallery: () => gallery.open(activeChatId()) });
 
   function activeChatId(): string {
     try {

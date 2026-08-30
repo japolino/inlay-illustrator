@@ -94,6 +94,7 @@ export const PANEL_STYLES = `
   .inlay-gallery-content{display:flex;flex-direction:column;gap:16px;max-height:60vh;overflow:auto;padding:4px}
   .inlay-gallery-chat{width:100%;display:flex;flex-direction:column;gap:8px}
   .inlay-gallery-chat-heading{font-size:13px;font-weight:600;color:var(--lumiverse-text);padding:6px 0;border-bottom:1px solid var(--lumiverse-border)}
+  .inlay-gallery-chat-meta{font-size:12px;color:var(--lumiverse-text-muted);margin-top:-2px;padding-bottom:2px}
   .inlay-gallery-grid{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
   .inlay-gallery-card{width:calc(33% - 8px);min-width:160px;display:flex;flex-direction:column;gap:6px;border:1px solid var(--lumiverse-border);border-radius:8px;background:var(--lumiverse-fill);overflow:hidden}
   .inlay-gallery-badge{align-self:flex-start;margin:8px 8px 0;padding:2px 6px;border-radius:999px;background:var(--lumiverse-fill-subtle);border:1px solid var(--lumiverse-border);font-size:11px;color:var(--lumiverse-text-muted)}

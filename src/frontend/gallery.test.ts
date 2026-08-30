@@ -473,3 +473,55 @@ describe("Inlay gallery frontend", () => {
     gallery.destroy();
   });
 });
+
+
+describe("Inlay gallery scoped-open and naming", () => {
+  beforeEach(() => setupDom());
+  afterEach(() => teardownDom());
+
+  test("open(chatId) scopes the first request to that chat", () => {
+    const { ctx, sent, modals } = makeCtx();
+    const gallery = createInlayGallery(ctx as unknown as import("lumiverse-spindle-types").SpindleFrontendContext);
+    gallery.open("chat-9");
+    expect(modals.length).toBe(1);
+    const first = sent[0] as Record<string, unknown>;
+    expect(first.type).toBe("list_inlay_gallery");
+    expect(first.page).toBe(1);
+    expect(first.selectedChatId).toBe("chat-9");
+  });
+
+  test("open() without a chat id stays on the global All view", () => {
+    const { ctx, sent } = makeCtx();
+    const gallery = createInlayGallery(ctx as unknown as import("lumiverse-spindle-types").SpindleFrontendContext);
+    gallery.open();
+    const first = sent[0] as Record<string, unknown>;
+    expect(first.type).toBe("list_inlay_gallery");
+    expect(first.selectedChatId).toBeUndefined();
+  });
+
+  test("renders the card/chat name and message/branch counts in the heading", () => {
+    const { ctx, sent, modals, emit } = makeCtx();
+    const gallery = createInlayGallery(ctx as unknown as import("lumiverse-spindle-types").SpindleFrontendContext);
+    gallery.open();
+    const first = sent[0] as Record<string, unknown>;
+    emit({
+      type: "inlay_gallery_result",
+      requestId: first.requestId,
+      ok: true,
+      page: 1,
+      totalChats: 1,
+      totalPages: 1,
+      chatIds: ["1"],
+      chats: [
+        { chatId: "1", cardName: "Alice", name: "Alice chat", messageCount: 2, branchCount: 1, images: [chatImage("1", 1), chatImage("1", 2), chatImage("1", 3)] as unknown[] }
+      ]
+    });
+    const root = modals[0].root;
+    const heading = root.findByClass("inlay-gallery-chat-heading");
+    expect(heading.textContent).toBe("💬 Alice");
+    const meta = root.findByClass("inlay-gallery-chat-meta");
+    expect(meta.textContent).toContain("2 messages");
+    expect(meta.textContent).toContain("3 images");
+    expect(meta.textContent).toContain("1 branch");
+  });
+});

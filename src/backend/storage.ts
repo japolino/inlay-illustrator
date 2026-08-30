@@ -271,6 +271,51 @@ export async function sendState(userId?: string, chatId?: string, preparedConfig
 
 export const GALLERY_CHATS_PER_PAGE = 5;
 
+type HostChatLike = { name?: string; character_id?: string };
+type HostCharacterLike = { name?: string };
+
+/**
+ * Best-effort display metadata for a gallery chat. Wrapped in try/catch because
+ * the host `chats`/`characters` APIs may be unavailable or permission-gated;
+ * the gallery must still work with raw chat ids when they are.
+ */
+async function enrichGalleryChat(
+  chatId: string,
+  images: InlayGalleryImage[],
+  quoteStyle: string,
+  userId?: string
+): Promise<InlayGalleryChat> {
+  let name: string | undefined;
+  let cardName: string | undefined;
+  try {
+    const chatsApi = (spindle.chats as { get?: (id: string, userId?: string) => Promise<HostChatLike | null> } | undefined);
+    const charactersApi = (spindle.characters as { get?: (id: string, userId?: string) => Promise<HostCharacterLike | null> } | undefined);
+    if (chatsApi && typeof chatsApi.get === "function") {
+      const chat = await chatsApi.get(chatId, userId);
+      if (chat) {
+        if (typeof chat.name === "string" && chat.name) name = chat.name;
+        const characterId = chat.character_id;
+        if (characterId && charactersApi && typeof charactersApi.get === "function") {
+          const character = await charactersApi.get(characterId, userId);
+          if (character && typeof character.name === "string" && character.name) cardName = character.name;
+        }
+      }
+    }
+  } catch {
+    // Best-effort only.
+  }
+
+  const messageIds = new Set<string>();
+  const branches = new Set<string>();
+  for (const image of images) {
+    if (image.messageId) messageIds.add(image.messageId);
+    const swipe = typeof image.swipeId === "number" ? image.swipeId : 0;
+    if (swipe > 0) branches.add(`${image.messageId}:${swipe}`);
+  }
+
+  return { chatId, name, cardName, messageCount: messageIds.size, branchCount: branches.size, quoteStyle, images };
+}
+
 export type InlayGalleryImage = {
   chatId: string;
   messageId: string;
@@ -286,6 +331,14 @@ export type InlayGalleryImage = {
 
 export type InlayGalleryChat = {
   chatId: string;
+  /** Best-effort chat display name (empty when the host chat is unavailable). */
+  name?: string;
+  /** Best-effort character card name (empty when the card is unavailable). */
+  cardName?: string;
+  /** Number of distinct assistant messages that have inlay records. */
+  messageCount?: number;
+  /** Number of distinct non-default swipe branches recorded for this chat. */
+  branchCount?: number;
   quoteStyle?: string;
   images: InlayGalleryImage[];
 };
@@ -485,13 +538,16 @@ export async function listInlayGallery(
   if (selectedChatId) {
     const selected = String(selectedChatId);
     const images = grouped.get(selected);
-    if (images) chats = [{ chatId: selected, quoteStyle: quoteStyles.get(selected) || "", images }];
-    else chats = [];
+    if (images) {
+      chats = [await enrichGalleryChat(selected, images, quoteStyles.get(selected) || "", userId)];
+    } else {
+      chats = [];
+    }
   } else {
     const start = (clampedPage - 1) * GALLERY_CHATS_PER_PAGE;
     const end = start + GALLERY_CHATS_PER_PAGE;
     const pageIds = chatIds.slice(start, end);
-    chats = pageIds.map((cid) => ({ chatId: cid, quoteStyle: quoteStyles.get(cid) || "", images: grouped.get(cid) || [] }));
+    chats = await Promise.all(pageIds.map((cid) => enrichGalleryChat(cid, grouped.get(cid) || [], quoteStyles.get(cid) || "", userId)));
   }
 
   return {
