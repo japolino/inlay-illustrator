@@ -247,20 +247,28 @@ async function generateParserText(
   userId?: string,
   _stage: ParserStage = "main"
 ): Promise<string> {
-  // Use connection's model via saved Spindle connection; do not inject provider/model/token budget/timeout/reasoning.
-  // Spindle's GenerationRequestDTO is {type, messages, connection_id, parameters?, userId?, signal?}.
-  // Parameters default to {} so connection defaults govern; explicit parserModel/Parameters are silent fallback only,
-  // but spec says they must not alter default calls — we intentionally ignore them here and pass {}.
+  // Use the connection's saved model, passed explicitly on the raw request.
+  // The Lumiverse host does NOT resolve provider/model from connection_id alone for
+  // custom (OpenAI-compatible) connections — observed as upstream 400 "Model name not
+  // specified, model name cannot be empty" / 401 "Model  is not supported" (empty model
+  // in the outgoing request body) even though spindle.connections.get reports a model.
+  // Mirrors staging generateParserText and the GenerationRequestDTO doc example:
+  // generate.raw({ provider, model, connection_id, messages, parameters, ... }).
+  // parameters stay {} so connection defaults govern other knobs; parserModel is the
+  // silent migration fallback and only applies when the connection has no model.
   const params: Record<string, unknown> = {};
+  const effectiveModel = config.parserModel || connection.model;
   logStage(config, "parser_llm_start", {
     stage: _stage,
     connectionId: connection.id,
     provider: connection.provider,
-    model: connection.model,
+    model: effectiveModel,
   });
   try {
     const result: unknown = await (spindle.generate.raw as unknown as (req: Record<string, unknown>) => Promise<unknown>)({
       type: "raw",
+      provider: connection.provider,
+      model: effectiveModel,
       connection_id: connection.id,
       messages,
       parameters: params,

@@ -1,7 +1,7 @@
 
 import { describe, expect, test, mock, beforeEach } from "bun:test";
 import { DEFAULT_CONFIG } from "../shared/config.js";
-import { buildParserMessages, preprocessingInstruction, preprocessTargetParagraphs, formatTargetParagraphs } from "./parser.js";
+import { buildParserMessages, preprocessingInstruction, preprocessTargetParagraphs, formatTargetParagraphs, generateParserText } from "./parser.js";
 import { buildParserContext, formatRecentContext, includeCountForAttempt } from "./context.js";
 import { assemblePrompt, finalizePromptText, renderPromptWithCurrentAffixes, renderNegativeWithCurrentSelection, renderPrompt, getFinalPromptsForGeneration } from "./prompt.js";
 import { decodePlaceholders, encodePrompt, decodeResponse } from "./encoding.js";
@@ -212,6 +212,30 @@ describe("B: preprocessing independent retry and verbatim", () => {
     expect(res.text.length).toBe(15000);
     expect(res.text).toBe(longVerbatim);
     expect(res.used).toBe(true);
+  });
+});
+
+describe("B2: raw generate carries explicit provider/model (custom-connection empty-model fix)", () => {
+  test("raw request includes provider and connection model so custom providers never send an empty model", async () => {
+    const m = mockSpindleGenerate([{ success: true, result: "ok" }]);
+    const conn = { id: "conn-1", name: "n", provider: "custom", model: "nemotron-3.5-lightning-free" } as any;
+    const cfg = { ...DEFAULT_CONFIG, encodeMode: "0" as const, parserModel: "" };
+    await generateParserText(conn, cfg as any, [{ role: "user", content: "hi" }]);
+    expect(m.getCallCount()).toBe(1);
+    const req = m.getCalls()[0];
+    expect(req.type).toBe("raw");
+    expect(req.provider).toBe("custom");
+    expect(req.model).toBe("nemotron-3.5-lightning-free");
+    expect(req.connection_id).toBe("conn-1");
+  });
+
+  test("parserModel silent migration fallback wins over the connection model when set", async () => {
+    const m = mockSpindleGenerate([{ success: true, result: "ok" }]);
+    const conn = { id: "conn-2", name: "n", provider: "custom", model: "" } as any;
+    const cfg = { ...DEFAULT_CONFIG, encodeMode: "0" as const, parserModel: "override-model" };
+    await generateParserText(conn, cfg as any, [{ role: "user", content: "hi" }]);
+    expect(m.getCalls()[0].model).toBe("override-model");
+    expect(m.getCalls()[0].provider).toBe("custom");
   });
 });
 
