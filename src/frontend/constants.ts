@@ -5,7 +5,7 @@ export const INLAY_ICON_SVG = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\
 export const INLAY_SETTINGS_DESCRIPTION = "Generate, reroll, edit, and organize message illustrations with the original Inlay Image v3.5 workflow.";
 
 export const PANEL_STYLES = `
-  .inlay-settings-host{display:block;width:100%;min-width:0;box-sizing:border-box;color:var(--lumiverse-text)}
+  .inlay-settings-host{display:block;width:100%;min-width:0;box-sizing:border-box;color:var(--lumiverse-text);container:inlay-settings/inline-size}
   .inlay-settings-page{width:100%;max-width:1480px;margin:0 auto;padding:clamp(16px,2.5vw,32px);display:flex;flex-direction:column;gap:18px;box-sizing:border-box;overflow-x:clip}
   .inlay-settings-header{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,380px);align-items:center;gap:20px;padding:20px 22px;border:1px solid var(--lumiverse-border);border-radius:12px;background:var(--lumiverse-fill-subtle)}
   .inlay-settings-identity{display:flex;align-items:center;gap:14px;min-width:0}
@@ -51,12 +51,12 @@ export const PANEL_STYLES = `
   .inlay-subtitle{font-size:13px;font-weight:650;margin:3px 0}
   .inlay-parser-summary{font-size:12px;color:var(--lumiverse-text-muted);line-height:1.45;overflow-wrap:anywhere}
   .inlay-status{min-width:0;padding:10px 12px;border:1px solid var(--lumiverse-border);border-radius:8px;background:var(--lumiverse-fill);font-size:12px;line-height:1.45;color:var(--lumiverse-text-muted);white-space:pre-wrap;overflow-wrap:anywhere;min-height:20px}
-  @media(max-width:1100px){
+  @container inlay-settings (max-width:1100px){
     .inlay-settings-header{grid-template-columns:1fr}
     .inlay-sections{grid-template-columns:1fr}
-    .inlay-section-host,.inlay-section-prompt-output,.inlay-section-character-memory{grid-column:1}
+    .inlay-section-host,.inlay-section-prompt-output,.inlay-section-character-memory,.inlay-section-caption-style{grid-column:1}
   }
-  @media(max-width:680px){
+  @container inlay-settings (max-width:680px){
     .inlay-settings-page{padding:12px;gap:12px}
     .inlay-settings-header{padding:15px;gap:14px}
     .inlay-settings-icon{flex-basis:42px;width:42px;height:42px}

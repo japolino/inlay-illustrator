@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { PANEL_STYLES } from "./constants.js";
 import { mountInlaySettingsHost } from "./settings-host.js";
 
 class FakeNode {
@@ -24,6 +25,15 @@ class FakeNode {
     this.attributes.set(name, value);
   }
 }
+
+describe("Extensions settings responsive layout", () => {
+  test("responds to the shared settings container rather than the browser viewport", () => {
+    expect(PANEL_STYLES).toContain("container:inlay-settings/inline-size");
+    expect(PANEL_STYLES).toContain("@container inlay-settings (max-width:1100px)");
+    expect(PANEL_STYLES).toContain("@container inlay-settings (max-width:680px)");
+    expect(PANEL_STYLES).not.toContain("@media(max-width:1100px)");
+  });
+});
 
 describe("Extensions settings mount lifecycle", () => {
   test("mounts an owned child at settings_extensions without clearing siblings", () => {
