@@ -61,6 +61,19 @@ describe("Inlay content sanitization", () => {
   });
 });
 
+describe("original settings-editor artifact sanitization", () => {
+  test("removes imported editor messages from user and assistant prompt history", () => {
+    const panel = "<CardSettingsEditor><div>settings UI</div></CardSettingsEditor>";
+    const edit = "<CardFontEdit>\nCSS: body{}\n</CardFontEdit>";
+    const output = stripInlayFromMessages([
+      { role: "user", content: `Before${panel}After` },
+      { role: "assistant", content: `Story${edit}` }
+    ]);
+    expect(output[0].content).toBe("BeforeAfter");
+    expect(output[1].content).toBe("Story");
+  });
+});
+
 describe("assistant message sanitization", () => {
   test("sanitizes strings and multipart text without mutating other roles or parts", () => {
     const user: LlmMessageDTO = { role: "user", content: currentBlock("user-owned text") };

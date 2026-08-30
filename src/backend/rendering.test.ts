@@ -40,13 +40,13 @@ describe("inlay rendering", () => {
     expect(rendered.split(MARKER)).toHaveLength(4);
   });
 
-  test("clamps invalid paragraph targets and applies configured dimensions", () => {
+  test("drops invalid paragraph targets and applies configured dimensions to valid images", () => {
     const rendered = renderInlaidMessage(
       "First.\n\nSecond.",
       {
-        imageUrls: ["/too-low.png", "/too-high.png"],
-        prompts: ["low", "high"],
-        paragraphs: [0, 99]
+        imageUrls: ["/too-low.png", "/too-high.png", "/valid.png"],
+        prompts: ["low", "high", "valid"],
+        paragraphs: [0, 99, 2]
       },
       {
         ...DEFAULT_CONFIG,
@@ -55,9 +55,10 @@ describe("inlay rendering", () => {
       }
     );
 
-    expect(rendered.indexOf("/too-low.png")).toBeLessThan(rendered.indexOf("First."));
-    expect(rendered.indexOf("First.")).toBeLessThan(rendered.indexOf("/too-high.png"));
-    expect(rendered.indexOf("/too-high.png")).toBeLessThan(rendered.indexOf("Second."));
+    expect(rendered).not.toContain("/too-low.png");
+    expect(rendered).not.toContain("/too-high.png");
+    expect(rendered).toContain("/valid.png");
+    expect(rendered.indexOf("/valid.png")).toBeLessThan(rendered.indexOf("Second."));
     expect(rendered).toContain("width:min(100%, 812px)");
     expect(rendered).toContain("max-height:63vh");
   });

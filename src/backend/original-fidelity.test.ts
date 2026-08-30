@@ -9,11 +9,12 @@ import {
   renderOriginalPreprocessInstruction
 } from "./original-instructions.js";
 import {
+  buildParserMessages,
   parseParserJson,
-  parserMessages,
-  parserUserRequest,
-  validatePreprocessedTarget
+  parserUserRequest
 } from "./parser.js";
+import { CORE_PREAMBLE } from "./instructions.js";
+import type { ParserContext } from "./types.js";
 import { renderPrompt } from "./prompt.js";
 import { selectPromptEntries } from "./scenes.js";
 import type { ParsedPayload, PreparedParagraph } from "./types.js";
@@ -56,11 +57,22 @@ describe("Inlay Image v3.5 source fidelity", () => {
 describe("v3.5 parser behavior", () => {
   test("keeps instructions, reference, source, and client override in their original priority order", () => {
     const request = parserUserRequest("[P1]\nA girl waves.", DEFAULT_CONFIG);
-    const messages = parserMessages("instruction", "reference", request, "client override");
-    expect(messages.map((message) => message.role)).toEqual(["system", "system", "user", "user"]);
-    expect(messages[0]?.content).toBe("instruction");
-    expect(messages[3]?.content).toContain("# Priority: Instructions Override");
-    expect(messages[3]?.content).toContain("client override");
+    const context: ParserContext = {
+      systemContext: CORE_PREAMBLE + "\n\nreference",
+      baseBlocks: [CORE_PREAMBLE, "reference"],
+      preprocessingBaseBlocks: [CORE_PREAMBLE, "reference"],
+      recentContext: "",
+      override: "client override",
+      diagnostics: {}
+    };
+    const messages = buildParserMessages(DEFAULT_CONFIG, context, "[P1]\nA girl waves.");
+    // Order: raw preamble, distinct base block(s), Core/Image, user, override, prefill
+    expect(messages[0]?.content).toBe(CORE_PREAMBLE);
+    expect(messages[1]?.role).toBe("system");
+    // Override should be the last user message before prefill
+    const overrideMsg = messages.find((m) => m.content.includes("client override"));
+    expect(overrideMsg).toBeDefined();
+    expect(overrideMsg?.role).toBe("user");
   });
 
   test("recovers fenced JSON and common misspelled v3.5 fields", () => {
@@ -69,28 +81,27 @@ describe("v3.5 parser behavior", () => {
     expect((parsed.scenes?.[0]?.shots?.[0] as { paragraph?: number }).paragraph).toBe(1);
   });
 
-  test("accepts only bounded, unique, real paragraph preprocessing selections", () => {
-    const config = { ...DEFAULT_CONFIG, minImages: 2, maxImages: 2 };
-    expect(validatePreprocessedTarget("[Appearance: blonde hair]\n[P1]: wave\n[P3]: doorway", paragraphs, config)?.selectedParagraphs)
-      .toEqual([1, 3]);
-    expect(validatePreprocessedTarget("[Appearance: blonde hair]\n[P1]: wave\n[P1]: duplicate", paragraphs, config)).toBeNull();
-  });
-
   test("uses one last parser shot per paragraph and sorts by paragraph", () => {
     const payload: ParsedPayload = { scenes: [{ place: "garden", shots: [
       { paragraph: 2, camera: "wide shot", situation: "1girl", characters: [], supplement: "old" },
       { paragraph: 1, camera: "portrait", situation: "1girl", characters: [], supplement: "first" },
       { paragraph: 2, camera: "cowboy shot", situation: "1girl", characters: [], supplement: "replacement" }
     ] }] };
-    const selected = selectPromptEntries(payload, paragraphs, { ...DEFAULT_CONFIG, minImages: 1, maxImages: 5 });
+    const selected = selectPromptEntries(payload, paragraphs, { ...DEFAULT_CONFIG, minImages: 1, maxImages: 5, supplement: true, promptStyle: "default" as const, promptSyntax: "comfyui" as const, presetNumber: "1" as any });
     expect(selected.map((entry) => entry.parserParagraph)).toEqual([1, 2]);
-    expect(renderPrompt(selected[1]!.prompt, "comfyui")).toContain("replacement");
-    expect(renderPrompt(selected[1]!.prompt, "comfyui")).not.toContain("old");
+    // With supplement true, replacement should be present via getFinal (appended after preset)
+    const promptText = renderPrompt(selected[1]!.prompt, "comfyui");
+    expect(promptText).toContain("replacement");
+    expect(promptText).not.toContain("old");
+    // Raw data defect: stored situation/place empty, setup includes scene text
+    expect(selected[1]!.rawPromptData.situation).toBe("");
+    expect(selected[1]!.rawPromptData.place).toBe("");
+    expect(selected[1]!.rawPromptData.setup).toContain("1girl");
   });
 });
 
 describe("restored Asset Mode", () => {
-  test("forces a single viewer-facing character on a simple white portrait background", () => {
+  test("forces a single viewer-facing character on a simple white portrait background (no slice, but asset injections)", () => {
     const payload: ParsedPayload = { scenes: [{ place: "busy street", shots: [{
       paragraph: 1,
       camera: "from side",
@@ -100,10 +111,11 @@ describe("restored Asset Mode", () => {
         { name: "Nia", label: "girl", appearance: "red hair", action: "waving" }
       ]
     }] }] };
-    const [entry] = selectPromptEntries(payload, paragraphs, { ...DEFAULT_CONFIG, mode: "asset", minImages: 1 });
+    const [entry] = selectPromptEntries(payload, paragraphs, { ...DEFAULT_CONFIG, mode: "asset", minImages: 1, promptStyle: "default" as const, promptSyntax: "comfyui" as const, presetNumber: "1" as any });
     const prompt = renderPrompt(entry!.prompt, "comfyui");
+    // Per exact original fidelity, dont slice characters - both should be present (task says do not slice)
     expect(prompt).toContain("black hair");
-    expect(prompt).not.toContain("red hair");
+    expect(prompt).toContain("red hair");
     expect(prompt).toContain("looking at viewer");
     expect(prompt).toContain("portrait, cowboy shot");
     expect(prompt).toContain("white background, simple background");

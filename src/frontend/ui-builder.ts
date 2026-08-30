@@ -15,6 +15,15 @@ type SelectOption = {
 
 type RangeChoice = SelectOption;
 
+export function settingsSectionSlug(title: string): string {
+  const slug = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "section";
+}
+
 export class UiBuilder {
   private sectionSequence = 0;
 
@@ -29,7 +38,9 @@ export class UiBuilder {
 
   section(title: string, defaultExpanded: boolean): HTMLElement {
     const host = document.createElement("section");
-    host.className = "inlay-section-host";
+    const slug = settingsSectionSlug(title);
+    host.className = `inlay-section-host inlay-section-${slug}`;
+    host.setAttribute("data-inlay-section", slug);
 
     const toggle = document.createElement("button");
     toggle.type = "button";
@@ -66,9 +77,9 @@ export class UiBuilder {
     return body;
   }
 
-  row(parent: HTMLElement, label: string, hint = ""): HTMLElement {
+  row(parent: HTMLElement, label: string, hint = "", variant: "default" | "textarea" = "default"): HTMLElement {
     const wrapper = document.createElement("div");
-    wrapper.className = "inlay-row";
+    wrapper.className = variant === "textarea" ? "inlay-row inlay-row-textarea" : "inlay-row";
     const labelNode = document.createElement("label");
     labelNode.textContent = label;
     const target = document.createElement("div");
@@ -188,7 +199,7 @@ export class UiBuilder {
   }
 
   addTextarea(parent: HTMLElement, key: keyof Config, label: string, hint = ""): void {
-    const target = this.row(parent, label, hint);
+    const target = this.row(parent, label, hint, "textarea");
     this.track(this.ctx.components.mountTextArea(target, {
       value: String(this.config[key] || ""),
       ariaLabel: label,

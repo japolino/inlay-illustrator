@@ -111,7 +111,9 @@ export function rerollImageParameters(
   const cloned = JSON.parse(JSON.stringify(parameters)) as Record<string, unknown>;
   const workflow = cloned.workflow;
   if (!workflow || typeof workflow !== "object" || Array.isArray(workflow)) {
-    cloned.seed = freshSeed([cloned.seed]);
+    // No workflow — do not invent seed semantics for non-Comfy providers.
+    // Only bump an existing explicit seed; otherwise leave randomization to the host.
+    if (cloned.seed !== undefined) cloned.seed = freshSeed([cloned.seed]);
     return cloned;
   }
 
@@ -202,6 +204,9 @@ export async function buildImageParameters(
     : parameters.custom && typeof parameters.custom === "object"
       ? parameters.custom as Record<string, unknown>
       : {};
+  // Comfy-only random seed patching — Lumiverse raw workflows otherwise retain a
+  // fixed imported seed; Risu host randomized internally. Keep this narrow adaptation
+  // but gate to comfyui/swarmui and document as Lumiverse-required divergence.
   const values: Record<string, unknown> = {
     positive_prompt: prompt,
     negative_prompt: negative || parameters.negativePrompt,
@@ -225,22 +230,20 @@ export async function buildImageParameters(
 }
 
 /**
- * Prepares prompts one at a time and submits each image as soon as its prompt is
- * ready. ComfyUI submissions are eager; other providers use a promise chain so
- * preparation of later prompts can overlap the currently running image without
- * allowing two provider requests to run at once.
+ * Strict sequential dispatch — mirrors original Risu `for i ... generateImage:await()` loop.
+ * Every provider including ComfyUI runs one image at a time with no overlap and no
+ * eager queue. Successful images are preserved when peers fail.
  */
 export async function prepareAndDispatchImageJobs<TInput, TResult>(
   inputs: TInput[],
-  eager: boolean,
   prepare: (input: TInput, index: number) => Promise<PreparedImageJob> | PreparedImageJob,
   generate: (job: PreparedImageJob) => Promise<TResult> | TResult
 ): Promise<{ jobs: PreparedImageJob[]; results: TResult[] }> {
   const jobs: PreparedImageJob[] = [];
-  const requests: Promise<TResult>[] = [];
-  let serialRequest: Promise<unknown> = Promise.resolve();
+  const results: TResult[] = [];
   let preparationFailure: unknown;
   let hasPreparationFailure = false;
+  let observedFailure: unknown;
 
   for (const [index, input] of inputs.entries()) {
     let job: PreparedImageJob;
@@ -251,40 +254,22 @@ export async function prepareAndDispatchImageJobs<TInput, TResult>(
       hasPreparationFailure = true;
       break;
     }
-    jobs.push(job);
-
-    const invoke = (): Promise<TResult> => {
-      try {
-        return Promise.resolve(generate(job));
-      } catch (error) {
-        return Promise.reject(error);
-      }
-    };
-    const request = eager || requests.length === 0 ? invoke() : serialRequest.then(invoke);
-    void request.catch(() => undefined);
-    requests.push(request);
-    // A failed request must not prevent later serial jobs from being attempted.
-    if (!eager) serialRequest = request.then(() => undefined, () => undefined);
+    try {
+      const result = await generate(job);
+      jobs.push(job);
+      results.push(result);
+    } catch (error) {
+      observedFailure = error;
+      // Preserve successful images when a peer fails — do not store failed job/result.
+    }
   }
 
-  const settled = await Promise.allSettled(requests);
-  const successfulJobs: PreparedImageJob[] = [];
-  const successfulResults: TResult[] = [];
-  for (const [index, result] of settled.entries()) {
-    if (result.status !== "fulfilled") continue;
-    successfulJobs.push(jobs[index]);
-    successfulResults.push(result.value);
-  }
-
-  // Preserve partial batches. Only fail the generation when no submitted image
-  // succeeded, matching the original inlay behavior.
-  if (successfulResults.length === 0) {
+  if (results.length === 0) {
     if (hasPreparationFailure) throw preparationFailure;
-    const failure = settled.find((result) => result.status === "rejected");
-    if (failure?.status === "rejected") throw failure.reason;
+    if (observedFailure !== undefined) throw observedFailure;
   }
   return {
-    jobs: successfulJobs,
-    results: successfulResults
+    jobs,
+    results
   };
 }

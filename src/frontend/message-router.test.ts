@@ -58,6 +58,8 @@ describe("frontend backend-message routing", () => {
       config: { ...DEFAULT_CONFIG, enabled: false },
       parserConnections: [{ id: "parser", name: "Parser", provider: "openai", model: "model" }],
       characterAppearance: { Alice: "blonde hair" },
+      quoteStyle: "",
+      quoteExample: "",
       status: "Ready"
     }]);
     expect(refreshes).toBe(0);

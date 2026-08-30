@@ -26,37 +26,58 @@ const PROMPT_PRE_BLOCK = ownedBlock(
 const ORPHAN_MARKER = ownedBlock(MARKER_PATTERN);
 const PROMPT_ATTRIBUTE = /\s+data-inlay-illustrator-(?:negative-prompt|perspective-source|concept|image-index|image-id|message-id|swipe-id|chat-id|perspective|prompt)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi;
 
+const CARDDATA_RE = /\nCARDDATA:[^\n]*/g;
+const LOADING_RE = /\s*\{\{(?:global::)?Card\.Loading[^}]*\}\}/g;
+const ORIGINAL_INLAY_RE = /INLAY\[[^\]]*\]\s*\n?/g;
+const ORIGINAL_EDITOR_RE = /<(Card(?:SettingsEditor|TagEdit|FontEdit|QuoteExEdit|QuoteInstEdit|PromptEdit|QuoteEdit|InstEdit))>[\s\S]*?<\/\1>/gi;
+
+export function stripOriginalEditorArtifacts(content: string): string {
+  return content.replace(ORIGINAL_EDITOR_RE, "");
+}
+
 /**
- * Removes only presentation markup owned by Inlay Illustrator.
+ * Removes only presentation markup owned by Inlay Illustrator plus original
+ * `INLAY[...]`, `CARDDATA:` and `{{Card.Loading...}}` artifacts for fidelity.
  *
  * Stored chat messages remain unchanged; callers use the returned string for
  * model/parser context or as the clean source for a fresh render.
  */
 export function stripInlayContent(content: string): string {
-  if (!content.includes("inlay-illustrator") && !content.includes("inlay_illustrator")) return content;
-  return content
-    .replace(LEGACY_BLOCK, "")
-    .replace(CURRENT_BLOCK, "")
-    .replace(MARKER_IMAGE_BLOCK, "")
-    .replace(PROMPT_PRE_BLOCK, "")
-    .replace(ORPHAN_MARKER, "")
-    .replace(PROMPT_ATTRIBUTE, "");
+  let output = stripOriginalEditorArtifacts(content)
+    .replace(ORIGINAL_INLAY_RE, "")
+    .replace(CARDDATA_RE, "")
+    .replace(LOADING_RE, "");
+  const hasOwned = output.includes("inlay-illustrator") || output.includes("inlay_illustrator");
+  if (hasOwned) {
+    output = output
+      .replace(LEGACY_BLOCK, "")
+      .replace(CURRENT_BLOCK, "")
+      .replace(MARKER_IMAGE_BLOCK, "")
+      .replace(PROMPT_PRE_BLOCK, "")
+      .replace(ORPHAN_MARKER, "")
+      .replace(PROMPT_ATTRIBUTE, "");
+  } else if (output === content) {
+    return content;
+  }
+  return output;
 }
 
 /** Returns a context-only copy with Inlay text removed from assistant turns. */
 export function stripInlayFromMessages(messages: LlmMessageDTO[]): LlmMessageDTO[] {
   return messages.map((message) => {
-    if (message.role !== "assistant") return message;
+    const cleanText = (text: string): string => message.role === "assistant"
+      ? stripInlayContent(text)
+      : stripOriginalEditorArtifacts(text);
 
     if (typeof message.content === "string") {
-      const content = stripInlayContent(message.content);
+      const content = cleanText(message.content);
       return content === message.content ? message : { ...message, content };
     }
 
     let changed = false;
     const content = message.content.map((part) => {
       if (part.type !== "text") return part;
-      const text = stripInlayContent(part.text);
+      const text = cleanText(part.text);
       if (text === part.text) return part;
       changed = true;
       return { ...part, text };

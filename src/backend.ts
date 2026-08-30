@@ -13,13 +13,9 @@ import { deleteCharacterTag, upsertCharacterTag } from "./backend/memory.js";
 import {
   continuityReference,
   formatTargetParagraphs,
-  parserInstruction,
-  parserMessages,
   parserUserRequest,
   preprocessTargetParagraphs,
-  preprocessingInstruction,
-  preprocessingUserRequest,
-  validatePreprocessedTarget
+  preprocessingInstruction
 } from "./backend/parser.js";
 import { activePromptPreset, assemblePrompt, renderPrompt } from "./backend/prompt.js";
 import { exactVisualKey, selectPromptEntries } from "./backend/scenes.js";
@@ -36,20 +32,16 @@ export const __testables = {
   continuityReference,
   exactVisualKey,
   formatTargetParagraphs,
-  parserInstruction,
-  parserMessages,
   parserUserRequest,
   preprocessTargetParagraphs,
   preprocessingInstruction,
-  preprocessingUserRequest,
   prepareAndDispatchImageJobs,
   rerollImageParameters,
   normalizeConfig,
   renderPrompt,
   selectPromptEntries,
   stripInlayContent,
-  stripInlayFromMessages,
-  validatePreprocessedTarget
+  stripInlayFromMessages
 };
 
 spindle.registerInterceptor(async (messages) => stripInlayFromMessages(messages));
@@ -97,6 +89,68 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         chatId: String(message.chatId || ""),
         config: next
       }, userId);
+    } else if (message.type === "set_inlay_display_mode") {
+      const config = await getConfig(userId);
+      configForError = config;
+      const chatId = String(message.chatId || "");
+      if (!chatId) throw new Error("Open a chat first.");
+      const displayMode = message.displayMode == null ? "0" : String(message.displayMode);
+      await updateState(chatId, userId, (current) => {
+        current.displayMode = displayMode;
+      });
+      spindle.sendToFrontend({
+        type: "inlay_display_settings_updated",
+        requestId: String(message.requestId || ""),
+        chatId,
+        displayMode,
+        ok: true
+      }, userId);
+    } else if (message.type === "set_quote_settings") {
+      const config = await getConfig(userId);
+      configForError = config;
+      const chatId = String(message.chatId || "");
+      if (!chatId) throw new Error("Open a chat first.");
+      const patch = message.patch && typeof message.patch === "object"
+        ? message.patch as Record<string, unknown>
+        : {};
+      let quoteStyle: string | undefined;
+      let quoteExample: string | undefined;
+      await updateState(chatId, userId, (current) => {
+        if (typeof patch.quoteStyle === "string") current.quoteStyle = patch.quoteStyle.trim();
+        if (typeof patch.quoteExample === "string") current.quoteExample = patch.quoteExample.trim();
+        quoteStyle = current.quoteStyle ?? "";
+        quoteExample = current.quoteExample ?? "";
+      });
+      spindle.sendToFrontend({
+        type: "quote_settings_updated",
+        requestId: String(message.requestId || ""),
+        chatId,
+        quoteStyle,
+        quoteExample,
+        ok: true
+      }, userId);
+    } else if (message.type === "get_inlay_display_context") {
+      const config = await getConfig(userId);
+      configForError = config;
+      const chatId = String(message.chatId || "");
+      if (!chatId) throw new Error("Open a chat first.");
+      const chatMessages = await spindle.chat.getMessages(chatId);
+      const roles = chatMessages.map((entry, index) => {
+        const row = entry as unknown as Record<string, unknown>;
+        const rawIndex = Number(row.index_in_chat);
+        return {
+          id: typeof row.id === "string" ? row.id : "",
+          index: Number.isInteger(rawIndex) && rawIndex >= 0 ? rawIndex : index,
+          role: entry.role === "assistant" ? "char" : entry.role
+        };
+      });
+      spindle.sendToFrontend({
+        type: "inlay_display_context",
+        requestId: String(message.requestId || ""),
+        chatId,
+        ok: true,
+        roles
+      }, userId);
     } else if (message.type === "character_tags_update") {
       const config = await getConfig(userId);
       configForError = config;
@@ -139,6 +193,33 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         config,
         messages: messages as import("./backend/types.js").ChatMessage[]
       });
+    } else if (message.type === "list_inlay_gallery") {
+      const requestId = String(message.requestId || "");
+      const rawPage = Number(message.page);
+      const page = Number.isFinite(rawPage) ? Math.floor(rawPage) : 1;
+      const selectedChatId = typeof message.selectedChatId === "string" && message.selectedChatId ? String(message.selectedChatId) : undefined;
+      try {
+        const { listInlayGallery } = await import("./backend/storage.js");
+        const result = await listInlayGallery(userId, page, selectedChatId);
+        spindle.sendToFrontend({
+          type: "inlay_gallery_result",
+          requestId,
+          ok: true,
+          page: result.page,
+          totalChats: result.totalChats,
+          totalPages: result.totalPages,
+          chatIds: result.chatIds,
+          chats: result.chats,
+          records: result.records ?? result.chats
+        }, userId);
+      } catch (error) {
+        spindle.sendToFrontend({
+          type: "inlay_gallery_result",
+          requestId,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error)
+        }, userId);
+      }
     } else if (message.type === "get_inlay_image_details") {
       const request: StoredImageActionRequest = {
         chatId: String(message.chatId || ""),
@@ -149,7 +230,8 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         imageUrl: String(message.imageUrl || "") || undefined
       };
       try {
-        const details = await getStoredImageDetails(request, userId);
+        const { getInlayImageDetailsExtended } = await import("./backend/stored-image-actions.js");
+        const details = await getInlayImageDetailsExtended(request, userId);
         spindle.sendToFrontend({
           type: "inlay_image_details_result",
           requestId: String(message.requestId || ""),
@@ -163,6 +245,182 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
           ok: false,
           error: error instanceof Error ? error.message : String(error)
         }, userId);
+      }
+    } else if (message.type === "update_inlay_prompt_data") {
+      const requestId = String(message.requestId || "");
+      const request: StoredImageActionRequest = {
+        chatId: String(message.chatId || ""),
+        messageId: String(message.messageId || "") || undefined,
+        swipeId: Number.isInteger(Number(message.swipeId)) ? Number(message.swipeId) : undefined,
+        imageIndex: Number.isInteger(Number(message.imageIndex)) ? Number(message.imageIndex) : undefined,
+        imageId: String(message.imageId || "") || undefined,
+        imageUrl: String(message.imageUrl || "") || undefined
+      };
+      try {
+        const { updateInlayPromptData } = await import("./backend/stored-image-actions.js");
+        const result = await updateInlayPromptData(request, message as Record<string, unknown>, userId);
+        spindle.sendToFrontend({
+          type: "inlay_image_edit_result",
+          requestId,
+          ok: true,
+          operation: "update_inlay_prompt_data",
+          details: result.details,
+          record: { messageId: result.record.messageId, imageIds: result.record.imageIds, imageUrls: result.record.imageUrls, paragraphs: result.record.paragraphs },
+          imageIndex: result.index
+        } as unknown as Record<string, unknown>, userId);
+      } catch (error) {
+        spindle.sendToFrontend({
+          type: "inlay_image_edit_result",
+          requestId,
+          ok: false,
+          operation: "update_inlay_prompt_data",
+          error: error instanceof Error ? error.message : String(error)
+        } as unknown as Record<string, unknown>, userId);
+      }
+    } else if (message.type === "update_inlay_quote") {
+      const requestId = String(message.requestId || "");
+      const request: StoredImageActionRequest = {
+        chatId: String(message.chatId || ""),
+        messageId: String(message.messageId || "") || undefined,
+        swipeId: Number.isInteger(Number(message.swipeId)) ? Number(message.swipeId) : undefined,
+        imageIndex: Number.isInteger(Number(message.imageIndex)) ? Number(message.imageIndex) : undefined,
+        imageId: String(message.imageId || "") || undefined,
+        imageUrl: String(message.imageUrl || "") || undefined
+      };
+      try {
+        const { updateInlayQuote } = await import("./backend/stored-image-actions.js");
+        const result = await updateInlayQuote(request, message as Record<string, unknown>, userId);
+        spindle.sendToFrontend({
+          type: "inlay_image_edit_result",
+          requestId,
+          ok: true,
+          operation: "update_inlay_quote",
+          details: result.details,
+          quote: result.details.quote,
+          record: { messageId: result.record.messageId, imageIds: result.record.imageIds, imageUrls: result.record.imageUrls, paragraphs: result.record.paragraphs, quotes: result.record.quotes },
+          imageIndex: result.index
+        } as unknown as Record<string, unknown>, userId);
+      } catch (error) {
+        spindle.sendToFrontend({
+          type: "inlay_image_edit_result",
+          requestId,
+          ok: false,
+          operation: "update_inlay_quote",
+          error: error instanceof Error ? error.message : String(error)
+        } as unknown as Record<string, unknown>, userId);
+      }
+    } else if (message.type === "delete_inlay_image") {
+      const requestId = String(message.requestId || "");
+      const request: StoredImageActionRequest = {
+        chatId: String(message.chatId || ""),
+        messageId: String(message.messageId || "") || undefined,
+        swipeId: Number.isInteger(Number(message.swipeId)) ? Number(message.swipeId) : undefined,
+        imageIndex: Number.isInteger(Number(message.imageIndex)) ? Number(message.imageIndex) : undefined,
+        imageId: String(message.imageId || "") || undefined,
+        imageUrl: String(message.imageUrl || "") || undefined
+      };
+      try {
+        const { deleteInlayImage } = await import("./backend/stored-image-actions.js");
+        const result = await deleteInlayImage(request, userId);
+        spindle.sendToFrontend({
+          type: "inlay_image_edit_result",
+          requestId,
+          ok: true,
+          operation: "delete_inlay_image",
+          record: { messageId: result.record.messageId, imageIds: result.record.imageIds, imageUrls: result.record.imageUrls, paragraphs: result.record.paragraphs, prompts: result.record.prompts },
+          deletedIndex: result.deletedIndex,
+          imageIndex: result.index
+        } as unknown as Record<string, unknown>, userId);
+      } catch (error) {
+        spindle.sendToFrontend({
+          type: "inlay_image_edit_result",
+          requestId,
+          ok: false,
+          operation: "delete_inlay_image",
+          error: error instanceof Error ? error.message : String(error)
+        } as unknown as Record<string, unknown>, userId);
+      }
+    } else if (message.type === "reroll_image_candidates") {
+      const config = await getConfig(userId);
+      configForError = config;
+      const chatId = String(message.chatId || "");
+      if (!chatId) throw new Error("Open the image's chat first.");
+      const numericIndex = Number(message.imageIndex);
+      const numericSwipe = Number(message.swipeId);
+      const request: StoredImageActionRequest = {
+        chatId,
+        messageId: String(message.messageId || "") || undefined,
+        swipeId: Number.isInteger(numericSwipe) ? numericSwipe : undefined,
+        imageIndex: Number.isInteger(numericIndex) && numericIndex >= 0 ? numericIndex : undefined,
+        imageId: String(message.imageId || "") || undefined,
+        imageUrl: String(message.imageUrl || "") || undefined
+      };
+      const count = Number(message.count) || Number((config as unknown as Record<string, unknown>).imageRerollCount) || 1;
+      const { generateRerollCandidates } = await import("./backend/generation.js");
+      const result = await generateRerollCandidates(request, count, userId, config);
+      spindle.sendToFrontend({
+        type: "inlay_reroll_candidates",
+        requestId: String(message.requestId || ""),
+        ok: true,
+        chatId,
+        messageId: result.record.messageId,
+        imageIndex: result.index,
+        candidates: result.candidates
+      }, userId);
+    } else if (message.type === "reroll_image_apply") {
+      const config = await getConfig(userId);
+      configForError = config;
+      const chatId = String(message.chatId || "");
+      const candidate = message.candidate as { imageId: string; imageUrl: string; parameters: Record<string, unknown> } | undefined;
+      if (!candidate || typeof candidate !== "object") throw new Error("Missing candidate image.");
+      if (typeof candidate.imageUrl !== "string" || !candidate.imageUrl.trim()) throw new Error("Missing candidate image.");
+      if (!candidate.parameters || typeof candidate.parameters !== "object" || Array.isArray(candidate.parameters)) throw new Error("Invalid candidate parameters.");
+      if (candidate.imageId !== undefined && typeof candidate.imageId !== "string") throw new Error("Invalid candidate imageId.");
+      const numericIndex = Number(message.imageIndex);
+      const numericSwipe = Number(message.swipeId);
+      const request: StoredImageActionRequest = {
+        chatId,
+        messageId: String(message.messageId || "") || undefined,
+        swipeId: Number.isInteger(numericSwipe) ? numericSwipe : undefined,
+        imageIndex: Number.isInteger(numericIndex) && numericIndex >= 0 ? numericIndex : undefined,
+        imageId: String(message.imageId || "") || undefined,
+        imageUrl: String(message.imageUrl || "") || undefined
+      };
+      const { applyRerollCandidate } = await import("./backend/generation.js");
+      const result = await applyRerollCandidate(request, candidate, userId, config);
+      spindle.sendToFrontend({
+        type: "inlay_image_action_result",
+        requestId: String(message.requestId || ""),
+        operation: "reroll_apply",
+        ok: true,
+        chatId,
+        messageId: result.record.messageId,
+        imageIndex: result.index,
+        imageUrl: result.record.imageUrls[result.index] || ""
+      }, userId);
+    } else if (message.type === "reroll_all_images") {
+      const config = await getConfig(userId);
+      configForError = config;
+      const chatId = String(message.chatId || "");
+      const messageId = String(message.messageId || "");
+      const numericSwipe = Number(message.swipeId);
+      if (!chatId || !messageId) throw new Error("Open the image's chat first.");
+      spindle.sendToFrontend({ type: "status", status: "Rerolling all images..." }, userId);
+      const { rerunAllStoredImages } = await import("./backend/generation.js");
+      const result = await rerunAllStoredImages(chatId, messageId, Number.isInteger(numericSwipe) ? numericSwipe : undefined, userId, config);
+      spindle.sendToFrontend({
+        type: "inlay_reroll_all_result",
+        requestId: String(message.requestId || ""),
+        ok: true,
+        chatId,
+        messageId: result.record.messageId,
+        failedCount: result.failedCount,
+        record: result.record
+      }, userId);
+      if (result.failedCount > 0) {
+        spindle.sendToFrontend({ type: "status", status: `Rerolled with ${result.failedCount} failure(s) — prior images preserved`, record: result.record }, userId);
+      } else {
+        spindle.sendToFrontend({ type: "status", status: "All images rerolled", record: result.record }, userId);
       }
     } else if (message.type === "reroll_image" || message.type === "rerun_image_sidecar") {
       const config = await getConfig(userId);
@@ -199,11 +457,53 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStage(configForError || { debugLogging: true }, "frontend_message_error", { type: String(message.type || ""), error: errorMessage }, "error");
     spindle.log.error(errorMessage);
-    if (message.type === "reroll_image" || message.type === "rerun_image_sidecar") {
+    if (message.type === "reroll_image" || message.type === "rerun_image_sidecar" || message.type === "reroll_image_candidates" || message.type === "reroll_image_apply" || message.type === "reroll_all_images") {
+      const isCandidates = message.type === "reroll_image_candidates";
+      const isApply = message.type === "reroll_image_apply";
+      const isAll = message.type === "reroll_all_images";
       spindle.sendToFrontend({
-        type: "inlay_image_action_result",
+        type: isCandidates ? "inlay_reroll_candidates" : isAll ? "inlay_reroll_all_result" : "inlay_image_action_result",
         requestId: String(message.requestId || ""),
-        operation: message.type === "rerun_image_sidecar" ? "sidecar" : "reroll",
+        operation: message.type === "rerun_image_sidecar" ? "sidecar" : message.type === "reroll_image_apply" ? "reroll_apply" : message.type === "reroll_all_images" ? "reroll_all" : "reroll",
+        ok: false,
+        error: errorMessage
+      } as unknown as Record<string, unknown>, userId);
+    } else if (message.type === "update_inlay_prompt_data" || message.type === "update_inlay_quote" || message.type === "delete_inlay_image") {
+      spindle.sendToFrontend({
+        type: "inlay_image_edit_result",
+        requestId: String(message.requestId || ""),
+        ok: false,
+        operation: String(message.type),
+        error: errorMessage
+      } as unknown as Record<string, unknown>, userId);
+    } else if (message.type === "get_inlay_image_details") {
+      spindle.sendToFrontend({
+        type: "inlay_image_details_result",
+        requestId: String(message.requestId || ""),
+        ok: false,
+        error: errorMessage
+      } as unknown as Record<string, unknown>, userId);
+    } else if (message.type === "set_quote_settings") {
+      spindle.sendToFrontend({
+        type: "quote_settings_updated",
+        requestId: String(message.requestId || ""),
+        chatId: String(message.chatId || ""),
+        ok: false,
+        error: errorMessage
+      }, userId);
+    } else if (message.type === "get_inlay_display_context") {
+      spindle.sendToFrontend({
+        type: "inlay_display_context",
+        requestId: String(message.requestId || ""),
+        chatId: String(message.chatId || ""),
+        ok: false,
+        error: errorMessage
+      }, userId);
+    } else if (message.type === "set_inlay_display_mode") {
+      spindle.sendToFrontend({
+        type: "inlay_display_settings_updated",
+        requestId: String(message.requestId || ""),
+        chatId: String(message.chatId || ""),
         ok: false,
         error: errorMessage
       }, userId);

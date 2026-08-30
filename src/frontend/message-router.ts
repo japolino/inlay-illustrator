@@ -5,6 +5,8 @@ export type BackendState = {
   config: Config;
   parserConnections: ParserConnection[];
   characterAppearance: Record<string, string>;
+  quoteStyle: string;
+  quoteExample: string;
   status: string;
 };
 
@@ -35,6 +37,8 @@ export function routeBackendMessage(
       config: { ...DEFAULT_CONFIG, ...message.config },
       parserConnections,
       characterAppearance: message.characterAppearance || {},
+      quoteStyle: message.quoteStyle || "",
+      quoteExample: message.quoteExample || "",
       status: "Ready"
     });
     if (parserConnections.length === 0) actions.refreshParserConnections();

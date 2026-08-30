@@ -263,6 +263,194 @@ export async function sendState(userId?: string, chatId?: string, preparedConfig
     config: preparedConfig || await getConfig(userId),
     parserConnections: await getParserConnections(userId),
     chatId: chatId || "",
-    characterAppearance: state?.characterAppearance || {}
+    characterAppearance: state?.characterAppearance || {},
+    displayMode: state?.displayMode ?? "0",
+    quoteStyle: state?.quoteStyle ?? "",
+    quoteExample: state?.quoteExample ?? ""
   }, userId);
+}
+
+export const GALLERY_CHATS_PER_PAGE = 5;
+
+export type InlayGalleryImage = {
+  chatId: string;
+  messageId: string;
+  swipeId: number;
+  imageId: string;
+  imageUrl: string;
+  imageIndex: number;
+  paragraph: number;
+  prompt: string;
+  negativePrompt: string;
+  quote: string;
+};
+
+export type InlayGalleryChat = {
+  chatId: string;
+  quoteStyle?: string;
+  images: InlayGalleryImage[];
+};
+
+export type InlayGalleryResult = {
+  page: number;
+  totalChats: number;
+  totalPages: number;
+  chatIds: string[];
+  chats: InlayGalleryChat[];
+  records?: InlayGalleryChat[];
+};
+
+function isNumericChatId(value: string): boolean {
+  return /^-?\d+$/.test(value);
+}
+
+function compareChatIds(left: string, right: string): number {
+  const leftNumeric = isNumericChatId(left);
+  const rightNumeric = isNumericChatId(right);
+  if (leftNumeric && rightNumeric) {
+    const diff = Number(left) - Number(right);
+    if (diff !== 0) return diff;
+    return left.localeCompare(right);
+  }
+  return left.localeCompare(right);
+}
+
+function chatIdFromStatePath(path: string): string | null {
+  if (!path.startsWith("states/") || !path.endsWith(".json")) return null;
+  return path.slice("states/".length, -".json".length);
+}
+
+export async function listInlayGallery(
+  userId: string | undefined,
+  page: number,
+  selectedChatId?: string
+): Promise<InlayGalleryResult> {
+  let statePaths: string[] = [];
+  try {
+    if (typeof (spindle.userStorage as unknown as { list?: unknown }).list === "function") {
+      statePaths = await (spindle.userStorage as unknown as { list: (prefix?: string, userId?: string) => Promise<string[]> }).list("states/", userId);
+    }
+  } catch {
+    statePaths = [];
+  }
+
+  // Do not enumerate unrelated storage: only consider states/ prefix
+  const filtered = statePaths.filter((p) => p.startsWith("states/") && p.endsWith(".json"));
+
+  const grouped = new Map<string, InlayGalleryImage[]>();
+  const quoteStyles = new Map<string, string>();
+  const seen = new Set<string>();
+
+  for (const path of filtered) {
+    const pathChatId = chatIdFromStatePath(path);
+    if (!pathChatId) continue;
+
+    let state: State | null = null;
+    try {
+      state = await readJson<State>(path, { characterAppearance: {}, generated: {} } as State, userId);
+    } catch {
+      continue;
+    }
+    if (!state || typeof state.generated !== "object" || state.generated === null) continue;
+
+    for (const [key, value] of Object.entries(state.generated)) {
+      if (!value || typeof value !== "object") continue;
+
+      const isRef = isGeneratedRecordReference(value);
+      const dedupKey = isRef
+        ? `ref:${(value as GeneratedRecordReference).recordPath}`
+        : `key:${pathChatId}:${key}`;
+      if (seen.has(dedupKey)) continue;
+      seen.add(dedupKey);
+
+      let record: GeneratedRecord | null = null;
+      try {
+        record = await loadGeneratedRecord(value, userId, false);
+      } catch {
+        continue;
+      }
+      if (!record) continue;
+      if (!Array.isArray(record.imageUrls) || !Array.isArray(record.paragraphs) || !Array.isArray(record.prompts)) continue;
+      if (typeof record.messageId !== "string" || !record.messageId) continue;
+
+      const chatId = typeof record.chatId === "string" && record.chatId ? record.chatId : pathChatId;
+      if (!quoteStyles.has(chatId)) quoteStyles.set(chatId, typeof state.quoteStyle === "string" ? state.quoteStyle : "");
+      const messageId = record.messageId;
+      const swipeId = typeof record.swipeId === "number" && Number.isInteger(record.swipeId) ? record.swipeId : 0;
+      const imageIds = Array.isArray(record.imageIds) ? record.imageIds : [];
+      const imageUrls = record.imageUrls;
+      const prompts = Array.isArray(record.prompts) ? record.prompts : [];
+      const negativePrompts = Array.isArray(record.negativePrompts) ? record.negativePrompts : [];
+      const quotes = Array.isArray(record.quotes) ? record.quotes : [];
+      const paragraphs = Array.isArray(record.paragraphs) ? record.paragraphs : [];
+
+      for (let i = 0; i < imageUrls.length; i += 1) {
+        const rawUrl = imageUrls[i];
+        if (typeof rawUrl !== "string" || !rawUrl) continue;
+        const imageId = typeof imageIds[i] === "string" ? String(imageIds[i]) : "";
+        const paragraphRaw = paragraphs[i];
+        const paragraph = Number.isInteger(Number(paragraphRaw)) && Number(paragraphRaw) >= 1 ? Number(paragraphRaw) : i + 1;
+        const prompt = typeof prompts[i] === "string" ? String(prompts[i]) : "";
+        const negativePrompt = typeof negativePrompts[i] === "string" ? String(negativePrompts[i]) : "";
+        const quote = typeof quotes[i] === "string" ? String(quotes[i]) : "";
+
+        const image: InlayGalleryImage = {
+          chatId,
+          messageId,
+          swipeId,
+          imageId,
+          imageUrl: rawUrl,
+          imageIndex: i,
+          paragraph,
+          prompt,
+          negativePrompt,
+          quote
+        };
+
+        const bucket = grouped.get(chatId) || [];
+        bucket.push(image);
+        grouped.set(chatId, bucket);
+      }
+    }
+  }
+
+  // Sort images within each chat by paragraph ascending, stable
+  for (const images of grouped.values()) {
+    images.sort((a, b) => {
+      if (a.paragraph !== b.paragraph) return a.paragraph - b.paragraph;
+      if (a.imageIndex !== b.imageIndex) return a.imageIndex - b.imageIndex;
+      return a.imageUrl.localeCompare(b.imageUrl);
+    });
+  }
+
+  const chatIds = [...grouped.keys()].sort(compareChatIds);
+  const totalChats = chatIds.length;
+  const totalPages = Math.max(1, Math.ceil(totalChats / GALLERY_CHATS_PER_PAGE));
+
+  let clampedPage = Math.floor(Number(page));
+  if (!Number.isFinite(clampedPage) || clampedPage < 1) clampedPage = 1;
+  if (clampedPage > totalPages) clampedPage = totalPages;
+
+  let chats: InlayGalleryChat[] = [];
+
+  if (selectedChatId) {
+    const selected = String(selectedChatId);
+    const images = grouped.get(selected);
+    if (images) chats = [{ chatId: selected, quoteStyle: quoteStyles.get(selected) || "", images }];
+    else chats = [];
+  } else {
+    const start = (clampedPage - 1) * GALLERY_CHATS_PER_PAGE;
+    const end = start + GALLERY_CHATS_PER_PAGE;
+    const pageIds = chatIds.slice(start, end);
+    chats = pageIds.map((cid) => ({ chatId: cid, quoteStyle: quoteStyles.get(cid) || "", images: grouped.get(cid) || [] }));
+  }
+
+  return {
+    page: clampedPage,
+    totalChats,
+    totalPages,
+    chatIds,
+    chats,
+    records: chats
+  };
 }

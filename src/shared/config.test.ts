@@ -18,11 +18,17 @@ describe("shared configuration", () => {
 
   test("clamps image counts, widths, and character limits", () => {
     expect(normalizeConfig({ minImages: 10, maxImages: 2, assetImageWidth: 50, maxCharacters: 99 }))
-      .toMatchObject({ minImages: 2, maxImages: 10, assetImageWidth: 120, maxCharacters: 8 });
+      .toMatchObject({ minImages: 2, maxImages: 10, assetImageWidth: 120, maxCharacters: 3 });
   });
 
   test("preserves quote and original-reference controls", () => {
     expect(normalizeConfig({ quotesEnabled: true, quoteInstructions: " exact quote rule ", originalReference: true, originalCreationName: " Anima " }))
       .toMatchObject({ quotesEnabled: true, quoteInstructions: "exact quote rule", originalReference: true, originalCreationName: "Anima" });
   });
+  test("preserves raw display-max text for Lua tonumber semantics", () => {
+    expect(normalizeConfig({ displayMax: " 02.50 " }).displayMax).toBe(" 02.50 ");
+    expect(normalizeConfig({ displayMax: "null" }).displayMax).toBe("null");
+    expect(normalizeConfig({}).displayMax).toBe("0");
+  });
+
 });

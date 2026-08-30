@@ -160,8 +160,8 @@ describe("serialized state updates", () => {
     await Promise.all([manualSave, secondManualSave, automaticMemory, generatedRecord]);
 
     expect(storage.storedState("chat-1", "user-1")).toEqual({
-      characterAppearance: { Alice: "red hair", Clara: "green eyes", Bob: "black hair" },
-      manualCharacterAppearance: { Alice: "red hair", Clara: "green eyes" },
+      characterAppearance: { Alice: "red hair, standing", Clara: "green eyes", Bob: "black hair, portrait" },
+      manualCharacterAppearance: { Alice: "red hair, standing", Clara: "green eyes" },
       generated: { "chat-1:message-1:0": { imageIds: ["image-1"] } }
     });
     expect(storage.readCalls).toHaveLength(4);

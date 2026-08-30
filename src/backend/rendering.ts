@@ -57,7 +57,9 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
   const blocks = new Map<number, string[]>();
   const count = Math.max(1, paragraphCount(cleanOriginal));
   record.imageUrls.forEach((url, index) => {
-    const paragraph = clampInt(record.paragraphs[index], 1, count, Math.min(index + 1, count));
+    const raw = record.paragraphs[index];
+    if (!Number.isFinite(raw) || raw < 1 || raw > count) return;
+    const paragraph = raw;
     const existing = blocks.get(paragraph) || [];
     existing.push(renderInlayBlock(
       url,
@@ -87,7 +89,5 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
     if (inlays?.length) output.push(`${inlays.join("\n\n")}\n\n`);
     output.push(token);
   }
-  const unused = [...blocks.entries()].filter(([number]) => number > paragraph).flatMap(([, inlays]) => inlays);
-  if (unused.length) output.push(`\n\n${unused.join("\n\n")}`);
   return output.join("");
 }

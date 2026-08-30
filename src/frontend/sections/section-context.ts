@@ -7,6 +7,8 @@ export type SectionContext = {
   config: Config;
   parserConnections: ParserConnection[];
   characterAppearance: Record<string, string>;
+  quoteStyle: string;
+  quoteExample: string;
   actions: FrontendActions;
   rerender(): void;
 };

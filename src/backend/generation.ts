@@ -1,5 +1,6 @@
 import type { Config } from "../shared/config.js";
 import {
+  buildFullLorebookSnapshot,
   buildLorebookContextSnapshot,
   buildParserContext,
   isOwnMessage,
@@ -11,15 +12,12 @@ import { logStage } from "./logging.js";
 import { updateCharacterMemory } from "./memory.js";
 import { ignoredTagNames, paragraphCount, prepareParagraphs } from "./paragraphs.js";
 import {
-  continuityReference,
+  buildParserMessages,
   parsePayloadWithRepair,
-  parserInstruction,
-  parserMessages,
-  parserUserRequest,
   preprocessTargetParagraphs,
   resolveParserConnection
 } from "./parser.js";
-import { renderNegativeWithCurrentSelection, renderPrompt, renderPromptWithCurrentAffixes } from "./prompt.js";
+import { getFinalPromptsForGeneration } from "./prompt.js";
 import { imageUrlFromId, renderInlaidMessage } from "./rendering.js";
 import { normalizeScenePayload, selectPromptEntries } from "./scenes.js";
 import {
@@ -33,7 +31,6 @@ import {
 } from "./storage.js";
 import { tryAcquireRuntimeLock } from "./runtime-lock.js";
 import type {
-  CharacterJson,
   ChatMessage,
   GeneratedRecord,
   ImageConnection,
@@ -41,6 +38,7 @@ import type {
   PreparedImageJob,
   PreparedParagraph,
   PromptEntry,
+  RawPromptData,
   State
 } from "./types.js";
 import { cleanArray, cleanString, keysOf } from "./utils.js";
@@ -48,7 +46,7 @@ import { cleanArray, cleanString, keysOf } from "./utils.js";
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
 type ImageGenerationResult = Awaited<ReturnType<typeof spindle.imageGen.generate>>;
-type ParsedSelection = { parsed: ParsedPayload; selected: PromptEntry[] };
+type ParsedSelection = { parsed: ParsedPayload; selected: PromptEntry[]; snapshot: LorebookContextSnapshot };
 type PreparedImageStage = { jobs: PreparedImageJob[]; results: ImageGenerationResult[] };
 type ImageAssets = {
   prompts: string[];
@@ -61,6 +59,7 @@ type ImageAssets = {
   paragraphs: number[];
   imageIds: string[];
   imageUrls: string[];
+  rawPromptData: RawPromptData[];
 };
 
 export type ParseStageInput = {
@@ -195,101 +194,92 @@ function replaceAt<T>(values: T[] | undefined, index: number, value: T, fallback
   return next;
 }
 
-export function compactLorebookNeedsFullRetry(payload: ParsedPayload, snapshot: LorebookContextSnapshot): boolean {
-  if (!snapshot.compacted || !snapshot.hasCharacterVisualReference) return false;
-  const characters = normalizeScenePayload(payload).flatMap(({ shot }) => cleanArray<CharacterJson>(shot.characters));
-  if (characters.length === 0) return false;
-  return !characters.some((character) => [character.appearance, character.body, character.attire]
-    .some((value) => cleanString(value)));
-}
-
-function retryClassification(error: unknown): "transient" | "context" | "terminal" {
-  const message = error instanceof Error ? error.message : String(error);
-  if (/\b(?:401|403|404)\b|unauthori[sz]ed|forbidden|connection not found|select a parser connection/i.test(message)) {
-    return "terminal";
-  }
-  if (/\b(?:408|409|425|429|500|502|503|504|520|522|523|524|525)\b|timeout|timed out|handshake|temporar|rate limit/i.test(message)) {
-    return "transient";
-  }
-  if (/\b400\b.*(?:invalid argument|bad request)/i.test(message)) return "terminal";
-  return "context";
-}
-
-async function waitForParserRetry(attempt: number): Promise<void> {
-  const delay = Math.min(1500, 250 * (2 ** attempt)) + Math.floor(Math.random() * 125);
-  await new Promise<void>((resolve) => setTimeout(resolve, delay));
-}
+// Removed non-original retry classification and backoff helpers — original retries every failure immediately, no exponential delay/jitter.
 
 export async function parseAndSelectPrompts(input: ParseStageInput): Promise<ParsedSelection> {
-  {
-    const { chatId, messageId, messages, paragraphs, state, config, userId } = input;
-    const targetIndex = Math.max(0, messages.findIndex((message) => message.id === messageId));
-    const [parserConnection, lorebookSnapshot, contextSources] = await Promise.all([
-      resolveParserConnection(config, userId),
-      buildLorebookContextSnapshot(chatId, paragraphs.map((paragraph) => paragraph.text).join("\n\n"), config, userId),
-      loadParserContextSources(chatId, config, userId)
-    ]);
-    let lastError: unknown = null;
-    for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
-      try {
-        const context = await buildParserContext(
-          chatId,
-          messages,
-          targetIndex,
-          state.characterAppearance,
-          config,
-          attempt,
-          userId,
-          lorebookSnapshot,
-          undefined,
-          contextSources
-        );
-        const targetSource = await preprocessTargetParagraphs(parserConnection, config, paragraphs, context, userId);
-        const instruction = parserInstruction(config);
-        const referenceContext = continuityReference(context.systemContext, context.recentContext);
-        const userRequest = parserUserRequest(targetSource, config);
-        logStage(config, "parser_prompt_built", {
-          attempt,
-          instructionLength: instruction.length,
-          systemContextLength: context.systemContext.length,
-          recentContextLength: context.recentContext.length,
-          overrideLength: context.override.length,
-          parserParagraphs: paragraphs.length,
-          cacheCharacters: Object.keys(state.characterAppearance).length,
-          promptStyle: config.promptStyle,
-          promptSyntax: config.promptSyntax,
-          mode: config.mode,
-          maxCharacters: config.mode === "asset" ? 1 : config.maxCharacters,
-          preprocessingEnabled: config.preprocessingEnabled,
-          contextDiagnostics: context.diagnostics
-        });
-        const parsed = await parsePayloadWithRepair(
-          parserConnection,
-          config,
-          parserMessages(instruction, referenceContext, userRequest, context.override),
-          userId
-        );
-        const selected = selectPromptEntries(parsed, paragraphs, config);
-        if (selected.length === 0) throw new Error("No usable prompts were parsed.");
-        if (attempt === 0 && config.parserRetries > 0 && compactLorebookNeedsFullRetry(parsed, lorebookSnapshot)) {
-          throw new Error("Compact lorebook context did not produce durable character tags; retrying with full lorebook context.");
-        }
-        return { parsed, selected };
-      } catch (error) {
-        lastError = error;
-        const classification = retryClassification(error);
-        logStage(config, "parser_attempt_failed", {
-          attempt,
-          retries: config.parserRetries,
-          classification,
-          error: error instanceof Error ? error.message : String(error)
-        }, attempt >= config.parserRetries ? "error" : "warn");
-        if (attempt >= config.parserRetries || classification === "terminal") throw error;
-        if (classification === "transient") await waitForParserRetry(attempt);
-      }
+  const { chatId, messageId, messages, paragraphs, state, config, userId } = input;
+  const targetIndex = Math.max(0, messages.findIndex((message) => message.id === messageId));
+  // Resolve full lorebook snapshot once regardless of includeLorebook toggle — no extra world-book calls per attempt
+  const fullSnapshotPromise = buildFullLorebookSnapshot(chatId, userId);
+  const [parserConnection, lorebookSnapshotForPreset, contextSources] = await Promise.all([
+    resolveParserConnection(config, userId),
+    fullSnapshotPromise,
+    loadParserContextSources(chatId, config, userId)
+  ]);
+  const effectiveSnapshotForContext = lorebookSnapshotForPreset;
+
+  const buildPreprocessingContextForAttempt = async (attempt: number) =>
+    buildParserContext(
+      chatId,
+      messages,
+      targetIndex,
+      state.characterAppearance,
+      config,
+      attempt,
+      userId,
+      effectiveSnapshotForContext,
+      undefined,
+      contextSources
+    );
+  const preprocessingResult = await preprocessTargetParagraphs(null, config, paragraphs, buildPreprocessingContextForAttempt, userId, lorebookSnapshotForPreset);
+
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt <= config.parserRetries; attempt += 1) {
+    try {
+      const context = await buildParserContext(
+        chatId,
+        messages,
+        targetIndex,
+        state.characterAppearance,
+        config,
+        attempt,
+        userId,
+        effectiveSnapshotForContext,
+        undefined,
+        contextSources
+      );
+      // Pass preprocessingResult (text+used) so header is chosen by used boolean, not shape
+      const parserMessagesList = buildParserMessages(config, context, preprocessingResult, userId, lorebookSnapshotForPreset);
+      logStage(config, "parser_prompt_built", {
+        attempt,
+        systemContextLength: context.systemContext.length,
+        recentContextLength: context.recentContext.length,
+        overrideLength: context.override.length,
+        parserParagraphs: paragraphs.length,
+        cacheCharacters: Object.keys(state.characterAppearance).length,
+        promptStyle: config.promptStyle,
+        promptSyntax: config.promptSyntax,
+        mode: config.mode,
+        maxCharacters: config.mode === "asset" ? 1 : config.maxCharacters,
+        preprocessingMode: config.preprocessingMode,
+        prefillEnabled: config.prefillEnabled,
+        contextDiagnostics: context.diagnostics,
+        messageCount: messages.length
+      });
+      const parsed = await parsePayloadWithRepair(
+        parserConnection,
+        config,
+        parserMessagesList,
+        userId
+      );
+      // Original success is scenes && #scenes>0 — parsePayloadWithRepair already enforces that.
+      // Do NOT validate allowed-P or structural issues; do NOT retry merely because shots later select to zero.
+      const lorebookEntries = lorebookSnapshotForPreset.entries.map(e => ({ comment: e.comment, content: e.content }));
+      const selected = selectPromptEntries(parsed, paragraphs, config, lorebookEntries);
+      // For main pipeline, empty selected is allowed (preserves original no-image completion); sidecar caller will handle empty honestly.
+      return { parsed, selected, snapshot: lorebookSnapshotForPreset };
+    } catch (error) {
+      lastError = error;
+      logStage(config, "parser_attempt_failed", {
+        attempt,
+        retries: config.parserRetries,
+        error: error instanceof Error ? error.message : String(error)
+      }, attempt >= config.parserRetries ? "error" : "warn");
+      if (attempt >= config.parserRetries) throw error;
+      // No classification, no delay — immediate retry, context include count grows via buildParserContext attempt+1
     }
-    throw lastError instanceof Error ? lastError : new Error("Parser did not return usable prompts.");
   }
+  throw lastError instanceof Error ? lastError : new Error("Parser did not return usable prompts.");
 }
 
 async function persistCharacterMemory(
@@ -316,20 +306,20 @@ function logParsedSelection(
   config: Config
 ): void {
   const scenes = parsed.scenes || [];
-  const normalized = normalizeScenePayload(parsed);
+  const normalized = normalizeScenePayload(parsed, config as any);
   logStage(config, "parsed_payload_summary", {
     sceneCount: scenes.length,
     normalizedCount: normalized.length,
     parserParagraphs: normalized.map((entry) => entry.parserParagraph),
     rejectedParagraphs: normalized.map((entry) => entry.parserParagraph).filter((paragraph) => paragraph < 1 || paragraph > paragraphs.length),
-    charactersPerShot: normalized.map((entry) => cleanArray<CharacterJson>(entry.shot.characters).length)
+    charactersPerShot: normalized.map((entry) => cleanArray<any>(entry.shot.characters).length)
   });
   logStage(config, "prompt_selection_done", {
     promptCount: normalized.length,
     selectedCount: selected.length,
     parserParagraphs: selected.map((entry) => entry.parserParagraph),
     originalParagraphs: selected.map((entry) => entry.paragraph),
-    promptLengths: selected.map((entry) => renderPrompt(entry.prompt, config.promptSyntax).length),
+    promptLengths: selected.map((entry) => entry.prompt.sections.join("").length),
     negativeLengths: selected.map((entry) => entry.negative.length),
     mode: config.mode
   });
@@ -340,8 +330,13 @@ async function prepareAndDispatchImages(
   selected: PromptEntry[],
   config: Config,
   userId?: string,
-  preparedImageConnection?: Promise<ImageConnection | null>
+  preparedImageConnection?: Promise<ImageConnection | null>,
+  lorebookSnapshot?: LorebookContextSnapshot
 ): Promise<PreparedImageStage> {
+  // Original no-scene completion never touches the image provider. The parser
+  // may return scenes that all drop during paragraph selection; that is a
+  // successful zero-image completion, even when no image connection exists.
+  if (selected.length === 0) return { jobs: [], results: [] };
   const imageConnection = await (preparedImageConnection || resolveImageConnection(config, userId));
   const preparationStartedAt = Date.now();
   logStage(config, "image_generation_preparation_start", {
@@ -349,27 +344,50 @@ async function prepareAndDispatchImages(
     provider: imageConnection?.provider || "(default)",
     connectionId: imageConnection?.id || null
   });
-  const eagerComfyQueueing = imageConnection?.provider === "comfyui";
   const submissionStartedAt = Date.now();
-  return prepareAndDispatchImageJobs(selected, eagerComfyQueueing, async (entry, index) => {
+  // Resolve lorebook entries once for preset recomposition during initial generation
+  let lorebookEntries: Array<{ comment: string; content: string }> | undefined;
+  if (!lorebookSnapshot) {
+    try {
+      const snap = await buildFullLorebookSnapshot(chatId, userId);
+      lorebookEntries = snap.entries.map(e => ({ comment: e.comment, content: e.content }));
+    } catch { lorebookEntries = []; }
+  } else {
+    lorebookEntries = lorebookSnapshot.entries.map(e => ({ comment: e.comment, content: e.content }));
+  }
+  return prepareAndDispatchImageJobs(selected, async (entry, index) => {
     const jobStartedAt = Date.now();
     logStage(config, "image_generation_preparation_job_start", { index: index + 1, total: selected.length, paragraph: entry.paragraph });
-    const prompt = renderPrompt(entry.prompt, config.promptSyntax);
-    const corePrompt = renderPrompt(entry.corePrompt, config.promptSyntax);
+    // Recompute final prompts from raw with current config + preset (ensures dynamic preset applied)
+    const raw = entry.rawPromptData;
+    let finalPrompt: string;
+    let finalNegative: string;
+    if (raw) {
+      // Use current config + lorebook entries at generation time
+      [finalPrompt, finalNegative] = getFinalPromptsForGeneration(raw, config, lorebookEntries);
+    } else {
+      // Legacy fallback: use stored assembled prompt directly
+      finalPrompt = entry.prompt.sections.join("");
+      finalNegative = entry.negative || "";
+    }
+    const prompt = finalPrompt;
+    const negative = finalNegative;
+    const corePrompt = raw ? raw.setup + (raw.charPos ? ", " + raw.charPos : "") : "";
     const promptFormat = entry.corePrompt.format || "ordered";
-    const parameters = await buildImageParameters(config, imageConnection, prompt, entry.negative || "");
+    const parameters = await buildImageParameters(config, imageConnection, prompt, negative || "");
     const job: PreparedImageJob = {
       index,
       total: selected.length,
       prompt,
-      negative: entry.negative || "",
+      negative: negative || "",
       corePrompt,
-      shotNegative: entry.shotNegative,
+      shotNegative: raw?.charNeg ?? entry.shotNegative,
       promptFormat,
       paragraph: entry.paragraph,
       parserParagraph: entry.parserParagraph,
       quote: entry.quote,
-      parameters
+      parameters,
+      rawPromptData: raw
     };
     logStage(config, "image_generation_prepared", {
       index: index + 1,
@@ -395,7 +413,7 @@ async function prepareAndDispatchImages(
       total: job.total,
       paragraph: job.paragraph,
       provider: imageConnection?.provider || "(default)",
-      dispatch: eagerComfyQueueing ? "eager_comfyui" : "sequential",
+      dispatch: "sequential",
       elapsedMs: submittedAt - submissionStartedAt
     });
     return spindle.imageGen.generate({
@@ -441,6 +459,7 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
   const shotNegatives = stage.jobs.map((job) => job.shotNegative || "");
   const promptFormats = stage.jobs.map((job) => job.promptFormat || "ordered");
   const paragraphs = stage.jobs.map((job) => job.paragraph);
+  const rawPromptData = stage.jobs.map((job) => job.rawPromptData!);
   for (const [index, result] of stage.results.entries()) {
     if (result.imageId) imageIds.push(result.imageId);
     const imageUrl = result.imageUrl || (result.imageId ? imageUrlFromId(result.imageId) : "");
@@ -464,7 +483,8 @@ function collectImageResults(stage: PreparedImageStage, config: Config): ImageAs
     promptFormats,
     paragraphs,
     imageIds,
-    imageUrls
+    imageUrls,
+    rawPromptData
   };
 }
 
@@ -485,7 +505,8 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
     imageIds: assets.imageIds,
     imageUrls: assets.imageUrls,
     rawJson: parsed,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    rawPromptData: assets.rawPromptData
   };
   const reference = await storeGeneratedRecord(chatId, key, record, userId);
   const committed = await updateState(chatId, userId, async (state) => {
@@ -535,6 +556,7 @@ type ImageReplacement = {
   parameters: Record<string, unknown>;
   imageId: string;
   imageUrl: string;
+  rawPromptData?: RawPromptData;
 };
 
 async function commitImageReplacement(
@@ -553,19 +575,42 @@ async function commitImageReplacement(
     committedKey = located.key;
     committedIndex = located.index;
     const record = located.record;
+    const nextPrompts = replaceAt(record.prompts, located.index, replacement.prompt, "");
+    const nextNegativePrompts = replaceAt(record.negativePrompts, located.index, replacement.negative, "");
+    const nextQuotes = replaceAt(record.quotes, located.index, replacement.quote, "");
+    const nextImageParameters = replaceAt(record.imageParameters, located.index, replacement.parameters, {});
+    const nextCorePrompts = replaceAt(record.corePrompts, located.index, replacement.corePrompt, "");
+    const nextShotNegatives = replaceAt(record.shotNegatives, located.index, replacement.shotNegative, "");
+    const nextPromptFormats = replaceAt(record.promptFormats, located.index, replacement.promptFormat, "ordered");
+    const nextParagraphs = replaceAt(record.paragraphs, located.index, replacement.paragraph, 1);
+    const nextImageIds = replaceAt(record.imageIds, located.index, replacement.imageId, "");
+    const nextImageUrls = replaceAt(record.imageUrls, located.index, replacement.imageUrl, "");
+    let nextRawPromptData: RawPromptData[] | undefined = record.rawPromptData;
+    if (replacement.rawPromptData !== undefined) {
+      nextRawPromptData = replaceAt(record.rawPromptData, located.index, replacement.rawPromptData, replacement.rawPromptData);
+    } else if (record.rawPromptData !== undefined) {
+      nextRawPromptData = record.rawPromptData;
+    } else {
+      nextRawPromptData = undefined;
+    }
     committedRecord = {
       ...record,
-      prompts: replaceAt(record.prompts, located.index, replacement.prompt, ""),
-      negativePrompts: replaceAt(record.negativePrompts, located.index, replacement.negative, ""),
-      quotes: replaceAt(record.quotes, located.index, replacement.quote, ""),
-      imageParameters: replaceAt(record.imageParameters, located.index, replacement.parameters, {}),
-      corePrompts: replaceAt(record.corePrompts, located.index, replacement.corePrompt, ""),
-      shotNegatives: replaceAt(record.shotNegatives, located.index, replacement.shotNegative, ""),
-      promptFormats: replaceAt(record.promptFormats, located.index, replacement.promptFormat, "ordered"),
-      paragraphs: replaceAt(record.paragraphs, located.index, replacement.paragraph, 1),
-      imageIds: replaceAt(record.imageIds, located.index, replacement.imageId, ""),
-      imageUrls: replaceAt(record.imageUrls, located.index, replacement.imageUrl, "")
+      prompts: nextPrompts,
+      negativePrompts: nextNegativePrompts,
+      quotes: nextQuotes,
+      imageParameters: nextImageParameters,
+      corePrompts: nextCorePrompts,
+      shotNegatives: nextShotNegatives,
+      promptFormats: nextPromptFormats,
+      paragraphs: nextParagraphs,
+      imageIds: nextImageIds,
+      imageUrls: nextImageUrls,
+      ...(nextRawPromptData !== undefined ? { rawPromptData: nextRawPromptData } : {}),
     } satisfies GeneratedRecord;
+    // Ensure rawPromptData absent when neither had data
+    if (nextRawPromptData === undefined && (committedRecord as any).rawPromptData !== undefined) {
+      delete (committedRecord as any).rawPromptData;
+    }
     current.generated[located.key] = await storeGeneratedRecord(request.chatId, located.key, committedRecord, userId);
     if (parsedForMemory) updateCharacterMemory(current, parsedForMemory);
     rebuildGeneratedImageIndex(current);
@@ -615,42 +660,86 @@ export async function rerunStoredImage(
     let selectionForMemory: ParsedPayload | undefined;
 
     if (!rerunSidecar) {
-      const corePrompt = located.record.corePrompts?.[located.index] || "";
-      const promptFormat = located.record.promptFormats?.[located.index]
-        || (config.promptStyle === "default" ? "legacy" : "ordered");
-      const prompt = corePrompt
-        ? renderPromptWithCurrentAffixes(corePrompt, promptFormat, config)
-        : located.record.prompts[located.index] || "";
-      if (!prompt) throw new Error("The selected image has no stored prompt to reroll.");
-      const shotNegative = located.record.shotNegatives?.[located.index] || "";
-      const negative = renderNegativeWithCurrentSelection(shotNegative, promptFormat, config);
-      const originalParameters = located.record.imageParameters?.[located.index]
-        || await buildImageParameters(config, imageConnection, prompt, negative);
-      const parameters = rerollImageParameters(originalParameters, imageConnection, prompt, negative);
-      const result = await spindle.imageGen.generate({
-        connection_id: config.imageConnectionId || undefined,
-        prompt,
-        negativePrompt: negative || undefined,
-        model: config.imageModel || undefined,
-        parameters,
-        owner_chat_id: request.chatId,
-        userId
-      });
-      const imageId = result.imageId || "";
-      const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
-      if (!imageUrl) throw new Error("The image provider returned no replacement image.");
-      replacement = {
-        prompt,
-        negative,
-        quote: located.record.quotes?.[located.index] || "",
-        corePrompt,
-        shotNegative,
-        promptFormat,
-        paragraph: located.record.paragraphs[located.index] || 1,
-        parameters,
-        imageId,
-        imageUrl
-      };
+      // Recompute from stored rawPromptData using CURRENT settings (original getFinalPromptsForGeneration recomposes)
+      const raw = located.record.rawPromptData?.[located.index];
+      let prompt: string;
+      let negative: string;
+      let corePrompt: string;
+      let shotNegative: string;
+      let promptFormat: "legacy" | "ordered";
+      let parameters: Record<string, unknown>;
+      if (raw) {
+        const snapshot = await buildFullLorebookSnapshot(request.chatId, userId);
+        const entries = snapshot.entries.map(e => ({ comment: e.comment, content: e.content }));
+        [prompt, negative] = getFinalPromptsForGeneration(raw, config, entries);
+        corePrompt = raw.setup + (raw.charPos ? ", " + raw.charPos : "");
+        shotNegative = raw.charNeg;
+        promptFormat = config.promptStyle === "default" ? "legacy" : "ordered";
+        const originalParameters = located.record.imageParameters?.[located.index]
+          || await buildImageParameters(config, imageConnection, prompt, negative);
+        parameters = rerollImageParameters(originalParameters, imageConnection, prompt, negative);
+        const result = await spindle.imageGen.generate({
+          connection_id: config.imageConnectionId || undefined,
+          prompt,
+          negativePrompt: negative || undefined,
+          model: config.imageModel || undefined,
+          parameters,
+          owner_chat_id: request.chatId,
+          userId
+        });
+        const imageId = result.imageId || "";
+        const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+        if (!imageUrl) throw new Error("The image provider returned no replacement image.");
+        replacement = {
+          prompt,
+          negative,
+          quote: located.record.quotes?.[located.index] || "",
+          corePrompt,
+          shotNegative,
+          promptFormat,
+          paragraph: located.record.paragraphs[located.index] || 1,
+          parameters,
+          imageId,
+          imageUrl,
+          rawPromptData: raw
+        };
+      } else {
+        // Legacy fallback: use stored frozen prompt (documented fallback)
+        const legacyPrompt = located.record.prompts[located.index] || "";
+        if (!legacyPrompt) throw new Error("The selected image has no stored prompt to reroll.");
+        const legacyNegative = located.record.negativePrompts?.[located.index] || "";
+        const legacyCore = located.record.corePrompts?.[located.index] || "";
+        const legacyFormat = located.record.promptFormats?.[located.index]
+          || (config.promptStyle === "default" ? "legacy" : "ordered");
+        const legacyShotNeg = located.record.shotNegatives?.[located.index] || "";
+        const originalParameters = located.record.imageParameters?.[located.index]
+          || await buildImageParameters(config, imageConnection, legacyPrompt, legacyNegative);
+        const params = rerollImageParameters(originalParameters, imageConnection, legacyPrompt, legacyNegative);
+        const result = await spindle.imageGen.generate({
+          connection_id: config.imageConnectionId || undefined,
+          prompt: legacyPrompt,
+          negativePrompt: legacyNegative || undefined,
+          model: config.imageModel || undefined,
+          parameters: params,
+          owner_chat_id: request.chatId,
+          userId
+        });
+        const imageId = result.imageId || "";
+        const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+        if (!imageUrl) throw new Error("The image provider returned no replacement image.");
+        replacement = {
+          prompt: legacyPrompt,
+          negative: legacyNegative,
+          quote: located.record.quotes?.[located.index] || "",
+          corePrompt: legacyCore,
+          shotNegative: legacyShotNeg,
+          promptFormat: legacyFormat,
+          paragraph: located.record.paragraphs[located.index] || 1,
+          parameters: params,
+          imageId,
+          imageUrl
+        };
+      }
     } else {
       const messages = await spindle.chat.getMessages(request.chatId) as ChatMessage[];
       const target = messages.find((message) => message.id === located.record.messageId);
@@ -683,7 +772,8 @@ export async function rerunStoredImage(
         [entry],
         singleConfig,
         userId,
-        Promise.resolve(imageConnection)
+        Promise.resolve(imageConnection),
+        selection.snapshot
       );
       const job = stage.jobs[0];
       const result = stage.results[0];
@@ -695,13 +785,14 @@ export async function rerunStoredImage(
         prompt: job.prompt,
         negative: job.negative,
         quote: entry.quote,
-        corePrompt: job.corePrompt || renderPrompt(entry.corePrompt, singleConfig.promptSyntax),
+        corePrompt: job.corePrompt || "",
         shotNegative: job.shotNegative || entry.shotNegative,
         promptFormat: job.promptFormat || entry.corePrompt.format || "ordered",
         paragraph: originalParagraph,
         parameters: job.parameters,
         imageId,
-        imageUrl
+        imageUrl,
+        rawPromptData: entry.rawPromptData
       };
     }
 
@@ -721,6 +812,222 @@ export async function rerunStoredImage(
     return committed;
   } finally {
     releaseAction();
+  }
+}
+
+/**
+ * Multi-candidate picker (original `processNaiReroll` with `Image.Reroll>1`).
+ * Generates N images sequentially for the same recomputed prompt and returns candidates
+ * without applying.
+ */
+export type RerollCandidate = { imageId: string; imageUrl: string; parameters: Record<string, unknown> };
+
+export async function generateRerollCandidates(
+  request: StoredImageActionRequest,
+  count: number,
+  userId?: string,
+  preparedConfig?: Config
+): Promise<{ record: GeneratedRecord; index: number; candidates: RerollCandidate[] }> {
+  if (!request.chatId) throw new Error("Open the image's chat first.");
+  const safeCount = Math.max(1, Math.min(8, Math.floor(count) || 1));
+  const lockKey = JSON.stringify([userId ?? null, request.chatId, request.messageId ?? null, request.swipeId ?? null, request.imageIndex ?? null, request.imageId ?? request.imageUrl ?? null, "candidates", safeCount]);
+  const releaseLock = tryAcquireRuntimeLock("image-action", lockKey);
+  if (!releaseLock) throw new Error("That image is already being regenerated.");
+  try {
+    const config = preparedConfig || await getConfig(userId);
+    const state = await getState(request.chatId, userId);
+    const located = await locateStoredGeneratedImage(state, request, userId);
+    const imageConnection = await resolveImageConnection(config, userId);
+    // Recompute prompt from raw with current settings
+    let prompt: string;
+    let negative: string;
+    const raw = located.record.rawPromptData?.[located.index];
+    if (raw) {
+      const snap = await buildFullLorebookSnapshot(request.chatId, userId);
+      const entries = snap.entries.map(e => ({ comment: e.comment, content: e.content }));
+      [prompt, negative] = getFinalPromptsForGeneration(raw, config, entries);
+    } else {
+      prompt = located.record.prompts[located.index] || "";
+      negative = located.record.negativePrompts?.[located.index] || "";
+    }
+    if (!prompt) throw new Error("The selected image has no stored prompt to reroll.");
+    const baseParameters = located.record.imageParameters?.[located.index]
+      || await buildImageParameters(config, imageConnection, prompt, negative);
+    const candidates: RerollCandidate[] = [];
+    let lastParams = baseParameters;
+    for (let i = 0; i < safeCount; i += 1) {
+      const params = rerollImageParameters(lastParams, imageConnection, prompt, negative);
+      lastParams = params;
+      try {
+        const result = await spindle.imageGen.generate({
+          connection_id: config.imageConnectionId || undefined,
+          prompt,
+          negativePrompt: negative || undefined,
+          model: config.imageModel || undefined,
+          parameters: params,
+          owner_chat_id: request.chatId,
+          userId
+        });
+        const imageId = result.imageId || "";
+        const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+        if (!imageUrl) {
+          logStage(config, "reroll_candidate_failed", { index: i, reason: "empty_result" }, "warn");
+          continue;
+        }
+        candidates.push({ imageId, imageUrl, parameters: params });
+      } catch (error) {
+        logStage(config, "reroll_candidate_failed", { index: i, error: error instanceof Error ? error.message : String(error) }, "warn");
+        continue;
+      }
+    }
+    if (candidates.length === 0) throw new Error("The image provider returned no candidates.");
+    return { record: located.record, index: located.index, candidates };
+  } finally {
+    releaseLock();
+  }
+}
+
+export async function applyRerollCandidate(
+  request: StoredImageActionRequest,
+  candidate: RerollCandidate,
+  userId?: string,
+  preparedConfig?: Config
+): Promise<{ record: GeneratedRecord; index: number }> {
+  if (!request.chatId) throw new Error("Open the image's chat first.");
+  if (!candidate || typeof candidate !== "object") throw new Error("Missing candidate image.");
+  const candidateImageUrl = typeof (candidate as Record<string, unknown>).imageUrl === "string" ? String((candidate as Record<string, unknown>).imageUrl).trim() : "";
+  if (!candidateImageUrl) throw new Error("Missing candidate image.");
+  const candidateParams = (candidate as Record<string, unknown>).parameters;
+  if (!candidateParams || typeof candidateParams !== "object" || Array.isArray(candidateParams)) throw new Error("Invalid candidate parameters.");
+  const candidateImageId = typeof (candidate as Record<string, unknown>).imageId === "string" ? String((candidate as Record<string, unknown>).imageId) : "";
+  const lockKey = JSON.stringify([userId ?? null, request.chatId, request.messageId ?? null, request.swipeId ?? null, request.imageIndex ?? null, request.imageId ?? request.imageUrl ?? null, "apply", candidateImageUrl]);
+  const releaseLock = tryAcquireRuntimeLock("image-action", lockKey);
+  if (!releaseLock) throw new Error("That image is already being regenerated.");
+  try {
+    const config = preparedConfig || await getConfig(userId);
+    const state = await getState(request.chatId, userId);
+    const located = await locateStoredGeneratedImage(state, request, userId);
+    const raw = located.record.rawPromptData?.[located.index];
+    let prompt: string;
+    let negative: string;
+    if (raw) {
+      const snap = await buildFullLorebookSnapshot(request.chatId, userId);
+      const entries = snap.entries.map(e => ({ comment: e.comment, content: e.content }));
+      [prompt, negative] = getFinalPromptsForGeneration(raw, config, entries);
+    } else {
+      prompt = located.record.prompts[located.index] || "";
+      negative = located.record.negativePrompts?.[located.index] || "";
+    }
+    const corePrompt = located.record.corePrompts?.[located.index] || "";
+    const promptFormat = located.record.promptFormats?.[located.index] || (config.promptStyle === "default" ? "legacy" : "ordered");
+    const shotNegative = located.record.shotNegatives?.[located.index] || "";
+    const replacement: ImageReplacement = {
+      prompt,
+      negative,
+      quote: located.record.quotes?.[located.index] || "",
+      corePrompt,
+      shotNegative,
+      promptFormat,
+      paragraph: located.record.paragraphs[located.index] || 1,
+      parameters: candidateParams as Record<string, unknown>,
+      imageId: candidateImageId,
+      imageUrl: candidateImageUrl,
+      rawPromptData: raw
+    };
+    return await commitImageReplacement(request, replacement, config, userId);
+  } finally {
+    releaseLock();
+  }
+}
+
+/**
+ * Full-batch reroll (original `processNaiFullReroll`).
+ * Re-generates every image in the stored record sequentially, recomputing each from raw with current settings.
+ */
+export async function rerunAllStoredImages(
+  chatId: string,
+  messageId: string,
+  swipeId: number | undefined,
+  userId?: string,
+  preparedConfig?: Config
+): Promise<{ record: GeneratedRecord; failedCount: number }> {
+  if (!chatId || !messageId) throw new Error("Open the image's chat first.");
+  const lockKey = JSON.stringify([userId ?? null, chatId, messageId, swipeId ?? null, "full-reroll"]);
+  const releaseLock = tryAcquireRuntimeLock("image-action", lockKey);
+  if (!releaseLock) throw new Error("Full reroll is already running for that message.");
+  try {
+    const config = preparedConfig || await getConfig(userId);
+    const key = `${chatId}:${messageId}:${swipeId ?? 0}`;
+    const state = await getState(chatId, userId);
+    const raw = state.generated[key];
+    const record = await (async () => {
+      const loaded = await loadGeneratedRecord(raw, userId, true);
+      return loaded;
+    })();
+    if (!record) throw new Error("No generated record found for that message.");
+    const imageConnection = await resolveImageConnection(config, userId);
+    const snapshot = await buildFullLorebookSnapshot(chatId, userId);
+    const lorebookEntries = snapshot.entries.map(e => ({ comment: e.comment, content: e.content }));
+    const imageIds = [...record.imageIds];
+    const imageUrls = [...record.imageUrls];
+    const imageParameters = [...(record.imageParameters || [])];
+    const prompts = [...record.prompts];
+    const negativePrompts = [...(record.negativePrompts || [])];
+    let failedCount = 0;
+    for (let i = 0; i < record.prompts.length; i += 1) {
+      const rawData = record.rawPromptData?.[i];
+      let prompt: string;
+      let negative: string;
+      if (rawData) {
+        [prompt, negative] = getFinalPromptsForGeneration(rawData, config, lorebookEntries);
+      } else {
+        // Legacy fallback: frozen strings
+        prompt = record.prompts[i] || "";
+        negative = record.negativePrompts?.[i] || "";
+      }
+      if (!prompt) { failedCount += 1; continue; }
+      const baseParams = record.imageParameters?.[i] || await buildImageParameters(config, imageConnection, prompt, negative);
+      const params = rerollImageParameters(baseParams, imageConnection, prompt, negative);
+      try {
+        const result = await spindle.imageGen.generate({
+          connection_id: config.imageConnectionId || undefined,
+          prompt,
+          negativePrompt: negative || undefined,
+          model: config.imageModel || undefined,
+          parameters: params,
+          owner_chat_id: chatId,
+          userId
+        });
+        const imageId = result.imageId || "";
+        const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+        if (!imageUrl) throw new Error("No imageUrl");
+        imageIds[i] = imageId;
+        imageUrls[i] = imageUrl;
+        imageParameters[i] = params;
+        prompts[i] = prompt;
+        negativePrompts[i] = negative;
+      } catch {
+        failedCount += 1;
+      }
+    }
+    const nextRecord: GeneratedRecord = { ...record, imageIds, imageUrls, imageParameters, prompts, negativePrompts };
+    const reference = await storeGeneratedRecord(chatId, key, nextRecord, userId);
+    await updateState(chatId, userId, async (current) => {
+      await migrateLegacyGeneratedRecords(chatId, current, userId);
+      current.generated[key] = reference;
+      rebuildGeneratedImageIndex(current);
+    });
+    const messages = await spindle.chat.getMessages(chatId) as ChatMessage[];
+    const target = messages.find((m) => m.id === messageId);
+    if (target) {
+      await spindle.chat.updateMessage(chatId, messageId, {
+        content: renderInlaidMessage(String(target.content || ""), nextRecord, config),
+        metadata: { ...(target.metadata || {}), inlayIllustratorImageIds: imageIds, inlayIllustratorParagraphs: record.paragraphs, inlayIllustratorGeneratedAt: nextRecord.createdAt }
+      });
+    }
+    return { record: nextRecord, failedCount };
+  } finally {
+    releaseLock();
   }
 }
 
@@ -773,10 +1080,22 @@ export async function generateForMessage(
 
     const imageConnectionPromise = resolveImageConnection(config, userId);
     void imageConnectionPromise.catch(() => undefined);
-    const { parsed, selected } = await parseAndSelectPrompts({ chatId, messageId, messages, paragraphs, state, config, userId });
+    const { parsed, selected, snapshot } = await parseAndSelectPrompts({ chatId, messageId, messages, paragraphs, state, config, userId });
     logParsedSelection(parsed, selected, paragraphs, config);
+    if (selected.length === 0) {
+      // Original no-image completion: persist memory, no retry, no image generation
+      await persistCharacterMemory(chatId, parsed, config, userId);
+      logStage(config, "generation_pipeline_done", {
+        chatId,
+        messageId,
+        imageCount: 0,
+        elapsedMs: Date.now() - generationStartedAt,
+        reason: "no_selected_shots"
+      });
+      return;
+    }
     try {
-      const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId, imageConnectionPromise);
+      const imageStage = await prepareAndDispatchImages(chatId, selected, config, userId, imageConnectionPromise, snapshot);
       const assets = collectImageResults(imageStage, config);
       await persistGeneration({ chatId, messageId, swipeId, key, target, parsed, assets, config, userId });
       logStage(config, "generation_pipeline_done", {

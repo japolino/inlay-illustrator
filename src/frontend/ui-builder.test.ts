@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_CONFIG } from "../shared/config.js";
-import { UiBuilder } from "./ui-builder.js";
+import { settingsSectionSlug, UiBuilder } from "./ui-builder.js";
 
 class FakeElement {
   readonly children: FakeElement[] = [];
@@ -53,7 +53,10 @@ describe("settings collapsible sections", () => {
 
       const body = ui.section("Prompt", true) as unknown as FakeElement;
       const field = new FakeElement();
-      const toggle = sections.children[0]!.children[0]!;
+      const host = sections.children[0]!;
+      const toggle = host.children[0]!;
+      expect(host.attributes.get("data-inlay-section")).toBe("prompt");
+      expect(host.className).toContain("inlay-section-prompt");
       body.append(field);
 
       toggle.click();
@@ -69,5 +72,15 @@ describe("settings collapsible sections", () => {
       if (previousDocument) Object.defineProperty(globalThis, "document", previousDocument);
       else Reflect.deleteProperty(globalThis, "document");
     }
+  });
+});
+
+
+describe("settings section layout hooks", () => {
+  test("creates stable accessible slugs for wide-grid placement", () => {
+    expect(settingsSectionSlug("Prompt output")).toBe("prompt-output");
+    expect(settingsSectionSlug("Character memory")).toBe("character-memory");
+    expect(settingsSectionSlug("  Inlay gallery  ")).toBe("inlay-gallery");
+    expect(settingsSectionSlug("---")).toBe("section");
   });
 });

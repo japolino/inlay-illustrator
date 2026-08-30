@@ -12,7 +12,7 @@ export function renderGenerationSection({ ui, config, actions, rerender }: Secti
     : "Faithful v3.5 narrative illustration generation.", rerender);
   ui.addNumber(section, "minImages", "Minimum images", 1, 12);
   ui.addNumber(section, "maxImages", "Maximum images", 1, 12);
-  if (config.mode === "illustration") ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 8);
+  if (config.mode === "illustration") ui.addNumber(section, "maxCharacters", "Maximum characters", 1, 3);
   ui.addActions(section, [{
     label: "Generate latest",
     primary: true,

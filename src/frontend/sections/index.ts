@@ -1,4 +1,7 @@
+import { renderCaptionsSection } from "./captions.js";
 import { renderDiagnosticsSection } from "./diagnostics.js";
+import { renderDisplaySection } from "./display.js";
+import { renderGallerySection } from "./gallery.js";
 import { renderGenerationSection } from "./generation.js";
 import { renderMemorySection } from "./memory.js";
 import { renderOutputSection } from "./output.js";
@@ -11,6 +14,9 @@ export function renderSettingsSections(context: SectionContext): void {
   renderParserSection(context);
   renderPromptSection(context);
   renderOutputSection(context);
+  renderDisplaySection(context);
+  renderCaptionsSection(context);
   renderMemorySection(context);
+  renderGallerySection(context);
   renderDiagnosticsSection(context);
 }

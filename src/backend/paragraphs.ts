@@ -1,88 +1,123 @@
 import type { Config } from "../shared/config.js";
 import { stripInlayContent } from "./inlay-content.js";
 import type { PreparedParagraph } from "./types.js";
-import { escapeRegExp, unique } from "./utils.js";
-
-export function ignoredTagNames(config: Config): string[] {
-  return unique(String(config.ignoredTags || "")
-    .split(/[\n,]/)
-    .map((tag) => tag.trim().replace(/^<|>$/g, "").replace(/^\/+/, ""))
-    .filter(Boolean));
-}
+import { unique } from "./utils.js";
 
 function splitParagraphBlocks(content: string): string[] {
   const blocks: string[] = [];
   let current: string[] = [];
   for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
-    if (line.trim()) {
+    if (/^\s*$/.test(line)) {
+      if (current.length > 0) {
+        blocks.push(current.join("\n"));
+        current = [];
+      }
+    } else {
       current.push(line);
-    } else if (current.length > 0) {
-      blocks.push(current.join("\n"));
-      current = [];
     }
   }
   if (current.length > 0) blocks.push(current.join("\n"));
   return blocks;
 }
 
-type IgnoredTagPattern = { paired: RegExp; element: RegExp; bracket: RegExp };
-const ignoredPatternCache = new Map<string, IgnoredTagPattern[]>();
-
-function ignoredTagPatterns(config: Config): IgnoredTagPattern[] {
-  const key = String(config.ignoredTags || "");
-  const cached = ignoredPatternCache.get(key);
-  if (cached) return cached;
-  const patterns = ignoredTagNames(config).map((tag) => {
-    const name = escapeRegExp(tag);
-    return {
-      paired: new RegExp(`<${name}\\b[^>]*>[\\s\\S]*?<\\/${name}>`, "gi"),
-      element: new RegExp(`<\\/?${name}\\b[^>]*>`, "gi"),
-      bracket: new RegExp(`^\\s*\\[${name}\\b[^\\]]*\\]\\s*$`, "gim")
-    };
-  });
-  if (ignoredPatternCache.size >= 32) {
-    const oldest = ignoredPatternCache.keys().next().value;
-    if (typeof oldest === "string") ignoredPatternCache.delete(oldest);
-  }
-  ignoredPatternCache.set(key, patterns);
-  return patterns;
+export function ignoredTagNames(config: Config): string[] {
+  return unique(
+    String(config.ignoredTags || "")
+      .split(";")
+      .map((token) => {
+        const m = token.match(/<?\s*(\w+)\s*>?/);
+        return m ? m[1] : "";
+      })
+      .filter(Boolean)
+  );
 }
 
-function stripIgnoredTags(text: string, patterns: IgnoredTagPattern[]): string {
+function stripIgnoredTags(text: string, tagNames: string[]): string {
   let output = text;
-  for (const pattern of patterns) {
-    output = output
-      .replace(pattern.paired, "")
-      .replace(pattern.element, "")
-      .replace(pattern.bracket, "");
+  for (const tag of tagNames) {
+    const re = new RegExp(`<${tag}>[^\\n]*?</${tag}>`, "g");
+    output = output.replace(re, "");
   }
   return output;
 }
 
-function cleanParagraphText(text: string, patterns: IgnoredTagPattern[]): string {
-  const stripped = stripIgnoredTags(text, patterns)
-    .replace(/CARDDATA:.*$/gim, "")
-    .replace(/<Update Log\b[\s\S]*?<\/Update Log>/gi, "")
-    .replace(/<Choice\b[\s\S]*?<\/Choice>/gi, "");
-  return stripped
-    .split(/\r?\n/)
-    .filter((line) => {
-      const trimmed = line.trim();
-      if (!trimmed) return false;
-      return !/^\[(?:Date|FLOOR|RESERVEDFLOOR)\s*:/i.test(trimmed)
-        && !/^<\s*(?:suggestion|scene\s+seed=|check|choice)\b/i.test(trimmed);
-    })
-    .join("\n")
-    .trim();
+function stripTaggedBlock(text: string, tagName: string): string {
+  let out = text;
+  const openTag = `<${tagName}>`;
+  const closeTag = `</${tagName}>`;
+  let startPos = out.indexOf(openTag);
+  while (startPos !== -1) {
+    const endPos = out.indexOf(closeTag, startPos);
+    if (endPos !== -1) {
+      out = out.slice(0, startPos) + out.slice(endPos + closeTag.length);
+    } else {
+      out = out.slice(0, startPos);
+      break;
+    }
+    startPos = out.indexOf(openTag);
+  }
+  return out;
+}
+
+function stripNonNarrativeSections(text: string): string {
+  let cleaned = text ?? "";
+  cleaned = stripTaggedBlock(cleaned, "Update Log");
+  cleaned = stripTaggedBlock(cleaned, "Choice");
+  const kept: string[] = [];
+  for (const line of (cleaned + "\n").split("\n").slice(0, -1)) {
+    const trimmed = line.trim();
+    const lower = trimmed.toLowerCase();
+    const drop =
+      /^(\[Date:|\[FLOOR:|\[RESERVEDFLOOR:|\[ClimaxHPointDamage:|\[Development:)/.test(trimmed) ||
+      /^●.+●$/.test(trimmed) ||
+      lower.includes("<suggestion") ||
+      lower.includes("</suggestion>") ||
+      lower.includes("<scene seed=") ||
+      lower.includes("</scene>") ||
+      lower.includes("<check ") ||
+      lower.includes("</choice>") ||
+      lower.includes("<choice>");
+    if (!drop) kept.push(line);
+  }
+  cleaned = kept.join("\n");
+  cleaned = cleaned.replace(/\n\s*\n\s*\n+/g, "\n\n");
+  return cleaned;
+}
+
+function stripCardData(text: string): string {
+  return text.replace(/\nCARDDATA:[^\n]*/g, "");
+}
+
+function stripExistingInlays(text: string): string {
+  return text.replace(/INLAY\[[^\]]*\]\s*\n?/g, "");
+}
+
+function stripLoadingTags(text: string): string {
+  if (!text) return "";
+  return text.replace(/\s*\{\{Card\.Loading[^}]*\}\}/g, "").replace(/\s*\{\{global::Card\.Loading[^}]*\}\}/g, "");
 }
 
 export function prepareParagraphs(content: string, config: Config): PreparedParagraph[] {
+  // Original order: loading first, then Inlays/CardData/NonNarrative/Ignored (see original_script.txt 1702)
+  // Spindle adaptation: stripInlayContent handles Lumiverse {{inlay::}} blocks before original pipeline.
+  const withoutSpindleInlays = stripInlayContent(content);
+  const withoutLoading = stripLoadingTags(withoutSpindleInlays);
+  const withoutInlays = stripExistingInlays(withoutLoading);
+  const withoutCardData = stripCardData(withoutInlays);
+  const withoutNarrative = stripNonNarrativeSections(withoutCardData);
+  const tagNames = ignoredTagNames(config);
+  const withoutIgnored = stripIgnoredTags(withoutNarrative, tagNames);
+  const originalBlocks = splitParagraphBlocks(withoutIgnored);
   const paragraphs: PreparedParagraph[] = [];
-  const originalBlocks = splitParagraphBlocks(stripInlayContent(content));
-  const patterns = ignoredTagPatterns(config);
   for (const [index, block] of originalBlocks.entries()) {
-    const cleaned = cleanParagraphText(block, patterns);
-    if (cleaned) paragraphs.push({ parserIndex: paragraphs.length + 1, originalIndex: index + 1, text: cleaned });
+    const cleaned = block.trim();
+    if (cleaned) {
+      paragraphs.push({
+        parserIndex: paragraphs.length + 1,
+        originalIndex: index + 1,
+        text: cleaned,
+      });
+    }
   }
   return paragraphs;
 }

@@ -1,11 +1,16 @@
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
 import { DEFAULT_CONFIG, type Config } from "./shared/config.js";
 import { fetchImageGenerationSettings, fetchParserConnections } from "./frontend/api.js";
-import { CLEANUP_KEY, DRAWER_TAB_OPTIONS, PANEL_STYLES } from "./frontend/constants.js";
+import { CLEANUP_KEY, PANEL_STYLES } from "./frontend/constants.js";
 import type { BackendMessage, FrontendActions, ParserConnection } from "./frontend/contracts.js";
 import { routeBackendMessage } from "./frontend/message-router.js";
 import { SettingsRenderer } from "./frontend/renderer.js";
 import { installInlayLightbox } from "./frontend/lightbox.js";
+import { installInlayMessageDisplay } from "./frontend/message-display.js";
+import { createInlayGallery } from "./frontend/gallery.js";
+import { mountInlaySettingsHost } from "./frontend/settings-host.js";
+import { applyDisplaySettingsSnapshot, configureDisplayModeTransport } from "./frontend/display-settings.js";
+import { applyQuoteSettingsSnapshot } from "./frontend/caption-settings.js";
 
 export function setup(ctx: SpindleFrontendContext) {
   const previousCleanup = (globalThis as Record<string, unknown>)[CLEANUP_KEY];
@@ -14,13 +19,23 @@ export function setup(ctx: SpindleFrontendContext) {
   let config: Config = { ...DEFAULT_CONFIG };
   let parserConnections: ParserConnection[] = [];
   let characterAppearance: Record<string, string> = {};
+  let quoteStyle = "";
+  let quoteExample = "";
   let status = "Loading...";
   let triedImageGenerationParserDefault = false;
-  let drawerWasActive = false;
-
-  const tab = ctx.ui.registerDrawerTab(DRAWER_TAB_OPTIONS);
+  const settingsHost = mountInlaySettingsHost(ctx.ui);
   const removeStyle = ctx.dom.addStyle(PANEL_STYLES);
   const removeLightbox = installInlayLightbox(ctx);
+  const removeMessageDisplay = installInlayMessageDisplay(ctx);
+  const gallery = createInlayGallery(ctx);
+  const removeDisplayTransport = configureDisplayModeTransport(({ chatId, displayMode }) => {
+    ctx.sendToBackend({
+      type: "set_inlay_display_mode",
+      requestId: `inlay-display-setting-${Date.now()}`,
+      chatId,
+      displayMode
+    });
+  });
 
   function activeChatId(): string {
     try {
@@ -36,7 +51,7 @@ export function setup(ctx: SpindleFrontendContext) {
 
   function updateStatus(next: string): void {
     status = next;
-    const node = tab.root.querySelector<HTMLElement>(".inlay-status");
+    const node = settingsHost.root.querySelector<HTMLElement>(".inlay-status");
     if (node) node.textContent = status;
   }
 
@@ -45,17 +60,27 @@ export function setup(ctx: SpindleFrontendContext) {
     ctx.sendToBackend({ type: "set_config", patch, chatId: activeChatId() });
   }
 
+  function patchQuoteSettings(patch: { quoteStyle?: string; quoteExample?: string }): void {
+    if (typeof patch.quoteStyle === "string") quoteStyle = patch.quoteStyle;
+    if (typeof patch.quoteExample === "string") quoteExample = patch.quoteExample;
+    const chatId = activeChatId();
+    applyQuoteSettingsSnapshot(chatId, quoteStyle, quoteExample);
+    ctx.sendToBackend({ type: "set_quote_settings", requestId: `quote-settings-${Date.now()}`, chatId, patch });
+  }
+
   const actions: FrontendActions = {
     activeChatId,
     patchConfig,
+    patchQuoteSettings,
     requestState: () => requestState(),
     sendToBackend: (payload) => ctx.sendToBackend(payload),
-    updateStatus
+    updateStatus,
+    openGallery: () => gallery.open()
   };
   const renderer = new SettingsRenderer(
     ctx,
-    tab.root,
-    () => ({ config, parserConnections, characterAppearance, status }),
+    settingsHost.root,
+    () => ({ config, parserConnections, characterAppearance, quoteStyle, quoteExample, status }),
     actions
   );
 
@@ -96,6 +121,39 @@ export function setup(ctx: SpindleFrontendContext) {
   }
 
   const unsub = ctx.onBackendMessage((payload: unknown) => {
+    const displayMessage = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
+    if (displayMessage.type === "state") {
+      const stateConfig = displayMessage.config && typeof displayMessage.config === "object"
+        ? displayMessage.config as Record<string, unknown>
+        : {};
+      const stateChatId = typeof displayMessage.chatId === "string" ? displayMessage.chatId : activeChatId();
+      applyDisplaySettingsSnapshot({
+        chatId: stateChatId,
+        displayMode: displayMessage.displayMode,
+        displayMax: stateConfig.displayMax
+      });
+      applyQuoteSettingsSnapshot(stateChatId, displayMessage.quoteStyle, displayMessage.quoteExample);
+    } else if (displayMessage.type === "quote_settings_updated" && displayMessage.ok === true) {
+      const stateChatId = typeof displayMessage.chatId === "string" ? displayMessage.chatId : activeChatId();
+      const nextQuoteStyle = typeof displayMessage.quoteStyle === "string" ? displayMessage.quoteStyle : "";
+      const nextQuoteExample = typeof displayMessage.quoteExample === "string" ? displayMessage.quoteExample : "";
+      applyQuoteSettingsSnapshot(stateChatId, nextQuoteStyle, nextQuoteExample);
+      if (stateChatId === activeChatId()) {
+        quoteStyle = nextQuoteStyle;
+        quoteExample = nextQuoteExample;
+        renderer.render();
+      }
+    } else if (displayMessage.type === "config_updated") {
+      const nextConfig = displayMessage.config && typeof displayMessage.config === "object"
+        ? displayMessage.config as Record<string, unknown>
+        : {};
+      applyDisplaySettingsSnapshot({ displayMax: nextConfig.displayMax });
+    } else if (displayMessage.type === "inlay_display_settings_updated" && displayMessage.ok === true) {
+      applyDisplaySettingsSnapshot({
+        chatId: typeof displayMessage.chatId === "string" ? displayMessage.chatId : activeChatId(),
+        displayMode: displayMessage.displayMode
+      });
+    }
     routeBackendMessage(payload as BackendMessage, activeChatId, {
       replaceConfig: (next) => {
         config = next;
@@ -104,6 +162,8 @@ export function setup(ctx: SpindleFrontendContext) {
         config = next.config;
         parserConnections = next.parserConnections;
         characterAppearance = next.characterAppearance;
+        quoteStyle = next.quoteStyle;
+        quoteExample = next.quoteExample;
         status = next.status;
         renderer.render();
       },
@@ -118,11 +178,6 @@ export function setup(ctx: SpindleFrontendContext) {
     });
   });
 
-  const unsubDrawer = ctx.ui.events.onDrawerChange((drawer) => {
-    const active = drawer.open && drawer.tabId === tab.tabId;
-    if (active && !drawerWasActive) requestState();
-    drawerWasActive = active;
-  });
   const unsubChatSwitched = ctx.events.on("CHAT_SWITCHED", (payload) => {
     const chatId = (payload as { chatId?: unknown } | null)?.chatId;
     requestState(typeof chatId === "string" ? chatId : "");
@@ -134,12 +189,14 @@ export function setup(ctx: SpindleFrontendContext) {
 
   const cleanup = () => {
     unsub();
-    unsubDrawer();
     unsubChatSwitched();
     renderer.destroy();
+    gallery.destroy();
+    removeDisplayTransport();
+    removeMessageDisplay();
     removeLightbox();
     removeStyle();
-    tab.destroy();
+    settingsHost.destroy();
     if ((globalThis as Record<string, unknown>)[CLEANUP_KEY] === cleanup) {
       delete (globalThis as Record<string, unknown>)[CLEANUP_KEY];
     }

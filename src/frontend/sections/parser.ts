@@ -2,54 +2,55 @@ import type { SectionContext } from "./section-context.js";
 
 export function renderParserSection({ ui, config, parserConnections, actions }: SectionContext): void {
   const section = ui.section("Parser and context", false);
-  const selectedParser = parserConnections.find((connection) => connection.id === config.parserConnectionId);
+
+  // Parser engine — determines which connection main generation uses
+  ui.addSelect(section, "parserEngine", "Parser engine", [
+    { value: "axllm", label: "axLLM" },
+    { value: "llm", label: "LLM" }
+  ], "Main uses the chosen engine connection. Preprocessing uses its own mode below.");
+
+  // Dual connection selectors — Spindle has no axLLM/LLM globals, so two independent connection IDs
   const parserOptions = parserConnections.map((connection) => ({
     value: connection.id,
     label: `${connection.name} (${connection.provider}${connection.model ? ` / ${connection.model}` : ""})`
   }));
-  if (config.parserConnectionId && !selectedParser) {
-    parserOptions.push({ value: config.parserConnectionId, label: `Missing: ${config.parserConnectionId}` });
+  const axSelected = parserConnections.find((c) => c.id === (config as any).axllmParserConnectionId);
+  const llmSelected = parserConnections.find((c) => c.id === (config as any).llmParserConnectionId);
+  // Preserve missing-entry display
+  if ((config as any).axllmParserConnectionId && !axSelected) {
+    parserOptions.push({ value: (config as any).axllmParserConnectionId, label: `Missing: ${(config as any).axllmParserConnectionId}` });
   }
-
+  if ((config as any).llmParserConnectionId && !llmSelected && (config as any).llmParserConnectionId !== (config as any).axllmParserConnectionId) {
+    parserOptions.push({ value: (config as any).llmParserConnectionId, label: `Missing: ${(config as any).llmParserConnectionId}` });
+  }
   ui.addSelect(
     section,
-    "parserConnectionId",
-    "Parser connection",
+    "axllmParserConnectionId",
+    "axLLM parser connection",
     parserOptions,
-    selectedParser
-      ? `Selected: ${selectedParser.name} / ${selectedParser.provider}`
-      : "Choose the model that turns chat text into image prompts."
+    axSelected ? `Selected: ${axSelected.name} / ${axSelected.provider}` : "Connection for axLLM engine. Missing selection errors rather than falling back."
   );
-  ui.addText(
+  ui.addSelect(
     section,
-    "parserModel",
-    "Parser model",
-    selectedParser?.model ? `Leave empty to use ${selectedParser.model}.` : "Leave empty to use the connection default."
+    "llmParserConnectionId",
+    "LLM parser connection",
+    parserOptions,
+    llmSelected ? `Selected: ${llmSelected.name} / ${llmSelected.provider}` : "Connection for LLM engine. Missing selection errors rather than falling back."
   );
 
-  const parserParameterTarget = ui.row(section, "Parser parameters", "JSON parameters sent to the parser connection.");
-  const parserParameterInput = document.createElement("textarea");
-  parserParameterInput.value = JSON.stringify(config.parserParameters || {}, null, 2);
-  parserParameterInput.spellcheck = false;
-  parserParameterInput.addEventListener("change", () => {
-    try {
-      actions.patchConfig({ parserParameters: JSON.parse(parserParameterInput.value || "{}") as Record<string, unknown> });
-    } catch {
-      actions.updateStatus("Parser parameters must be valid JSON.");
-    }
-  });
-  parserParameterTarget.append(parserParameterInput);
+  ui.addSelect(section, "preprocessingMode", "Preprocessing mode", [
+    { value: "off", label: "Off" },
+    { value: "axllm", label: "axLLM" },
+    { value: "llm", label: "LLM" }
+  ], "Preprocessing independently uses chosen engine. Off falls back to numbered text.");
 
-  ui.addNumber(
-    section,
-    "parserMaxTokens",
-    "Maximum token budget",
-    0,
-    32768,
-    "0 uses the automatic model and parser-stage budget. Explicit max_tokens or max_completion_tokens in Parser parameters takes precedence."
-  );
+  ui.addSelect(section, "encodeMode", "Encode method", [
+    { value: "0", label: "0 — None" },
+    { value: "1", label: "1 — Base64" },
+    { value: "2", label: "2 — Atbash" }
+  ], "Original encode modes 0/1/2 only.");
 
-  ui.addSwitch(section, "preprocessingEnabled", "Illustration preprocessing");
+  ui.addSwitch(section, "prefillEnabled", "Prefill", "Enable Card.Prefill.Prompt at absolute end (Spindle adapts unsupported roles narrowly).");
   ui.addNumber(section, "includeMinMessages", "Minimum context", 0, 32);
   ui.addNumber(section, "includeMaxMessages", "Maximum context", 0, 32);
   ui.addNumber(section, "parserRetries", "Parser retries", 0, 5);
@@ -57,6 +58,6 @@ export function renderParserSection({ ui, config, parserConnections, actions }: 
   ui.addSwitch(section, "includeUserInfo", "User info");
   ui.addSwitch(section, "includeCharacterInfo", "Character info");
   ui.addSwitch(section, "includeLorebook", "Lorebook");
-  ui.addSwitch(section, "userInstructionsEnabled", "User instructions");
-  ui.addTextarea(section, "customParserInstructions", "Parser override");
+  ui.addSwitch(section, "characterTagContextEnabled", "Character tag context");
+  ui.addTextarea(section, "customParserInstructions", "Parser override", "Custom instructions (trimmed, always included when non-empty).");
 }

@@ -8,6 +8,8 @@ export type CharacterJson = {
   expression?: unknown;
   action?: unknown;
   negative?: unknown;
+  positive?: unknown;
+  scene?: unknown;
 };
 
 export type ShotJson = {
@@ -19,6 +21,9 @@ export type ShotJson = {
   supplement?: unknown;
   negative?: unknown;
   quote?: unknown;
+  scene?: unknown;
+  place?: unknown;
+  positive?: unknown;
 };
 
 export type SceneJson = ShotJson & {
@@ -37,6 +42,17 @@ export type AssembledPrompt = {
   format?: "legacy" | "ordered";
 };
 
+export type RawPromptData = {
+  setup: string;
+  charPos: string;
+  charNeg: string;
+  supplement: string;
+  situation: string;
+  place: string;
+  camera: string;
+  action: string;
+};
+
 export type PromptEntry = {
   prompt: AssembledPrompt;
   corePrompt: AssembledPrompt;
@@ -45,6 +61,7 @@ export type PromptEntry = {
   paragraph: number;
   parserParagraph: number;
   quote: string;
+  rawPromptData: RawPromptData;
 };
 
 export type PreparedParagraph = { parserIndex: number; originalIndex: number; text: string };
@@ -60,9 +77,15 @@ export type ChatMessage = {
 
 export type ParserContext = {
   systemContext: string;
-  /** Stable references safe for the visual-beat preprocessing call. Lorebook prose is intentionally excluded. */
+  /** Ordered raw base system blocks: preamble first, then each user/char/lorebook entry/appearance as distinct strings (original buildBaseSharedChatData per-entry fidelity). */
+  baseBlocks: string[];
+  /** Subset of baseBlocks stable for preprocessing (lorebook excluded). Raw preamble plus distinct user/char/appearance blocks. */
+  preprocessingBaseBlocks?: string[];
+  /** Legacy joined string for preprocessing stability (still supported, but prefer preprocessingBaseBlocks). */
   preprocessingSystemContext?: string;
   recentContext: string;
+  /** Preprocessing history omits the main-parser supporting-context warning, matching v3.5. */
+  preprocessingRecentContext?: string;
   override: string;
   diagnostics: Record<string, unknown>;
 };
@@ -108,6 +131,7 @@ export type PreparedImageJob = {
   parserParagraph?: number;
   quote?: string;
   parameters: Record<string, unknown>;
+  rawPromptData?: RawPromptData;
 };
 
 export type State = {
@@ -118,6 +142,11 @@ export type State = {
    */
   manualCharacterAppearance?: Record<string, string>;
   generated: Record<string, unknown>;
+  /** Original per-chat Card.Inlay.Display raw value. */
+  displayMode?: string;
+  /** Original per-chat Card.Quote.Style and Card.Quote.Example values. */
+  quoteStyle?: string;
+  quoteExample?: string;
   /** Compact lookup for records stored outside the continuity-state document. */
   generatedImageIndex?: Record<string, { key: string; index: number }>;
   /** Ignored legacy state retained only until the next state write. */
@@ -138,12 +167,9 @@ export type GeneratedRecordReference = {
 
 export type ParserGenerationRequest = {
   type: "raw";
-  provider: string;
-  model: string;
   connection_id: string;
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
   parameters?: Record<string, unknown>;
-  reasoning: { source: "off" };
   userId?: string;
   signal?: AbortSignal;
 };
@@ -167,4 +193,5 @@ export type GeneratedRecord = {
   imageUrls: string[];
   rawJson: ParsedPayload;
   createdAt: string;
+  rawPromptData?: RawPromptData[];
 };
