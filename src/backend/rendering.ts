@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type Config } from "../shared/config.js";
+import { DEFAULT_CONFIG, resolveInlayImageAspect, type Config } from "../shared/config.js";
 import { MARKER } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
 import { paragraphCount } from "./paragraphs.js";
@@ -42,14 +42,17 @@ function renderInlayBlock(
   config: Config
 ): string {
   const label = `Inlay ${index + 1}`;
-  const configuredWidth = config.mode === "asset" ? config.assetImageWidth : config.inlayImageWidth;
-  const fallbackWidth = config.mode === "asset" ? DEFAULT_CONFIG.assetImageWidth : DEFAULT_CONFIG.inlayImageWidth;
-  const width = clampInt(configuredWidth, 120, 2400, fallbackWidth);
+  // Absolute pixel width is capped by the chat column, so it is not a useful
+  // control. Size the box by a preset aspect ratio and a viewport-height cap
+  // instead: the box keeps the chosen aspect and object-fit:cover crops the
+  // generator output into it.
+  const aspect = resolveInlayImageAspect(config.inlayImageAspect);
   const maxHeight = clampInt(config.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh);
+  const boxWidth = `min(100%, calc(${maxHeight}vh * ${aspect.w} / ${aspect.h}))`;
   const quoteHtml = quote.trim()
-    ? `<blockquote class="inlay-illustrator-inline-quote" style="width:min(100%, ${width}px);margin:8px auto 0;padding:8px 12px;text-align:center;font-style:italic;opacity:.9;">${htmlAttr(quote.trim())}</blockquote>`
+    ? `<blockquote class="inlay-illustrator-inline-quote" style="width:${boxWidth};margin:8px auto 0;padding:8px 12px;text-align:center;font-style:italic;opacity:.9;">${htmlAttr(quote.trim())}</blockquote>`
     : "";
-  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img alt="${htmlAttr(label)}" data-inlay-illustrator-quote="${htmlAttr(quote)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" data-inlay-illustrator-image-url="${htmlAttr(url)}" style="display:block;width:min(100%, ${width}px);height:${maxHeight}vh;object-fit:cover;border-radius:8px;cursor:zoom-in;"/>${quoteHtml}</div>`;
+  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;"><img alt="${htmlAttr(label)}" data-inlay-illustrator-quote="${htmlAttr(quote)}" data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" data-inlay-illustrator-image-url="${htmlAttr(url)}" style="display:block;width:${boxWidth};aspect-ratio:${aspect.w}/${aspect.h};object-fit:cover;border-radius:8px;cursor:zoom-in;"/>${quoteHtml}</div>`;
 }
 
 export function renderInlaidMessage(original: string, record: InlayRecord, config: Config): string {

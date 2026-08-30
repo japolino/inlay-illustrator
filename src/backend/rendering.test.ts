@@ -40,7 +40,7 @@ describe("inlay rendering", () => {
     expect(rendered.split(MARKER)).toHaveLength(4);
   });
 
-  test("drops invalid paragraph targets and applies configured dimensions to valid images", () => {
+  test("drops invalid paragraph targets and sizes valid images by aspect + height cap", () => {
     const rendered = renderInlaidMessage(
       "First.\n\nSecond.",
       {
@@ -50,7 +50,7 @@ describe("inlay rendering", () => {
       },
       {
         ...DEFAULT_CONFIG,
-        inlayImageWidth: 812,
+        inlayImageAspect: "wide",
         inlayImageMaxHeightVh: 63
       }
     );
@@ -59,9 +59,21 @@ describe("inlay rendering", () => {
     expect(rendered).not.toContain("/too-high.png");
     expect(rendered).toContain("/valid.png");
     expect(rendered.indexOf("/valid.png")).toBeLessThan(rendered.indexOf("Second."));
-    expect(rendered).toContain("width:min(100%, 812px)");
-    expect(rendered).toContain("height:63vh");
+    // Sized by aspect-ratio (16:9) and the viewport-height cap: the box width is
+    // min(container, 63vh * 16 / 9) and the height follows the aspect ratio.
+    expect(rendered).toContain("width:min(100%, calc(63vh * 16 / 9))");
+    expect(rendered).toContain("aspect-ratio:16/9");
     expect(rendered).toContain("object-fit:cover");
+  });
+
+  test("uses a vertical aspect preset when configured", () => {
+    const rendered = renderInlaidMessage(
+      "Paragraph.",
+      { imageUrls: ["/v.png"], prompts: ["p"], paragraphs: [1] },
+      { ...DEFAULT_CONFIG, inlayImageAspect: "vertical", inlayImageMaxHeightVh: 60 }
+    );
+    expect(rendered).toContain("width:min(100%, calc(60vh * 9 / 16))");
+    expect(rendered).toContain("aspect-ratio:9/16");
   });
 
   test("escapes image metadata without embedding prompt text in the chat", () => {
@@ -119,17 +131,18 @@ describe("inlay rendering", () => {
     expect(block).not.toContain('<pre class="inlay-illustrator-negative-prompt"');
   });
 
-  test("renders an escaped quote below the image and uses the Asset Mode width", () => {
+  test("renders an escaped quote below the image and uses the asset-mode box", () => {
     const rendered = renderInlaidMessage("Paragraph.", {
       imageUrls: ["/asset.png"],
       prompts: ["1girl"],
       quotes: ['"Stay <close>."'],
       paragraphs: [1]
-    }, { ...DEFAULT_CONFIG, mode: "asset", assetImageWidth: 512 });
+    }, { ...DEFAULT_CONFIG, mode: "asset" });
 
     expect(rendered).toContain("inlay-illustrator-inline-quote");
     expect(rendered).toContain("&quot;Stay &lt;close&gt;.&quot;");
-    expect(rendered).toContain("width:min(100%, 512px)");
+    expect(rendered).toContain("width:min(100%, calc(70vh * 16 / 9))");
+    expect(rendered).toContain("aspect-ratio:16/9");
   });
 
   test("encodes provider image IDs for the Lumiverse result route", () => {

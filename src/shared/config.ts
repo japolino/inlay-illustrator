@@ -8,6 +8,38 @@ export type PromptPreset = {
 export type ParserEngine = "axllm" | "llm";
 export type PreprocessingMode = "off" | "axllm" | "llm";
 
+/** Preset aspect ratios for in-chat inlay image boxes. */
+export type InlayImageAspect = "wide" | "standard" | "square" | "portrait" | "vertical" | "classic";
+
+export const INLAY_IMAGE_ASPECT_PRESETS: Array<{ value: InlayImageAspect; label: string }> = [
+  { value: "wide", label: "Wide 16:9" },
+  { value: "standard", label: "Standard 4:3" },
+  { value: "square", label: "Square 1:1" },
+  { value: "portrait", label: "Portrait 3:4" },
+  { value: "vertical", label: "Vertical 9:16" },
+  { value: "classic", label: "Classic 2:3" }
+];
+
+const INLAY_IMAGE_ASPECT_RATIOS: Record<InlayImageAspect, { w: number; h: number }> = {
+  wide: { w: 16, h: 9 },
+  standard: { w: 4, h: 3 },
+  square: { w: 1, h: 1 },
+  portrait: { w: 3, h: 4 },
+  vertical: { w: 9, h: 16 },
+  classic: { w: 2, h: 3 }
+};
+
+/** Resolve an aspect (w/h) for a preset, defaulting to wide 16:9. */
+export function resolveInlayImageAspect(value: unknown): { w: number; h: number } {
+  const key = String(value ?? "").toLowerCase();
+  return INLAY_IMAGE_ASPECT_RATIOS[key as InlayImageAspect] ?? INLAY_IMAGE_ASPECT_RATIOS.wide;
+}
+
+export function normalizeInlayImageAspect(value: unknown): InlayImageAspect {
+  const key = String(value ?? "").toLowerCase();
+  return key in INLAY_IMAGE_ASPECT_RATIOS ? (key as InlayImageAspect) : "wide";
+}
+
 export type Config = {
   enabled: boolean;
   autoGenerate: boolean;
@@ -35,6 +67,7 @@ export type Config = {
   prefillEnabled: boolean;
   inlayImageWidth: number;
   assetImageWidth: number;
+  inlayImageAspect: InlayImageAspect;
   inlayImageMaxHeightVh: number;
   promptStyle: "default" | "anima";
   promptSyntax: "nai" | "comfyui";
@@ -112,6 +145,7 @@ export const DEFAULT_CONFIG: Config = {
   prefillEnabled: false,
   inlayImageWidth: 640,
   assetImageWidth: 400,
+  inlayImageAspect: "wide",
   inlayImageMaxHeightVh: 70,
   promptStyle: "default",
   promptSyntax: "nai",
@@ -292,6 +326,7 @@ export function normalizeConfig(raw: RawConfig): Config {
     prefillEnabled: (raw as Record<string, unknown>).prefillEnabled === true,
     inlayImageWidth: clampInt(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
     assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
+    inlayImageAspect: normalizeInlayImageAspect((raw as Record<string, unknown>).inlayImageAspect),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
     promptStyle: raw.promptStyle === "anima" ? "anima" : "default",
     promptSyntax: raw.promptSyntax === "comfyui" ? "comfyui" : "nai",

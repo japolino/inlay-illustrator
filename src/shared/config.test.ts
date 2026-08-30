@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_CONFIG, normalizeConfig, normalizeFabCorner } from "./config.js";
+import { DEFAULT_CONFIG, normalizeConfig, normalizeFabCorner, normalizeInlayImageAspect, resolveInlayImageAspect } from "./config.js";
 
 describe("shared configuration", () => {
   test("normalizes an empty record to independent defaults", () => {
@@ -25,6 +25,19 @@ describe("shared configuration", () => {
     expect(normalizeConfig({ quotesEnabled: true, quoteInstructions: " exact quote rule ", originalReference: true, originalCreationName: " Anima " }))
       .toMatchObject({ quotesEnabled: true, quoteInstructions: "exact quote rule", originalReference: true, originalCreationName: "Anima" });
   });
+  test("normalizes inlay image aspect presets to a known value", () => {
+    expect(normalizeInlayImageAspect("wide")).toBe("wide");
+    expect(normalizeInlayImageAspect("portrait")).toBe("portrait");
+    expect(normalizeInlayImageAspect("Vertical")).toBe("vertical");
+    expect(normalizeInlayImageAspect("")).toBe("wide");
+    expect(normalizeInlayImageAspect("nonsense")).toBe("wide");
+    expect(normalizeConfig({ inlayImageAspect: "square" }).inlayImageAspect).toBe("square");
+    expect(DEFAULT_CONFIG.inlayImageAspect).toBe("wide");
+    expect(resolveInlayImageAspect("wide")).toEqual({ w: 16, h: 9 });
+    expect(resolveInlayImageAspect("vertical")).toEqual({ w: 9, h: 16 });
+    expect(resolveInlayImageAspect(undefined)).toEqual({ w: 16, h: 9 });
+  });
+
   test("preserves raw display-max text for Lua tonumber semantics", () => {
     expect(normalizeConfig({ displayMax: " 02.50 " }).displayMax).toBe(" 02.50 ");
     expect(normalizeConfig({ displayMax: "null" }).displayMax).toBe("null");
