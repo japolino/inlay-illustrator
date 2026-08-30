@@ -533,7 +533,7 @@ async function persistGeneration(input: PersistStageInput): Promise<GeneratedRec
     chatId,
     characterAppearance: committed.characterAppearance
   }, userId);
-  spindle.sendToFrontend({ type: "status", status: "Generated", record }, userId);
+  spindle.sendToFrontend({ type: "status", status: "Generated", record, busy: false }, userId);
   return record;
 }
 
@@ -935,12 +935,13 @@ export async function rerunAllStoredImages(
   messageId: string,
   swipeId: number | undefined,
   userId?: string,
-  preparedConfig?: Config
+  preparedConfig?: Config,
+  sidecar = false
 ): Promise<{ record: GeneratedRecord; failedCount: number }> {
   if (!chatId || !messageId) throw new Error("Open the image's chat first.");
-  const lockKey = JSON.stringify([userId ?? null, chatId, messageId, swipeId ?? null, "full-reroll"]);
+  const lockKey = JSON.stringify([userId ?? null, chatId, messageId, swipeId ?? null, sidecar ? "full-sidecar" : "full-reroll"]);
   const releaseLock = tryAcquireRuntimeLock("image-action", lockKey);
-  if (!releaseLock) throw new Error("Full reroll is already running for that message.");
+  if (!releaseLock) throw new Error(sidecar ? "Sidecar rerun is already running for that message." : "Full reroll is already running for that message.");
   try {
     const config = preparedConfig || await getConfig(userId);
     const key = `${chatId}:${messageId}:${swipeId ?? 0}`;
@@ -959,40 +960,97 @@ export async function rerunAllStoredImages(
     const prompts = [...record.prompts];
     const negativePrompts = [...(record.negativePrompts || [])];
     let failedCount = 0;
-    for (let i = 0; i < record.prompts.length; i += 1) {
-      const rawData = record.rawPromptData?.[i];
-      let prompt: string;
-      let negative: string;
-      if (rawData) {
-        [prompt, negative] = getFinalPromptsForGeneration(rawData, config);
-      } else {
-        // Legacy fallback: frozen strings
-        prompt = record.prompts[i] || "";
-        negative = record.negativePrompts?.[i] || "";
+
+    if (sidecar) {
+      // Sidecar mode (floating action button): re-run the parser from the source
+      // message for each stored image, exactly like rerunStoredImage's sidecar
+      // path, then replace that image. Prior images are preserved on failure.
+      const messages = await spindle.chat.getMessages(chatId) as ChatMessage[];
+      const target = messages.find((message) => message.id === messageId);
+      if (!target) throw new Error("The source assistant message no longer exists.");
+      const sourceParagraphs = prepareParagraphs(String(target.content || ""), config);
+      for (let i = 0; i < record.paragraphs.length; i += 1) {
+        const originalParagraph = record.paragraphs[i] || 1;
+        const sourceParagraph = sourceParagraphs.find((paragraph) => paragraph.originalIndex === originalParagraph);
+        if (!sourceParagraph) { failedCount += 1; continue; }
+        try {
+          const singleConfig: Config = {
+            ...config,
+            minImages: 1,
+            maxImages: 1,
+            preprocessingEnabled: false
+          };
+          const paragraphs: PreparedParagraph[] = [{ ...sourceParagraph, parserIndex: 1 }];
+          const selection = await parseAndSelectPrompts({
+            chatId,
+            messageId,
+            messages,
+            paragraphs,
+            state,
+            config: singleConfig,
+            userId
+          });
+          const entry = selection.selected[0];
+          if (!entry) throw new Error("The sidecar returned no usable replacement prompt.");
+          const stage = await prepareAndDispatchImages(
+            chatId,
+            [entry],
+            singleConfig,
+            userId,
+            Promise.resolve(imageConnection),
+            selection.snapshot
+          );
+          const job = stage.jobs[0];
+          const result = stage.results[0];
+          if (!job || !result) throw new Error("The replacement image was not generated.");
+          const imageId = result.imageId || "";
+          const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+          if (!imageUrl) throw new Error("The image provider returned no replacement image.");
+          imageIds[i] = imageId;
+          imageUrls[i] = imageUrl;
+          imageParameters[i] = job.parameters;
+          prompts[i] = job.prompt;
+          negativePrompts[i] = job.negative;
+        } catch {
+          failedCount += 1;
+        }
       }
-      if (!prompt) { failedCount += 1; continue; }
-      const baseParams = record.imageParameters?.[i] || await buildImageParameters(config, imageConnection, prompt, negative);
-      const params = rerollImageParameters(baseParams, imageConnection, prompt, negative);
-      try {
-        const result = await spindle.imageGen.generate({
-          connection_id: config.imageConnectionId || undefined,
-          prompt,
-          negativePrompt: negative || undefined,
-          model: config.imageModel || undefined,
-          parameters: params,
-          owner_chat_id: chatId,
-          userId
-        });
-        const imageId = result.imageId || "";
-        const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
-        if (!imageUrl) throw new Error("No imageUrl");
-        imageIds[i] = imageId;
-        imageUrls[i] = imageUrl;
-        imageParameters[i] = params;
-        prompts[i] = prompt;
-        negativePrompts[i] = negative;
-      } catch {
-        failedCount += 1;
+    } else {
+      for (let i = 0; i < record.prompts.length; i += 1) {
+        const rawData = record.rawPromptData?.[i];
+        let prompt: string;
+        let negative: string;
+        if (rawData) {
+          [prompt, negative] = getFinalPromptsForGeneration(rawData, config);
+        } else {
+          // Legacy fallback: frozen strings
+          prompt = record.prompts[i] || "";
+          negative = record.negativePrompts?.[i] || "";
+        }
+        if (!prompt) { failedCount += 1; continue; }
+        const baseParams = record.imageParameters?.[i] || await buildImageParameters(config, imageConnection, prompt, negative);
+        const params = rerollImageParameters(baseParams, imageConnection, prompt, negative);
+        try {
+          const result = await spindle.imageGen.generate({
+            connection_id: config.imageConnectionId || undefined,
+            prompt,
+            negativePrompt: negative || undefined,
+            model: config.imageModel || undefined,
+            parameters: params,
+            owner_chat_id: chatId,
+            userId
+          });
+          const imageId = result.imageId || "";
+          const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+          if (!imageUrl) throw new Error("No imageUrl");
+          imageIds[i] = imageId;
+          imageUrls[i] = imageUrl;
+          imageParameters[i] = params;
+          prompts[i] = prompt;
+          negativePrompts[i] = negative;
+        } catch {
+          failedCount += 1;
+        }
       }
     }
     const nextRecord: GeneratedRecord = { ...record, imageIds, imageUrls, imageParameters, prompts, negativePrompts };
@@ -1048,9 +1106,13 @@ export async function generateForMessage(
     return;
   }
   try {
+    // Busy signal for the floating action button; every exit path below must
+    // clear it (the auto-generation path has no outer "Generating..." send).
+    spindle.sendToFrontend({ type: "status", status: "Generating...", busy: true }, userId);
     const state = await getState(chatId, userId);
     if (state.generated[key]) {
       logStage(config, "request_skipped", { reason: "already_generated", key });
+      spindle.sendToFrontend({ type: "status", status: "Skipped", busy: false }, userId);
       return;
     }
     const sourceContent = String(content || target.content || "");
@@ -1077,6 +1139,7 @@ export async function generateForMessage(
         elapsedMs: Date.now() - generationStartedAt,
         reason: "no_selected_shots"
       });
+      spindle.sendToFrontend({ type: "status", status: "No image generated", busy: false }, userId);
       return;
     }
     try {

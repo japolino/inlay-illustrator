@@ -71,6 +71,8 @@ export type BackendMessage = {
   quoteStyle?: string;
   quoteExample?: string;
   status?: string;
+  /** Present on status messages: true while a generation/reroll is running (drives the floating action button). */
+  busy?: boolean;
   error?: string;
   record?: { imageUrls?: string[] };
 };

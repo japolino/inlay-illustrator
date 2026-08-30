@@ -6,7 +6,6 @@ import {
   foldUidFor,
   inlayUidIndex,
   isMessageFolded,
-  modeHasButtons,
   type ChatRole
 } from "./message-display.js";
 
@@ -123,18 +122,6 @@ describe("folding rule (toggle_Card.Display.Max)", () => {
         }
       }
     }
-  });
-});
-
-describe("display-mode button quirk", () => {
-  test("modes 0, 1, 2 render buttons; mode 3 and unknown render none", () => {
-    expect(modeHasButtons("0")).toBe(true);
-    expect(modeHasButtons("1")).toBe(true);
-    expect(modeHasButtons("2")).toBe(true);
-    expect(modeHasButtons("3")).toBe(false);
-    expect(modeHasButtons("")).toBe(false);
-    expect(modeHasButtons("4")).toBe(false);
-    expect(modeHasButtons("null")).toBe(false);
   });
 });
 

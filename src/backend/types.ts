@@ -142,8 +142,6 @@ export type State = {
    */
   manualCharacterAppearance?: Record<string, string>;
   generated: Record<string, unknown>;
-  /** Original per-chat Card.Inlay.Display raw value. */
-  displayMode?: string;
   /** Original per-chat Card.Quote.Style and Card.Quote.Example values. */
   quoteStyle?: string;
   quoteExample?: string;

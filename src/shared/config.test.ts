@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_CONFIG, normalizeConfig } from "./config.js";
+import { DEFAULT_CONFIG, normalizeConfig, normalizeFabCorner } from "./config.js";
 
 describe("shared configuration", () => {
   test("normalizes an empty record to independent defaults", () => {
@@ -29,6 +29,22 @@ describe("shared configuration", () => {
     expect(normalizeConfig({ displayMax: " 02.50 " }).displayMax).toBe(" 02.50 ");
     expect(normalizeConfig({ displayMax: "null" }).displayMax).toBe("null");
     expect(normalizeConfig({}).displayMax).toBe("0");
+  });
+
+  test("fab corner normalizes case, whitespace, and unknown values", () => {
+    expect(normalizeFabCorner("Bottom-Left")).toBe("bottom-left");
+    expect(normalizeFabCorner(" top-right ")).toBe("top-right");
+    expect(normalizeFabCorner("bottom-left")).toBe("bottom-left");
+    expect(normalizeFabCorner("top-right")).toBe("top-right");
+    expect(normalizeFabCorner("top-left")).toBe("top-left");
+    for (const bad of ["", "middle", "4", null, undefined]) {
+      expect(normalizeFabCorner(bad as string | null | undefined)).toBe("bottom-right");
+    }
+    expect(normalizeConfig({ fabCorner: "top-left" }).fabCorner).toBe("top-left");
+    expect(normalizeConfig({ fabCorner: "nonsense" } as Record<string, unknown>).fabCorner).toBe("bottom-right");
+    expect(DEFAULT_CONFIG.fabCorner).toBe("bottom-right");
+    expect("displayTheme" in DEFAULT_CONFIG).toBeFalse();
+    expect("displayTheme" in normalizeConfig({ displayTheme: "1" } as Record<string, unknown>)).toBeFalse();
   });
 
 });

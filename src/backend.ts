@@ -66,7 +66,7 @@ spindle.on("GENERATION_ENDED", async (payload, userId) => {
     const message = error instanceof Error ? error.message : String(error);
     logStage(configForError || { debugLogging: true }, "auto_generation_error", { error: message }, "error");
     spindle.log.error(`Auto generation failed: ${message}`);
-    spindle.sendToFrontend({ type: "status", status: "Error", error: message }, userId);
+    spindle.sendToFrontend({ type: "status", status: "Error", error: message, busy: false }, userId);
   }
 });
 
@@ -88,22 +88,6 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         type: "config_updated",
         chatId: String(message.chatId || ""),
         config: next
-      }, userId);
-    } else if (message.type === "set_inlay_display_mode") {
-      const config = await getConfig(userId);
-      configForError = config;
-      const chatId = String(message.chatId || "");
-      if (!chatId) throw new Error("Open a chat first.");
-      const displayMode = message.displayMode == null ? "0" : String(message.displayMode);
-      await updateState(chatId, userId, (current) => {
-        current.displayMode = displayMode;
-      });
-      spindle.sendToFrontend({
-        type: "inlay_display_settings_updated",
-        requestId: String(message.requestId || ""),
-        chatId,
-        displayMode,
-        ok: true
       }, userId);
     } else if (message.type === "set_quote_settings") {
       const config = await getConfig(userId);
@@ -188,7 +172,8 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       const messages = await spindle.chat.getMessages(chatId);
       const target = [...messages].reverse().find((candidate) => candidate.role === "assistant" && !isOwnMessage(candidate));
       if (!target) throw new Error("No assistant message found.");
-      spindle.sendToFrontend({ type: "status", status: "Generating..." }, userId);
+      // generateForMessage emits the busy:true "Generating..." status itself
+      // after its own early guards, so skipped work never wedges the FAB.
       await generateForMessage(chatId, target.id, target.content, userId, {
         config,
         messages: messages as import("./backend/types.js").ChatMessage[]
@@ -404,23 +389,45 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       const chatId = String(message.chatId || "");
       const messageId = String(message.messageId || "");
       const numericSwipe = Number(message.swipeId);
-      if (!chatId || !messageId) throw new Error("Open the image's chat first.");
-      spindle.sendToFrontend({ type: "status", status: "Rerolling all images..." }, userId);
+      const sidecar = message.sidecar === true;
+      if (!chatId) throw new Error("Open the image's chat first.");
+      // The floating action button may omit messageId: reroll the newest
+      // assistant turn that has a stored generated record ("from this turn").
+      let targetMessageId = messageId;
+      let targetSwipeId: number | undefined = Number.isInteger(numericSwipe) ? numericSwipe : undefined;
+      if (!targetMessageId) {
+        const { findLatestGeneratedTurn } = await import("./backend/storage.js");
+        const latest = await findLatestGeneratedTurn(chatId, userId);
+        if (!latest) throw new Error("This chat has no generated illustrations yet.");
+        targetMessageId = latest.messageId;
+        targetSwipeId = latest.swipeId;
+      } else if (targetSwipeId === undefined) {
+        const key = `${chatId}:${targetMessageId}`;
+        const { getState } = await import("./backend/storage.js");
+        const state = await getState(chatId, userId);
+        const match = Object.keys(state.generated)
+          .filter((key) => key.startsWith(`${chatId}:${targetMessageId}:`))
+          .sort()
+          .at(-1);
+        if (match) targetSwipeId = Number(match.split(":").at(-1)) || undefined;
+      }
+      spindle.sendToFrontend({ type: "status", status: sidecar ? "Rerunning sidecar for all images..." : "Rerolling all images...", busy: true }, userId);
       const { rerunAllStoredImages } = await import("./backend/generation.js");
-      const result = await rerunAllStoredImages(chatId, messageId, Number.isInteger(numericSwipe) ? numericSwipe : undefined, userId, config);
+      const result = await rerunAllStoredImages(chatId, targetMessageId, targetSwipeId, userId, config, sidecar);
       spindle.sendToFrontend({
         type: "inlay_reroll_all_result",
         requestId: String(message.requestId || ""),
         ok: true,
+        sidecar,
         chatId,
         messageId: result.record.messageId,
         failedCount: result.failedCount,
         record: result.record
       }, userId);
       if (result.failedCount > 0) {
-        spindle.sendToFrontend({ type: "status", status: `Rerolled with ${result.failedCount} failure(s) — prior images preserved`, record: result.record }, userId);
+        spindle.sendToFrontend({ type: "status", status: `Rerolled with ${result.failedCount} failure(s) — prior images preserved`, record: result.record, busy: false }, userId);
       } else {
-        spindle.sendToFrontend({ type: "status", status: "All images rerolled", record: result.record }, userId);
+        spindle.sendToFrontend({ type: "status", status: sidecar ? "All sidecars rerun" : "All images rerolled", record: result.record, busy: false }, userId);
       }
     } else if (message.type === "reroll_image" || message.type === "rerun_image_sidecar") {
       const config = await getConfig(userId);
@@ -439,7 +446,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       };
       const rerunSidecar = message.type === "rerun_image_sidecar";
       const actionLabel = rerunSidecar ? "Rerunning sidecar..." : "Rerolling image...";
-      spindle.sendToFrontend({ type: "status", status: actionLabel }, userId);
+      spindle.sendToFrontend({ type: "status", status: actionLabel, busy: true }, userId);
       const result = await rerunStoredImage(request, rerunSidecar, userId, config);
       spindle.sendToFrontend({
         type: "inlay_image_action_result",
@@ -451,7 +458,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         imageIndex: result.index,
         imageUrl: result.record.imageUrls[result.index] || ""
       }, userId);
-      spindle.sendToFrontend({ type: "status", status: rerunSidecar ? "Sidecar rerun complete" : "Image rerolled", record: result.record }, userId);
+      spindle.sendToFrontend({ type: "status", status: rerunSidecar ? "Sidecar rerun complete" : "Image rerolled", record: result.record, busy: false }, userId);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -499,16 +506,8 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         ok: false,
         error: errorMessage
       }, userId);
-    } else if (message.type === "set_inlay_display_mode") {
-      spindle.sendToFrontend({
-        type: "inlay_display_settings_updated",
-        requestId: String(message.requestId || ""),
-        chatId: String(message.chatId || ""),
-        ok: false,
-        error: errorMessage
-      }, userId);
-    }
-    spindle.sendToFrontend({ type: "status", status: "Error", error: errorMessage }, userId);
+}
+    spindle.sendToFrontend({ type: "status", status: "Error", error: errorMessage, busy: false }, userId);
   }
 });
 

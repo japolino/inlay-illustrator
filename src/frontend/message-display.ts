@@ -1,18 +1,8 @@
 /**
- * Port of the RisuAI Inlay Image v3.5 display-mode + folding pass
- * (`Card.Inlay.Display`, `Card.Inlay.Display` buttons and
- * `toggle_Card.Display.Max`).
+ * Port of the RisuAI Inlay Image v3.5 folding pass
+ * (`toggle_Card.Display.Max`).
  *
  * Original behavior (references/original-module/original_script.txt):
- *  - `Card.Inlay.Display` chat var, default "0"; exact "null"/"" read back
- *    as "0". Modes: "0" floating top-right buttons, "1" top tab
- *    (blob-wrap-1), "2" right tab (blob-wrap-2), anything else ("3",
- *    unknown) renders *no* per-inlay buttons.
- *  - Changing the display mode never rerolls. The original forced a
- *    re-render by toggling a trailing space on stored char messages that
- *    contain `INLAY[` (cache-bust) and calling `updateDisplay`. Lumiverse
- *    bakes final inlay HTML into message content, so this port re-runs the
- *    DOM decoration instead of touching stored content.
  *  - `toggle_Card.Display.Max` (global, default 0 = off): traverse the full
  *    chat backwards counting char messages; at the first message where
  *    charCount > displayMax (1-based index i), every message with
@@ -20,20 +10,21 @@
  *    newer messages — including interleaved user messages — do not).
  *  - Folding wraps each inlay individually in `FOLD_STYLE_BLOCK` +
  *    `inlay-fold-wrap` (checkbox/label "🖼️ Past Image", collapsed by
- *    default). Per-inlay buttons sit inside the fold; the fullscreen
- *    overlay stays outside.
+ *    default). The fullscreen overlay stays outside the fold.
  *
  * Divergences (documented in tmp-audit/display-modes-folding.md):
  *  - Role data comes from the typed backend `spindle.chat.getMessages` API
  *    and is returned to this renderer as a light role/index projection.
- *  - Persistence uses backend per-chat state for display mode and per-user
+ *  - The per-inlay reroll buttons (`Card.Inlay.Display` modes 0/1/2) and the
+ *    dark/light `Card.Theme` are NOT ported: the buttons never rendered in
+ *    the Lumiverse chat DOM and Lumiverse owns theming. Reroll actions live
+ *    on the floating action button (fab.ts) and the lightbox instead.
+ *  - Persistence uses backend per-chat state for quote settings and per-user
  *    config for displayMax, mirroring the original chat/global variable split.
- *  - The space-toggle cache-bust is replaced by re-decoration; no message
- *    content is modified when the display mode changes.
  */
 
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
-import { getDisplayMax, getDisplayMode, subscribeDisplaySettings } from "./display-settings.js";
+import { getDisplayMax, subscribeDisplaySettings } from "./display-settings.js";
 import { applyQuoteSettingsSnapshot, getQuoteSettings, splitOriginalQuoteCss } from "./caption-settings.js";
 
 const INLAY_WRAPPER_SELECTOR = '[data-inlay-illustrator="true"]';
@@ -105,14 +96,6 @@ export function isMessageFolded(index0: number, threshold: number | null): boole
 }
 
 /**
- * Whether the display mode renders per-inlay buttons. Only "0", "1" and "2"
- * do; "3" and any unknown value render *no* buttons (original quirk).
- */
-export function modeHasButtons(mode: string): boolean {
-  return mode === "0" || mode === "1" || mode === "2";
-}
-
-/**
  * 1-based inlay number for the fold/button uid scheme. The original read the
  * 1-based `<CARDn>` tag from the inlay content; the port stores a 0-based
  * `data-inlay-illustrator-image-index`, so the uid adds one. Missing or
@@ -144,68 +127,7 @@ const FOLD_CSS = `
 .inlay-fold-inner{width:100%;display:grid;grid-template-rows:0fr;transition:grid-template-rows .5s cubic-bezier(.16,1,.3,1),opacity .4s ease,filter .4s ease;opacity:0;filter:blur(8px);transform-origin:top}
 .inlay-fold-inner>div{overflow:hidden}
 .inlay-fold-cb:checked~.inlay-fold-inner{grid-template-rows:1fr;opacity:1;filter:blur(0)}
-.inlay-reroll-btn{padding:6px 8px;background:rgba(0,0,0,0.4);color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.2);border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);opacity:0.6;transition:opacity 0.2s}
-.inlay-reroll-btn:hover{opacity:1}
-.inlay-reroll-btn.inlay-reroll-busy{opacity:1;pointer-events:none}
-.inlay-theme-light .inlay-reroll-btn{background:rgba(255,255,255,0.85);color:#333;border-color:rgba(0,0,0,0.15)}
-.blob-wrap-1.inlay-theme-light,.blob-wrap-2.inlay-theme-light{background:rgba(245,245,252,0.95);border-color:#c4a8ff}
-.blob-wrap-1.inlay-theme-light .blob-btn-1,.blob-wrap-2.inlay-theme-light .blob-btn-2{color:#8a58ff}
-.blob-wrap-1.inlay-theme-light .blob-btn-1:first-child::after,.blob-wrap-2.inlay-theme-light .blob-btn-2:first-child::after{background:rgba(0,0,0,0.1)}
-.blob-wrap-1.inlay-theme-light .blob-btn-1:hover,.blob-wrap-2.inlay-theme-light .blob-btn-2:hover{background:rgba(138,88,255,0.15);color:#5522aa;text-shadow:none}
-.blob-wrap-1{position:absolute;bottom:100%;right:12px;display:inline-flex;margin-bottom:-30px;z-index:50;background:rgba(30,20,36,0.95);border:1px solid rgba(255,255,255,0.25);border-bottom:none;border-radius:4px 4px 0 0;backdrop-filter:blur(4px);overflow:hidden}
-.blob-btn-1{position:relative;color:#c4a8ff;font-weight:bold;font-size:13px;cursor:pointer;background:transparent;border:none;transition:all 0.2s ease;display:inline-flex;justify-content:center;align-items:center;z-index:50;}
-.blob-btn-1:first-child{padding:2px 16px;}
-.blob-btn-1:last-child{padding:2px 16px;}
-.blob-btn-1:first-child::after{content:"";position:absolute;right:0px;top:4px;bottom:4px;width:1px;background:rgba(255,255,255,0.15);z-index:51;}
-.blob-btn-1:hover{background:rgba(168,136,255,0.35);color:#fff;text-shadow:0 0 8px rgba(168,136,255,0.8)}
-.blob-wrap-2{position:absolute;left:100%;top:40px;display:inline-flex;flex-direction:column;margin-left:2px;z-index:1;background:rgba(30,20,36,0.95);border:1px solid rgba(255,255,255,0.25);border-left:none;border-radius:0 4px 4px 0;backdrop-filter:blur(4px);overflow:hidden}
-.blob-btn-2{position:relative;color:#c4a8ff;font-weight:bold;font-size:13px;cursor:pointer;background:transparent;border:none;transition:all 0.2s ease;display:inline-flex;justify-content:center;align-items:center;z-index:2;}
-.blob-btn-2:first-child{padding:12px 2px;}
-.blob-btn-2:last-child{padding:12px 2px;}
-.blob-btn-2:first-child::after{content:"";position:absolute;bottom:0px;left:4px;right:4px;height:1px;background:rgba(255,255,255,0.15);z-index:3;}
-.blob-btn-2:hover{background:rgba(168,136,255,0.35);color:#fff;text-shadow:0 0 8px rgba(168,136,255,0.8)}
-.inlay-display-picker{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:12px}
-.inlay-display-picker figure{margin:0;width:200px;display:flex;flex-direction:column;gap:6px}
-.inlay-display-picker img{width:100%;height:auto;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:border-color .15s ease}
-.inlay-display-picker img:hover{border-color:#a888ff}
-.inlay-display-picker figcaption{font-size:12px;color:var(--lumiverse-text-muted,#888);text-align:center}
-.inlay-display-picker-status{padding:8px 12px;font-size:12px;color:var(--lumiverse-text-muted,#888)}
 `;
-
-const SVG_NAI = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line><path d="M12 7.5h.01"></path><path d="M7.5 12h.01"></path><path d="M7.5 17h.01"></path><path d="M14 11.5h.01"></path><path d="M16.5 14.5h.01"></path><path d="M19 17.5h.01"></path></svg>';
-const SVG_LLM = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>';
-
-const NAI_TITLE = "이미지만 다시 생성 (NAI)";
-const LLM_TITLE = "프롬프트부터 다시 작성 (LLM)";
-
-type RerollCandidate = { imageId: string; imageUrl: string; parameters: Record<string, unknown> };
-
-type ButtonTarget = {
-  chatId: string;
-  messageId: string;
-  swipeId?: number;
-  imageIndex?: number;
-  imageId?: string;
-  imageUrl: string;
-};
-
-function optionalIntegerAttribute(value: string | null): number | undefined {
-  if (value === null || value.trim() === "") return undefined;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
-}
-
-function buttonTargetFromImage(image: HTMLImageElement, chatId: string): ButtonTarget {
-  const imageUrl = image.getAttribute("src") || image.currentSrc || image.src;
-  return {
-    chatId: image.getAttribute("data-inlay-illustrator-chat-id") || chatId,
-    messageId: image.getAttribute("data-inlay-illustrator-message-id") || "",
-    swipeId: optionalIntegerAttribute(image.getAttribute("data-inlay-illustrator-swipe-id")),
-    imageIndex: optionalIntegerAttribute(image.getAttribute("data-inlay-illustrator-image-index")),
-    imageId: image.getAttribute("data-inlay-illustrator-image-id") || undefined,
-    imageUrl
-  };
-}
 
 function makeRequestId(prefix = "inlay-display"): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -214,25 +136,8 @@ function makeRequestId(prefix = "inlay-display"): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function displayThemeFromConfig(config: unknown): "0" | "1" {
-  if (!config || typeof config !== "object") return "0";
-  return String((config as Record<string, unknown>).displayTheme ?? "0") === "1" ? "1" : "0";
-}
-
-function imageRerollCountFromConfig(config: unknown): number {
-  if (config && typeof config === "object" && "imageRerollCount" in (config as Record<string, unknown>)) {
-    const parsed = Number((config as Record<string, unknown>).imageRerollCount);
-    if (!Number.isFinite(parsed)) return 1;
-    return Math.min(8, Math.max(1, Math.floor(parsed)));
-  }
-  return 1;
-}
-
 type AppliedDecoration = {
-  mode: string;
   folded: boolean;
-  theme: "0" | "1";
-  buttonGroup: HTMLElement | null;
   foldShell: HTMLElement | null;
   originalPosition: string;
   quoteElement: HTMLElement | null;
@@ -245,7 +150,6 @@ const decorations = new WeakMap<Element, AppliedDecoration>();
 function undoInlayDecoration(wrapper: HTMLElement, restorePosition: boolean): AppliedDecoration | null {
   const previous = decorations.get(wrapper) ?? null;
   if (!previous) return null;
-  if (previous.buttonGroup?.parentNode) previous.buttonGroup.remove();
   if (previous.foldShell) {
     const hosted = previous.foldShell.querySelector<HTMLElement>(INLAY_WRAPPER_SELECTOR);
     if (hosted) previous.foldShell.replaceWith(hosted);
@@ -262,49 +166,30 @@ export function clearInlayDecoration(wrapper: HTMLElement): void {
   undoInlayDecoration(wrapper, true);
 }
 
-function setBusy(button: HTMLButtonElement, busy: boolean): void {
-  button.classList.toggle("inlay-reroll-busy", busy);
-  button.disabled = busy;
-}
-
-function releaseBusyButtons(): void {
-  if (typeof document === "undefined") return;
-  document
-    .querySelectorAll<HTMLButtonElement>("button.inlay-reroll-busy, button.blob-btn-1:disabled, button.blob-btn-2:disabled")
-    .forEach((button) => setBusy(button, false));
-}
-
 /**
- * Apply (or re-apply) the display-mode + fold decoration to one inlay
- * wrapper element. Mirrors `changeInlayWithReroll` per-inlay output:
- * mode 0 floating buttons, 1 top tab, 2 right tab, 3/unknown no buttons,
- * and the individual `inlay-fold-wrap` fold shell for older inlays.
+ * Apply (or re-apply) the fold decoration to one inlay wrapper element.
+ * Mirrors `changeInlayWithReroll`'s fold output: the individual
+ * `inlay-fold-wrap` fold shell for older inlays. The quote overlay styling
+ * (Card.Quote.Style) is applied to the `.inlay-illustrator-inline-quote`
+ * element on every pass.
  */
 export function decorateInlayWrapper(
   wrapper: HTMLElement,
   options: {
-    mode: string;
     folded: boolean;
-    theme: "0" | "1";
     quoteStyle: string;
     index0: number | null;
     messageId: string;
-    chatId: string;
-    onNaiReroll: (target: ButtonTarget, button: HTMLButtonElement) => void;
-    onLlmReroll: (target: ButtonTarget, button: HTMLButtonElement) => void;
   }
 ): void {
   const existing = decorations.get(wrapper);
   const originalPosition = existing?.originalPosition ?? wrapper.style.position;
-  // Undo any previous decoration (button group + fold shell) so a display
-  // mode change re-decorates from the pristine baked markup. Keep the original
-  // inline position until final teardown so mode switches do not accumulate.
+  // Undo any previous decoration (fold shell) so a fold-threshold change
+  // re-decorates from the pristine baked markup. Keep the original inline
+  // position until final teardown so repeated passes do not accumulate.
   undoInlayDecoration(wrapper, false);
   const next: AppliedDecoration = {
-    mode: options.mode,
     folded: options.folded,
-    theme: options.theme,
-    buttonGroup: null,
     foldShell: null,
     originalPosition,
     quoteElement: null,
@@ -320,57 +205,6 @@ export function decorateInlayWrapper(
     wrapper.style.position = "relative";
     const baseStyle = "position:absolute;left:50%;bottom:8%;transform:translateX(-50%);color:#fff;font-size:24px;font-style:italic;font-weight:bold;text-align:center;text-shadow:0 4px 15px rgba(0,0,0,0.9),0 1px 3px rgba(0,0,0,0.8);background:rgba(20,20,25,0.65);padding:15px 30px;border-radius:16px;border:1px solid rgba(255,255,255,0.15);backdrop-filter:blur(8px);z-index:3;pointer-events:none;max-width:85%;width:max-content;white-space:pre-wrap;overflow-wrap:anywhere;box-sizing:border-box";
     quote.style.cssText = `${baseStyle};${options.quoteStyle}`;
-  }
-  const hasButtons = modeHasButtons(options.mode);
-
-  if (hasButtons && image) {
-    const target = buttonTargetFromImage(image, options.chatId);
-    const nai = document.createElement("button");
-    nai.type = "button";
-    nai.title = NAI_TITLE;
-    nai.setAttribute("aria-label", NAI_TITLE);
-    nai.innerHTML = SVG_NAI;
-    nai.addEventListener("click", () => options.onNaiReroll(target, nai));
-
-    const llm = document.createElement("button");
-    llm.type = "button";
-    llm.title = LLM_TITLE;
-    llm.setAttribute("aria-label", LLM_TITLE);
-    llm.innerHTML = SVG_LLM;
-    llm.addEventListener("click", () => options.onLlmReroll(target, llm));
-
-    const group = document.createElement("div");
-    if (options.mode === "1") {
-      nai.className = "blob-btn-1";
-      llm.className = "blob-btn-1";
-      group.className = "blob-wrap-1";
-      group.setAttribute("data-inlay-display-buttons", "top-tab");
-      wrapper.style.position = "relative";
-      wrapper.prepend(group);
-    } else if (options.mode === "2") {
-      nai.className = "blob-btn-2";
-      llm.className = "blob-btn-2";
-      group.className = "blob-wrap-2";
-      group.setAttribute("data-inlay-display-buttons", "right-tab");
-      wrapper.style.position = "relative";
-      wrapper.append(group);
-    } else {
-      // Mode "0": floating top-right (original inline style port).
-      nai.className = "inlay-reroll-btn";
-      llm.className = "inlay-reroll-btn";
-      group.setAttribute("data-inlay-display-buttons", "floating");
-      group.style.position = "absolute";
-      group.style.top = "30px";
-      group.style.right = "12px";
-      group.style.display = "flex";
-      group.style.gap = "4px";
-      group.style.zIndex = "10";
-      wrapper.style.position = "relative";
-      wrapper.prepend(group);
-    }
-    if (options.theme === "1") group.classList.add("inlay-theme-light");
-    group.append(nai, llm);
-    next.buttonGroup = group;
   }
 
   if (options.folded) {
@@ -405,8 +239,7 @@ export function decorateInlayWrapper(
     shell.append(checkbox, label, inner);
     inner.append(clip);
 
-    // Buttons stay inside the fold (original order); the lightbox overlay is
-    // host-level and therefore naturally outside the fold.
+    // The lightbox overlay is host-level and therefore naturally outside the fold.
     wrapper.replaceWith(shell);
     clip.append(wrapper);
 
@@ -417,14 +250,13 @@ export function decorateInlayWrapper(
 }
 
 /**
- * Install the display-mode + folding pass: styles, mutation observation,
- * role-list fetching, event invalidation and the per-inlay reroll actions.
+ * Install the folding pass: styles, mutation observation, role-list
+ * fetching and event invalidation.
  */
 export function installInlayMessageDisplay(ctx: SpindleFrontendContext): () => void {
   let roleCache: { chatId: string; list: ChatRoleList } | null = null;
   let roleRequest: { requestId: string; chatId: string } | null = null;
   let decorateScheduled = false;
-  let latestConfig: unknown = null;
   let currentQuoteGlobalCss = "";
   let removeQuoteGlobalStyle: () => void = () => {};
 
@@ -451,8 +283,6 @@ export function installInlayMessageDisplay(ctx: SpindleFrontendContext): () => v
 
   function decorate(): void {
     const chatId = activeChatId();
-    const mode = getDisplayMode(chatId);
-    const theme = displayThemeFromConfig(latestConfig);
     const quoteCss = splitOriginalQuoteCss(getQuoteSettings(chatId).quoteStyle);
     if (quoteCss.globalCss !== currentQuoteGlobalCss) {
       removeQuoteGlobalStyle();
@@ -472,17 +302,12 @@ export function installInlayMessageDisplay(ctx: SpindleFrontendContext): () => v
       const wrappers = mounted.element.querySelectorAll<HTMLElement>(INLAY_WRAPPER_SELECTOR);
       for (const wrapper of wrappers) {
         const applied = decorations.get(wrapper);
-        if (applied && applied.mode === mode && applied.folded === folded && applied.theme === theme && applied.quoteStyle === quoteCss.inlineStyle && applied.quoteElement === wrapper.querySelector(".inlay-illustrator-inline-quote")) continue;
+        if (applied && applied.folded === folded && applied.quoteStyle === quoteCss.inlineStyle && applied.quoteElement === wrapper.querySelector(".inlay-illustrator-inline-quote")) continue;
         decorateInlayWrapper(wrapper, {
-          mode,
           folded,
-          theme,
           quoteStyle: quoteCss.inlineStyle,
           index0,
-          messageId: mounted.messageId,
-          chatId,
-          onNaiReroll: (target, button) => { void naiReroll(target, button); },
-          onLlmReroll: (target, button) => { void llmReroll(target, button); }
+          messageId: mounted.messageId
         });
       }
     }
@@ -503,89 +328,6 @@ export function installInlayMessageDisplay(ctx: SpindleFrontendContext): () => v
       roleCache = null;
       ensureRoles();
     }
-  }
-
-  async function naiReroll(target: ButtonTarget, button: HTMLButtonElement): Promise<void> {
-    const chatId = target.chatId || activeChatId();
-    if (!chatId) return;
-    const count = imageRerollCountFromConfig(latestConfig);
-    setBusy(button, true);
-    if (count > 1) {
-      const requestId = makeRequestId("inlay-display-candidates");
-      activeCandidatePickers.set(requestId, { chatId, button, target });
-      ctx.sendToBackend({ type: "reroll_image_candidates", requestId, ...target, chatId, count });
-      return;
-    }
-    ctx.sendToBackend({ type: "reroll_image", requestId: makeRequestId("inlay-display-reroll"), ...target, chatId });
-  }
-
-  async function llmReroll(target: ButtonTarget, button: HTMLButtonElement): Promise<void> {
-    const chatId = target.chatId || activeChatId();
-    if (!chatId) return;
-    setBusy(button, true);
-    ctx.sendToBackend({ type: "rerun_image_sidecar", requestId: makeRequestId("inlay-display-sidecar"), ...target, chatId });
-  }
-
-  const activeCandidatePickers = new Map<string, { chatId: string; button: HTMLButtonElement; target: ButtonTarget }>();
-
-  function showCandidatePicker(
-    requestId: string,
-    candidates: RerollCandidate[],
-    resolved: { messageId?: string; imageIndex?: number }
-  ): void {
-    const entry = activeCandidatePickers.get(requestId);
-    activeCandidatePickers.delete(requestId);
-    if (entry) setBusy(entry.button, false);
-    if (candidates.length === 0) return;
-    if (!entry) return;
-
-    // Prefer the backend-resolved locator fields, keep the original image
-    // identity (imageId/imageUrl/swipeId) so the apply request locates the
-    // stored record exactly like the lightbox does.
-    const target: ButtonTarget = {
-      ...entry.target,
-      messageId: resolved.messageId || entry.target.messageId,
-      imageIndex: resolved.imageIndex ?? entry.target.imageIndex
-    };
-
-    // Single successful candidate: apply immediately (original behavior).
-    if (candidates.length === 1) {
-      applyCandidate(candidates[0], target, entry.chatId);
-      return;
-    }
-
-    const modal = ctx.ui.showModal({ title: "Reroll candidates", width: 900 });
-    const grid = document.createElement("div");
-    grid.className = "inlay-display-picker";
-    for (const candidate of candidates) {
-      const figure = document.createElement("figure");
-      const image = document.createElement("img");
-      image.src = candidate.imageUrl;
-      image.alt = "Reroll candidate";
-      image.addEventListener("click", () => {
-        modal.dismiss();
-        applyCandidate(candidate, target, entry.chatId);
-      });
-      const caption = document.createElement("figcaption");
-      caption.textContent = candidate.imageId ? String(candidate.imageId) : "";
-      figure.append(image, caption);
-      grid.append(figure);
-    }
-    modal.root.append(grid);
-  }
-
-  function applyCandidate(candidate: RerollCandidate, target: ButtonTarget, chatId: string): void {
-    ctx.sendToBackend({
-      type: "reroll_image_apply",
-      requestId: makeRequestId("inlay-display-apply"),
-      chatId,
-      messageId: target.messageId,
-      swipeId: target.swipeId,
-      imageIndex: target.imageIndex,
-      imageId: target.imageId,
-      imageUrl: target.imageUrl,
-      candidate
-    });
   }
 
   const unsubscribeBackend = ctx.onBackendMessage((payload: unknown) => {
@@ -615,32 +357,6 @@ export function installInlayMessageDisplay(ctx: SpindleFrontendContext): () => v
       return;
     }
     if (message.type === "state" || message.type === "config_updated") {
-      if (message.config && typeof message.config === "object") latestConfig = message.config;
-      scheduleDecorate();
-    }
-    if (message.type === "inlay_reroll_candidates") {
-      const requestId = String(message.requestId || "");
-      const pending = activeCandidatePickers.get(requestId);
-      if (!pending) return;
-      if (message.ok !== true) {
-        setBusy(pending.button, false);
-        activeCandidatePickers.delete(requestId);
-        return;
-      }
-      const raw = Array.isArray(message.candidates) ? message.candidates as unknown[] : [];
-      const candidates = raw.filter((c): c is RerollCandidate =>
-        Boolean(c) && typeof c === "object" && typeof (c as RerollCandidate).imageUrl === "string" && (c as RerollCandidate).imageUrl.trim() !== ""
-      );
-      const messageId = typeof message.messageId === "string" ? message.messageId : undefined;
-      const imageIndexRaw = Number(message.imageIndex);
-      const imageIndex = Number.isInteger(imageIndexRaw) ? imageIndexRaw : undefined;
-      showCandidatePicker(requestId, candidates, { messageId, imageIndex });
-    }
-    if (message.type === "inlay_image_action_result" || message.type === "inlay_reroll_all_result") {
-      // Reroll/apply finished; the host re-renders the message content and
-      // the mutation observer re-decorates the fresh inlay markup. On
-      // failure no re-render happens, so release disabled buttons.
-      if (message.ok === false) releaseBusyButtons();
       scheduleDecorate();
     }
   });
@@ -664,10 +380,10 @@ export function installInlayMessageDisplay(ctx: SpindleFrontendContext): () => v
   ];
 
   const unsubscribeSettings = subscribeDisplaySettings(() => {
-    // Display-mode change: re-decorate only (the original toggled a cache-bust
-    // space on stored char messages; that write is unnecessary here because
-    // decorations are rebuilt from baked content, and it would corrupt chat
-    // history). No reroll is triggered.
+    // Fold-threshold change: re-decorate only (the original toggled a
+    // cache-bust space on stored char messages; that write is unnecessary
+    // here because decorations are rebuilt from baked content, and it would
+    // corrupt chat history). No reroll is triggered.
     scheduleDecorate();
   });
   unsubscribes.push(unsubscribeSettings);
@@ -678,12 +394,11 @@ export function installInlayMessageDisplay(ctx: SpindleFrontendContext): () => v
   return () => {
     for (const unsubscribe of unsubscribes) unsubscribe();
     // Restore baked message DOM before styles disappear. Otherwise extension
-    // reloads leave collapsed shells and stale click handlers behind.
+    // reloads leave collapsed shells behind.
     for (const mounted of ctx.dom.listMessageElements()) {
       const wrappers = mounted.element.querySelectorAll<HTMLElement>(INLAY_WRAPPER_SELECTOR);
       for (const wrapper of wrappers) clearInlayDecoration(wrapper);
     }
-    activeCandidatePickers.clear();
     removeQuoteGlobalStyle();
     removeStyle();
     roleCache = null;

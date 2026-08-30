@@ -7,9 +7,10 @@ import { routeBackendMessage } from "./frontend/message-router.js";
 import { SettingsRenderer } from "./frontend/renderer.js";
 import { installInlayLightbox } from "./frontend/lightbox.js";
 import { installInlayMessageDisplay } from "./frontend/message-display.js";
+import { installInlayFab } from "./frontend/fab.js";
 import { createInlayGallery } from "./frontend/gallery.js";
 import { mountInlaySettingsHost } from "./frontend/settings-host.js";
-import { applyDisplaySettingsSnapshot, configureDisplayModeTransport } from "./frontend/display-settings.js";
+import { applyDisplaySettingsSnapshot } from "./frontend/display-settings.js";
 import { applyQuoteSettingsSnapshot } from "./frontend/caption-settings.js";
 
 export function setup(ctx: SpindleFrontendContext) {
@@ -28,14 +29,7 @@ export function setup(ctx: SpindleFrontendContext) {
   const removeLightbox = installInlayLightbox(ctx);
   const removeMessageDisplay = installInlayMessageDisplay(ctx);
   const gallery = createInlayGallery(ctx);
-  const removeDisplayTransport = configureDisplayModeTransport(({ chatId, displayMode }) => {
-    ctx.sendToBackend({
-      type: "set_inlay_display_mode",
-      requestId: `inlay-display-setting-${Date.now()}`,
-      chatId,
-      displayMode
-    });
-  });
+  const removeFab = installInlayFab(ctx, { getCorner: () => config.fabCorner, openGallery: () => gallery.open() });
 
   function activeChatId(): string {
     try {
@@ -128,8 +122,6 @@ export function setup(ctx: SpindleFrontendContext) {
         : {};
       const stateChatId = typeof displayMessage.chatId === "string" ? displayMessage.chatId : activeChatId();
       applyDisplaySettingsSnapshot({
-        chatId: stateChatId,
-        displayMode: displayMessage.displayMode,
         displayMax: stateConfig.displayMax
       });
       applyQuoteSettingsSnapshot(stateChatId, displayMessage.quoteStyle, displayMessage.quoteExample);
@@ -148,11 +140,6 @@ export function setup(ctx: SpindleFrontendContext) {
         ? displayMessage.config as Record<string, unknown>
         : {};
       applyDisplaySettingsSnapshot({ displayMax: nextConfig.displayMax });
-    } else if (displayMessage.type === "inlay_display_settings_updated" && displayMessage.ok === true) {
-      applyDisplaySettingsSnapshot({
-        chatId: typeof displayMessage.chatId === "string" ? displayMessage.chatId : activeChatId(),
-        displayMode: displayMessage.displayMode
-      });
     }
     routeBackendMessage(payload as BackendMessage, activeChatId, {
       replaceConfig: (next) => {
@@ -192,7 +179,7 @@ export function setup(ctx: SpindleFrontendContext) {
     unsubChatSwitched();
     renderer.destroy();
     gallery.destroy();
-    removeDisplayTransport();
+    removeFab();
     removeMessageDisplay();
     removeLightbox();
     removeStyle();

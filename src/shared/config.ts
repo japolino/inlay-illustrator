@@ -60,8 +60,8 @@ export type Config = {
   imageRerollCount: number;
   /** Original toggle_Card.Display.Max raw text; tonumber parsing happens at display time. */
   displayMax: string;
-  /** Original toggle_Card.Theme: 0 dark, 1 light. */
-  displayTheme: "0" | "1";
+  /** Floating action button corner: bottom-right default; user-selectable among all four corners. */
+  fabCorner: "bottom-right" | "bottom-left" | "top-right" | "top-left";
 };
 
 export type RawConfig = Partial<Config> & {
@@ -136,7 +136,7 @@ export const DEFAULT_CONFIG: Config = {
   presetNumber: "1",
   imageRerollCount: 1,
   displayMax: "0",
-  displayTheme: "0",
+  fabCorner: "bottom-right",
 };
 
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
@@ -192,6 +192,12 @@ function normalizePresetNumber(value: unknown): string {
 
 function normalizeDisplayMax(value: unknown): string {
   return value == null ? "0" : String(value);
+}
+
+export function normalizeFabCorner(value: unknown): Config["fabCorner"] {
+  const raw = value == null ? "" : String(value).trim().toLowerCase();
+  if (raw === "bottom-left" || raw === "top-right" || raw === "top-left") return raw;
+  return "bottom-right";
 }
 
 function normalizeParserEngine(value: unknown): ParserEngine {
@@ -313,6 +319,6 @@ export function normalizeConfig(raw: RawConfig): Config {
     presetNumber: normalizePresetNumber((raw as Record<string, unknown>).presetNumber),
     imageRerollCount: clampInt((raw as Record<string, unknown>).imageRerollCount, 1, 8, DEFAULT_CONFIG.imageRerollCount),
     displayMax: normalizeDisplayMax((raw as Record<string, unknown>).displayMax),
-    displayTheme: String((raw as Record<string, unknown>).displayTheme ?? "0") === "1" ? "1" : "0",
+    fabCorner: normalizeFabCorner((raw as Record<string, unknown>).fabCorner),
   };
 }

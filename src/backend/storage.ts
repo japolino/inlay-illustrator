@@ -264,7 +264,6 @@ export async function sendState(userId?: string, chatId?: string, preparedConfig
     parserConnections: await getParserConnections(userId),
     chatId: chatId || "",
     characterAppearance: state?.characterAppearance || {},
-    displayMode: state?.displayMode ?? "0",
     quoteStyle: state?.quoteStyle ?? "",
     quoteExample: state?.quoteExample ?? ""
   }, userId);
@@ -318,6 +317,37 @@ function compareChatIds(left: string, right: string): number {
 function chatIdFromStatePath(path: string): string | null {
   if (!path.startsWith("states/") || !path.endsWith(".json")) return null;
   return path.slice("states/".length, -".json".length);
+}
+
+
+/**
+ * Newest generated turn in a chat: the stored record with the greatest
+ * createdAt. Used by the floating action button's "from this turn" actions
+ * when no specific message is targeted.
+ */
+export async function findLatestGeneratedTurn(
+  chatId: string,
+  userId?: string
+): Promise<{ messageId: string; swipeId: number } | null> {
+  const state = await getState(chatId, userId);
+  let best: { messageId: string; swipeId: number; createdAt: number } | null = null;
+  for (const [key, value] of Object.entries(state.generated)) {
+    const reference = isGeneratedRecordReference(value) ? value : null;
+    const inline = !reference && value && typeof value === "object" ? value as Partial<GeneratedRecord> : null;
+    const messageId = reference?.messageId ?? (inline?.messageId as string | undefined) ?? "";
+    const swipeId = Number(reference?.swipeId ?? inline?.swipeId ?? 0);
+    const createdAtRaw = reference?.createdAt ?? (inline?.createdAt as string | undefined) ?? "";
+    const createdAt = Date.parse(createdAtRaw);
+    if (!messageId) continue;
+    // Prefer the newest record; stable tie-break on the state key so repeated
+    // calls return the same turn even when timestamps collide.
+    const candidate = { messageId, swipeId, createdAt: Number.isFinite(createdAt) ? createdAt : 0 };
+    if (!best || candidate.createdAt > best.createdAt
+      || (candidate.createdAt === best.createdAt && key > `${chatId}:${best.messageId}:${best.swipeId}`)) {
+      best = candidate;
+    }
+  }
+  return best ? { messageId: best.messageId, swipeId: best.swipeId } : null;
 }
 
 export async function listInlayGallery(
