@@ -38,6 +38,8 @@ const FAB_CSS = `
 .inlay-fab.inlay-fab-busy svg{animation:inlay-fab-spin 1s linear infinite}
 .inlay-fab.inlay-fab-busy{cursor:progress}
 .inlay-fab-menu{position:fixed;min-width:230px;padding:6px;border:1px solid var(--lumiverse-border);border-radius:12px;background:var(--lumiverse-fill);box-shadow:var(--lumiverse-shadow-lg);display:flex;flex-direction:column;gap:2px;z-index:9951}
+.inlay-fab-menu[hidden]{display:none}
+.inlay-fab-menu[aria-hidden="true"]{display:none}
 .inlay-fab-menu button{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:var(--lumiverse-text);font:inherit;font-size:13px;text-align:left;cursor:pointer}
 .inlay-fab-menu button:hover{background:var(--lumiverse-fill-hover)}
 .inlay-fab-menu button:disabled{opacity:.5;cursor:not-allowed}
@@ -150,6 +152,7 @@ export function installInlayFab(
   const menu = document.createElement("div");
   menu.className = "inlay-fab-menu";
   menu.setAttribute("role", "menu");
+  menu.setAttribute("aria-hidden", "true");
   menu.hidden = true;
 
   function menuItem(action: string, label: string, svg: string): HTMLButtonElement {
@@ -187,7 +190,12 @@ export function installInlayFab(
     const buttonRect = typeof button.getBoundingClientRect === "function"
       ? button.getBoundingClientRect()
       : fabButtonRect(corner, { width: window.innerWidth, height: window.innerHeight });
-    const menuRect = typeof menu.getBoundingClientRect === "function" ? menu.getBoundingClientRect() : { width: 230, height: 140 };
+    // Measure the menu after it is visible. When it is not yet laid out (just
+    // unhidden, or zero due to display:none) prefer the known footprint so the
+    // menu is never clamped off-screen by a 0-size measurement.
+    const measured = typeof menu.getBoundingClientRect === "function" ? menu.getBoundingClientRect() : { width: 0, height: 0 };
+    const menuWidth = measured && measured.width > 0 ? measured.width : 230;
+    const menuHeight = measured && measured.height > 0 ? measured.height : 140;
     const position = fabMenuPosition(
       corner,
       {
@@ -198,7 +206,7 @@ export function installInlayFab(
         width: buttonRect.width,
         height: buttonRect.height
       },
-      { width: menuRect.width, height: menuRect.height },
+      { width: menuWidth, height: menuHeight },
       { width: window.innerWidth, height: window.innerHeight }
     );
     menu.style.left = px(position.left);
@@ -211,6 +219,7 @@ export function installInlayFab(
     if (menuOpen) return;
     menuOpen = true;
     menu.hidden = false;
+    menu.setAttribute("aria-hidden", "false");
     positionMenu();
     button.setAttribute("aria-expanded", "true");
     rerollItem.disabled = busy;
@@ -221,6 +230,7 @@ export function installInlayFab(
     if (!menuOpen) return;
     menuOpen = false;
     menu.hidden = true;
+    menu.setAttribute("aria-hidden", "true");
     button.setAttribute("aria-expanded", "false");
   }
 

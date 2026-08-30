@@ -145,6 +145,12 @@ describe("FAB DOM lifecycle (fake DOM)", () => {
     expect(button.style.right).toBe("20px");
     expect(button.style.bottom).toBe("20px");
 
+    // The menu starts closed (hidden + aria-hidden). A visible-menu CSS rule
+    // must never override [hidden]; the dropdown only appears after a click.
+    const menu = body.children[1];
+    expect(menu.hidden).toBeTrue();
+    expect(menu.getAttribute("aria-hidden")).toBe("true");
+
     // Busy: true sets the animation class; a status completion clears it.
     const emit = (payload: unknown) => backendHandlers.forEach((h) => h(payload));
     emit({ type: "status", status: "Rerolling all images...", busy: true });
@@ -153,7 +159,6 @@ describe("FAB DOM lifecycle (fake DOM)", () => {
     expect(button.classList.contains("inlay-fab-busy")).toBeFalse();
 
     // Menu items: exact labels, in the user-specified order.
-    const menu = body.children[1];
     expect(menu.children.length).toBe(3);
     expect(menu.children[0].children[0].textContent).toBe("Reroll images (from this turn)");
     expect(menu.children[1].children[0].textContent).toBe("Reroll images with sidecar (from this turn)");
@@ -168,6 +173,17 @@ describe("FAB DOM lifecycle (fake DOM)", () => {
     // Sidecar variant flips the flag.
     menu.children[1].click();
     expect(sent[1]).toMatchObject({ type: "reroll_all_images", sidecar: true });
+
+    // Opening then closing toggles hidden/aria-hidden so the dropdown can be
+    // dismissed by clicking the button again.
+    button.click();
+    expect(menu.hidden).toBeFalse();
+    expect(menu.getAttribute("aria-hidden")).toBe("false");
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    button.click();
+    expect(menu.hidden).toBeTrue();
+    expect(menu.getAttribute("aria-hidden")).toBe("true");
+    expect(button.getAttribute("aria-expanded")).toBe("false");
 
     // A config broadcast re-anchors the button to the new corner.
     emit({ type: "config_updated", config: { fabCorner: "top-left" } });
