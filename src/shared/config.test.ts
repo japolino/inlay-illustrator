@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_CONFIG, effectiveGenerationConfig, normalizeConfig, normalizePromptPresets } from "./config.js";
+import { DEFAULT_CONFIG, effectiveGenerationConfig, normalizeConfig, normalizePromptPresets, resolveInlayImageAspect } from "./config.js";
 
 describe("shared configuration", () => {
   test("normalizes an empty persisted record to independent defaults", () => {
@@ -91,6 +91,14 @@ describe("shared configuration", () => {
       assetImageWidth: 2400,
       inlayImageMaxHeightVh: DEFAULT_CONFIG.inlayImageMaxHeightVh
     });
+  });
+
+  test("normalizes the Legacy in-chat aspect presets and resolves their ratios", () => {
+    expect(DEFAULT_CONFIG.inlayImageAspect).toBe("wide");
+    expect(normalizeConfig({ inlayImageAspect: "vertical" }).inlayImageAspect).toBe("vertical");
+    expect(normalizeConfig({ inlayImageAspect: "invalid" as never }).inlayImageAspect).toBe("wide");
+    expect(resolveInlayImageAspect("classic")).toEqual({ w: 2, h: 3 });
+    expect(resolveInlayImageAspect("invalid")).toEqual({ w: 16, h: 9 });
   });
 
   test("uses an automatic parser token budget by default and clamps explicit budgets", () => {

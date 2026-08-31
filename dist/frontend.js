@@ -14,6 +14,30 @@ var __export = (target, all) => {
 };
 
 // src/shared/config.ts
+var INLAY_IMAGE_ASPECT_PRESETS = [
+  { value: "wide", label: "Wide 16:9" },
+  { value: "standard", label: "Standard 4:3" },
+  { value: "square", label: "Square 1:1" },
+  { value: "portrait", label: "Portrait 3:4" },
+  { value: "vertical", label: "Vertical 9:16" },
+  { value: "classic", label: "Classic 2:3" }
+];
+var INLAY_IMAGE_ASPECT_RATIOS = {
+  wide: { w: 16, h: 9 },
+  standard: { w: 4, h: 3 },
+  square: { w: 1, h: 1 },
+  portrait: { w: 3, h: 4 },
+  vertical: { w: 9, h: 16 },
+  classic: { w: 2, h: 3 }
+};
+function resolveInlayImageAspect(value) {
+  const key = String(value ?? "").toLowerCase();
+  return INLAY_IMAGE_ASPECT_RATIOS[key] ?? INLAY_IMAGE_ASPECT_RATIOS.wide;
+}
+function normalizeInlayImageAspect(value) {
+  const key = String(value ?? "").toLowerCase();
+  return key in INLAY_IMAGE_ASPECT_RATIOS ? key : "wide";
+}
 var DEFAULT_CONFIG = {
   enabled: true,
   autoGenerate: true,
@@ -38,6 +62,7 @@ var DEFAULT_CONFIG = {
   preprocessingEnabled: false,
   inlayImageWidth: 640,
   assetImageWidth: 400,
+  inlayImageAspect: "wide",
   inlayImageMaxHeightVh: 70,
   coverImageWidth: 1200,
   coverImageMaxHeightVh: 80,
@@ -135,6 +160,7 @@ function normalizeConfig(raw) {
     preprocessingEnabled: raw.preprocessingEnabled === true,
     inlayImageWidth: clampInt(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
     assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
+    inlayImageAspect: normalizeInlayImageAspect(raw.inlayImageAspect),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
     coverImageWidth: clampInt(raw.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth),
     coverImageMaxHeightVh: clampInt(raw.coverImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.coverImageMaxHeightVh),
@@ -445,8 +471,8 @@ function promptSummary(config) {
   return `${style} · ${syntax}`;
 }
 function outputSummary(config) {
-  const asset = !config.adaptiveMode && config.perspectiveMode === "asset";
-  return `${asset ? config.assetImageWidth : config.inlayImageWidth}px · ${config.inlayImageMaxHeightVh}vh`;
+  const aspect = INLAY_IMAGE_ASPECT_PRESETS.find((preset) => preset.value === config.inlayImageAspect)?.label || "Wide 16:9";
+  return `${aspect} · ${config.inlayImageMaxHeightVh}vh`;
 }
 
 // src/frontend/sections/generation.ts
@@ -590,15 +616,11 @@ function renderMemorySection({ ui, characterAppearance, actions }) {
 // src/frontend/sections/output.ts
 function renderOutputSection({ ui, config }) {
   const section = ui.section("Image output", false, {
-    description: "Set in-chat image dimensions and output filtering.",
+    description: "Set the in-chat frame shape, height, crop, and output filtering.",
     badge: outputSummary(config)
   });
-  if (!config.adaptiveMode && config.perspectiveMode === "asset") {
-    ui.addNumber(section, "assetImageWidth", "Asset width", 120, 2400);
-  } else {
-    ui.addNumber(section, "inlayImageWidth", "Illustration width", 120, 2400);
-  }
-  ui.addNumber(section, "inlayImageMaxHeightVh", "Maximum height", 10, 100, "Viewport height percentage.");
+  ui.addSelect(section, "inlayImageAspect", "Aspect ratio", INLAY_IMAGE_ASPECT_PRESETS, "The shape of the in-chat image frame. Generated images are cropped to fill it (object-fit: cover).");
+  ui.addNumber(section, "inlayImageMaxHeightVh", "Maximum height", 10, 100, "Viewport-height cap. The frame keeps the selected aspect ratio and fits the chat column.");
   ui.addTextarea(section, "ignoredTags", "Ignored tags", "Separate tags with commas or semicolons.");
 }
 

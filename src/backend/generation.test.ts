@@ -307,7 +307,7 @@ describe("progressive ComfyUI delivery", () => {
     expect(imageResolvers).toHaveLength(2);
     expect(events.indexOf("generate-0")).toBeLessThan(events.indexOf("placeholder"));
     const placeholderUpdate = updates.find((content) => content.includes("Generating illustration"));
-    expect(placeholderUpdate).toContain("aspect-ratio:768 / 1024");
+    expect(placeholderUpdate).toContain("aspect-ratio:16/9");
 
     imageResolvers[1]({ imageId: "second-id", imageUrl: "/second.png", imageDataUrl: "", model: "workflow", provider: "comfyui" });
     for (let attempt = 0; attempt < 20 && !message.content.includes("/second.png"); attempt += 1) {

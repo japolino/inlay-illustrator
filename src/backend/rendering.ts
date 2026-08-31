@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type Config, type PerspectiveMode } from "../shared/config.js";
+import { DEFAULT_CONFIG, resolveInlayImageAspect, type Config, type PerspectiveMode } from "../shared/config.js";
 import { MARKER } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
 import { paragraphCount } from "./paragraphs.js";
@@ -77,33 +77,33 @@ function positiveDimension(value: unknown): number | null {
 }
 
 function frameGeometry(
-  perspectiveMode: PerspectiveMode | undefined,
   imageParameters: Record<string, unknown> | undefined,
   placement: "cover" | "paragraph",
   config: Config
-): { style: string; intrinsicAttributes: string } {
-  const asset = perspectiveMode === "asset";
-  const displayWidth = clampInt(
-    asset ? config.assetImageWidth : placement === "cover" ? config.coverImageWidth : config.inlayImageWidth,
-    120,
-    2400,
-    asset ? DEFAULT_CONFIG.assetImageWidth : placement === "cover" ? DEFAULT_CONFIG.coverImageWidth : DEFAULT_CONFIG.inlayImageWidth
-  );
+): { wrapperStyle: string; frameStyle: string; placeholderFrameStyle: string; intrinsicAttributes: string } {
   const maxHeight = clampInt(
     placement === "cover" ? config.coverImageMaxHeightVh : config.inlayImageMaxHeightVh,
     10,
     100,
     placement === "cover" ? DEFAULT_CONFIG.coverImageMaxHeightVh : DEFAULT_CONFIG.inlayImageMaxHeightVh
   );
+  const aspect = resolveInlayImageAspect(config.inlayImageAspect);
+  const viewportWidth = `calc(${maxHeight}vh * ${aspect.w} / ${aspect.h})`;
+  // Preserve staging's optional cover-width cap. Paragraph and Asset slots use
+  // the Legacy display contract: aspect ratio + viewport-height cap only.
+  const boxWidth = placement === "cover"
+    ? `min(100%, ${clampInt(config.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth)}px, ${viewportWidth})`
+    : `min(100%, ${viewportWidth})`;
   const parameters = imageParameters && Object.keys(imageParameters).length > 0
     ? imageParameters
     : config.imageParameters;
   const intrinsicWidth = positiveDimension(parameters.width);
   const intrinsicHeight = positiveDimension(parameters.height);
-  const aspectWidth = intrinsicWidth || 1;
-  const aspectHeight = intrinsicHeight || 1;
+  const commonFrameStyle = `width:${boxWidth};max-width:100%;aspect-ratio:${aspect.w}/${aspect.h};`;
   return {
-    style: `display:flex;justify-content:center;align-items:center;margin:10px auto;box-sizing:border-box;width:min(100%, ${displayWidth}px);aspect-ratio:${aspectWidth} / ${aspectHeight};max-height:${maxHeight}vh;overflow:hidden;`,
+    wrapperStyle: "display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;",
+    frameStyle: `display:block;${commonFrameStyle}`,
+    placeholderFrameStyle: `display:flex;justify-content:center;align-items:center;${commonFrameStyle}`,
     intrinsicAttributes: intrinsicWidth && intrinsicHeight
       ? ` width="${intrinsicWidth}" height="${intrinsicHeight}"`
       : ""
@@ -114,7 +114,7 @@ function renderInlayBlock(
   url: string,
   _prompt: string,
   _negativePrompt: string,
-  perspectiveMode: PerspectiveMode | undefined,
+  _perspectiveMode: PerspectiveMode | undefined,
   _perspectiveSource: "adaptive" | "manual" | undefined,
   _creativeConcept: CreativeConcept | null | undefined,
   imageParameters: Record<string, unknown> | undefined,
@@ -128,13 +128,13 @@ function renderInlayBlock(
   illustrationNumber = index + 1
 ): string {
   const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
-  const frame = frameGeometry(perspectiveMode, imageParameters, placement, config);
-  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="${frame.style}"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
+  const frame = frameGeometry(imageParameters, placement, config);
+  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.frameStyle}"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:100%;height:100%;object-fit:cover;border-radius:8px;cursor:zoom-in;"/></span></div>`;
 }
 
 function renderSlotPlaceholder(
   status: GenerationSlotStatus,
-  perspectiveMode: PerspectiveMode | undefined,
+  _perspectiveMode: PerspectiveMode | undefined,
   imageParameters: Record<string, unknown> | undefined,
   index: number,
   config: Config,
@@ -147,8 +147,8 @@ function renderSlotPlaceholder(
     : status === "cancelled"
       ? `${subject} cancelled.`
       : `Generating ${subject.toLowerCase()}…`;
-  const frame = frameGeometry(perspectiveMode, imageParameters, placement, config);
-  return `${MARKER}\n<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-image-index="${index}" role="status" style="${frame.style}">${htmlAttr(label)}</div>`;
+  const frame = frameGeometry(imageParameters, placement, config);
+  return `${MARKER}\n<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-image-index="${index}" role="status" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.placeholderFrameStyle}">${htmlAttr(label)}</span></div>`;
 }
 
 export function renderInlaidMessage(original: string, record: InlayRecord, config: Config): string {

@@ -27,11 +27,13 @@ describe("settings view model", () => {
       minImages: 2,
       maxImages: 5,
       promptStyle: "anima" as const,
-      promptSyntax: "nai" as const
+      promptSyntax: "nai" as const,
+      inlayImageAspect: "vertical" as const,
+      inlayImageMaxHeightVh: 80
     };
     expect(generationSummary(config)).toBe("Adaptive · 2–5 images");
     expect(parserSummary(config, [])).toBe("Not configured");
     expect(promptSummary(config)).toBe("Anima · NovelAI");
-    expect(outputSummary(config)).toContain("px");
+    expect(outputSummary(config)).toBe("Vertical 9:16 · 80vh");
   });
 });

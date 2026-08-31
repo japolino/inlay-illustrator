@@ -76,10 +76,12 @@ describe("inlay rendering", () => {
     const paragraphImage = rendered.indexOf("/first.png");
     const coverBlock = rendered.slice(rendered.lastIndexOf('<div class="inlay-illustrator-image"', coverImage), rendered.indexOf("</div>", coverImage));
     const paragraphBlock = rendered.slice(rendered.lastIndexOf('<div class="inlay-illustrator-image"', paragraphImage), rendered.indexOf("</div>", paragraphImage));
-    expect(coverBlock).toContain("width:min(100%, 1500px)");
-    expect(coverBlock).toContain("max-height:45vh");
-    expect(paragraphBlock).toContain("width:min(100%, 640px)");
-    expect(paragraphBlock).toContain("max-height:70vh");
+    expect(coverBlock).toContain("width:min(100%, 1500px, calc(45vh * 16 / 9))");
+    expect(coverBlock).toContain("aspect-ratio:16/9");
+    expect(paragraphBlock).toContain("width:min(100%, calc(70vh * 16 / 9))");
+    expect(paragraphBlock).toContain("aspect-ratio:16/9");
+    expect(coverBlock).toContain("object-fit:cover");
+    expect(paragraphBlock).toContain("object-fit:cover");
   });
 
   test("clamps invalid paragraph targets and applies configured dimensions", () => {
@@ -93,6 +95,7 @@ describe("inlay rendering", () => {
       {
         ...DEFAULT_CONFIG,
         inlayImageWidth: 812,
+        inlayImageAspect: "portrait",
         inlayImageMaxHeightVh: 63
       }
     );
@@ -100,8 +103,9 @@ describe("inlay rendering", () => {
     expect(rendered.indexOf("/too-low.png")).toBeLessThan(rendered.indexOf("First."));
     expect(rendered.indexOf("First.")).toBeLessThan(rendered.indexOf("/too-high.png"));
     expect(rendered.indexOf("/too-high.png")).toBeLessThan(rendered.indexOf("Second."));
-    expect(rendered).toContain("width:min(100%, 812px)");
-    expect(rendered).toContain("max-height:63vh");
+    expect(rendered).toContain("width:min(100%, calc(63vh * 3 / 4))");
+    expect(rendered).toContain("aspect-ratio:3/4");
+    expect(rendered).toContain("object-fit:cover");
   });
 
   test("escapes image metadata without embedding prompt text in the chat", () => {
@@ -177,8 +181,14 @@ describe("inlay rendering", () => {
     expect(rerendered.split(MARKER)).toHaveLength(3);
   });
 
-  test("uses the compact Asset width only for records generated in Asset Mode", () => {
-    const config = { ...DEFAULT_CONFIG, inlayImageWidth: 800, assetImageWidth: 420 };
+  test("uses the same selected frame aspect for Asset and adaptive illustration slots", () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      inlayImageWidth: 800,
+      assetImageWidth: 420,
+      inlayImageAspect: "standard" as const,
+      inlayImageMaxHeightVh: 65
+    };
     const asset = renderInlaidMessage("Paragraph.", {
       imageUrls: ["/asset.png"],
       prompts: ["asset"],
@@ -193,8 +203,13 @@ describe("inlay rendering", () => {
       paragraphs: [1]
     }, { ...config, adaptiveMode: true, perspectiveMode: "asset" });
 
-    expect(asset).toContain("width:min(100%, 420px)");
-    expect(adaptiveIllustration).toContain("width:min(100%, 800px)");
+    for (const rendered of [asset, adaptiveIllustration]) {
+      expect(rendered).toContain("width:min(100%, calc(65vh * 4 / 3))");
+      expect(rendered).toContain("aspect-ratio:4/3");
+      expect(rendered).toContain("object-fit:cover");
+      expect(rendered).not.toContain("width:min(100%, 420px)");
+      expect(rendered).not.toContain("width:min(100%, 800px)");
+    }
   });
 
   test("renders stable progressive slots in paragraph order and replaces placeholders in place", () => {
@@ -225,6 +240,7 @@ describe("inlay rendering", () => {
       ...DEFAULT_CONFIG,
       imageParameters: { width: 768, height: 1024 },
       inlayImageWidth: 640,
+      inlayImageAspect: "portrait" as const,
       inlayImageMaxHeightVh: 70
     };
     const baseSlot = {
@@ -240,12 +256,12 @@ describe("inlay rendering", () => {
     const completed = renderInlaidMessage("Paragraph.", {
       slots: [{ ...baseSlot, imageUrl: "/ready.png", status: "completed" }]
     }, config);
-    const expectedFrame = "width:min(100%, 640px);aspect-ratio:768 / 1024;max-height:70vh";
+    const expectedFrame = "width:min(100%, calc(70vh * 3 / 4));max-width:100%;aspect-ratio:3/4";
 
     expect(pending).toContain(expectedFrame);
     expect(completed).toContain(expectedFrame);
     expect(completed).toContain('width="768" height="1024"');
-    expect(completed).toContain("width:100%;height:100%;object-fit:contain");
+    expect(completed).toContain("width:100%;height:100%;object-fit:cover");
   });
 
   test("renders canonical V3 slots without reconstructing parallel arrays", () => {

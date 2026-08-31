@@ -14,6 +14,30 @@ var __export = (target, all) => {
 };
 
 // src/shared/config.ts
+var INLAY_IMAGE_ASPECT_PRESETS = [
+  { value: "wide", label: "Wide 16:9" },
+  { value: "standard", label: "Standard 4:3" },
+  { value: "square", label: "Square 1:1" },
+  { value: "portrait", label: "Portrait 3:4" },
+  { value: "vertical", label: "Vertical 9:16" },
+  { value: "classic", label: "Classic 2:3" }
+];
+var INLAY_IMAGE_ASPECT_RATIOS = {
+  wide: { w: 16, h: 9 },
+  standard: { w: 4, h: 3 },
+  square: { w: 1, h: 1 },
+  portrait: { w: 3, h: 4 },
+  vertical: { w: 9, h: 16 },
+  classic: { w: 2, h: 3 }
+};
+function resolveInlayImageAspect(value) {
+  const key = String(value ?? "").toLowerCase();
+  return INLAY_IMAGE_ASPECT_RATIOS[key] ?? INLAY_IMAGE_ASPECT_RATIOS.wide;
+}
+function normalizeInlayImageAspect(value) {
+  const key = String(value ?? "").toLowerCase();
+  return key in INLAY_IMAGE_ASPECT_RATIOS ? key : "wide";
+}
 var DEFAULT_CONFIG = {
   enabled: true,
   autoGenerate: true,
@@ -38,6 +62,7 @@ var DEFAULT_CONFIG = {
   preprocessingEnabled: false,
   inlayImageWidth: 640,
   assetImageWidth: 400,
+  inlayImageAspect: "wide",
   inlayImageMaxHeightVh: 70,
   coverImageWidth: 1200,
   coverImageMaxHeightVh: 80,
@@ -135,6 +160,7 @@ function normalizeConfig(raw) {
     preprocessingEnabled: raw.preprocessingEnabled === true,
     inlayImageWidth: clampInt(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
     assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
+    inlayImageAspect: normalizeInlayImageAspect(raw.inlayImageAspect),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
     coverImageWidth: clampInt(raw.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth),
     coverImageMaxHeightVh: clampInt(raw.coverImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.coverImageMaxHeightVh),
@@ -20395,32 +20421,34 @@ function positiveDimension(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
 }
-function frameGeometry(perspectiveMode, imageParameters, placement, config2) {
-  const asset = perspectiveMode === "asset";
-  const displayWidth = clampInt2(asset ? config2.assetImageWidth : placement === "cover" ? config2.coverImageWidth : config2.inlayImageWidth, 120, 2400, asset ? DEFAULT_CONFIG.assetImageWidth : placement === "cover" ? DEFAULT_CONFIG.coverImageWidth : DEFAULT_CONFIG.inlayImageWidth);
+function frameGeometry(imageParameters, placement, config2) {
   const maxHeight = clampInt2(placement === "cover" ? config2.coverImageMaxHeightVh : config2.inlayImageMaxHeightVh, 10, 100, placement === "cover" ? DEFAULT_CONFIG.coverImageMaxHeightVh : DEFAULT_CONFIG.inlayImageMaxHeightVh);
+  const aspect = resolveInlayImageAspect(config2.inlayImageAspect);
+  const viewportWidth = `calc(${maxHeight}vh * ${aspect.w} / ${aspect.h})`;
+  const boxWidth = placement === "cover" ? `min(100%, ${clampInt2(config2.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth)}px, ${viewportWidth})` : `min(100%, ${viewportWidth})`;
   const parameters = imageParameters && Object.keys(imageParameters).length > 0 ? imageParameters : config2.imageParameters;
   const intrinsicWidth = positiveDimension(parameters.width);
   const intrinsicHeight = positiveDimension(parameters.height);
-  const aspectWidth = intrinsicWidth || 1;
-  const aspectHeight = intrinsicHeight || 1;
+  const commonFrameStyle = `width:${boxWidth};max-width:100%;aspect-ratio:${aspect.w}/${aspect.h};`;
   return {
-    style: `display:flex;justify-content:center;align-items:center;margin:10px auto;box-sizing:border-box;width:min(100%, ${displayWidth}px);aspect-ratio:${aspectWidth} / ${aspectHeight};max-height:${maxHeight}vh;overflow:hidden;`,
+    wrapperStyle: "display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;",
+    frameStyle: `display:block;${commonFrameStyle}`,
+    placeholderFrameStyle: `display:flex;justify-content:center;align-items:center;${commonFrameStyle}`,
     intrinsicAttributes: intrinsicWidth && intrinsicHeight ? ` width="${intrinsicWidth}" height="${intrinsicHeight}"` : ""
   };
 }
-function renderInlayBlock(url2, _prompt, _negativePrompt, perspectiveMode, _perspectiveSource, _creativeConcept, imageParameters, imageId, chatId, messageId, swipeId, index, config2, placement = "paragraph", illustrationNumber = index + 1) {
+function renderInlayBlock(url2, _prompt, _negativePrompt, _perspectiveMode, _perspectiveSource, _creativeConcept, imageParameters, imageId, chatId, messageId, swipeId, index, config2, placement = "paragraph", illustrationNumber = index + 1) {
   const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
-  const frame = frameGeometry(perspectiveMode, imageParameters, placement, config2);
+  const frame = frameGeometry(imageParameters, placement, config2);
   return `${MARKER}
-<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="${frame.style}"><img src="${htmlAttr(url2)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:8px;cursor:zoom-in;"/></div>`;
+<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.frameStyle}"><img src="${htmlAttr(url2)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:100%;height:100%;object-fit:cover;border-radius:8px;cursor:zoom-in;"/></span></div>`;
 }
-function renderSlotPlaceholder(status, perspectiveMode, imageParameters, index, config2, placement = "paragraph", illustrationNumber = index + 1) {
+function renderSlotPlaceholder(status, _perspectiveMode, imageParameters, index, config2, placement = "paragraph", illustrationNumber = index + 1) {
   const subject = placement === "cover" ? "Cover image" : `Illustration ${illustrationNumber}`;
   const label = status === "failed" ? `${subject} failed. Use Generate latest to retry.` : status === "cancelled" ? `${subject} cancelled.` : `Generating ${subject.toLowerCase()}…`;
-  const frame = frameGeometry(perspectiveMode, imageParameters, placement, config2);
+  const frame = frameGeometry(imageParameters, placement, config2);
   return `${MARKER}
-<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-image-index="${index}" role="status" style="${frame.style}">${htmlAttr(label)}</div>`;
+<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-image-index="${index}" role="status" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.placeholderFrameStyle}">${htmlAttr(label)}</span></div>`;
 }
 function renderInlaidMessage(original, record2, config2) {
   const cleanOriginal = stripInlayContent(original);

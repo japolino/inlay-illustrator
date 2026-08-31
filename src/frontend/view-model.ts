@@ -1,4 +1,4 @@
-import type { Config } from "../shared/config.js";
+import { INLAY_IMAGE_ASPECT_PRESETS, type Config } from "../shared/config.js";
 import type { ParserConnection } from "./contracts.js";
 
 export type StatusTone = "neutral" | "active" | "success" | "warning" | "error";
@@ -39,6 +39,6 @@ export function promptSummary(config: Config): string {
 }
 
 export function outputSummary(config: Config): string {
-  const asset = !config.adaptiveMode && config.perspectiveMode === "asset";
-  return `${asset ? config.assetImageWidth : config.inlayImageWidth}px · ${config.inlayImageMaxHeightVh}vh`;
+  const aspect = INLAY_IMAGE_ASPECT_PRESETS.find((preset) => preset.value === config.inlayImageAspect)?.label || "Wide 16:9";
+  return `${aspect} · ${config.inlayImageMaxHeightVh}vh`;
 }
