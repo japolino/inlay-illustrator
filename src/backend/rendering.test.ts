@@ -87,11 +87,12 @@ describe("inlay rendering", () => {
       DEFAULT_CONFIG
     );
 
-    // The image URL is carried in a data attribute (no `<img src>`), so a
-    // character card's asset display regex that rewrites `<img src="...">`
-    // cannot mangle it. The URL is still HTML-attribute-escaped.
+    // The image URL is carried in both `src` (so the image loads natively) and
+    // a data attribute (so a character card's asset display regex that rewrites
+    // `<img src="...">` can be repaired at render time). Both are HTML-attribute-
+    // escaped.
+    expect(rendered).toContain('src="/image?name=&quot;quoted&quot;&amp;tag=&lt;unsafe&gt;"');
     expect(rendered).toContain('data-inlay-illustrator-image-url="/image?name=&quot;quoted&quot;&amp;tag=&lt;unsafe&gt;"');
-    expect(rendered).not.toContain("<img src=");
     expect(rendered).not.toContain("look &quot;here&quot;");
     expect(rendered).not.toContain("<script>");
     expect(rendered).not.toContain("```");

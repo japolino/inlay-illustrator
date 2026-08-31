@@ -31,10 +31,10 @@ const INLAY_WRAPPER_SELECTOR = '[data-inlay-illustrator="true"]';
 const INLAY_IMAGE_SELECTOR = '[data-inlay-illustrator="true"] img';
 
 /**
- * Hydrate a single baked inlay image: the backend renders inlay `<img>` tags
- * WITHOUT a `src` (the URL lives in data-inlay-illustrator-image-url) so a
- * character card's asset display regex that rewrites `<img src="...">` cannot
- * mangle them. This restores the `src` at render time.
+ * Repair a single baked inlay image: the backend bakes `src` (so the image
+ * loads natively) plus data-inlay-illustrator-image-url. A character card's
+ * asset display regex that rewrites `<img src="...">` can still mangle `src`;
+ * this restores it from the data attribute at render time.
  * Returns true when the src was set or corrected.
  */
 export function hydrateInlayImageSource(image: HTMLImageElement): boolean {
@@ -380,11 +380,9 @@ export function installInlayMessageDisplay(ctx: SpindleFrontendContext): () => v
     }
   });
 
-  // Card display regex can rewrite `<img src="...">` in message content and
-  // break inlay images. We therefore bake the inlay `<img>` WITHOUT a `src`
-  // (the real URL lives in data-inlay-illustrator-image-url), so the regex
-  // never matches it, and hydrate the src here at render time. Keep the img
-  // hidden until its src is set so a partially-rendered box isn't shown.
+  // The inlay box is baked with a real `src` so images render natively. A card
+  // display regex can rewrite `<img src="...">` in message content; if it
+  // mangles the src, restore it here from data-inlay-illustrator-image-url.
   const hydrateInlayImageSources = (): void => {
     for (const mounted of ctx.dom.listMessageElements()) {
       const images = mounted.element.querySelectorAll<HTMLImageElement>(INLAY_IMAGE_SELECTOR);
