@@ -101,10 +101,6 @@ function asRecord(value) {
 function keysOf(value) {
   return Object.keys(asRecord(value));
 }
-function clampInt(value, min, max, fallback) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : fallback;
-}
 function cleanString(value) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -5653,7 +5649,7 @@ var DEFAULT_CONFIG = {
   activePromptPresetId: null,
   fabCorner: "bottom-right"
 };
-function clampInt2(value, min, max, fallback) {
+function clampInt(value, min, max, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : fallback;
 }
@@ -5697,10 +5693,10 @@ function normalizeConfig(raw) {
     imageGeneration: _legacyImageGeneration,
     ...current
   } = raw;
-  const includeMin = clampInt2(raw.includeMinMessages, 0, 32, DEFAULT_CONFIG.includeMinMessages);
-  const includeMax = clampInt2(raw.includeMaxMessages, 0, 32, DEFAULT_CONFIG.includeMaxMessages);
-  const minImages = clampInt2(raw.minImages, 1, 12, DEFAULT_CONFIG.minImages);
-  const maxImages = clampInt2(raw.maxImages, 1, 12, DEFAULT_CONFIG.maxImages);
+  const includeMin = clampInt(raw.includeMinMessages, 0, 32, DEFAULT_CONFIG.includeMinMessages);
+  const includeMax = clampInt(raw.includeMaxMessages, 0, 32, DEFAULT_CONFIG.includeMaxMessages);
+  const minImages = clampInt(raw.minImages, 1, 12, DEFAULT_CONFIG.minImages);
+  const maxImages = clampInt(raw.maxImages, 1, 12, DEFAULT_CONFIG.maxImages);
   const promptPresets = normalizePromptPresets(raw.promptPresets);
   const activePromptPresetId = cleanNullableString(raw.activePromptPresetId);
   const parserParameters = cleanParameters(raw.parserParameters);
@@ -5732,23 +5728,23 @@ function normalizeConfig(raw) {
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString2(raw.parserModel) || cleanString2(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
-    parserMaxTokens: clampInt2(raw.parserMaxTokens, 0, 32768, DEFAULT_CONFIG.parserMaxTokens),
+    parserMaxTokens: clampInt(raw.parserMaxTokens, 0, 32768, DEFAULT_CONFIG.parserMaxTokens),
     imageConnectionId: cleanNullableString(raw.imageConnectionId) || cleanNullableString(imageGeneration.activeImageGenConnectionId),
     imageModel: cleanString2(raw.imageModel) || cleanString2(imageGeneration.model),
     imageParameters: Object.keys(imageParameters).length > 0 ? imageParameters : cleanParameters(imageGeneration.parameters),
     minImages: Math.min(minImages, maxImages),
     maxImages: Math.max(minImages, maxImages),
-    maxCharacters: clampInt2(raw.maxCharacters, 1, 8, DEFAULT_CONFIG.maxCharacters),
+    maxCharacters: clampInt(raw.maxCharacters, 1, 8, DEFAULT_CONFIG.maxCharacters),
     includeMinMessages: Math.min(includeMin, includeMax),
     includeMaxMessages: Math.max(includeMin, includeMax),
-    parserRetries: clampInt2(raw.parserRetries, 0, 5, DEFAULT_CONFIG.parserRetries),
+    parserRetries: clampInt(raw.parserRetries, 0, 5, DEFAULT_CONFIG.parserRetries),
     preprocessingEnabled: raw.preprocessingEnabled === true,
-    inlayImageWidth: clampInt2(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
-    assetImageWidth: clampInt2(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
+    inlayImageWidth: clampInt(raw.inlayImageWidth, 120, 2400, DEFAULT_CONFIG.inlayImageWidth),
+    assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
     inlayImageAspect: normalizeInlayImageAspect(raw.inlayImageAspect),
-    inlayImageMaxHeightVh: clampInt2(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
-    coverImageWidth: clampInt2(raw.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth),
-    coverImageMaxHeightVh: clampInt2(raw.coverImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.coverImageMaxHeightVh),
+    inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
+    coverImageWidth: clampInt(raw.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth),
+    coverImageMaxHeightVh: clampInt(raw.coverImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.coverImageMaxHeightVh),
     promptStyle: raw.promptStyle === "default" ? "default" : "anima",
     promptSyntax: raw.promptSyntax === "nai" ? "nai" : "comfyui",
     includeUserInfo: raw.includeUserInfo !== false,
@@ -10544,6 +10540,32 @@ function paragraphCount(content) {
   return content.split(/(\r?\n\s*\r?\n)/).filter((part) => part.trim()).length;
 }
 
+// src/shared/inlay-frame.ts
+function clampInteger(value, min, max, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : fallback;
+}
+function positiveDimension(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
+}
+function inlayFrameGeometry(imageParameters, placement, config) {
+  const maxHeight = clampInteger(placement === "cover" ? config.coverImageMaxHeightVh : config.inlayImageMaxHeightVh, 10, 100, placement === "cover" ? DEFAULT_CONFIG.coverImageMaxHeightVh : DEFAULT_CONFIG.inlayImageMaxHeightVh);
+  const aspect = resolveInlayImageAspect(config.inlayImageAspect);
+  const viewportWidth = `calc(${maxHeight}vh * ${aspect.w} / ${aspect.h})`;
+  const boxWidth = placement === "cover" ? `min(100%, ${clampInteger(config.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth)}px, ${viewportWidth})` : `min(100%, ${viewportWidth})`;
+  const parameters = imageParameters && Object.keys(imageParameters).length > 0 ? imageParameters : config.imageParameters;
+  const intrinsicWidth = positiveDimension(parameters.width);
+  const intrinsicHeight = positiveDimension(parameters.height);
+  const commonFrameStyle = `width:${boxWidth};max-width:100%;aspect-ratio:${aspect.w}/${aspect.h};`;
+  return {
+    wrapperStyle: "display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;",
+    frameStyle: `display:block;${commonFrameStyle}`,
+    placeholderFrameStyle: `display:flex;justify-content:center;align-items:center;${commonFrameStyle}`,
+    intrinsicAttributes: intrinsicWidth && intrinsicHeight ? ` width="${intrinsicWidth}" height="${intrinsicHeight}"` : ""
+  };
+}
+
 // src/backend/rendering.ts
 function normalizedInlaySlots(record) {
   if (record.slots)
@@ -10565,41 +10587,25 @@ function normalizedInlaySlots(record) {
 function imageUrlFromId(imageId) {
   return `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
 }
+function clampInt2(value, min, max, fallback = min) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : fallback;
+}
 function htmlAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r\n?|\n/g, "&#10;");
 }
-function positiveDimension(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
-}
-function frameGeometry(imageParameters, placement, config) {
-  const maxHeight = clampInt(placement === "cover" ? config.coverImageMaxHeightVh : config.inlayImageMaxHeightVh, 10, 100, placement === "cover" ? DEFAULT_CONFIG.coverImageMaxHeightVh : DEFAULT_CONFIG.inlayImageMaxHeightVh);
-  const aspect = resolveInlayImageAspect(config.inlayImageAspect);
-  const viewportWidth = `calc(${maxHeight}vh * ${aspect.w} / ${aspect.h})`;
-  const boxWidth = placement === "cover" ? `min(100%, ${clampInt(config.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth)}px, ${viewportWidth})` : `min(100%, ${viewportWidth})`;
-  const parameters = imageParameters && Object.keys(imageParameters).length > 0 ? imageParameters : config.imageParameters;
-  const intrinsicWidth = positiveDimension(parameters.width);
-  const intrinsicHeight = positiveDimension(parameters.height);
-  const commonFrameStyle = `width:${boxWidth};max-width:100%;aspect-ratio:${aspect.w}/${aspect.h};`;
-  return {
-    wrapperStyle: "display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;",
-    frameStyle: `display:block;${commonFrameStyle}`,
-    placeholderFrameStyle: `display:flex;justify-content:center;align-items:center;${commonFrameStyle}`,
-    intrinsicAttributes: intrinsicWidth && intrinsicHeight ? ` width="${intrinsicWidth}" height="${intrinsicHeight}"` : ""
-  };
-}
 function renderInlayBlock(url, _prompt, _negativePrompt, _perspectiveMode, _perspectiveSource, _creativeConcept, imageParameters, imageId, chatId, messageId, swipeId, index, config, placement = "paragraph", illustrationNumber = index + 1) {
   const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
-  const frame = frameGeometry(imageParameters, placement, config);
+  const frame = inlayFrameGeometry(imageParameters, placement, config);
   return `${MARKER}
-<div class="inlay-illustrator-image" data-inlay-illustrator="true" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.frameStyle}"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:100%;height:100%;object-fit:cover;border-radius:8px;cursor:zoom-in;"/></span></div>`;
+<div class="inlay-illustrator-image" data-inlay-illustrator="true" data-inlay-illustrator-placement="${placement}" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.frameStyle}"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:100%;height:100%;object-fit:cover;border-radius:8px;cursor:zoom-in;"/></span></div>`;
 }
 function renderSlotPlaceholder(status, _perspectiveMode, imageParameters, index, config, placement = "paragraph", illustrationNumber = index + 1) {
   const subject = placement === "cover" ? "Cover image" : `Illustration ${illustrationNumber}`;
   const label = status === "failed" ? `${subject} failed. Use Generate latest to retry.` : status === "cancelled" ? `${subject} cancelled.` : `Generating ${subject.toLowerCase()}…`;
-  const frame = frameGeometry(imageParameters, placement, config);
+  const frame = inlayFrameGeometry(imageParameters, placement, config);
   return `${MARKER}
-<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-image-index="${index}" role="status" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.placeholderFrameStyle}">${htmlAttr(label)}</span></div>`;
+<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-placement="${placement}" data-inlay-illustrator-image-index="${index}" role="status" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.placeholderFrameStyle}">${htmlAttr(label)}</span></div>`;
 }
 function renderInlaidMessage(original, record, config) {
   const cleanOriginal = stripInlayContent(original);
@@ -10614,7 +10620,7 @@ function renderInlaidMessage(original, record, config) {
       continue;
     const placement = slot.placement === "cover" ? "cover" : "paragraph";
     const illustrationNumber = slots.slice(0, index + 1).filter((candidate) => candidate.placement !== "cover").length;
-    const paragraph = clampInt(slot.paragraph, 1, count, Math.min(index + 1, count));
+    const paragraph = clampInt2(slot.paragraph, 1, count, Math.min(index + 1, count));
     const existing = placement === "cover" ? coverBlocks : blocks.get(paragraph) || [];
     existing.push(url ? renderInlayBlock(url, slot.prompt || "", slot.negativePrompt || "", slot.perspectiveMode, slot.perspectiveSource, slot.creativeConcept, slot.imageParameters, slot.imageId || "", record.chatId || "", record.messageId || "", record.swipeId || 0, index, config, placement, illustrationNumber) : renderSlotPlaceholder(status || "pending", slot.perspectiveMode, slot.imageParameters, index, config, placement, illustrationNumber));
     if (placement === "paragraph")

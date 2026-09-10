@@ -384,6 +384,81 @@ async function respondToAvatarImageRequest(message, sendToBackend, fetchFn = fet
   }
 }
 
+// src/shared/inlay-frame.ts
+function clampInteger(value, min, max, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : fallback;
+}
+function positiveDimension(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
+}
+function inlayFrameGeometry(imageParameters, placement, config) {
+  const maxHeight = clampInteger(placement === "cover" ? config.coverImageMaxHeightVh : config.inlayImageMaxHeightVh, 10, 100, placement === "cover" ? DEFAULT_CONFIG.coverImageMaxHeightVh : DEFAULT_CONFIG.inlayImageMaxHeightVh);
+  const aspect = resolveInlayImageAspect(config.inlayImageAspect);
+  const viewportWidth = `calc(${maxHeight}vh * ${aspect.w} / ${aspect.h})`;
+  const boxWidth = placement === "cover" ? `min(100%, ${clampInteger(config.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth)}px, ${viewportWidth})` : `min(100%, ${viewportWidth})`;
+  const parameters = imageParameters && Object.keys(imageParameters).length > 0 ? imageParameters : config.imageParameters;
+  const intrinsicWidth = positiveDimension(parameters.width);
+  const intrinsicHeight = positiveDimension(parameters.height);
+  const commonFrameStyle = `width:${boxWidth};max-width:100%;aspect-ratio:${aspect.w}/${aspect.h};`;
+  return {
+    wrapperStyle: "display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;",
+    frameStyle: `display:block;${commonFrameStyle}`,
+    placeholderFrameStyle: `display:flex;justify-content:center;align-items:center;${commonFrameStyle}`,
+    intrinsicAttributes: intrinsicWidth && intrinsicHeight ? ` width="${intrinsicWidth}" height="${intrinsicHeight}"` : ""
+  };
+}
+
+// src/frontend/inlay-display.ts
+var INLAY_WRAPPER_SELECTOR = '[data-inlay-illustrator="true"]';
+var INLAY_PLACEMENT_ATTRIBUTE = "data-inlay-illustrator-placement";
+var INLAY_FRAME_SELECTOR = ".inlay-illustrator-frame";
+var IMAGE_SELECTOR = "[data-inlay-illustrator-image-id]";
+function placementOf(element) {
+  return element.getAttribute?.(INLAY_PLACEMENT_ATTRIBUTE) === "cover" ? "cover" : "paragraph";
+}
+function parametersOf(element) {
+  const image = element.querySelector?.(IMAGE_SELECTOR);
+  if (!image)
+    return;
+  const width = Number(image.getAttribute?.("width"));
+  const height = Number(image.getAttribute?.("height"));
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0)
+    return;
+  return { width, height };
+}
+function applyInlayDisplaySettings(config, root) {
+  const host = root ?? (typeof document !== "undefined" ? document : null);
+  if (!host?.querySelectorAll)
+    return 0;
+  let updated = 0;
+  const wrappers = host.querySelectorAll(INLAY_WRAPPER_SELECTOR);
+  const count = Number(wrappers?.length ?? 0);
+  for (let index = 0;index < count; index += 1) {
+    const wrapper = wrappers[index];
+    if (!wrapper)
+      continue;
+    const placement = placementOf(wrapper);
+    const isPlaceholder = String(wrapper.className || "").includes("inlay-illustrator-placeholder");
+    const frame = wrapper.querySelector?.(INLAY_FRAME_SELECTOR) ?? null;
+    if (!frame?.style)
+      continue;
+    const geometry = inlayFrameGeometry(parametersOf(wrapper), placement, config);
+    const nextWrapperStyle = geometry.wrapperStyle;
+    const nextFrameStyle = isPlaceholder ? geometry.placeholderFrameStyle : geometry.frameStyle;
+    if (wrapper.style && wrapper.style.cssText !== nextWrapperStyle) {
+      wrapper.style.cssText = nextWrapperStyle;
+      updated += 1;
+    }
+    if (frame.style.cssText !== nextFrameStyle) {
+      frame.style.cssText = nextFrameStyle;
+      updated += 1;
+    }
+  }
+  return updated;
+}
+
 // src/frontend/api.ts
 var JSON_HEADERS = { Accept: "application/json" };
 async function fetchImageGenerationSettings() {
@@ -1593,7 +1668,7 @@ class SettingsRenderer {
 
 // src/frontend/lightbox.ts
 var INLAY_IMAGE_SELECTOR = '[data-inlay-illustrator="true"] img';
-var INLAY_WRAPPER_SELECTOR = '[data-inlay-illustrator="true"]';
+var INLAY_WRAPPER_SELECTOR2 = '[data-inlay-illustrator="true"]';
 function disableNativeInlayLightboxes(root) {
   root.querySelectorAll(INLAY_IMAGE_SELECTOR).forEach((image) => {
     image.removeAttribute("data-lightbox");
@@ -1623,12 +1698,12 @@ function findInlayImage(target) {
   if (!(target instanceof Element))
     return null;
   const image = target.closest(INLAY_IMAGE_SELECTOR);
-  if (!image?.closest(INLAY_WRAPPER_SELECTOR))
+  if (!image?.closest(INLAY_WRAPPER_SELECTOR2))
     return null;
   return image;
 }
 function detailsForImage(image) {
-  const wrapper = image.closest(INLAY_WRAPPER_SELECTOR);
+  const wrapper = image.closest(INLAY_WRAPPER_SELECTOR2);
   const fallback = wrapper?.querySelector(".inlay-illustrator-prompt")?.textContent || null;
   const fallbackNegative = wrapper?.querySelector(".inlay-illustrator-negative-prompt")?.textContent || null;
   return resolveInlayDetails(image.getAttribute("data-inlay-illustrator-prompt"), fallback, image.getAttribute("data-inlay-illustrator-negative-prompt"), fallbackNegative, image.getAttribute("data-inlay-illustrator-perspective"), image.getAttribute("data-inlay-illustrator-perspective-source"), image.getAttribute("data-inlay-illustrator-concept"));
@@ -3226,6 +3301,27 @@ function setup(ctx) {
   function patchConfig(patch) {
     config = { ...config, ...patch };
     ctx.sendToBackend({ type: "set_config", patch, chatId: activeChatId() });
+    scheduleInlayDisplayRefresh();
+  }
+  let inlayDisplayTimer = null;
+  let applyingInlayDisplay = false;
+  function refreshInlayDisplay() {
+    if (applyingInlayDisplay)
+      return;
+    applyingInlayDisplay = true;
+    try {
+      applyInlayDisplaySettings(config);
+    } catch {} finally {
+      applyingInlayDisplay = false;
+    }
+  }
+  function scheduleInlayDisplayRefresh(delayMs = 40) {
+    if (inlayDisplayTimer)
+      clearTimeout(inlayDisplayTimer);
+    inlayDisplayTimer = setTimeout(() => {
+      inlayDisplayTimer = null;
+      refreshInlayDisplay();
+    }, delayMs);
   }
   const actions = {
     activeChatId,
@@ -3279,6 +3375,7 @@ function setup(ctx) {
     routeBackendMessage(message, activeChatId, {
       replaceConfig: (next) => {
         config = next;
+        scheduleInlayDisplayRefresh(0);
       },
       replaceState: (next) => {
         config = next.config;
@@ -3287,6 +3384,7 @@ function setup(ctx) {
         characterAppearance = next.characterAppearance;
         status = next.status;
         renderer?.render();
+        scheduleInlayDisplayRefresh(0);
       },
       replaceCharacterMemory: (nextAppearance, nextStatus) => {
         characterAppearance = nextAppearance;
@@ -3301,6 +3399,7 @@ function setup(ctx) {
         applyImageGenerationDefaults();
       }
     });
+    scheduleInlayDisplayRefresh();
   });
   const unsubDrawer = ctx.ui.events.onDrawerChange((drawer) => {
     const active = drawer.open && drawer.tabId === tab.tabId;
@@ -3311,7 +3410,21 @@ function setup(ctx) {
   const unsubChatSwitched = ctx.events.on("CHAT_SWITCHED", (payload) => {
     const chatId = payload?.chatId;
     requestState(typeof chatId === "string" ? chatId : "");
+    scheduleInlayDisplayRefresh(80);
   });
+  let inlayObserver = null;
+  if (typeof MutationObserver !== "undefined" && typeof document !== "undefined" && document.body) {
+    try {
+      inlayObserver = new MutationObserver(() => {
+        if (applyingInlayDisplay)
+          return;
+        scheduleInlayDisplayRefresh(60);
+      });
+      inlayObserver.observe(document.body, { childList: true, subtree: true });
+    } catch {
+      inlayObserver = null;
+    }
+  }
   renderer?.render();
   requestState();
   ctx.ready();
@@ -3319,6 +3432,9 @@ function setup(ctx) {
     unsub();
     unsubDrawer();
     unsubChatSwitched();
+    if (inlayDisplayTimer)
+      clearTimeout(inlayDisplayTimer);
+    inlayObserver?.disconnect();
     removeFab();
     gallery.destroy();
     cleanupModalStyles();

@@ -1,6 +1,7 @@
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
 import { DEFAULT_CONFIG, type Config } from "./shared/config.js";
 import { respondToAvatarImageRequest } from "./frontend/avatar-image.js";
+import { applyInlayDisplaySettings } from "./frontend/inlay-display.js";
 import { fetchImageGenerationSettings, fetchParserConnections } from "./frontend/api.js";
 import { CLEANUP_KEY, DRAWER_TAB_OPTIONS, PANEL_STYLES } from "./frontend/constants.js";
 import type { BackendMessage, FrontendActions, ImageConnection, ParserConnection } from "./frontend/contracts.js";
@@ -60,6 +61,32 @@ export function setup(ctx: SpindleFrontendContext) {
   function patchConfig(patch: Partial<Config>): void {
     config = { ...config, ...patch };
     ctx.sendToBackend({ type: "set_config", patch, chatId: activeChatId() });
+    // Display settings restyle images that are already in the chat.
+    scheduleInlayDisplayRefresh();
+  }
+
+  // Message HTML is generated once, when an image is produced. Re-apply the
+  // current Image output geometry so changing the aspect ratio or height cap
+  // affects existing inlays instead of only future generations.
+  let inlayDisplayTimer: ReturnType<typeof setTimeout> | null = null;
+  let applyingInlayDisplay = false;
+  function refreshInlayDisplay(): void {
+    if (applyingInlayDisplay) return;
+    applyingInlayDisplay = true;
+    try {
+      applyInlayDisplaySettings(config);
+    } catch {
+      // The chat DOM may not be mounted yet; the next pass retries.
+    } finally {
+      applyingInlayDisplay = false;
+    }
+  }
+  function scheduleInlayDisplayRefresh(delayMs = 40): void {
+    if (inlayDisplayTimer) clearTimeout(inlayDisplayTimer);
+    inlayDisplayTimer = setTimeout(() => {
+      inlayDisplayTimer = null;
+      refreshInlayDisplay();
+    }, delayMs);
   }
 
   const actions: FrontendActions = {
@@ -128,6 +155,7 @@ export function setup(ctx: SpindleFrontendContext) {
     routeBackendMessage(message, activeChatId, {
       replaceConfig: (next) => {
         config = next;
+        scheduleInlayDisplayRefresh(0);
       },
       replaceState: (next) => {
         config = next.config;
@@ -136,6 +164,7 @@ export function setup(ctx: SpindleFrontendContext) {
         characterAppearance = next.characterAppearance;
         status = next.status;
         renderer?.render();
+        scheduleInlayDisplayRefresh(0);
       },
       replaceCharacterMemory: (nextAppearance, nextStatus) => {
         characterAppearance = nextAppearance;
@@ -146,6 +175,9 @@ export function setup(ctx: SpindleFrontendContext) {
       refreshParserConnections: () => { void refreshParserConnectionsFromApi(); },
       applyImageGenerationDefaults: () => { void applyImageGenerationDefaults(); }
     });
+    // New or refreshed images arrive with baked geometry from the backend;
+    // re-apply the current display settings after the host paints them.
+    scheduleInlayDisplayRefresh();
   });
 
   const unsubDrawer = ctx.ui.events.onDrawerChange((drawer) => {
@@ -156,7 +188,24 @@ export function setup(ctx: SpindleFrontendContext) {
   const unsubChatSwitched = ctx.events.on("CHAT_SWITCHED", (payload) => {
     const chatId = (payload as { chatId?: unknown } | null)?.chatId;
     requestState(typeof chatId === "string" ? chatId : "");
+    scheduleInlayDisplayRefresh(80);
   });
+
+  // The host re-renders message HTML from stored content, so watch the chat for
+  // inlay frames that appear after a generation, a swipe, or a chat reload.
+  let inlayObserver: MutationObserver | null = null;
+  if (typeof MutationObserver !== "undefined" && typeof document !== "undefined" && document.body) {
+    try {
+      inlayObserver = new MutationObserver(() => {
+        // Ignore the mutations this restyler causes itself.
+        if (applyingInlayDisplay) return;
+        scheduleInlayDisplayRefresh(60);
+      });
+      inlayObserver.observe(document.body, { childList: true, subtree: true });
+    } catch {
+      inlayObserver = null;
+    }
+  }
 
   renderer?.render();
   requestState();
@@ -166,6 +215,8 @@ export function setup(ctx: SpindleFrontendContext) {
     unsub();
     unsubDrawer();
     unsubChatSwitched();
+    if (inlayDisplayTimer) clearTimeout(inlayDisplayTimer);
+    inlayObserver?.disconnect();
     removeFab();
     gallery.destroy();
     cleanupModalStyles();
