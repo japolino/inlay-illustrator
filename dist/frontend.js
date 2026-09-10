@@ -42,7 +42,7 @@ var NOVELAI_SAMPLER_OPTIONS = [
   { value: "k_dpmpp_2m", label: "DPM++ 2M" },
   { value: "k_dpmpp_2s_ancestral", label: "DPM++ 2S Ancestral" },
   { value: "k_dpmpp_sde", label: "DPM++ SDE" },
-  { value: "ddim", label: "DDIM" }
+  { value: "ddim_v3", label: "DDIM v3" }
 ];
 var NOVELAI_RESOLUTION_PRESETS = [
   { value: "832x1216", label: "Normal Portrait (832 × 1216)", width: 832, height: 1216, aspect: "portrait" },
@@ -783,9 +783,15 @@ function renderGenerationSection({ ui, config, imageConnections, actions, rerend
   }
   if (isNai) {
     ui.addSubtitle(section, "NovelAI settings");
-    ui.addSummary(section, "NovelAI connection detected. Basic generation settings are exposed and applied automatically.");
     const params = config.imageParameters || {};
     const connectionParams = activeImgConn?.default_parameters || {};
+    const inheritedKeys = [
+      params.sampler === undefined ? "sampler" : null,
+      params.steps === undefined ? "steps" : null,
+      params.scale === undefined && params.cfg === undefined ? "guidance" : null,
+      params.seed === undefined ? "seed" : null
+    ].filter((key) => key !== null);
+    ui.addSummary(section, inheritedKeys.length > 0 ? `Using the NovelAI connection profile for: ${inheritedKeys.join(", ")}. Change a value here to store it in this extension.` : "All NovelAI generation values are stored in this extension.");
     const curWidth = Number(params.width) || Number(connectionParams.width) || 832;
     const curHeight = Number(params.height) || Number(connectionParams.height) || 1216;
     const sizeIsInherited = params.width === undefined && params.height === undefined;

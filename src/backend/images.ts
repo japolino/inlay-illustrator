@@ -33,7 +33,7 @@ export function normalizeNovelAiSampler(candidate: string | undefined): string |
   if (clean === "dpmpp_2m" || clean === "dpm_2m" || clean === "dpm++ 2m") return "k_dpmpp_2m";
   if (clean === "dpmpp_2s_ancestral" || clean === "dpm_2s_ancestral" || clean === "dpm++ 2s ancestral") return "k_dpmpp_2s_ancestral";
   if (clean === "dpmpp_sde" || clean === "dpm++ sde") return "k_dpmpp_sde";
-  if (clean === "ddim" || clean === "ddim_v3") return "ddim";
+  if (clean === "ddim" || clean === "ddim_v3") return "ddim_v3";
   if (clean.startsWith("k_")) return clean;
   return undefined;
 }
@@ -301,12 +301,14 @@ export async function buildImageParameters(
   characters?: Array<{ prompt: string; negative?: string }>
 ): Promise<Record<string, unknown>> {
   const parameters = { ...(connection?.default_parameters || {}), ...config.imageParameters };
+  const droppedKeys = keysOf(parameters).filter((key) => COMFY_KEYS_TO_DISCARD.includes(key));
   logStage(config, "image_parameters_start", {
     provider: connection?.provider || "(default)",
     connectionId: connection?.id || null,
     promptLength: prompt.length,
     negativeLength: negative.length,
-    parameterKeys: keysOf(parameters)
+    parameterKeys: keysOf(parameters),
+    droppedLegacyKeys: droppedKeys
   });
 
   // Extract character payload candidates
@@ -333,12 +335,17 @@ export async function buildImageParameters(
       ?? 5.0;
     const scale = Math.min(20, Math.max(1, Number(rawScale.toFixed(1))));
 
-    const rawSampler = stringParam(parameters.sampler)
-      ?? stringParam(defaultParams.sampler)
-      ?? stringParam(parameters.sampler_name);
-    const sampler = normalizeNovelAiSampler(rawSampler)
-      ?? normalizeNovelAiSampler(stringParam(defaultParams.sampler))
+    // The extension's own sampler choice wins, then the connection profile's.
+    // A stored `sampler_name` is a ComfyUI-era leftover: it is dropped from the
+    // outgoing request, so it must never decide the sampler either.
+    const configuredSampler = stringParam(parameters.sampler);
+    const connectionSampler = stringParam(defaultParams.sampler) ?? stringParam(defaultParams.sampler_name);
+    const sampler = normalizeNovelAiSampler(configuredSampler)
+      ?? normalizeNovelAiSampler(connectionSampler)
       ?? "k_euler_ancestral";
+    const samplerSource = normalizeNovelAiSampler(configuredSampler)
+      ? "extension"
+      : normalizeNovelAiSampler(connectionSampler) ? "connection-profile" : "provider-default";
 
     const rawWidth = numberParam(parameters.width)
       ?? numberParam(defaultParams.width)
@@ -380,11 +387,14 @@ export async function buildImageParameters(
     logStage(config, "image_parameters_ready", {
       provider: "novelai",
       sampler,
+      samplerSource,
       steps,
       scale,
       width,
       height,
       seed,
+      smea: naiParams.smea,
+      smea_dyn: naiParams.smea_dyn,
       characterCount: normalizedChars?.length ?? 0
     });
     return naiParams;

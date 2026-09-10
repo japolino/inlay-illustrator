@@ -5488,7 +5488,7 @@ var NOVELAI_SAMPLER_OPTIONS = [
   { value: "k_dpmpp_2m", label: "DPM++ 2M" },
   { value: "k_dpmpp_2s_ancestral", label: "DPM++ 2S Ancestral" },
   { value: "k_dpmpp_sde", label: "DPM++ SDE" },
-  { value: "ddim", label: "DDIM" }
+  { value: "ddim_v3", label: "DDIM v3" }
 ];
 var NOVELAI_RESOLUTION_PRESETS = [
   { value: "832x1216", label: "Normal Portrait (832 × 1216)", width: 832, height: 1216, aspect: "portrait" },
@@ -9011,7 +9011,7 @@ function normalizeNovelAiSampler(candidate) {
   if (clean === "dpmpp_sde" || clean === "dpm++ sde")
     return "k_dpmpp_sde";
   if (clean === "ddim" || clean === "ddim_v3")
-    return "ddim";
+    return "ddim_v3";
   if (clean.startsWith("k_"))
     return clean;
   return;
@@ -9237,12 +9237,14 @@ function rerollImageParameters(parameters, connection, prompt, negative) {
 }
 async function buildImageParameters(config, connection, prompt, negative, characters) {
   const parameters = { ...connection?.default_parameters || {}, ...config.imageParameters };
+  const droppedKeys = keysOf(parameters).filter((key) => COMFY_KEYS_TO_DISCARD.includes(key));
   logStage(config, "image_parameters_start", {
     provider: connection?.provider || "(default)",
     connectionId: connection?.id || null,
     promptLength: prompt.length,
     negativeLength: negative.length,
-    parameterKeys: keysOf(parameters)
+    parameterKeys: keysOf(parameters),
+    droppedLegacyKeys: droppedKeys
   });
   const charCandidates = characters ?? (Array.isArray(parameters.characters) ? parameters.characters : undefined) ?? (Array.isArray(parameters.nativeCharacters) ? parameters.nativeCharacters : undefined);
   const normalizedChars = charCandidates ? normalizeCharacterPayload(charCandidates) : undefined;
@@ -9256,8 +9258,10 @@ async function buildImageParameters(config, connection, prompt, negative, charac
     const steps = Math.min(50, Math.max(1, Math.round(rawSteps)));
     const rawScale = numberParam(parameters.scale) ?? numberParam(parameters.cfg) ?? numberParam(defaultParams.scale) ?? numberParam(defaultParams.cfg) ?? 5;
     const scale = Math.min(20, Math.max(1, Number(rawScale.toFixed(1))));
-    const rawSampler = stringParam(parameters.sampler) ?? stringParam(defaultParams.sampler) ?? stringParam(parameters.sampler_name);
-    const sampler = normalizeNovelAiSampler(rawSampler) ?? normalizeNovelAiSampler(stringParam(defaultParams.sampler)) ?? "k_euler_ancestral";
+    const configuredSampler = stringParam(parameters.sampler);
+    const connectionSampler = stringParam(defaultParams.sampler) ?? stringParam(defaultParams.sampler_name);
+    const sampler = normalizeNovelAiSampler(configuredSampler) ?? normalizeNovelAiSampler(connectionSampler) ?? "k_euler_ancestral";
+    const samplerSource = normalizeNovelAiSampler(configuredSampler) ? "extension" : normalizeNovelAiSampler(connectionSampler) ? "connection-profile" : "provider-default";
     const rawWidth = numberParam(parameters.width) ?? numberParam(defaultParams.width) ?? 832;
     const rawHeight = numberParam(parameters.height) ?? numberParam(defaultParams.height) ?? 1216;
     const width = Math.min(1920, Math.max(512, Math.round(rawWidth / 64) * 64));
@@ -9291,11 +9295,14 @@ async function buildImageParameters(config, connection, prompt, negative, charac
     logStage(config, "image_parameters_ready", {
       provider: "novelai",
       sampler,
+      samplerSource,
       steps,
       scale,
       width,
       height,
       seed,
+      smea: naiParams.smea,
+      smea_dyn: naiParams.smea_dyn,
       characterCount: normalizedChars?.length ?? 0
     });
     return naiParams;

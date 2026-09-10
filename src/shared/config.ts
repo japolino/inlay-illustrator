@@ -87,7 +87,7 @@ export const NOVELAI_SAMPLER_OPTIONS: Array<{ value: string; label: string }> = 
   { value: "k_dpmpp_2m", label: "DPM++ 2M" },
   { value: "k_dpmpp_2s_ancestral", label: "DPM++ 2S Ancestral" },
   { value: "k_dpmpp_sde", label: "DPM++ SDE" },
-  { value: "ddim", label: "DDIM" }
+  { value: "ddim_v3", label: "DDIM v3" }
 ];
 
 export const NOVELAI_RESOLUTION_PRESETS: Array<{ value: string; label: string; width: number; height: number; aspect: InlayImageAspect }> = [

@@ -446,15 +446,48 @@ describe("Cross-provider isolation and parameter normalization", () => {
 
     const built = await buildImageParameters(dirtyConfig, connWithoutSampler, "test prompt", "test neg");
 
-    // "euler" must be converted to valid NovelAI sampler "k_euler"
-    expect(built.sampler).toBe("k_euler");
+    // A leftover ComfyUI "sampler_name" must never decide the sampler, even
+    // though it used to be normalized. The provider default applies instead.
+    expect(built.sampler).toBe("k_euler_ancestral");
 
-    // Leftover ComfyUI keys must be discarded
+    // Leftover ComfyUI keys must be discarded from the request.
     expect(built.sampler_name).toBeUndefined();
     expect(built.scheduler).toBeUndefined();
     expect(built.comfyui_field_values).toBeUndefined();
     expect(built.includePersonaAvatar).toBeUndefined();
     expect(built.includeCharacterAvatar).toBeUndefined();
+  });
+
+  test("a stored sampler_name never decides the sampler", async () => {
+    const profileWithoutSampler: ImageConnection = { ...naiConn, default_parameters: { steps: 28, scale: 5 } };
+    const staleConfig: Config = {
+      ...DEFAULT_CONFIG,
+      imageParameters: { sampler_name: "euler", scheduler: "normal" }
+    };
+
+    const built = await buildImageParameters(staleConfig, profileWithoutSampler, "p", "n");
+    expect(built.sampler).toBe("k_euler_ancestral");
+  });
+
+  test("an explicit extension sampler overrides the connection profile sampler", async () => {
+    const profile: ImageConnection = { ...naiConn, default_parameters: { sampler: "k_euler_ancestral", steps: 28 } };
+    const chosen: Config = { ...DEFAULT_CONFIG, imageParameters: { sampler: "k_dpmpp_2m" } };
+
+    const built = await buildImageParameters(chosen, profile, "p", "n");
+    expect(built.sampler).toBe("k_dpmpp_2m");
+  });
+
+  test("honors a connection profile that names its sampler sampler_name", async () => {
+    const profile: ImageConnection = { ...naiConn, default_parameters: { sampler_name: "k_dpmpp_sde", steps: 28 } };
+    const built = await buildImageParameters(DEFAULT_CONFIG, profile, "p", "n");
+    expect(built.sampler).toBe("k_dpmpp_sde");
+  });
+
+  test("normalizes DDIM to NovelAI's ddim_v3 sampler id", async () => {
+    const profile: ImageConnection = { ...naiConn, default_parameters: { sampler: "ddim" } };
+    const built = await buildImageParameters(DEFAULT_CONFIG, profile, "p", "n");
+    expect(built.sampler).toBe("ddim_v3");
+    expect(NOVELAI_SAMPLER_OPTIONS.some((option) => option.value === "ddim_v3")).toBeTrue();
   });
 });
 

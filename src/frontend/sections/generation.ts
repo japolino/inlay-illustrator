@@ -113,12 +113,27 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
 
   if (isNai) {
     ui.addSubtitle(section, "NovelAI settings");
-    ui.addSummary(section, "NovelAI connection detected. Basic generation settings are exposed and applied automatically.");
 
     // Extension values win; otherwise show the size the connection profile will
     // actually generate, so the panel never claims a size the request ignores.
     const params = config.imageParameters || {};
     const connectionParams = activeImgConn?.default_parameters || {};
+
+    // A control can display a value that is not stored in this extension: the
+    // fallback is the connection profile. Say so, so a displayed value is never
+    // mistaken for a saved one.
+    const inheritedKeys = [
+      params.sampler === undefined ? "sampler" : null,
+      params.steps === undefined ? "steps" : null,
+      params.scale === undefined && params.cfg === undefined ? "guidance" : null,
+      params.seed === undefined ? "seed" : null
+    ].filter((key): key is string => key !== null);
+    ui.addSummary(
+      section,
+      inheritedKeys.length > 0
+        ? `Using the NovelAI connection profile for: ${inheritedKeys.join(", ")}. Change a value here to store it in this extension.`
+        : "All NovelAI generation values are stored in this extension."
+    );
     const curWidth = Number(params.width) || Number(connectionParams.width) || 832;
     const curHeight = Number(params.height) || Number(connectionParams.height) || 1216;
     const sizeIsInherited = params.width === undefined && params.height === undefined;
