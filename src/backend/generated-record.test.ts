@@ -247,4 +247,26 @@ describe("GeneratedRecord V3 migration adapter", () => {
     expect(isGeneratedRecordV3({ ...withPlan, illustrationPlan: { ...plan, version: 2 } })).toBe(false);
   });
 
+  test("accepts and preserves V3.7.6 metadata on records and slots", () => {
+    const record = toGeneratedRecordV3(legacyRecord())!;
+    record.v376Payload = { scenes: [{ place: "garden", shots: [] }] };
+    record.v376Options = { mode: "illustration", nsfw: true, syntax: "nai", separator: "pipe" };
+    record.slots[0] = {
+      ...record.slots[0]!,
+      rawShot: { paragraph: 1, characters: [{ name: "Alice", label: "1girl", age: "20", appearance: "blonde", attire: "dress" }] },
+      nativeCharacters: [{ name: "Alice", prompt: "blonde, dress", negative: "" }],
+      quote: "Hello there",
+      panels: "wide view",
+      v376Options: { mode: "illustration" }
+    };
+
+    expect(isGeneratedRecordV3(record)).toBe(true);
+    const adapted = toGeneratedRecordV3(record);
+    expect(adapted).not.toBeNull();
+    expect(adapted?.v376Payload).toEqual({ scenes: [{ place: "garden", shots: [] }] });
+    expect(adapted?.slots[0]?.nativeCharacters).toEqual([{ name: "Alice", prompt: "blonde, dress", negative: "" }]);
+    expect(adapted?.slots[0]?.quote).toBe("Hello there");
+    expect(adapted?.slots[0]?.panels).toBe("wide view");
+  });
+
 });

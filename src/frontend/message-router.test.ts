@@ -57,6 +57,7 @@ describe("frontend backend-message routing", () => {
     expect(states).toEqual([{
       config: { ...DEFAULT_CONFIG, enabled: false },
       parserConnections: [{ id: "parser", name: "Parser", provider: "openai", model: "model" }],
+      imageConnections: [],
       characterAppearance: { Alice: "blonde hair" },
       status: "Ready"
     }]);

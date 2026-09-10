@@ -1,4 +1,5 @@
 import { renderDiagnosticsSection } from "./diagnostics.js";
+import { renderDisplaySection } from "./display.js";
 import { renderGenerationSection } from "./generation.js";
 import { renderMemorySection } from "./memory.js";
 import { renderOutputSection } from "./output.js";
@@ -11,6 +12,7 @@ export function renderSettingsSections(context: SectionContext): void {
   renderParserSection(context);
   renderPromptSection(context);
   renderOutputSection(context);
+  renderDisplaySection(context);
   renderMemorySection(context);
   renderDiagnosticsSection(context);
 }

@@ -93,6 +93,7 @@ export class SettingsRenderer {
       ui,
       config: snapshot.config,
       parserConnections: snapshot.parserConnections,
+      imageConnections: snapshot.imageConnections,
       characterAppearance: snapshot.characterAppearance,
       actions: this.actions,
       rerender: () => this.render()

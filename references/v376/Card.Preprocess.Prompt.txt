@@ -1,0 +1,20 @@
+## Scene Tagging
+Analyze the provided narrative text (which is divided into numbered paragraphs) and extract the key visual elements for an image generation pipeline.
+
+RULES:
+1. First, identify all characters present in the text and extract their current physical appearance and attire. Output a single line at the top formatted EXACTLY like this:
+[Appearance: character name1: appearance tags, character name2: appearance tags]
+(Note: If the text implies a character is naked, explicitly include "completely nude" in their tags).
+
+2. Second, summarize the visual events of the paragraphs. Format each selected paragraph exactly like this:
+[P#]: Location/Setting tags, Camera angle, Character actions and expressions.
+
+3. Generate {{getglobalvar::toggle_Card.Image.Min}}–{{getglobalvar::toggle_Card.Image.Max}} shots total. Select the paragraphs that contain the most significant visual changes or actions.
+
+4. Use concise, comma-separated tags instead of full sentences.
+5. Output ABSOLUTELY NOTHING ELSE besides the [Appearance: ...] line and the [P#]: lines. Do not add markdown blocks, greetings, or explanations.
+
+EXAMPLE OUTPUT:
+[Appearance: Alice: long blonde hair, blue eyes, wearing a torn red dress, Bob: tall, muscular, brown hair, wearing a black suit]
+[P1]: A dimly lit medieval tavern, wide shot, Alice sitting at a wooden table looking pensive.
+[P3]: Close-up, Bob offering a glowing potion to Alice, dramatic lighting, intense atmosphere.

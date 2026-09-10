@@ -1,9 +1,10 @@
 import { DEFAULT_CONFIG, type Config } from "../shared/config.js";
-import type { BackendMessage, ParserConnection } from "./contracts.js";
+import type { BackendMessage, ImageConnection, ParserConnection } from "./contracts.js";
 
 export type BackendState = {
   config: Config;
   parserConnections: ParserConnection[];
+  imageConnections: ImageConnection[];
   characterAppearance: Record<string, string>;
   status: string;
 };
@@ -31,9 +32,11 @@ export function routeBackendMessage(
   if (message.type === "state" && message.config) {
     if (message.chatId && message.chatId !== getActiveChatId()) return;
     const parserConnections = message.parserConnections || [];
+    const imageConnections = message.imageConnections || [];
     actions.replaceState({
       config: { ...DEFAULT_CONFIG, ...message.config },
       parserConnections,
+      imageConnections,
       characterAppearance: message.characterAppearance || {},
       status: "Ready"
     });

@@ -10,7 +10,7 @@ type FrontendMessageHandler = (payload: unknown, userId?: string) => Promise<voi
 let parserResponse = "";
 let promptInterceptor: PromptInterceptor;
 let frontendMessageHandler: FrontendMessageHandler;
-let helpers: typeof import("./backend").__testables;
+let helpers: typeof import("./testing/legacy-backend-helpers.js").__testables;
 const storedFiles = new Map<string, string>();
 const storageWrites: string[] = [];
 const frontendMessages: unknown[] = [];
@@ -73,7 +73,8 @@ beforeAll(async () => {
     },
     log: { info: () => undefined, warn: () => undefined, error: () => undefined }
   };
-  helpers = (await import("./backend")).__testables;
+  await import("./backend");
+  helpers = (await import("./testing/legacy-backend-helpers.js")).__testables;
 });
 beforeEach(() => {
   parserRequests.splice(0);
@@ -100,14 +101,14 @@ describe("character-memory frontend messages", () => {
     }, "user-1");
 
     expect(JSON.parse(storedFiles.get(storageKey("states/chat-1.json", "user-1")) || "{}")).toEqual({
-      characterAppearance: { Bob: "black hair", Alicia: "blue hair" },
-      manualCharacterAppearance: { Alicia: "blue hair" },
+      characterAppearance: { Bob: "black hair", "Alicia (source)": "blue hair, standing, open shirt" },
+      manualCharacterAppearance: { "Alicia (source)": "blue hair, standing, open shirt" },
       generated: { existing: { imageIds: ["kept"] } }
     });
     expect(frontendMessages).toEqual([{
       type: "character_memory_updated",
       chatId: "chat-1",
-      characterAppearance: { Bob: "black hair", Alicia: "blue hair" }
+      characterAppearance: { Bob: "black hair", "Alicia (source)": "blue hair, standing, open shirt" }
     }]);
   });
 
@@ -325,7 +326,7 @@ function promptWithPreset() {
   };
 }
 
-describe("prompt presets", () => {
+describe("legacy ANIMA compatibility: prompt presets", () => {
   test("places active preset prefixes before custom and generated prompt fields", () => {
     const { config, entry } = promptWithPreset();
 
@@ -351,7 +352,7 @@ describe("prompt presets", () => {
   });
 });
 
-describe("illustration parser construction", () => {
+describe("legacy ANIMA compatibility: illustration parser construction", () => {
   const paragraphs = [
     { parserIndex: 1, originalIndex: 1, text: "She enters the empty station." },
     { parserIndex: 2, originalIndex: 2, text: "A train bursts through the rain." },
@@ -509,7 +510,7 @@ describe("illustration parser construction", () => {
   });
 });
 
-describe("illustration candidate selection", () => {
+describe("legacy ANIMA compatibility: illustration candidate selection", () => {
   test("keeps only the first model-priority shot per paragraph, ignores invalid references, and caps before paragraph sorting", () => {
     const paragraphs = [
       { parserIndex: 1, originalIndex: 10, text: "First" },
@@ -628,7 +629,7 @@ describe("illustration candidate selection", () => {
   });
 });
 
-describe("illustration defaults", () => {
+describe("legacy ANIMA compatibility: illustration defaults", () => {
   test("uses 3-5 only for missing values and preserves explicit stored values", () => {
     expect(helpers.normalizeConfig({})).toMatchObject({ minImages: 3, maxImages: 5 });
     expect(helpers.normalizeConfig({ minImages: 1, maxImages: 2 })).toMatchObject({ minImages: 1, maxImages: 2 });

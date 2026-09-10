@@ -18,7 +18,8 @@
     "dev:mcp": "bun run src/dev/lumiverse-mcp/server.ts",
     "dev:mcp:smoke": "bun run src/dev/lumiverse-mcp/smoke.ts",
     "verify": "bun run test && bun run typecheck",
-    "build": "bun run typecheck:build && bun build ./src/backend.ts ./src/frontend.ts --outdir ./dist --target browser --format esm"
+    "build": "bun run typecheck:build && bun build ./src/backend.ts ./src/frontend.ts --outdir ./dist --target browser --format esm",
+    "eval:v376": "bun run src/evals/v376-parity/cli.ts"
   },
   "devDependencies": {
     "@google/genai": "^2.13.0",

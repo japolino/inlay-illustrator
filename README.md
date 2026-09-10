@@ -4,20 +4,21 @@ Lumiverse extension for persistent, context-aware character image generation.
 
 ## Main features
 
-- Persistent character image generation across a chat
-- Dynamic visual memory for returning characters, including base attire
-- One-time, first-generation avatar vision enrichment when the selected parser model accepts image input; observed details complement but never rewrite card-derived memory
-- Image prompts generated from current and recent chat context
-- Optional cinematic cover/key-visual prompt generated for the whole message and rendered above the prose, with its own display width and max-height settings
-- Progressive illustration slots that fill as each image finishes without changing paragraph order
-- Per-chat FIFO scheduling, scoped progress, duplicate suppression, and cooperative cancellation
-- Manual Creative concept exploration, visual-novel-style Static, action-focused Dynamic, or Original-style single-character Asset generation
-- Optional Adaptive Mode that selects Creative, Static, or Dynamic independently for each illustration; Asset remains manual-only
-- Identity-safe Creative candidate slates for objects, environments, shadows, silhouettes, spatial details, and non-identifying fragments
-- Atomic Anima composition, structured environments, and ComfyUI-friendly prompt output
-- Image lightbox with prompt metadata, fresh-seed rerolls, and per-image sidecar reruns
-- Optional activated-lorebook context with macro resolution, compact first-pass references, and full-context retry
-- Configurable maximum parser token budget with automatic allowances for reasoning-heavy sidecars
+- V3.7.6 scene/shot schemas and source-derived conditional parser instructions
+- Illustration, single-character Asset, and multi-panel Comic modes
+- Source-style scene and character prompt groups, weights, presets, and optional natural-language supplements
+- Optional NSFW instruction strengthening, in-image text language, and quote fields
+- Plain, placeholder, Base64, and Atbash parser protocols, plus optional source prefill
+- Current narrative, optional preceding user messages, character/persona references, and lorebook context
+- Persistent character tags with source-style context depth; expired context entries are retained in storage
+- NovelAI profile settings and separate positive/negative character channels at the extension request boundary
+- Progressive illustration slots, per-chat scheduling, cancellation, and stored-image rerolls
+- Existing chat display, floating action button, gallery, and image lightbox
+
+The active image pipeline is being ported from V3.7.6 rather than continuing the
+ANIMA-specific planner. See [pipeline scope and compatibility](docs/V376_PIPELINE_PORT.md)
+for the source mapping and verification boundary. Native NovelAI character-channel
+handling by the Lumiverse host driver still needs end-to-end verification.
 
 ## Install from source
 
@@ -43,8 +44,11 @@ If generation does not start, check the panel status first. A setup message mean
 $env:BUN_INSTALL_CACHE_DIR = "$PWD\.cache\bun"
 bun install --frozen-lockfile
 bun run verify
+bun run eval:v376
 bun run build
 ```
 
-`verify` runs the Bun test suite and strict TypeScript checking. `build` type-checks
-the runtime sources, then bundles the backend and frontend entrypoints into `dist/`.
+`verify` runs the Bun test suite and strict TypeScript checking. `eval:v376` runs
+offline source-derived fixtures. Its pass rate is not a claim of complete source
+parity or better image quality. `build` type-checks the runtime sources, then
+bundles the backend and frontend entrypoints into `dist/`.

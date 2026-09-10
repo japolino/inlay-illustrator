@@ -1,0 +1,95 @@
+==divider
+=🆔인레이=group
+Card.Power=전원
+=ON: 대사 카드 활성화=caption
+Card.LLM=모델=select=보조 모델,메인 모델
+=이미지 프롬프트 생성에 사용할 모델=caption
+Card.Execute=발동=select=자동,수동
+=자동: AI 응답 시 자동 / 수동: 버튼 클릭 시=caption
+Card.Mode=모드=select=삽화,에셋,만화
+=삽화 생성 / 에셋 생성 / 만화 생성=caption
+Card.Image.Execute=이미지 생성=select=자동,수동
+=이미지 생성 자동화 / 버튼 클릭으로 생성=caption
+=———— 전역🌎=divider
+Card.Userchat=유저 메세지 포함
+=메세지 하나당 유저 인풋 1개씩 추가(약사칭 및 비사칭용)=caption
+Card.IncludeMin=최소 포함 메세지=text
+=최대 포함 메세지보다 작아야 작동, 0은 현재 메세지만=caption
+=1은 이전 메세지 1개 추가 포함=caption
+Card.Include=최대 포함 메시지=text
+=현재 char 메시지 이전의 char 메시지를 최신순으로 최대로 몇 개 추가 포함할지=caption
+Card.Original=원작 참조
+=ON: 캐릭터 태그를 원작+이름으로 태깅=caption
+=‼️‼️오류나면 캐릭터 이름이 '캐릭터 (원작)'인지 확인=caption
+Card.Original.Text=원작 이름=text
+=이미지 프롬프트에 사용할 원작 이름 입력=caption
+Card.Preprocessing=삽화 태그 전처리=select=사용 안함,보조 모델,메인 모델
+=보조 모델로 삽화 내용 전처리 (LLM 호출 횟수↑/삽화 퀄리티↑)=caption
+=———— 프롬프트🅿️=divider
+Card.Preset=프리셋=text
+=이미지 생성 시 사용할 프리셋=caption
+Card.CharAppearance.Context=캐릭터 컨텍스트
+=캐릭터 태그 컨텍스트(캐릭터 찐빠가 난 경우 끄는 것 추천)=caption
+Card.CharAppearance.Depth=캐릭터 컨텍스트 깊이=text
+=해당 턴만큼 캐릭터가 출력 안 될 경우, 컨텍에서 제거(기본은 5)=caption
+Card.Prompt.Compatibility=프롬프트 구문=select=NAI,ComfyUI
+=ComfyUI: { } → ( ) 변환=caption
+Card.PromptSep=프롬프트 구분 방법=select=파이프,줄바꿈
+=씬 | 캐릭터 vs 씬⏎⏎캐릭터=caption
+Card.CustomPos=커스텀 작가 태그=text
+=프리셋에서 [Positive]의 맨 앞에 붙는 태그(비워두면 무시)=caption
+Card.CustomNeg=커스텀 퀄리티 태그=text
+=프리셋에서 [Positive]의 맨 뒤에 붙는 태그=caption
+Card.Nsfw=🔞NSFW 지침 강화
+=NSFW 상호작용 지침 출력 강도 상승 (검열 확률↑)=caption
+Card.Supplement=자연어 보충
+=태그에 자연어 보충 설명을 추가함=caption
+Card.Text=텍스트 추가=select=사용 안함,자유,영어,한국어,일본어,중국어
+=이미지 출력 시 텍스트 추가 (구체적인 언어 설정 추천)=caption
+=———— 삽화 설정🖼️=divider
+Card.Image.Min=최소 삽화 수=text
+=한 응답당 최소 삽화 개수 (기본: 3)=caption
+Card.Image.Max=최대 삽화 수=text
+=한 응답당 최대 삽화 개수 (기본: 5)=caption
+Card.Character.Max=최대 캐릭터 수=text
+=삽화에 감지할 최대 캐릭터 수 (기본: 2)=caption
+Card.Image.Reroll=리롤 시 생성 삽화 수=text
+=삽화 1개 리롤 시 생성하는 이미지 갯수 (0, 1, 빈값은 기본)=caption
+Card.PanelNum=최소 패널 갯수=text
+=이미지 한 장당 만화 패널 갯수(기본은 3개 및 만화 설정 시 반영)=caption
+=———— 디스플레이 설정🖥=divider
+=╰┈➤이 항목에 들어가는 모든 설정은 디스플레이 갱신 후 반영=caption
+Card.Ratio=가로세로비=select=원본,2.35/1,16/9,1/1,2/3,3/1
+=삽화 너비 조절=caption
+Card.Image.Width=삽화 최대 너비=text
+=삽화/에셋 표시 최대 너비 px (0은 기본값)=caption
+Card.Theme=인레이 테마=select=🌑다크,☀️라이트
+=테마 설정 (캡션 폰트나 색깔은 안 바뀜)=caption
+Card.Display.Max=디스플레이 삽화 수=text
+=과거 챗의 삽화를 접는 기능(기본은 모두 표시)=caption
+=———— 삽화 캡션 💬 =divider
+Card.Quote=삽화 캡션 전원
+=전원 꺼진 상태로 출력된 이미지는 캡션 보유X (전원 꺼진 경우 이전 인레이의 캡션도 디스플레이X)=caption
+=캡션 디스플레이는 갱신 후 반영=caption
+=———— 필터✂️=divider
+Card.Ignore=무시할 태그=text
+=삽화 생성 시 제거할 태그 (예: <GigaTrans>;<Note> → 여러 개는 ;로 구분)=caption
+=———— 탈옥🚫=divider
+=╰┈➤검열 걸릴 경우 최소포함 메세지↑추천=caption
+Card.Encode=암호화 검열 우회=select=기본,PlaceHolder,Base64,Atbash
+=지시문/응답 인코딩 방식=caption
+Card.Prefill=검열 해제 프리필
+=검열 해제용 프리필 토글 (feat.삽화 모듈)=caption
+Card.Retry=재시도=text
+=검열 감지 시 추가 재시도 횟수 (시도 안 함: 0/높을수록 LLM 호출 횟수↑ 및 탈옥력↑)=caption
+=———— 참조📎=divider
+Card.UserInfo=유저 정보 포함
+=ON: {{user}} 페르소나 정보를 이미지 프롬프트 생성에 포함=caption
+Card.CharInfo=캐릭터 정보 포함
+=ON: {{char}} 설명 정보를 이미지 프롬프트 생성에 포함=caption
+Card.Lorebook=로어북 포함
+=ON: 로어북 정보를 이미지 프롬프트 생성에 포함=caption
+Card.CustomInst=사용자 지시문=textarea
+=이미지 프롬프트 생성 시 추가 지시사항 (비어 있으면 무시)=caption
+==groupEnd
+==divider

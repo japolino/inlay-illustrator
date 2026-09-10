@@ -1,12 +1,26 @@
-import type { Config } from "../shared/config.js";
+import { isNovelAiConnection, type Config } from "../shared/config.js";
 import { logStage } from "./logging.js";
 import { abortError, throwIfAborted } from "./operation-manager.js";
 import type { ComfyUIConfig, ComfyUIMapping, ImageConnection, PreparedImageJob } from "./types.js";
 import { keysOf } from "./utils.js";
+import { normalizeCharacterPayload } from "./v376/provider.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
 const imageConnectionCache = new Map<string, { expiresAt: number; connection: ImageConnection | null }>();
+
+const COMFY_KEYS_TO_DISCARD = [
+  "workflow",
+  "workflowFormat",
+  "preserveImportedWorkflow",
+  "comfyui_custom_fields",
+  "field_mappings",
+  "checkpoint",
+  "ckpt_name",
+  "scheduler",
+  "sampler_name",
+  "custom"
+];
 
 function cacheImageConnection(key: string, connection: ImageConnection | null): void {
   if (imageConnectionCache.size >= 32) {
@@ -110,52 +124,156 @@ export function rerollImageParameters(
   negative?: string
 ): Record<string, unknown> {
   const cloned = JSON.parse(JSON.stringify(parameters)) as Record<string, unknown>;
-  const workflow = cloned.workflow;
-  if (!workflow || typeof workflow !== "object" || Array.isArray(workflow)) {
-    cloned.seed = freshSeed([cloned.seed]);
+
+  // Preserve character channels across rerolls (NovelAI native multi-character channels)
+  const charCandidates = (Array.isArray(cloned.characters) ? cloned.characters : undefined)
+    ?? (Array.isArray(cloned.nativeCharacters) ? cloned.nativeCharacters : undefined);
+  if (charCandidates) {
+    const normalized = normalizeCharacterPayload(charCandidates);
+    cloned.characters = normalized;
+    cloned.nativeCharacters = normalized;
+  }
+
+  // Provider: NovelAI
+  if (isNovelAiConnection(connection)) {
+    for (const key of COMFY_KEYS_TO_DISCARD) {
+      delete cloned[key];
+    }
+    let seed = freshSeed([cloned.seed]);
+    if (seed <= 0) seed = Math.floor(Math.random() * 2147483646) + 1;
+    cloned.seed = seed;
+
+    const defaultParams = connection?.default_parameters || {};
+    const rawSampler = stringParam(cloned.sampler)
+      ?? stringParam(defaultParams.sampler)
+      ?? "k_euler_ancestral";
+    const rawSteps = numberParam(cloned.steps)
+      ?? numberParam(defaultParams.steps)
+      ?? 28;
+    const rawScale = numberParam(cloned.scale)
+      ?? numberParam(cloned.cfg)
+      ?? numberParam(defaultParams.scale)
+      ?? numberParam(defaultParams.cfg)
+      ?? 5.0;
+    const rawWidth = numberParam(cloned.width)
+      ?? numberParam(defaultParams.width)
+      ?? 832;
+    const rawHeight = numberParam(cloned.height)
+      ?? numberParam(defaultParams.height)
+      ?? 1216;
+
+    cloned.sampler = rawSampler;
+    cloned.steps = Math.min(50, Math.max(1, Math.round(rawSteps)));
+    const scale = Math.min(20, Math.max(1, Number(rawScale.toFixed(1))));
+    cloned.scale = scale;
+    cloned.cfg = scale;
+    cloned.width = Math.min(1920, Math.max(512, Math.round(rawWidth / 64) * 64));
+    cloned.height = Math.min(1920, Math.max(512, Math.round(rawHeight / 64) * 64));
+
+    const smeaVal = cloned.smea !== undefined ? cloned.smea : defaultParams.smea;
+    if (smeaVal !== undefined) cloned.smea = smeaVal === true || smeaVal === "true";
+    const smeaDynVal = cloned.smea_dyn !== undefined ? cloned.smea_dyn : defaultParams.smea_dyn;
+    if (smeaDynVal !== undefined) cloned.smea_dyn = smeaDynVal === true || smeaDynVal === "true";
+
     return cloned;
   }
 
-  const comfy = readComfyConfig(connection?.metadata);
-  const mappings = comfy?.field_mappings || [];
-  const seedMappings = mappings.filter((mapping) => mapping.mappedAs === "seed");
-  const priorSeeds: unknown[] = [cloned.seed];
-  for (const mapping of seedMappings) {
-    const node = (workflow as Record<string, { inputs?: Record<string, unknown> }>)[mapping.nodeId];
-    priorSeeds.push(node?.inputs?.[mapping.fieldName]);
-  }
-  if (seedMappings.length === 0) {
-    for (const node of Object.values(workflow as Record<string, { inputs?: Record<string, unknown> }>)) {
-      if (!node?.inputs || typeof node.inputs !== "object") continue;
-      for (const [key, value] of Object.entries(node.inputs)) {
-        if (/^(?:seed|noise_seed)$/i.test(key)) priorSeeds.push(value);
+  // Provider: ComfyUI or SwarmUI
+  if (connection?.provider === "comfyui" || connection?.provider === "swarmui") {
+    const workflow = cloned.workflow;
+    if (workflow && typeof workflow === "object" && !Array.isArray(workflow)) {
+      const comfy = readComfyConfig(connection?.metadata);
+      const mappings = comfy?.field_mappings || [];
+      const seedMappings = mappings.filter((mapping) => mapping.mappedAs === "seed");
+      const priorSeeds: unknown[] = [cloned.seed];
+      for (const mapping of seedMappings) {
+        const node = (workflow as Record<string, { inputs?: Record<string, unknown> }>)[mapping.nodeId];
+        priorSeeds.push(node?.inputs?.[mapping.fieldName]);
       }
+      if (seedMappings.length === 0) {
+        for (const node of Object.values(workflow as Record<string, { inputs?: Record<string, unknown> }>)) {
+          if (!node?.inputs || typeof node.inputs !== "object") continue;
+          for (const [key, value] of Object.entries(node.inputs)) {
+            if (/^(?:seed|noise_seed)$/i.test(key)) priorSeeds.push(value);
+          }
+        }
+      }
+      const seed = freshSeed(priorSeeds);
+      cloned.seed = seed;
+      for (const mapping of mappings) {
+        const value = mapping.mappedAs === "positive_prompt" ? prompt
+          : mapping.mappedAs === "negative_prompt" ? negative
+            : undefined;
+        if (value !== undefined) {
+          const node = (workflow as Record<string, { inputs?: Record<string, unknown> }>)[mapping.nodeId];
+          if (node?.inputs && typeof node.inputs === "object") node.inputs[mapping.fieldName] = value;
+        }
+      }
+      if (seedMappings.length > 0) {
+        for (const mapping of seedMappings) {
+          const node = (workflow as Record<string, { inputs?: Record<string, unknown> }>)[mapping.nodeId];
+          if (node?.inputs && typeof node.inputs === "object") node.inputs[mapping.fieldName] = seed;
+        }
+      } else {
+        for (const node of Object.values(workflow as Record<string, { inputs?: Record<string, unknown> }>)) {
+          if (!node?.inputs || typeof node.inputs !== "object") continue;
+          for (const key of Object.keys(node.inputs)) {
+            if (/^(?:seed|noise_seed)$/i.test(key)) node.inputs[key] = seed;
+          }
+        }
+      }
+      return cloned;
     }
-  }
-  const seed = freshSeed(priorSeeds);
-  cloned.seed = seed;
-  for (const mapping of mappings) {
-    const value = mapping.mappedAs === "positive_prompt" ? prompt
-      : mapping.mappedAs === "negative_prompt" ? negative
-        : undefined;
-    if (value === undefined) continue;
-    const node = (workflow as Record<string, { inputs?: Record<string, unknown> }>)[mapping.nodeId];
-    if (node?.inputs && typeof node.inputs === "object") node.inputs[mapping.fieldName] = value;
-  }
-  if (seedMappings.length > 0) {
-    for (const mapping of seedMappings) {
-      const node = (workflow as Record<string, { inputs?: Record<string, unknown> }>)[mapping.nodeId];
-      if (node?.inputs && typeof node.inputs === "object") node.inputs[mapping.fieldName] = seed;
+
+    // Cross-provider reroll to ComfyUI (no existing workflow on cloned): build from metadata
+    const comfy = readComfyConfig(connection?.metadata);
+    if (comfy) {
+      const workflowTemplate = comfy.workflow_api_json || comfy.workflow_json;
+      const mappings = comfy.field_mappings || [];
+      const customValues = cloned.comfyui_custom_fields && typeof cloned.comfyui_custom_fields === "object"
+        ? cloned.comfyui_custom_fields as Record<string, unknown>
+        : cloned.custom && typeof cloned.custom === "object"
+          ? cloned.custom as Record<string, unknown>
+          : {};
+      const seed = freshSeed([cloned.seed]);
+      const defaultParams = connection.default_parameters || {};
+      const values: Record<string, unknown> = {
+        positive_prompt: prompt,
+        negative_prompt: negative || (typeof cloned.negativePrompt === "string" ? cloned.negativePrompt : undefined),
+        seed,
+        steps: numberParam(cloned.steps) ?? numberParam(defaultParams.steps),
+        cfg: numberParam(cloned.cfg) ?? numberParam(cloned.scale) ?? numberParam(defaultParams.cfg),
+        sampler_name: stringParam(cloned.sampler_name) ?? stringParam(cloned.sampler) ?? stringParam(defaultParams.sampler_name),
+        scheduler: stringParam(cloned.scheduler) ?? stringParam(defaultParams.scheduler),
+        width: numberParam(cloned.width) ?? numberParam(defaultParams.width),
+        height: numberParam(cloned.height) ?? numberParam(defaultParams.height),
+        checkpoint: stringParam(cloned.checkpoint || cloned.ckpt_name || defaultParams.checkpoint),
+        custom: customValues
+      };
+      const patched = patchComfyWorkflow(workflowTemplate as Record<string, unknown>, mappings, values);
+      cloned.seed = seed;
+      cloned.workflow = patched;
+      cloned.workflowFormat = "api_prompt";
+      cloned.preserveImportedWorkflow = true;
+      return cloned;
     }
+
+    // ComfyUI without workflow in metadata: just roll seed
+    let seed = freshSeed([cloned.seed]);
+    if (seed <= 0) seed = Math.floor(Math.random() * 2147483646) + 1;
+    cloned.seed = seed;
     return cloned;
   }
 
-  for (const node of Object.values(workflow as Record<string, { inputs?: Record<string, unknown> }>)) {
-    if (!node?.inputs || typeof node.inputs !== "object") continue;
-    for (const key of Object.keys(node.inputs)) {
-      if (/^(?:seed|noise_seed)$/i.test(key)) node.inputs[key] = seed;
-    }
-  }
+  // Generic / other providers
+  delete cloned.workflow;
+  delete cloned.workflowFormat;
+  delete cloned.preserveImportedWorkflow;
+  delete cloned.comfyui_custom_fields;
+  delete cloned.field_mappings;
+  let seed = freshSeed([cloned.seed]);
+  if (seed <= 0) seed = Math.floor(Math.random() * 2147483646) + 1;
+  cloned.seed = seed;
   return cloned;
 }
 
@@ -163,7 +281,8 @@ export async function buildImageParameters(
   config: Config,
   connection: ImageConnection | null,
   prompt: string,
-  negative: string
+  negative: string,
+  characters?: Array<{ prompt: string; negative?: string }>
 ): Promise<Record<string, unknown>> {
   const parameters = { ...(connection?.default_parameters || {}), ...config.imageParameters };
   logStage(config, "image_parameters_start", {
@@ -173,6 +292,92 @@ export async function buildImageParameters(
     negativeLength: negative.length,
     parameterKeys: keysOf(parameters)
   });
+
+  // Extract character payload candidates
+  const charCandidates = characters
+    ?? (Array.isArray(parameters.characters) ? parameters.characters : undefined)
+    ?? (Array.isArray(parameters.nativeCharacters) ? parameters.nativeCharacters : undefined);
+  const normalizedChars = charCandidates ? normalizeCharacterPayload(charCandidates) : undefined;
+
+  if (isNovelAiConnection(connection)) {
+    const rawSeed = numberParam(parameters.seed);
+    let seed = (rawSeed === undefined || rawSeed <= 0) ? freshSeed([]) : Math.floor(rawSeed);
+    if (seed <= 0) seed = Math.floor(Math.random() * 2147483646) + 1;
+
+    const defaultParams = connection?.default_parameters || {};
+    const rawSteps = numberParam(parameters.steps)
+      ?? numberParam(defaultParams.steps)
+      ?? 28;
+    const steps = Math.min(50, Math.max(1, Math.round(rawSteps)));
+
+    const rawScale = numberParam(parameters.scale)
+      ?? numberParam(parameters.cfg)
+      ?? numberParam(defaultParams.scale)
+      ?? numberParam(defaultParams.cfg)
+      ?? 5.0;
+    const scale = Math.min(20, Math.max(1, Number(rawScale.toFixed(1))));
+
+    const sampler = stringParam(parameters.sampler)
+      ?? stringParam(defaultParams.sampler)
+      ?? stringParam(parameters.sampler_name)
+      ?? "k_euler_ancestral";
+
+    const rawWidth = numberParam(parameters.width)
+      ?? numberParam(defaultParams.width)
+      ?? 832;
+    const rawHeight = numberParam(parameters.height)
+      ?? numberParam(defaultParams.height)
+      ?? 1216;
+    const width = Math.min(1920, Math.max(512, Math.round(rawWidth / 64) * 64));
+    const height = Math.min(1920, Math.max(512, Math.round(rawHeight / 64) * 64));
+
+    const cleanParams: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(parameters)) {
+      if (!COMFY_KEYS_TO_DISCARD.includes(key)) {
+        cleanParams[key] = value;
+      }
+    }
+
+    const naiParams: Record<string, unknown> = {
+      ...cleanParams,
+      sampler,
+      steps,
+      scale,
+      cfg: scale,
+      seed,
+      width,
+      height
+    };
+
+    const smeaVal = parameters.smea !== undefined ? parameters.smea : defaultParams.smea;
+    if (smeaVal !== undefined) naiParams.smea = smeaVal === true || smeaVal === "true";
+    const smeaDynVal = parameters.smea_dyn !== undefined ? parameters.smea_dyn : defaultParams.smea_dyn;
+    if (smeaDynVal !== undefined) naiParams.smea_dyn = smeaDynVal === true || smeaDynVal === "true";
+
+    if (normalizedChars && normalizedChars.length > 0) {
+      naiParams.characters = normalizedChars;
+      naiParams.nativeCharacters = normalizedChars;
+    }
+
+    logStage(config, "image_parameters_ready", {
+      provider: "novelai",
+      sampler,
+      steps,
+      scale,
+      width,
+      height,
+      seed,
+      characterCount: normalizedChars?.length ?? 0
+    });
+    return naiParams;
+  }
+
+  // Non-NovelAI: attach characters if present so metadata is preserved
+  if (normalizedChars && normalizedChars.length > 0) {
+    parameters.characters = normalizedChars;
+    parameters.nativeCharacters = normalizedChars;
+  }
+
   if (connection?.provider !== "comfyui" && connection?.provider !== "swarmui") {
     logStage(config, "image_parameters_ready", { provider: connection?.provider || "(default)", workflowPresent: Boolean(parameters.workflow) });
     return parameters;

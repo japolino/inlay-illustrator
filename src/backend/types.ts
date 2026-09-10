@@ -228,6 +228,12 @@ export type PreparedImageJob = {
   creativeConcept?: CreativeConcept;
   creativeCandidates?: CreativeConcept[];
   parameters: Record<string, unknown>;
+  rawShot?: unknown;
+  scenePlace?: string;
+  nativeCharacters?: Array<{ prompt: string; negative?: string; name?: string }>;
+  quote?: string;
+  panels?: string;
+  v376Options?: unknown;
 };
 
 export type AvatarVisualSupplement = {
@@ -266,6 +272,13 @@ export type State = {
   /** Compact lookup for records stored outside the continuity-state document. */
   generatedImageIndex?: Record<string, { key: string; index: number }>;
   previousVisualState?: PreviousVisualState;
+  /** Structured V3.7.6 character appearance memory with tag, negTag, depth, and manual status. */
+  v376CharacterMemory?: Record<string, {
+    tags: string;
+    negTags: string;
+    depth: number;
+    isManual?: boolean;
+  }>;
 };
 
 export type PreviousVisualCharacter = CharacterContinuityState;

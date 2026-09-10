@@ -1,4 +1,5 @@
 import { normalizeCharacterName, normalizeReferenceTags } from "./prompt.js";
+import { normalizeReferenceTags as normalizeV376ReferenceTags } from "./v376/schema.js";
 import { normalizeScenePayload } from "./scenes.js";
 import type { CharacterJson, ParsedPayload, PreviousVisualCharacter, State } from "./types.js";
 import { cleanArray, csvParts, unique } from "./utils.js";
@@ -112,11 +113,13 @@ function invalidatePreviousVisualCharacters(state: State, names: string[]): void
 }
 
 export function upsertCharacterTag(state: State, oldName: unknown, nextName: unknown, nextTags: unknown): void {
-  const previous = normalizeCharacterName(oldName);
-  const name = normalizeCharacterName(nextName);
-  const tags = sanitizeMemoryTags(normalizeReferenceTags(nextTags));
+  // Manual entries are user-authored source data, not ANIMA visibility input.
+  // Keep reference names and clothing/pose tags rather than silently pruning them.
+  const previous = typeof oldName === "string" ? oldName.trim() : "";
+  const name = typeof nextName === "string" ? nextName.trim() : "";
+  const tags = normalizeV376ReferenceTags(typeof nextTags === "string" ? nextTags : "");
   if (!name) throw new Error("Character name is required.");
-  if (!tags) throw new Error("Character appearance tags must include at least one durable tag.");
+  if (!tags) throw new Error("Character appearance tags must include at least one tag.");
 
   const entries = Object.keys(state.characterAppearance);
   const sourceKey = previous
@@ -136,13 +139,24 @@ export function upsertCharacterTag(state: State, oldName: unknown, nextName: unk
   if (manualDestinationKey && manualDestinationKey !== name) delete manual[manualDestinationKey];
   manual[name] = tags;
   state.manualCharacterAppearance = manual;
+  const sourceMemory = state.v376CharacterMemory;
+  if (sourceMemory) {
+    const sourceMemoryKey = Object.keys(sourceMemory).find((candidate) =>
+      candidate.toLowerCase() === (previous || name).toLowerCase());
+    const destinationKey = Object.keys(sourceMemory).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+    const entry = (sourceMemoryKey ? sourceMemory[sourceMemoryKey] : undefined)
+      ?? (destinationKey ? sourceMemory[destinationKey] : undefined);
+    if (sourceMemoryKey && sourceMemoryKey !== name) delete sourceMemory[sourceMemoryKey];
+    if (destinationKey && destinationKey !== name) delete sourceMemory[destinationKey];
+    if (entry) sourceMemory[name] = { ...entry, tags, isManual: true };
+  }
   // Otherwise the structured snapshot created before this edit would restore
   // stale fields after parsing and make the successful save appear ineffective.
   invalidatePreviousVisualCharacters(state, [previous, name]);
 }
 
 export function deleteCharacterTag(state: State, name: unknown): void {
-  const target = normalizeCharacterName(name);
+  const target = typeof name === "string" ? name.trim() : "";
   if (!target) return;
   const key = Object.keys(state.characterAppearance).find((candidate) => candidate.toLowerCase() === target.toLowerCase()) || target;
   delete state.characterAppearance[key];
@@ -150,6 +164,11 @@ export function deleteCharacterTag(state: State, name: unknown): void {
   if (manualKey) delete state.manualCharacterAppearance![manualKey];
   if (state.manualCharacterAppearance && Object.keys(state.manualCharacterAppearance).length === 0) {
     delete state.manualCharacterAppearance;
+  }
+  if (state.v376CharacterMemory) {
+    for (const name of Object.keys(state.v376CharacterMemory)) {
+      if (name.toLowerCase() === target.toLowerCase()) delete state.v376CharacterMemory[name];
+    }
   }
   invalidatePreviousVisualCharacters(state, [target]);
 }

@@ -1,3 +1,21 @@
+import type {
+  V376EncodingMode,
+  V376Mode,
+  V376Options,
+  V376PromptSeparator,
+  V376PromptSyntax,
+  V376TextLanguage
+} from "../backend/v376/types.js";
+
+export type {
+  V376EncodingMode,
+  V376Mode,
+  V376Options,
+  V376PromptSeparator,
+  V376PromptSyntax,
+  V376TextLanguage
+};
+
 export type PromptPreset = {
   id: string;
   name: string;
@@ -38,15 +56,180 @@ export function normalizeInlayImageAspect(value: unknown): InlayImageAspect {
   return key in INLAY_IMAGE_ASPECT_RATIOS ? (key as InlayImageAspect) : "wide";
 }
 
+export type FabCorner = "bottom-right" | "bottom-left" | "top-right" | "top-left";
+
+export const FAB_CORNER_OPTIONS: Array<{ value: FabCorner; label: string }> = [
+  { value: "bottom-right", label: "Bottom right" },
+  { value: "bottom-left", label: "Bottom left" },
+  { value: "top-right", label: "Top right" },
+  { value: "top-left", label: "Top left" }
+];
+
+export function normalizeFabCorner(value: unknown): FabCorner {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "bottom-left" || normalized === "top-right" || normalized === "top-left") {
+    return normalized;
+  }
+  return "bottom-right";
+}
+
+export type NovelAiSampler =
+  | "k_euler_ancestral"
+  | "k_euler"
+  | "k_dpmpp_2m"
+  | "k_dpmpp_2s_ancestral"
+  | "k_dpmpp_sde"
+  | "ddim";
+
+export const NOVELAI_SAMPLER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "k_euler_ancestral", label: "Euler Ancestral (Default)" },
+  { value: "k_euler", label: "Euler" },
+  { value: "k_dpmpp_2m", label: "DPM++ 2M" },
+  { value: "k_dpmpp_2s_ancestral", label: "DPM++ 2S Ancestral" },
+  { value: "k_dpmpp_sde", label: "DPM++ SDE" },
+  { value: "ddim", label: "DDIM" }
+];
+
+export const NOVELAI_RESOLUTION_PRESETS: Array<{ value: string; label: string; width: number; height: number; aspect: InlayImageAspect }> = [
+  { value: "832x1216", label: "Normal Portrait (832 × 1216)", width: 832, height: 1216, aspect: "portrait" },
+  { value: "1216x832", label: "Normal Landscape (1216 × 832)", width: 1216, height: 832, aspect: "wide" },
+  { value: "1024x1024", label: "Normal Square (1024 × 1024)", width: 1024, height: 1024, aspect: "square" },
+  { value: "512x768", label: "Small Portrait (512 × 768)", width: 512, height: 768, aspect: "classic" },
+  { value: "768x512", label: "Small Landscape (768 × 512)", width: 768, height: 512, aspect: "standard" },
+  { value: "640x640", label: "Small Square (640 × 640)", width: 640, height: 640, aspect: "square" },
+  { value: "1024x1536", label: "Large Portrait (1024 × 1536)", width: 1024, height: 1536, aspect: "classic" },
+  { value: "1536x1024", label: "Large Landscape (1536 × 1024)", width: 1536, height: 1024, aspect: "wide" },
+  { value: "1472x1472", label: "Large Square (1472 × 1472)", width: 1472, height: 1472, aspect: "square" },
+  { value: "1920x1088", label: "Wallpaper (1920 × 1088)", width: 1920, height: 1088, aspect: "wide" }
+];
+
+export function isNovelAiConnection(connection: { provider?: string; name?: string; model?: string } | null | undefined): boolean {
+  if (!connection) return false;
+  const provider = String(connection.provider || "").trim().toLowerCase();
+  if (provider === "comfyui" || provider === "swarmui") return false;
+  if (provider === "novelai" || provider === "nai") return true;
+  const naiPattern = /(?:^|[^a-z0-9])nai(?:$|[^a-z0-9])/i;
+  const model = String(connection.model || "").trim().toLowerCase();
+  if (model.startsWith("nai-") || model.includes("novelai") || naiPattern.test(model)) return true;
+  const name = String(connection.name || "").trim().toLowerCase();
+  if (name.includes("novelai") || naiPattern.test(name)) return true;
+  return false;
+}
+
+export const MODULE_MODE_OPTIONS: Array<{ value: V376Mode; label: string }> = [
+  { value: "illustration", label: "Illustration (삽화)" },
+  { value: "asset", label: "Asset (에셋)" },
+  { value: "comic", label: "Comic (만화)" }
+];
+
+export function normalizeModuleMode(value: unknown): V376Mode {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "illustration" || normalized === "0" || normalized === "삽화") return "illustration";
+  if (normalized === "asset" || normalized === "1" || normalized === "에셋") return "asset";
+  if (normalized === "comic" || normalized === "2" || normalized === "만화") return "comic";
+  return "illustration";
+}
+
+export const PROMPT_SEPARATOR_OPTIONS: Array<{ value: V376PromptSeparator; label: string }> = [
+  { value: "pipe", label: "Pipe ( | )" },
+  { value: "newline", label: "Newline ( \n\n )" },
+  { value: "native", label: "NovelAI Native Characters (v4 API)" }
+];
+
+export function normalizePromptSeparator(value: unknown): V376PromptSeparator {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "pipe" || normalized === "0" || normalized === "파이프") return "pipe";
+  if (normalized === "newline" || normalized === "1" || normalized === "줄바꿈") return "newline";
+  if (normalized === "native" || normalized === "2" || normalized === "novelai") return "native";
+  return "pipe";
+}
+
+export const TEXT_LANGUAGE_OPTIONS: Array<{ value: V376TextLanguage; label: string }> = [
+  { value: "off", label: "Off (사용 안함)" },
+  { value: "free", label: "Free (자유)" },
+  { value: "english", label: "English (영어)" },
+  { value: "korean", label: "Korean (한국어)" },
+  { value: "japanese", label: "Japanese (일본어)" },
+  { value: "chinese", label: "Chinese (중국어)" }
+];
+
+export function normalizeTextLanguage(value: unknown): V376TextLanguage {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "off" || normalized === "0" || normalized === "사용 안함" || normalized === "none") return "off";
+  if (normalized === "free" || normalized === "1" || normalized === "자유") return "free";
+  if (normalized === "english" || normalized === "2" || normalized === "영어") return "english";
+  if (normalized === "korean" || normalized === "3" || normalized === "한국어") return "korean";
+  if (normalized === "japanese" || normalized === "4" || normalized === "일본어") return "japanese";
+  if (normalized === "chinese" || normalized === "5" || normalized === "중국어") return "chinese";
+  return "off";
+}
+
+export const ENCODING_MODE_OPTIONS: Array<{ value: V376EncodingMode; label: string }> = [
+  { value: "plain", label: "Standard / Plain (기본)" },
+  { value: "placeholder", label: "Placeholder Codes (검열 우회 치환)" },
+  { value: "base64", label: "Base64 Protocol (암호화 프로토콜)" },
+  { value: "atbash", label: "Atbash Cipher (단일 치환 암호)" }
+];
+
+export function normalizeEncodingMode(value: unknown): V376EncodingMode {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "plain" || normalized === "0" || normalized === "기본" || normalized === "none" || normalized === "default") return "plain";
+  if (normalized === "placeholder" || normalized === "1") return "placeholder";
+  if (normalized === "base64" || normalized === "2") return "base64";
+  if (normalized === "atbash" || normalized === "3") return "atbash";
+  return "plain";
+}
+
+export function normalizeCharacterContextDepth(value: unknown): number {
+  if (value === null || value === undefined || value === "") return DEFAULT_CONFIG.characterContextDepth;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return DEFAULT_CONFIG.characterContextDepth;
+  const rounded = Math.round(parsed);
+  if (rounded === -1) return DEFAULT_CONFIG.characterContextDepth;
+  if (rounded < 0) return DEFAULT_CONFIG.characterContextDepth;
+  return Math.min(100_000, rounded);
+}
+
+export function normalizeComicMinPanels(value: unknown): number {
+  if (value === null || value === undefined || value === "") return DEFAULT_CONFIG.comicMinPanels;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return DEFAULT_CONFIG.comicMinPanels;
+  const rounded = Math.round(parsed);
+  if (rounded < 1) return 1;
+  return Math.min(1000, rounded);
+}
+
 export type Config = {
   enabled: boolean;
   autoGenerate: boolean;
   debugLogging: boolean;
   /** Generate one additional cinematic key visual and place it above the message. */
   coverImageEnabled: boolean;
+  /** V3.7.6 core pipeline mode: illustration, asset, or comic (toggle_Card.Mode). */
+  moduleMode: V376Mode;
+  /** V3.7.6 NSFW instruction strength booster (toggle_Card.Nsfw). Note: instruction strength, NOT a safety filter. */
+  nsfwInstructions: boolean;
+  /** V3.7.6 prompt separator: pipe, newline, or native character separation (toggle_Card.PromptSep). */
+  promptSeparator: V376PromptSeparator;
+  /** V3.7.6 in-image text language: off, free, english, korean, japanese, chinese (toggle_Card.Text). */
+  imageTextLanguage: V376TextLanguage;
+  /** V3.7.6 minimum comic panels per image in comic mode (toggle_Card.PanelNum). */
+  comicMinPanels: number;
+  /** V3.7.6 preceding user-message context per turn (toggle_Card.Userchat). */
+  includeUserMessage: boolean;
+  /** V3.7.6 character appearance context depth turns (toggle_Card.CharAppearance.Depth). */
+  characterContextDepth: number;
+  /** V3.7.6 quote / caption generation and display switch (toggle_Card.Quote). */
+  quoteEnabled: boolean;
+  /** V3.7.6 instruction / response encoding mode (toggle_Card.Encode). */
+  encodingMode: V376EncodingMode;
+  /** V3.7.6 consensual adult roleplay prefill bypass (toggle_Card.Prefill). */
+  prefillEnabled: boolean;
+  /** Retained legacy field: ANIMA adaptive mode. Inactive in V3.7.6 pipeline. */
   adaptiveMode: boolean;
-  /** Fast Mode: single compact parser pass with reduced context. Never changes minImages/maxImages. */
+  /** Retained legacy field: ANIMA fast mode. Inactive in V3.7.6 pipeline. */
   fastMode: boolean;
+  /** Retained legacy field: ANIMA perspective mode. Inactive in V3.7.6 pipeline. */
   perspectiveMode: PerspectiveMode;
   parserConnectionId: string | null;
   parserModel: string;
@@ -70,6 +253,7 @@ export type Config = {
   coverImageWidth: number;
   /** Maximum display height of the optional cover image. */
   coverImageMaxHeightVh: number;
+  /** Retained legacy field: ANIMA prompt style. Inactive in V3.7.6 pipeline. */
   promptStyle: "default" | "anima";
   promptSyntax: "nai" | "comfyui";
   includeUserInfo: boolean;
@@ -83,11 +267,15 @@ export type Config = {
   originalCreationName: string;
   supplement: boolean;
   ignoredTags: string;
+  /** V3.7.6 CustomPos: tags prepended to [Positive] prompt. */
   customPositivePrefix: string;
+  /** V3.7.6 CustomNeg: tags appended to [Positive] prompt (positive suffix, NOT negative prompt!). */
   customPositiveSuffix: string;
+  /** Additional tags appended to negative prompt. */
   customNegative: string;
   promptPresets: PromptPreset[];
   activePromptPresetId: string | null;
+  fabCorner: FabCorner;
 };
 
 export type RawConfig = Partial<Config> & {
@@ -110,6 +298,16 @@ export const DEFAULT_CONFIG: Config = {
   autoGenerate: true,
   debugLogging: false,
   coverImageEnabled: false,
+  moduleMode: "illustration",
+  nsfwInstructions: false,
+  promptSeparator: "pipe",
+  imageTextLanguage: "off",
+  comicMinPanels: 3,
+  includeUserMessage: false,
+  characterContextDepth: 5,
+  quoteEnabled: false,
+  encodingMode: "plain",
+  prefillEnabled: false,
   adaptiveMode: false,
   fastMode: false,
   perspectiveMode: "dynamic",
@@ -150,7 +348,8 @@ export const DEFAULT_CONFIG: Config = {
   customPositiveSuffix: "",
   customNegative: "",
   promptPresets: [],
-  activePromptPresetId: null
+  activePromptPresetId: null,
+  fabCorner: "bottom-right"
 };
 
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
@@ -195,7 +394,7 @@ export function normalizeConfig(raw: RawConfig): Config {
   const {
     danbooruCleanup: _legacyDanbooruCleanup,
     danbooruEndpoint: _legacyDanbooruEndpoint,
-    mode: _legacyMode,
+    mode: legacyMode,
     imageGeneration: _legacyImageGeneration,
     ...current
   } = raw;
@@ -207,15 +406,35 @@ export function normalizeConfig(raw: RawConfig): Config {
   const activePromptPresetId = cleanNullableString(raw.activePromptPresetId);
   const parserParameters = cleanParameters(raw.parserParameters);
   const imageParameters = cleanParameters(raw.imageParameters);
+
+  // V3.7.6 mode migration: if legacy mode === "asset" or perspectiveMode === "asset", default moduleMode to "asset"
+  const rawModuleMode = raw.moduleMode ?? (legacyMode === "asset" || raw.perspectiveMode === "asset" ? "asset" : undefined);
+  const moduleMode = normalizeModuleMode(rawModuleMode);
+  const promptSeparator = normalizePromptSeparator(raw.promptSeparator);
+  const imageTextLanguage = normalizeTextLanguage(raw.imageTextLanguage);
+  const encodingMode = normalizeEncodingMode(raw.encodingMode);
+  const comicMinPanels = normalizeComicMinPanels(raw.comicMinPanels);
+  const characterContextDepth = normalizeCharacterContextDepth(raw.characterContextDepth);
+
   return {
     ...DEFAULT_CONFIG,
     ...current,
+    moduleMode,
+    nsfwInstructions: raw.nsfwInstructions === true,
+    promptSeparator,
+    imageTextLanguage,
+    comicMinPanels,
+    includeUserMessage: raw.includeUserMessage === true,
+    characterContextDepth,
+    quoteEnabled: raw.quoteEnabled === true,
+    encodingMode,
+    prefillEnabled: raw.prefillEnabled === true,
     coverImageEnabled: raw.coverImageEnabled === true,
     adaptiveMode: raw.adaptiveMode === true,
     fastMode: raw.fastMode === true,
     perspectiveMode: raw.perspectiveMode === "creative" || raw.perspectiveMode === "static" || raw.perspectiveMode === "dynamic" || raw.perspectiveMode === "asset"
       ? raw.perspectiveMode
-      : raw.mode === "asset" ? "asset" : "dynamic",
+      : legacyMode === "asset" ? "asset" : "dynamic",
     parserConnectionId: cleanNullableString(raw.parserConnectionId) || cleanNullableString(imageGeneration.promptParserConnectionId),
     parserModel: cleanString(raw.parserModel) || cleanString(imageGeneration.promptParserModel),
     parserParameters: Object.keys(parserParameters).length > 0 ? parserParameters : cleanParameters(imageGeneration.promptParserParameters),
@@ -252,7 +471,8 @@ export function normalizeConfig(raw: RawConfig): Config {
     promptPresets,
     activePromptPresetId: activePromptPresetId && promptPresets.some((preset) => preset.id === activePromptPresetId)
       ? activePromptPresetId
-      : null
+      : null,
+    fabCorner: normalizeFabCorner(raw.fabCorner)
   };
 }
 
@@ -274,5 +494,41 @@ export function effectiveGenerationConfig(config: Config): Config {
     preprocessingEnabled: false,
     parserRetries: 0,
     includeLorebook: false
+  };
+}
+
+/**
+ * Maps high-level application Config to the shared V3.7.6 pipeline options.
+ *
+ * Semantic Notes:
+ * - customPos maps from customPositivePrefix (prepended to [Positive] prompt tags).
+ * - customNeg maps from customPositiveSuffix (appended to [Positive] prompt tags in source Lua, NOT negative prompt!).
+ * - customNegative additions remain in generation/prompt compilation for actual negative tags.
+ * - nsfwInstructions maps to nsfw (NSFW instruction-strength booster, NOT a content filter).
+ * - promptSeparator maps to separator ("pipe" | "newline" | "native").
+ */
+export function v376OptionsFromConfig(config: Config): V376Options {
+  return {
+    mode: config.moduleMode,
+    nsfw: config.nsfwInstructions,
+    supplement: config.supplement,
+    text: config.imageTextLanguage,
+    quote: config.quoteEnabled,
+    syntax: config.promptSyntax,
+    separator: config.promptSeparator,
+    imageMin: config.minImages,
+    imageMax: config.maxImages,
+    characterMax: config.maxCharacters,
+    panelMin: config.comicMinPanels,
+    originalReference: config.originalReference,
+    originalCreationName: config.originalCreationName,
+    encodingMode: config.encodingMode,
+    prefillEnabled: config.prefillEnabled,
+    characterContext: config.characterTagContextEnabled,
+    characterContextDepth: config.characterContextDepth,
+    customInstruction: config.customParserInstructions,
+    includeUserMessage: config.includeUserMessage,
+    customPos: config.customPositivePrefix,
+    customNeg: config.customPositiveSuffix
   };
 }

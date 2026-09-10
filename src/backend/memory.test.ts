@@ -7,6 +7,7 @@ import {
   upsertCharacterTag
 } from "./memory.js";
 import type { State } from "./types.js";
+import { loadV376Memory } from "./v376/memory.js";
 
 function state(characterAppearance: Record<string, string>): State {
   return { characterAppearance: { ...characterAppearance }, generated: {} };
@@ -183,37 +184,37 @@ describe("character memory", () => {
     expect(cache.Mira).not.toContain("fingertips");
   });
 
-  test("renames entries case-insensitively, sanitizes edited tags, and preserves unrelated memory", () => {
+  test("renames entries case-insensitively and preserves source reference names and user-authored tags", () => {
     const current = state({ Alice: "red hair", Bob: "black hair" });
 
     upsertCharacterTag(current, "alice", " Alicia (source) ", "blue hair, standing, open shirt, none");
 
     expect(current).toMatchObject({
-      characterAppearance: { Bob: "black hair", Alicia: "blue hair" },
-      manualCharacterAppearance: { Alicia: "blue hair" }
+      characterAppearance: { Bob: "black hair", "Alicia (source)": "blue hair, standing, open shirt" },
+      manualCharacterAppearance: { "Alicia (source)": "blue hair, standing, open shirt" }
     });
   });
 
   test("rejects a blank normalized name without deleting the original entry", () => {
     const current = state({ Alice: "red hair", Bob: "black hair" });
 
-    expect(() => upsertCharacterTag(current, "Alice", " (source) ", "blue hair"))
+    expect(() => upsertCharacterTag(current, "Alice", "   ", "blue hair"))
       .toThrow("Character name is required.");
     expect(current.characterAppearance).toEqual({ Alice: "red hair", Bob: "black hair" });
   });
 
-  test("rejects fully filtered tags without deleting the original entry", () => {
+  test("rejects empty source tags without deleting the original entry", () => {
     const current = state({ Alice: "red hair", Bob: "black hair" });
 
-    expect(() => upsertCharacterTag(current, "Alice", "Alicia", "standing, portrait, open shirt, none"))
-      .toThrow("Character appearance tags must include at least one durable tag.");
+    expect(() => upsertCharacterTag(current, "Alice", "Alicia", "null, none, ,"))
+      .toThrow("Character appearance tags must include at least one tag.");
     expect(current.characterAppearance).toEqual({ Alice: "red hair", Bob: "black hair" });
   });
 
   test("rejects case-insensitive rename collisions and preserves both entries", () => {
     const current = state({ Alice: "red hair", Bob: "black hair" });
 
-    expect(() => upsertCharacterTag(current, "alice", " bOb (source) ", "blue hair"))
+    expect(() => upsertCharacterTag(current, "alice", " bOb ", "blue hair"))
       .toThrow('A character named "bOb" already exists.');
     expect(current.characterAppearance).toEqual({ Alice: "red hair", Bob: "black hair" });
   });
@@ -224,8 +225,8 @@ describe("character memory", () => {
     upsertCharacterTag(current, "alice", "ALICE", "blue hair, standing");
 
     expect(current).toMatchObject({
-      characterAppearance: { Bob: "black hair", ALICE: "blue hair" },
-      manualCharacterAppearance: { ALICE: "blue hair" }
+      characterAppearance: { Bob: "black hair", ALICE: "blue hair, standing" },
+      manualCharacterAppearance: { ALICE: "blue hair, standing" }
     });
   });
 
@@ -293,5 +294,41 @@ describe("character memory", () => {
     expect(current.characterAppearance.Vexa).toBe(
       "1girl, furry, wolf girl, gray fur, white muzzle, wolf ears, fluffy tail"
     );
+  });
+});
+
+
+describe("V3.7.6 manual memory compatibility", () => {
+  test("renames source reference names without resurrecting the old structured entry", () => {
+    const current: State = {
+      characterAppearance: { "Alice (series)": "red hair", Bob: "black hair" },
+      v376CharacterMemory: {
+        "Alice (series)": { tags: "red hair", negTags: "blue hair", depth: 0 },
+        Bob: { tags: "black hair", negTags: "", depth: 2 }
+      },
+      generated: {}
+    };
+    upsertCharacterTag(current, "alice (series)", "Alicia (series)", "green hair, open shirt, standing");
+    expect(current.v376CharacterMemory?.["Alice (series)"]).toBeUndefined();
+    expect(current.v376CharacterMemory?.["Alicia (series)"]).toEqual({
+      tags: "green hair, open shirt, standing", negTags: "blue hair", depth: 0, isManual: true
+    });
+    const loaded = loadV376Memory(JSON.parse(JSON.stringify(current)));
+    expect(Object.keys(loaded).sort()).toEqual(["Alicia (series)", "Bob"]);
+    expect(loaded["Alicia (series)"].tags).toBe("green hair, open shirt, standing");
+    expect(loaded.Bob.depth).toBe(2);
+  });
+
+  test("deletes all source storage representations so removed tags cannot return", () => {
+    const current: State = {
+      characterAppearance: { "Alice (series)": "red hair" },
+      manualCharacterAppearance: { "Alice (series)": "red hair" },
+      v376CharacterMemory: { "Alice (series)": { tags: "red hair", negTags: "blue hair", depth: 5, isManual: true } },
+      generated: {}
+    };
+    deleteCharacterTag(current, "ALICE (series)");
+    expect(current.characterAppearance).toEqual({});
+    expect(current.manualCharacterAppearance).toBeUndefined();
+    expect(loadV376Memory(JSON.parse(JSON.stringify(current)))).toEqual({});
   });
 });

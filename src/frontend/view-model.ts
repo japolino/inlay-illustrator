@@ -17,25 +17,35 @@ export function isBusyStatus(status: string): boolean {
 }
 
 export function generationSummary(config: Config): string {
-  const mode = config.adaptiveMode
-    ? "Adaptive"
-    : `${config.perspectiveMode.slice(0, 1).toUpperCase()}${config.perspectiveMode.slice(1)}`;
+  const modeLabel = config.moduleMode === "comic"
+    ? `Comic (${config.comicMinPanels}+ panels)`
+    : config.moduleMode === "asset"
+      ? "Asset"
+      : "Illustration";
   const count = config.minImages === config.maxImages
     ? `${config.maxImages} image${config.maxImages === 1 ? "" : "s"}`
     : `${config.minImages}–${config.maxImages} images`;
-  return `${mode} · ${count}`;
+  return `${modeLabel} · ${count}`;
 }
 
 export function parserSummary(config: Config, connections: ParserConnection[]): string {
-  if (config.fastMode) return "Fast mode";
   const selected = connections.find((connection) => connection.id === config.parserConnectionId);
-  return selected?.name || (config.parserConnectionId ? "Missing connection" : "Not configured");
+  const base = selected?.name || (config.parserConnectionId ? "Missing connection" : "Not configured");
+  if (config.encodingMode && config.encodingMode !== "plain") {
+    const enc = config.encodingMode.charAt(0).toUpperCase() + config.encodingMode.slice(1);
+    return `${base} · [${enc}]`;
+  }
+  return base;
 }
 
 export function promptSummary(config: Config): string {
-  const style = config.promptStyle === "anima" ? "Anima" : "Default";
   const syntax = config.promptSyntax === "nai" ? "NovelAI" : "ComfyUI";
-  return `${style} · ${syntax}`;
+  const sep = config.promptSeparator === "native"
+    ? "Native"
+    : config.promptSeparator === "newline"
+      ? "Newline"
+      : "Pipe";
+  return `${syntax} · ${sep}`;
 }
 
 export function outputSummary(config: Config): string {

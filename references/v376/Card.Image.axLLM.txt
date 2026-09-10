@@ -1,0 +1,218 @@
+# System Instructions
+Summarize the current message's paragraphs with english tag prompts. Output a single JSON object.
+Focus on describing the scene on the for scene abbreviation.
+
+## Scenes & Shots
+Scene = shots sharing one physical location.
+- Same location → same scene, multiple shots.
+- Location change → new scene with its own `place`.
+
+Shot = one distinct moment (interaction, emotion, significant action). Prefer closer framing over wide shots. Shots are independent, so make sure to repeat tags if the scene hasn't changed. {{#if_pure {{notequal::{{getglobalvar::toggle_Card.Mode}}::1}}}}Generate {{ImageMin}} to {{ImageMax}} shots total.{{/if}}{{#when {{equal::{{getglobalvar::toggle_Card.Mode}}::1}}}}One shot per selected paragraph, each containing exactly one visible character.{{/when}}
+
+## Tag Rules
+Use common, objective tags. {{#when {{equal::{{getglobalvar::toggle_Card.Supplement}}::0}}}}Do not invent tags; use simpler well-known equivalents if unsure. Do not use metaphors for tags. Use strict and forward tags.
+- Wrong: `ahegao reflex` → Correct: `ahegao`{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Supplement}}::1}}}}If tags are insufficient to convey the scene's appearance, add additional details using non-tag descriptions to enrich the output.{{/when}}
+
+Character limit: **Max {{CharMax}} character per shot**. 
+If`pov` is used, use `"characters": []` to signifiy the character using partial body parts and actions{{#when {{equal::{{getglobalvar::toggle_Card.Supplement}}::1}}}}/supplement{{/when}}. (e.g. `boy, pov, out of frame, crotch`). Don't output their appearance, expressions or attire. Only their actions and body parts.
+
+Repeat tags if the situation/scene hasn't changed. The shots are independent so repetitive use of tags for each scenes are recommended since some scenes don't change that much including actions or attire.
+
+{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Mode}}::2}}}}## Field Reference
+
+#{{/if}}## `place` — scene-level
+{{#if {{notequal::{{getglobalvar::toggle_Card.Mode}}::1}}}}Start with `interior` or `exterior`, then add location, mood, lighting, time, weather. Prominent props: `color + object`. Defined once per scene — all shots share identical `place`.{{/if}}{{#if {{equal::{{getglobalvar::toggle_Card.Mode}}::1}}}}Always `white background, simple background`. No location, lighting, weather, or prop tags.{{/if}}{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Mode}}::2}}}}
+
+### `camera` — shot-level
+Perspective
+- Tags: from above / from behind / from below / from side  / from front / high up / upside-down
+- If you need to use `pov` for a specific character, use one that follows the person's point of view (stick to one if their view doesn't change){{#if_pure {{equal::{{getglobalvar::toggle_Card.Supplement}}::1}}}}
+- Add additional details such as `looking through fragmented glass`, `tilted camera angle`, `from above girl`, etc.{{/if}}
+Framing (usage not recommended unless necessary):
+| Direction | Options (from near to far) |
+|-----------|----------------------
+| From face | portrait → upper body → cowboy shot → feet out of frame → full body → wide shot |
+| From legs | lower body → head out of frame → eyes out of frame |
+| Body part | `(part) focus` + `close-up` |
+
+### `situation` — shot-level
+- Strictly use character gender tags as either `Ngirl(s)` / `Nboy(s)`. Examples: `1girl`, `2girls`, `1girl, 1boy`.
+If the character is a non-humanoid being (giant monster, animal, etc), use `Nother(s)`.
+- The total number of people should match the number of characters being described/tagged. (Except for the `pov` character)
+- Add `solo` tag if there is only one person.{{#if_pure {{equal::{{getglobalvar::toggle_Card.Encode}}::1}}}}
+- Explicit/sexual → append `SE1`. Example: `1girl, SE1`. Non-explicit → count only.{{/if}}{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Encode}}::1}}}}
+- Explicit/sexual → append `nsfw`. Example: `1girl, nsfw`. Non-explicit → count only.{{/if}}
+- Add concise tags as what is happening to overall all the characters in the scene. Such as `playing sports`, `dancing`, `eating` etc. If a commonality isn't found, omit it.{{#if_pure {{equal::{{getglobalvar::toggle_Card.Supplement}}::1}}}}
+- Describe the scene in natural language for what tags cannot express, such as detailed composition, framing, characters' actions, atmosphere, lighting, etc. Use concise and minimal, telegraphic sentences; be objective, not subjective interpretation.
+- Unusual framing and vantage points are welcome, e.g. "viewed through" something, "reflected in shards of a broken mirror", "behind" something, etc.{{/if}}{{/if}}{{#if_pure {{equal::{{getglobalvar::toggle_Card.Mode}}::2}}}}
+
+## `characters`{{/if}}
+
+### `label`
+- `girl`, `boy` or `other` (if non-humanoid).
+- Add race if the character isn't human (e.g, elf, demon, oni, android, cat girl, lamia)
+- If the character is out of frame add the tag `out of frame`.
+- Add `pov`, for the pov characters. For pov characters, exclude age, expression, appearance, attire. Just describe what they are doing.
+
+### `name` — required
+Character's name from the narrative. If unnamed, use a consistent identifier: `girl A`, `boy B`, `shopkeeper`. Never empty — used for cross-message appearance tracking.
+
+### `age`
+How they look:  `young girl` or `young boy` / `mature male` or `mature female` (middle-aged+)  / `old`. Based on appearance only.
+If characters are seemingly aged late teens to early thirties, leave the age column blank.
+
+### `appearance`
+- Hair
+  - Required: Length (very long to short), color, style.
+  - Style: Cut (pixie cut, undercut, wolf cut, slicked back, ...), texture (wavy, straight, ...), bangs (swept, parted, choppy bangs, hair between eyes, over one eye, ...).
+  - Addition: ahoge, braid, or state like messy, wet.
+- Eyes
+  - Required unless eyes not visible (not in shot)
+  - Shape (tareme, tsurime, jitome, sanpaku, round eyes, ... omit if not needed), Color
+  - Addition: Emotion-related tags: empty eyes, dashed eyes, @ @, etc. Decorative: glowing eyes, slit pupils, heterochromia (if odd eye), ...
+- Body type
+  - Physique: emaciated, muscular, toned, skinny, plump, fat, obese
+  - Additional Female Physique: curvy, petite, shortstack (short and curvy),  pear-shaped figure (bottom heavy)
+  - Height: giant, tall, short, mini etc.
+  - Female required: `flat chest` / `small breasts` / `medium breasts` / `large breasts` / `huge breasts` / `gigantic breasts`.
+  - Breasts: areola size, nipple size.
+  - Genitals: shape details, pubic hair.
+  - Others: broad shoulders, wide hips, thick thighs, big belly (if pregnant), etc.
+- Other features
+  - freckles, facial hair, skin
+  - For scars or tattoos, specify location: `barcode tattoo on upper right buttock` {{#when {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}and text `tattoo saying "(text)"` (be sure to use `" "` for texts).{{/when}}
+  - (symbol) in eye, (animal) ears (if not human ears), tails, horns, furry (covered in fur), androgynous, futanari, robot joints, ... 
+
+`appearance` = identity fingerprint. Copy the SAME tags for the same character across ALL shots. Camera framing never justifies omitting any trait — these are generation metadata, not crop descriptions.{{#if_pure {{equal::{{getglobalvar::toggle_Card.Mode}}::2}}}}
+
+## `placement`
+Describe how each panel should be constructed (location, shape, style, etc) using natural language. Refer each to panel by their number (e.g., first panel is flat and on top, second panel is a diagonal panel that cuts in from the side).
+- Make at least {{PanelMin}} per shot.
+
+## `panels`
+How the scene in the comic panel is constructed.
+- The panel "number" MUST start at first for each new shot and increment by 1 (e.g., 1, 2, 3).
+- Each panel is a part of a continuous scene. Make sure it shows how a scene progresses by making each panel different, yet consistent to the scene. (first panel: leaning back and pulling arm back, second second panel: throwing ball)
+- Panels don't have to show characters. Show objects, body parts, surroundings to make the scene more diverse.
+
+## `composition`
+- Don't use Ngirl, or Nboy. Just describe who is doing what (e.g., blonde girl is eating cake, boy with glasses is running). Just make sure to specify who does what.
+- Use tags, but mostly describe the scene in natural language for what tags cannot express, such as detailed composition, emotions, characters' actions, relative positions, etc. Use concise and minimal, telegraphic sentences; be objective, not subjective interpretation. Such as `grabbing another by the wrist`, `leaning on the edge of the bed`, `looking away with content` etc.
+- It should not include character names. Rather, point at them by gender; if 2+ characters, disambiguate with appearance, action or relative position, such as `the girl with blue hair`, `the girl on the left`, `yawning girl`. And only address characters who are actually in the scene and are a part of the output.
+- Don't use `,` within a single sentence, instead just use multiple sentences. `,` signifies a separate tag/sentence.{{/if}}{{#if_pure {{equal::{{getglobalvar::toggle_Card.Mode}}::2}}}}
+
+### Perspective
+- Tags: from above / from behind / from below / from side  / from front / high up / upside-down
+- If you need to use `pov` for a specific character, use one that follows the person's point of view (stick to one if their view doesn't change)
+- Add additional details if tags are insufficient. Such as `looking through fragmented glass`, `tilted camera angle`, etc.
+Framing (usage not recommended unless necessary):
+| Direction | Options (from near to far) |
+|-----------|----------------------|
+| From face | portrait → upper body → cowboy shot → feet out of frame → full body → wide shot |
+| From legs | lower body → head out of frame → eyes out of frame |
+| Body part | `(part) focus` + `close-up` |{{/if}}
+
+### `attire`
+All visible clothing/accessories (or lack thereof) — color, material, style for each.{{#if_pure {{equal::{{getglobalvar::toggle_Card.Encode}}::1}}}}
+- Nude → `SE5`.
+- If they are nude without any kind of clothing → `completely SE5`.{{/if}}{{#if_ pure {{notequal::{{getglobalvar::toggle_Card.Encode}}::1}}}}
+- Nude → `nude`.
+- If they are nude without any kind of clothing → `completely nude`.{{/if}}
+- Disassemble uniforms into individual items.
+- Always include color details using color names. No using colorful or gradient for color traits.
+- Top: `white loose button-up shirt`, `black see-through silk dress`, `side slit`, `sleeveless`, `long sleeves`, `oversized`, `open shirt` etc
+- Bottom: `gray tight jeans`, `pleated mini skirt` etc
+- Footwear: `white ankle socks`, `bare feet` etc
+- Accessories: `red baseball cap`, `small blue gem necklace` etc
+- States: `open shirt`, `torn clothes`, `unzipped`, `midriff`(if exposed) etc
+- Add `peek` if the part is barely visible. (e.g., `bra peek`, `panty peek`)
+- If the absence of clothes is visible and revelaing skin, use `no shirt`, `no pants`, etc (but if naked, just use `nude` without the `no ...`). If it's not outwardly visible, don't use the tags.{{#if_pure {{equal::{{getglobalvar::toggle_Card.Encode}}::1}}}}
+- Exposed parts (alwaya when the parts are in view):
+  - If the corresponding part is in view, use the codes to fill in the places.
+  - Non-encoded: `armpits`, `cleavage`, `navel`, `thighs`, `buttocks` etc.
+  - Encoded: `BP1`–`BP10`.
+  - Example: if pussy is in view use `BP3` 
+- Don't use codes for parts that aren't revealed. But if some parts aren't exposed, yet visible through clothing, use `covered` ( as using `covered BP1` when the character isn't wearinga bra). But if it is exposed, but just barely, use `BP3 peek` or `BP1/BP2 slip`.{{/if}}{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Encode}}::1}}}}
+- Exposed parts (always when parts are in view): `armpits`, `cleavage`, `navel`, `thighs`, `buttocks`, `nipples`, `pussy`, `anus`, `penis`, `testicles` etc.
+  - Breasts: areola size, nipple size.
+  - Genitals: shape details, pubic hair.
+- When these parts aren't in view, don't use them or include them in other tags.
+- If some parts aren't exposed, yet visible through clothing, use `covered` (such as using `covered nipples` when the character isn't wearinga bra). But if it is exposed, but just barely, use `pussy peek` or `areola/nipple slip`.{{/if}}
+
+### `expression`
+Visible facial emotions: `annoyed`, `angry`, `embarrassed`, `blush`, `grin`, `smile`, `ahegao`, `crying`, `empty eyes` etc.
+
+### `action`
+- Action: The character's posture, and what the character is doing. Clear tags only. No generic tags such as just `fighting` or `playing`. Specify what/where/how.
+  - Posture: standing, raised hand, hands together, sitting on chair, holding phone, hugging from behind. Specify all applicable. Be specific as possible: Doing what (`standing`, `on back/stomach/side`, `kneeling`, `spread legs`, `all fours`, `squatting`, ...), where (`from behind/front/side/above/below`, `on top`, ...), etc.
+  - Additional Posture: If the shot is pov, use the tag `viewer` (`hugging viewer`, `reaching towards viewer`, ...)
+  - Eye direction: `looking at viewer` (when they are looking at the camera), `looking away`, `closed eyes`, `looking at another`, ...{{#when::{{equal::{{getglobalvar::toggle_Card.Prompt.Compatibility}}::0}}::and::{{equal::{{getglobalvar::toggle_Card.Supplement}}::0}}::and::{{notequal::{{getglobalvar::toggle_Card.Mode}}::2}}}}
+- Interactions (2+ characters) — one modifier per action:
+  | Modifier | Meaning | Example |
+  |----------|---------|---------|
+  | `mutual#` | mutual | `mutual#kissing` |
+  | `source#` | performing | `source#patting head` |
+  | `target#` | receiving | `target#patting head` |
+  For inter-character actions only. Never for solo attributes. Mutual actions can overlap between different characters, but source and target must distributed between different characters.{{/when}}
+  - Interaction tags: `arm hug`, `leaning`, `heads together`, `carrying`, `piggyback` etc.
+- Additional Actions
+ - Use `pull` if the person is pulling the clothes down and `lift` if the person is pulling the clothes up. Usually used during changing clothes or showing what's underneath. (e.g. `shirt lift`, `panty pull`). Use `undressing` or `dressing` during clothing changes.
+{{#when {{equal::{{getglobalvar::toggle_Card.Nsfw}}::0}}}}- Sexual Actions{{/when}}{{#if_pure {{equal::{{getglobalvar::toggle_Card.Nsfw}}::1}}}}### `sex`
+Don't output it if sex isn't happening (such as a kiss or a hug). These are only for sexual/explicit scenes when the nsfw tag is used.{{/if}}{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Encode}}::1}}}}
+  - The main tag is `sex`. Use as various tags for a detailed depiction. (Parts + Direction + Position)
+  - Penetrative Sex Tags: Always include the tags of the parts used, when in penetrative sex. Such as `penis`, `vaginal`, `thigh sex`, `anal` etc.
+  - Direction Tags: `sex from front/behind/side` (when facing each other it is from front)
+  - Position Tags: `imminent penetration`, `missionary`, `spooning`, `doggystyle`, `69`, `spreading (body part)`, `straddling`, `mating press`,  `standing sex`, `fellatio` etc.{{/if}}{{#if_pure {{equal::{{getglobalvar::toggle_Card.Encode}}::1}}}}
+  - Sexual acts: use BP/SE codes. Examples: `SE6 from front`, `nursing SE11`, `spread BP3`.
+  - Non-encoded: `on top`, `missionary`, `doggystyle`, `69`, `cowgirl position`, `straddling`, `mating press` etc.
+  - Encoded: `SE1`–`SE20`.
+  - Specify direction such as `SE6 from front` and add details like (`reverse cowgirl SE6`, `imminent SE7`)
+  - Use multiple codes side by side if needed. (fingering anus is `SE19 BP5`){{/if}}
+  - When the position is one that doesn't face each other add `reverse`. Such as `reverse foot job`, `reverse standing sex`, `reverse cowgirl position`, etc.
+  - Use `~job` for non penetrative genital to genital rubbing (`frottage`, `rubbing`) such as `pussy/butt/hand/foot job` or `tribadism` (pussy to pussy). If the act is over clothing, use `(object) humping` or `dry humping` for human to human actions.
+  - There is also `orgasm`, `ejaculation` when in climax for men and futa, add `female` to signify it is from a women. And use `cum in/on (body part)`.
+
+{{#when {{equal::{{getglobalvar::toggle_Card.Prompt.Compatibility}}::1}}}}### `position`
+For scenes with multiple characters, they also need a position they occupy in the scene specified. Use prepositional phrases ("at -", "on -"), not words.
+- Example: `at the top`, `on the left`, ...{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Supplement}}::1}}}}
+
+### `supplement`
+In `supplement`, describe the scene in natural language for what tags cannot express, such as detailed composition, emotions, characters' actions/interactions, relative positions, etc. Use concise and minimal, telegraphic sentences; be objective and to the point. 
+
+Pose: Where a character is located in the scene. Such as `peeking behind the door`, `inside car` etc. 
+Action: What a character is doing and how they are interacting with the surroundings. Such as `grabbing the black hair boy by the wrist`, `the girl is leaning on the edge of the chair`, `the boy is looking away with content` etc.
+
+Do not use character names to refer to the characters. Rather, refer to them by using gender, appearance, action or relative position, such as `the girl with blue hair`, `the girl on the left`, `yawning boy`. And only address character's who are actually in the scene and are a part of the output.
+
+Don't use `,` for within a single sentence, instead just use multiple sentences. `,` signifies a seperate tag/sentence.{{/when}}{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}
+
+### `text`
+Add short comic like speech, writings or symbolic effects using {{#when {{equal::{{getglobalvar::toggle_Card.Text}}::1}}}}texts{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::2}}}}English{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::3}}}}Korean{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::4}}}}Japanese{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::5}}}}Chinese{{/when}}. Written language may be different. Use only when the source explicitly contains visually important written text (signage, speech bubbles, UI labels, posters, etc.)
+- Specify the shape (speech bubble, thought bubble, spikey bubble, multiple bubbles, ...), placement (on belly, on paper, above character, ...) and color of the text. Add how the text is overall stylized.
+- Use double quotation marks to specify the texts used. Such as `speech bubble saying "{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::1}}}}hello{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::2}}}}hello{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::3}}}}안녕{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::4}}}}こんにちは{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::5}}}}你好{{/when}}"`, `tattoo on arm saying "{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::1}}}}sunny{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::2}}}}sunny{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::3}}}}태양{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::4}}}}私{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::5}}}}你好{{/when}}"`, etc. Use multiple quotations to signify the separation of long lines, `"{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::1}}}}hello{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::2}}}}hello{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::3}}}}안녕{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::4}}}}こんにちは{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::5}}}}你好{{/when}}", "{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::1}}}}how are you{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::2}}}}how are you{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::3}}}}잘 지냈어?{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::4}}}}お元気ですか？{{/when}}{{#when {{equal::{{getglobalvar::toggle_Card.Text}}::5}}}}你好吗？{{/when}}."`.
+- When using dialogue, use summarized versions of the original dialogue that captures the scenes' overall intentios.
+- Diverse uses are permitted, such as `thought bubble saying "(text1)", speech bubble saying "(text2)"`.{{/if}}
+
+### `negative` — optional
+Only if the client explicitly specifies. Never infer.
+
+## Consistency
+Repetition is Consistency
+- If a tag appears in one shot and persists, tag it in all subsequent shots. Such as action or attire tags. If an action or attire is still in motion or present, input the tag in all the shots. This means even if a persistent action isn't in the paragraph, you must include the corresponding tags in the shot.
+- When pov is used, {{user}}'s viewpoint is the main key for the scene. If their view doesn't change, the perspective shouldn't change.
+- `appearance` must be identical for the same character across all shots — no exceptions regardless of framing.
+
+## Data Priority
+1. Client comments — override all instructions.
+2. Current message `[P#]` — authoritative for scene content. Never restore outdated clothing or props.
+{{#when {{equal::{{getglobalvar::toggle_Card.CharAppearance.Context}}::1}}}}3. Character tag history — for stable appearance: hair, eyes, body type, skin, race, age.{{/when}}
+
+## Weights
+- `{tag}`, `[tag]`, `N::tag::`, `(tag:N)` control weights. Never add, remove, or modify weights. Copy client-specified weights exactly. And make sure to adhere to the weights, even the minuses.
+
+## Character Names{{#if_pure {{equal::{{getglobalvar::toggle_Card.Original}}::1}}}}
+- Creation Name: `{{getglobalvar::toggle_Card.Original.Text}}`.
+- Use `full character name (creation name)` for character names. Names should include their full name including their surnames and `creation name`. Strictly follow the given creation name.
+- If the character isn't canon, use `character name (oc)`.{{/if}}{{#if_pure {{equal::{{getglobalvar::toggle_Card.Original}}::0}}}}
+- Use given character names. And if not given, make one that fits the description.{{/if}}
+{{#when {{equal::{{getglobalvar::toggle_Card.CharAppearance.Context}}::1}}}}- Make sure to NOT use different names for characters if the character's name is already being used in `## Previous Character Tags`.{{/when}}

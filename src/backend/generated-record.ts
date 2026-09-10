@@ -28,6 +28,12 @@ export type GeneratedRecordSlot = {
   placement: "cover" | "paragraph";
   status: GenerationSlotStatus;
   error?: string;
+  rawShot?: unknown;
+  scenePlace?: string;
+  nativeCharacters?: Array<{ prompt: string; negative?: string; name?: string }>;
+  quote?: string;
+  panels?: string;
+  v376Options?: unknown;
 };
 
 /**
@@ -48,6 +54,8 @@ export type GeneratedRecordV3 = {
   /** Validated canonical plan when the record was produced through the typed boundary. */
   illustrationPlan?: IllustrationPlan;
   createdAt: string;
+  v376Payload?: unknown;
+  v376Options?: unknown;
 };
 
 /** A compact slot retained in continuity state when the full record is external. */
@@ -166,7 +174,13 @@ function isRecordSlot(value: unknown): value is GeneratedRecordSlot {
       || (Array.isArray(candidate.creativeConceptCandidates) && candidate.creativeConceptCandidates.every(isCreativeConcept)))
     && (candidate.creativeConceptHistory === undefined
       || (Array.isArray(candidate.creativeConceptHistory) && candidate.creativeConceptHistory.every((id) => typeof id === "string")))
-    && (candidate.error === undefined || typeof candidate.error === "string");
+    && (candidate.error === undefined || typeof candidate.error === "string")
+    && (candidate.rawShot === undefined || candidate.rawShot === null || isObject(candidate.rawShot))
+    && (candidate.scenePlace === undefined || typeof candidate.scenePlace === "string")
+    && (candidate.nativeCharacters === undefined || Array.isArray(candidate.nativeCharacters))
+    && (candidate.quote === undefined || typeof candidate.quote === "string")
+    && (candidate.panels === undefined || typeof candidate.panels === "string")
+    && (candidate.v376Options === undefined || candidate.v376Options === null || isObject(candidate.v376Options));
 }
 
 export function isGeneratedRecordV3(value: unknown): value is GeneratedRecordV3 {
@@ -181,6 +195,8 @@ export function isGeneratedRecordV3(value: unknown): value is GeneratedRecordV3 
       || (typeof value.generationStatus === "string" && GENERATION_STATUSES.has(value.generationStatus as GenerationStatus)))
     && (value.sourceFingerprint === undefined || typeof value.sourceFingerprint === "string")
     && (value.illustrationPlan === undefined || IllustrationPlanSchema.safeParse(value.illustrationPlan).success)
+    && (value.v376Payload === undefined || value.v376Payload === null || isObject(value.v376Payload))
+    && (value.v376Options === undefined || value.v376Options === null || isObject(value.v376Options))
     && value.slots.every(isRecordSlot);
 }
 
@@ -308,6 +324,7 @@ export function toGeneratedRecordV3(value: unknown): GeneratedRecordV3 | null {
       .filter((candidate): candidate is CreativeConcept => candidate !== undefined && candidate !== null);
     copyOptional(slot, "creativeConceptCandidates", candidates);
     copyOptional(slot, "creativeConceptHistory", value.creativeConceptHistory?.[index]);
+    copyOptional(slot, "scenePlace", (value as { scenePlaces?: Array<string | undefined> }).scenePlaces?.[index]);
     const error = value.slotErrors?.[index];
     if (error) slot.error = error;
     return slot;

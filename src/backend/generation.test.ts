@@ -6,6 +6,7 @@ import {
   locateGeneratedImage,
   matchesGenerationSource,
   parseAndSelectPrompts,
+  rerunAllStoredImages,
   rerunStoredImage,
   sourceContentFingerprint
 } from "./generation.js";
@@ -325,8 +326,8 @@ describe("progressive ComfyUI delivery", () => {
     expect(updates.length).toBeGreaterThanOrEqual(3);
     const savedState = files.get("states/progress-chat.json") as { generated?: Record<string, { recordPath?: string }> } | undefined;
     const recordReference = savedState?.generated?.["progress-chat:progress-message:0"];
-    const fullRecord = recordReference?.recordPath ? files.get(recordReference.recordPath) as { illustrationPlan?: unknown } : undefined;
-    expect(fullRecord?.illustrationPlan).toBeDefined();
+    const fullRecord = recordReference?.recordPath ? files.get(recordReference.recordPath) as { v376Payload?: unknown } : undefined;
+    expect(fullRecord?.v376Payload).toBeDefined();
   });
 });
 
@@ -463,10 +464,10 @@ describe("optional cover image generation", () => {
     const completed = frontend.find((payload) => payload.type === "status" && payload.status === "Generated");
     expect((completed?.record as { slots?: Array<{ placement?: string }> })?.slots?.map((slot) => slot.placement))
       .toEqual(["cover", "paragraph"]);
-    // The canonical typed boundary must be exercised end-to-end and persisted.
-    const persistedPlan = (completed?.record as { illustrationPlan?: unknown })?.illustrationPlan;
-    expect(persistedPlan).toBeDefined();
-    expect((persistedPlan as { shots?: unknown[] } | undefined)?.shots).toHaveLength(1);
+    // V3.7.6 structured payload must be exercised end-to-end and persisted.
+    const persistedV376 = (completed?.record as { v376Payload?: unknown })?.v376Payload;
+    expect(persistedV376).toBeDefined();
+    expect((persistedV376 as { scenes?: Array<{ shots?: unknown[] }> })?.scenes?.[0]?.shots).toHaveLength(1);
   });
 });
 
@@ -746,7 +747,7 @@ describe("Fast Mode sidecar rerun", () => {
     );
 
     expect(requests).toHaveLength(1);
-    expect((requests[0].messages as Array<{ content: string }>)[0].content).toContain("# Image Tagging System");
+    expect((requests[0].messages as Array<{ content: string }>)[0].content).toContain("research paper");
     expect((requests[0].messages as Array<{ content: string }>)[0].content).not.toContain("Creative Illustration Concept Ideator");
     expect(committed.index).toBe(0);
     expect(committed.record.slots[0]?.imageUrl).toBe("/rerun.png");
@@ -886,5 +887,460 @@ describe("backend hardening - already generated skip", () => {
     expect(status).toBeDefined();
     expect(completedProgress?.total).toBe(1);
     expect(completedProgress?.completed).toBe(1);
+  });
+});
+
+describe("V3.7.6 Active Generation and Reroll Pipeline", () => {
+  const sampleV376Response = JSON.stringify({
+    scenes: [
+      {
+        place: "crystal cavern",
+        shots: [
+          {
+            paragraph: 1,
+            camera: "medium shot",
+            situation: "girl exploring cave",
+            characters: [
+              {
+                name: "Serena",
+                label: "girl",
+                age: "young adult",
+                appearance: "cyan hair, golden eyes",
+                attire: "adventurer tunic"
+              }
+            ],
+            quote: "Look at that crystal!"
+          }
+        ]
+      }
+    ]
+  });
+
+  test("live generateForMessage invokes V3.7.6 parser, produces V3 record with v376Payload, and preserves native character channels", async () => {
+    const files = new Map<string, unknown>();
+    const updates: string[] = [];
+    const frontend: Array<Record<string, unknown>> = [];
+    const imageRequests: Array<Record<string, unknown>> = [];
+    const parserRequests: Array<Record<string, unknown>> = [];
+
+    const message = {
+      id: "v376-msg-1",
+      role: "assistant",
+      content: "Serena entered the cavern carefully.\n\nThe crystal glowed with an eerie light.",
+      metadata: {},
+      swipe_id: 0
+    };
+
+    const config = {
+      ...DEFAULT_CONFIG,
+      parserConnectionId: "v376-parser",
+      imageConnectionId: "v376-nai",
+      promptSeparator: "native" as const,
+      promptSyntax: "nai" as const,
+      minImages: 1,
+      maxImages: 1,
+    };
+
+    (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
+      connections: {
+        get: async () => ({ id: "v376-parser", name: "Parser", provider: "openai", model: "gpt-4" })
+      },
+      imageGen: {
+        getConnection: async () => ({ id: "v376-nai", name: "NAI", provider: "novelai", model: "nai-diffusion-3" }),
+        generate: async (request: Record<string, unknown>) => {
+          imageRequests.push(request);
+          return { imageId: "img-v376-1", imageUrl: "/v376-1.png", model: "nai", provider: "novelai" };
+        }
+      },
+      generate: {
+        raw: async (req: Record<string, unknown>) => {
+          parserRequests.push(req);
+          return { content: sampleV376Response };
+        }
+      },
+      userStorage: {
+        getJson: async <T>(path: string, options: { fallback: T }) => (files.has(path) ? files.get(path) : options.fallback) as T,
+        setJson: async (path: string, value: unknown) => { files.set(path, structuredClone(value)); },
+        exists: async (path: string) => files.has(path),
+        read: async (path: string) => JSON.stringify(files.get(path)),
+        write: async (path: string, value: string) => { files.set(path, JSON.parse(value)); },
+        mkdir: async () => undefined
+      },
+      chat: {
+        getMessages: async () => [message],
+        updateMessage: async (_chatId: string, _messageId: string, patch: { content?: string; metadata?: Record<string, unknown> }) => {
+          if (patch.content) message.content = patch.content;
+          if (patch.metadata) message.metadata = patch.metadata;
+          updates.push(message.content);
+        }
+      },
+      sendToFrontend: (payload: Record<string, unknown>) => frontend.push(payload),
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+
+    await generateForMessage("v376-chat", message.id, message.content, "user-1", {
+      config,
+      messages: [message]
+    });
+
+    // 1. Verifies parser was invoked with V3.7.6 context framing
+    expect(parserRequests.length).toBeGreaterThanOrEqual(1);
+    expect((parserRequests[0].messages as Array<{ content: string }>)[0].content).toContain("research paper");
+
+    // 2. Verifies image request preserved native character channels in parameters
+    expect(imageRequests).toHaveLength(1);
+    const params = imageRequests[0].parameters as Record<string, unknown>;
+    expect(params.characters).toBeDefined();
+    expect(Array.isArray(params.characters)).toBe(true);
+
+    // 3. Verifies frontend completed status contains GeneratedRecordV3 with v376 metadata
+    const completed = frontend.find((p) => p.type === "status" && p.status === "Generated") as { record?: Record<string, unknown> } | undefined;
+    expect(completed?.record).toBeDefined();
+    expect(completed?.record?.schemaVersion).toBe(3);
+    expect(completed?.record?.v376Payload).toBeDefined();
+    const slots = completed?.record?.slots as Array<Record<string, unknown>>;
+    expect(slots).toHaveLength(1);
+    expect(slots[0].rawShot).toBeDefined();
+    expect(slots[0].scenePlace).toBe("crystal cavern");
+    expect(slots[0].quote).toBe("Look at that crystal!");
+  });
+
+  test("single seed-only rerun recompiles rawShot with latest affixes and preserves native character channels", async () => {
+    const files = new Map<string, unknown>();
+    const imageRequests: Array<Record<string, unknown>> = [];
+
+    const slot = {
+      prompt: "old prompt",
+      negativePrompt: "old negative",
+      perspectiveMode: "dynamic" as const,
+      perspectiveSource: "manual" as const,
+      paragraph: 1,
+      imageId: "old-id",
+      imageUrl: "/old.png",
+      placement: "paragraph" as const,
+      status: "completed" as const,
+      scenePlace: "floating island",
+      rawShot: {
+        paragraph: 1,
+        camera: "wide shot",
+        scene: "sky clouds",
+        characters: [
+          { name: "Lyra", label: "girl", age: "teen", appearance: "pink hair", attire: "robe" }
+        ]
+      },
+      nativeCharacters: [{ name: "Lyra", prompt: "pink hair, robe", negative: "" }],
+      imageParameters: {
+        seed: 111,
+        characters: [{ prompt: "pink hair, robe", negative: "" }]
+      }
+    };
+
+    const record = {
+      schemaVersion: 3,
+      chatId: "rerun-chat",
+      messageId: "msg-rerun",
+      swipeId: 0,
+      slots: [slot],
+      rawJson: { scenes: [] },
+      createdAt: new Date().toISOString()
+    };
+
+    files.set("states/rerun-chat.json", {
+      characterAppearance: {},
+      generated: { "rerun-chat:msg-rerun:0": record }
+    });
+
+    const latestConfig = {
+      ...DEFAULT_CONFIG,
+      imageConnectionId: "img-nai-v376-reroll",
+      customPositivePrefix: "masterpiece, anime style",
+      customNegative: "blurry, worst quality",
+      promptSeparator: "native" as const,
+      promptSyntax: "nai" as const,
+    };
+
+    const message = {
+      id: "msg-rerun",
+      role: "assistant",
+      content: "A floating island in the clouds.",
+      metadata: {},
+      swipe_id: 0
+    };
+
+    (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
+      connections: { get: async () => ({ id: "img-nai-v376-reroll", name: "NAI", provider: "novelai", model: "nai-3" }) },
+      imageGen: {
+        getConnection: async () => ({ id: "img-nai-v376-reroll", name: "NAI", provider: "novelai", model: "nai-3" }),
+        listConnections: async () => [{ id: "img-nai-v376-reroll", name: "NAI", provider: "novelai", model: "nai-3" }],
+        generate: async (req: Record<string, unknown>) => {
+          imageRequests.push(req);
+          return { imageId: "new-seed-id", imageUrl: "/new-seed.png" };
+        }
+      },
+      userStorage: {
+        getJson: async <T>(path: string, options: { fallback: T }) => (files.has(path) ? files.get(path) : options.fallback) as T,
+        setJson: async (path: string, value: unknown) => { files.set(path, structuredClone(value)); },
+        exists: async (path: string) => files.has(path),
+        read: async (path: string) => JSON.stringify(files.get(path)),
+        write: async (path: string, value: string) => { files.set(path, JSON.parse(value)); },
+        mkdir: async () => undefined
+      },
+      chat: {
+        getMessages: async () => [message],
+        updateMessage: async () => {}
+      },
+      sendToFrontend: () => {},
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+
+    const result = await rerunStoredImage(
+      { chatId: "rerun-chat", messageId: "msg-rerun", swipeId: 0, imageIndex: 0 },
+      false,
+      "user-v376-rerun-test",
+      latestConfig
+    );
+
+    expect(imageRequests).toHaveLength(1);
+    expect(imageRequests[0].prompt).toContain("masterpiece, anime style");
+    expect(imageRequests[0].negativePrompt).toContain("blurry, worst quality");
+    const updatedSlot = result.record.slots[0];
+    expect(updatedSlot.imageId).toBe("new-seed-id");
+    expect(updatedSlot.rawShot).toBeDefined();
+    expect(updatedSlot.scenePlace).toBe("floating island");
+    expect(result.record.slots[0].imageParameters?.seed).not.toBe(111);
+  });
+
+  test("single sidecar rerun invokes V3.7.6 parser and updates slot with replacement", async () => {
+    const files = new Map<string, unknown>();
+    const parserCalls: unknown[] = [];
+
+    const slot = {
+      prompt: "old prompt",
+      negativePrompt: "old negative",
+      perspectiveMode: "dynamic" as const,
+      perspectiveSource: "manual" as const,
+      paragraph: 1,
+      imageId: "old-id",
+      imageUrl: "/old.png",
+      placement: "paragraph" as const,
+      status: "completed" as const
+    };
+
+    const record = {
+      schemaVersion: 3,
+      chatId: "sidecar-chat",
+      messageId: "msg-sidecar",
+      swipeId: 0,
+      slots: [slot],
+      rawJson: { scenes: [] },
+      createdAt: new Date().toISOString()
+    };
+
+    files.set("states/sidecar-chat.json", {
+      characterAppearance: {},
+      generated: { "sidecar-chat:msg-sidecar:0": record }
+    });
+
+    const message = {
+      id: "msg-sidecar",
+      role: "assistant",
+      content: "The dragon rested on the peak.",
+      metadata: {},
+      swipe_id: 0
+    };
+
+    (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
+      connections: {
+        get: async () => ({ id: "parser", name: "Parser", provider: "openai", model: "gpt-4" })
+      },
+      imageGen: {
+        getConnection: async () => ({ id: "img-conn", name: "NAI", provider: "novelai", model: "nai-3" }),
+        listConnections: async () => [{ id: "img-conn", name: "NAI", provider: "novelai", model: "nai-3" }],
+        generate: async () => ({ imageId: "sidecar-new-id", imageUrl: "/sidecar-new.png" })
+      },
+      generate: {
+        raw: async (req: unknown) => {
+          parserCalls.push(req);
+          return { content: sampleV376Response };
+        }
+      },
+      userStorage: {
+        getJson: async <T>(path: string, options: { fallback: T }) => (files.has(path) ? files.get(path) : options.fallback) as T,
+        setJson: async (path: string, value: unknown) => { files.set(path, structuredClone(value)); },
+        exists: async (path: string) => files.has(path),
+        read: async (path: string) => JSON.stringify(files.get(path)),
+        write: async (path: string, value: string) => { files.set(path, JSON.parse(value)); },
+        mkdir: async () => undefined
+      },
+      chat: {
+        getMessages: async () => [message],
+        updateMessage: async () => {}
+      },
+      sendToFrontend: () => {},
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+
+    const result = await rerunStoredImage(
+      { chatId: "sidecar-chat", messageId: "msg-sidecar", swipeId: 0, imageIndex: 0 },
+      true,
+      "user-1",
+      { ...DEFAULT_CONFIG, parserConnectionId: "parser" }
+    );
+
+    expect(parserCalls.length).toBeGreaterThanOrEqual(1);
+    expect(result.record.slots[0].imageId).toBe("sidecar-new-id");
+    expect(result.record.slots[0].imageUrl).toBe("/sidecar-new.png");
+    expect(result.record.slots[0].rawShot).toBeDefined();
+    expect(result.record.slots[0].quote).toBe("Look at that crystal!");
+  });
+
+  test("bulk sidecar rerun parses message once and updates all slots, guarding stale swipe", async () => {
+    const files = new Map<string, unknown>();
+    let parserCallCount = 0;
+
+    const slot1 = {
+      prompt: "old 1",
+      negativePrompt: "",
+      paragraph: 1,
+      imageId: "old-1",
+      imageUrl: "/1.png",
+      placement: "paragraph" as const,
+      perspectiveMode: "dynamic" as const,
+      perspectiveSource: "manual" as const,
+      status: "completed" as const
+    };
+    const slot2 = {
+      prompt: "old 2",
+      negativePrompt: "",
+      paragraph: 2,
+      imageId: "old-2",
+      imageUrl: "/2.png",
+      placement: "paragraph" as const,
+      perspectiveMode: "dynamic" as const,
+      perspectiveSource: "manual" as const,
+      status: "completed" as const
+    };
+
+    const record = {
+      schemaVersion: 3,
+      chatId: "bulk-chat",
+      messageId: "msg-bulk",
+      swipeId: 0,
+      slots: [slot1, slot2],
+      rawJson: { scenes: [] },
+      createdAt: new Date().toISOString()
+    };
+
+    files.set("states/bulk-chat.json", {
+      characterAppearance: {},
+      generated: { "bulk-chat:msg-bulk:0": record }
+    });
+
+    const message = {
+      id: "msg-bulk",
+      role: "assistant",
+      content: "First paragraph.\n\nSecond paragraph.",
+      metadata: {},
+      swipe_id: 0
+    };
+
+    const twoShotResponse = JSON.stringify({
+      scenes: [
+        {
+          place: "garden",
+          shots: [
+            { paragraph: 1, situation: "flowers blooming", characters: [] },
+            { paragraph: 2, situation: "fountain splashing", characters: [] }
+          ]
+        }
+      ]
+    });
+
+    (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
+      connections: { get: async () => ({ id: "p", name: "P", provider: "openai", model: "m" }) },
+      imageGen: {
+        getConnection: async () => ({ id: "img", name: "NAI", provider: "novelai", model: "nai-3" }),
+        listConnections: async () => [{ id: "img", name: "NAI", provider: "novelai", model: "nai-3" }],
+        generate: async () => ({ imageId: "bulk-id", imageUrl: "/bulk.png" })
+      },
+      generate: {
+        raw: async () => {
+          parserCallCount++;
+          return { content: twoShotResponse };
+        }
+      },
+      userStorage: {
+        getJson: async <T>(path: string, options: { fallback: T }) => (files.has(path) ? files.get(path) : options.fallback) as T,
+        setJson: async (path: string, value: unknown) => { files.set(path, structuredClone(value)); },
+        exists: async (path: string) => files.has(path),
+        read: async (path: string) => JSON.stringify(files.get(path)),
+        write: async (path: string, value: string) => { files.set(path, JSON.parse(value)); },
+        mkdir: async () => undefined
+      },
+      chat: {
+        getMessages: async () => [message],
+        updateMessage: async () => {}
+      },
+      sendToFrontend: () => {},
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+
+    const result = await rerunAllStoredImages("bulk-chat", "msg-bulk", 0, "user-1", { ...DEFAULT_CONFIG, parserConnectionId: "p" }, true);
+
+    // Verifies parser was called ONCE for the message, not per slot!
+    expect(parserCallCount).toBe(1);
+    expect(result.failedCount).toBe(0);
+    expect(result.record.slots[0].imageId).toBe("bulk-id");
+    expect(result.record.slots[1].imageId).toBe("bulk-id");
+  });
+
+  test("provider guard rejects NovelAI native character channels on non-NovelAI providers with actionable error", async () => {
+    const files = new Map<string, unknown>();
+
+    const message = {
+      id: "guard-msg",
+      role: "assistant",
+      content: "Character in a scene.",
+      metadata: {},
+      swipe_id: 0
+    };
+
+    const config = {
+      ...DEFAULT_CONFIG,
+      parserConnectionId: "parser",
+      imageConnectionId: "comfy-conn",
+      promptSeparator: "native" as const,
+      promptSyntax: "nai" as const,
+    };
+
+    (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
+      connections: { get: async () => ({ id: "parser", name: "P", provider: "openai", model: "m" }) },
+      imageGen: {
+        getConnection: async () => ({ id: "comfy-conn", name: "ComfyUI", provider: "comfyui", model: "workflow" }),
+        generate: async () => ({ imageId: "fail", imageUrl: "/fail.png" })
+      },
+      generate: {
+        raw: async () => ({ content: sampleV376Response })
+      },
+      userStorage: {
+        getJson: async <T>(path: string, options: { fallback: T }) => (files.has(path) ? files.get(path) : options.fallback) as T,
+        setJson: async (path: string, value: unknown) => { files.set(path, structuredClone(value)); },
+        exists: async (path: string) => files.has(path),
+        read: async (path: string) => JSON.stringify(files.get(path)),
+        write: async (path: string, value: string) => { files.set(path, JSON.parse(value)); },
+        mkdir: async () => undefined
+      },
+      chat: {
+        getMessages: async () => [message],
+        updateMessage: async () => {}
+      },
+      sendToFrontend: () => {},
+      log: { info: () => undefined, warn: () => undefined, error: () => undefined }
+    };
+
+    await expect(generateForMessage("guard-chat", "guard-msg", message.content, "user-1", {
+      config,
+      messages: [message]
+    })).rejects.toThrow(/NovelAI native character channels are not supported by provider "comfyui"/);
   });
 });

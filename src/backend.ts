@@ -1,58 +1,21 @@
-import { DEFAULT_CONFIG, normalizeConfig, type Config } from "./shared/config.js";
+import type { Config } from "./shared/config.js";
 import { acceptAvatarImageResponse } from "./backend/avatar-image-bridge.js";
 import { isOwnMessage } from "./backend/context.js";
 import {
   generateForMessage,
   getStoredImageDetails,
+  rerunAllStoredImages,
   rerunStoredImage,
   type StoredImageActionRequest
 } from "./backend/generation.js";
-import { prepareAndDispatchImageJobs, rerollImageParameters } from "./backend/images.js";
-import { stripInlayContent, stripInlayFromMessages } from "./backend/inlay-content.js";
+import { stripInlayFromMessages } from "./backend/inlay-content.js";
 import { logStage } from "./backend/logging.js";
 import { cancelChatGenerations } from "./backend/operation-manager.js";
 import { deleteCharacterTag, upsertCharacterTag } from "./backend/memory.js";
-import {
-  continuityReference,
-  formatTargetParagraphs,
-  parserInstruction,
-  parserMessages,
-  parserUserRequest,
-  preprocessTargetParagraphs,
-  preprocessingInstruction,
-  preprocessingUserRequest,
-  validatePreprocessedTarget
-} from "./backend/parser.js";
-import { activePromptPreset, assemblePrompt, renderPrompt } from "./backend/prompt.js";
-import { exactVisualKey, selectPromptEntries } from "./backend/scenes.js";
-import { getConfig, sendState, setConfig, updateState } from "./backend/storage.js";
+import { findLatestGeneratedTurn, getConfig, listInlayGallery, sendState, setConfig, updateState } from "./backend/storage.js";
 import { keysOf } from "./backend/utils.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
-
-/** Stable compatibility surface for the existing backend unit tests. */
-export const __testables = {
-  DEFAULT_CONFIG,
-  activePromptPreset,
-  assemblePrompt,
-  continuityReference,
-  exactVisualKey,
-  formatTargetParagraphs,
-  parserInstruction,
-  parserMessages,
-  parserUserRequest,
-  preprocessTargetParagraphs,
-  preprocessingInstruction,
-  preprocessingUserRequest,
-  prepareAndDispatchImageJobs,
-  rerollImageParameters,
-  normalizeConfig,
-  renderPrompt,
-  selectPromptEntries,
-  stripInlayContent,
-  stripInlayFromMessages,
-  validatePreprocessedTarget
-};
 
 spindle.registerInterceptor(async (messages) => stripInlayFromMessages(messages));
 
@@ -211,11 +174,94 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         imageUrl: result.record.slots[result.index]?.imageUrl || ""
       }, userId);
       spindle.sendToFrontend({ type: "status", chatId, status: rerunSidecar ? "Sidecar rerun complete" : "Image rerolled", record: result.record }, userId);
+    } else if (message.type === "reroll_all_images") {
+      const config = await getConfig(userId);
+      configForError = config;
+      const chatId = String(message.chatId || "");
+      if (!chatId) throw new Error("Open the image's chat first.");
+      let messageId = String(message.messageId || "");
+      let swipeId = Number.isInteger(Number(message.swipeId)) ? Number(message.swipeId) : undefined;
+      const sidecar = message.sidecar === true;
+      if (!messageId) {
+        const latest = await findLatestGeneratedTurn(chatId, userId);
+        if (!latest) throw new Error("This chat has no generated illustrations yet.");
+        messageId = latest.messageId;
+        swipeId = latest.swipeId;
+      }
+      spindle.sendToFrontend({
+        type: "status",
+        chatId,
+        status: sidecar ? "Rerunning sidecar for all images..." : "Rerolling all images...",
+        busy: true
+      }, userId);
+      const result = await rerunAllStoredImages(chatId, messageId, swipeId, userId, config, sidecar);
+      spindle.sendToFrontend({
+        type: "inlay_reroll_all_result",
+        requestId: String(message.requestId || ""),
+        ok: true,
+        sidecar,
+        chatId,
+        messageId: result.record.messageId,
+        failedCount: result.failedCount,
+        record: result.record
+      }, userId);
+      if (result.failedCount > 0) {
+        spindle.sendToFrontend({
+          type: "status",
+          chatId,
+          status: `Rerolled with ${result.failedCount} failure(s) — prior images preserved`,
+          record: result.record,
+          busy: false
+        }, userId);
+      } else {
+        spindle.sendToFrontend({
+          type: "status",
+          chatId,
+          status: sidecar ? "All sidecars rerun" : "All images rerolled",
+          record: result.record,
+          busy: false
+        }, userId);
+      }
+    } else if (message.type === "list_inlay_gallery") {
+      const requestId = String(message.requestId || "");
+      const page = Math.max(1, Math.floor(Number(message.page)) || 1);
+      const selectedChatId = typeof message.selectedChatId === "string" && message.selectedChatId.trim()
+        ? message.selectedChatId.trim()
+        : undefined;
+      try {
+        const result = await listInlayGallery(userId, page, selectedChatId);
+        spindle.sendToFrontend({
+          type: "inlay_gallery_result",
+          requestId,
+          ok: true,
+          page: result.page,
+          totalChats: result.totalChats,
+          totalPages: result.totalPages,
+          chatIds: result.chatIds,
+          chats: result.chats,
+          records: result.records ?? result.chats
+        }, userId);
+      } catch (error) {
+        spindle.sendToFrontend({
+          type: "inlay_gallery_result",
+          requestId,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error)
+        }, userId);
+      }
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStage(configForError || { debugLogging: true }, "frontend_message_error", { type: String(message.type || ""), error: errorMessage }, "error");
     spindle.log.error(errorMessage);
+    if (message.type === "reroll_all_images") {
+      spindle.sendToFrontend({
+        type: "inlay_reroll_all_result",
+        requestId: String(message.requestId || ""),
+        ok: false,
+        error: errorMessage
+      }, userId);
+    }
     if (message.type === "reroll_image" || message.type === "rerun_image_sidecar") {
       spindle.sendToFrontend({
         type: "inlay_image_action_result",
@@ -225,7 +271,16 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         error: errorMessage
       }, userId);
     }
-    spindle.sendToFrontend({ type: "status", chatId: String(message.chatId || ""), status: "Error", error: errorMessage }, userId);
+    const statusPayload: Record<string, unknown> = {
+      type: "status",
+      chatId: String(message.chatId || ""),
+      status: "Error",
+      error: errorMessage
+    };
+    if (message.type === "generate_latest") {
+      statusPayload.busy = false;
+    }
+    spindle.sendToFrontend(statusPayload, userId);
   }
 });
 

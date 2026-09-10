@@ -8,7 +8,7 @@ import {
   type GeneratedRecordV3
 } from "./generated-record.js";
 import type { LegacyGeneratedRecord, LegacyGeneratedRecordReference } from "./generated-record-legacy.js";
-import type { ParserConnection, State } from "./types.js";
+import type { ImageConnection, ParserConnection, State } from "./types.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
 
@@ -294,19 +294,301 @@ async function getParserConnections(userId?: string): Promise<ParserConnection[]
   }
 }
 
+export async function getImageConnections(userId?: string): Promise<ImageConnection[]> {
+  try {
+    if (!spindle || !spindle.imageGen || typeof spindle.imageGen.listConnections !== "function") {
+      return [];
+    }
+    return (await spindle.imageGen.listConnections(userId)) as ImageConnection[];
+  } catch (error) {
+    spindle.log.warn(`Image connection list unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
+  }
+}
+
 export async function sendState(userId?: string, chatId?: string, preparedConfig?: Config): Promise<void> {
-  const [state, config, parserConnections] = await Promise.all([
+  const [state, config, parserConnections, imageConnections] = await Promise.all([
     chatId ? getState(chatId, userId) : Promise.resolve(null),
     preparedConfig ? Promise.resolve(preparedConfig) : getConfig(userId),
-    getParserConnections(userId)
+    getParserConnections(userId),
+    getImageConnections(userId)
   ]);
   spindle.sendToFrontend({
     type: "state",
     config,
     parserConnections,
+    imageConnections,
     chatId: chatId || "",
     characterAppearance: state?.characterAppearance || {},
     avatarVisualSupplements: state?.avatarVisualSupplements || {},
     avatarVisionAttempts: state?.avatarVisionAttempts || {}
   }, userId);
+}
+
+export async function findLatestGeneratedTurn(
+  chatId: string,
+  userId?: string
+): Promise<{ messageId: string; swipeId: number } | null> {
+  const state = await getState(chatId, userId);
+  let latest: { messageId: string; swipeId: number; createdAt: number } | null = null;
+  for (const [key, value] of Object.entries(state.generated)) {
+    if (!value || typeof value !== "object") continue;
+    let messageId = "";
+    let swipeId = 0;
+    let createdAt = 0;
+    if (isGeneratedRecordReference(value)) {
+      messageId = (value as { messageId?: string }).messageId || "";
+      swipeId = Number((value as { swipeId?: number }).swipeId || 0);
+    } else {
+      const rec = value as Partial<GeneratedRecordV3>;
+      messageId = rec.messageId || "";
+      swipeId = Number(rec.swipeId || 0);
+      const parsedTs = Date.parse(rec.createdAt || "");
+      createdAt = Number.isFinite(parsedTs) ? parsedTs : 0;
+    }
+    if (!messageId) {
+      const parts = key.split(":");
+      if (parts.length >= 3) {
+        messageId = parts[1];
+        swipeId = Number(parts[2]) || 0;
+      }
+    }
+    if (!messageId) continue;
+    if (!latest || createdAt > latest.createdAt) {
+      latest = { messageId, swipeId, createdAt };
+    }
+  }
+  return latest ? { messageId: latest.messageId, swipeId: latest.swipeId } : null;
+}
+
+export type InlayGalleryImage = {
+  chatId: string;
+  messageId: string;
+  swipeId: number;
+  imageId: string;
+  imageUrl: string;
+  imageIndex: number;
+  paragraph: number;
+  prompt: string;
+  negativePrompt: string;
+  quote: string;
+};
+
+export type InlayGalleryChat = {
+  chatId: string;
+  name?: string;
+  cardName?: string;
+  messageCount: number;
+  branchCount: number;
+  quoteStyle?: string;
+  images: InlayGalleryImage[];
+};
+
+export type InlayGalleryResult = {
+  page: number;
+  totalChats: number;
+  totalPages: number;
+  chatIds: string[];
+  chats: InlayGalleryChat[];
+  records?: InlayGalleryChat[];
+};
+
+const GALLERY_CHATS_PER_PAGE = 5;
+
+function chatIdFromStatePath(path: string): string | null {
+  if (!path.startsWith("states/") || !path.endsWith(".json")) return null;
+  return path.slice(7, -5);
+}
+
+function compareChatIds(a: string, b: string): number {
+  const aNum = /^-?\d+$/.test(a);
+  const bNum = /^-?\d+$/.test(b);
+  if (aNum && bNum) {
+    const diff = Number(a) - Number(b);
+    if (diff !== 0) return diff;
+    return a.localeCompare(b);
+  }
+  return a.localeCompare(b);
+}
+
+async function enrichChatInfo(
+  chatId: string,
+  images: InlayGalleryImage[],
+  quoteStyle: string | undefined,
+  userId?: string
+): Promise<InlayGalleryChat> {
+  let name: string | undefined;
+  let cardName: string | undefined;
+  try {
+    const { chats, characters } = spindle as unknown as {
+      chats?: { get?: (id: string, user?: string) => Promise<{ name?: string; character_id?: string } | null> };
+      characters?: { get?: (id: string, user?: string) => Promise<{ name?: string } | null> };
+    };
+    if (chats && typeof chats.get === "function") {
+      const meta = await chats.get(chatId, userId);
+      if (meta) {
+        if (typeof meta.name === "string" && meta.name) name = meta.name;
+        const charId = meta.character_id;
+        if (charId && characters && typeof characters.get === "function") {
+          const char = await characters.get(charId, userId);
+          if (char && typeof char.name === "string" && char.name) cardName = char.name;
+        }
+      }
+    }
+  } catch {
+    // metadata is optional
+  }
+  const messageIds = new Set<string>();
+  const branchIds = new Set<string>();
+  for (const img of images) {
+    if (img.messageId) messageIds.add(img.messageId);
+    const swipe = typeof img.swipeId === "number" ? img.swipeId : 0;
+    if (swipe > 0) branchIds.add(`${img.messageId}:${swipe}`);
+  }
+  return {
+    chatId,
+    name,
+    cardName,
+    messageCount: messageIds.size,
+    branchCount: branchIds.size,
+    quoteStyle,
+    images
+  };
+}
+
+export async function listInlayGallery(
+  userId: string | undefined,
+  page: number,
+  selectedChatId?: string
+): Promise<InlayGalleryResult> {
+  const sanitizedSelectedChatId = typeof selectedChatId === "string" && /^[a-zA-Z0-9_-]+$/.test(selectedChatId.trim())
+    ? selectedChatId.trim()
+    : undefined;
+
+  let statePaths: string[] = [];
+  try {
+    if (typeof (spindle.userStorage as unknown as { list?: unknown }).list === "function") {
+      statePaths = await (spindle.userStorage as unknown as { list: (prefix?: string, userId?: string) => Promise<string[]> }).list("states/", userId);
+    }
+  } catch {
+    statePaths = [];
+  }
+
+  const allChatIdsSet = new Set<string>();
+  const seenPaths = new Set<string>();
+  for (const raw of statePaths) {
+    if (typeof raw !== "string" || !raw) continue;
+    const normalized = raw.replace(/\\/g, "/").replace(/^\/+/, "");
+    const path = normalized.startsWith("states/") ? normalized : `states/${normalized}`;
+    if (!path.endsWith(".json")) continue;
+    if (seenPaths.has(path)) continue;
+    seenPaths.add(path);
+    const cid = chatIdFromStatePath(path);
+    if (cid) allChatIdsSet.add(cid);
+  }
+
+  if (sanitizedSelectedChatId) {
+    allChatIdsSet.add(sanitizedSelectedChatId);
+  }
+
+  const sortedChatIds = [...allChatIdsSet].sort(compareChatIds);
+  const totalChats = sortedChatIds.length;
+  const totalPages = Math.max(1, Math.ceil(totalChats / GALLERY_CHATS_PER_PAGE));
+
+  let requestedPage = Math.floor(Number(page));
+  if (!Number.isFinite(requestedPage) || requestedPage < 1) requestedPage = 1;
+  if (requestedPage > totalPages) requestedPage = totalPages;
+
+  const targetChatIds = sanitizedSelectedChatId
+    ? [sanitizedSelectedChatId]
+    : sortedChatIds.slice((requestedPage - 1) * GALLERY_CHATS_PER_PAGE, requestedPage * GALLERY_CHATS_PER_PAGE);
+
+  const grouped = new Map<string, InlayGalleryImage[]>();
+  const seen = new Set<string>();
+
+  for (const cid of targetChatIds) {
+    const path = `states/${cid}.json`;
+    let state: State | null = null;
+    try {
+      state = await readJson<State>(path, { characterAppearance: {}, generated: {} } as State, userId);
+    } catch {
+      continue;
+    }
+    if (!state || typeof state.generated !== "object" || state.generated === null) continue;
+
+    for (const [key, value] of Object.entries(state.generated)) {
+      if (!value || typeof value !== "object") continue;
+
+      const isRef = isGeneratedRecordReference(value);
+      const dedupKey = isRef
+        ? `ref:${(value as GeneratedRecordReferenceV3).recordPath}`
+        : `key:${cid}:${key}`;
+      if (seen.has(dedupKey)) continue;
+      seen.add(dedupKey);
+
+      let record: GeneratedRecordV3 | null = null;
+      try {
+        record = await loadGeneratedRecord(value, userId, false);
+      } catch {
+        continue;
+      }
+      if (!record) continue;
+      if (!Array.isArray(record.slots)) continue;
+      if (typeof record.messageId !== "string" || !record.messageId) continue;
+
+      const chatKey = typeof record.chatId === "string" && record.chatId ? record.chatId : cid;
+      const messageId = record.messageId;
+      const swipeId = typeof record.swipeId === "number" && Number.isInteger(record.swipeId) ? record.swipeId : 0;
+
+      for (let idx = 0; idx < record.slots.length; idx++) {
+        const slot = record.slots[idx];
+        if (!slot || !slot.imageUrl) continue;
+        const galleryImg: InlayGalleryImage = {
+          chatId: chatKey,
+          messageId,
+          swipeId,
+          imageId: slot.imageId || "",
+          imageUrl: slot.imageUrl,
+          imageIndex: idx,
+          paragraph: slot.paragraph || idx + 1,
+          prompt: slot.prompt || "",
+          negativePrompt: slot.negativePrompt || "",
+          quote: ""
+        };
+        const list = grouped.get(chatKey) || [];
+        list.push(galleryImg);
+        grouped.set(chatKey, list);
+      }
+    }
+  }
+
+  for (const list of grouped.values()) {
+    list.sort((a, b) => {
+      const msgDiff = compareChatIds(a.messageId, b.messageId);
+      if (msgDiff !== 0) return msgDiff;
+      if (a.swipeId !== b.swipeId) return a.swipeId - b.swipeId;
+      if (a.paragraph !== b.paragraph) return a.paragraph - b.paragraph;
+      if (a.imageIndex !== b.imageIndex) return a.imageIndex - b.imageIndex;
+      return a.imageUrl.localeCompare(b.imageUrl);
+    });
+  }
+
+  let chats: InlayGalleryChat[] = [];
+  if (sanitizedSelectedChatId) {
+    const images = grouped.get(sanitizedSelectedChatId) || [];
+    chats = [await enrichChatInfo(sanitizedSelectedChatId, images, undefined, userId)];
+  } else {
+    chats = await Promise.all(
+      targetChatIds.map((cid) => enrichChatInfo(cid, grouped.get(cid) || [], undefined, userId))
+    );
+  }
+
+  return {
+    page: requestedPage,
+    totalChats,
+    totalPages,
+    chatIds: sortedChatIds,
+    chats,
+    records: chats
+  };
 }

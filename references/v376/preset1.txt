@@ -1,0 +1,7 @@
+[Positive]
+1.35::henriiku (ahemaru)::,1.3::artist:teshima nari::,1.25::artist:noco (adamas)::,
+1.2::artist:bekotarou::,
+1.2::artist:kat (bu-kunn)::, 0.7::mika_pikazo::, 0.7::artist:qiandaiyiyu::, 0.4::artist:mx2j::, 0.4::artist:hwansang::, 0.6::artist:kim hyung tae::, year 2025,
+
+[Negative]
+censored, logo, watermark, too many watermarks, blank page, reference inset, username, signature, artist collaboration, variant set, large variant set, 4koma, toon (style), oekaki, chibi, turnaround, film grain, monochrome, dithering, halftone, screentones, dated, old, 1990s (style), mutation, deformed, distorted, disfigured, artistic error, distorted anatomy, anatomical structure error, asymmetrical face, unnatural hair, bad eyes, cloudy eyes, pointy ears, bad fingers, bad proportions, bad limb, bad hands, extra hands, bad hand structure, extra digits, fewer digits, bad legs, extra legs, amputee, distorted composition, bad perspective, ::multiple views::, negative space, animation error, chromatic aberration, disorganized colors, scan artifacts, jpeg artifacts, vertical lines, vertical banding, worst quality, bad quality, lowres, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, poor, displeasing, very displeasing, bad illustration, bad portrait, big head, monochrome, abstract, dissolving, earrings, character doll, colored inner hair, emoji

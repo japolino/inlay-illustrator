@@ -146,10 +146,13 @@ export function renderPromptWithCurrentAffixes(
   const preset = activePromptPreset(config);
   const clean = (value: string): string => format === "ordered" ? normalizePromptSection(value) : value.trim();
   const separator = config.promptSyntax === "comfyui" ? (format === "ordered" ? ",\n\n" : ",\n") : ", ";
+  const sanitizedCore = config.promptSyntax === "nai"
+    ? corePrompt.replace(/,\s*\r?\n+\s*/g, ", ").replace(/\r?\n+/g, ", ").trim()
+    : corePrompt.trim();
   return [
     clean(preset?.positivePrefix || ""),
     clean(config.customPositivePrefix),
-    corePrompt.trim(),
+    sanitizedCore,
     clean(config.customPositiveSuffix)
   ].filter(Boolean).join(separator);
 }

@@ -1,4 +1,14 @@
-import { effectiveGenerationConfig, type Config, type PerspectiveMode } from "../shared/config.js";
+import { isNovelAiConnection, normalizeConfig, v376OptionsFromConfig, type Config, type PerspectiveMode } from "../shared/config.js";
+import { parseV376ForMessage } from "./v376/parser.js";
+import type { V376ChatMessage } from "./v376/context.js";
+import { compileV376Shot } from "./v376/prompt.js";
+import {
+  createV376PendingRecord,
+  mapV376ShotsToJobs,
+  prepareV376FreshReroll
+} from "./v376/runtime.js";
+import type { V376Shot } from "./v376/types.js";
+import { updateV376Memory } from "./v376/memory.js";
 import { applyAvatarVisualSupplements, ensureAvatarVisualSupplement } from "./avatar-vision.js";
 import {
   buildLorebookContextSnapshot,
@@ -752,7 +762,13 @@ async function commitProgressiveSlot(
       imageId,
       imageUrl,
       status,
-      error: reason.slice(0, 500)
+      error: reason.slice(0, 500),
+      rawShot: job.rawShot ?? slot.rawShot,
+      scenePlace: job.scenePlace ?? slot.scenePlace,
+      nativeCharacters: job.nativeCharacters ?? slot.nativeCharacters,
+      quote: job.quote ?? slot.quote,
+      panels: job.panels ?? slot.panels,
+      v376Options: job.v376Options ?? slot.v376Options
     } : slot)
   }));
   return completed;
@@ -765,13 +781,16 @@ async function finalizeProgressiveGeneration(
   cancelled: boolean,
   plan?: IllustrationPlan | null
 ): Promise<GeneratedRecord> {
-  const visualState = successfulParserParagraphs.length > 0 && !plan
+  const isV376 = Boolean((parsed as unknown as Record<string, unknown>)?.scenes);
+  const visualState = !isV376 && successfulParserParagraphs.length > 0 && !plan
     ? buildPreviousVisualState(parsed, successfulParserParagraphs)
     : null;
   const validatedVisualState = plan
     ? ContinuityStateSchema.parse(plan.terminalContinuity)
     : visualState ? ContinuityStateSchema.parse(visualState) : null;
-  const terminalParagraphMatch = String(parsed.terminalState?.paragraph ?? "").match(/\d+/);
+  const terminalParagraphMatch = !isV376 && parsed.terminalState?.paragraph
+    ? String(parsed.terminalState.paragraph).match(/\d+/)
+    : null;
   const continuityParagraph = terminalParagraphMatch
     ? Number(terminalParagraphMatch[0])
     : Math.max(1, ...successfulParserParagraphs);
@@ -786,7 +805,7 @@ async function finalizeProgressiveGeneration(
       generationStatus: cancelled ? "cancelled" : hasSuccess ? "completed" : "failed"
     };
   }, (state) => {
-    if (successfulParserParagraphs.length > 0) {
+    if (!isV376 && successfulParserParagraphs.length > 0) {
       if (validatedVisualState) {
         const terminal = {
           ...validatedVisualState,
@@ -912,6 +931,41 @@ async function prepareAndDispatchImages(
   }, options);
 }
 
+async function prepareAndDispatchV376Jobs(
+  chatId: string,
+  jobs: PreparedImageJob[],
+  config: Config,
+  userId?: string,
+  preparedImageConnection?: Promise<ImageConnection | null>,
+  options: {
+    signal?: AbortSignal;
+    stopWaitingOnAbort?: boolean;
+    onSettled?: (job: PreparedImageJob, result: PromiseSettledResult<ImageGenerationResult>) => Promise<void> | void;
+  } = {}
+): Promise<PreparedImageStage> {
+  throwIfAborted(options.signal);
+  const imageConnection = await (preparedImageConnection || resolveImageConnection(config, userId));
+  const eagerComfyQueueing = imageConnection?.provider === "comfyui";
+  return prepareAndDispatchImageJobs(
+    jobs,
+    eagerComfyQueueing,
+    (job) => job,
+    (job) => {
+      return spindle.imageGen.generate({
+        connection_id: config.imageConnectionId || undefined,
+        prompt: job.prompt,
+        negativePrompt: job.negative || undefined,
+        model: config.imageModel || undefined,
+        parameters: job.parameters,
+        owner_chat_id: chatId,
+        userId,
+        includeDataUrl: false
+      });
+    },
+    options
+  );
+}
+
 type ImageReplacement = {
   prompt: string;
   negative: string;
@@ -927,6 +981,12 @@ type ImageReplacement = {
   parameters: Record<string, unknown>;
   imageId: string;
   imageUrl: string;
+  rawShot?: unknown;
+  scenePlace?: string;
+  nativeCharacters?: Array<{ prompt: string; negative?: string; name?: string }>;
+  quote?: string;
+  panels?: string;
+  v376Options?: unknown;
 };
 
 async function commitImageReplacement(
@@ -964,11 +1024,23 @@ async function commitImageReplacement(
         imageId: replacement.imageId,
         imageUrl: replacement.imageUrl,
         status: "completed",
-        error: ""
+        error: "",
+        rawShot: replacement.rawShot !== undefined ? replacement.rawShot : slot.rawShot,
+        scenePlace: replacement.scenePlace !== undefined ? replacement.scenePlace : slot.scenePlace,
+        nativeCharacters: replacement.nativeCharacters !== undefined ? replacement.nativeCharacters : slot.nativeCharacters,
+        quote: replacement.quote !== undefined ? replacement.quote : slot.quote,
+        panels: replacement.panels !== undefined ? replacement.panels : slot.panels,
+        v376Options: replacement.v376Options !== undefined ? replacement.v376Options : slot.v376Options
       } : slot)
     } satisfies GeneratedRecord;
     current.generated[located.key] = await storeGeneratedRecord(request.chatId, located.key, committedRecord, userId);
-    if (parsedForMemory) updateCharacterMemory(current, parsedForMemory);
+    if (parsedForMemory) {
+      if ((parsedForMemory as unknown as Record<string, unknown>).scenes && Array.isArray((parsedForMemory as unknown as Record<string, unknown>).scenes)) {
+        updateV376Memory(current, (parsedForMemory as unknown as { scenes: never }).scenes, v376OptionsFromConfig(config));
+      } else {
+        updateCharacterMemory(current, parsedForMemory);
+      }
+    }
     rebuildGeneratedImageIndex(current);
   });
   const record = committedRecord as GeneratedRecord | null;
@@ -1008,10 +1080,13 @@ export async function rerunStoredImage(
   const releaseAction = tryAcquireRuntimeLock("image-action", actionKey);
   if (!releaseAction) throw new Error("That image is already being regenerated.");
   try {
-    const config = preparedConfig || await getConfig(userId);
+    const rawConfig = preparedConfig || await getConfig(userId);
     const initialState = await getState(request.chatId, userId);
     const located = await locateStoredGeneratedImage(initialState, request, userId);
-    const imageConnection = await resolveImageConnection(config, userId);
+    const imageConnection = await resolveImageConnection(rawConfig, userId);
+    const config = isNovelAiConnection(imageConnection)
+      ? { ...rawConfig, promptSyntax: "nai" as const }
+      : rawConfig;
     let replacement: ImageReplacement;
     let selectionForMemory: ParsedPayload | undefined;
 
@@ -1019,24 +1094,18 @@ export async function rerunStoredImage(
     if (!originalSlot) throw new Error("The selected image slot no longer exists.");
 
     if (!rerunSidecar) {
-      const corePrompt = originalSlot.corePrompt || "";
-      const promptFormat = originalSlot.promptFormat
-        || (config.promptStyle === "default" ? "legacy" : "ordered");
-      const prompt = corePrompt
-        ? renderPromptWithCurrentAffixes(corePrompt, promptFormat, config)
-        : originalSlot.prompt || "";
-      if (!prompt) throw new Error("The selected image has no stored prompt to reroll.");
-      const shotNegative = originalSlot.shotNegative || "";
-      const negative = renderNegativeWithCurrentSelection(shotNegative, promptFormat, config);
-      const originalParameters = originalSlot.imageParameters
-        || await buildImageParameters(config, imageConnection, prompt, negative);
-      const parameters = rerollImageParameters(originalParameters, imageConnection, prompt, negative);
+      const reroll = await prepareV376FreshReroll({
+        slot: originalSlot,
+        config,
+        imageConnection,
+        state: initialState
+      });
       const result = await spindle.imageGen.generate({
         connection_id: config.imageConnectionId || undefined,
-        prompt,
-        negativePrompt: negative || undefined,
+        prompt: reroll.prompt,
+        negativePrompt: reroll.negative || undefined,
         model: config.imageModel || undefined,
-        parameters,
+        parameters: reroll.parameters,
         owner_chat_id: request.chatId,
         userId,
         includeDataUrl: false
@@ -1045,20 +1114,26 @@ export async function rerunStoredImage(
       const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
       if (!imageUrl) throw new Error("The image provider returned no replacement image.");
       replacement = {
-        prompt,
-        negative,
-        corePrompt,
-        shotNegative,
-        promptFormat,
+        prompt: reroll.prompt,
+        negative: reroll.negative,
+        corePrompt: reroll.corePrompt || originalSlot.corePrompt || "",
+        shotNegative: originalSlot.shotNegative || "",
+        promptFormat: originalSlot.promptFormat || "legacy",
         paragraph: originalSlot.paragraph || 1,
         perspectiveMode: originalSlot.perspectiveMode || "dynamic",
         perspectiveSource: originalSlot.perspectiveSource || "manual",
         creativeConcept: originalSlot.creativeConcept || null,
         creativeCandidates: originalSlot.creativeConceptCandidates || [],
         creativeConceptHistory: originalSlot.creativeConceptHistory || [],
-        parameters,
+        parameters: reroll.parameters,
         imageId,
-        imageUrl
+        imageUrl,
+        rawShot: originalSlot.rawShot,
+        scenePlace: originalSlot.scenePlace,
+        nativeCharacters: reroll.nativeCharacters ?? originalSlot.nativeCharacters,
+        quote: originalSlot.quote,
+        panels: originalSlot.panels,
+        v376Options: originalSlot.v376Options
       };
     } else {
       const messages = await spindle.chat.getMessages(request.chatId) as ChatMessage[];
@@ -1071,72 +1146,75 @@ export async function rerunStoredImage(
       if (!isCover && !sourceParagraph) throw new Error("The source paragraph for this image no longer exists.");
       if (isCover && allParagraphs.length === 0) throw new Error("The source message has no usable paragraphs for a cover prompt.");
       const singleConfig: Config = {
-        ...effectiveGenerationConfig(config),
+        ...normalizeConfig(config),
         coverImageEnabled: isCover,
         minImages: 1,
         maxImages: 1,
-        preprocessingEnabled: false,
-        previousVisualStateEnabled: false
       };
       const paragraphs: PreparedParagraph[] = isCover
         ? allParagraphs
         : [{ ...(sourceParagraph as PreparedParagraph), parserIndex: 1 }];
-      const storedCandidates = rebaseCreativeConcepts(
-        originalSlot.creativeConceptCandidates || [],
-        1
-      );
-      const previousConceptHistory = originalSlot.creativeConceptHistory || [];
-      const selection = await parseAndSelectPrompts({
+
+      const { payload, compiled } = await parseV376ForMessage({
         chatId: request.chatId,
         messageId: located.record.messageId,
-        messages,
+        messages: messages as unknown as V376ChatMessage[],
         paragraphs,
         state: initialState,
         config: singleConfig,
-        creativeCandidates: storedCandidates,
-        usedCreativeConceptIds: previousConceptHistory,
-        userId,
-        fastBootstrapCharacter: singleConfig.fastMode && singleConfig.includeCharacterInfo
-          && Object.keys(initialState.characterAppearance).length === 0
+        userId
       });
-      selectionForMemory = selection.parsed;
-      const entry = isCover
-        ? selection.selected.find((candidate) => candidate.placement === "cover")
-        : selection.selected.find((candidate) => candidate.placement !== "cover");
-      if (!entry) throw new Error(isCover
-        ? "The sidecar returned no usable replacement cover prompt."
-        : "The sidecar returned no usable replacement prompt.");
-      const stage = await prepareAndDispatchImages(
-        request.chatId,
-        [entry],
-        singleConfig,
+
+      if (!compiled || compiled.length === 0) {
+        throw new Error("The sidecar returned no usable replacement prompt.");
+      }
+
+      const jobs = await mapV376ShotsToJobs({
+        compiledShots: [compiled[0]!],
+        paragraphs: isCover ? allParagraphs : [sourceParagraph!],
+        config,
+        imageConnection,
+        v376Options: v376OptionsFromConfig(config)
+      });
+      const job = jobs[0]!;
+
+      const result = await spindle.imageGen.generate({
+        connection_id: config.imageConnectionId || undefined,
+        prompt: job.prompt,
+        negativePrompt: job.negative || undefined,
+        model: config.imageModel || undefined,
+        parameters: job.parameters,
+        owner_chat_id: request.chatId,
         userId,
-        Promise.resolve(imageConnection)
-      );
-      const job = stage.jobs[0];
-      const result = stage.results[0];
-      if (!job || !result) throw new Error("The replacement image was not generated.");
+        includeDataUrl: false
+      });
       const imageId = result.imageId || "";
       const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
       if (!imageUrl) throw new Error("The image provider returned no replacement image.");
+
       replacement = {
         prompt: job.prompt,
         negative: job.negative,
-        corePrompt: job.corePrompt || renderPrompt(entry.corePrompt, singleConfig.promptSyntax),
-        shotNegative: job.shotNegative || entry.shotNegative,
-        promptFormat: job.promptFormat || entry.corePrompt.format || "ordered",
-        paragraph: originalParagraph,
-        perspectiveMode: entry.perspectiveMode,
-        perspectiveSource: entry.perspectiveSource,
-        creativeConcept: entry.creativeConcept || null,
-        creativeCandidates: entry.creativeCandidates || storedCandidates,
-        creativeConceptHistory: entry.creativeConcept
-          ? [...new Set([...previousConceptHistory, entry.creativeConcept.id])]
-          : previousConceptHistory,
+        corePrompt: job.corePrompt || job.prompt,
+        shotNegative: job.shotNegative || job.negative || "",
+        promptFormat: job.promptFormat ?? "legacy",
+        paragraph: isCover ? (originalSlot.paragraph || 1) : (sourceParagraph?.originalIndex ?? originalSlot.paragraph),
+        perspectiveMode: originalSlot.perspectiveMode || job.perspectiveMode || "dynamic",
+        perspectiveSource: originalSlot.perspectiveSource || job.perspectiveSource || "manual",
+        creativeConcept: null,
+        creativeCandidates: [],
+        creativeConceptHistory: [],
         parameters: job.parameters,
         imageId,
-        imageUrl
+        imageUrl,
+        rawShot: job.rawShot,
+        scenePlace: job.scenePlace,
+        nativeCharacters: job.nativeCharacters,
+        quote: job.quote,
+        panels: job.panels,
+        v376Options: job.v376Options
       };
+      selectionForMemory = payload as unknown as ParsedPayload;
     }
 
     const committed = await commitImageReplacement(
@@ -1153,6 +1231,176 @@ export async function rerunStoredImage(
       imageId: replacement.imageId || null
     });
     return committed;
+  } finally {
+    releaseAction();
+  }
+}
+
+export async function rerunAllStoredImages(
+  chatId: string,
+  messageId: string,
+  swipeId: number | undefined,
+  userId?: string,
+  preparedConfig?: Config,
+  rerunSidecar = false
+): Promise<{ record: GeneratedRecord; failedCount: number }> {
+  if (!chatId || !messageId) throw new Error("Open the image's chat first.");
+  const runningKey = JSON.stringify([userId ?? null, chatId, messageId, swipeId ?? null, rerunSidecar ? "all-sidecar" : "all-reroll"]);
+  const releaseAction = tryAcquireRuntimeLock("image-action", runningKey);
+  if (!releaseAction) throw new Error(rerunSidecar ? "Sidecar rerun is already running for that message." : "Full reroll is already running for that message.");
+  try {
+    const config = preparedConfig || await getConfig(userId);
+    const key = `${chatId}:${messageId}:${swipeId ?? 0}`;
+    const state = await getState(chatId, userId);
+    const storedRef = state.generated[key];
+    if (!storedRef) throw new Error("No generated record found for that message.");
+    const record = await loadGeneratedRecord(storedRef, userId, true);
+    if (!record) throw new Error("No generated record found for that message.");
+
+    const imageConnection = await resolveImageConnection(config, userId);
+    const effectiveConfig = isNovelAiConnection(imageConnection)
+      ? { ...config, promptSyntax: "nai" as const }
+      : config;
+
+    let failedCount = 0;
+    const messages = await spindle.chat.getMessages(chatId) as ChatMessage[];
+    const target = messages.find((m) => m.id === messageId);
+    if (!target) throw new Error("The source assistant message no longer exists.");
+
+    const updatedSlots = [...record.slots];
+
+    if (!rerunSidecar) {
+      for (let i = 0; i < updatedSlots.length; i++) {
+        const slot = updatedSlots[i];
+        if (!slot) continue;
+        try {
+          const reroll = await prepareV376FreshReroll({
+            slot,
+            config: effectiveConfig,
+            imageConnection,
+            state
+          });
+          const result = await spindle.imageGen.generate({
+            connection_id: effectiveConfig.imageConnectionId || undefined,
+            prompt: reroll.prompt,
+            negativePrompt: reroll.negative || undefined,
+            model: effectiveConfig.imageModel || undefined,
+            parameters: reroll.parameters,
+            owner_chat_id: chatId,
+            userId,
+            includeDataUrl: false
+          });
+          const imageId = result.imageId || "";
+          const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+          if (!imageUrl) { failedCount++; continue; }
+          updatedSlots[i] = {
+            ...slot,
+            prompt: reroll.prompt,
+            negativePrompt: reroll.negative,
+            corePrompt: reroll.corePrompt || slot.corePrompt,
+            imageParameters: reroll.parameters,
+            nativeCharacters: reroll.nativeCharacters ?? slot.nativeCharacters,
+            imageId,
+            imageUrl,
+            status: "completed"
+          };
+        } catch {
+          failedCount++;
+        }
+      }
+    } else {
+      // Bulk sidecar rerun: parse message ONCE, update source memory ONCE, and map shots
+      const allParagraphs = prepareParagraphs(String(target.content || ""), effectiveConfig);
+      if (allParagraphs.length === 0) throw new Error("The source message has no usable paragraphs.");
+      const { payload, compiled } = await parseV376ForMessage({
+        chatId,
+        messageId,
+        messages: messages as unknown as V376ChatMessage[],
+        paragraphs: allParagraphs,
+        state,
+        config: effectiveConfig,
+        userId
+      });
+      const jobs = await mapV376ShotsToJobs({
+        compiledShots: compiled,
+        paragraphs: allParagraphs,
+        config: effectiveConfig,
+        imageConnection,
+        v376Options: v376OptionsFromConfig(effectiveConfig)
+      });
+      for (let i = 0; i < updatedSlots.length; i++) {
+        const slot = updatedSlots[i];
+        if (!slot) continue;
+        const job = jobs.find((j) => j.paragraph === slot.paragraph) || jobs[i];
+        if (!job) { failedCount++; continue; }
+        try {
+          const result = await spindle.imageGen.generate({
+            connection_id: effectiveConfig.imageConnectionId || undefined,
+            prompt: job.prompt,
+            negativePrompt: job.negative || undefined,
+            model: effectiveConfig.imageModel || undefined,
+            parameters: job.parameters,
+            owner_chat_id: chatId,
+            userId,
+            includeDataUrl: false
+          });
+          const imageId = result.imageId || "";
+          const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
+          if (!imageUrl) { failedCount++; continue; }
+          updatedSlots[i] = {
+            ...slot,
+            prompt: job.prompt,
+            negativePrompt: job.negative,
+            corePrompt: job.corePrompt,
+            shotNegative: job.shotNegative,
+            imageParameters: job.parameters,
+            rawShot: job.rawShot,
+            scenePlace: job.scenePlace,
+            nativeCharacters: job.nativeCharacters,
+            quote: job.quote,
+            panels: job.panels,
+            v376Options: job.v376Options,
+            imageId,
+            imageUrl,
+            status: "completed"
+          };
+        } catch {
+          failedCount++;
+        }
+      }
+    }
+
+    const updatedRecord: GeneratedRecord = {
+      ...record,
+      slots: updatedSlots,
+      generationStatus: "completed"
+    };
+
+    // Stale swipe guard: check that assistant message has not been swiped/edited/removed
+    const latestMessages = await spindle.chat.getMessages(chatId) as ChatMessage[];
+    const currentTarget = latestMessages.find((m) => m.id === messageId);
+    if (!currentTarget || currentSwipe(currentTarget) !== (swipeId ?? 0) || currentTarget.role !== "assistant" || isOwnMessage(currentTarget)) {
+      logStage(effectiveConfig, "bulk_rerun_stale_swipe_skipped", { chatId, messageId, swipeId });
+      return { record: updatedRecord, failedCount };
+    }
+
+    await updateState(chatId, userId, async (currentState) => {
+      currentState.generated[key] = await storeGeneratedRecord(chatId, key, updatedRecord, userId);
+      rebuildGeneratedImageIndex(currentState);
+    });
+
+    const updatedContent = renderInlaidMessage(String(currentTarget.content || ""), updatedRecord, effectiveConfig);
+    await spindle.chat.updateMessage(chatId, messageId, {
+      content: updatedContent,
+      metadata: {
+        ...(currentTarget.metadata || {}),
+        inlayIllustratorImageIds: updatedRecord.slots.map((s) => s.imageId).filter(Boolean),
+        inlayIllustratorParagraphs: updatedRecord.slots.map((s) => s.paragraph),
+        inlayIllustratorGeneratedAt: updatedRecord.createdAt
+      }
+    });
+
+    return { record: updatedRecord, failedCount };
   } finally {
     releaseAction();
   }
@@ -1179,20 +1427,8 @@ async function runGenerationForMessage(
   try {
     throwIfAborted(signal);
     const storedConfig = prepared?.config || await getConfig(userId);
-    config = effectiveGenerationConfig(storedConfig);
+    config = normalizeConfig(storedConfig);
     logStage(config, "request_received", { chatId, messageId, contentLength: content.length, enabled: config.enabled, autoGenerate: config.autoGenerate });
-    if (config.fastMode) {
-      logStage(config, "fast_mode_applied", {
-        configuredMinImages: storedConfig.minImages,
-        configuredMaxImages: storedConfig.maxImages,
-        effectiveMinImages: config.minImages,
-        effectiveMaxImages: config.maxImages,
-        recentContextSkipped: true,
-        preprocessingSkipped: true,
-        retriesDisabled: true,
-        lorebookSkipped: storedConfig.includeLorebook && !config.includeLorebook
-      });
-    }
     if (!config.enabled) {
       logStage(config, "request_skipped", { reason: "disabled", chatId, messageId });
       return;
@@ -1207,8 +1443,11 @@ async function runGenerationForMessage(
     const parserConnectionPromise = resolveParserConnection(config, userId);
     void imageConnectionPromise.catch(() => undefined);
     void parserConnectionPromise.catch(() => undefined);
-    const [messages, state] = await Promise.all([messagesPromise, statePromise]);
+    const [messages, state, imageConnection] = await Promise.all([messagesPromise, statePromise, imageConnectionPromise]);
     throwIfAborted(signal);
+    if (isNovelAiConnection(imageConnection)) {
+      config = { ...config, promptSyntax: "nai" as const };
+    }
     const target = messages.find((message) => message.id === messageId);
     logStage(config, "target_checked", {
       found: Boolean(target),
@@ -1261,38 +1500,74 @@ async function runGenerationForMessage(
     if (paragraphs.length === 0) throw new Error("No usable paragraphs found for image parsing.");
 
     reportGenerationProgress(operation, "parsing", userId);
-    const selection = await parseAndSelectPrompts({
+    const { payload, compiled } = await parseV376ForMessage({
       chatId,
       messageId,
-      messages,
+      messages: messages as unknown as V376ChatMessage[],
       paragraphs,
       state,
       config,
       userId,
-      signal,
-      preparedParserConnection: parserConnectionPromise,
-      fastBootstrapCharacter: config.fastMode && config.includeCharacterInfo
-        && Object.keys(state.characterAppearance).length === 0
+      signal
     });
-    parsed = selection.parsed;
-    canonicalPlan = selection.plan || null;
-    const selected = selection.selected;
-    logParsedSelection(parsed, selected, paragraphs, config);
-    operation.total = selected.length;
+    parsed = payload as unknown as ParsedPayload;
+    const v376Options = v376OptionsFromConfig(config);
+
+    if (config.coverImageEnabled) {
+      const rawPayloadObj = payload as unknown as Record<string, unknown>;
+      if (rawPayloadObj.cover && typeof rawPayloadObj.cover === "object") {
+        const coverData = rawPayloadObj.cover as Record<string, unknown>;
+        const formatCamera = (cam: unknown): string => {
+          if (typeof cam === "string") return cam;
+          if (cam && typeof cam === "object") {
+            return Object.values(cam).flatMap((v) => Array.isArray(v) ? v : [v]).filter((v) => typeof v === "string" && v).join(", ");
+          }
+          return "";
+        };
+        const coverShot: V376Shot = {
+          paragraph: paragraphs[0]?.parserIndex ?? 1,
+          camera: formatCamera(coverData.camera),
+          scene: typeof coverData.situation === "string"
+            ? coverData.situation
+            : typeof coverData.scene === "string"
+              ? coverData.scene
+              : undefined,
+          characters: Array.isArray(coverData.characters) ? coverData.characters as V376Shot["characters"] : [],
+          placement: "cover"
+        };
+        const compiledCover = compileV376Shot(coverShot, v376Options);
+        (compiledCover as unknown as Record<string, unknown>).placementType = "cover";
+        compiled.unshift(compiledCover);
+      }
+    }
+
+    const selectedJobs = await mapV376ShotsToJobs({
+      compiledShots: compiled,
+      paragraphs,
+      config,
+      imageConnection,
+      v376Options
+    });
+    operation.total = selectedJobs.length;
     reportGenerationProgress(operation, "preparing", userId);
-    const imageConnection = await imageConnectionPromise;
-    const initialImageParameters = {
-      ...(imageConnection?.default_parameters || {}),
-      ...config.imageParameters
-    };
+    const pendingRecord = createV376PendingRecord({
+      chatId,
+      messageId,
+      swipeId,
+      sourceFingerprint: sourceContentFingerprint(sourceContent),
+      operationId: operation.id,
+      jobs: selectedJobs,
+      payload,
+      options: v376Options
+    });
     initializationPromise = initializeProgressiveGeneration(
       context,
-      pendingGenerationRecord(context, selected, parsed, selection.plan, initialImageParameters)
+      pendingRecord
     ).then(() => { initialized = true; });
     void initializationPromise.catch(() => undefined);
     reportGenerationProgress(operation, "generating", userId);
 
-    await prepareAndDispatchImages(chatId, selected, config, userId, Promise.resolve(imageConnection), {
+    await prepareAndDispatchV376Jobs(chatId, selectedJobs, config, userId, Promise.resolve(imageConnection), {
       signal,
       stopWaitingOnAbort: true,
       onSettled: async (job, settlement) => {
@@ -1304,7 +1579,7 @@ async function runGenerationForMessage(
             successfulParserParagraphs.push(job.parserParagraph as number);
           }
           operation.completed += 1;
-          const illustrationNumber = selected[0]?.placement === "cover" ? job.index : job.index + 1;
+          const illustrationNumber = selectedJobs[0]?.placement === "cover" ? job.index : job.index + 1;
           const subject = job.placement === "cover" ? "Cover image" : `Illustration ${illustrationNumber}`;
           reportGenerationProgress(operation, "generating", userId, completed
             ? `${subject} ready.`

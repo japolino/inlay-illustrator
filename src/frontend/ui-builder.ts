@@ -287,4 +287,85 @@ export class UiBuilder {
     summary.textContent = text;
     parent.append(summary);
   }
+
+  addCustomSelect(
+    parent: HTMLElement,
+    label: string,
+    value: string,
+    options: SelectOption[],
+    hint = "",
+    onChange?: (value: string) => void
+  ): void {
+    const target = this.row(parent, label, hint);
+    this.track(this.ctx.components.mountSelect(target, {
+      value,
+      options,
+      placeholder: `Select ${label.toLowerCase()}`,
+      emptyMessage: "No options available",
+      ariaLabel: label,
+      className: "inlay-select-control",
+      triggerClassName: "inlay-select-trigger",
+      portal: true,
+      onChange: (next) => {
+        onChange?.(next);
+      }
+    }));
+  }
+
+  addCustomNumber(
+    parent: HTMLElement,
+    label: string,
+    value: number,
+    min: number,
+    max: number,
+    hint = "",
+    onChange?: (value: number | null) => void,
+    integer = true
+  ): void {
+    const target = this.row(parent, label, hint);
+    this.track(this.ctx.components.mountNumericInput(target, {
+      value,
+      min,
+      max,
+      integer,
+      ariaLabel: label,
+      onChange: (next) => {
+        onChange?.(next);
+      }
+    }));
+  }
+
+  addCustomSwitch(
+    parent: HTMLElement,
+    label: string,
+    checked: boolean,
+    hint = "",
+    onChange?: (checked: boolean) => void
+  ): void {
+    const target = this.row(parent, label, hint);
+    this.track(this.ctx.components.mountSwitch(target, {
+      checked,
+      ariaLabel: label,
+      onChange: (next) => {
+        onChange?.(next);
+      }
+    }));
+  }
+
+  addCustomText(
+    parent: HTMLElement,
+    label: string,
+    value: string,
+    hint = "",
+    onChange?: (value: string) => void
+  ): void {
+    const target = this.row(parent, label, hint);
+    this.track(this.ctx.components.mountTextInput(target, {
+      value,
+      ariaLabel: label,
+      onChange: (next) => {
+        onChange?.(next);
+      }
+    }));
+  }
 }

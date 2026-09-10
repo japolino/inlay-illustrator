@@ -7,6 +7,16 @@ export type ParserConnection = {
   model: string;
 };
 
+export type ImageConnection = {
+  id: string;
+  name: string;
+  provider: string;
+  model: string;
+  is_default?: boolean;
+  default_parameters?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+};
+
 export type MountedComponent = {
   destroy(): void;
 };
@@ -14,6 +24,7 @@ export type MountedComponent = {
 export type FrontendSnapshot = {
   config: Config;
   parserConnections: ParserConnection[];
+  imageConnections: ImageConnection[];
   characterAppearance: Record<string, string>;
   status: string;
 };
@@ -24,6 +35,7 @@ export type FrontendActions = {
   requestState(): void;
   sendToBackend(payload: unknown): void;
   updateStatus(status: string): void;
+  openGallery?(): void;
 };
 
 export type BackendMessage = {
@@ -31,6 +43,7 @@ export type BackendMessage = {
   chatId?: string;
   config?: Config;
   parserConnections?: ParserConnection[];
+  imageConnections?: ImageConnection[];
   characterAppearance?: Record<string, string>;
   avatarVisualSupplements?: Record<string, unknown>;
   avatarVisionAttempts?: Record<string, unknown>;

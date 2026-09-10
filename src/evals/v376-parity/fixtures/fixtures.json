@@ -1,0 +1,505 @@
+{
+  "version": "v3.7.6",
+  "description": "Frozen benign source parity fixtures derived from decompiled V3.7.6 trigger_lua_0.lua and module.json",
+  "prompt_assembly": [
+    {
+      "id": "mode0_illustration_pipe_nai",
+      "mode": 0,
+      "separator": "pipe",
+      "syntax": "nai",
+      "inputs": {
+        "setup": "close-up, bedroom, sunlight",
+        "charPos": "girl, long blonde hair, blue eyes, white shirt, smile",
+        "charNeg": "",
+        "customPos": "",
+        "customNeg": ""
+      },
+      "expected_positive": "1.35::henriiku \\(ahemaru\\)::,1.3::artist:teshima nari::,1.25::artist:noco \\(adamas\\)::,\n1.2::artist:bekotarou::,\n1.2::artist:kat \\(bu-kunn\\)::, 0.7::mika_pikazo::, 0.7::artist:qiandaiyiyu::, 0.4::artist:mx2j::, 0.4::artist:hwansang::, 0.6::artist:kim hyung tae::, year 2025,  close-up, bedroom, sunlight | girl, long blonde hair, blue eyes, white shirt, smile",
+      "expected_negative": "censored, logo, watermark, too many watermarks, blank page, reference inset, username, signature, artist collaboration, variant set, large variant set, 4koma, toon (style), oekaki, chibi, turnaround, film grain, monochrome, dithering, halftone, screentones, dated, old, 1990s (style), mutation, deformed, distorted, disfigured, artistic error, distorted anatomy, anatomical structure error, asymmetrical face, unnatural hair, bad eyes, cloudy eyes, pointy ears, bad fingers, bad proportions, bad limb, bad hands, extra hands, bad hand structure, extra digits, fewer digits, bad legs, extra legs, amputee, distorted composition, bad perspective, ::multiple views::, negative space, animation error, chromatic aberration, disorganized colors, scan artifacts, jpeg artifacts, vertical lines, vertical banding, worst quality, bad quality, lowres, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, poor, displeasing, very displeasing, bad illustration, bad portrait, big head, monochrome, abstract, dissolving, earrings, character doll, colored inner hair, emoji",
+      "notes": "Positive template has {prompt} appended with ', '. Setup and char joined with ' | '. Parentheses escaped for NAI."
+    },
+    {
+      "id": "mode0_illustration_newline_comfyui",
+      "mode": 0,
+      "separator": "newline",
+      "syntax": "comfyui",
+      "inputs": {
+        "setup": "close-up, bedroom, sunlight",
+        "charPos": "girl, long blonde hair, blue eyes, white shirt, smile",
+        "charNeg": "",
+        "customPos": "",
+        "customNeg": ""
+      },
+      "expected_positive": "1.35::henriiku (ahemaru)::,1.3::artist:teshima nari::,1.25::artist:noco (adamas)::,\n1.2::artist:bekotarou::,\n1.2::artist:kat (bu-kunn)::, 0.7::mika_pikazo::, 0.7::artist:qiandaiyiyu::, 0.4::artist:mx2j::, 0.4::artist:hwansang::, 0.6::artist:kim hyung tae::, year 2025,\n\nclose-up, bedroom, sunlight,\n\ngirl, long blonde hair, blue eyes, white shirt, smile",
+      "expected_negative": "censored, logo, watermark, too many watermarks, blank page, reference inset, username, signature, artist collaboration, variant set, large variant set, 4koma, toon (style), oekaki, chibi, turnaround, film grain, monochrome, dithering, halftone, screentones, dated, old, 1990s (style), mutation, deformed, distorted, disfigured, artistic error, distorted anatomy, anatomical structure error, asymmetrical face, unnatural hair, bad eyes, cloudy eyes, pointy ears, bad fingers, bad proportions, bad limb, bad hands, extra hands, bad hand structure, extra digits, fewer digits, bad legs, extra legs, amputee, distorted composition, bad perspective, ::multiple views::, negative space, animation error, chromatic aberration, disorganized colors, scan artifacts, jpeg artifacts, vertical lines, vertical banding, worst quality, bad quality, lowres, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, poor, displeasing, very displeasing, bad illustration, bad portrait, big head, monochrome, abstract, dissolving, earrings, character doll, colored inner hair, emoji",
+      "notes": "Positive template has {prompt} appended with '\\n\\n'. Setup and char joined with ',\\n\\n'. Parentheses unescaped for ComfyUI."
+    },
+    {
+      "id": "mode1_asset_pipe_nai",
+      "mode": 1,
+      "separator": "pipe",
+      "syntax": "nai",
+      "inputs": {
+        "setup": "close-up, bedroom, sunlight",
+        "charPos": "girl, long blonde hair, blue eyes, white shirt, smile",
+        "charNeg": "",
+        "customPos": "",
+        "customNeg": ""
+      },
+      "expected_positive": "portrait, cowboy shot, white background, simple background, 1.35::henriiku \\(ahemaru\\)::,1.3::artist:teshima nari::,1.25::artist:noco \\(adamas\\)::,\n1.2::artist:bekotarou::,\n1.2::artist:kat \\(bu-kunn\\)::, 0.7::mika_pikazo::, 0.7::artist:qiandaiyiyu::, 0.4::artist:mx2j::, 0.4::artist:hwansang::, 0.6::artist:kim hyung tae::, year 2025,  close-up, bedroom, sunlight | girl, long blonde hair, blue eyes, white shirt, smile, looking at viewer",
+      "expected_negative": "censored, logo, watermark, too many watermarks, blank page, reference inset, username, signature, artist collaboration, variant set, large variant set, 4koma, toon (style), oekaki, chibi, turnaround, film grain, monochrome, dithering, halftone, screentones, dated, old, 1990s (style), mutation, deformed, distorted, disfigured, artistic error, distorted anatomy, anatomical structure error, asymmetrical face, unnatural hair, bad eyes, cloudy eyes, pointy ears, bad fingers, bad proportions, bad limb, bad hands, extra hands, bad hand structure, extra digits, fewer digits, bad legs, extra legs, amputee, distorted composition, bad perspective, ::multiple views::, negative space, animation error, chromatic aberration, disorganized colors, scan artifacts, jpeg artifacts, vertical lines, vertical banding, worst quality, bad quality, lowres, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, poor, displeasing, very displeasing, bad illustration, bad portrait, big head, monochrome, abstract, dissolving, earrings, character doll, colored inner hair, emoji",
+      "notes": "Asset mode prepends white background/portrait/cowboy shot and appends looking at viewer."
+    },
+    {
+      "id": "mode2_comic_pipe_nai",
+      "mode": 2,
+      "separator": "pipe",
+      "syntax": "nai",
+      "inputs": {
+        "place": "exterior, city street",
+        "placement": "panel 1 on top, panel 2 on bottom",
+        "charPos": "girl, blue hair, sailor uniform | boy, black hair, blazer",
+        "panels": [
+          {
+            "number": "1",
+            "composition": "wide angle",
+            "text": "speech bubble saying \"look!\""
+          },
+          {
+            "number": "2",
+            "composition": "close-up",
+            "text": "scream"
+          }
+        ]
+      },
+      "expected_positive": "1.35::henriiku \\(ahemaru\\)::,1.3::artist:teshima nari::,1.25::artist:noco \\(adamas\\)::,\n1.2::artist:bekotarou::,\n1.2::artist:kat \\(bu-kunn\\)::, 0.7::mika_pikazo::, 0.7::artist:qiandaiyiyu::, 0.4::artist:mx2j::, 0.4::artist:hwansang::, 0.6::artist:kim hyung tae::, year 2025,  exterior, city street, panel 1 on top, panel 2 on bottom, comic panel, manga panel, ultra complexity | girl, blue hair, sailor uniform | boy, black hair, blazer | panel 1, wide angle, speech bubble saying \"look!\" | panel 2, close-up, scream",
+      "expected_negative": "censored, logo, watermark, too many watermarks, blank page, reference inset, username, signature, artist collaboration, variant set, large variant set, 4koma, toon (style), oekaki, chibi, turnaround, film grain, monochrome, dithering, halftone, screentones, dated, old, 1990s (style), mutation, deformed, distorted, disfigured, artistic error, distorted anatomy, anatomical structure error, asymmetrical face, unnatural hair, bad eyes, cloudy eyes, pointy ears, bad fingers, bad proportions, bad limb, bad hands, extra hands, bad hand structure, extra digits, fewer digits, bad legs, extra legs, amputee, distorted composition, bad perspective, ::multiple views::, negative space, animation error, chromatic aberration, disorganized colors, scan artifacts, jpeg artifacts, vertical lines, vertical banding, worst quality, bad quality, lowres, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, poor, displeasing, very displeasing, bad illustration, bad portrait, big head, monochrome, abstract, dissolving, earrings, character doll, colored inner hair, emoji",
+      "notes": "Comic mode appends manga tags to setup, merges panel definitions with ' | ' into character/panel chain."
+    },
+    {
+      "id": "nai_v4_native_characters_aligned",
+      "mode": 0,
+      "separator": "native",
+      "syntax": "nai",
+      "inputs": {
+        "setup": "street, daytime",
+        "charPos": "girl, blonde hair, blue eyes, sundress | boy, black hair, brown eyes, t-shirt",
+        "charNeg": "hat | glasses",
+        "charNames": "Alice|Bob"
+      },
+      "expected_base_positive": "1.35::henriiku \\(ahemaru\\)::,1.3::artist:teshima nari::,1.25::artist:noco \\(adamas\\)::,\n1.2::artist:bekotarou::,\n1.2::artist:kat \\(bu-kunn\\)::, 0.7::mika_pikazo::, 0.7::artist:qiandaiyiyu::, 0.4::artist:mx2j::, 0.4::artist:hwansang::, 0.6::artist:kim hyung tae::, year 2025,  street, daytime",
+      "expected_base_negative": "censored, logo, watermark, too many watermarks, blank page, reference inset, username, signature, artist collaboration, variant set, large variant set, 4koma, toon (style), oekaki, chibi, turnaround, film grain, monochrome, dithering, halftone, screentones, dated, old, 1990s (style), mutation, deformed, distorted, disfigured, artistic error, distorted anatomy, anatomical structure error, asymmetrical face, unnatural hair, bad eyes, cloudy eyes, pointy ears, bad fingers, bad proportions, bad limb, bad hands, extra hands, bad hand structure, extra digits, fewer digits, bad legs, extra legs, amputee, distorted composition, bad perspective, ::multiple views::, negative space, animation error, chromatic aberration, disorganized colors, scan artifacts, jpeg artifacts, vertical lines, vertical banding, worst quality, bad quality, lowres, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, poor, displeasing, very displeasing, bad illustration, bad portrait, big head, monochrome, abstract, dissolving, earrings, character doll, colored inner hair, emoji",
+      "expected_characters": [
+        {
+          "prompt": "girl, blonde hair, blue eyes, sundress",
+          "negative": "hat"
+        },
+        {
+          "prompt": "boy, black hair, brown eyes, t-shirt",
+          "negative": "glasses"
+        }
+      ],
+      "notes": "NAI v4 native path passes empty strings for charPos to applyPreset, and emits characters array with 1:1 aligned negatives."
+    },
+    {
+      "id": "nai_v4_native_characters_mismatched_negatives",
+      "mode": 0,
+      "separator": "native",
+      "syntax": "nai",
+      "inputs": {
+        "setup": "street, daytime",
+        "charPos": "girl, blonde hair, blue eyes, sundress | boy, black hair, brown eyes, t-shirt",
+        "charNeg": "hat",
+        "charNames": "Alice|Bob"
+      },
+      "expected_base_positive": "1.35::henriiku \\(ahemaru\\)::,1.3::artist:teshima nari::,1.25::artist:noco \\(adamas\\)::,\n1.2::artist:bekotarou::,\n1.2::artist:kat \\(bu-kunn\\)::, 0.7::mika_pikazo::, 0.7::artist:qiandaiyiyu::, 0.4::artist:mx2j::, 0.4::artist:hwansang::, 0.6::artist:kim hyung tae::, year 2025,  street, daytime",
+      "expected_base_negative": "censored, logo, watermark, too many watermarks, blank page, reference inset, username, signature, artist collaboration, variant set, large variant set, 4koma, toon (style), oekaki, chibi, turnaround, film grain, monochrome, dithering, halftone, screentones, dated, old, 1990s (style), mutation, deformed, distorted, disfigured, artistic error, distorted anatomy, anatomical structure error, asymmetrical face, unnatural hair, bad eyes, cloudy eyes, pointy ears, bad fingers, bad proportions, bad limb, bad hands, extra hands, bad hand structure, extra digits, fewer digits, bad legs, extra legs, amputee, distorted composition, bad perspective, ::multiple views::, negative space, animation error, chromatic aberration, disorganized colors, scan artifacts, jpeg artifacts, vertical lines, vertical banding, worst quality, bad quality, lowres, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, poor, displeasing, very displeasing, bad illustration, bad portrait, big head, monochrome, abstract, dissolving, earrings, character doll, colored inner hair, emoji, hat",
+      "expected_characters": [
+        {
+          "prompt": "girl, blonde hair, blue eyes, sundress",
+          "negative": ""
+        },
+        {
+          "prompt": "boy, black hair, brown eyes, t-shirt",
+          "negative": ""
+        }
+      ],
+      "notes": "When character negatives cannot align 1:1 with positive characters, Lua concatenates all negatives into baseNeg and keeps character negatives empty."
+    }
+  ],
+  "tag_filtering_and_replacements": [
+    {
+      "id": "standalone_gender_filtering",
+      "input": "girl, short blue hair, blue eyes, tall boy, 1girl, 1boy, school uniform",
+      "expected": "short blue hair, blue eyes, tall boy, school uniform",
+      "rule": "filterStandaloneGenderTags strips exact matches of boy, girl, 1boy, 1girl but preserves composites like 'tall boy'"
+    },
+    {
+      "id": "keyword_replacements_prompt_extraction",
+      "input_setup": "wide shot, from front, young girl sitting",
+      "input_char": "young girl, blonde hair, blue eyes | young boy, brown hair",
+      "expected_setup": "wide shot, straight-on, loli sitting",
+      "expected_char": "loli, blonde hair, blue eyes | shota, brown hair",
+      "rule": "extractLLMPrompts replaces 'from front'->'straight-on', 'young girl'->'loli', 'young boy'->'shota'"
+    },
+    {
+      "id": "scoped_deduplication",
+      "input": "solo, blonde hair, blue eyes, solo, smiling | solo, blue eyes, red dress, solo",
+      "expected": "solo, blonde hair, blue eyes, smiling | solo, blue eyes, red dress",
+      "rule": "removeDuplicateTags deduplicates case-insensitively within each pipe segment; cross-character repetition is preserved"
+    }
+  ],
+  "memory_lifecycle": [
+    {
+      "id": "char_appearance_turn_transition",
+      "initial_map": {
+        "Alice": {
+          "tags": "blonde hair, blue eyes",
+          "negTags": "",
+          "depth": 5
+        },
+        "Bob": {
+          "tags": "black hair",
+          "negTags": "",
+          "depth": 1
+        },
+        "Charlie": {
+          "tags": "red hair",
+          "negTags": "",
+          "depth": 0
+        }
+      },
+      "current_scene_characters": [
+        {
+          "name": "Bob",
+          "identity": "black hair, t-shirt"
+        }
+      ],
+      "max_depth": 5,
+      "expected_updated_map": {
+        "Alice": {
+          "tags": "blonde hair, blue eyes",
+          "negTags": "",
+          "depth": 4
+        },
+        "Bob": {
+          "tags": "black hair, t-shirt",
+          "negTags": "",
+          "depth": 5
+        },
+        "Charlie": {
+          "tags": "red hair",
+          "negTags": "",
+          "depth": 0
+        }
+      },
+      "expected_reference_prompt": "## Previous Character Tags\nCharacters: Alice, Bob, Charlie\nUse these as a baseline for returning characters (including their base attire). The current messge always wins over this reference. But stick to the given names, don't change or modify already given names or terms of address.\n- Alice: blonde hair, blue eyes\n- Bob: black hair, t-shirt",
+      "serialization_example": "{\"Alice\":\"blonde hair, blue eyes||||||4\",\"Bob\":\"black hair, t-shirt||||||5\",\"Charlie\":\"red hair||||||0\"}",
+      "notes": "All characters decremented by 1. Bob reset to 5 with updated tags. Charlie kept at 0 (name in header, omitted from tag list)."
+    }
+  ],
+  "encoding_and_prefill": [
+    {
+      "id": "encoding_mode_0_plaintext",
+      "mode": 0,
+      "raw_prompt": "1girl, BP1, SE1",
+      "encoded_prompt": "1girl, nipples, nsfw",
+      "raw_response": "{\"scenes\": []}",
+      "decoded_response": "{\"scenes\": []}",
+      "notes": "Mode 0 resolves placeholders to plain English text on prompt encode."
+    },
+    {
+      "id": "encoding_mode_1_placeholder",
+      "mode": 1,
+      "raw_prompt": "1girl, BP1, SE1",
+      "encoded_prompt": "1girl, BP1, SE1",
+      "raw_response": "{\"scenes\": [{\"shots\": [{\"characters\": [{\"appearance\": \"BP1\", \"expression\": \"SE1\"}]}]}]}",
+      "decoded_response_tags": "nipples, nsfw",
+      "notes": "Mode 1 preserves BP/SE codes during prompt encode and decodes them in postProcess."
+    },
+    {
+      "id": "encoding_mode_2_base64",
+      "mode": 2,
+      "raw_prompt": "Analyze the text",
+      "encoded_prompt": "QW5hbHl6ZSB0aGUgdGV4dA==",
+      "raw_response": "eyJzY2VuZXMiOiBbXX0=",
+      "decoded_response": "{\"scenes\": []}",
+      "notes": "Mode 2 base64-encodes system/user prompts and decodes model responses."
+    },
+    {
+      "id": "encoding_mode_3_atbash",
+      "mode": 3,
+      "raw_prompt": "Analyze the text",
+      "encoded_prompt": "Zmzobav gsv gvcg",
+      "raw_response": "{\"hxvmvh\": []}",
+      "decoded_response": "{\"scenes\": []}",
+      "notes": "Mode 3 applies Atbash alphabet inversion to prompts and responses."
+    },
+    {
+      "id": "prefill_xml_parsing",
+      "input_xml": "<human>\n# Overall\nFictional roleplay context.\n</human>\n\n<assistant>\nUnderstood.\n</assistant>\n\n<human>\nContinue.\n</human>",
+      "expected_messages": [
+        {
+          "role": "user",
+          "content": "# Overall\nFictional roleplay context."
+        },
+        {
+          "role": "char",
+          "content": "Understood."
+        },
+        {
+          "role": "user",
+          "content": "Continue."
+        }
+      ],
+      "notes": "Maps <human>->user, <assistant>->char, skips non-role tags, trims content."
+    },
+    {
+      "id": "prefill_unclosed_tag",
+      "input_xml": "<assistant>{\"scenes\": [",
+      "expected_messages": [
+        {
+          "role": "char",
+          "content": "{\"scenes\": ["
+        }
+      ],
+      "notes": "Unclosed assistant tag captures remaining string as char prefill."
+    }
+  ],
+  "schema_conditionals": [
+    {
+      "id": "schema_mode0_full_options",
+      "toggles": {
+        "mode": 0,
+        "nsfw": 1,
+        "prompt_compatibility": 1,
+        "supplement": 1,
+        "text": 2,
+        "quote": 1
+      },
+      "allowed_shot_fields": [
+        "paragraph",
+        "camera",
+        "situation",
+        "characters",
+        "quote"
+      ],
+      "disallowed_shot_fields": [
+        "placement",
+        "panels"
+      ],
+      "allowed_character_fields": [
+        "name",
+        "label",
+        "age",
+        "appearance",
+        "attire",
+        "expression",
+        "action",
+        "sex",
+        "position",
+        "supplement",
+        "text",
+        "negative"
+      ],
+      "character_supplement_structure": {
+        "pose": "string",
+        "action": "string"
+      },
+      "notes": "Full Mode 0 schema includes sex, position, supplement, character text, and quote."
+    },
+    {
+      "id": "schema_mode0_minimal_options",
+      "toggles": {
+        "mode": 0,
+        "nsfw": 0,
+        "prompt_compatibility": 0,
+        "supplement": 0,
+        "text": 0,
+        "quote": 0
+      },
+      "allowed_shot_fields": [
+        "paragraph",
+        "camera",
+        "situation",
+        "characters"
+      ],
+      "disallowed_shot_fields": [
+        "placement",
+        "panels",
+        "quote"
+      ],
+      "allowed_character_fields": [
+        "name",
+        "label",
+        "age",
+        "appearance",
+        "attire",
+        "expression",
+        "action",
+        "negative"
+      ],
+      "disallowed_character_fields": [
+        "sex",
+        "position",
+        "supplement",
+        "text"
+      ],
+      "notes": "Minimal Mode 0 schema omits sex, position, supplement, text, quote, placement, and panels."
+    },
+    {
+      "id": "schema_mode2_comic",
+      "toggles": {
+        "mode": 2,
+        "nsfw": 1,
+        "supplement": 1,
+        "text": 2,
+        "quote": 0
+      },
+      "allowed_shot_fields": [
+        "paragraph",
+        "placement",
+        "panels",
+        "characters"
+      ],
+      "disallowed_shot_fields": [
+        "camera",
+        "situation",
+        "quote"
+      ],
+      "allowed_panel_fields": [
+        "number",
+        "composition",
+        "text"
+      ],
+      "allowed_character_fields": [
+        "name",
+        "label",
+        "age",
+        "appearance",
+        "attire",
+        "negative"
+      ],
+      "disallowed_character_fields": [
+        "expression",
+        "action",
+        "sex",
+        "position",
+        "supplement",
+        "text"
+      ],
+      "notes": "Mode 2 moves visual action/composition into panels and placement; character object only keeps identity fingerprint."
+    }
+  ],
+  "character_normalization": [
+    {
+      "id": "canon_char_original_on_supplement_on",
+      "input": {
+        "name": "Asuka Langley Soryu (Evangelion)",
+        "label": "girl",
+        "age": "",
+        "appearance": "girl, long orange hair, blue eyes",
+        "body": "slender",
+        "attire": "plugsuit",
+        "expression": "smirk",
+        "action": "arms crossed",
+        "supplement": {
+          "pose": "standing proud",
+          "action": "glaring"
+        }
+      },
+      "options": {
+        "original": true,
+        "supplement": true
+      },
+      "expected": {
+        "name": "Asuka Langley Soryu (Evangelion)",
+        "positive": "girl, Asuka Langley Soryu (Evangelion), long orange hair, blue eyes, slender, plugsuit, smirk, arms crossed, standing proud, glaring",
+        "negative": "",
+        "identity": "girl, long orange hair, blue eyes, slender, plugsuit"
+      },
+      "notes": "Name inserted after label; gender stripped from appearance; supplement appended."
+    },
+    {
+      "id": "canon_char_original_off_supplement_on",
+      "input": {
+        "name": "Asuka Langley Soryu (Evangelion)",
+        "label": "girl",
+        "age": "",
+        "appearance": "girl, long orange hair, blue eyes",
+        "body": "slender",
+        "attire": "plugsuit",
+        "expression": "smirk",
+        "action": "arms crossed",
+        "supplement": {
+          "pose": "standing proud",
+          "action": "glaring"
+        }
+      },
+      "options": {
+        "original": false,
+        "supplement": true
+      },
+      "expected": {
+        "name": "Asuka Langley Soryu (Evangelion)",
+        "positive": "girl, long orange hair, blue eyes, slender, plugsuit, smirk, arms crossed, standing proud, glaring",
+        "negative": "",
+        "identity": "girl, long orange hair, blue eyes, slender, plugsuit"
+      },
+      "notes": "Name omitted from prompt when original reference is off."
+    },
+    {
+      "id": "oc_char_original_on_supplement_on",
+      "input": {
+        "name": "Evelyn (oc)",
+        "label": "girl",
+        "age": "",
+        "appearance": "girl, silver hair, purple eyes",
+        "body": "petite",
+        "attire": "black cloak",
+        "expression": "serious",
+        "action": "holding wand",
+        "supplement": "casting a spell"
+      },
+      "options": {
+        "original": true,
+        "supplement": true
+      },
+      "expected": {
+        "name": "Evelyn (oc)",
+        "positive": "girl, silver hair, purple eyes, petite, black cloak, serious, holding wand, casting a spell",
+        "negative": "",
+        "identity": "girl, silver hair, purple eyes, petite, black cloak"
+      },
+      "notes": "(oc) in name prevents insertion of name into prompt even if original reference is on."
+    },
+    {
+      "id": "canon_char_original_on_supplement_off",
+      "input": {
+        "name": "Asuka Langley Soryu (Evangelion)",
+        "label": "girl",
+        "age": "",
+        "appearance": "girl, long orange hair, blue eyes",
+        "body": "slender",
+        "attire": "plugsuit",
+        "expression": "smirk",
+        "action": "arms crossed",
+        "supplement": {
+          "pose": "standing proud",
+          "action": "glaring"
+        }
+      },
+      "options": {
+        "original": true,
+        "supplement": false
+      },
+      "expected": {
+        "name": "Asuka Langley Soryu (Evangelion)",
+        "positive": "girl, Asuka Langley Soryu (Evangelion), long orange hair, blue eyes, slender, plugsuit, smirk, arms crossed",
+        "negative": "",
+        "identity": "girl, long orange hair, blue eyes, slender, plugsuit"
+      },
+      "notes": "Supplement ignored when toggle_Card.Supplement is off."
+    }
+  ]
+}

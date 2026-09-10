@@ -3,10 +3,13 @@ import { DEFAULT_CONFIG, type Config } from "./shared/config.js";
 import { respondToAvatarImageRequest } from "./frontend/avatar-image.js";
 import { fetchImageGenerationSettings, fetchParserConnections } from "./frontend/api.js";
 import { CLEANUP_KEY, DRAWER_TAB_OPTIONS, PANEL_STYLES } from "./frontend/constants.js";
-import type { BackendMessage, FrontendActions, ParserConnection } from "./frontend/contracts.js";
+import type { BackendMessage, FrontendActions, ImageConnection, ParserConnection } from "./frontend/contracts.js";
 import { routeBackendMessage } from "./frontend/message-router.js";
 import { SettingsRenderer } from "./frontend/renderer.js";
 import { installInlayLightbox } from "./frontend/lightbox.js";
+import { installInlayFab } from "./frontend/fab.js";
+import { createInlayGallery } from "./frontend/gallery.js";
+import { cleanupModalStyles } from "./frontend/modal.js";
 
 export function setup(ctx: SpindleFrontendContext) {
   const previousCleanup = (globalThis as Record<string, unknown>)[CLEANUP_KEY];
@@ -14,6 +17,7 @@ export function setup(ctx: SpindleFrontendContext) {
 
   let config: Config = { ...DEFAULT_CONFIG };
   let parserConnections: ParserConnection[] = [];
+  let imageConnections: ImageConnection[] = [];
   let characterAppearance: Record<string, string> = {};
   let status = "Loading...";
   let triedImageGenerationParserDefault = false;
@@ -23,6 +27,7 @@ export function setup(ctx: SpindleFrontendContext) {
   const tab = ctx.ui.registerDrawerTab(DRAWER_TAB_OPTIONS);
   const removeStyle = ctx.dom.addStyle(PANEL_STYLES);
   const removeLightbox = installInlayLightbox(ctx);
+  const gallery = createInlayGallery(ctx);
 
   function activeChatId(): string {
     try {
@@ -31,6 +36,17 @@ export function setup(ctx: SpindleFrontendContext) {
       return "";
     }
   }
+
+  const removeFab = installInlayFab(ctx, {
+    getCorner: () => config.fabCorner,
+    openGallery: () => gallery.open(activeChatId()),
+    openSettings: () => {
+      const maybeDrawer = ctx as unknown as { openDrawer?: () => void };
+      if (typeof maybeDrawer.openDrawer === "function") {
+        maybeDrawer.openDrawer();
+      }
+    }
+  });
 
   function requestState(chatId = activeChatId()): void {
     ctx.sendToBackend({ type: "get_state", chatId });
@@ -51,12 +67,13 @@ export function setup(ctx: SpindleFrontendContext) {
     patchConfig,
     requestState: () => requestState(),
     sendToBackend: (payload) => ctx.sendToBackend(payload),
-    updateStatus
+    updateStatus,
+    openGallery: () => gallery.open(activeChatId())
   };
   renderer = new SettingsRenderer(
     ctx,
     tab.root,
-    () => ({ config, parserConnections, characterAppearance, status }),
+    () => ({ config, parserConnections, imageConnections, characterAppearance, status }),
     actions
   );
 
@@ -109,6 +126,7 @@ export function setup(ctx: SpindleFrontendContext) {
       replaceState: (next) => {
         config = next.config;
         parserConnections = next.parserConnections;
+        imageConnections = next.imageConnections;
         characterAppearance = next.characterAppearance;
         status = next.status;
         renderer?.render();
@@ -142,6 +160,9 @@ export function setup(ctx: SpindleFrontendContext) {
     unsub();
     unsubDrawer();
     unsubChatSwitched();
+    removeFab();
+    gallery.destroy();
+    cleanupModalStyles();
     renderer?.destroy();
     removeLightbox();
     removeStyle();

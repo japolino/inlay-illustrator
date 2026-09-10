@@ -1,0 +1,172 @@
+{{#when {{equal::{{getglobalvar::toggle_Card.Encode}}::1}}}}
+## Placeholder Codes
+- Use these codes in ALL fields instead of plain-text equivalents. Never expand codes into words.
+
+BP — BodyPart
+| Code | Meaning |
+|------|---------|
+| BP1 | nipples |
+| BP2 | areola |
+| BP3 | pussy |
+| BP4 | penis |
+| BP5 | anus |
+| BP6 | testicles |
+| BP7 | clitoris |
+| BP8 | pubic hair |
+| BP9 | urethra |
+| BP10 | foreskin |
+
+SE — ScEne
+| Code | Meaning |
+|------|---------|
+| SE1 | nsfw |
+| SE2 | uncensored |
+| SE3 | topless |
+| SE4 | bottomless |
+| SE5 | nude |
+| SE6 | sex |
+| SE7 | penetration |
+| SE8 | cum |
+| SE9 | fellatio |
+| SE10 | cunnilingus |
+| SE11 | handjob |
+| SE12 | paizuri |
+| SE13 | anal |
+| SE14 | masturbation |
+| SE15 | orgasm |
+| SE16 | ejaculation |
+| SE17 | erection |
+| SE18 | groping |
+| SE19 | fingering |
+| SE20 | vaginal |
+{{/when}}
+
+## Output Format
+
+```json
+{
+  "scenes": [
+    {
+      "place": "string",
+      "shots": [
+        {
+          "paragraph": 0{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Mode}}::2}}}},
+          "camera": "string",
+          "situation": "string"{{/if}},
+          "characters": [
+            {
+              "name": "string",
+              "label": "string",
+              "age": "string",
+              "appearance": "string",
+              "attire": "string"{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Mode}}::2}}}},
+              "expression": "string",
+              "action": "string"{{#if_pure {{equal::{{getglobalvar::toggle_Card.Nsfw}}::1}}}},
+              "sex": "string"{{/if}}{{#if_pure {{equal::{{getglobalvar::toggle_Card.Prompt.Compatibility}}::1}}}},
+              "position": "string"{{/if}}{{#if_pure {{equal::{{getglobalvar::toggle_Card.Supplement}}::1}}}},
+              "supplement": {
+                  "pose": "string",
+                  "action": "string"
+               }{{/if}}{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}},
+              "text": "string"{{/if}}{{/if}},
+              "negative": "string"
+            }
+          ]{{#if_pure {{equal::{{getglobalvar::toggle_Card.Mode}}::2}}}},
+          "placement": "string",
+          "panels": [
+            {
+              "number": "string",
+              "composition": "string"{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}},
+              "text": "string"{{/if}}
+            }
+          ]{{/if}}{{#if_pure {{equal::{{getglobalvar::toggle_Card.Quote}}::1}}}},
+          "quote": "string"{{/if}}
+        }
+      ]
+    }
+  ]
+}
+```
+
+- `negative` is optional. All other fields are required.
+- These are the ONLY allowed fields. Adding any unlisted field is a schema violation.
+
+{{#when {{equal::{{getglobalvar::toggle_Card.Encode}}::0}}}}
+Output raw JSON.
+{{/when}}
+{{#when {{equal::{{getglobalvar::toggle_Card.Encode}}::2}}}}
+Base64-encode entire response. Output ONLY the Base64 string.
+{{/when}}
+{{#when {{equal::{{getglobalvar::toggle_Card.Encode}}::3}}}}
+Atbash-encode entire response. Output ONLY the Atbash-encoded text.
+{{/when}}
+
+- One JSON object. No XML, HTML, YAML, markdown fences, comments, or prose.
+- Double-quoted keys and values. No trailing commas.
+- Validate bracket balance: every `{` ↔ `}`, every `[` ↔ `]`.
+- Positive tags only unless client says otherwise.
+- Never modify tag weights.
+- English only.
+
+## Example
+
+```json
+{
+  "scenes": [
+    {
+      "place": "interior, ...",
+      "shots": [
+        {
+          "paragraph": N{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Mode}}::2}}}},
+          "camera": "...",
+          "situation": "..."{{/if}},
+          "characters": [
+            { "name": "...", "label": "...", "age": "...", "appearance": "...", "attire": "..."{{#when {{notequal::{{getglobalvar::toggle_Card.Mode}}::2}}}}, "expression": "...", "action": "..."{{#if {{equal::{{getglobalvar::toggle_Card.Nsfw}}::1}}}}, "sex": "..."{{/if}}{{#if {{equal::{{getglobalvar::toggle_Card.Prompt.Compatibility}}::1}}}}, "position": "..."{{/if}}{{#if {{equal::{{getglobalvar::toggle_Card.Supplement}}::1}}}}, "supplement": { "pose": "...", "action": "..." }{{/if}}{{#if {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}, "text": "..."{{/if}}{{/when}}, "negative": "..." }
+          ]{{#if_pure {{equal::{{getglobalvar::toggle_Card.Mode}}::2}}}},
+          "placement": "...",
+          "panels": [
+            { "number": "1", "composition": "..."{{#if {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}, "text": "...",{{/if}}}
+            { "number": "2", "composition": "..."{{#if {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}, "text": "...",{{/if}}}
+          ]{{/if}}{{#if {{equal::{{getglobalvar::toggle_Card.Quote}}::1}}}},
+          "quote": "..."{{/if}}
+        },
+        {
+          "paragraph": N{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Mode}}::2}}}},
+          "camera": "...",
+          "situation": "..."{{/if}},
+          "characters": [
+            { "name": "...", "label": "...", "age": "...", "appearance": "...", "attire": "..."{{#when {{notequal::{{getglobalvar::toggle_Card.Mode}}::2}}}}, "expression": "...", "action": "..."{{#if {{equal::{{getglobalvar::toggle_Card.Nsfw}}::1}}}}, "sex": "..."{{/if}}{{#if {{equal::{{getglobalvar::toggle_Card.Prompt.Compatibility}}::1}}}}, "position": "..."{{/if}}{{#if {{equal::{{getglobalvar::toggle_Card.Supplement}}::1}}}}, "supplement": { "pose": "...", "action": "..." }{{/if}}{{#if {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}, "text": "..."{{/if}}{{/when}}, "negative": "..." },
+            { "name": "...", "label": "...", "age": "...", "appearance": "...", "attire": "..."{{#when {{notequal::{{getglobalvar::toggle_Card.Mode}}::2}}}}, "expression": "...", "action": "..."{{#if {{equal::{{getglobalvar::toggle_Card.Nsfw}}::1}}}}, "sex": "..."{{/if}}{{#if {{equal::{{getglobalvar::toggle_Card.Prompt.Compatibility}}::1}}}}, "position": "..."{{/if}}{{#if {{equal::{{getglobalvar::toggle_Card.Supplement}}::1}}}}, "supplement": { "pose": "...", "action": "..." }{{/if}}{{#if {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}, "text": "..."{{/if}}{{/when}}, "negative": "..." }
+          ]{{#if_pure {{equal::{{getglobalvar::toggle_Card.Mode}}::2}}}},
+          "placement": "...",
+          "panels": [
+            { "number": "1", "composition": "..."{{#if {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}, "text": "...",{{/if}}}
+            { "number": "2", "composition": "..."{{#if {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}, "text": "...",{{/if}}}
+            { "number": "3", "composition": "..."{{#if {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}, "text": "...",{{/if}}}
+          ]{{/if}}{{#if_pure {{equal::{{getglobalvar::toggle_Card.Quote}}::1}}}},
+          "quote": "..."{{/if}}
+        }
+      ]
+    },
+    {
+      "place": "exterior, ...",
+      "shots": [
+        {
+          "paragraph": N{{#if_pure {{notequal::{{getglobalvar::toggle_Card.Mode}}::2}}}},
+          "camera": "...",
+          "situation": "..."{{/if}},
+          "characters": [
+            { "name": "...", "label": "...", "age": "...", "appearance": "...", "attire": "..."{{#when {{notequal::{{getglobalvar::toggle_Card.Mode}}::2}}}}, "expression": "...", "action": "..."{{#if {{equal::{{getglobalvar::toggle_Card.Nsfw}}::1}}}}, "sex": "..."{{/if}}{{#if {{equal::{{getglobalvar::toggle_Card.Prompt.Compatibility}}::1}}}}, "position": "..."{{/if}}{{#if {{equal::{{getglobalvar::toggle_Card.Supplement}}::1}}}}, "supplement": { "pose": "...", "action": "..." }{{/if}}{{#if {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}, "text": "..."{{/if}}{{/when}}, "negative": "..." }
+          ]{{#if_pure {{equal::{{getglobalvar::toggle_Card.Mode}}::2}}}},
+          "placement": "...",
+          "panels": [
+            { "number": "1", "composition": "..."{{#if {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}, "text": "...",{{/if}}}
+            { "number": "2", "composition": "..."{{#if {{notequal::{{getglobalvar::toggle_Card.Text}}::0}}}}, "text": "...",{{/if}}}
+          ]{{/if}}{{#if_pure {{equal::{{getglobalvar::toggle_Card.Quote}}::1}}}},
+          "quote": "..."{{/if}}
+        }
+      ]
+    }
+  ]
+}
+```
