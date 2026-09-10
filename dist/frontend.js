@@ -308,6 +308,8 @@ function normalizeConfig(raw) {
     previousVisualStateEnabled: raw.previousVisualStateEnabled !== false,
     userInstructionsEnabled: raw.userInstructionsEnabled !== false,
     customParserInstructions: cleanString(raw.customParserInstructions),
+    originalReference: raw.originalReference === true,
+    originalCreationName: cleanString(raw.originalCreationName),
     ignoredTags: cleanString(raw.ignoredTags),
     customPositivePrefix: cleanString(raw.customPositivePrefix),
     customPositiveSuffix: cleanString(raw.customPositiveSuffix),
@@ -1114,9 +1116,10 @@ function renderPromptSection({ ui, config, imageConnections, actions, rerender }
     { value: "japanese", label: "Japanese (일본어)" },
     { value: "chinese", label: "Chinese (중국어)" }
   ], "Add speech bubbles, sound effects, or dialogue text inside the image (V3.7.6 Card.Text).");
-  ui.addSwitch(section, "originalReference", "Source reference", "Include the configured creation name as an explicit source-style reference.", rerender);
-  if (config.originalReference)
-    ui.addText(section, "originalCreationName", "Creation name");
+  ui.addSwitch(section, "originalReference", "Source reference (canon names)", "Ask the model to name characters as `full name (creation name)` and to use their canon names. Characters that are not canon become `name (oc)`. Source toggle_Card.Original.", rerender);
+  if (config.originalReference) {
+    ui.addText(section, "originalCreationName", "Creation name", "Creation or series name appended to canon character names, for example `Arknights`. Source toggle_Card.Original.Text.");
+  }
   ui.addSwitch(section, "supplement", "Natural language supplement", "Add natural language pose and action descriptions to character tags (V3.7.6 Card.Supplement).");
   ui.addSwitch(section, "quoteEnabled", "Extract image dialogue quotes", "Include a short per-shot dialogue quote in parser output (V3.7.6 Card.Quote). Quotes are saved as metadata; existing image display is unchanged.");
   ui.addSubtitle(section, "Prompt presets");

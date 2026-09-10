@@ -464,6 +464,10 @@ export function normalizeConfig(raw: RawConfig): Config {
     previousVisualStateEnabled: raw.previousVisualStateEnabled !== false,
     userInstructionsEnabled: raw.userInstructionsEnabled !== false,
     customParserInstructions: cleanString(raw.customParserInstructions),
+    // The creation name is injected verbatim into the instruction, so surrounding
+    // whitespace must never reach the prompt.
+    originalReference: raw.originalReference === true,
+    originalCreationName: cleanString(raw.originalCreationName),
     ignoredTags: cleanString(raw.ignoredTags),
     customPositivePrefix: cleanString(raw.customPositivePrefix),
     customPositiveSuffix: cleanString(raw.customPositiveSuffix),

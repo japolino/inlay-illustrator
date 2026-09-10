@@ -78,6 +78,17 @@ describe("shared configuration", () => {
     });
   });
 
+
+  test("trims the source creation name and defaults the toggle to false", () => {
+    const enabled = normalizeConfig({ originalReference: true, originalCreationName: "  Arknights  " } as never);
+    expect(enabled.originalReference).toBe(true);
+    expect(enabled.originalCreationName).toBe("Arknights");
+
+    const disabled = normalizeConfig({ originalCreationName: "Arknights" } as never);
+    expect(disabled.originalReference).toBe(false);
+    expect(disabled.originalCreationName).toBe("Arknights");
+  });
+
   test("clamps and orders persisted numeric ranges", () => {
     const config = normalizeConfig({
       minImages: 99,

@@ -71,11 +71,18 @@ export function renderPromptSection({ ui, config, imageConnections, actions, rer
   ui.addSwitch(
     section,
     "originalReference",
-    "Source reference",
-    "Include the configured creation name as an explicit source-style reference.",
+    "Source reference (canon names)",
+    "Ask the model to name characters as `full name (creation name)` and to use their canon names. Characters that are not canon become `name (oc)`. Source toggle_Card.Original.",
     rerender
   );
-  if (config.originalReference) ui.addText(section, "originalCreationName", "Creation name");
+  if (config.originalReference) {
+    ui.addText(
+      section,
+      "originalCreationName",
+      "Creation name",
+      "Creation or series name appended to canon character names, for example `Arknights`. Source toggle_Card.Original.Text."
+    );
+  }
 
   ui.addSwitch(
     section,

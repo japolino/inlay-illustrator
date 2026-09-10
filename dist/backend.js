@@ -5754,6 +5754,8 @@ function normalizeConfig(raw) {
     previousVisualStateEnabled: raw.previousVisualStateEnabled !== false,
     userInstructionsEnabled: raw.userInstructionsEnabled !== false,
     customParserInstructions: cleanString2(raw.customParserInstructions),
+    originalReference: raw.originalReference === true,
+    originalCreationName: cleanString2(raw.originalCreationName),
     ignoredTags: cleanString2(raw.ignoredTags),
     customPositivePrefix: cleanString2(raw.customPositivePrefix),
     customPositiveSuffix: cleanString2(raw.customPositiveSuffix),
