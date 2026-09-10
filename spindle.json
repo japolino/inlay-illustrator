@@ -7,6 +7,7 @@
   "homepage": "https://github.com/japolino/inlay-illustrator",
   "description": "Persistent character image generation with manual Asset Mode, adaptive Creative, Static, or Dynamic perspectives, inline prompt details, and Anima/ComfyUI output.",
   "permissions": ["generation", "interceptor", "image_gen", "chat_mutation", "images", "chats", "characters", "personas", "world_books"],
+  "requested_capabilities": ["base64_decode"],
   "entry_backend": "dist/backend.js",
   "entry_frontend": "dist/frontend.js",
   "minimum_lumiverse_version": "0.1.0"
