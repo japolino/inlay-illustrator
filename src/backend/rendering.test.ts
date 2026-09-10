@@ -261,7 +261,9 @@ describe("inlay rendering", () => {
     expect(pending).toContain(expectedFrame);
     expect(completed).toContain(expectedFrame);
     expect(completed).toContain('width="768" height="1024"');
-    expect(completed).toContain("width:100%;height:100%;object-fit:cover");
+    expect(completed).toContain("width:100%;height:100%;aspect-ratio:3/4;object-fit:cover");
+    // The frame clips any overflow so the image can never paint over the text.
+    expect(completed).toContain("aspect-ratio:3/4;overflow:hidden;");
   });
 
   test("renders canonical V3 slots without reconstructing parallel arrays", () => {

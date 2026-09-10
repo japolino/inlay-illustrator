@@ -95,7 +95,7 @@ function renderInlayBlock(
 ): string {
   const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
   const frame = inlayFrameGeometry(imageParameters, placement, config);
-  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" data-inlay-illustrator-placement="${placement}" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.frameStyle}"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="display:block;width:100%;height:100%;object-fit:cover;border-radius:8px;cursor:zoom-in;"/></span></div>`;
+  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" data-inlay-illustrator-placement="${placement}" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.frameStyle}"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="${frame.imageStyle}"/></span></div>`;
 }
 
 function renderSlotPlaceholder(

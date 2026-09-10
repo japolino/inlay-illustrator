@@ -401,11 +401,13 @@ function inlayFrameGeometry(imageParameters, placement, config) {
   const parameters = imageParameters && Object.keys(imageParameters).length > 0 ? imageParameters : config.imageParameters;
   const intrinsicWidth = positiveDimension(parameters.width);
   const intrinsicHeight = positiveDimension(parameters.height);
-  const commonFrameStyle = `width:${boxWidth};max-width:100%;aspect-ratio:${aspect.w}/${aspect.h};`;
+  const frameRatio = `${aspect.w}/${aspect.h}`;
+  const commonFrameStyle = `width:${boxWidth};max-width:100%;aspect-ratio:${frameRatio};overflow:hidden;`;
   return {
     wrapperStyle: "display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;",
     frameStyle: `display:block;${commonFrameStyle}`,
     placeholderFrameStyle: `display:flex;justify-content:center;align-items:center;${commonFrameStyle}`,
+    imageStyle: `display:block;width:100%;height:100%;aspect-ratio:${frameRatio};object-fit:cover;border-radius:8px;cursor:zoom-in;`,
     intrinsicAttributes: intrinsicWidth && intrinsicHeight ? ` width="${intrinsicWidth}" height="${intrinsicHeight}"` : ""
   };
 }
@@ -453,6 +455,11 @@ function applyInlayDisplaySettings(config, root) {
     }
     if (frame.style.cssText !== nextFrameStyle) {
       frame.style.cssText = nextFrameStyle;
+      updated += 1;
+    }
+    const image = isPlaceholder ? null : wrapper.querySelector?.(IMAGE_SELECTOR) ?? null;
+    if (image?.style && image.style.cssText !== geometry.imageStyle) {
+      image.style.cssText = geometry.imageStyle;
       updated += 1;
     }
   }

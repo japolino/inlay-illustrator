@@ -66,6 +66,13 @@ export function applyInlayDisplaySettings(config: Config, root?: MinimalRoot | n
       frame.style.cssText = nextFrameStyle;
       updated += 1;
     }
+    // The image carries the frame aspect too, so it keeps filling the frame
+    // after an aspect change and never spills over the following text.
+    const image = isPlaceholder ? null : wrapper.querySelector?.(IMAGE_SELECTOR) ?? null;
+    if (image?.style && image.style.cssText !== geometry.imageStyle) {
+      image.style.cssText = geometry.imageStyle;
+      updated += 1;
+    }
   }
   return updated;
 }
