@@ -263,6 +263,27 @@ export function extractCardImageJson(responseText: string): unknown {
 /**
  * Normalizes a single character object according to Lua normalizeCharacterData.
  */
+/**
+ * Splits a source-reference character name into plain tags.
+ *
+ * The source prints `Name (Creation)` and then escapes the parentheses for
+ * NovelAI. NovelAI reads a parenthetical as weight syntax, and the escaped form
+ * lands in the prompt as literal parentheses, so the name and its source are
+ * emitted as separate tags instead: `Amiya (Arknights)` -> ["Amiya", "Arknights"].
+ */
+export function splitSourceReferenceName(name: string): string[] {
+  const trimmed = name.trim();
+  if (!trimmed) return [];
+  const match = trimmed.match(/^(.*?)[\s_]*\(([^()]*)\)\s*$/);
+  if (!match) return [trimmed];
+  const base = match[1].replace(/[\s_]+$/, "").trim();
+  const qualifier = match[2].trim();
+  if (!base || !qualifier) return [trimmed];
+  // `(oc)` marks a non-canon character, it is not a source reference.
+  if (qualifier.toLowerCase() === "oc") return [base];
+  return [base, qualifier];
+}
+
 export function normalizeCharacterData(
   char: unknown,
   options?: V376Options
@@ -292,6 +313,10 @@ export function normalizeCharacterData(
 
   if (positive === "") {
     const parts: string[] = [];
+    const nameTags: string[] = [];
+    // NovelAI reads a parenthetical as weight syntax, so the source-reference
+    // name is emitted as leading plain tags instead of `Name (Creation)`.
+    const splitSourceName = useOriginal && options?.syntax === "nai";
     const keys = useOriginal
       ? ["label", "name", "age", "appearance", "body", "attire", "expression", "action", "sex", "text"]
       : ["label", "age", "appearance", "body", "attire", "expression", "action", "sex", "text"];
@@ -301,10 +326,15 @@ export function normalizeCharacterData(
       if (key === "appearance") {
         val = filterStandaloneGenderTags(val);
       }
-      if (val !== "" && val.toLowerCase() !== "null" && val.toLowerCase() !== "none") {
-        parts.push(val);
+      if (val === "" || val.toLowerCase() === "null" || val.toLowerCase() === "none") continue;
+      if (key === "name" && splitSourceName) {
+        nameTags.push(...splitSourceReferenceName(val));
+        continue;
       }
+      parts.push(val);
     }
+
+    if (nameTags.length > 0) parts.unshift(...nameTags);
 
     if (options?.supplement) {
       const rawSup = record.supplement;

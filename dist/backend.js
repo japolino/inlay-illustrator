@@ -7441,6 +7441,21 @@ function extractCardImageJson(responseText) {
   }
   return null;
 }
+function splitSourceReferenceName(name) {
+  const trimmed = name.trim();
+  if (!trimmed)
+    return [];
+  const match = trimmed.match(/^(.*?)[\s_]*\(([^()]*)\)\s*$/);
+  if (!match)
+    return [trimmed];
+  const base = match[1].replace(/[\s_]+$/, "").trim();
+  const qualifier = match[2].trim();
+  if (!base || !qualifier)
+    return [trimmed];
+  if (qualifier.toLowerCase() === "oc")
+    return [base];
+  return [base, qualifier];
+}
 function normalizeCharacterData(char, options) {
   if (!char || typeof char !== "object") {
     return {
@@ -7464,16 +7479,24 @@ function normalizeCharacterData(char, options) {
   }
   if (positive === "") {
     const parts = [];
+    const nameTags = [];
+    const splitSourceName = useOriginal && options?.syntax === "nai";
     const keys = useOriginal ? ["label", "name", "age", "appearance", "body", "attire", "expression", "action", "sex", "text"] : ["label", "age", "appearance", "body", "attire", "expression", "action", "sex", "text"];
     for (const key of keys) {
       let val = String(record[key] ?? "").trim();
       if (key === "appearance") {
         val = filterStandaloneGenderTags(val);
       }
-      if (val !== "" && val.toLowerCase() !== "null" && val.toLowerCase() !== "none") {
-        parts.push(val);
+      if (val === "" || val.toLowerCase() === "null" || val.toLowerCase() === "none")
+        continue;
+      if (key === "name" && splitSourceName) {
+        nameTags.push(...splitSourceReferenceName(val));
+        continue;
       }
+      parts.push(val);
     }
+    if (nameTags.length > 0)
+      parts.unshift(...nameTags);
     if (options?.supplement) {
       const rawSup = record.supplement;
       const supParts = [];

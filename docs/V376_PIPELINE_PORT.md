@@ -92,3 +92,21 @@ user-entered clothing/pose tags; it no longer uses ANIMA's tag-pruning rules.
 
 Implementation and parity verification are in progress. This document is not a
 claim of completed end-to-end provider validation.
+
+### Deliberate deviation: NovelAI source-reference naming
+
+The source prints character names as `Name (Creation)` and then escapes the
+parentheses for NovelAI (`Amiya \(Arknights\)`). Parentheses are weight syntax
+in NovelAI, so the escaped form reaches the model as literal punctuation.
+
+For NovelAI the port instead emits the name and its source reference as separate
+leading tags, followed by the rest of the character tags:
+
+```
+Amiya, Arknights, 1girl, teen, brown hair, coat
+```
+
+ComfyUI keeps the source form (`1girl, Amiya (Arknights), teen, brown hair`).
+This is an intentional deviation requested by the user, not source parity. The
+`character_normalization` parity fixtures record the source order and are
+asserted with ComfyUI syntax.

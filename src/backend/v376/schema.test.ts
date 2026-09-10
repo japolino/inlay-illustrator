@@ -274,6 +274,9 @@ describe("v376 schema parsing and structural normalization", () => {
     expect(flatShots[0].characters[0].identity).toBe("man, 30, tall, jeans");
   });
 
+  // The fixtures record SOURCE assembly order. ComfyUI syntax preserves it
+  // exactly; the NovelAI path deliberately emits the source-reference name as
+  // plain leading tags instead (covered by the test below).
   it("matches character_normalization fixtures from src/evals/v376-parity/fixtures/fixtures.json", () => {
     // 1. canon_char_original_on_supplement_on
     const c1 = normalizeCharacterData(
@@ -291,7 +294,7 @@ describe("v376 schema parsing and structural normalization", () => {
           action: "glaring",
         },
       },
-      { ...baseOptions, originalReference: true, supplement: true }
+      { ...baseOptions, syntax: "comfyui", originalReference: true, supplement: true }
     );
     expect(c1.positive).toBe(
       "girl, Asuka Langley Soryu (Evangelion), long orange hair, blue eyes, slender, plugsuit, smirk, arms crossed, standing proud, glaring"
@@ -314,7 +317,7 @@ describe("v376 schema parsing and structural normalization", () => {
           action: "glaring",
         },
       },
-      { ...baseOptions, originalReference: false, supplement: true }
+      { ...baseOptions, syntax: "comfyui", originalReference: false, supplement: true }
     );
     expect(c2.positive).toBe(
       "girl, long orange hair, blue eyes, slender, plugsuit, smirk, arms crossed, standing proud, glaring"
@@ -333,7 +336,7 @@ describe("v376 schema parsing and structural normalization", () => {
         action: "holding wand",
         supplement: "casting a spell",
       },
-      { ...baseOptions, originalReference: true, supplement: true }
+      { ...baseOptions, syntax: "comfyui", originalReference: true, supplement: true }
     );
     expect(c3.positive).toBe(
       "girl, silver hair, purple eyes, petite, black cloak, serious, holding wand, casting a spell"
@@ -355,7 +358,7 @@ describe("v376 schema parsing and structural normalization", () => {
           action: "glaring",
         },
       },
-      { ...baseOptions, originalReference: true, supplement: false }
+      { ...baseOptions, syntax: "comfyui", originalReference: true, supplement: false }
     );
     expect(c4.positive).toBe(
       "girl, Asuka Langley Soryu (Evangelion), long orange hair, blue eyes, slender, plugsuit, smirk, arms crossed"
@@ -389,6 +392,46 @@ describe("v376 schema parsing and structural normalization", () => {
     expect(char.identity).not.toContain("TestChar");
   });
 
+  it("emits the source-reference name and creation as leading plain tags for NovelAI", () => {
+    const canon = normalizeCharacterData(
+      {
+        name: "Asuka Langley Soryu (Evangelion)",
+        label: "girl",
+        age: "teen",
+        appearance: "long orange hair, blue eyes",
+        attire: "plugsuit",
+      },
+      { ...baseOptions, originalReference: true }
+    );
+    // Name, then the source reference, then the rest of the tags. No parentheses
+    // and no escape characters, because NovelAI reads a parenthetical as weights.
+    expect(canon.positive).toBe(
+      "Asuka Langley Soryu, Evangelion, girl, teen, long orange hair, blue eyes, plugsuit"
+    );
+    expect(canon.positive).not.toContain("\\(");
+
+    // ComfyUI keeps the source form.
+    const comfy = normalizeCharacterData(
+      { name: "Asuka Langley Soryu (Evangelion)", label: "girl", appearance: "red hair" },
+      { ...baseOptions, syntax: "comfyui", originalReference: true }
+    );
+    expect(comfy.positive).toBe("girl, Asuka Langley Soryu (Evangelion), red hair");
+
+    // A name without a source reference is still placed first for NovelAI.
+    const plain = normalizeCharacterData(
+      { name: "Asuka Langley Soryu", label: "girl", appearance: "red hair" },
+      { ...baseOptions, originalReference: true }
+    );
+    expect(plain.positive).toBe("Asuka Langley Soryu, girl, red hair");
+
+    // The (oc) marker is not a source reference and is never emitted.
+    const oc = normalizeCharacterData(
+      { name: "Evelyn (oc)", label: "girl", appearance: "silver hair" },
+      { ...baseOptions, originalReference: true }
+    );
+    expect(oc.positive).toBe("girl, silver hair");
+  });
+
   it("strictly enforces source array order for character tags and identity tags", () => {
     // Canon character: label, name, age, appearance, body, attire, expression, action, sex, text
     const canonChar = normalizeCharacterData(
@@ -404,7 +447,7 @@ describe("v376 schema parsing and structural normalization", () => {
         sex: "none",
         text: "speech bubble saying \"charge\"",
       },
-      { ...baseOptions, originalReference: true }
+      { ...baseOptions, syntax: "comfyui", originalReference: true }
     );
     expect(canonChar.positive).toBe(
       "warrior, CanonHero, young adult, black hair, athletic, armor, fierce, slashing, speech bubble saying \"charge\""
@@ -424,7 +467,7 @@ describe("v376 schema parsing and structural normalization", () => {
         sex: "none",
         text: "runic glow",
       },
-      { ...baseOptions, originalReference: true }
+      { ...baseOptions, syntax: "comfyui", originalReference: true }
     );
     expect(ocChar.positive).toBe(
       "mage, adult, white hair, slender, robe, calm, casting, runic glow"
