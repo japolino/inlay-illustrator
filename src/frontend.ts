@@ -90,7 +90,13 @@ export function setup(ctx: SpindleFrontendContext) {
         patch.parserModel = imageGeneration.promptParserModel || "";
         patch.parserParameters = imageGeneration.promptParserParameters || {};
       }
-      if (imageGeneration.activeImageGenConnectionId) {
+      // Only inherit the app-level image setup on a blank extension config.
+      // The legacy settings blob also carries a stale model and a ComfyUI-era
+      // parameter bag; copying those over would replace the image connection
+      // profile's own resolution, steps, guidance, and seed.
+      const hasStoredImageSetup = Boolean(config.imageConnectionId)
+        || Object.keys(config.imageParameters || {}).length > 0;
+      if (!hasStoredImageSetup && imageGeneration.activeImageGenConnectionId) {
         patch.imageConnectionId = imageGeneration.activeImageGenConnectionId;
         patch.imageModel = imageGeneration.model || "";
         patch.imageParameters = imageGeneration.parameters || {};

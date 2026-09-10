@@ -649,6 +649,19 @@ function outputSummary(config) {
 }
 
 // src/frontend/sections/generation.ts
+function novelAiResolutionPatch(currentParameters, value) {
+  const found = NOVELAI_RESOLUTION_PRESETS.find((preset) => preset.value === value);
+  if (!found)
+    return null;
+  return {
+    imageParameters: {
+      ...currentParameters || {},
+      width: found.width,
+      height: found.height,
+      resolution: found.value
+    }
+  };
+}
 function renderGenerationSection({ ui, config, imageConnections, actions, rerender }) {
   const activeImgConn = imageConnections?.find((c) => c.id === config.imageConnectionId) || imageConnections?.find((c) => c.is_default) || imageConnections?.[0] || null;
   const isNai = isNovelAiConnection(activeImgConn);
@@ -690,25 +703,19 @@ function renderGenerationSection({ ui, config, imageConnections, actions, rerend
     ui.addSubtitle(section, "NovelAI settings");
     ui.addSummary(section, "NovelAI connection detected. Basic generation settings are exposed and applied automatically.");
     const params = config.imageParameters || {};
-    const curWidth = Number(params.width) || 832;
-    const curHeight = Number(params.height) || 1216;
+    const connectionParams = activeImgConn?.default_parameters || {};
+    const curWidth = Number(params.width) || Number(connectionParams.width) || 832;
+    const curHeight = Number(params.height) || Number(connectionParams.height) || 1216;
+    const sizeIsInherited = params.width === undefined && params.height === undefined;
     const matchedPreset = NOVELAI_RESOLUTION_PRESETS.find((p) => p.width === curWidth && p.height === curHeight) || NOVELAI_RESOLUTION_PRESETS[0];
-    ui.addCustomSelect(section, "Resolution", matchedPreset.value, NOVELAI_RESOLUTION_PRESETS.map((p) => ({ value: p.value, label: p.label })), "NovelAI resolution preset. Automatically synchronizes the in-chat display aspect ratio.", (val) => {
-      const found = NOVELAI_RESOLUTION_PRESETS.find((p) => p.value === val);
-      if (found) {
-        actions.patchConfig({
-          inlayImageAspect: found.aspect,
-          imageParameters: {
-            ...config.imageParameters,
-            width: found.width,
-            height: found.height,
-            resolution: found.value
-          }
-        });
+    ui.addCustomSelect(section, "Resolution", matchedPreset.value, NOVELAI_RESOLUTION_PRESETS.map((p) => ({ value: p.value, label: p.label })), sizeIsInherited ? "Currently inherited from the NovelAI connection profile. Choosing a value here sends that canvas size to NovelAI for generation. This does not change the in-chat frame size; use Image output → Aspect ratio for that." : "Canvas size sent to NovelAI for generation (resolution, width, and height). This does not change the in-chat frame size; use Image output → Aspect ratio for that.", (val) => {
+      const patch = novelAiResolutionPatch(config.imageParameters, val);
+      if (patch) {
+        actions.patchConfig(patch);
         rerender();
       }
     });
-    const currentSampler = String(params.sampler || params.sampler_name || "k_euler_ancestral");
+    const currentSampler = String(params.sampler || connectionParams.sampler || "k_euler_ancestral");
     ui.addCustomSelect(section, "Sampler", currentSampler, NOVELAI_SAMPLER_OPTIONS, "Diffusion sampler algorithm.", (val) => {
       actions.patchConfig({
         imageParameters: {
@@ -717,7 +724,7 @@ function renderGenerationSection({ ui, config, imageConnections, actions, rerend
         }
       });
     });
-    const currentSteps = Number(params.steps) || 28;
+    const currentSteps = Number(params.steps) || Number(connectionParams.steps) || 28;
     ui.addCustomNumber(section, "Steps", currentSteps, 1, 50, "Sampling steps (1–50, default 28).", (val) => {
       if (val !== null) {
         actions.patchConfig({
@@ -728,7 +735,7 @@ function renderGenerationSection({ ui, config, imageConnections, actions, rerend
         });
       }
     });
-    const currentScale = Number(params.scale) || Number(params.cfg) || 5;
+    const currentScale = Number(params.scale) || Number(params.cfg) || Number(connectionParams.scale) || Number(connectionParams.cfg) || 5;
     ui.addCustomNumber(section, "Guidance scale (CFG)", currentScale, 1, 20, "Prompt guidance scale (1–20, default 5.0).", (val) => {
       if (val !== null) {
         actions.patchConfig({
@@ -740,7 +747,7 @@ function renderGenerationSection({ ui, config, imageConnections, actions, rerend
         });
       }
     }, false);
-    const currentSeed = params.seed !== undefined ? String(params.seed) : "-1";
+    const currentSeed = params.seed !== undefined ? String(params.seed) : connectionParams.seed !== undefined ? String(connectionParams.seed) : "-1";
     ui.addCustomText(section, "Seed", currentSeed, "RNG seed. Set to -1 for a fresh random seed on each turn.", (val) => {
       const trimmed = (val || "").trim();
       const parsed = Number(trimmed);
@@ -3243,7 +3250,8 @@ function setup(ctx) {
         patch.parserModel = imageGeneration.promptParserModel || "";
         patch.parserParameters = imageGeneration.promptParserParameters || {};
       }
-      if (imageGeneration.activeImageGenConnectionId) {
+      const hasStoredImageSetup = Boolean(config.imageConnectionId) || Object.keys(config.imageParameters || {}).length > 0;
+      if (!hasStoredImageSetup && imageGeneration.activeImageGenConnectionId) {
         patch.imageConnectionId = imageGeneration.activeImageGenConnectionId;
         patch.imageModel = imageGeneration.model || "";
         patch.imageParameters = imageGeneration.parameters || {};

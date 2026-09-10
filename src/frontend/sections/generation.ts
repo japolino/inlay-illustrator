@@ -1,10 +1,34 @@
 import {
   isNovelAiConnection,
   NOVELAI_RESOLUTION_PRESETS,
-  NOVELAI_SAMPLER_OPTIONS
+  NOVELAI_SAMPLER_OPTIONS,
+  type Config
 } from "../../shared/config.js";
 import { generationSummary } from "../view-model.js";
 import type { SectionContext } from "./section-context.js";
+
+/**
+ * Builds the configuration patch for the NovelAI canvas-size selector.
+ *
+ * This controls the size the image provider generates. It deliberately does
+ * not touch `inlayImageAspect`, which is the separate in-chat frame shape
+ * handled by the Image output section.
+ */
+export function novelAiResolutionPatch(
+  currentParameters: Record<string, unknown> | undefined,
+  value: string
+): Partial<Config> | null {
+  const found = NOVELAI_RESOLUTION_PRESETS.find((preset) => preset.value === value);
+  if (!found) return null;
+  return {
+    imageParameters: {
+      ...(currentParameters || {}),
+      width: found.width,
+      height: found.height,
+      resolution: found.value
+    }
+  };
+}
 
 export function renderGenerationSection({ ui, config, imageConnections, actions, rerender }: SectionContext): void {
   const activeImgConn = imageConnections?.find((c) => c.id === config.imageConnectionId)
@@ -91,9 +115,13 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
     ui.addSubtitle(section, "NovelAI settings");
     ui.addSummary(section, "NovelAI connection detected. Basic generation settings are exposed and applied automatically.");
 
+    // Extension values win; otherwise show the size the connection profile will
+    // actually generate, so the panel never claims a size the request ignores.
     const params = config.imageParameters || {};
-    const curWidth = Number(params.width) || 832;
-    const curHeight = Number(params.height) || 1216;
+    const connectionParams = activeImgConn?.default_parameters || {};
+    const curWidth = Number(params.width) || Number(connectionParams.width) || 832;
+    const curHeight = Number(params.height) || Number(connectionParams.height) || 1216;
+    const sizeIsInherited = params.width === undefined && params.height === undefined;
     const matchedPreset = NOVELAI_RESOLUTION_PRESETS.find((p) => p.width === curWidth && p.height === curHeight)
       || NOVELAI_RESOLUTION_PRESETS[0];
 
@@ -102,25 +130,19 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
       "Resolution",
       matchedPreset.value,
       NOVELAI_RESOLUTION_PRESETS.map((p) => ({ value: p.value, label: p.label })),
-      "NovelAI resolution preset. Automatically synchronizes the in-chat display aspect ratio.",
+      sizeIsInherited
+        ? "Currently inherited from the NovelAI connection profile. Choosing a value here sends that canvas size to NovelAI for generation. This does not change the in-chat frame size; use Image output \u2192 Aspect ratio for that."
+        : "Canvas size sent to NovelAI for generation (resolution, width, and height). This does not change the in-chat frame size; use Image output \u2192 Aspect ratio for that.",
       (val) => {
-        const found = NOVELAI_RESOLUTION_PRESETS.find((p) => p.value === val);
-        if (found) {
-          actions.patchConfig({
-            inlayImageAspect: found.aspect,
-            imageParameters: {
-              ...config.imageParameters,
-              width: found.width,
-              height: found.height,
-              resolution: found.value
-            }
-          });
+        const patch = novelAiResolutionPatch(config.imageParameters, val);
+        if (patch) {
+          actions.patchConfig(patch);
           rerender();
         }
       }
     );
 
-    const currentSampler = String(params.sampler || params.sampler_name || "k_euler_ancestral");
+    const currentSampler = String(params.sampler || connectionParams.sampler || "k_euler_ancestral");
     ui.addCustomSelect(
       section,
       "Sampler",
@@ -137,7 +159,7 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
       }
     );
 
-    const currentSteps = Number(params.steps) || 28;
+    const currentSteps = Number(params.steps) || Number(connectionParams.steps) || 28;
     ui.addCustomNumber(
       section,
       "Steps",
@@ -157,7 +179,7 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
       }
     );
 
-    const currentScale = Number(params.scale) || Number(params.cfg) || 5;
+    const currentScale = Number(params.scale) || Number(params.cfg) || Number(connectionParams.scale) || Number(connectionParams.cfg) || 5;
     ui.addCustomNumber(
       section,
       "Guidance scale (CFG)",
@@ -179,7 +201,9 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
       false
     );
 
-    const currentSeed = params.seed !== undefined ? String(params.seed) : "-1";
+    const currentSeed = params.seed !== undefined
+      ? String(params.seed)
+      : connectionParams.seed !== undefined ? String(connectionParams.seed) : "-1";
     ui.addCustomText(
       section,
       "Seed",
