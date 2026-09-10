@@ -1414,7 +1414,7 @@ describe("Anima parser contract and visual distinctness", () => {
   test("silently drops removed legacy cleanup configuration keys", () => {
     const config = normalizeConfig({ danbooruCleanup: true, danbooruEndpoint: "http://legacy.invalid" });
 
-    expect(config).toEqual(DEFAULT_CONFIG);
+    expect(config).toEqual({ ...DEFAULT_CONFIG, imageParameterProfileMigration: true });
     expect("danbooruCleanup" in config).toBe(false);
     expect("danbooruEndpoint" in config).toBe(false);
   });

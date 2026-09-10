@@ -19,7 +19,8 @@ describe("shared configuration", () => {
     const first = normalizeConfig({});
     const second = normalizeConfig({});
 
-    expect(first).toEqual(DEFAULT_CONFIG);
+    // Normalization records the one-time image-parameter profile migration.
+    expect(first).toEqual({ ...DEFAULT_CONFIG, imageParameterProfileMigration: true });
     expect(first.parserParameters).not.toBe(DEFAULT_CONFIG.parserParameters);
     expect(first.imageParameters).not.toBe(DEFAULT_CONFIG.imageParameters);
     expect(first.promptPresets).not.toBe(DEFAULT_CONFIG.promptPresets);
@@ -46,7 +47,9 @@ describe("shared configuration", () => {
       parserParameters: { temperature: 0.4 },
       imageConnectionId: "legacy-image",
       imageModel: "legacy-image-model",
-      imageParameters: { steps: 24 }
+      // The legacy global blob's inherited parameter bag is dropped so the image
+      // connection profile's own resolution, steps, guidance, and seed apply.
+      imageParameters: {}
     });
   });
 
@@ -74,7 +77,8 @@ describe("shared configuration", () => {
       parserParameters: { top_p: 0.8 },
       imageConnectionId: "current-image",
       imageModel: "current-image-model",
-      imageParameters: { cfg: 6 }
+      // The inherited "cfg" value is purged once by the profile migration.
+      imageParameters: {}
     });
   });
 

@@ -25,6 +25,40 @@ const COMFY_KEYS_TO_DISCARD = [
   "includeCharacterAvatar"
 ];
 
+/** Parses "832x1216" / "832×1216" / "832 x 1216" resolution strings. */
+export function parseResolutionString(value: unknown): { width: number; height: number } | null {
+  if (typeof value !== "string") return null;
+  const match = value.trim().match(/^(\d{2,5})\s*[x×*]\s*(\d{2,5})$/i);
+  if (!match) return null;
+  return { width: Number(match[1]), height: Number(match[2]) };
+}
+
+/**
+ * Resolves the requested canvas size from the connection defaults and the
+ * extension parameters. Accepts the key shapes used by the host drivers:
+ * explicit `width`/`height`, a `resolution` preset string, or a `size` string.
+ */
+export function resolveNovelAiSize(
+  sources: Array<Record<string, unknown> | undefined>
+): { width: number; height: number; source: string } | null {
+  for (const [index, source] of sources.entries()) {
+    if (!source) continue;
+    const width = numberParam(source.width);
+    const height = numberParam(source.height);
+    if (width !== undefined && height !== undefined) {
+      return { width, height, source: index === 0 ? "parameters.width/height" : "connection.width/height" };
+    }
+  }
+  for (const [index, source] of sources.entries()) {
+    if (!source) continue;
+    const parsed = parseResolutionString(source.resolution) ?? parseResolutionString(source.size);
+    if (parsed) {
+      return { ...parsed, source: index === 0 ? "parameters.resolution" : "connection.resolution" };
+    }
+  }
+  return null;
+}
+
 export function normalizeNovelAiSampler(candidate: string | undefined): string | undefined {
   if (!candidate) return undefined;
   const clean = candidate.trim().toLowerCase();
@@ -293,6 +327,20 @@ export function rerollImageParameters(
   return cloned;
 }
 
+/**
+ * Resolves the model override for an image request.
+ *
+ * The image connection profile already carries its own model, so an extension
+ * level `imageModel` must not silently replace it. Only forward the override
+ * when the active connection has no model of its own.
+ */
+export function imageModelOverride(config: Config, connection: ImageConnection | null): string | undefined {
+  const configured = typeof config.imageModel === "string" ? config.imageModel.trim() : "";
+  if (!configured) return undefined;
+  const connectionModel = typeof connection?.model === "string" ? connection.model.trim() : "";
+  return connectionModel ? undefined : configured;
+}
+
 export async function buildImageParameters(
   config: Config,
   connection: ImageConnection | null,
@@ -340,14 +388,12 @@ export async function buildImageParameters(
       ?? normalizeNovelAiSampler(stringParam(defaultParams.sampler))
       ?? "k_euler_ancestral";
 
-    const rawWidth = numberParam(parameters.width)
-      ?? numberParam(defaultParams.width)
-      ?? 832;
-    const rawHeight = numberParam(parameters.height)
-      ?? numberParam(defaultParams.height)
-      ?? 1216;
+    const requestedSize = resolveNovelAiSize([parameters, defaultParams]);
+    const rawWidth = requestedSize?.width ?? 832;
+    const rawHeight = requestedSize?.height ?? 1216;
     const width = Math.min(1920, Math.max(512, Math.round(rawWidth / 64) * 64));
     const height = Math.min(1920, Math.max(512, Math.round(rawHeight / 64) * 64));
+    const sizeSource = requestedSize?.source ?? "fallback-default";
 
     const cleanParams: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(parameters)) {
@@ -364,7 +410,12 @@ export async function buildImageParameters(
       cfg: scale,
       seed,
       width,
-      height
+      height,
+      // The host NovelAI driver reads a `resolution` preset string. Send it
+      // alongside the explicit width/height so the selected canvas size is
+      // honored regardless of which key the active driver consumes.
+      resolution: `${width}x${height}`,
+      size: `${width}x${height}`
     };
 
     const smeaVal = parameters.smea !== undefined ? parameters.smea : defaultParams.smea;
@@ -384,6 +435,7 @@ export async function buildImageParameters(
       scale,
       width,
       height,
+      sizeSource,
       seed,
       characterCount: normalizedChars?.length ?? 0
     });

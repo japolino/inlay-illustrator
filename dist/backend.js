@@ -5620,6 +5620,7 @@ var DEFAULT_CONFIG = {
   imageConnectionId: null,
   imageModel: "",
   imageParameters: {},
+  imageParameterProfileMigration: false,
   minImages: 3,
   maxImages: 5,
   maxCharacters: 2,
@@ -5688,6 +5689,29 @@ function normalizePromptPresets(value) {
   }
   return presets;
 }
+var IMAGE_PARAMETER_ARTIFACTS = [
+  "sampler_name",
+  "scheduler",
+  "comfyui_field_values",
+  "comfyui_custom_fields",
+  "field_mappings",
+  "includePersonaAvatar",
+  "includeCharacterAvatar",
+  "preserveImportedWorkflow",
+  "workflowFormat",
+  "custom"
+];
+var INHERITED_PROFILE_PARAMETER_KEYS = ["steps", "scale", "cfg", "seed", "sampler"];
+function sanitizeImageParameters(value, dropInheritedProfileKeys = false) {
+  const cleaned = { ...value };
+  for (const key of IMAGE_PARAMETER_ARTIFACTS)
+    delete cleaned[key];
+  if (dropInheritedProfileKeys) {
+    for (const key of INHERITED_PROFILE_PARAMETER_KEYS)
+      delete cleaned[key];
+  }
+  return cleaned;
+}
 function normalizeConfig(raw) {
   const imageGeneration = raw.imageGeneration || {};
   const {
@@ -5705,6 +5729,7 @@ function normalizeConfig(raw) {
   const activePromptPresetId = cleanNullableString(raw.activePromptPresetId);
   const parserParameters = cleanParameters(raw.parserParameters);
   const imageParameters = cleanParameters(raw.imageParameters);
+  const profileMigrationDone = raw.imageParameterProfileMigration === true;
   const rawModuleMode = raw.moduleMode ?? (legacyMode === "asset" || raw.perspectiveMode === "asset" ? "asset" : undefined);
   const moduleMode = normalizeModuleMode(rawModuleMode);
   const promptSeparator = normalizePromptSeparator(raw.promptSeparator);
@@ -5735,7 +5760,8 @@ function normalizeConfig(raw) {
     parserMaxTokens: clampInt2(raw.parserMaxTokens, 0, 32768, DEFAULT_CONFIG.parserMaxTokens),
     imageConnectionId: cleanNullableString(raw.imageConnectionId) || cleanNullableString(imageGeneration.activeImageGenConnectionId),
     imageModel: cleanString2(raw.imageModel) || cleanString2(imageGeneration.model),
-    imageParameters: Object.keys(imageParameters).length > 0 ? imageParameters : cleanParameters(imageGeneration.parameters),
+    imageParameters: sanitizeImageParameters(Object.keys(imageParameters).length > 0 ? imageParameters : cleanParameters(imageGeneration.parameters), !profileMigrationDone),
+    imageParameterProfileMigration: true,
     minImages: Math.min(minImages, maxImages),
     maxImages: Math.max(minImages, maxImages),
     maxCharacters: clampInt2(raw.maxCharacters, 1, 8, DEFAULT_CONFIG.maxCharacters),
@@ -9000,6 +9026,34 @@ var COMFY_KEYS_TO_DISCARD = [
   "includePersonaAvatar",
   "includeCharacterAvatar"
 ];
+function parseResolutionString(value) {
+  if (typeof value !== "string")
+    return null;
+  const match = value.trim().match(/^(\d{2,5})\s*[x×*]\s*(\d{2,5})$/i);
+  if (!match)
+    return null;
+  return { width: Number(match[1]), height: Number(match[2]) };
+}
+function resolveNovelAiSize(sources) {
+  for (const [index, source] of sources.entries()) {
+    if (!source)
+      continue;
+    const width = numberParam(source.width);
+    const height = numberParam(source.height);
+    if (width !== undefined && height !== undefined) {
+      return { width, height, source: index === 0 ? "parameters.width/height" : "connection.width/height" };
+    }
+  }
+  for (const [index, source] of sources.entries()) {
+    if (!source)
+      continue;
+    const parsed = parseResolutionString(source.resolution) ?? parseResolutionString(source.size);
+    if (parsed) {
+      return { ...parsed, source: index === 0 ? "parameters.resolution" : "connection.resolution" };
+    }
+  }
+  return null;
+}
 function normalizeNovelAiSampler(candidate) {
   if (!candidate)
     return;
@@ -9239,6 +9293,13 @@ function rerollImageParameters(parameters, connection, prompt, negative) {
   cloned.seed = seed;
   return cloned;
 }
+function imageModelOverride(config, connection) {
+  const configured = typeof config.imageModel === "string" ? config.imageModel.trim() : "";
+  if (!configured)
+    return;
+  const connectionModel = typeof connection?.model === "string" ? connection.model.trim() : "";
+  return connectionModel ? undefined : configured;
+}
 async function buildImageParameters(config, connection, prompt, negative, characters) {
   const parameters = { ...connection?.default_parameters || {}, ...config.imageParameters };
   logStage(config, "image_parameters_start", {
@@ -9262,10 +9323,12 @@ async function buildImageParameters(config, connection, prompt, negative, charac
     const scale = Math.min(20, Math.max(1, Number(rawScale.toFixed(1))));
     const rawSampler = stringParam(parameters.sampler) ?? stringParam(defaultParams.sampler) ?? stringParam(parameters.sampler_name);
     const sampler = normalizeNovelAiSampler(rawSampler) ?? normalizeNovelAiSampler(stringParam(defaultParams.sampler)) ?? "k_euler_ancestral";
-    const rawWidth = numberParam(parameters.width) ?? numberParam(defaultParams.width) ?? 832;
-    const rawHeight = numberParam(parameters.height) ?? numberParam(defaultParams.height) ?? 1216;
+    const requestedSize = resolveNovelAiSize([parameters, defaultParams]);
+    const rawWidth = requestedSize?.width ?? 832;
+    const rawHeight = requestedSize?.height ?? 1216;
     const width = Math.min(1920, Math.max(512, Math.round(rawWidth / 64) * 64));
     const height = Math.min(1920, Math.max(512, Math.round(rawHeight / 64) * 64));
+    const sizeSource = requestedSize?.source ?? "fallback-default";
     const cleanParams = {};
     for (const [key, value] of Object.entries(parameters)) {
       if (!COMFY_KEYS_TO_DISCARD.includes(key)) {
@@ -9280,7 +9343,9 @@ async function buildImageParameters(config, connection, prompt, negative, charac
       cfg: scale,
       seed,
       width,
-      height
+      height,
+      resolution: `${width}x${height}`,
+      size: `${width}x${height}`
     };
     const smeaVal = parameters.smea !== undefined ? parameters.smea : defaultParams.smea;
     if (smeaVal !== undefined)
@@ -9299,6 +9364,7 @@ async function buildImageParameters(config, connection, prompt, negative, charac
       scale,
       width,
       height,
+      sizeSource,
       seed,
       characterCount: normalizedChars?.length ?? 0
     });
@@ -10932,7 +10998,7 @@ async function prepareAndDispatchV376Jobs(chatId, jobs, config, userId, prepared
       connection_id: config.imageConnectionId || undefined,
       prompt: job.prompt,
       negativePrompt: job.negative || undefined,
-      model: config.imageModel || undefined,
+      model: imageModelOverride(config, imageConnection),
       parameters: job.parameters,
       owner_chat_id: chatId,
       userId,
@@ -11049,7 +11115,7 @@ async function rerunStoredImage(request, rerunSidecar, userId, preparedConfig) {
         connection_id: config.imageConnectionId || undefined,
         prompt: reroll.prompt,
         negativePrompt: reroll.negative || undefined,
-        model: config.imageModel || undefined,
+        model: imageModelOverride(config, imageConnection),
         parameters: reroll.parameters,
         owner_chat_id: request.chatId,
         userId,
@@ -11125,7 +11191,7 @@ async function rerunStoredImage(request, rerunSidecar, userId, preparedConfig) {
         connection_id: config.imageConnectionId || undefined,
         prompt: job.prompt,
         negativePrompt: job.negative || undefined,
-        model: config.imageModel || undefined,
+        model: imageModelOverride(config, imageConnection),
         parameters: job.parameters,
         owner_chat_id: request.chatId,
         userId,
@@ -11212,7 +11278,7 @@ async function rerunAllStoredImages(chatId, messageId, swipeId, userId, prepared
             connection_id: effectiveConfig.imageConnectionId || undefined,
             prompt: reroll.prompt,
             negativePrompt: reroll.negative || undefined,
-            model: effectiveConfig.imageModel || undefined,
+            model: imageModelOverride(effectiveConfig, imageConnection),
             parameters: reroll.parameters,
             owner_chat_id: chatId,
             userId,
@@ -11273,7 +11339,7 @@ async function rerunAllStoredImages(chatId, messageId, swipeId, userId, prepared
             connection_id: effectiveConfig.imageConnectionId || undefined,
             prompt: job.prompt,
             negativePrompt: job.negative || undefined,
-            model: effectiveConfig.imageModel || undefined,
+            model: imageModelOverride(effectiveConfig, imageConnection),
             parameters: job.parameters,
             owner_chat_id: chatId,
             userId,

@@ -90,10 +90,12 @@ export function setup(ctx: SpindleFrontendContext) {
         patch.parserModel = imageGeneration.promptParserModel || "";
         patch.parserParameters = imageGeneration.promptParserParameters || {};
       }
-      if (imageGeneration.activeImageGenConnectionId) {
+      // Only adopt the app's image connection when the extension has none. The
+      // legacy settings blob also carries a stale model and ComfyUI-era
+      // parameter bag; copying those over would silently replace the image
+      // connection profile's own model, resolution, steps, and seed.
+      if (!config.imageConnectionId && imageGeneration.activeImageGenConnectionId) {
         patch.imageConnectionId = imageGeneration.activeImageGenConnectionId;
-        patch.imageModel = imageGeneration.model || "";
-        patch.imageParameters = imageGeneration.parameters || {};
       }
       if (Object.keys(patch).length > 0) patchConfig(patch);
     } catch {
