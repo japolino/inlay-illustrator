@@ -4,6 +4,8 @@ import { isOwnMessage } from "./backend/context.js";
 import {
   generateForMessage,
   getStoredImageDetails,
+  inlayDisplayKeysChanged,
+  rerenderInlaidMessages,
   rerunAllStoredImages,
   rerunStoredImage,
   type StoredImageActionRequest
@@ -60,7 +62,8 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       logStage(config, "frontend_get_state", { chatId: chatId || null });
       await sendState(userId, chatId, config);
     } else if (message.type === "set_config") {
-      const next = await setConfig((message.patch || {}) as Partial<Config>, userId);
+      const patch = (message.patch || {}) as Partial<Config>;
+      const next = await setConfig(patch, userId);
       configForError = next;
       logStage(next, "frontend_set_config", { patchKeys: keysOf(message.patch) });
       spindle.sendToFrontend({
@@ -68,6 +71,19 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         chatId: String(message.chatId || ""),
         config: next
       }, userId);
+      // Stored inlay HTML is written at generation time, so a display change
+      // must rewrite it or existing images keep the old frame.
+      const displayChatId = String(message.chatId || "");
+      if (displayChatId && inlayDisplayKeysChanged(patch)) {
+        try {
+          const refreshed = await rerenderInlaidMessages(displayChatId, next, userId);
+          logStage(next, "display_settings_rerender", { chatId: displayChatId, messagesUpdated: refreshed });
+        } catch (error) {
+          logStage(next, "display_settings_rerender_error", {
+            error: error instanceof Error ? error.message : String(error)
+          }, "warn");
+        }
+      }
     } else if (message.type === "character_tags_update") {
       const config = await getConfig(userId);
       configForError = config;

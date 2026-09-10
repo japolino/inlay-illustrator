@@ -11555,6 +11555,42 @@ async function runGenerationForMessage(chatId, messageId, content, operation, us
     releaseGeneration?.();
   }
 }
+var INLAY_DISPLAY_KEYS = [
+  "inlayImageAspect",
+  "inlayImageMaxHeightVh",
+  "inlayImageWidth",
+  "assetImageWidth",
+  "coverImageWidth",
+  "coverImageMaxHeightVh"
+];
+function inlayDisplayKeysChanged(patch) {
+  return INLAY_DISPLAY_KEYS.some((key) => (key in patch));
+}
+async function rerenderInlaidMessages(chatId, config, userId) {
+  if (!chatId)
+    return 0;
+  const state = await getState(chatId, userId);
+  const messages = await spindle.chat.getMessages(chatId);
+  let updated = 0;
+  for (const message of messages) {
+    if (!message?.id || message.role !== "assistant")
+      continue;
+    const key = `${chatId}:${message.id}:${currentSwipe(message)}`;
+    const stored = state.generated[key];
+    if (!stored)
+      continue;
+    const record = await loadGeneratedRecord(stored, userId, false);
+    if (!record || !record.slots.some((slot) => slot.imageUrl))
+      continue;
+    const content = String(message.content || "");
+    const next = renderInlaidMessage(content, record, config);
+    if (next === content)
+      continue;
+    await spindle.chat.updateMessage(chatId, message.id, { content: next });
+    updated += 1;
+  }
+  return updated;
+}
 async function generateForMessage(chatId, messageId, content, userId, prepared) {
   const scheduled = enqueueGeneration(userId, chatId, messageId, (operation) => runGenerationForMessage(chatId, messageId, content, operation, userId, prepared), `${messageId}:${sourceContentFingerprint(stripInlayContent(content))}`);
   if (!scheduled.reused)
@@ -11607,7 +11643,8 @@ spindle.onFrontendMessage(async (payload, userId) => {
       logStage(config, "frontend_get_state", { chatId: chatId || null });
       await sendState(userId, chatId, config);
     } else if (message.type === "set_config") {
-      const next = await setConfig(message.patch || {}, userId);
+      const patch = message.patch || {};
+      const next = await setConfig(patch, userId);
       configForError = next;
       logStage(next, "frontend_set_config", { patchKeys: keysOf(message.patch) });
       spindle.sendToFrontend({
@@ -11615,6 +11652,17 @@ spindle.onFrontendMessage(async (payload, userId) => {
         chatId: String(message.chatId || ""),
         config: next
       }, userId);
+      const displayChatId = String(message.chatId || "");
+      if (displayChatId && inlayDisplayKeysChanged(patch)) {
+        try {
+          const refreshed = await rerenderInlaidMessages(displayChatId, next, userId);
+          logStage(next, "display_settings_rerender", { chatId: displayChatId, messagesUpdated: refreshed });
+        } catch (error) {
+          logStage(next, "display_settings_rerender_error", {
+            error: error instanceof Error ? error.message : String(error)
+          }, "warn");
+        }
+      }
     } else if (message.type === "character_tags_update") {
       const config = await getConfig(userId);
       configForError = config;

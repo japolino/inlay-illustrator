@@ -1634,6 +1634,53 @@ async function runGenerationForMessage(
   }
 }
 
+/** Config keys that change how an already-rendered inlay looks in the chat. */
+const INLAY_DISPLAY_KEYS: Array<keyof Config> = [
+  "inlayImageAspect",
+  "inlayImageMaxHeightVh",
+  "inlayImageWidth",
+  "assetImageWidth",
+  "coverImageWidth",
+  "coverImageMaxHeightVh"
+];
+
+export function inlayDisplayKeysChanged(patch: Partial<Config>): boolean {
+  return INLAY_DISPLAY_KEYS.some((key) => key in patch);
+}
+
+/**
+ * Re-renders the stored inlay HTML for every generated message in a chat.
+ *
+ * Message HTML is written once, when an image is produced, so a display change
+ * would otherwise only affect future generations. Rewriting the stored content
+ * keeps the chat and the saved record consistent, and matches what a reroll
+ * already does.
+ */
+export async function rerenderInlaidMessages(
+  chatId: string,
+  config: Config,
+  userId?: string
+): Promise<number> {
+  if (!chatId) return 0;
+  const state = await getState(chatId, userId);
+  const messages = await spindle.chat.getMessages(chatId) as ChatMessage[];
+  let updated = 0;
+  for (const message of messages) {
+    if (!message?.id || message.role !== "assistant") continue;
+    const key = `${chatId}:${message.id}:${currentSwipe(message)}`;
+    const stored = state.generated[key];
+    if (!stored) continue;
+    const record = await loadGeneratedRecord(stored, userId, false);
+    if (!record || !record.slots.some((slot) => slot.imageUrl)) continue;
+    const content = String(message.content || "");
+    const next = renderInlaidMessage(content, record, config);
+    if (next === content) continue;
+    await spindle.chat.updateMessage(chatId, message.id, { content: next });
+    updated += 1;
+  }
+  return updated;
+}
+
 export async function generateForMessage(
   chatId: string,
   messageId: string,

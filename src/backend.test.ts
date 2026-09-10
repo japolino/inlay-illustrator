@@ -1,5 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import type { InterceptorResultDTO, LlmMessageDTO } from "lumiverse-spindle-types";
+import { DEFAULT_CONFIG } from "./shared/config.js";
+import { renderInlaidMessage } from "./backend/rendering.js";
 
 const parserRequests: Array<{ messages: Array<{ role: string; content: string }> }> = [];
 type PromptInterceptor = (
@@ -188,7 +190,88 @@ describe("configuration frontend messages", () => {
       config: { customParserInstructions: "keep typing" }
     });
   });
+
+  test("rewrites stored inlay HTML when a display setting changes", async () => {
+    const configKey = JSON.stringify(["user-1", "config.json"]);
+    storedFiles.set(configKey, JSON.stringify({ enabled: true, autoGenerate: false }));
+
+    const record = {
+      schemaVersion: 3,
+      chatId: "chat-1",
+      messageId: "message-1",
+      swipeId: 0,
+      slots: [{
+        prompt: "p",
+        negativePrompt: "",
+        perspectiveMode: "dynamic" as const,
+        perspectiveSource: "manual" as const,
+        paragraph: 1,
+        imageId: "img-1",
+        imageUrl: "/img-1.png",
+        placement: "paragraph" as const,
+        status: "completed" as const
+      }],
+      rawJson: { scenes: [] },
+      createdAt: new Date().toISOString()
+    };
+    const before = renderInlaidMessage("Body text.", record, DEFAULT_CONFIG);
+    storedFiles.set(storageKey("states/chat-1.json", "user-1"), JSON.stringify({
+      characterAppearance: {},
+      generated: { "chat-1:message-1:0": record }
+    }));
+
+    const message = { id: "message-1", role: "assistant", content: before, metadata: {}, swipe_id: 0 };
+    const updates: Array<{ id: string; content: string }> = [];
+    const originalSpindle = (globalThis as unknown as { spindle: Record<string, unknown> }).spindle as Record<string, unknown>;
+    const originalChat = originalSpindle.chat;
+    originalSpindle.chat = {
+      getMessages: async () => [message],
+      updateMessage: async (_chatId: string, messageId: string, patch: { content?: string }) => {
+        updates.push({ id: messageId, content: String(patch.content || "") });
+      }
+    };
+
+    try {
+      await frontendMessageHandler({
+        type: "set_config",
+        chatId: "chat-1",
+        patch: { inlayImageAspect: "portrait" }
+      }, "user-1");
+
+      expect(before).toContain("aspect-ratio:16/9");
+      expect(updates).toHaveLength(1);
+      expect(updates[0].id).toBe("message-1");
+      expect(updates[0].content).toContain("aspect-ratio:3/4");
+      expect(updates[0].content).toContain("Body text.");
+    } finally {
+      originalSpindle.chat = originalChat;
+    }
+  });
+
+  test("leaves stored inlay HTML alone when an unrelated setting changes", async () => {
+    const configKey = JSON.stringify(["user-1", "config.json"]);
+    storedFiles.set(configKey, JSON.stringify({ enabled: true, autoGenerate: false }));
+    const updates: unknown[] = [];
+    const originalSpindle = (globalThis as unknown as { spindle: Record<string, unknown> }).spindle as Record<string, unknown>;
+    const originalChat = originalSpindle.chat;
+    originalSpindle.chat = {
+      getMessages: async () => [],
+      updateMessage: async (...args: unknown[]) => { updates.push(args); }
+    };
+
+    try {
+      await frontendMessageHandler({
+        type: "set_config",
+        chatId: "chat-1",
+        patch: { customParserInstructions: "keep typing" }
+      }, "user-1");
+      expect(updates).toHaveLength(0);
+    } finally {
+      originalSpindle.chat = originalChat;
+    }
+  });
 });
+
 
 describe("lightbox detail lookup", () => {
   test("returns prompt metadata from storage for compact inlays", async () => {
