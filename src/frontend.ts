@@ -191,22 +191,6 @@ export function setup(ctx: SpindleFrontendContext) {
     scheduleInlayDisplayRefresh(80);
   });
 
-  // The host re-renders message HTML from stored content, so watch the chat for
-  // inlay frames that appear after a generation, a swipe, or a chat reload.
-  let inlayObserver: MutationObserver | null = null;
-  if (typeof MutationObserver !== "undefined" && typeof document !== "undefined" && document.body) {
-    try {
-      inlayObserver = new MutationObserver(() => {
-        // Ignore the mutations this restyler causes itself.
-        if (applyingInlayDisplay) return;
-        scheduleInlayDisplayRefresh(60);
-      });
-      inlayObserver.observe(document.body, { childList: true, subtree: true });
-    } catch {
-      inlayObserver = null;
-    }
-  }
-
   renderer?.render();
   requestState();
   ctx.ready();
@@ -216,7 +200,6 @@ export function setup(ctx: SpindleFrontendContext) {
     unsubDrawer();
     unsubChatSwitched();
     if (inlayDisplayTimer) clearTimeout(inlayDisplayTimer);
-    inlayObserver?.disconnect();
     removeFab();
     gallery.destroy();
     cleanupModalStyles();

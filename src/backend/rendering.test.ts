@@ -158,6 +158,7 @@ describe("inlay rendering", () => {
     expect(block).toContain('data-inlay-illustrator-message-id="message-1"');
     expect(block).toContain('data-inlay-illustrator-swipe-id="2"');
     expect(block).toContain('data-inlay-illustrator-image-index="0"');
+    expect(block).toContain('data-no-island');
     expect(block).not.toContain('<pre class="inlay-illustrator-prompt"');
     expect(block).not.toContain('<pre class="inlay-illustrator-negative-prompt"');
   });
@@ -221,6 +222,7 @@ describe("inlay rendering", () => {
     }, DEFAULT_CONFIG);
     expect(pending).toContain("Generating illustration 1");
     expect(pending).toContain("Generating illustration 2");
+    expect(pending).toContain("data-no-island");
     expect(pending.indexOf("Generating illustration 1")).toBeLessThan(pending.indexOf("First."));
     expect(pending.indexOf("Generating illustration 2")).toBeLessThan(pending.indexOf("Second."));
 

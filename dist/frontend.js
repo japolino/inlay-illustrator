@@ -3430,19 +3430,6 @@ function setup(ctx) {
     requestState(typeof chatId === "string" ? chatId : "");
     scheduleInlayDisplayRefresh(80);
   });
-  let inlayObserver = null;
-  if (typeof MutationObserver !== "undefined" && typeof document !== "undefined" && document.body) {
-    try {
-      inlayObserver = new MutationObserver(() => {
-        if (applyingInlayDisplay)
-          return;
-        scheduleInlayDisplayRefresh(60);
-      });
-      inlayObserver.observe(document.body, { childList: true, subtree: true });
-    } catch {
-      inlayObserver = null;
-    }
-  }
   renderer?.render();
   requestState();
   ctx.ready();
@@ -3452,7 +3439,6 @@ function setup(ctx) {
     unsubChatSwitched();
     if (inlayDisplayTimer)
       clearTimeout(inlayDisplayTimer);
-    inlayObserver?.disconnect();
     removeFab();
     gallery.destroy();
     cleanupModalStyles();

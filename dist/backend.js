@@ -10708,14 +10708,14 @@ function renderInlayBlock(url, _prompt, _negativePrompt, _perspectiveMode, _pers
   const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
   const frame = inlayFrameGeometry(imageParameters, placement, config);
   return `${MARKER}
-<div class="inlay-illustrator-image" data-inlay-illustrator="true" data-inlay-illustrator-placement="${placement}" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.frameStyle}"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="${frame.imageStyle}"/></span></div>`;
+<div class="inlay-illustrator-image" data-inlay-illustrator="true" data-no-island data-inlay-illustrator-placement="${placement}" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.frameStyle}"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="${frame.imageStyle}"/></span></div>`;
 }
 function renderSlotPlaceholder(status, _perspectiveMode, imageParameters, index, config, placement = "paragraph", illustrationNumber = index + 1) {
   const subject = placement === "cover" ? "Cover image" : `Illustration ${illustrationNumber}`;
   const label = status === "failed" ? `${subject} failed. Use Generate latest to retry.` : status === "cancelled" ? `${subject} cancelled.` : `Generating ${subject.toLowerCase()}…`;
   const frame = inlayFrameGeometry(imageParameters, placement, config);
   return `${MARKER}
-<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-inlay-illustrator-placement="${placement}" data-inlay-illustrator-image-index="${index}" role="status" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.placeholderFrameStyle}">${htmlAttr(label)}</span></div>`;
+<div class="inlay-illustrator-placeholder" data-inlay-illustrator="true" data-no-island data-inlay-illustrator-placement="${placement}" data-inlay-illustrator-image-index="${index}" role="status" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.placeholderFrameStyle}">${htmlAttr(label)}</span></div>`;
 }
 function renderInlaidMessage(original, record, config) {
   const cleanOriginal = stripInlayContent(original);
