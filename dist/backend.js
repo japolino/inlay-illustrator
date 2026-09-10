@@ -8996,6 +8996,54 @@ var COMFY_KEYS_TO_DISCARD = [
   "includePersonaAvatar",
   "includeCharacterAvatar"
 ];
+var NOVELAI_SAMPLER_IDS = Object.freeze([
+  "k_euler_ancestral",
+  "k_euler",
+  "k_dpmpp_2m",
+  "k_dpmpp_2s_ancestral",
+  "k_dpmpp_sde",
+  "ddim_v3"
+]);
+function samplerCandidateFrom(value) {
+  if (typeof value === "string")
+    return value.trim() || undefined;
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value;
+    for (const key of ["id", "value", "sampler", "sampler_name", "name", "slug"]) {
+      const found = record[key];
+      if (typeof found === "string" && found.trim())
+        return found.trim();
+    }
+  }
+  return;
+}
+function collectProfileSamplerCandidates(profile, maxDepth = 4) {
+  const found = [];
+  const seen = new Set;
+  const visit = (value, path, depth) => {
+    if (depth > maxDepth || value === null || value === undefined)
+      return;
+    if (typeof value === "string") {
+      const clean = value.trim().toLowerCase();
+      if (NOVELAI_SAMPLER_IDS.includes(clean) && !seen.has(path)) {
+        seen.add(path);
+        found.push({ path, sampler: clean });
+      }
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => visit(entry, `${path}[${index}]`, depth + 1));
+      return;
+    }
+    if (typeof value === "object") {
+      for (const [key, entry] of Object.entries(value)) {
+        visit(entry, path ? `${path}.${key}` : key, depth + 1);
+      }
+    }
+  };
+  visit(profile, "", 0);
+  return found;
+}
 function normalizeNovelAiSampler(candidate) {
   if (!candidate)
     return;
@@ -9249,6 +9297,7 @@ async function buildImageParameters(config, connection, prompt, negative, charac
     connectionDefaultKeys: keysOf(connectionDefaults),
     connectionSampler: connectionDefaults.sampler ?? null,
     connectionSamplerName: connectionDefaults.sampler_name ?? null,
+    profileSamplerPaths: collectProfileSamplerCandidates(connection),
     extensionSampler: (config.imageParameters || {}).sampler ?? null,
     extensionSamplerName: (config.imageParameters || {}).sampler_name ?? null
   });
@@ -9264,10 +9313,14 @@ async function buildImageParameters(config, connection, prompt, negative, charac
     const steps = Math.min(50, Math.max(1, Math.round(rawSteps)));
     const rawScale = numberParam(parameters.scale) ?? numberParam(parameters.cfg) ?? numberParam(defaultParams.scale) ?? numberParam(defaultParams.cfg) ?? 5;
     const scale = Math.min(20, Math.max(1, Number(rawScale.toFixed(1))));
-    const configuredSampler = stringParam(parameters.sampler);
-    const connectionSampler = stringParam(defaultParams.sampler) ?? stringParam(defaultParams.sampler_name);
-    const sampler = normalizeNovelAiSampler(configuredSampler) ?? normalizeNovelAiSampler(connectionSampler) ?? "k_euler_ancestral";
-    const samplerSource = normalizeNovelAiSampler(configuredSampler) ? "extension" : normalizeNovelAiSampler(connectionSampler) ? "connection-profile" : "provider-default";
+    const configuredSampler = samplerCandidateFrom(parameters.sampler);
+    const connectionSampler = samplerCandidateFrom(defaultParams.sampler) ?? samplerCandidateFrom(defaultParams.sampler_name);
+    const profileSamplerPaths = collectProfileSamplerCandidates(connection);
+    const profileSamplerFallback = profileSamplerPaths.length > 0 ? profileSamplerPaths[0].sampler : undefined;
+    const resolvedConfigured = normalizeNovelAiSampler(configuredSampler);
+    const resolvedConnection = normalizeNovelAiSampler(connectionSampler);
+    const sampler = resolvedConfigured ?? resolvedConnection ?? profileSamplerFallback ?? "k_euler_ancestral";
+    const samplerSource = resolvedConfigured ? "extension" : resolvedConnection ? "connection-profile" : profileSamplerFallback ? `profile:${profileSamplerPaths[0].path}` : "provider-default";
     const rawWidth = numberParam(parameters.width) ?? numberParam(defaultParams.width) ?? 832;
     const rawHeight = numberParam(parameters.height) ?? numberParam(defaultParams.height) ?? 1216;
     const width = Math.min(1920, Math.max(512, Math.round(rawWidth / 64) * 64));

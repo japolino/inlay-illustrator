@@ -811,6 +811,8 @@ function renderGenerationSection({ ui, config, imageConnections, actions, rerend
           sampler: val
         }
       });
+      const label = NOVELAI_SAMPLER_OPTIONS.find((option) => option.value === val)?.label || val;
+      actions.updateStatus(`Sampler stored in this extension: ${label} (${val}).`);
     });
     const currentSteps = Number(params.steps) || Number(connectionParams.steps) || 28;
     ui.addCustomNumber(section, "Steps", currentSteps, 1, 50, "Sampling steps (1–50, default 28).", (val) => {

@@ -6,7 +6,7 @@ import {
   NOVELAI_SAMPLER_OPTIONS,
   type Config
 } from "../shared/config.js";
-import { buildImageParameters, rerollImageParameters } from "./images.js";
+import { buildImageParameters, collectProfileSamplerCandidates, rerollImageParameters } from "./images.js";
 import { renderPromptWithCurrentAffixes } from "./prompt.js";
 import type { ImageConnection } from "./types.js";
 
@@ -489,5 +489,25 @@ describe("Cross-provider isolation and parameter normalization", () => {
     expect(built.sampler).toBe("ddim_v3");
     expect(NOVELAI_SAMPLER_OPTIONS.some((option) => option.value === "ddim_v3")).toBeTrue();
   });
+
+  test("finds a canonical sampler stored elsewhere in the profile", () => {
+    const profile = {
+      default_parameters: { steps: 28 },
+      metadata: { novelai: { sampler: "k_euler_ancestral" } }
+    };
+    expect(collectProfileSamplerCandidates(profile)).toEqual([
+      { path: "metadata.novelai.sampler", sampler: "k_euler_ancestral" }
+    ]);
+  });
+
+  test("reads a structured sampler object from the profile", async () => {
+    const profile: ImageConnection = {
+      ...naiConn,
+      default_parameters: { sampler: { id: "k_dpmpp_2m", label: "DPM++ 2M" }, steps: 28 }
+    };
+    const built = await buildImageParameters(DEFAULT_CONFIG, profile, "p", "n");
+    expect(built.sampler).toBe("k_dpmpp_2m");
+  });
 });
+
 

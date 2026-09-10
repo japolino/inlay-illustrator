@@ -25,6 +25,69 @@ const COMFY_KEYS_TO_DISCARD = [
   "includeCharacterAvatar"
 ];
 
+/** Canonical NovelAI sampler ids the provider accepts. */
+export const NOVELAI_SAMPLER_IDS: readonly string[] = Object.freeze([
+  "k_euler_ancestral",
+  "k_euler",
+  "k_dpmpp_2m",
+  "k_dpmpp_2s_ancestral",
+  "k_dpmpp_sde",
+  "ddim_v3"
+]);
+
+/**
+ * Reads a sampler value that may be a plain string or a structured object.
+ * Host connection profiles are not consistent about this.
+ */
+export function samplerCandidateFrom(value: unknown): string | undefined {
+  if (typeof value === "string") return value.trim() || undefined;
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    for (const key of ["id", "value", "sampler", "sampler_name", "name", "slug"]) {
+      const found = record[key];
+      if (typeof found === "string" && found.trim()) return found.trim();
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Walks the connection profile and reports every value that is already a
+ * canonical NovelAI sampler id, with the path it was found at.
+ *
+ * The host does not guarantee which key holds the selected sampler, so this
+ * lets the request honor a profile that stores it outside `default_parameters.sampler`.
+ */
+export function collectProfileSamplerCandidates(
+  profile: unknown,
+  maxDepth = 4
+): Array<{ path: string; sampler: string }> {
+  const found: Array<{ path: string; sampler: string }> = [];
+  const seen = new Set<string>();
+  const visit = (value: unknown, path: string, depth: number): void => {
+    if (depth > maxDepth || value === null || value === undefined) return;
+    if (typeof value === "string") {
+      const clean = value.trim().toLowerCase();
+      if (NOVELAI_SAMPLER_IDS.includes(clean) && !seen.has(path)) {
+        seen.add(path);
+        found.push({ path, sampler: clean });
+      }
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => visit(entry, `${path}[${index}]`, depth + 1));
+      return;
+    }
+    if (typeof value === "object") {
+      for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+        visit(entry, path ? `${path}.${key}` : key, depth + 1);
+      }
+    }
+  };
+  visit(profile, "", 0);
+  return found;
+}
+
 export function normalizeNovelAiSampler(candidate: string | undefined): string | undefined {
   if (!candidate) return undefined;
   const clean = candidate.trim().toLowerCase();
@@ -315,6 +378,7 @@ export async function buildImageParameters(
     connectionDefaultKeys: keysOf(connectionDefaults),
     connectionSampler: connectionDefaults.sampler ?? null,
     connectionSamplerName: connectionDefaults.sampler_name ?? null,
+    profileSamplerPaths: collectProfileSamplerCandidates(connection),
     extensionSampler: (config.imageParameters || {}).sampler ?? null,
     extensionSamplerName: (config.imageParameters || {}).sampler_name ?? null
   });
@@ -346,14 +410,20 @@ export async function buildImageParameters(
     // The extension's own sampler choice wins, then the connection profile's.
     // A stored `sampler_name` is a ComfyUI-era leftover: it is dropped from the
     // outgoing request, so it must never decide the sampler either.
-    const configuredSampler = stringParam(parameters.sampler);
-    const connectionSampler = stringParam(defaultParams.sampler) ?? stringParam(defaultParams.sampler_name);
-    const sampler = normalizeNovelAiSampler(configuredSampler)
-      ?? normalizeNovelAiSampler(connectionSampler)
-      ?? "k_euler_ancestral";
-    const samplerSource = normalizeNovelAiSampler(configuredSampler)
+    const configuredSampler = samplerCandidateFrom(parameters.sampler);
+    const connectionSampler = samplerCandidateFrom(defaultParams.sampler)
+      ?? samplerCandidateFrom(defaultParams.sampler_name);
+    // Fall back to any canonical sampler id stored elsewhere in the profile.
+    const profileSamplerPaths = collectProfileSamplerCandidates(connection);
+    const profileSamplerFallback = profileSamplerPaths.length > 0 ? profileSamplerPaths[0].sampler : undefined;
+    const resolvedConfigured = normalizeNovelAiSampler(configuredSampler);
+    const resolvedConnection = normalizeNovelAiSampler(connectionSampler);
+    const sampler = resolvedConfigured ?? resolvedConnection ?? profileSamplerFallback ?? "k_euler_ancestral";
+    const samplerSource = resolvedConfigured
       ? "extension"
-      : normalizeNovelAiSampler(connectionSampler) ? "connection-profile" : "provider-default";
+      : resolvedConnection
+        ? "connection-profile"
+        : profileSamplerFallback ? `profile:${profileSamplerPaths[0].path}` : "provider-default";
 
     const rawWidth = numberParam(parameters.width)
       ?? numberParam(defaultParams.width)

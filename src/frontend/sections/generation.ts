@@ -171,6 +171,8 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
             sampler: val
           }
         });
+        const label = NOVELAI_SAMPLER_OPTIONS.find((option) => option.value === val)?.label || val;
+        actions.updateStatus(`Sampler stored in this extension: ${label} (${val}).`);
       }
     );
 
