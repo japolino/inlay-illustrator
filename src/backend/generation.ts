@@ -26,7 +26,7 @@ import {
 import { planAndCompilePrompts } from "./canonical-planning.js";
 import { ContinuityStateSchema, reconcileContinuityState, type IllustrationPlan } from "./domain.js";
 import { type GeneratedRecordV3 as GeneratedRecord, toGeneratedRecordV3 } from "./generated-record.js";
-import { buildImageParameters, imageModelOverride, prepareAndDispatchImageJobs, rerollImageParameters, resolveImageConnection } from "./images.js";
+import { buildImageParameters, prepareAndDispatchImageJobs, rerollImageParameters, resolveImageConnection } from "./images.js";
 import { logStage } from "./logging.js";
 import { updateCharacterMemory } from "./memory.js";
 import { stripInlayContent } from "./inlay-content.js";
@@ -900,7 +900,7 @@ async function prepareAndDispatchImages(
       connection_id: config.imageConnectionId || undefined,
       prompt: job.prompt,
       negativePrompt: job.negative || undefined,
-      model: imageModelOverride(config, imageConnection),
+      model: config.imageModel || undefined,
       parameters: job.parameters,
       owner_chat_id: chatId,
       userId,
@@ -955,7 +955,7 @@ async function prepareAndDispatchV376Jobs(
         connection_id: config.imageConnectionId || undefined,
         prompt: job.prompt,
         negativePrompt: job.negative || undefined,
-        model: imageModelOverride(config, imageConnection),
+        model: config.imageModel || undefined,
         parameters: job.parameters,
         owner_chat_id: chatId,
         userId,
@@ -1104,7 +1104,7 @@ export async function rerunStoredImage(
         connection_id: config.imageConnectionId || undefined,
         prompt: reroll.prompt,
         negativePrompt: reroll.negative || undefined,
-        model: imageModelOverride(config, imageConnection),
+        model: config.imageModel || undefined,
         parameters: reroll.parameters,
         owner_chat_id: request.chatId,
         userId,
@@ -1182,7 +1182,7 @@ export async function rerunStoredImage(
         connection_id: config.imageConnectionId || undefined,
         prompt: job.prompt,
         negativePrompt: job.negative || undefined,
-        model: imageModelOverride(config, imageConnection),
+        model: config.imageModel || undefined,
         parameters: job.parameters,
         owner_chat_id: request.chatId,
         userId,
@@ -1284,7 +1284,7 @@ export async function rerunAllStoredImages(
             connection_id: effectiveConfig.imageConnectionId || undefined,
             prompt: reroll.prompt,
             negativePrompt: reroll.negative || undefined,
-            model: imageModelOverride(effectiveConfig, imageConnection),
+            model: effectiveConfig.imageModel || undefined,
             parameters: reroll.parameters,
             owner_chat_id: chatId,
             userId,
@@ -1338,7 +1338,7 @@ export async function rerunAllStoredImages(
             connection_id: effectiveConfig.imageConnectionId || undefined,
             prompt: job.prompt,
             negativePrompt: job.negative || undefined,
-            model: imageModelOverride(effectiveConfig, imageConnection),
+            model: effectiveConfig.imageModel || undefined,
             parameters: job.parameters,
             owner_chat_id: chatId,
             userId,

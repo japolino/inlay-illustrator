@@ -6,7 +6,7 @@ import {
   NOVELAI_SAMPLER_OPTIONS,
   type Config
 } from "../shared/config.js";
-import { buildImageParameters, imageModelOverride, rerollImageParameters } from "./images.js";
+import { buildImageParameters, rerollImageParameters } from "./images.js";
 import { renderPromptWithCurrentAffixes } from "./prompt.js";
 import type { ImageConnection } from "./types.js";
 
@@ -456,59 +456,5 @@ describe("Cross-provider isolation and parameter normalization", () => {
     expect(built.includePersonaAvatar).toBeUndefined();
     expect(built.includeCharacterAvatar).toBeUndefined();
   });
-
-  test("sends the selected canvas size as resolution/size and honors the connection profile model", async () => {
-    const conn: ImageConnection = {
-      id: "nai-size",
-      name: "NovelAI",
-      provider: "novelai",
-      model: "nai-diffusion-4-full",
-      is_default: true,
-      default_parameters: {},
-      metadata: {}
-    };
-
-    // Resolution selected through the extension panel.
-    const fromResolution = await buildImageParameters(
-      {
-        ...DEFAULT_CONFIG,
-        imageModel: "stale-model-from-legacy-settings",
-        imageParameters: { resolution: "1216x832", steps: 28, scale: 5 }
-      },
-      conn,
-      "prompt",
-      "neg"
-    );
-    expect(fromResolution.width).toBe(1216);
-    expect(fromResolution.height).toBe(832);
-    expect(fromResolution.resolution).toBe("1216x832");
-    expect(fromResolution.size).toBe("1216x832");
-
-    // Explicit width/height still win, and out-of-grid values snap to 64.
-    const fromWidthHeight = await buildImageParameters(
-      { ...DEFAULT_CONFIG, imageParameters: { width: 1000, height: 700 } },
-      conn,
-      "prompt",
-      "neg"
-    );
-    expect(fromWidthHeight.width).toBe(1024);
-    expect(fromWidthHeight.height).toBe(704);
-    expect(fromWidthHeight.resolution).toBe("1024x704");
-
-    // Connection profile size is used when the extension has no size configured.
-    const profileSized: ImageConnection = {
-      ...conn,
-      default_parameters: { width: 1536, height: 1024 }
-    };
-    const fromProfile = await buildImageParameters(DEFAULT_CONFIG, profileSized, "prompt", "neg");
-    expect(fromProfile.width).toBe(1536);
-    expect(fromProfile.height).toBe(1024);
-
-    // A stale extension model must not override the connection profile model.
-    expect(imageModelOverride({ ...DEFAULT_CONFIG, imageModel: "stale-model" }, conn)).toBeUndefined();
-    expect(imageModelOverride({ ...DEFAULT_CONFIG, imageModel: "explicit" }, { ...conn, model: "" })).toBe("explicit");
-    expect(imageModelOverride(DEFAULT_CONFIG, conn)).toBeUndefined();
-  });
 });
-
 

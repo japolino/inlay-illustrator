@@ -238,13 +238,6 @@ export type Config = {
   imageConnectionId: string | null;
   imageModel: string;
   imageParameters: Record<string, unknown>;
-  /**
-   * Set after the one-time purge of image parameters that the retired global
-   * image-generation settings blob inherited into this extension. Those values
-   * silently shadowed the image connection profile's own model, resolution,
-   * steps, guidance, and seed.
-   */
-  imageParameterProfileMigration: boolean;
   minImages: number;
   maxImages: number;
   maxCharacters: number;
@@ -325,7 +318,6 @@ export const DEFAULT_CONFIG: Config = {
   imageConnectionId: null,
   imageModel: "",
   imageParameters: {},
-  imageParameterProfileMigration: false,
   minImages: 3,
   maxImages: 5,
   maxCharacters: 2,
@@ -397,39 +389,6 @@ export function normalizePromptPresets(value: unknown): PromptPreset[] {
   return presets;
 }
 
-/** ComfyUI-only or host-blob keys that have no meaning for an image request. */
-const IMAGE_PARAMETER_ARTIFACTS = [
-  "sampler_name",
-  "scheduler",
-  "comfyui_field_values",
-  "comfyui_custom_fields",
-  "field_mappings",
-  "includePersonaAvatar",
-  "includeCharacterAvatar",
-  "preserveImportedWorkflow",
-  "workflowFormat",
-  "custom"
-];
-
-/**
- * Keys the retired global image-generation settings blob copied into this
- * extension's parameter bag. They override the image connection profile's own
- * defaults, so the one-time migration removes them.
- */
-const INHERITED_PROFILE_PARAMETER_KEYS = ["steps", "scale", "cfg", "seed", "sampler"];
-
-export function sanitizeImageParameters(
-  value: Record<string, unknown>,
-  dropInheritedProfileKeys = false
-): Record<string, unknown> {
-  const cleaned: Record<string, unknown> = { ...value };
-  for (const key of IMAGE_PARAMETER_ARTIFACTS) delete cleaned[key];
-  if (dropInheritedProfileKeys) {
-    for (const key of INHERITED_PROFILE_PARAMETER_KEYS) delete cleaned[key];
-  }
-  return cleaned;
-}
-
 export function normalizeConfig(raw: RawConfig): Config {
   const imageGeneration = raw.imageGeneration || {};
   const {
@@ -447,7 +406,6 @@ export function normalizeConfig(raw: RawConfig): Config {
   const activePromptPresetId = cleanNullableString(raw.activePromptPresetId);
   const parserParameters = cleanParameters(raw.parserParameters);
   const imageParameters = cleanParameters(raw.imageParameters);
-  const profileMigrationDone = raw.imageParameterProfileMigration === true;
 
   // V3.7.6 mode migration: if legacy mode === "asset" or perspectiveMode === "asset", default moduleMode to "asset"
   const rawModuleMode = raw.moduleMode ?? (legacyMode === "asset" || raw.perspectiveMode === "asset" ? "asset" : undefined);
@@ -483,11 +441,7 @@ export function normalizeConfig(raw: RawConfig): Config {
     parserMaxTokens: clampInt(raw.parserMaxTokens, 0, 32768, DEFAULT_CONFIG.parserMaxTokens),
     imageConnectionId: cleanNullableString(raw.imageConnectionId) || cleanNullableString(imageGeneration.activeImageGenConnectionId),
     imageModel: cleanString(raw.imageModel) || cleanString(imageGeneration.model),
-    imageParameters: sanitizeImageParameters(
-      Object.keys(imageParameters).length > 0 ? imageParameters : cleanParameters(imageGeneration.parameters),
-      !profileMigrationDone
-    ),
-    imageParameterProfileMigration: true,
+    imageParameters: Object.keys(imageParameters).length > 0 ? imageParameters : cleanParameters(imageGeneration.parameters),
     minImages: Math.min(minImages, maxImages),
     maxImages: Math.max(minImages, maxImages),
     maxCharacters: clampInt(raw.maxCharacters, 1, 8, DEFAULT_CONFIG.maxCharacters),

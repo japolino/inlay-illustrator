@@ -170,7 +170,6 @@ var DEFAULT_CONFIG = {
   imageConnectionId: null,
   imageModel: "",
   imageParameters: {},
-  imageParameterProfileMigration: false,
   minImages: 3,
   maxImages: 5,
   maxCharacters: 2,
@@ -239,29 +238,6 @@ function normalizePromptPresets(value) {
   }
   return presets;
 }
-var IMAGE_PARAMETER_ARTIFACTS = [
-  "sampler_name",
-  "scheduler",
-  "comfyui_field_values",
-  "comfyui_custom_fields",
-  "field_mappings",
-  "includePersonaAvatar",
-  "includeCharacterAvatar",
-  "preserveImportedWorkflow",
-  "workflowFormat",
-  "custom"
-];
-var INHERITED_PROFILE_PARAMETER_KEYS = ["steps", "scale", "cfg", "seed", "sampler"];
-function sanitizeImageParameters(value, dropInheritedProfileKeys = false) {
-  const cleaned = { ...value };
-  for (const key of IMAGE_PARAMETER_ARTIFACTS)
-    delete cleaned[key];
-  if (dropInheritedProfileKeys) {
-    for (const key of INHERITED_PROFILE_PARAMETER_KEYS)
-      delete cleaned[key];
-  }
-  return cleaned;
-}
 function normalizeConfig(raw) {
   const imageGeneration = raw.imageGeneration || {};
   const {
@@ -279,7 +255,6 @@ function normalizeConfig(raw) {
   const activePromptPresetId = cleanNullableString(raw.activePromptPresetId);
   const parserParameters = cleanParameters(raw.parserParameters);
   const imageParameters = cleanParameters(raw.imageParameters);
-  const profileMigrationDone = raw.imageParameterProfileMigration === true;
   const rawModuleMode = raw.moduleMode ?? (legacyMode === "asset" || raw.perspectiveMode === "asset" ? "asset" : undefined);
   const moduleMode = normalizeModuleMode(rawModuleMode);
   const promptSeparator = normalizePromptSeparator(raw.promptSeparator);
@@ -310,8 +285,7 @@ function normalizeConfig(raw) {
     parserMaxTokens: clampInt(raw.parserMaxTokens, 0, 32768, DEFAULT_CONFIG.parserMaxTokens),
     imageConnectionId: cleanNullableString(raw.imageConnectionId) || cleanNullableString(imageGeneration.activeImageGenConnectionId),
     imageModel: cleanString(raw.imageModel) || cleanString(imageGeneration.model),
-    imageParameters: sanitizeImageParameters(Object.keys(imageParameters).length > 0 ? imageParameters : cleanParameters(imageGeneration.parameters), !profileMigrationDone),
-    imageParameterProfileMigration: true,
+    imageParameters: Object.keys(imageParameters).length > 0 ? imageParameters : cleanParameters(imageGeneration.parameters),
     minImages: Math.min(minImages, maxImages),
     maxImages: Math.max(minImages, maxImages),
     maxCharacters: clampInt(raw.maxCharacters, 1, 8, DEFAULT_CONFIG.maxCharacters),
@@ -719,7 +693,7 @@ function renderGenerationSection({ ui, config, imageConnections, actions, rerend
     const curWidth = Number(params.width) || 832;
     const curHeight = Number(params.height) || 1216;
     const matchedPreset = NOVELAI_RESOLUTION_PRESETS.find((p) => p.width === curWidth && p.height === curHeight) || NOVELAI_RESOLUTION_PRESETS[0];
-    ui.addCustomSelect(section, "Resolution", matchedPreset.value, NOVELAI_RESOLUTION_PRESETS.map((p) => ({ value: p.value, label: p.label })), "NovelAI canvas size. Sent to the provider as the resolution preset, width, and height, and also synchronizes the in-chat display aspect ratio.", (val) => {
+    ui.addCustomSelect(section, "Resolution", matchedPreset.value, NOVELAI_RESOLUTION_PRESETS.map((p) => ({ value: p.value, label: p.label })), "NovelAI resolution preset. Automatically synchronizes the in-chat display aspect ratio.", (val) => {
       const found = NOVELAI_RESOLUTION_PRESETS.find((p) => p.value === val);
       if (found) {
         actions.patchConfig({
@@ -3269,8 +3243,10 @@ function setup(ctx) {
         patch.parserModel = imageGeneration.promptParserModel || "";
         patch.parserParameters = imageGeneration.promptParserParameters || {};
       }
-      if (!config.imageConnectionId && imageGeneration.activeImageGenConnectionId) {
+      if (imageGeneration.activeImageGenConnectionId) {
         patch.imageConnectionId = imageGeneration.activeImageGenConnectionId;
+        patch.imageModel = imageGeneration.model || "";
+        patch.imageParameters = imageGeneration.parameters || {};
       }
       if (Object.keys(patch).length > 0)
         patchConfig(patch);

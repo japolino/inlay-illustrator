@@ -102,7 +102,7 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
       "Resolution",
       matchedPreset.value,
       NOVELAI_RESOLUTION_PRESETS.map((p) => ({ value: p.value, label: p.label })),
-      "NovelAI canvas size. Sent to the provider as the resolution preset, width, and height, and also synchronizes the in-chat display aspect ratio.",
+      "NovelAI resolution preset. Automatically synchronizes the in-chat display aspect ratio.",
       (val) => {
         const found = NOVELAI_RESOLUTION_PRESETS.find((p) => p.value === val);
         if (found) {
