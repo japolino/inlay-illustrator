@@ -9238,13 +9238,19 @@ function rerollImageParameters(parameters, connection, prompt, negative) {
 async function buildImageParameters(config, connection, prompt, negative, characters) {
   const parameters = { ...connection?.default_parameters || {}, ...config.imageParameters };
   const droppedKeys = keysOf(parameters).filter((key) => COMFY_KEYS_TO_DISCARD.includes(key));
+  const connectionDefaults = connection?.default_parameters || {};
   logStage(config, "image_parameters_start", {
     provider: connection?.provider || "(default)",
     connectionId: connection?.id || null,
     promptLength: prompt.length,
     negativeLength: negative.length,
     parameterKeys: keysOf(parameters),
-    droppedLegacyKeys: droppedKeys
+    droppedLegacyKeys: droppedKeys,
+    connectionDefaultKeys: keysOf(connectionDefaults),
+    connectionSampler: connectionDefaults.sampler ?? null,
+    connectionSamplerName: connectionDefaults.sampler_name ?? null,
+    extensionSampler: (config.imageParameters || {}).sampler ?? null,
+    extensionSamplerName: (config.imageParameters || {}).sampler_name ?? null
   });
   const charCandidates = characters ?? (Array.isArray(parameters.characters) ? parameters.characters : undefined) ?? (Array.isArray(parameters.nativeCharacters) ? parameters.nativeCharacters : undefined);
   const normalizedChars = charCandidates ? normalizeCharacterPayload(charCandidates) : undefined;
