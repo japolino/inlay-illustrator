@@ -106,7 +106,11 @@ leading tags, followed by the rest of the character tags:
 Amiya, Arknights, 1girl, teen, brown hair, coat
 ```
 
-ComfyUI keeps the source form (`1girl, Amiya (Arknights), teen, brown hair`).
-This is an intentional deviation requested by the user, not source parity. The
-`character_normalization` parity fixtures record the source order and are
-asserted with ComfyUI syntax.
+ComfyUI instead keeps a literal escaped reference, because parentheses are weight
+syntax there: `1girl, Amiya \(Arknights\), teen, brown hair`. A name without its
+own parenthetical gets the configured creation name appended in the same escaped
+form.
+
+Both forms are intentional deviations requested by the user, not source parity.
+The `character_normalization` parity fixtures continue to record the source form
+and are asserted with no syntax, where the source form is produced.

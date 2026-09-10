@@ -274,9 +274,11 @@ describe("v376 schema parsing and structural normalization", () => {
     expect(flatShots[0].characters[0].identity).toBe("man, 30, tall, jeans");
   });
 
-  // The fixtures record SOURCE assembly order. ComfyUI syntax preserves it
-  // exactly; the NovelAI path deliberately emits the source-reference name as
-  // plain leading tags instead (covered by the test below).
+  // These fixtures record SOURCE behavior. The extension deviates in the
+  // source-reference NAME only: NovelAI emits it as plain leading tags, and
+  // ComfyUI escapes the parentheses (`Name \(Creation\)`) because parentheses
+  // are weight syntax there. Every other field matches the fixture exactly.
+  // The fixture file keeps the source expectation on purpose.
   it("matches character_normalization fixtures from src/evals/v376-parity/fixtures/fixtures.json", () => {
     // 1. canon_char_original_on_supplement_on
     const c1 = normalizeCharacterData(
@@ -297,7 +299,7 @@ describe("v376 schema parsing and structural normalization", () => {
       { ...baseOptions, syntax: "comfyui", originalReference: true, supplement: true }
     );
     expect(c1.positive).toBe(
-      "girl, Asuka Langley Soryu (Evangelion), long orange hair, blue eyes, slender, plugsuit, smirk, arms crossed, standing proud, glaring"
+      "girl, Asuka Langley Soryu \\(Evangelion\\), long orange hair, blue eyes, slender, plugsuit, smirk, arms crossed, standing proud, glaring"
     );
     expect(c1.identity).toBe("girl, long orange hair, blue eyes, slender, plugsuit");
 
@@ -361,7 +363,7 @@ describe("v376 schema parsing and structural normalization", () => {
       { ...baseOptions, syntax: "comfyui", originalReference: true, supplement: false }
     );
     expect(c4.positive).toBe(
-      "girl, Asuka Langley Soryu (Evangelion), long orange hair, blue eyes, slender, plugsuit, smirk, arms crossed"
+      "girl, Asuka Langley Soryu \\(Evangelion\\), long orange hair, blue eyes, slender, plugsuit, smirk, arms crossed"
     );
   });
 
@@ -410,12 +412,12 @@ describe("v376 schema parsing and structural normalization", () => {
     );
     expect(canon.positive).not.toContain("\\(");
 
-    // ComfyUI keeps the source form.
+    // ComfyUI keeps the escaped literal form: parentheses are weight syntax there.
     const comfy = normalizeCharacterData(
       { name: "Asuka Langley Soryu (Evangelion)", label: "girl", appearance: "red hair" },
       { ...baseOptions, syntax: "comfyui", originalReference: true }
     );
-    expect(comfy.positive).toBe("girl, Asuka Langley Soryu (Evangelion), red hair");
+    expect(comfy.positive).toBe("girl, Asuka Langley Soryu \\(Evangelion\\), red hair");
 
     // A name without a source reference is still placed first for NovelAI.
     const plain = normalizeCharacterData(
@@ -423,6 +425,19 @@ describe("v376 schema parsing and structural normalization", () => {
       { ...baseOptions, originalReference: true }
     );
     expect(plain.positive).toBe("Asuka Langley Soryu, girl, red hair");
+
+    // The rest of the ComfyUI source-reference cases.
+    const comfyNoParen = normalizeCharacterData(
+      { name: "Asuka Langley Soryu", label: "girl", appearance: "red hair" },
+      { ...baseOptions, syntax: "comfyui", originalReference: true, originalCreationName: "Evangelion" }
+    );
+    expect(comfyNoParen.positive).toBe("girl, Asuka Langley Soryu \\(Evangelion\\), red hair");
+
+    const comfyNoCreation = normalizeCharacterData(
+      { name: "Asuka Langley Soryu", label: "girl", appearance: "red hair" },
+      { ...baseOptions, syntax: "comfyui", originalReference: true, originalCreationName: "" }
+    );
+    expect(comfyNoCreation.positive).toBe("girl, Asuka Langley Soryu, red hair");
 
     // The (oc) marker is not a source reference and is never emitted.
     const oc = normalizeCharacterData(

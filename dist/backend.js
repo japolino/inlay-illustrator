@@ -7441,6 +7441,18 @@ function extractCardImageJson(responseText) {
   }
   return null;
 }
+function sourceReferenceNameForComfyUi(name, creationName) {
+  const trimmed = name.trim();
+  const escape = (value) => value.replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  const match = trimmed.match(/^(.*?)[\s_]*\(([^()]*)\)\s*$/);
+  if (match && match[1].trim() && match[2].trim()) {
+    return `${match[1].replace(/[\s_]+$/, "").trim()} \\(${match[2].trim()}\\)`;
+  }
+  const creation = (creationName ?? "").trim();
+  if (trimmed && creation)
+    return `${trimmed} \\(${escape(creation)}\\)`;
+  return trimmed;
+}
 function splitSourceReferenceName(name) {
   const trimmed = name.trim();
   if (!trimmed)
@@ -7481,6 +7493,7 @@ function normalizeCharacterData(char, options) {
     const parts = [];
     const nameTags = [];
     const splitSourceName = useOriginal && options?.syntax === "nai";
+    const escapeSourceName = useOriginal && options?.syntax === "comfyui";
     const keys = useOriginal ? ["label", "name", "age", "appearance", "body", "attire", "expression", "action", "sex", "text"] : ["label", "age", "appearance", "body", "attire", "expression", "action", "sex", "text"];
     for (const key of keys) {
       let val = String(record[key] ?? "").trim();
@@ -7491,6 +7504,10 @@ function normalizeCharacterData(char, options) {
         continue;
       if (key === "name" && splitSourceName) {
         nameTags.push(...splitSourceReferenceName(val));
+        continue;
+      }
+      if (key === "name" && escapeSourceName) {
+        parts.push(sourceReferenceNameForComfyUi(val, options?.originalCreationName));
         continue;
       }
       parts.push(val);

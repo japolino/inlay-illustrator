@@ -271,6 +271,25 @@ export function extractCardImageJson(responseText: string): unknown {
  * lands in the prompt as literal parentheses, so the name and its source are
  * emitted as separate tags instead: `Amiya (Arknights)` -> ["Amiya", "Arknights"].
  */
+/**
+ * Builds the ComfyUI source-reference name.
+ *
+ * Parentheses are weight syntax in ComfyUI, so a literal reference must be
+ * escaped: `Amiya \(Arknights\)`. A name without its own parenthetical gets the
+ * configured creation name appended, matching the previous extension behavior.
+ */
+export function sourceReferenceNameForComfyUi(name: string, creationName?: string): string {
+  const trimmed = name.trim();
+  const escape = (value: string): string => value.replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  const match = trimmed.match(/^(.*?)[\s_]*\(([^()]*)\)\s*$/);
+  if (match && match[1].trim() && match[2].trim()) {
+    return `${match[1].replace(/[\s_]+$/, "").trim()} \\(${match[2].trim()}\\)`;
+  }
+  const creation = (creationName ?? "").trim();
+  if (trimmed && creation) return `${trimmed} \\(${escape(creation)}\\)`;
+  return trimmed;
+}
+
 export function splitSourceReferenceName(name: string): string[] {
   const trimmed = name.trim();
   if (!trimmed) return [];
@@ -317,6 +336,7 @@ export function normalizeCharacterData(
     // NovelAI reads a parenthetical as weight syntax, so the source-reference
     // name is emitted as leading plain tags instead of `Name (Creation)`.
     const splitSourceName = useOriginal && options?.syntax === "nai";
+    const escapeSourceName = useOriginal && options?.syntax === "comfyui";
     const keys = useOriginal
       ? ["label", "name", "age", "appearance", "body", "attire", "expression", "action", "sex", "text"]
       : ["label", "age", "appearance", "body", "attire", "expression", "action", "sex", "text"];
@@ -329,6 +349,10 @@ export function normalizeCharacterData(
       if (val === "" || val.toLowerCase() === "null" || val.toLowerCase() === "none") continue;
       if (key === "name" && splitSourceName) {
         nameTags.push(...splitSourceReferenceName(val));
+        continue;
+      }
+      if (key === "name" && escapeSourceName) {
+        parts.push(sourceReferenceNameForComfyUi(val, options?.originalCreationName));
         continue;
       }
       parts.push(val);
