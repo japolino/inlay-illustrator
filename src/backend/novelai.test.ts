@@ -3,7 +3,8 @@ import {
   DEFAULT_CONFIG,
   isNovelAiConnection,
   NOVELAI_RESOLUTION_PRESETS,
-  NOVELAI_SAMPLER_OPTIONS
+  NOVELAI_SAMPLER_OPTIONS,
+  type Config
 } from "../shared/config.js";
 import { buildImageParameters, rerollImageParameters } from "./images.js";
 import { renderPromptWithCurrentAffixes } from "./prompt.js";
@@ -421,4 +422,39 @@ describe("Cross-provider isolation and parameter normalization", () => {
     expect(rerolled.workflow).toBeDefined();
     expect(rerolled.workflowFormat).toBe("api_prompt");
   });
+
+  test("strips leftover ComfyUI keys and normalizes ComfyUI sampler names to valid NovelAI samplers", async () => {
+    const connWithoutSampler: ImageConnection = {
+      ...naiConn,
+      default_parameters: {
+        steps: 28
+      }
+    };
+    const dirtyConfig: Config = {
+      ...DEFAULT_CONFIG,
+      imageParameters: {
+        sampler_name: "euler",
+        scheduler: "normal",
+        comfyui_field_values: { prompt: 1 },
+        includePersonaAvatar: true,
+        includeCharacterAvatar: true,
+        steps: 30,
+        scale: 5,
+        seed: 1
+      }
+    };
+
+    const built = await buildImageParameters(dirtyConfig, connWithoutSampler, "test prompt", "test neg");
+
+    // "euler" must be converted to valid NovelAI sampler "k_euler"
+    expect(built.sampler).toBe("k_euler");
+
+    // Leftover ComfyUI keys must be discarded
+    expect(built.sampler_name).toBeUndefined();
+    expect(built.scheduler).toBeUndefined();
+    expect(built.comfyui_field_values).toBeUndefined();
+    expect(built.includePersonaAvatar).toBeUndefined();
+    expect(built.includeCharacterAvatar).toBeUndefined();
+  });
 });
+

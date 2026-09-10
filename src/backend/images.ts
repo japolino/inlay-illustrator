@@ -14,13 +14,29 @@ const COMFY_KEYS_TO_DISCARD = [
   "workflowFormat",
   "preserveImportedWorkflow",
   "comfyui_custom_fields",
+  "comfyui_field_values",
   "field_mappings",
   "checkpoint",
   "ckpt_name",
   "scheduler",
   "sampler_name",
-  "custom"
+  "custom",
+  "includePersonaAvatar",
+  "includeCharacterAvatar"
 ];
+
+export function normalizeNovelAiSampler(candidate: string | undefined): string | undefined {
+  if (!candidate) return undefined;
+  const clean = candidate.trim().toLowerCase();
+  if (clean === "euler") return "k_euler";
+  if (clean === "euler_ancestral" || clean === "euler a" || clean === "euler_a") return "k_euler_ancestral";
+  if (clean === "dpmpp_2m" || clean === "dpm_2m" || clean === "dpm++ 2m") return "k_dpmpp_2m";
+  if (clean === "dpmpp_2s_ancestral" || clean === "dpm_2s_ancestral" || clean === "dpm++ 2s ancestral") return "k_dpmpp_2s_ancestral";
+  if (clean === "dpmpp_sde" || clean === "dpm++ sde") return "k_dpmpp_sde";
+  if (clean === "ddim" || clean === "ddim_v3") return "ddim";
+  if (clean.startsWith("k_")) return clean;
+  return undefined;
+}
 
 function cacheImageConnection(key: string, connection: ImageConnection | null): void {
   if (imageConnectionCache.size >= 32) {
@@ -317,9 +333,11 @@ export async function buildImageParameters(
       ?? 5.0;
     const scale = Math.min(20, Math.max(1, Number(rawScale.toFixed(1))));
 
-    const sampler = stringParam(parameters.sampler)
+    const rawSampler = stringParam(parameters.sampler)
       ?? stringParam(defaultParams.sampler)
-      ?? stringParam(parameters.sampler_name)
+      ?? stringParam(parameters.sampler_name);
+    const sampler = normalizeNovelAiSampler(rawSampler)
+      ?? normalizeNovelAiSampler(stringParam(defaultParams.sampler))
       ?? "k_euler_ancestral";
 
     const rawWidth = numberParam(parameters.width)

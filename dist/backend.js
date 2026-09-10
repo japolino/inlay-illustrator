@@ -8990,13 +8990,36 @@ var COMFY_KEYS_TO_DISCARD = [
   "workflowFormat",
   "preserveImportedWorkflow",
   "comfyui_custom_fields",
+  "comfyui_field_values",
   "field_mappings",
   "checkpoint",
   "ckpt_name",
   "scheduler",
   "sampler_name",
-  "custom"
+  "custom",
+  "includePersonaAvatar",
+  "includeCharacterAvatar"
 ];
+function normalizeNovelAiSampler(candidate) {
+  if (!candidate)
+    return;
+  const clean = candidate.trim().toLowerCase();
+  if (clean === "euler")
+    return "k_euler";
+  if (clean === "euler_ancestral" || clean === "euler a" || clean === "euler_a")
+    return "k_euler_ancestral";
+  if (clean === "dpmpp_2m" || clean === "dpm_2m" || clean === "dpm++ 2m")
+    return "k_dpmpp_2m";
+  if (clean === "dpmpp_2s_ancestral" || clean === "dpm_2s_ancestral" || clean === "dpm++ 2s ancestral")
+    return "k_dpmpp_2s_ancestral";
+  if (clean === "dpmpp_sde" || clean === "dpm++ sde")
+    return "k_dpmpp_sde";
+  if (clean === "ddim" || clean === "ddim_v3")
+    return "ddim";
+  if (clean.startsWith("k_"))
+    return clean;
+  return;
+}
 function cacheImageConnection(key, connection) {
   if (imageConnectionCache.size >= 32) {
     const oldest = imageConnectionCache.keys().next().value;
@@ -9237,7 +9260,8 @@ async function buildImageParameters(config, connection, prompt, negative, charac
     const steps = Math.min(50, Math.max(1, Math.round(rawSteps)));
     const rawScale = numberParam(parameters.scale) ?? numberParam(parameters.cfg) ?? numberParam(defaultParams.scale) ?? numberParam(defaultParams.cfg) ?? 5;
     const scale = Math.min(20, Math.max(1, Number(rawScale.toFixed(1))));
-    const sampler = stringParam(parameters.sampler) ?? stringParam(defaultParams.sampler) ?? stringParam(parameters.sampler_name) ?? "k_euler_ancestral";
+    const rawSampler = stringParam(parameters.sampler) ?? stringParam(defaultParams.sampler) ?? stringParam(parameters.sampler_name);
+    const sampler = normalizeNovelAiSampler(rawSampler) ?? normalizeNovelAiSampler(stringParam(defaultParams.sampler)) ?? "k_euler_ancestral";
     const rawWidth = numberParam(parameters.width) ?? numberParam(defaultParams.width) ?? 832;
     const rawHeight = numberParam(parameters.height) ?? numberParam(defaultParams.height) ?? 1216;
     const width = Math.min(1920, Math.max(512, Math.round(rawWidth / 64) * 64));
