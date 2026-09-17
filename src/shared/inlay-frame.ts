@@ -40,29 +40,29 @@ export function inlayFrameGeometry(
     100,
     placement === "cover" ? DEFAULT_CONFIG.coverImageMaxHeightVh : DEFAULT_CONFIG.inlayImageMaxHeightVh
   );
-  const aspect = resolveInlayImageAspect(config.inlayImageAspect);
+  const parameters = imageParameters && Object.keys(imageParameters).length > 0
+    ? imageParameters
+    : config.imageParameters;
+  const intrinsicWidth = positiveDimension(parameters.width);
+  const intrinsicHeight = positiveDimension(parameters.height);
+  const aspect = resolveInlayImageAspect(config.inlayImageAspect, { width: intrinsicWidth, height: intrinsicHeight });
   const viewportWidth = `calc(${maxHeight}vh * ${aspect.w} / ${aspect.h})`;
   // Preserve staging's optional cover-width cap. Paragraph and Asset slots use
   // the Legacy display contract: aspect ratio + viewport-height cap only.
   const boxWidth = placement === "cover"
     ? `min(100%, ${clampInteger(config.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth)}px, ${viewportWidth})`
     : `min(100%, ${viewportWidth})`;
-  const parameters = imageParameters && Object.keys(imageParameters).length > 0
-    ? imageParameters
-    : config.imageParameters;
-  const intrinsicWidth = positiveDimension(parameters.width);
-  const intrinsicHeight = positiveDimension(parameters.height);
   // `overflow:hidden` keeps the image inside the frame: if the host cannot
   // resolve the image's percentage height, the image would otherwise keep its
   // intrinsic ratio, spill below the frame, and paint over the paragraph text
   // that follows the inlay.
   const frameRatio = `${aspect.w}/${aspect.h}`;
-  const commonFrameStyle = `width:${boxWidth};max-width:100%;aspect-ratio:${frameRatio};overflow:hidden;`;
+  const commonFrameStyle = `width:${boxWidth};max-width:100%;max-height:${maxHeight}vh;aspect-ratio:${frameRatio};overflow:hidden;`;
   return {
     wrapperStyle: "display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;",
     frameStyle: `display:block;${commonFrameStyle}`,
     placeholderFrameStyle: `display:flex;justify-content:center;align-items:center;${commonFrameStyle}`,
-    imageStyle: `display:block;width:100%;height:100%;aspect-ratio:${frameRatio};object-fit:cover;border-radius:8px;cursor:zoom-in;`,
+    imageStyle: `display:block;width:100%;height:100%;aspect-ratio:${frameRatio};object-fit:contain;border-radius:8px;cursor:zoom-in;`,
     intrinsicAttributes: intrinsicWidth && intrinsicHeight
       ? ` width="${intrinsicWidth}" height="${intrinsicHeight}"`
       : ""

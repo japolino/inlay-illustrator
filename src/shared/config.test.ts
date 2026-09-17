@@ -118,11 +118,12 @@ describe("shared configuration", () => {
   });
 
   test("normalizes the Legacy in-chat aspect presets and resolves their ratios", () => {
-    expect(DEFAULT_CONFIG.inlayImageAspect).toBe("wide");
+    expect(DEFAULT_CONFIG.inlayImageAspect).toBe("auto");
     expect(normalizeConfig({ inlayImageAspect: "vertical" }).inlayImageAspect).toBe("vertical");
-    expect(normalizeConfig({ inlayImageAspect: "invalid" as never }).inlayImageAspect).toBe("wide");
+    expect(normalizeConfig({ inlayImageAspect: "invalid" as never }).inlayImageAspect).toBe("auto");
     expect(resolveInlayImageAspect("classic")).toEqual({ w: 2, h: 3 });
     expect(resolveInlayImageAspect("invalid")).toEqual({ w: 16, h: 9 });
+    expect(resolveInlayImageAspect("auto", { width: 832, height: 1216 })).toEqual({ w: 832, h: 1216 });
   });
 
   test("uses an automatic parser token budget by default and clamps explicit budgets", () => {

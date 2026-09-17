@@ -8,7 +8,7 @@ export function renderOutputSection({ ui, config }: SectionContext): void {
     badge: outputSummary(config)
   });
   ui.addSelect(section, "inlayImageAspect", "Aspect ratio", INLAY_IMAGE_ASPECT_PRESETS,
-    "The shape of the in-chat image frame. Generated images are cropped to fill it (object-fit: cover).");
+    "The shape of the in-chat image frame. Auto matches the generated image dimensions.");
   ui.addNumber(section, "inlayImageMaxHeightVh", "Maximum height", 10, 100,
     "Viewport-height cap. The frame keeps the selected aspect ratio and fits the chat column.");
   ui.addTextarea(section, "ignoredTags", "Ignored tags", "Separate tags with commas or semicolons.");

@@ -49,6 +49,6 @@ export function promptSummary(config: Config): string {
 }
 
 export function outputSummary(config: Config): string {
-  const aspect = INLAY_IMAGE_ASPECT_PRESETS.find((preset) => preset.value === config.inlayImageAspect)?.label || "Wide 16:9";
+  const aspect = INLAY_IMAGE_ASPECT_PRESETS.find((preset) => preset.value === config.inlayImageAspect)?.label || "Auto (Image ratio)";
   return `${aspect} · ${config.inlayImageMaxHeightVh}vh`;
 }

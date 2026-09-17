@@ -1,5 +1,6 @@
 // src/shared/config.ts
 var INLAY_IMAGE_ASPECT_PRESETS = [
+  { value: "auto", label: "Auto (Image ratio)" },
   { value: "wide", label: "Wide 16:9" },
   { value: "standard", label: "Standard 4:3" },
   { value: "square", label: "Square 1:1" },
@@ -15,13 +16,26 @@ var INLAY_IMAGE_ASPECT_RATIOS = {
   vertical: { w: 9, h: 16 },
   classic: { w: 2, h: 3 }
 };
-function resolveInlayImageAspect(value) {
+function positiveDimension(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
+}
+function resolveInlayImageAspect(value, intrinsicDimensions) {
   const key = String(value ?? "").toLowerCase();
+  if (key === "auto" || !key) {
+    const w = positiveDimension(intrinsicDimensions?.width);
+    const h = positiveDimension(intrinsicDimensions?.height);
+    if (w && h)
+      return { w, h };
+    return INLAY_IMAGE_ASPECT_RATIOS.wide;
+  }
   return INLAY_IMAGE_ASPECT_RATIOS[key] ?? INLAY_IMAGE_ASPECT_RATIOS.wide;
 }
 function normalizeInlayImageAspect(value) {
   const key = String(value ?? "").toLowerCase();
-  return key in INLAY_IMAGE_ASPECT_RATIOS ? key : "wide";
+  if (key === "auto")
+    return "auto";
+  return key in INLAY_IMAGE_ASPECT_RATIOS ? key : "auto";
 }
 var FAB_CORNER_OPTIONS = [
   { value: "bottom-right", label: "Bottom right" },
@@ -179,7 +193,7 @@ var DEFAULT_CONFIG = {
   preprocessingEnabled: false,
   inlayImageWidth: 640,
   assetImageWidth: 400,
-  inlayImageAspect: "wide",
+  inlayImageAspect: "auto",
   inlayImageMaxHeightVh: 70,
   coverImageWidth: 1200,
   coverImageMaxHeightVh: 80,
@@ -391,25 +405,25 @@ function clampInteger(value, min, max, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : fallback;
 }
-function positiveDimension(value) {
+function positiveDimension2(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
 }
 function inlayFrameGeometry(imageParameters, placement, config) {
   const maxHeight = clampInteger(placement === "cover" ? config.coverImageMaxHeightVh : config.inlayImageMaxHeightVh, 10, 100, placement === "cover" ? DEFAULT_CONFIG.coverImageMaxHeightVh : DEFAULT_CONFIG.inlayImageMaxHeightVh);
-  const aspect = resolveInlayImageAspect(config.inlayImageAspect);
+  const parameters = imageParameters && Object.keys(imageParameters).length > 0 ? imageParameters : config.imageParameters;
+  const intrinsicWidth = positiveDimension2(parameters.width);
+  const intrinsicHeight = positiveDimension2(parameters.height);
+  const aspect = resolveInlayImageAspect(config.inlayImageAspect, { width: intrinsicWidth, height: intrinsicHeight });
   const viewportWidth = `calc(${maxHeight}vh * ${aspect.w} / ${aspect.h})`;
   const boxWidth = placement === "cover" ? `min(100%, ${clampInteger(config.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth)}px, ${viewportWidth})` : `min(100%, ${viewportWidth})`;
-  const parameters = imageParameters && Object.keys(imageParameters).length > 0 ? imageParameters : config.imageParameters;
-  const intrinsicWidth = positiveDimension(parameters.width);
-  const intrinsicHeight = positiveDimension(parameters.height);
   const frameRatio = `${aspect.w}/${aspect.h}`;
-  const commonFrameStyle = `width:${boxWidth};max-width:100%;aspect-ratio:${frameRatio};overflow:hidden;`;
+  const commonFrameStyle = `width:${boxWidth};max-width:100%;max-height:${maxHeight}vh;aspect-ratio:${frameRatio};overflow:hidden;`;
   return {
     wrapperStyle: "display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;",
     frameStyle: `display:block;${commonFrameStyle}`,
     placeholderFrameStyle: `display:flex;justify-content:center;align-items:center;${commonFrameStyle}`,
-    imageStyle: `display:block;width:100%;height:100%;aspect-ratio:${frameRatio};object-fit:cover;border-radius:8px;cursor:zoom-in;`,
+    imageStyle: `display:block;width:100%;height:100%;aspect-ratio:${frameRatio};object-fit:contain;border-radius:8px;cursor:zoom-in;`,
     intrinsicAttributes: intrinsicWidth && intrinsicHeight ? ` width="${intrinsicWidth}" height="${intrinsicHeight}"` : ""
   };
 }
@@ -728,7 +742,7 @@ function promptSummary(config) {
   return `${syntax} · ${sep}`;
 }
 function outputSummary(config) {
-  const aspect = INLAY_IMAGE_ASPECT_PRESETS.find((preset) => preset.value === config.inlayImageAspect)?.label || "Wide 16:9";
+  const aspect = INLAY_IMAGE_ASPECT_PRESETS.find((preset) => preset.value === config.inlayImageAspect)?.label || "Auto (Image ratio)";
   return `${aspect} · ${config.inlayImageMaxHeightVh}vh`;
 }
 
@@ -990,7 +1004,7 @@ function renderOutputSection({ ui, config }) {
     description: "Set the in-chat frame shape, height, crop, and output filtering.",
     badge: outputSummary(config)
   });
-  ui.addSelect(section, "inlayImageAspect", "Aspect ratio", INLAY_IMAGE_ASPECT_PRESETS, "The shape of the in-chat image frame. Generated images are cropped to fill it (object-fit: cover).");
+  ui.addSelect(section, "inlayImageAspect", "Aspect ratio", INLAY_IMAGE_ASPECT_PRESETS, "The shape of the in-chat image frame. Auto matches the generated image dimensions.");
   ui.addNumber(section, "inlayImageMaxHeightVh", "Maximum height", 10, 100, "Viewport-height cap. The frame keeps the selected aspect ratio and fits the chat column.");
   ui.addTextarea(section, "ignoredTags", "Ignored tags", "Separate tags with commas or semicolons.");
 }

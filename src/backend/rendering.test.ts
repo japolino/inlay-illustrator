@@ -80,8 +80,8 @@ describe("inlay rendering", () => {
     expect(coverBlock).toContain("aspect-ratio:16/9");
     expect(paragraphBlock).toContain("width:min(100%, calc(70vh * 16 / 9))");
     expect(paragraphBlock).toContain("aspect-ratio:16/9");
-    expect(coverBlock).toContain("object-fit:cover");
-    expect(paragraphBlock).toContain("object-fit:cover");
+    expect(coverBlock).toContain("object-fit:contain");
+    expect(paragraphBlock).toContain("object-fit:contain");
   });
 
   test("clamps invalid paragraph targets and applies configured dimensions", () => {
@@ -105,7 +105,7 @@ describe("inlay rendering", () => {
     expect(rendered.indexOf("/too-high.png")).toBeLessThan(rendered.indexOf("Second."));
     expect(rendered).toContain("width:min(100%, calc(63vh * 3 / 4))");
     expect(rendered).toContain("aspect-ratio:3/4");
-    expect(rendered).toContain("object-fit:cover");
+    expect(rendered).toContain("object-fit:contain");
   });
 
   test("escapes image metadata without embedding prompt text in the chat", () => {
@@ -207,7 +207,7 @@ describe("inlay rendering", () => {
     for (const rendered of [asset, adaptiveIllustration]) {
       expect(rendered).toContain("width:min(100%, calc(65vh * 4 / 3))");
       expect(rendered).toContain("aspect-ratio:4/3");
-      expect(rendered).toContain("object-fit:cover");
+      expect(rendered).toContain("object-fit:contain");
       expect(rendered).not.toContain("width:min(100%, 420px)");
       expect(rendered).not.toContain("width:min(100%, 800px)");
     }
@@ -258,12 +258,12 @@ describe("inlay rendering", () => {
     const completed = renderInlaidMessage("Paragraph.", {
       slots: [{ ...baseSlot, imageUrl: "/ready.png", status: "completed" }]
     }, config);
-    const expectedFrame = "width:min(100%, calc(70vh * 3 / 4));max-width:100%;aspect-ratio:3/4";
+    const expectedFrame = "width:min(100%, calc(70vh * 3 / 4));max-width:100%;max-height:70vh;aspect-ratio:3/4;overflow:hidden;";
 
     expect(pending).toContain(expectedFrame);
     expect(completed).toContain(expectedFrame);
     expect(completed).toContain('width="768" height="1024"');
-    expect(completed).toContain("width:100%;height:100%;aspect-ratio:3/4;object-fit:cover");
+    expect(completed).toContain("width:100%;height:100%;aspect-ratio:3/4;object-fit:contain");
     // The frame clips any overflow so the image can never paint over the text.
     expect(completed).toContain("aspect-ratio:3/4;overflow:hidden;");
   });

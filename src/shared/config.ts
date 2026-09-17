@@ -25,9 +25,10 @@ export type PromptPreset = {
 
 export type PerspectiveMode = "creative" | "static" | "dynamic" | "asset";
 
-export type InlayImageAspect = "wide" | "standard" | "square" | "portrait" | "vertical" | "classic";
+export type InlayImageAspect = "auto" | "wide" | "standard" | "square" | "portrait" | "vertical" | "classic";
 
 export const INLAY_IMAGE_ASPECT_PRESETS: Array<{ value: InlayImageAspect; label: string }> = [
+  { value: "auto", label: "Auto (Image ratio)" },
   { value: "wide", label: "Wide 16:9" },
   { value: "standard", label: "Standard 4:3" },
   { value: "square", label: "Square 1:1" },
@@ -36,7 +37,7 @@ export const INLAY_IMAGE_ASPECT_PRESETS: Array<{ value: InlayImageAspect; label:
   { value: "classic", label: "Classic 2:3" }
 ];
 
-const INLAY_IMAGE_ASPECT_RATIOS: Record<InlayImageAspect, { w: number; h: number }> = {
+const INLAY_IMAGE_ASPECT_RATIOS: Record<Exclude<InlayImageAspect, "auto">, { w: number; h: number }> = {
   wide: { w: 16, h: 9 },
   standard: { w: 4, h: 3 },
   square: { w: 1, h: 1 },
@@ -45,15 +46,30 @@ const INLAY_IMAGE_ASPECT_RATIOS: Record<InlayImageAspect, { w: number; h: number
   classic: { w: 2, h: 3 }
 };
 
-/** Resolve an aspect (w/h) for a preset, defaulting to wide 16:9. */
-export function resolveInlayImageAspect(value: unknown): { w: number; h: number } {
+function positiveDimension(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
+}
+
+/** Resolve an aspect (w/h) for a preset, defaulting to intrinsic image dimensions or wide 16:9. */
+export function resolveInlayImageAspect(
+  value: unknown,
+  intrinsicDimensions?: { width?: unknown; height?: unknown } | null
+): { w: number; h: number } {
   const key = String(value ?? "").toLowerCase();
-  return INLAY_IMAGE_ASPECT_RATIOS[key as InlayImageAspect] ?? INLAY_IMAGE_ASPECT_RATIOS.wide;
+  if (key === "auto" || !key) {
+    const w = positiveDimension(intrinsicDimensions?.width);
+    const h = positiveDimension(intrinsicDimensions?.height);
+    if (w && h) return { w, h };
+    return INLAY_IMAGE_ASPECT_RATIOS.wide;
+  }
+  return INLAY_IMAGE_ASPECT_RATIOS[key as keyof typeof INLAY_IMAGE_ASPECT_RATIOS] ?? INLAY_IMAGE_ASPECT_RATIOS.wide;
 }
 
 export function normalizeInlayImageAspect(value: unknown): InlayImageAspect {
   const key = String(value ?? "").toLowerCase();
-  return key in INLAY_IMAGE_ASPECT_RATIOS ? (key as InlayImageAspect) : "wide";
+  if (key === "auto") return "auto";
+  return key in INLAY_IMAGE_ASPECT_RATIOS ? (key as InlayImageAspect) : "auto";
 }
 
 export type FabCorner = "bottom-right" | "bottom-left" | "top-right" | "top-left";
@@ -327,7 +343,7 @@ export const DEFAULT_CONFIG: Config = {
   preprocessingEnabled: false,
   inlayImageWidth: 640,
   assetImageWidth: 400,
-  inlayImageAspect: "wide",
+  inlayImageAspect: "auto",
   inlayImageMaxHeightVh: 70,
   coverImageWidth: 1200,
   coverImageMaxHeightVh: 80,
