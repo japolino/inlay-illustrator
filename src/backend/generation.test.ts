@@ -1343,4 +1343,10 @@ describe("V3.7.6 Active Generation and Reroll Pipeline", () => {
       messages: [message]
     })).rejects.toThrow(/NovelAI native character channels are not supported by provider "comfyui"/);
   });
+
+  test("triggers message re-render when publicHostUrl changes", () => {
+    const { inlayDisplayKeysChanged } = require("./generation.js");
+    expect(inlayDisplayKeysChanged({ publicHostUrl: "https://party.example.com" })).toBe(true);
+    expect(inlayDisplayKeysChanged({ minImages: 4 })).toBe(false);
+  });
 });

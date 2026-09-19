@@ -265,6 +265,8 @@ export type Config = {
   assetImageWidth: number;
   inlayImageAspect: InlayImageAspect;
   inlayImageMaxHeightVh: number;
+  /** Optional public or tunnel URL (e.g. https://... or http://192.168.1.x:7860) for party rooms and remote sharing. */
+  publicHostUrl: string;
   /** Maximum display width of the optional cover image. */
   coverImageWidth: number;
   /** Maximum display height of the optional cover image. */
@@ -345,6 +347,7 @@ export const DEFAULT_CONFIG: Config = {
   assetImageWidth: 400,
   inlayImageAspect: "auto",
   inlayImageMaxHeightVh: 70,
+  publicHostUrl: "",
   coverImageWidth: 1200,
   coverImageMaxHeightVh: 80,
   promptStyle: "anima",
@@ -379,6 +382,17 @@ function cleanString(value: unknown): string {
 
 function cleanNullableString(value: unknown): string | null {
   return cleanString(value) || null;
+}
+
+export function cleanPublicHostUrl(value: unknown): string {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return "";
+  const trimmed = raw.replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^(?:localhost|127\.|192\.168\.|10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)/i.test(trimmed)) {
+    return `http://${trimmed}`;
+  }
+  return `https://${trimmed}`;
 }
 
 function cleanParameters(value: unknown): Record<string, unknown> {
@@ -469,6 +483,7 @@ export function normalizeConfig(raw: RawConfig): Config {
     assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
     inlayImageAspect: normalizeInlayImageAspect(raw.inlayImageAspect),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
+    publicHostUrl: cleanPublicHostUrl(raw.publicHostUrl),
     coverImageWidth: clampInt(raw.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth),
     coverImageMaxHeightVh: clampInt(raw.coverImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.coverImageMaxHeightVh),
     promptStyle: raw.promptStyle === "default" ? "default" : "anima",

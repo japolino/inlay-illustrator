@@ -195,6 +195,7 @@ var DEFAULT_CONFIG = {
   assetImageWidth: 400,
   inlayImageAspect: "auto",
   inlayImageMaxHeightVh: 70,
+  publicHostUrl: "",
   coverImageWidth: 1200,
   coverImageMaxHeightVh: 80,
   promptStyle: "anima",
@@ -226,6 +227,18 @@ function cleanString(value) {
 }
 function cleanNullableString(value) {
   return cleanString(value) || null;
+}
+function cleanPublicHostUrl(value) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw)
+    return "";
+  const trimmed = raw.replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(trimmed))
+    return trimmed;
+  if (/^(?:localhost|127\.|192\.168\.|10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)/i.test(trimmed)) {
+    return `http://${trimmed}`;
+  }
+  return `https://${trimmed}`;
 }
 function cleanParameters(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -311,6 +324,7 @@ function normalizeConfig(raw) {
     assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
     inlayImageAspect: normalizeInlayImageAspect(raw.inlayImageAspect),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
+    publicHostUrl: cleanPublicHostUrl(raw.publicHostUrl),
     coverImageWidth: clampInt(raw.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth),
     coverImageMaxHeightVh: clampInt(raw.coverImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.coverImageMaxHeightVh),
     promptStyle: raw.promptStyle === "default" ? "default" : "anima",
@@ -1006,6 +1020,7 @@ function renderOutputSection({ ui, config }) {
   });
   ui.addSelect(section, "inlayImageAspect", "Aspect ratio", INLAY_IMAGE_ASPECT_PRESETS, "The shape of the in-chat image frame. Auto matches the generated image dimensions.");
   ui.addNumber(section, "inlayImageMaxHeightVh", "Maximum height", 10, 100, "Viewport-height cap. The frame keeps the selected aspect ratio and fits the chat column.");
+  ui.addText(section, "publicHostUrl", "Public host / tunnel URL", "Optional public URL or tunnel (e.g. https://... or http://192.168.1.x:7860) so party room guests can load illustrations.");
   ui.addTextarea(section, "ignoredTags", "Ignored tags", "Separate tags with commas or semicolons.");
 }
 

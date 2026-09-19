@@ -165,6 +165,24 @@ describe("inlay rendering", () => {
 
   test("encodes provider image IDs for the Lumiverse result route", () => {
     expect(imageUrlFromId("folder/id ?#value")).toBe("/api/v1/image-gen/results/folder%2Fid%20%3F%23value");
+    expect(imageUrlFromId("test-id", "https://party.example.com/")).toBe("https://party.example.com/api/v1/image-gen/results/test-id");
+    expect(imageUrlFromId("test-id", "192.168.1.15:7860")).toBe("http://192.168.1.15:7860/api/v1/image-gen/results/test-id");
+  });
+
+  test("renders party-accessible image URLs when publicHostUrl is configured", () => {
+    const original = "First paragraph.";
+    const record = {
+      imageUrls: ["/api/v1/image-gen/results/img-abc"],
+      imageIds: ["img-abc"],
+      prompts: ["a scene"],
+      paragraphs: [1]
+    };
+    const rendered = renderInlaidMessage(original, record, {
+      ...DEFAULT_CONFIG,
+      publicHostUrl: "https://my-tunnel.trycloudflare.com"
+    });
+    expect(rendered).toContain('src="https://my-tunnel.trycloudflare.com/api/v1/image-gen/results/img-abc"');
+    expect(rendered).toContain('data-no-island');
   });
 
   test("replaces existing Inlay blocks instead of duplicating them", () => {
