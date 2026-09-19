@@ -11,7 +11,5 @@ export function renderOutputSection({ ui, config }: SectionContext): void {
     "The shape of the in-chat image frame. Auto matches the generated image dimensions.");
   ui.addNumber(section, "inlayImageMaxHeightVh", "Maximum height", 10, 100,
     "Viewport-height cap. The frame keeps the selected aspect ratio and fits the chat column.");
-  ui.addText(section, "publicHostUrl", "Public host / tunnel URL",
-    "Optional public URL or tunnel (e.g. https://... or http://192.168.1.x:7860) so party room guests can load illustrations.");
   ui.addTextarea(section, "ignoredTags", "Ignored tags", "Separate tags with commas or semicolons.");
 }

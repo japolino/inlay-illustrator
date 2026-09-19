@@ -5641,7 +5641,6 @@ var DEFAULT_CONFIG = {
   assetImageWidth: 400,
   inlayImageAspect: "auto",
   inlayImageMaxHeightVh: 70,
-  publicHostUrl: "",
   coverImageWidth: 1200,
   coverImageMaxHeightVh: 80,
   promptStyle: "anima",
@@ -5673,18 +5672,6 @@ function cleanString2(value) {
 }
 function cleanNullableString(value) {
   return cleanString2(value) || null;
-}
-function cleanPublicHostUrl(value) {
-  const raw = typeof value === "string" ? value.trim() : "";
-  if (!raw)
-    return "";
-  const trimmed = raw.replace(/\/+$/, "");
-  if (/^https?:\/\//i.test(trimmed))
-    return trimmed;
-  if (/^(?:localhost|127\.|192\.168\.|10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)/i.test(trimmed)) {
-    return `http://${trimmed}`;
-  }
-  return `https://${trimmed}`;
 }
 function cleanParameters(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -5770,7 +5757,6 @@ function normalizeConfig(raw) {
     assetImageWidth: clampInt(raw.assetImageWidth, 120, 2400, DEFAULT_CONFIG.assetImageWidth),
     inlayImageAspect: normalizeInlayImageAspect(raw.inlayImageAspect),
     inlayImageMaxHeightVh: clampInt(raw.inlayImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.inlayImageMaxHeightVh),
-    publicHostUrl: cleanPublicHostUrl(raw.publicHostUrl),
     coverImageWidth: clampInt(raw.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth),
     coverImageMaxHeightVh: clampInt(raw.coverImageMaxHeightVh, 10, 100, DEFAULT_CONFIG.coverImageMaxHeightVh),
     promptStyle: raw.promptStyle === "default" ? "default" : "anima",
@@ -10722,23 +10708,8 @@ function normalizedInlaySlots(record) {
     status: record.slotStatuses?.[index]
   }));
 }
-function imageUrlFromId(imageId, publicHostUrl) {
-  const base = cleanPublicHostUrl(publicHostUrl);
-  const path = `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
-  return base ? `${base}${path}` : path;
-}
-function resolveInlayImageUrl(url, imageId, publicHostUrl) {
-  const base = cleanPublicHostUrl(publicHostUrl);
-  if (!base)
-    return url || (imageId ? imageUrlFromId(imageId) : "");
-  if (imageId)
-    return `${base}/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
-  if (url.startsWith("/api/v1/image-gen/results/"))
-    return `${base}${url}`;
-  const match = url.match(/^(?:https?:\/\/[^/]+)(\/api\/v1\/image-gen\/results\/.+)$/);
-  if (match)
-    return `${base}${match[1]}`;
-  return url;
+function imageUrlFromId(imageId) {
+  return `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
 }
 function clampInt2(value, min, max, fallback = min) {
   const parsed = Number(value);
@@ -10748,11 +10719,10 @@ function htmlAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r\n?|\n/g, "&#10;");
 }
 function renderInlayBlock(url, _prompt, _negativePrompt, _perspectiveMode, _perspectiveSource, _creativeConcept, imageParameters, imageId, chatId, messageId, swipeId, index, config, placement = "paragraph", illustrationNumber = index + 1) {
-  const effectiveUrl = resolveInlayImageUrl(url, imageId, config.publicHostUrl);
   const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
   const frame = inlayFrameGeometry(imageParameters, placement, config);
   return `${MARKER}
-<div class="inlay-illustrator-image" data-inlay-illustrator="true" data-no-island data-inlay-illustrator-placement="${placement}" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.frameStyle}"><img src="${htmlAttr(effectiveUrl)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="${frame.imageStyle}"/></span></div>`;
+<div class="inlay-illustrator-image" data-inlay-illustrator="true" data-no-island data-inlay-illustrator-placement="${placement}" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.frameStyle}"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="${frame.imageStyle}"/></span></div>`;
 }
 function renderSlotPlaceholder(status, _perspectiveMode, imageParameters, index, config, placement = "paragraph", illustrationNumber = index + 1) {
   const subject = placement === "cover" ? "Cover image" : `Illustration ${illustrationNumber}`;
@@ -11715,8 +11685,7 @@ var INLAY_DISPLAY_KEYS = [
   "inlayImageWidth",
   "assetImageWidth",
   "coverImageWidth",
-  "coverImageMaxHeightVh",
-  "publicHostUrl"
+  "coverImageMaxHeightVh"
 ];
 function inlayDisplayKeysChanged(patch) {
   return INLAY_DISPLAY_KEYS.some((key) => (key in patch));

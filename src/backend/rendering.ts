@@ -1,4 +1,4 @@
-import { cleanPublicHostUrl, type Config, type PerspectiveMode } from "../shared/config.js";
+import { type Config, type PerspectiveMode } from "../shared/config.js";
 import { inlayFrameGeometry } from "../shared/inlay-frame.js";
 import { MARKER } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
@@ -58,20 +58,8 @@ function normalizedInlaySlots(record: InlayRecord): InlaySlot[] {
   }));
 }
 
-export function imageUrlFromId(imageId: string, publicHostUrl?: string): string {
-  const base = cleanPublicHostUrl(publicHostUrl);
-  const path = `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
-  return base ? `${base}${path}` : path;
-}
-
-export function resolveInlayImageUrl(url: string, imageId: string, publicHostUrl?: string): string {
-  const base = cleanPublicHostUrl(publicHostUrl);
-  if (!base) return url || (imageId ? imageUrlFromId(imageId) : "");
-  if (imageId) return `${base}/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
-  if (url.startsWith("/api/v1/image-gen/results/")) return `${base}${url}`;
-  const match = url.match(/^(?:https?:\/\/[^/]+)(\/api\/v1\/image-gen\/results\/.+)$/);
-  if (match) return `${base}${match[1]}`;
-  return url;
+export function imageUrlFromId(imageId: string): string {
+  return `/api/v1/image-gen/results/${encodeURIComponent(imageId)}`;
 }
 
 function clampInt(value: unknown, min: number, max: number, fallback = min): number {
@@ -105,10 +93,9 @@ function renderInlayBlock(
   placement: "cover" | "paragraph" = "paragraph",
   illustrationNumber = index + 1
 ): string {
-  const effectiveUrl = resolveInlayImageUrl(url, imageId, config.publicHostUrl);
   const label = placement === "cover" ? "Cover image" : `Inlay ${illustrationNumber}`;
   const frame = inlayFrameGeometry(imageParameters, placement, config);
-  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" data-no-island data-inlay-illustrator-placement="${placement}" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.frameStyle}"><img src="${htmlAttr(effectiveUrl)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="${frame.imageStyle}"/></span></div>`;
+  return `${MARKER}\n<div class="inlay-illustrator-image" data-inlay-illustrator="true" data-no-island data-inlay-illustrator-placement="${placement}" style="${frame.wrapperStyle}"><span class="inlay-illustrator-frame" style="${frame.frameStyle}"><img src="${htmlAttr(url)}" alt="${htmlAttr(label)}"${frame.intrinsicAttributes} data-inlay-illustrator-image-id="${htmlAttr(imageId)}" data-inlay-illustrator-chat-id="${htmlAttr(chatId)}" data-inlay-illustrator-message-id="${htmlAttr(messageId)}" data-inlay-illustrator-swipe-id="${swipeId}" data-inlay-illustrator-image-index="${index}" style="${frame.imageStyle}"/></span></div>`;
 }
 
 function renderSlotPlaceholder(

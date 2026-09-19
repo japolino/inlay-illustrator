@@ -1641,8 +1641,7 @@ const INLAY_DISPLAY_KEYS: Array<keyof Config> = [
   "inlayImageWidth",
   "assetImageWidth",
   "coverImageWidth",
-  "coverImageMaxHeightVh",
-  "publicHostUrl"
+  "coverImageMaxHeightVh"
 ];
 
 export function inlayDisplayKeysChanged(patch: Partial<Config>): boolean {
