@@ -63,17 +63,41 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
     );
   }
 
+  if (activeImgConn?.provider === "comfyui") {
+    const metadata = activeImgConn.metadata ?? {};
+    const workflows = Array.isArray(metadata.comfyui_workflows)
+      ? metadata.comfyui_workflows as Array<{ id: string; name: string }> : [];
+    if (workflows.length) {
+      ui.addCustomSelect(section, "Workflow", String(config.imageParameters.workflow_id ?? ""), [
+        { value: "", label: "Use connection's active workflow" },
+        ...workflows.map(w => ({ value: w.id, label: w.name }))
+      ], "Choose a workflow from the selected ComfyUI connection.", value => {
+        const parameters = { ...config.imageParameters };
+        delete parameters.workflowId;
+        if (value) parameters.workflow_id = value; else delete parameters.workflow_id;
+        actions.patchConfig({ imageParameters: parameters });
+        rerender();
+      });
+    }
+  }
+
   ui.addSwitch(
     section,
     "autoGenerate",
     "Auto generate",
     "Automatically illustrate completed assistant messages. You can always use Generate latest above."
   );
+  ui.addSwitch(section, "generateImagesImmediately", "Generate images immediately", "When off, prepare and save scene prompts first, then generate images on request.", rerender);
+  if (!config.generateImagesImmediately) ui.addActions(section, [{ label: "Generate prepared images", primary: true, onClick: () => {
+    const chatId = actions.activeChatId();
+    if (!chatId) { actions.updateStatus("Open a chat first."); return; }
+    actions.sendToBackend({ type: "reroll_all_images", chatId, sidecar: false });
+  } }]);
   ui.addSwitch(
     section,
     "coverImageEnabled",
     "Cover image",
-    "Generate one additional cinematic key visual for the whole message and place it above the first paragraph.",
+    "Generate one additional cinematic key visual for the whole message with its own placement and aspect settings.",
     rerender
   );
   if (config.coverImageEnabled) {
@@ -90,21 +114,40 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
       { value: "asset", label: "Asset (에셋) - Isolated character portrait/sprites" },
       { value: "comic", label: "Comic (만화) - Multi-panel manga style" }
     ],
-    "V3.7.6 module generation mode (Card.Mode): multi-shot illustration, isolated character assets, or multi-panel manga.",
+    "Lightboard scenes or multi-panel pages. Asset mode is retained as a Lumiverse portrait option.",
     rerender
   );
 
   if (config.moduleMode === "comic") {
+    ui.addSelect(section, "lightboardPanelLayout", "Panel layout", [
+      { value: "comic", label: "Manga page" }, { value: "panels", label: "Panels without manga styling" }
+    ]);
     ui.addNumber(
       section,
       "comicMinPanels",
       "Minimum comic panels",
       1,
       100,
-      "Minimum number of manga panels per comic illustration (V3.7.6 Card.PanelNum, default: 3)."
+      "Minimum panels per comic illustration."
     );
   }
 
+  ui.addSwitch(section, "lightboardExactQuantity", "Require the image count", "Ask the parser to meet the selected range exactly.");
+  ui.addSwitch(section, "lightboardKeyVisualTitle", "Title on the key visual", "Add the character name as a title when generating a cover image.");
+  ui.addSwitch(section, "referenceSnapshots", "Character reference snapshots", "Generate dedicated reference portraits and reuse them for this chat. These extra images are never inserted into messages.", rerender);
+  if (config.referenceSnapshots) {
+    const target = ui.row(section, "Reference strength", "0 disables reference conditioning. ComfyUI uses the selected workflow's reference/denoise mapping.");
+    const input = document.createElement("input");
+    input.type = "number"; input.min = "0"; input.max = "1"; input.step = "0.05";
+    input.value = String(config.referenceStrength); input.setAttribute("aria-label", "Reference strength");
+    input.addEventListener("change", () => actions.patchConfig({ referenceStrength: Number(input.value) }));
+    target.append(input);
+    ui.addActions(section, [{ label: "Refresh snapshots on next generation", onClick: () => {
+      actions.patchConfig({ referenceRevision: config.referenceRevision + 1 });
+      actions.updateStatus("New reference snapshots will be generated on the next request.");
+      rerender();
+    } }]);
+  }
   ui.addNumber(section, "minImages", "Minimum images", 1, 12);
   ui.addNumber(section, "maxImages", "Maximum images", 1, 12);
   if (config.moduleMode !== "asset") {
@@ -125,7 +168,7 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
     const inheritedKeys = [
       params.sampler === undefined ? "sampler" : null,
       params.steps === undefined ? "steps" : null,
-      params.scale === undefined && params.cfg === undefined ? "guidance" : null,
+      params.guidance === undefined && params.scale === undefined && params.cfg === undefined ? "guidance" : null,
       params.seed === undefined ? "seed" : null
     ].filter((key): key is string => key !== null);
     ui.addSummary(
@@ -134,9 +177,10 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
         ? `Using the NovelAI connection profile for: ${inheritedKeys.join(", ")}. Change a value here to store it in this extension.`
         : "All NovelAI generation values are stored in this extension."
     );
-    const curWidth = Number(params.width) || Number(connectionParams.width) || 832;
-    const curHeight = Number(params.height) || Number(connectionParams.height) || 1216;
-    const sizeIsInherited = params.width === undefined && params.height === undefined;
+    const resolution = String(params.resolution ?? connectionParams.resolution ?? "").split("x").map(Number);
+    const curWidth = Number(params.width) || resolution[0] || Number(connectionParams.width) || 832;
+    const curHeight = Number(params.height) || resolution[1] || Number(connectionParams.height) || 1216;
+    const sizeIsInherited = params.width === undefined && params.height === undefined && params.resolution === undefined;
     const matchedPreset = NOVELAI_RESOLUTION_PRESETS.find((p) => p.width === curWidth && p.height === curHeight)
       || NOVELAI_RESOLUTION_PRESETS[0];
 
@@ -196,7 +240,7 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
       }
     );
 
-    const currentScale = Number(params.scale) || Number(params.cfg) || Number(connectionParams.scale) || Number(connectionParams.cfg) || 5;
+    const currentScale = Number(params.guidance) || Number(params.scale) || Number(params.cfg) || Number(connectionParams.guidance) || Number(connectionParams.scale) || Number(connectionParams.cfg) || 5;
     ui.addCustomNumber(
       section,
       "Guidance scale (CFG)",
@@ -209,6 +253,7 @@ export function renderGenerationSection({ ui, config, imageConnections, actions,
           actions.patchConfig({
             imageParameters: {
               ...config.imageParameters,
+              guidance: val,
               scale: val,
               cfg: val
             }

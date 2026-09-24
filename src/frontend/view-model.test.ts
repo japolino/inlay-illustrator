@@ -48,6 +48,6 @@ describe("settings view model", () => {
     };
     expect(generationSummary(comicConfig)).toBe("Comic (4+ panels) · 3 images");
     expect(promptSummary(comicConfig)).toBe("ComfyUI · Native");
-    expect(parserSummary(comicConfig, [{ id: "p1", name: "Claude Sonnet", provider: "openrouter", model: "claude-sonnet" }])).toBe("Not configured · [Base64]");
+    expect(parserSummary(comicConfig, [{ id: "p1", name: "Claude Sonnet", provider: "openrouter", model: "claude-sonnet" }])).toBe("Not configured");
   });
 });

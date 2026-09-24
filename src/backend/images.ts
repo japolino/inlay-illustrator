@@ -142,9 +142,12 @@ export async function resolveImageConnection(config: Config, userId?: string): P
   return fallback;
 }
 
-function readComfyConfig(metadata: unknown): ComfyUIConfig | null {
+export function readComfyConfig(metadata: unknown, workflowId?: unknown): ComfyUIConfig | null {
   if (!metadata || typeof metadata !== "object") return null;
-  const comfy = (metadata as Record<string, unknown>).comfyui;
+  const record = metadata as Record<string, unknown>;
+  const library = Array.isArray(record.comfyui_workflows) ? record.comfyui_workflows as Array<{ id: string; config: unknown }> : [];
+  const selected = workflowId || record.comfyui_active_workflow_id;
+  const comfy = library.find(entry => entry.id === selected)?.config ?? record.comfyui;
   if (!comfy || typeof comfy !== "object") return null;
   const config = comfy as ComfyUIConfig;
   const workflow = config.workflow_api_json || config.workflow_json;
@@ -246,8 +249,13 @@ export function rerollImageParameters(
     const scale = Math.min(20, Math.max(1, Number(rawScale.toFixed(1))));
     cloned.scale = scale;
     cloned.cfg = scale;
+    cloned.guidance = scale;
     cloned.width = Math.min(1920, Math.max(512, Math.round(rawWidth / 64) * 64));
     cloned.height = Math.min(1920, Math.max(512, Math.round(rawHeight / 64) * 64));
+
+    cloned.resolution = `${cloned.width}x${cloned.height}`;
+    if (negative !== undefined) cloned.negativePrompt = negative;
+    if (Array.isArray(cloned.characters)) cloned.characterTags = normalizeCharacterPayload(cloned.characters).map(c => ({ tags: c.prompt }));
 
     const smeaVal = cloned.smea !== undefined ? cloned.smea : defaultParams.smea;
     if (smeaVal !== undefined) cloned.smea = smeaVal === true || smeaVal === "true";
@@ -400,8 +408,10 @@ export async function buildImageParameters(
       ?? 28;
     const steps = Math.min(50, Math.max(1, Math.round(rawSteps)));
 
-    const rawScale = numberParam(parameters.scale)
-      ?? numberParam(parameters.cfg)
+    const rawScale = numberParam(config.imageParameters.guidance)
+      ?? numberParam(config.imageParameters.scale)
+      ?? numberParam(config.imageParameters.cfg)
+      ?? numberParam(defaultParams.guidance)
       ?? numberParam(defaultParams.scale)
       ?? numberParam(defaultParams.cfg)
       ?? 5.0;
@@ -425,12 +435,12 @@ export async function buildImageParameters(
         ? "connection-profile"
         : profileSamplerFallback ? `profile:${profileSamplerPaths[0].path}` : "provider-default";
 
-    const rawWidth = numberParam(parameters.width)
-      ?? numberParam(defaultParams.width)
-      ?? 832;
-    const rawHeight = numberParam(parameters.height)
-      ?? numberParam(defaultParams.height)
-      ?? 1216;
+    const explicitResolution = String(config.imageParameters.resolution || "").match(/^(\d+)x(\d+)$/);
+    const profileResolution = String(defaultParams.resolution || "").match(/^(\d+)x(\d+)$/);
+    const rawWidth = numberParam(config.imageParameters.width) ?? (explicitResolution ? Number(explicitResolution[1]) : undefined)
+      ?? numberParam(defaultParams.width) ?? (profileResolution ? Number(profileResolution[1]) : undefined) ?? 832;
+    const rawHeight = numberParam(config.imageParameters.height) ?? (explicitResolution ? Number(explicitResolution[2]) : undefined)
+      ?? numberParam(defaultParams.height) ?? (profileResolution ? Number(profileResolution[2]) : undefined) ?? 1216;
     const width = Math.min(1920, Math.max(512, Math.round(rawWidth / 64) * 64));
     const height = Math.min(1920, Math.max(512, Math.round(rawHeight / 64) * 64));
 
@@ -447,6 +457,9 @@ export async function buildImageParameters(
       steps,
       scale,
       cfg: scale,
+      guidance: scale,
+      resolution: `${width}x${height}`,
+      negativePrompt: negative,
       seed,
       width,
       height
@@ -455,11 +468,12 @@ export async function buildImageParameters(
     const smeaVal = parameters.smea !== undefined ? parameters.smea : defaultParams.smea;
     if (smeaVal !== undefined) naiParams.smea = smeaVal === true || smeaVal === "true";
     const smeaDynVal = parameters.smea_dyn !== undefined ? parameters.smea_dyn : defaultParams.smea_dyn;
-    if (smeaDynVal !== undefined) naiParams.smea_dyn = smeaDynVal === true || smeaDynVal === "true";
+    if (smeaDynVal !== undefined) naiParams.smeaDyn = naiParams.smea_dyn = smeaDynVal === true || smeaDynVal === "true";
 
     if (normalizedChars && normalizedChars.length > 0) {
       naiParams.characters = normalizedChars;
       naiParams.nativeCharacters = normalizedChars;
+      naiParams.characterTags = normalizedChars.map(c => ({ tags: c.prompt }));
     }
 
     logStage(config, "image_parameters_ready", {
@@ -493,7 +507,7 @@ export async function buildImageParameters(
     return parameters;
   }
 
-  const comfy = readComfyConfig(connection.metadata);
+  const comfy = readComfyConfig(connection.metadata, parameters.workflow_id ?? parameters.workflowId);
   if (!comfy) {
     logStage(config, "comfy_workflow_missing", { metadataKeys: keysOf(connection.metadata) }, "warn");
     return parameters;

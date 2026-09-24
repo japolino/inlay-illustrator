@@ -84,13 +84,14 @@ export type GeneratedRecordAdapterInput =
   | GeneratedRecordReferenceV3;
 
 const SLOT_STATUSES = new Set<GenerationSlotStatus>([
+  "planned",
   "pending",
   "generating",
   "completed",
   "failed",
   "cancelled"
 ]);
-const GENERATION_STATUSES = new Set<GenerationStatus>(["pending", "completed", "failed", "cancelled"]);
+const GENERATION_STATUSES = new Set<GenerationStatus>(["planned", "pending", "completed", "failed", "cancelled"]);
 const PERSPECTIVE_MODES = new Set<PerspectiveMode>(["creative", "static", "dynamic", "asset"]);
 
 function isObject(value: unknown): value is Record<string, unknown> {

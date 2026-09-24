@@ -216,6 +216,25 @@ export function normalizeComicMinPanels(value: unknown): number {
 }
 
 export type Config = {
+  generateImagesImmediately: boolean;
+  coverImagePosition: "top" | "bottom";
+  coverImageAspect: InlayImageAspect;
+  imageAlignment: "center" | "left";
+  lightboardDescription: "high" | "low" | "full";
+  lightboardAppearance: "reference" | "locked" | "closed";
+  lightboardCamera: number;
+  lightboardFocus: string;
+  lightboardDirection: string;
+  lightboardExactQuantity: boolean;
+  lightboardPanelLayout: "comic" | "panels";
+  lightboardAttenuate: boolean;
+  lightboardSeparateCharacters: boolean;
+  lightboardWeightMode: "strip" | "convert";
+  lightboardKeyVisualTitle: boolean;
+  referenceSnapshots: boolean;
+  referenceStrength: number;
+  referenceRevision: number;
+
   enabled: boolean;
   autoGenerate: boolean;
   debugLogging: boolean;
@@ -310,6 +329,25 @@ export type RawConfig = Partial<Config> & {
 };
 
 export const DEFAULT_CONFIG: Config = {
+  generateImagesImmediately: true,
+  coverImagePosition: "top",
+  coverImageAspect: "wide",
+  imageAlignment: "center",
+  lightboardDescription: "high",
+  lightboardAppearance: "reference",
+  lightboardCamera: 0,
+  lightboardFocus: "",
+  lightboardDirection: "",
+  lightboardExactQuantity: false,
+  lightboardPanelLayout: "comic",
+  lightboardAttenuate: false,
+  lightboardSeparateCharacters: false,
+  lightboardWeightMode: "strip",
+  lightboardKeyVisualTitle: false,
+  referenceSnapshots: false,
+  referenceStrength: 0.6,
+  referenceRevision: 0,
+
   enabled: true,
   autoGenerate: true,
   debugLogging: false,
@@ -435,6 +473,24 @@ export function normalizeConfig(raw: RawConfig): Config {
   return {
     ...DEFAULT_CONFIG,
     ...current,
+    generateImagesImmediately: raw.generateImagesImmediately !== false,
+    coverImagePosition: raw.coverImagePosition === "bottom" ? "bottom" : "top",
+    coverImageAspect: raw.coverImageAspect === undefined ? "wide" : normalizeInlayImageAspect(raw.coverImageAspect),
+    imageAlignment: raw.imageAlignment === "left" ? "left" : "center",
+    lightboardDescription: raw.lightboardDescription === "low" || raw.lightboardDescription === "full" ? raw.lightboardDescription : "high",
+    lightboardAppearance: raw.lightboardAppearance === "locked" || raw.lightboardAppearance === "closed" ? raw.lightboardAppearance : "reference",
+    lightboardCamera: clampInt(raw.lightboardCamera, 0, 2, 0),
+    lightboardFocus: cleanString(raw.lightboardFocus),
+    lightboardDirection: cleanString(raw.lightboardDirection),
+    lightboardExactQuantity: raw.lightboardExactQuantity === true,
+    lightboardPanelLayout: raw.lightboardPanelLayout === "panels" ? "panels" : "comic",
+    lightboardAttenuate: raw.lightboardAttenuate === true,
+    lightboardSeparateCharacters: raw.lightboardSeparateCharacters === true,
+    lightboardWeightMode: raw.lightboardWeightMode === "convert" ? "convert" : "strip",
+    lightboardKeyVisualTitle: raw.lightboardKeyVisualTitle === true,
+    referenceSnapshots: raw.referenceSnapshots === true,
+    referenceStrength: raw.referenceStrength == null || !Number.isFinite(Number(raw.referenceStrength)) ? 0.6 : Math.min(1, Math.max(0, Number(raw.referenceStrength))),
+    referenceRevision: clampInt(raw.referenceRevision, 0, Number.MAX_SAFE_INTEGER, 0),
     moduleMode,
     nsfwInstructions: raw.nsfwInstructions === true,
     promptSeparator,

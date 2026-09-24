@@ -160,6 +160,24 @@ function normalizeComicMinPanels(value) {
   return Math.min(1000, rounded);
 }
 var DEFAULT_CONFIG = {
+  generateImagesImmediately: true,
+  coverImagePosition: "top",
+  coverImageAspect: "wide",
+  imageAlignment: "center",
+  lightboardDescription: "high",
+  lightboardAppearance: "reference",
+  lightboardCamera: 0,
+  lightboardFocus: "",
+  lightboardDirection: "",
+  lightboardExactQuantity: false,
+  lightboardPanelLayout: "comic",
+  lightboardAttenuate: false,
+  lightboardSeparateCharacters: false,
+  lightboardWeightMode: "strip",
+  lightboardKeyVisualTitle: false,
+  referenceSnapshots: false,
+  referenceStrength: 0.6,
+  referenceRevision: 0,
   enabled: true,
   autoGenerate: true,
   debugLogging: false,
@@ -279,6 +297,24 @@ function normalizeConfig(raw) {
   return {
     ...DEFAULT_CONFIG,
     ...current,
+    generateImagesImmediately: raw.generateImagesImmediately !== false,
+    coverImagePosition: raw.coverImagePosition === "bottom" ? "bottom" : "top",
+    coverImageAspect: raw.coverImageAspect === undefined ? "wide" : normalizeInlayImageAspect(raw.coverImageAspect),
+    imageAlignment: raw.imageAlignment === "left" ? "left" : "center",
+    lightboardDescription: raw.lightboardDescription === "low" || raw.lightboardDescription === "full" ? raw.lightboardDescription : "high",
+    lightboardAppearance: raw.lightboardAppearance === "locked" || raw.lightboardAppearance === "closed" ? raw.lightboardAppearance : "reference",
+    lightboardCamera: clampInt(raw.lightboardCamera, 0, 2, 0),
+    lightboardFocus: cleanString(raw.lightboardFocus),
+    lightboardDirection: cleanString(raw.lightboardDirection),
+    lightboardExactQuantity: raw.lightboardExactQuantity === true,
+    lightboardPanelLayout: raw.lightboardPanelLayout === "panels" ? "panels" : "comic",
+    lightboardAttenuate: raw.lightboardAttenuate === true,
+    lightboardSeparateCharacters: raw.lightboardSeparateCharacters === true,
+    lightboardWeightMode: raw.lightboardWeightMode === "convert" ? "convert" : "strip",
+    lightboardKeyVisualTitle: raw.lightboardKeyVisualTitle === true,
+    referenceSnapshots: raw.referenceSnapshots === true,
+    referenceStrength: raw.referenceStrength == null || !Number.isFinite(Number(raw.referenceStrength)) ? 0.6 : Math.min(1, Math.max(0, Number(raw.referenceStrength))),
+    referenceRevision: clampInt(raw.referenceRevision, 0, Number.MAX_SAFE_INTEGER, 0),
     moduleMode,
     nsfwInstructions: raw.nsfwInstructions === true,
     promptSeparator,
@@ -414,13 +450,13 @@ function inlayFrameGeometry(imageParameters, placement, config) {
   const parameters = imageParameters && Object.keys(imageParameters).length > 0 ? imageParameters : config.imageParameters;
   const intrinsicWidth = positiveDimension2(parameters.width);
   const intrinsicHeight = positiveDimension2(parameters.height);
-  const aspect = resolveInlayImageAspect(config.inlayImageAspect, { width: intrinsicWidth, height: intrinsicHeight });
+  const aspect = resolveInlayImageAspect(placement === "cover" ? config.coverImageAspect : config.inlayImageAspect, { width: intrinsicWidth, height: intrinsicHeight });
   const viewportWidth = `calc(${maxHeight}vh * ${aspect.w} / ${aspect.h})`;
   const boxWidth = placement === "cover" ? `min(100%, ${clampInteger(config.coverImageWidth, 120, 2400, DEFAULT_CONFIG.coverImageWidth)}px, ${viewportWidth})` : `min(100%, ${viewportWidth})`;
   const frameRatio = `${aspect.w}/${aspect.h}`;
   const commonFrameStyle = `width:${boxWidth};max-width:100%;max-height:${maxHeight}vh;aspect-ratio:${frameRatio};overflow:hidden;`;
   return {
-    wrapperStyle: "display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;",
+    wrapperStyle: `display:flex;flex-direction:column;justify-content:center;align-items:${config.imageAlignment === "left" ? "flex-start" : "center"};margin:10px 0;width:100%;`,
     frameStyle: `display:block;${commonFrameStyle}`,
     placeholderFrameStyle: `display:flex;justify-content:center;align-items:center;${commonFrameStyle}`,
     imageStyle: `display:block;width:100%;height:100%;aspect-ratio:${frameRatio};object-fit:contain;border-radius:8px;cursor:zoom-in;`,
@@ -730,10 +766,6 @@ function generationSummary(config) {
 function parserSummary(config, connections) {
   const selected = connections.find((connection) => connection.id === config.parserConnectionId);
   const base = selected?.name || (config.parserConnectionId ? "Missing connection" : "Not configured");
-  if (config.encodingMode && config.encodingMode !== "plain") {
-    const enc = config.encodingMode.charAt(0).toUpperCase() + config.encodingMode.slice(1);
-    return `${base} · [${enc}]`;
-  }
   return base;
 }
 function promptSummary(config) {
@@ -778,8 +810,37 @@ function renderGenerationSection({ ui, config, imageConnections, actions, rerend
   if (imageConnOptions.length > 0) {
     ui.addSelect(section, "imageConnectionId", "Image connection", imageConnOptions, selectedImageConn ? `Active: ${selectedImageConn.name} (${selectedImageConn.provider})` : "Choose the image generator profile for illustrations.", rerender);
   }
+  if (activeImgConn?.provider === "comfyui") {
+    const metadata = activeImgConn.metadata ?? {};
+    const workflows = Array.isArray(metadata.comfyui_workflows) ? metadata.comfyui_workflows : [];
+    if (workflows.length) {
+      ui.addCustomSelect(section, "Workflow", String(config.imageParameters.workflow_id ?? ""), [
+        { value: "", label: "Use connection's active workflow" },
+        ...workflows.map((w) => ({ value: w.id, label: w.name }))
+      ], "Choose a workflow from the selected ComfyUI connection.", (value) => {
+        const parameters = { ...config.imageParameters };
+        delete parameters.workflowId;
+        if (value)
+          parameters.workflow_id = value;
+        else
+          delete parameters.workflow_id;
+        actions.patchConfig({ imageParameters: parameters });
+        rerender();
+      });
+    }
+  }
   ui.addSwitch(section, "autoGenerate", "Auto generate", "Automatically illustrate completed assistant messages. You can always use Generate latest above.");
-  ui.addSwitch(section, "coverImageEnabled", "Cover image", "Generate one additional cinematic key visual for the whole message and place it above the first paragraph.", rerender);
+  ui.addSwitch(section, "generateImagesImmediately", "Generate images immediately", "When off, prepare and save scene prompts first, then generate images on request.", rerender);
+  if (!config.generateImagesImmediately)
+    ui.addActions(section, [{ label: "Generate prepared images", primary: true, onClick: () => {
+      const chatId = actions.activeChatId();
+      if (!chatId) {
+        actions.updateStatus("Open a chat first.");
+        return;
+      }
+      actions.sendToBackend({ type: "reroll_all_images", chatId, sidecar: false });
+    } }]);
+  ui.addSwitch(section, "coverImageEnabled", "Cover image", "Generate one additional cinematic key visual for the whole message with its own placement and aspect settings.", rerender);
   if (config.coverImageEnabled) {
     ui.addNumber(section, "coverImageWidth", "Cover image width", 120, 2400);
     ui.addNumber(section, "coverImageMaxHeightVh", "Cover image max height (vh)", 10, 100);
@@ -788,9 +849,33 @@ function renderGenerationSection({ ui, config, imageConnections, actions, rerend
     { value: "illustration", label: "Illustration (삽화) - Full scene with characters" },
     { value: "asset", label: "Asset (에셋) - Isolated character portrait/sprites" },
     { value: "comic", label: "Comic (만화) - Multi-panel manga style" }
-  ], "V3.7.6 module generation mode (Card.Mode): multi-shot illustration, isolated character assets, or multi-panel manga.", rerender);
+  ], "Lightboard scenes or multi-panel pages. Asset mode is retained as a Lumiverse portrait option.", rerender);
   if (config.moduleMode === "comic") {
-    ui.addNumber(section, "comicMinPanels", "Minimum comic panels", 1, 100, "Minimum number of manga panels per comic illustration (V3.7.6 Card.PanelNum, default: 3).");
+    ui.addSelect(section, "lightboardPanelLayout", "Panel layout", [
+      { value: "comic", label: "Manga page" },
+      { value: "panels", label: "Panels without manga styling" }
+    ]);
+    ui.addNumber(section, "comicMinPanels", "Minimum comic panels", 1, 100, "Minimum panels per comic illustration.");
+  }
+  ui.addSwitch(section, "lightboardExactQuantity", "Require the image count", "Ask the parser to meet the selected range exactly.");
+  ui.addSwitch(section, "lightboardKeyVisualTitle", "Title on the key visual", "Add the character name as a title when generating a cover image.");
+  ui.addSwitch(section, "referenceSnapshots", "Character reference snapshots", "Generate dedicated reference portraits and reuse them for this chat. These extra images are never inserted into messages.", rerender);
+  if (config.referenceSnapshots) {
+    const target = ui.row(section, "Reference strength", "0 disables reference conditioning. ComfyUI uses the selected workflow's reference/denoise mapping.");
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.max = "1";
+    input.step = "0.05";
+    input.value = String(config.referenceStrength);
+    input.setAttribute("aria-label", "Reference strength");
+    input.addEventListener("change", () => actions.patchConfig({ referenceStrength: Number(input.value) }));
+    target.append(input);
+    ui.addActions(section, [{ label: "Refresh snapshots on next generation", onClick: () => {
+      actions.patchConfig({ referenceRevision: config.referenceRevision + 1 });
+      actions.updateStatus("New reference snapshots will be generated on the next request.");
+      rerender();
+    } }]);
   }
   ui.addNumber(section, "minImages", "Minimum images", 1, 12);
   ui.addNumber(section, "maxImages", "Maximum images", 1, 12);
@@ -804,13 +889,14 @@ function renderGenerationSection({ ui, config, imageConnections, actions, rerend
     const inheritedKeys = [
       params.sampler === undefined ? "sampler" : null,
       params.steps === undefined ? "steps" : null,
-      params.scale === undefined && params.cfg === undefined ? "guidance" : null,
+      params.guidance === undefined && params.scale === undefined && params.cfg === undefined ? "guidance" : null,
       params.seed === undefined ? "seed" : null
     ].filter((key) => key !== null);
     ui.addSummary(section, inheritedKeys.length > 0 ? `Using the NovelAI connection profile for: ${inheritedKeys.join(", ")}. Change a value here to store it in this extension.` : "All NovelAI generation values are stored in this extension.");
-    const curWidth = Number(params.width) || Number(connectionParams.width) || 832;
-    const curHeight = Number(params.height) || Number(connectionParams.height) || 1216;
-    const sizeIsInherited = params.width === undefined && params.height === undefined;
+    const resolution = String(params.resolution ?? connectionParams.resolution ?? "").split("x").map(Number);
+    const curWidth = Number(params.width) || resolution[0] || Number(connectionParams.width) || 832;
+    const curHeight = Number(params.height) || resolution[1] || Number(connectionParams.height) || 1216;
+    const sizeIsInherited = params.width === undefined && params.height === undefined && params.resolution === undefined;
     const matchedPreset = NOVELAI_RESOLUTION_PRESETS.find((p) => p.width === curWidth && p.height === curHeight) || NOVELAI_RESOLUTION_PRESETS[0];
     ui.addCustomSelect(section, "Resolution", matchedPreset.value, NOVELAI_RESOLUTION_PRESETS.map((p) => ({ value: p.value, label: p.label })), sizeIsInherited ? "Currently inherited from the NovelAI connection profile. Choosing a value here sends that canvas size to NovelAI for generation. This does not change the in-chat frame size; use Image output → Aspect ratio for that." : "Canvas size sent to NovelAI for generation (resolution, width, and height). This does not change the in-chat frame size; use Image output → Aspect ratio for that.", (val) => {
       const patch = novelAiResolutionPatch(config.imageParameters, val);
@@ -841,12 +927,13 @@ function renderGenerationSection({ ui, config, imageConnections, actions, rerend
         });
       }
     });
-    const currentScale = Number(params.scale) || Number(params.cfg) || Number(connectionParams.scale) || Number(connectionParams.cfg) || 5;
+    const currentScale = Number(params.guidance) || Number(params.scale) || Number(params.cfg) || Number(connectionParams.guidance) || Number(connectionParams.scale) || Number(connectionParams.cfg) || 5;
     ui.addCustomNumber(section, "Guidance scale (CFG)", currentScale, 1, 20, "Prompt guidance scale (1–20, default 5.0).", (val) => {
       if (val !== null) {
         actions.patchConfig({
           imageParameters: {
             ...config.imageParameters,
+            guidance: val,
             scale: val,
             cfg: val
           }
@@ -1005,6 +1092,15 @@ function renderOutputSection({ ui, config }) {
     badge: outputSummary(config)
   });
   ui.addSelect(section, "inlayImageAspect", "Aspect ratio", INLAY_IMAGE_ASPECT_PRESETS, "The shape of the in-chat image frame. Auto matches the generated image dimensions.");
+  ui.addSelect(section, "coverImageAspect", "Key visual aspect ratio", INLAY_IMAGE_ASPECT_PRESETS);
+  ui.addSelect(section, "coverImagePosition", "Key visual position", [
+    { value: "top", label: "Above the message" },
+    { value: "bottom", label: "Below the message" }
+  ]);
+  ui.addSelect(section, "imageAlignment", "Image alignment", [
+    { value: "center", label: "Center" },
+    { value: "left", label: "Left" }
+  ]);
   ui.addNumber(section, "inlayImageMaxHeightVh", "Maximum height", 10, 100, "Viewport-height cap. The frame keeps the selected aspect ratio and fits the chat column.");
   ui.addTextarea(section, "ignoredTags", "Ignored tags", "Separate tags with commas or semicolons.");
 }
@@ -1012,7 +1108,7 @@ function renderOutputSection({ ui, config }) {
 // src/frontend/sections/parser.ts
 function renderParserSection({ ui, config, parserConnections, actions, rerender }) {
   const section = ui.section("Parser and context", false, {
-    description: "Configure the sidecar model, bypass protocols, and continuity sources.",
+    description: "Configure the Lightboard 4.5.3 parser and its context sources.",
     badge: parserSummary(config, parserConnections)
   });
   const selectedParser = parserConnections.find((connection) => connection.id === config.parserConnectionId);
@@ -1063,30 +1159,42 @@ function renderParserSection({ ui, config, parserConnections, actions, rerender 
   validateParameters();
   parserParameterTarget.append(parserParameterInput, parserParameterValidation);
   ui.addNumber(section, "parserMaxTokens", "Maximum token budget", 0, 32768, "0 uses the automatic model and parser-stage budget. Explicit max_tokens or max_completion_tokens in Parser parameters takes precedence.");
-  ui.addSwitch(section, "preprocessingEnabled", "Illustration preprocessing", "Use auxiliary preprocessing for scene tagging extraction (V3.7.6 Card.Preprocessing).");
-  ui.addNumber(section, "includeMinMessages", "Minimum context messages", 0, 32, "Minimum prior turns included in context (V3.7.6 Card.IncludeMin).");
-  ui.addNumber(section, "includeMaxMessages", "Maximum context messages", 0, 32, "Maximum prior turns included in context (V3.7.6 Card.Include).");
-  ui.addSwitch(section, "includeUserMessage", "Include preceding user message", "Include one preceding user message per turn in context for non-impersonation accuracy (V3.7.6 Card.Userchat).");
-  ui.addSwitch(section, "nsfwInstructions", "NSFW instruction strength (\uD83D\uDD1ENSFW 지침 강화)", "Increases explicit interaction instruction intensity in the prompt generation system message (V3.7.6 Card.Nsfw). Note: This is an instruction-strength booster, NOT a safe-content filter.");
-  ui.addNumber(section, "parserRetries", "Parser retries on refusal / error", 0, 5, "Number of retries when censorship refusal or format error is detected (V3.7.6 Card.Retry).");
-  ui.addSubtitle(section, "Bypass & encoding protocols (탈옥 / 암호화)");
-  ui.addSelect(section, "encodingMode", "Refusal bypass encoding", [
-    { value: "plain", label: "Standard / Plain (기본) - Plain text" },
-    { value: "placeholder", label: "Placeholder Codes (단어 치환) - BP/SE body part codes" },
-    { value: "base64", label: "Base64 Protocol (연구 프로토콜 암호화)" },
-    { value: "atbash", label: "Atbash Cipher (A↔Z 단일 치환 암호)" }
-  ], "Instruction and response encoding protocol to bypass LLM safety refusals (V3.7.6 Card.Encode).");
-  ui.addSwitch(section, "prefillEnabled", "Consensual adult prefill bypass", "Inject consensual adult roleplay confirmation prefill into parser prompt (V3.7.6 Card.Prefill).");
+  ui.addSummary(section, "Lightboard 4.5.3 returns slot-based TOON descriptors. Saved 3.7.6 images remain available in the gallery and lightbox.");
+  ui.addNumber(section, "includeMinMessages", "Prior context messages", 0, 32, "Previous turns included in the first parser request.");
+  ui.addNumber(section, "includeMaxMessages", "Maximum context messages", 0, 32, "Upper limit as retries expand the context.");
+  ui.addSwitch(section, "includeUserMessage", "Include user messages", "Include user turns in prior context.");
+  ui.addNumber(section, "parserRetries", "Parser retries", 0, 5, "Retry invalid responses with the validation error and more context.");
+  ui.addSelect(section, "lightboardDescription", "Description detail", [
+    { value: "high", label: "Tags and detailed prose" },
+    { value: "low", label: "Tags and concise prose" },
+    { value: "full", label: "Natural language" }
+  ]);
+  ui.addSelect(section, "lightboardAppearance", "Appearance instructions", [
+    { value: "reference", label: "Use as a reference" },
+    { value: "locked", label: "Preserve specified traits" },
+    { value: "closed", label: "Only specified traits" }
+  ]);
+  ui.addNumber(section, "lightboardCamera", "Camera direction strength", 0, 2, "0: restrained, 1: stronger, 2: strongest source camera guidance.");
+  ui.addText(section, "lightboardFocus", "Character focus", "Optional names to prioritize.");
+  ui.addTextarea(section, "lightboardDirection", "Author direction", "Scene and composition requests for the parser.");
   ui.addSubtitle(section, "Context sources");
-  ui.addSwitch(section, "includeUserInfo", "User info", "Include {{user}} persona in prompt generation (V3.7.6 Card.UserInfo).");
-  ui.addSwitch(section, "includeCharacterInfo", "Character info", "Include {{char}} definition in prompt generation (V3.7.6 Card.CharInfo).");
-  ui.addSwitch(section, "includeLorebook", "Lorebook", "Include active lorebook entries in prompt generation (V3.7.6 Card.Lorebook).");
-  ui.addSwitch(section, "characterTagContextEnabled", "Character appearance continuity", "Track and reuse character appearance tags across turns (V3.7.6 Card.CharAppearance.Context).", rerender);
+  ui.addSwitch(section, "includeUserInfo", "User info", "Include {{user}} persona in prompt generation.");
+  ui.addSwitch(section, "includeCharacterInfo", "Character info", "Include {{char}} definition in prompt generation.");
+  ui.addSwitch(section, "includeLorebook", "Lorebook", "Include active lorebook entries in prompt generation.");
+  ui.addSwitch(section, "characterTagContextEnabled", "Character appearance continuity", "Pass recent Lightboard descriptors and saved appearance tags into the next request.", rerender);
   if (config.characterTagContextEnabled) {
-    ui.addNumber(section, "characterContextDepth", "Character memory depth", 0, 1000, "Turns before an unseen character's detailed tags leave parser context. Saved tags are retained (V3.7.6 Card.CharAppearance.Depth, default: 5).");
+    ui.addNumber(section, "characterContextDepth", "Character memory depth", 0, 1000, "Number of prior descriptor sets kept in parser context. Zero disables descriptor history.");
   }
+  ui.addActions(section, [{ label: "Clear descriptor history for this chat", onClick: () => {
+    const chatId = actions.activeChatId();
+    if (!chatId) {
+      actions.updateStatus("Open a chat first.");
+      return;
+    }
+    actions.sendToBackend({ type: "clear_lightboard_history", chatId });
+  } }]);
   ui.addSwitch(section, "userInstructionsEnabled", "Character-specific instructions", "Include extra image instructions stored on the character, chat, or persona. The parser override below is independent.");
-  ui.addTextarea(section, "customParserInstructions", "Parser instructions override", "Additional prompt instructions injected into prompt generation (V3.7.6 Card.CustomInst).");
+  ui.addTextarea(section, "customParserInstructions", "Parser instructions override", "Additional instructions for prompt generation. Activated lb-xnai.lb.extra entries are also read when lorebook context is enabled.");
 }
 
 // src/frontend/sections/prompt.ts
@@ -1113,7 +1221,7 @@ function renderPromptSection({ ui, config, imageConnections, actions, rerender }
 
  ) - Multi-line tag groups` },
     { value: "native", label: "NovelAI Native Characters (v4 API)" }
-  ], config.promptSeparator === "native" ? "Keeps scene and character prompts separate in parameters.characters. Host NovelAI V4 support is unverified. Use pipe mode unless your host supports native character channels." : "Delimiter separating scene tags and character definitions (V3.7.6 Card.PromptSep).", rerender);
+  ], config.promptSeparator === "native" ? "Keeps character channels separate in saved prompts. NovelAI V4/V5 requests always use host character channels, with a shared negative prompt; older models receive a combined prompt." : "Delimiter separating scene tags and character definitions.", rerender);
   if (isNai) {
     ui.addSummary(section, "Prompt syntax is automatically locked to NovelAI based on your active connection profile.");
   } else {
@@ -1129,23 +1237,25 @@ function renderPromptSection({ ui, config, imageConnections, actions, rerender }
     { value: "korean", label: "Korean (한국어)" },
     { value: "japanese", label: "Japanese (일본어)" },
     { value: "chinese", label: "Chinese (중국어)" }
-  ], "Add speech bubbles, sound effects, or dialogue text inside the image (V3.7.6 Card.Text).");
-  ui.addSwitch(section, "originalReference", "Source reference (canon names)", "Ask the model to name characters as `full name (creation name)` and to use their canon names. Characters that are not canon become `name (oc)`. Source toggle_Card.Original.", rerender);
-  if (config.originalReference) {
-    ui.addText(section, "originalCreationName", "Creation name", "Creation or series name appended to canon character names, for example `Arknights`. Source toggle_Card.Original.Text.");
+  ], "Add speech bubbles, sound effects, or dialogue text inside the image.");
+  ui.addSwitch(section, "lightboardAttenuate", "Emphasize the style preset", "Lower generated scene weights to 0.75 while keeping preset weights intact. NovelAI only.");
+  if (!isNai) {
+    ui.addSelect(section, "lightboardWeightMode", "NovelAI weight conversion", [
+      { value: "strip", label: "Remove weights" },
+      { value: "convert", label: "Convert to ComfyUI weights" }
+    ]);
+    ui.addSwitch(section, "lightboardSeparateCharacters", "Describe separate characters", "Prefix each character group with 'the' for models that understand prose and tags.");
   }
-  ui.addSwitch(section, "supplement", "Natural language supplement", "Add natural language pose and action descriptions to character tags (V3.7.6 Card.Supplement).");
-  ui.addSwitch(section, "quoteEnabled", "Extract image dialogue quotes", "Include a short per-shot dialogue quote in parser output (V3.7.6 Card.Quote). Quotes are saved as metadata; existing image display is unchanged.");
   ui.addSubtitle(section, "Prompt presets");
   if (config.promptPresets.length === 0) {
-    ui.addSummary(section, "The original V3.7.6 preset is used by default. Save a preset to replace its positive and negative templates.");
+    ui.addSummary(section, "The original Lightboard 4.5.3 preset is used by default. Save a preset to replace its positive and negative templates.");
   }
   const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
-  const presetSelectTarget = ui.row(section, "Active preset", "CustomPos is placed before the preset output. CustomNeg is a positive suffix. With no selection, the original V3.7.6 preset is used.");
+  const presetSelectTarget = ui.row(section, "Active preset", "The positive prefix comes before the preset output. Positive additions follow the scene setup. With no selection, the original Lightboard 4.5.3 preset is used.");
   const presetSelect = document.createElement("select");
   presetSelect.className = "inlay-native-select";
   presetSelect.setAttribute("aria-label", "Active prompt preset");
-  presetSelect.innerHTML = '<option value="">V3.7.6 default preset</option>';
+  presetSelect.innerHTML = '<option value="">Lightboard 4.5.3 default preset</option>';
   for (const preset of config.promptPresets) {
     const option = document.createElement("option");
     option.value = preset.id;
@@ -1165,7 +1275,7 @@ function renderPromptSection({ ui, config, imageConnections, actions, rerender }
   presetName.placeholder = "e.g. Cinematic anime";
   presetName.setAttribute("aria-label", "Preset name");
   presetNameTarget.append(presetName);
-  const presetPositiveTarget = ui.row(section, "Preset positive template", "Use {prompt} for the full generated prompt, or {setup} and {char} for scene and character groups. Plain tags automatically get the generated prompt appended.");
+  const presetPositiveTarget = ui.row(section, "Preset positive template", "Use {prompt} for the full generated prompt, or {setup}, {char}, and {description} for scene and character groups. Plain tags automatically get the generated prompt appended.");
   const presetPositive = document.createElement("textarea");
   presetPositive.value = selectedPreset?.positivePrefix || "";
   presetPositive.placeholder = "masterpiece, best quality";
@@ -1272,8 +1382,8 @@ function renderPromptSection({ ui, config, imageConnections, actions, rerender }
       }
     }
   ]);
-  ui.addText(section, "customPositivePrefix", "Custom author tags (Positive prefix / CustomPos)", "Tags prepended to the [Positive] prompt (V3.7.6 toggle_Card.CustomPos / 커스텀 작가 태그).");
-  ui.addText(section, "customPositiveSuffix", "Custom quality tags (Positive suffix / CustomNeg)", "Tags appended to the [Positive] prompt (V3.7.6 toggle_Card.CustomNeg / 커스텀 퀄리티 태그 - source positive suffix, NOT negative prompt!).");
+  ui.addText(section, "customPositivePrefix", "Custom author tags (Positive prefix / CustomPos)", "Tags prepended to the [Positive] prompt (Lightboard 4.5.3 toggle_Card.CustomPos / 커스텀 작가 태그).");
+  ui.addText(section, "customPositiveSuffix", "Custom quality tags (Positive suffix / CustomNeg)", "Tags appended to the [Positive] prompt (Lightboard 4.5.3 toggle_Card.CustomNeg / 커스텀 퀄리티 태그 - source positive suffix, NOT negative prompt!).");
   ui.addText(section, "customNegative", "Negative prompt additions", "Additional tags appended to the negative prompt.");
 }
 
@@ -1845,6 +1955,64 @@ function appendLightboxContent(root, image, details, onAction) {
   const controls = { status, buttons: [reroll, sidecar] };
   reroll.addEventListener("click", () => onAction("reroll", controls));
   sidecar.addEventListener("click", () => onAction("sidecar", controls));
+  if (details.descriptor) {
+    const descriptor = structuredClone(details.descriptor);
+    const editor = document.createElement("details");
+    editor.className = "inlay-lightbox-prompt-block";
+    const summary = document.createElement("summary");
+    summary.textContent = "Edit scene prompts";
+    editor.append(summary);
+    const field = (label, value, set) => {
+      const wrapper = document.createElement("label");
+      wrapper.textContent = label;
+      const input = document.createElement("textarea");
+      input.value = value;
+      input.className = "inlay-lightbox-prompt";
+      input.style.width = "100%";
+      input.style.boxSizing = "border-box";
+      input.setAttribute("aria-label", label);
+      input.addEventListener("input", () => set(input.value));
+      wrapper.append(input);
+      editor.append(wrapper);
+    };
+    field("Cast", descriptor.cast, (value) => {
+      descriptor.cast = value;
+    });
+    if (!descriptor.panels) {
+      field("Camera", descriptor.camera ?? "", (value) => {
+        descriptor.camera = value;
+      });
+      field("Scene", descriptor.scene ?? "", (value) => {
+        descriptor.scene = value;
+      });
+    }
+    const groups = descriptor.panels ?? [{ scene: descriptor.scene ?? "", characters: descriptor.characters ?? [] }];
+    groups.forEach((group, panelIndex) => {
+      if (descriptor.panels)
+        field(`Panel ${panelIndex + 1} scene`, group.scene, (value) => {
+          group.scene = value;
+        });
+      group.characters.forEach((character) => {
+        const prefix = descriptor.panels ? `Panel ${panelIndex + 1}, ${character.name}` : character.name;
+        field(`${prefix}: positive`, character.positive, (value) => {
+          character.positive = value;
+        });
+        field(`${prefix}: description`, character.description, (value) => {
+          character.description = value;
+        });
+        field(`${prefix}: negative`, character.negative ?? "", (value) => {
+          character.negative = value;
+        });
+      });
+    });
+    const save = document.createElement("button");
+    save.type = "button";
+    save.textContent = "Generate with edits";
+    save.addEventListener("click", () => onAction("edit", controls, descriptor));
+    controls.buttons.push(save);
+    editor.append(save);
+    panel.append(editor);
+  }
   actions.append(reroll, sidecar, status);
   panel.append(actions);
   layout.append(preview, panel);
@@ -1863,7 +2031,7 @@ function installInlayLightbox(ctx) {
     const result = payload;
     if (result.type === "inlay_image_details_result" && String(result.requestId || "") === activeDetailsRequest?.id) {
       if (result.ok === true) {
-        activeDetailsRequest.render(resolveInlayDetails(typeof result.prompt === "string" ? result.prompt : null, null, typeof result.negativePrompt === "string" ? result.negativePrompt : null, null, typeof result.perspectiveMode === "string" ? result.perspectiveMode : null, typeof result.perspectiveSource === "string" ? result.perspectiveSource : null, typeof result.creativeConcept === "string" ? result.creativeConcept : null));
+        activeDetailsRequest.render({ ...resolveInlayDetails(typeof result.prompt === "string" ? result.prompt : null, null, typeof result.negativePrompt === "string" ? result.negativePrompt : null, null, typeof result.perspectiveMode === "string" ? result.perspectiveMode : null, typeof result.perspectiveSource === "string" ? result.perspectiveSource : null, typeof result.creativeConcept === "string" ? result.creativeConcept : null), ...result.descriptor && typeof result.descriptor === "object" ? { descriptor: result.descriptor } : {} });
       }
       activeDetailsRequest = null;
       return;
@@ -1898,7 +2066,7 @@ function installInlayLightbox(ctx) {
         maxHeight: Math.max(480, window.innerHeight - 48)
       });
       activeModal = modal;
-      const render = (nextDetails) => appendLightboxContent(modal.root, image, nextDetails, (operation, controls) => {
+      const render = (nextDetails) => appendLightboxContent(modal.root, image, nextDetails, (operation, controls, descriptor) => {
         let chatId = actionTarget.chatId || "";
         if (!chatId) {
           try {
@@ -1918,14 +2086,15 @@ function installInlayLightbox(ctx) {
         controls.status.textContent = operation === "sidecar" ? "Rerunning sidecar and generating..." : "Rerolling with a fresh seed...";
         activeRequest = { id: requestId, modal, controls };
         ctx.sendToBackend({
-          type: operation === "sidecar" ? "rerun_image_sidecar" : "reroll_image",
+          type: operation === "edit" ? "edit_inlay_descriptor" : operation === "sidecar" ? "rerun_image_sidecar" : "reroll_image",
+          ...descriptor ? { descriptor } : {},
           requestId,
           ...actionTarget,
           chatId
         });
       });
       render(details);
-      if (!details.prompt && (actionTarget.imageId || actionTarget.messageId)) {
+      if (actionTarget.imageId || actionTarget.messageId) {
         let chatId = actionTarget.chatId || "";
         if (!chatId) {
           try {

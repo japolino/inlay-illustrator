@@ -1,5 +1,8 @@
+import { validateDescriptor } from "./v453/schema.js";
+import type { LightboardDescriptor } from "./v453/types.js";
+import { generateWithSnapshots } from "./v453/references.js";
 import { isNovelAiConnection, normalizeConfig, v376OptionsFromConfig, type Config, type PerspectiveMode } from "../shared/config.js";
-import { parseV376ForMessage } from "./v376/parser.js";
+import { parseLightboardForMessage } from "./v453/parser.js";
 import type { V376ChatMessage } from "./v376/context.js";
 import { compileV376Shot } from "./v376/prompt.js";
 import {
@@ -112,6 +115,7 @@ export type StoredImageActionRequest = {
 };
 
 export type StoredImageDetails = {
+  descriptor?: LightboardDescriptor;
   prompt: string;
   negativePrompt: string;
   perspectiveMode: PerspectiveMode | null;
@@ -200,6 +204,7 @@ export async function getStoredImageDetails(
   const slot = located.record.slots[located.index];
   const concept = slot.creativeConcept;
   return {
+    ...((slot.rawShot as V376Shot | undefined)?.lightboard ? { descriptor: (slot.rawShot as V376Shot).lightboard } : {}),
     prompt: slot.prompt,
     negativePrompt: slot.negativePrompt,
     perspectiveMode: slot.perspectiveMode || null,
@@ -951,7 +956,7 @@ async function prepareAndDispatchV376Jobs(
     eagerComfyQueueing,
     (job) => job,
     (job) => {
-      return spindle.imageGen.generate({
+      return generateWithSnapshots({
         connection_id: config.imageConnectionId || undefined,
         prompt: job.prompt,
         negativePrompt: job.negative || undefined,
@@ -960,7 +965,7 @@ async function prepareAndDispatchV376Jobs(
         owner_chat_id: chatId,
         userId,
         includeDataUrl: false
-      });
+      }, job.rawShot, config, imageConnection, options.signal);
     },
     options
   );
@@ -1072,7 +1077,8 @@ export async function rerunStoredImage(
   request: StoredImageActionRequest,
   rerunSidecar: boolean,
   userId?: string,
-  preparedConfig?: Config
+  preparedConfig?: Config,
+  descriptorOverride?: unknown
 ): Promise<{ record: GeneratedRecord; index: number }> {
   if (!request.chatId) throw new Error("Open the image's chat first.");
   const actionKey = JSON.stringify([userId ?? null, request.chatId, request.messageId ?? null, request.swipeId ?? null,
@@ -1090,8 +1096,16 @@ export async function rerunStoredImage(
     let replacement: ImageReplacement;
     let selectionForMemory: ParsedPayload | undefined;
 
-    const originalSlot = located.record.slots[located.index];
+    let originalSlot = located.record.slots[located.index];
     if (!originalSlot) throw new Error("The selected image slot no longer exists.");
+    if (descriptorOverride !== undefined) {
+      const raw = originalSlot.rawShot as V376Shot | undefined;
+      if (!raw?.lightboard) throw new Error("Only Lightboard 4.5.3 descriptors can be edited.");
+      const descriptor = validateDescriptor(descriptorOverride, Boolean(raw.lightboard.panels), raw.lightboard.slot !== undefined);
+      descriptor.slot = raw.lightboard.slot;
+      originalSlot = { ...originalSlot, rawShot: { ...raw, lightboard: descriptor } };
+    }
+
 
     if (!rerunSidecar) {
       const reroll = await prepareV376FreshReroll({
@@ -1100,7 +1114,7 @@ export async function rerunStoredImage(
         imageConnection,
         state: initialState
       });
-      const result = await spindle.imageGen.generate({
+      const result = await generateWithSnapshots({
         connection_id: config.imageConnectionId || undefined,
         prompt: reroll.prompt,
         negativePrompt: reroll.negative || undefined,
@@ -1109,7 +1123,7 @@ export async function rerunStoredImage(
         owner_chat_id: request.chatId,
         userId,
         includeDataUrl: false
-      });
+      }, originalSlot.rawShot, config, imageConnection);
       const imageId = result.imageId || "";
       const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
       if (!imageUrl) throw new Error("The image provider returned no replacement image.");
@@ -1155,7 +1169,7 @@ export async function rerunStoredImage(
         ? allParagraphs
         : [{ ...(sourceParagraph as PreparedParagraph), parserIndex: 1 }];
 
-      const { payload, compiled } = await parseV376ForMessage({
+      const { payload, compiled } = await parseLightboardForMessage({
         chatId: request.chatId,
         messageId: located.record.messageId,
         messages: messages as unknown as V376ChatMessage[],
@@ -1178,7 +1192,7 @@ export async function rerunStoredImage(
       });
       const job = jobs[0]!;
 
-      const result = await spindle.imageGen.generate({
+      const result = await generateWithSnapshots({
         connection_id: config.imageConnectionId || undefined,
         prompt: job.prompt,
         negativePrompt: job.negative || undefined,
@@ -1187,7 +1201,7 @@ export async function rerunStoredImage(
         owner_chat_id: request.chatId,
         userId,
         includeDataUrl: false
-      });
+      }, job.rawShot, config, imageConnection);
       const imageId = result.imageId || "";
       const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
       if (!imageUrl) throw new Error("The image provider returned no replacement image.");
@@ -1280,7 +1294,7 @@ export async function rerunAllStoredImages(
             imageConnection,
             state
           });
-          const result = await spindle.imageGen.generate({
+          const result = await generateWithSnapshots({
             connection_id: effectiveConfig.imageConnectionId || undefined,
             prompt: reroll.prompt,
             negativePrompt: reroll.negative || undefined,
@@ -1289,7 +1303,7 @@ export async function rerunAllStoredImages(
             owner_chat_id: chatId,
             userId,
             includeDataUrl: false
-          });
+          }, slot.rawShot, effectiveConfig, imageConnection);
           const imageId = result.imageId || "";
           const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
           if (!imageUrl) { failedCount++; continue; }
@@ -1312,7 +1326,7 @@ export async function rerunAllStoredImages(
       // Bulk sidecar rerun: parse message ONCE, update source memory ONCE, and map shots
       const allParagraphs = prepareParagraphs(String(target.content || ""), effectiveConfig);
       if (allParagraphs.length === 0) throw new Error("The source message has no usable paragraphs.");
-      const { payload, compiled } = await parseV376ForMessage({
+      const { payload, compiled } = await parseLightboardForMessage({
         chatId,
         messageId,
         messages: messages as unknown as V376ChatMessage[],
@@ -1331,10 +1345,10 @@ export async function rerunAllStoredImages(
       for (let i = 0; i < updatedSlots.length; i++) {
         const slot = updatedSlots[i];
         if (!slot) continue;
-        const job = jobs.find((j) => j.paragraph === slot.paragraph) || jobs[i];
+        const job = jobs.find((j) => j.paragraph === slot.paragraph && (j.placement ?? "paragraph") === (slot.placement ?? "paragraph"));
         if (!job) { failedCount++; continue; }
         try {
-          const result = await spindle.imageGen.generate({
+          const result = await generateWithSnapshots({
             connection_id: effectiveConfig.imageConnectionId || undefined,
             prompt: job.prompt,
             negativePrompt: job.negative || undefined,
@@ -1343,7 +1357,7 @@ export async function rerunAllStoredImages(
             owner_chat_id: chatId,
             userId,
             includeDataUrl: false
-          });
+          }, job.rawShot, effectiveConfig, imageConnection);
           const imageId = result.imageId || "";
           const imageUrl = result.imageUrl || (imageId ? imageUrlFromId(imageId) : "");
           if (!imageUrl) { failedCount++; continue; }
@@ -1500,7 +1514,7 @@ async function runGenerationForMessage(
     if (paragraphs.length === 0) throw new Error("No usable paragraphs found for image parsing.");
 
     reportGenerationProgress(operation, "parsing", userId);
-    const { payload, compiled } = await parseV376ForMessage({
+    const { payload, compiled } = await parseLightboardForMessage({
       chatId,
       messageId,
       messages: messages as unknown as V376ChatMessage[],
@@ -1560,6 +1574,14 @@ async function runGenerationForMessage(
       payload,
       options: v376Options
     });
+    if (!config.generateImagesImmediately) {
+      pendingRecord.generationStatus = "planned";
+      pendingRecord.slots.forEach(slot => { slot.status = "planned"; });
+      await initializeProgressiveGeneration(context, pendingRecord);
+      reportGenerationProgress(operation, "completed", userId, "Prompts prepared. Generate the images from Inlay settings when ready.");
+      spindle.sendToFrontend({ type: "status", chatId, status: "Prompts prepared", record: pendingRecord }, userId);
+      return;
+    }
     initializationPromise = initializeProgressiveGeneration(
       context,
       pendingRecord
@@ -1636,6 +1658,9 @@ async function runGenerationForMessage(
 
 /** Config keys that change how an already-rendered inlay looks in the chat. */
 const INLAY_DISPLAY_KEYS: Array<keyof Config> = [
+  "coverImagePosition",
+  "coverImageAspect",
+  "imageAlignment",
   "inlayImageAspect",
   "inlayImageMaxHeightVh",
   "inlayImageWidth",

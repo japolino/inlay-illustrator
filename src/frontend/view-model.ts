@@ -31,10 +31,6 @@ export function generationSummary(config: Config): string {
 export function parserSummary(config: Config, connections: ParserConnection[]): string {
   const selected = connections.find((connection) => connection.id === config.parserConnectionId);
   const base = selected?.name || (config.parserConnectionId ? "Missing connection" : "Not configured");
-  if (config.encodingMode && config.encodingMode !== "plain") {
-    const enc = config.encodingMode.charAt(0).toUpperCase() + config.encodingMode.slice(1);
-    return `${base} · [${enc}]`;
-  }
   return base;
 }
 

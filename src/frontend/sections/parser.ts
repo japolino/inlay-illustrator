@@ -3,7 +3,7 @@ import type { SectionContext } from "./section-context.js";
 
 export function renderParserSection({ ui, config, parserConnections, actions, rerender }: SectionContext): void {
   const section = ui.section("Parser and context", false, {
-    description: "Configure the sidecar model, bypass protocols, and continuity sources.",
+    description: "Configure the Lightboard 4.5.3 parser and its context sources.",
     badge: parserSummary(config, parserConnections)
   });
 
@@ -77,64 +77,34 @@ export function renderParserSection({ ui, config, parserConnections, actions, re
     "0 uses the automatic model and parser-stage budget. Explicit max_tokens or max_completion_tokens in Parser parameters takes precedence."
   );
 
-  ui.addSwitch(
-    section,
-    "preprocessingEnabled",
-    "Illustration preprocessing",
-    "Use auxiliary preprocessing for scene tagging extraction (V3.7.6 Card.Preprocessing)."
-  );
-  ui.addNumber(section, "includeMinMessages", "Minimum context messages", 0, 32, "Minimum prior turns included in context (V3.7.6 Card.IncludeMin).");
-  ui.addNumber(section, "includeMaxMessages", "Maximum context messages", 0, 32, "Maximum prior turns included in context (V3.7.6 Card.Include).");
-  ui.addSwitch(
-    section,
-    "includeUserMessage",
-    "Include preceding user message",
-    "Include one preceding user message per turn in context for non-impersonation accuracy (V3.7.6 Card.Userchat)."
-  );
-  ui.addSwitch(
-    section,
-    "nsfwInstructions",
-    "NSFW instruction strength (🔞NSFW 지침 강화)",
-    "Increases explicit interaction instruction intensity in the prompt generation system message (V3.7.6 Card.Nsfw). Note: This is an instruction-strength booster, NOT a safe-content filter."
-  );
-  ui.addNumber(
-    section,
-    "parserRetries",
-    "Parser retries on refusal / error",
-    0,
-    5,
-    "Number of retries when censorship refusal or format error is detected (V3.7.6 Card.Retry)."
-  );
-
-  ui.addSubtitle(section, "Bypass & encoding protocols (탈옥 / 암호화)");
-  ui.addSelect(
-    section,
-    "encodingMode",
-    "Refusal bypass encoding",
-    [
-      { value: "plain", label: "Standard / Plain (기본) - Plain text" },
-      { value: "placeholder", label: "Placeholder Codes (단어 치환) - BP/SE body part codes" },
-      { value: "base64", label: "Base64 Protocol (연구 프로토콜 암호화)" },
-      { value: "atbash", label: "Atbash Cipher (A↔Z 단일 치환 암호)" }
-    ],
-    "Instruction and response encoding protocol to bypass LLM safety refusals (V3.7.6 Card.Encode)."
-  );
-  ui.addSwitch(
-    section,
-    "prefillEnabled",
-    "Consensual adult prefill bypass",
-    "Inject consensual adult roleplay confirmation prefill into parser prompt (V3.7.6 Card.Prefill)."
-  );
+  ui.addSummary(section, "Lightboard 4.5.3 returns slot-based TOON descriptors. Saved 3.7.6 images remain available in the gallery and lightbox.");
+  ui.addNumber(section, "includeMinMessages", "Prior context messages", 0, 32, "Previous turns included in the first parser request.");
+  ui.addNumber(section, "includeMaxMessages", "Maximum context messages", 0, 32, "Upper limit as retries expand the context.");
+  ui.addSwitch(section, "includeUserMessage", "Include user messages", "Include user turns in prior context.");
+  ui.addNumber(section, "parserRetries", "Parser retries", 0, 5, "Retry invalid responses with the validation error and more context.");
+  ui.addSelect(section, "lightboardDescription", "Description detail", [
+    { value: "high", label: "Tags and detailed prose" },
+    { value: "low", label: "Tags and concise prose" },
+    { value: "full", label: "Natural language" }
+  ]);
+  ui.addSelect(section, "lightboardAppearance", "Appearance instructions", [
+    { value: "reference", label: "Use as a reference" },
+    { value: "locked", label: "Preserve specified traits" },
+    { value: "closed", label: "Only specified traits" }
+  ]);
+  ui.addNumber(section, "lightboardCamera", "Camera direction strength", 0, 2, "0: restrained, 1: stronger, 2: strongest source camera guidance.");
+  ui.addText(section, "lightboardFocus", "Character focus", "Optional names to prioritize.");
+  ui.addTextarea(section, "lightboardDirection", "Author direction", "Scene and composition requests for the parser.");
 
   ui.addSubtitle(section, "Context sources");
-  ui.addSwitch(section, "includeUserInfo", "User info", "Include {{user}} persona in prompt generation (V3.7.6 Card.UserInfo).");
-  ui.addSwitch(section, "includeCharacterInfo", "Character info", "Include {{char}} definition in prompt generation (V3.7.6 Card.CharInfo).");
-  ui.addSwitch(section, "includeLorebook", "Lorebook", "Include active lorebook entries in prompt generation (V3.7.6 Card.Lorebook).");
+  ui.addSwitch(section, "includeUserInfo", "User info", "Include {{user}} persona in prompt generation.");
+  ui.addSwitch(section, "includeCharacterInfo", "Character info", "Include {{char}} definition in prompt generation.");
+  ui.addSwitch(section, "includeLorebook", "Lorebook", "Include active lorebook entries in prompt generation.");
   ui.addSwitch(
     section,
     "characterTagContextEnabled",
     "Character appearance continuity",
-    "Track and reuse character appearance tags across turns (V3.7.6 Card.CharAppearance.Context).",
+    "Pass recent Lightboard descriptors and saved appearance tags into the next request.",
     rerender
   );
   if (config.characterTagContextEnabled) {
@@ -144,9 +114,14 @@ export function renderParserSection({ ui, config, parserConnections, actions, re
       "Character memory depth",
       0,
       1000,
-      "Turns before an unseen character's detailed tags leave parser context. Saved tags are retained (V3.7.6 Card.CharAppearance.Depth, default: 5)."
+      "Number of prior descriptor sets kept in parser context. Zero disables descriptor history."
     );
   }
+  ui.addActions(section, [{ label: "Clear descriptor history for this chat", onClick: () => {
+    const chatId = actions.activeChatId();
+    if (!chatId) { actions.updateStatus("Open a chat first."); return; }
+    actions.sendToBackend({ type: "clear_lightboard_history", chatId });
+  } }]);
   ui.addSwitch(section, "userInstructionsEnabled", "Character-specific instructions", "Include extra image instructions stored on the character, chat, or persona. The parser override below is independent.");
-  ui.addTextarea(section, "customParserInstructions", "Parser instructions override", "Additional prompt instructions injected into prompt generation (V3.7.6 Card.CustomInst).");
+  ui.addTextarea(section, "customParserInstructions", "Parser instructions override", "Additional instructions for prompt generation. Activated lb-xnai.lb.extra entries are also read when lorebook context is enabled.");
 }

@@ -1,0 +1,9 @@
+[Positive]
+high complexity, year 2024, year 2025,
+
+{prompt}
+
+very aesthetic, masterpiece, best illustration
+
+[Negative]
+lowres, worst quality, very displeasing, jpeg artifacts

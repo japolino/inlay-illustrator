@@ -45,7 +45,7 @@ export function inlayFrameGeometry(
     : config.imageParameters;
   const intrinsicWidth = positiveDimension(parameters.width);
   const intrinsicHeight = positiveDimension(parameters.height);
-  const aspect = resolveInlayImageAspect(config.inlayImageAspect, { width: intrinsicWidth, height: intrinsicHeight });
+  const aspect = resolveInlayImageAspect(placement === "cover" ? config.coverImageAspect : config.inlayImageAspect, { width: intrinsicWidth, height: intrinsicHeight });
   const viewportWidth = `calc(${maxHeight}vh * ${aspect.w} / ${aspect.h})`;
   // Preserve staging's optional cover-width cap. Paragraph and Asset slots use
   // the Legacy display contract: aspect ratio + viewport-height cap only.
@@ -59,7 +59,7 @@ export function inlayFrameGeometry(
   const frameRatio = `${aspect.w}/${aspect.h}`;
   const commonFrameStyle = `width:${boxWidth};max-width:100%;max-height:${maxHeight}vh;aspect-ratio:${frameRatio};overflow:hidden;`;
   return {
-    wrapperStyle: "display:flex;flex-direction:column;justify-content:center;align-items:center;margin:10px 0;width:100%;",
+    wrapperStyle: `display:flex;flex-direction:column;justify-content:center;align-items:${config.imageAlignment === "left" ? "flex-start" : "center"};margin:10px 0;width:100%;`,
     frameStyle: `display:block;${commonFrameStyle}`,
     placeholderFrameStyle: `display:flex;justify-content:center;align-items:center;${commonFrameStyle}`,
     imageStyle: `display:block;width:100%;height:100%;aspect-ratio:${frameRatio};object-fit:contain;border-radius:8px;cursor:zoom-in;`,

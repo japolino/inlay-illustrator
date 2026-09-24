@@ -258,6 +258,7 @@ export type AvatarVisionAttempt = {
 };
 
 export type State = {
+  lightboardHistory?: Array<{ messageId: string; descriptors: string }>;
   characterAppearance: Record<string, string>;
   /**
    * Exact user-saved baselines. Automatic parser memory may create and update
@@ -296,8 +297,8 @@ export type ParserGenerationRequest = {
   signal?: AbortSignal;
 };
 
-export type GenerationSlotStatus = "pending" | "generating" | "completed" | "failed" | "cancelled";
-export type GenerationStatus = "pending" | "completed" | "failed" | "cancelled";
+export type GenerationSlotStatus = "planned" | "pending" | "generating" | "completed" | "failed" | "cancelled";
+export type GenerationStatus = "planned" | "pending" | "completed" | "failed" | "cancelled";
 
 
 // ─── Spindle type augmentation ─────────────────────────────────────────

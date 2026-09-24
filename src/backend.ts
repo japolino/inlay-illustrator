@@ -112,6 +112,11 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         chatId,
         characterAppearance: state.characterAppearance
       }, userId);
+    } else if (message.type === "clear_lightboard_history") {
+      const chatId = String(message.chatId || "");
+      if (!chatId) throw new Error("Open a chat first.");
+      await updateState(chatId, userId, current => { current.lightboardHistory = []; });
+      spindle.sendToFrontend({ type: "status", chatId, status: "Lightboard descriptor history cleared." }, userId);
     } else if (message.type === "cancel_generation") {
       const chatId = String(message.chatId || "");
       if (!chatId) throw new Error("Open a chat first.");
@@ -160,7 +165,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
           error: error instanceof Error ? error.message : String(error)
         }, userId);
       }
-    } else if (message.type === "reroll_image" || message.type === "rerun_image_sidecar") {
+    } else if (message.type === "reroll_image" || message.type === "rerun_image_sidecar" || message.type === "edit_inlay_descriptor") {
       const config = await getConfig(userId);
       configForError = config;
       const chatId = String(message.chatId || "");
@@ -178,7 +183,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
       const rerunSidecar = message.type === "rerun_image_sidecar";
       const actionLabel = rerunSidecar ? "Rerunning sidecar..." : "Rerolling image...";
       spindle.sendToFrontend({ type: "status", chatId, status: actionLabel }, userId);
-      const result = await rerunStoredImage(request, rerunSidecar, userId, config);
+      const result = await rerunStoredImage(request, rerunSidecar, userId, config, message.type === "edit_inlay_descriptor" ? message.descriptor : undefined);
       spindle.sendToFrontend({
         type: "inlay_image_action_result",
         requestId: String(message.requestId || ""),
@@ -278,7 +283,7 @@ spindle.onFrontendMessage(async (payload: unknown, userId) => {
         error: errorMessage
       }, userId);
     }
-    if (message.type === "reroll_image" || message.type === "rerun_image_sidecar") {
+    if (message.type === "reroll_image" || message.type === "rerun_image_sidecar" || message.type === "edit_inlay_descriptor") {
       spindle.sendToFrontend({
         type: "inlay_image_action_result",
         requestId: String(message.requestId || ""),

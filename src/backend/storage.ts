@@ -337,6 +337,8 @@ export async function findLatestGeneratedTurn(
     let swipeId = 0;
     let createdAt = 0;
     if (isGeneratedRecordReference(value)) {
+      const parsedTs = Date.parse((value as { createdAt?: string }).createdAt || "");
+      createdAt = Number.isFinite(parsedTs) ? parsedTs : 0;
       messageId = (value as { messageId?: string }).messageId || "";
       swipeId = Number((value as { swipeId?: number }).swipeId || 0);
     } else {

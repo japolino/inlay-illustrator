@@ -107,7 +107,7 @@ function extractLlmText(result: unknown): string {
  * surfaces provider errors directly, and normalizes chat roles to standard
  * "system" | "user" | "assistant" for Spindle API compliance.
  */
-async function defaultSpindleInvoker(
+export async function defaultSpindleInvoker(
   messages: V376OutboundMessage[],
   params: {
     connection: ParserConnection;

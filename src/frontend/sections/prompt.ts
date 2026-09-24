@@ -36,8 +36,8 @@ export function renderPromptSection({ ui, config, imageConnections, actions, rer
       { value: "native", label: "NovelAI Native Characters (v4 API)" }
     ],
     config.promptSeparator === "native"
-      ? "Keeps scene and character prompts separate in parameters.characters. Host NovelAI V4 support is unverified. Use pipe mode unless your host supports native character channels."
-      : "Delimiter separating scene tags and character definitions (V3.7.6 Card.PromptSep).",
+      ? "Keeps character channels separate in saved prompts. NovelAI V4/V5 requests always use host character channels, with a shared negative prompt; older models receive a combined prompt."
+      : "Delimiter separating scene tags and character definitions.",
     rerender
   );
 
@@ -65,50 +65,28 @@ export function renderPromptSection({ ui, config, imageConnections, actions, rer
       { value: "japanese", label: "Japanese (일본어)" },
       { value: "chinese", label: "Chinese (중국어)" }
     ],
-    "Add speech bubbles, sound effects, or dialogue text inside the image (V3.7.6 Card.Text)."
+    "Add speech bubbles, sound effects, or dialogue text inside the image."
   );
 
-  ui.addSwitch(
-    section,
-    "originalReference",
-    "Source reference (canon names)",
-    "Ask the model to name characters as `full name (creation name)` and to use their canon names. Characters that are not canon become `name (oc)`. Source toggle_Card.Original.",
-    rerender
-  );
-  if (config.originalReference) {
-    ui.addText(
-      section,
-      "originalCreationName",
-      "Creation name",
-      "Creation or series name appended to canon character names, for example `Arknights`. Source toggle_Card.Original.Text."
-    );
+  ui.addSwitch(section, "lightboardAttenuate", "Emphasize the style preset", "Lower generated scene weights to 0.75 while keeping preset weights intact. NovelAI only.");
+  if (!isNai) {
+    ui.addSelect(section, "lightboardWeightMode", "NovelAI weight conversion", [
+      { value: "strip", label: "Remove weights" }, { value: "convert", label: "Convert to ComfyUI weights" }
+    ]);
+    ui.addSwitch(section, "lightboardSeparateCharacters", "Describe separate characters", "Prefix each character group with 'the' for models that understand prose and tags.");
   }
-
-  ui.addSwitch(
-    section,
-    "supplement",
-    "Natural language supplement",
-    "Add natural language pose and action descriptions to character tags (V3.7.6 Card.Supplement)."
-  );
-
-  ui.addSwitch(
-    section,
-    "quoteEnabled",
-    "Extract image dialogue quotes",
-    "Include a short per-shot dialogue quote in parser output (V3.7.6 Card.Quote). Quotes are saved as metadata; existing image display is unchanged."
-  );
 
   ui.addSubtitle(section, "Prompt presets");
   if (config.promptPresets.length === 0) {
-    ui.addSummary(section, "The original V3.7.6 preset is used by default. Save a preset to replace its positive and negative templates.");
+    ui.addSummary(section, "The original Lightboard 4.5.3 preset is used by default. Save a preset to replace its positive and negative templates.");
   }
 
   const selectedPreset = config.promptPresets.find((preset) => preset.id === config.activePromptPresetId) || null;
-  const presetSelectTarget = ui.row(section, "Active preset", "CustomPos is placed before the preset output. CustomNeg is a positive suffix. With no selection, the original V3.7.6 preset is used.");
+  const presetSelectTarget = ui.row(section, "Active preset", "The positive prefix comes before the preset output. Positive additions follow the scene setup. With no selection, the original Lightboard 4.5.3 preset is used.");
   const presetSelect = document.createElement("select");
   presetSelect.className = "inlay-native-select";
   presetSelect.setAttribute("aria-label", "Active prompt preset");
-  presetSelect.innerHTML = '<option value="">V3.7.6 default preset</option>';
+  presetSelect.innerHTML = '<option value="">Lightboard 4.5.3 default preset</option>';
   for (const preset of config.promptPresets) {
     const option = document.createElement("option");
     option.value = preset.id;
@@ -130,7 +108,7 @@ export function renderPromptSection({ ui, config, imageConnections, actions, rer
   presetName.setAttribute("aria-label", "Preset name");
   presetNameTarget.append(presetName);
 
-  const presetPositiveTarget = ui.row(section, "Preset positive template", "Use {prompt} for the full generated prompt, or {setup} and {char} for scene and character groups. Plain tags automatically get the generated prompt appended.");
+  const presetPositiveTarget = ui.row(section, "Preset positive template", "Use {prompt} for the full generated prompt, or {setup}, {char}, and {description} for scene and character groups. Plain tags automatically get the generated prompt appended.");
   const presetPositive = document.createElement("textarea");
   presetPositive.value = selectedPreset?.positivePrefix || "";
   presetPositive.placeholder = "masterpiece, best quality";
@@ -252,13 +230,13 @@ export function renderPromptSection({ ui, config, imageConnections, actions, rer
     section,
     "customPositivePrefix",
     "Custom author tags (Positive prefix / CustomPos)",
-    "Tags prepended to the [Positive] prompt (V3.7.6 toggle_Card.CustomPos / 커스텀 작가 태그)."
+    "Tags prepended to the [Positive] prompt (Lightboard 4.5.3 toggle_Card.CustomPos / 커스텀 작가 태그)."
   );
   ui.addText(
     section,
     "customPositiveSuffix",
     "Custom quality tags (Positive suffix / CustomNeg)",
-    "Tags appended to the [Positive] prompt (V3.7.6 toggle_Card.CustomNeg / 커스텀 퀄리티 태그 - source positive suffix, NOT negative prompt!)."
+    "Tags appended to the [Positive] prompt (Lightboard 4.5.3 toggle_Card.CustomNeg / 커스텀 퀄리티 태그 - source positive suffix, NOT negative prompt!)."
   );
   ui.addText(
     section,

@@ -233,35 +233,10 @@ describe("progressive ComfyUI delivery", () => {
         get: async () => ({ id: "progress-parser", name: "Parser", provider: "openai", model: "test" })
       },
       generate: {
-        raw: async () => ({ content: JSON.stringify({
-          scenes: [{
-            place: "street",
-            environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: ["shops", "pavement"] },
-            shots: [
-              {
-                paragraph: 1,
-                action: "first beat",
-                shotPlan: { primaryAction: "wind moves paper", secondaryCue: "", staging: "paper crosses foreground" },
-                characters: [],
-                camera: { framing: "wide shot", angle: "eye level", perspective: "straight-on" }
-              },
-              {
-                paragraph: 2,
-                action: "second beat",
-                shotPlan: { primaryAction: "rain darkens pavement", secondaryCue: "", staging: "pavement fills foreground" },
-                characters: [],
-                camera: { framing: "close-up", angle: "low angle", perspective: "from side" }
-              }
-            ]
-          }],
-          terminalState: {
-            paragraph: 2,
-            place: "street",
-            environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: ["shops", "pavement"] },
-            environmentChanges: [],
-            characters: []
-          }
-        }) })
+        raw: async () => ({ content: JSON.stringify({ scenes: [
+          { slot: 0, cast: "no people", camera: "wide shot", scene: "exterior, street, wind moves paper", characters: [] },
+          { slot: 1, cast: "no people", camera: "close-up", scene: "exterior, rain darkens pavement", characters: [] }
+        ] }) })
       },
       imageGen: {
         getConnection: async () => ({
@@ -368,59 +343,10 @@ describe("optional cover image generation", () => {
       },
       generate: {
         raw: async () => ({ content: JSON.stringify({
-          cover: {
-            environment: {
-              location: "abstract mirrored void",
-              timeWeather: "timeless darkness",
-              lightingMood: ["dramatic rim light"],
-              backgroundElements: ["fractured mirror", "floating paper"]
-            },
-            camera: { framing: "wide shot", angle: "dutch angle", perspective: "from below", focus: ["deep focus"] },
-            shotPlan: {
-              primaryAction: "solitary girl faces her fractured reflection",
-              secondaryCue: "floating paper surrounds her",
-              staging: "girl and reflection divide the frame"
-            },
-            situation: "1girl, symbolic fractured reflection",
-            characters: [{
-              name: "girl A",
-              label: "girl",
-              age: "adolescent",
-              identity: "",
-              appearance: "long black hair, blue eyes",
-              body: "pale skin",
-              attire: "red coat",
-              attireInferred: false,
-              visualChanges: [],
-              expression: "determined",
-              renderScope: "full figure",
-              visibleTags: "long black hair, blue eyes, pale skin, red coat",
-              composition: {
-                position: "left of center",
-                pose: "upright stance",
-                actions: ["facing her fractured reflection"],
-                gaze: "looking at reflection"
-              }
-            }],
-            sharedComposition: { interaction: [], spatialRelation: "reflection fills the right half" },
-            negative: ""
-          },
-          scenes: [{
-            environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: [] },
-            shots: [{
-              paragraph: 2,
-              situation: "windblown paper",
-              shotPlan: { primaryAction: "wind moves paper", secondaryCue: "", staging: "paper crosses foreground" },
-              characters: [],
-              camera: { framing: "close-up", angle: "low angle", perspective: "from side", focus: [] }
-            }]
-          }],
-          terminalState: {
-            paragraph: 2,
-            environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: [] },
-            environmentChanges: [],
-            characters: []
-          }
+          keyvis: { cast: "1girl", camera: "from below, wide shot", scene: "abstract mirrored void", characters: [
+            { name: "Mira", positive: "girl on the left, adult, black hair, red coat", negative: "", description: "She faces her fractured reflection." }
+          ] },
+          scenes: [{ slot: 1, cast: "no people", camera: "close-up", scene: "exterior, street, windblown paper", characters: [] }]
         }) })
       },
       imageGen: {
@@ -693,27 +619,9 @@ describe("Fast Mode sidecar rerun", () => {
       generate: {
         raw: async (request: Record<string, unknown>) => {
           requests.push(request);
-          return { content: JSON.stringify({
-            scenes: [{
-              place: "street",
-              environment: { location: "street", timeWeather: "day" },
-              shots: [{
-                paragraph: 1,
-                perspectiveMode: "creative",
-                camera: { framing: "body-part focus", angle: "eye level", perspective: "from side" },
-                renderScope: "shadow and pavement",
-                visibleTags: ["shadow", "pavement"],
-                characters: []
-              }]
-            }],
-            terminalState: {
-              paragraph: 1,
-              place: "street",
-              environment: { location: "street", timeWeather: "day", lightingMood: [], backgroundElements: [] },
-              environmentChanges: [],
-              characters: []
-            }
-          }) }
+          return { content: JSON.stringify({ scenes: [
+            { slot: 0, cast: "no people", camera: "from side, close-up", scene: "exterior, street, shadow on pavement", characters: [] }
+          ] }) };
         }
       },
       imageGen: {
@@ -747,7 +655,7 @@ describe("Fast Mode sidecar rerun", () => {
     );
 
     expect(requests).toHaveLength(1);
-    expect((requests[0].messages as Array<{ content: string }>)[0].content).toContain("research paper");
+    expect((requests[0].messages as Array<{ content: string }>)[0].content).toContain("Image Prompt Details");
     expect((requests[0].messages as Array<{ content: string }>)[0].content).not.toContain("Creative Illustration Concept Ideator");
     expect(committed.index).toBe(0);
     expect(committed.record.slots[0]?.imageUrl).toBe("/rerun.png");
@@ -890,33 +798,14 @@ describe("backend hardening - already generated skip", () => {
   });
 });
 
-describe("V3.7.6 Active Generation and Reroll Pipeline", () => {
-  const sampleV376Response = JSON.stringify({
-    scenes: [
-      {
-        place: "crystal cavern",
-        shots: [
-          {
-            paragraph: 1,
-            camera: "medium shot",
-            situation: "girl exploring cave",
-            characters: [
-              {
-                name: "Serena",
-                label: "girl",
-                age: "young adult",
-                appearance: "cyan hair, golden eyes",
-                attire: "adventurer tunic"
-              }
-            ],
-            quote: "Look at that crystal!"
-          }
-        ]
-      }
-    ]
-  });
+describe("Lightboard 4.5.3 generation and legacy rerolls", () => {
+  const sampleV376Response = JSON.stringify({ scenes: [
+    { slot: 0, cast: "1girl", camera: "straight-on, upper body", scene: "crystal cavern", characters: [
+      { name: "Serena", positive: "girl on the left, young adult, cyan hair, golden eyes, adventurer tunic", negative: "hat", description: "She explores the cave." }
+    ] }
+  ] });
 
-  test("live generateForMessage invokes V3.7.6 parser, produces V3 record with v376Payload, and preserves native character channels", async () => {
+  test.each([true, false])("Lightboard generates immediately=%s and prepared images can be generated without reparsing", async (generateImagesImmediately) => {
     const files = new Map<string, unknown>();
     const updates: string[] = [];
     const frontend: Array<Record<string, unknown>> = [];
@@ -933,6 +822,7 @@ describe("V3.7.6 Active Generation and Reroll Pipeline", () => {
 
     const config = {
       ...DEFAULT_CONFIG,
+      generateImagesImmediately,
       parserConnectionId: "v376-parser",
       imageConnectionId: "v376-nai",
       promptSeparator: "native" as const,
@@ -946,7 +836,7 @@ describe("V3.7.6 Active Generation and Reroll Pipeline", () => {
         get: async () => ({ id: "v376-parser", name: "Parser", provider: "openai", model: "gpt-4" })
       },
       imageGen: {
-        getConnection: async () => ({ id: "v376-nai", name: "NAI", provider: "novelai", model: "nai-diffusion-3" }),
+        getConnection: async () => ({ id: "v376-nai", name: "NAI", provider: "novelai", model: "nai-diffusion-4-5-full" }),
         generate: async (request: Record<string, unknown>) => {
           imageRequests.push(request);
           return { imageId: "img-v376-1", imageUrl: "/v376-1.png", model: "nai", provider: "novelai" };
@@ -983,15 +873,25 @@ describe("V3.7.6 Active Generation and Reroll Pipeline", () => {
       messages: [message]
     });
 
+    if (!generateImagesImmediately) {
+      expect(imageRequests).toHaveLength(0);
+      expect(message.content).toContain("prompts are ready");
+      const result = await rerunAllStoredImages("v376-chat", message.id, 0, "user-1", config, false);
+      expect(result.failedCount).toBe(0);
+      expect(result.record.slots[0]?.status).toBe("completed");
+      expect(imageRequests).toHaveLength(1);
+      expect(parserRequests).toHaveLength(1);
+      return;
+    }
+
     // 1. Verifies parser was invoked with V3.7.6 context framing
     expect(parserRequests.length).toBeGreaterThanOrEqual(1);
-    expect((parserRequests[0].messages as Array<{ content: string }>)[0].content).toContain("research paper");
+    expect((parserRequests[0].messages as Array<{ content: string }>)[0].content).toContain("Image Prompt Details");
 
     // 2. Verifies image request preserved native character channels in parameters
     expect(imageRequests).toHaveLength(1);
     const params = imageRequests[0].parameters as Record<string, unknown>;
-    expect(params.characters).toBeDefined();
-    expect(Array.isArray(params.characters)).toBe(true);
+    expect(params.characterTags).toEqual([expect.objectContaining({ tags: expect.stringContaining("cyan hair") })]);
 
     // 3. Verifies frontend completed status contains GeneratedRecordV3 with v376 metadata
     const completed = frontend.find((p) => p.type === "status" && p.status === "Generated") as { record?: Record<string, unknown> } | undefined;
@@ -1001,8 +901,17 @@ describe("V3.7.6 Active Generation and Reroll Pipeline", () => {
     const slots = completed?.record?.slots as Array<Record<string, unknown>>;
     expect(slots).toHaveLength(1);
     expect(slots[0].rawShot).toBeDefined();
-    expect(slots[0].scenePlace).toBe("crystal cavern");
-    expect(slots[0].quote).toBe("Look at that crystal!");
+    expect((slots[0].rawShot as { lightboard: { scene: string } }).lightboard.scene).toBe("crystal cavern");
+    expect((slots[0].rawShot as { lightboard: { slot: number } }).lightboard.slot).toBe(0);
+    const edited = JSON.parse(sampleV376Response).scenes[0];
+    edited.scene = "sunlit ocean pier";
+    const changed = await rerunStoredImage({ chatId: "v376-chat", messageId: message.id, swipeId: 0, imageIndex: 0 }, false, "user-1", config, edited);
+    expect(imageRequests[1]!.prompt).toContain("sunlit ocean pier");
+    expect((changed.record.slots[0]!.rawShot as { lightboard: { scene: string } }).lightboard.scene).toBe("sunlit ocean pier");
+    expect(parserRequests).toHaveLength(1);
+    await expect(rerunStoredImage({ chatId: "v376-chat", messageId: message.id, swipeId: 0, imageIndex: 0 }, false, "user-1", config, { ...edited, camera: "" })).rejects.toThrow("Camera");
+    expect(imageRequests).toHaveLength(2);
+
   });
 
   test("single seed-only rerun recompiles rawShot with latest affixes and preserves native character channels", async () => {
@@ -1110,7 +1019,7 @@ describe("V3.7.6 Active Generation and Reroll Pipeline", () => {
     expect(result.record.slots[0].imageParameters?.seed).not.toBe(111);
   });
 
-  test("single sidecar rerun invokes V3.7.6 parser and updates slot with replacement", async () => {
+  test("single sidecar rerun invokes Lightboard 4.5.3 parser and updates slot with replacement", async () => {
     const files = new Map<string, unknown>();
     const parserCalls: unknown[] = [];
 
@@ -1191,7 +1100,7 @@ describe("V3.7.6 Active Generation and Reroll Pipeline", () => {
     expect(result.record.slots[0].imageId).toBe("sidecar-new-id");
     expect(result.record.slots[0].imageUrl).toBe("/sidecar-new.png");
     expect(result.record.slots[0].rawShot).toBeDefined();
-    expect(result.record.slots[0].quote).toBe("Look at that crystal!");
+    expect((result.record.slots[0].rawShot as { lightboard: { slot: number } }).lightboard.slot).toBe(0);
   });
 
   test("bulk sidecar rerun parses message once and updates all slots, guarding stale swipe", async () => {
@@ -1244,17 +1153,10 @@ describe("V3.7.6 Active Generation and Reroll Pipeline", () => {
       swipe_id: 0
     };
 
-    const twoShotResponse = JSON.stringify({
-      scenes: [
-        {
-          place: "garden",
-          shots: [
-            { paragraph: 1, situation: "flowers blooming", characters: [] },
-            { paragraph: 2, situation: "fountain splashing", characters: [] }
-          ]
-        }
-      ]
-    });
+    const twoShotResponse = JSON.stringify({ scenes: [
+      { slot: 0, cast: "no people", camera: "wide shot", scene: "exterior, garden, flowers blooming", characters: [] },
+      { slot: 1, cast: "no people", camera: "close-up", scene: "exterior, garden, fountain splashing", characters: [] }
+    ] });
 
     (globalThis as typeof globalThis & { spindle: unknown }).spindle = {
       connections: { get: async () => ({ id: "p", name: "P", provider: "openai", model: "m" }) },

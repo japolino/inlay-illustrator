@@ -1,54 +1,37 @@
 # Inlay Illustrator
 
-Lumiverse extension for persistent, context-aware character image generation.
+Lightboard 4.5.3 illustration and comic generation adapted to Lumiverse.
 
-## Main features
-
-- V3.7.6 scene/shot schemas and source-derived conditional parser instructions
-- Illustration, single-character Asset, and multi-panel Comic modes
-- Source-style scene and character prompt groups, weights, presets, and optional natural-language supplements
-- Optional NSFW instruction strengthening, in-image text language, and quote fields
-- Plain, placeholder, Base64, and Atbash parser protocols, plus optional source prefill
-- Current narrative, optional preceding user messages, character/persona references, and lorebook context
-- Persistent character tags with source-style context depth; expired context entries are retained in storage
-- NovelAI profile settings and separate positive/negative character channels at the extension request boundary
-- Progressive illustration slots, per-chat scheduling, cancellation, and stored-image rerolls
-- Existing chat display, floating action button, gallery, and image lightbox
-
-The active image pipeline is being ported from V3.7.6 rather than continuing the
-ANIMA-specific planner. See [pipeline scope and compatibility](docs/V376_PIPELINE_PORT.md)
-for the source mapping and verification boundary. Native NovelAI character-channel
-handling by the Lumiverse host driver still needs end-to-end verification.
-
-## Install from source
-
-Clone or download this repository into your Lumiverse extension data folder:
-
-```powershell
-data\extensions\inlay_illustrator\repo
-```
-
-The built extension files are included in `dist/`, so no build step is required for normal installation.
+- Source-derived TOON scene descriptors, camera and appearance controls, and optional key visuals.
+- Saved style presets with selection, editing, renaming and deletion; NovelAI and ComfyUI prompt formatting.
+- Lumiverse character, persona and activated lorebook context, plus recent descriptor history.
+- Dedicated reference portraits for character continuity. Reference images are generated separately and never taken from chat illustrations.
+- Immediate generation or prepare-first mode, progressive delivery, gallery, lightbox prompt editing and rerolls.
+- NovelAI connection/profile detection and ComfyUI workflow selection.
+- Existing saved images and legacy rerolls remain readable.
 
 ## Setup
 
-1. In **Parser and context**, select a parser connection. Leave the model field empty to use that connection's default model.
-2. Configure the image provider in Lumiverse's image-generation settings. When no extension-specific connection is saved, Inlay uses the account default or first available image connection.
-3. **Auto generate** is enabled by default after setup. Disable it for manual-only use with **Generate latest**. **Cancel** cooperatively stops queued or running work.
+Install this repository's `staging` branch as a Lumiverse extension. Built entrypoints are included in `dist/`.
 
-If generation does not start, check the panel status first. A setup message means the parser connection is missing. A missing-connection error means a previously selected image connection was deleted or disconnected. Invalid parser parameters must be corrected to a JSON object. Enable **Debug logging** for detailed `[Inlay:stage]` entries.
+1. Select a connection in **Parser and context**. An empty model uses its default model.
+2. Select an image connection in **Generation**. Without an explicit selection, the account default or first available connection is used.
+3. Choose a saved style in **Prompt formatting**, or keep the Lightboard default.
+4. Use **Generate latest**, or leave **Auto generate** on. Turn off **Generate images immediately** to prepare prompts first, then use **Generate prepared images**.
+5. Open an image's lightbox to reroll, reparse, or edit its scene and character prompts.
+
+Reference snapshots are optional and require extra image generations when first created. Enable **Character reference snapshots** to reuse dedicated portraits within a chat. NovelAI uses individual character references; ComfyUI and SwarmUI use one dedicated cast sheet for a multi-character scene. **Refresh snapshots on next generation** starts fresh references.
+
+For ComfyUI references, select a workflow with `init_image` and `denoise` mappings. The workflow must treat zero in the mapped conditioning control as reference-off and support generation without an uploaded source. This preserves cue-living-novel's convention; ordinary sampler denoise is not automatically a reference on/off switch. Strength zero or disabling snapshots sends zero, including when generating the initial portraits.
+
+See [port behavior and compatibility](docs/V453_PIPELINE_PORT.md) and [source attribution](THIRD_PARTY_NOTICES.md).
 
 ## Development
 
 ```powershell
-$env:BUN_INSTALL_CACHE_DIR = "$PWD\.cache\bun"
 bun install --frozen-lockfile
 bun run verify
-bun run eval:v376
 bun run build
 ```
 
-`verify` runs the Bun test suite and strict TypeScript checking. `eval:v376` runs
-offline source-derived fixtures. Its pass rate is not a claim of complete source
-parity or better image quality. `build` type-checks the runtime sources, then
-bundles the backend and frontend entrypoints into `dist/`.
+`verify` runs tests and TypeScript checking. `build` checks the runtime and bundles both entrypoints. Tests use mocked host/provider responses; they do not spend image-generation credits. The retained `eval:v376` command evaluates legacy fixtures, not the active 4.5.3 pipeline.

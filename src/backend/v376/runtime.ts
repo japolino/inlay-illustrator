@@ -1,3 +1,4 @@
+import { compileLightboardDescriptor } from "../v453/prompt.js";
 /**
  * V3.7.6 Runtime adapter and job mapper.
  * Bridges V3.7.6 parsed shots and compiled prompts to Lumiverse Spindle image generation jobs,
@@ -80,7 +81,7 @@ export async function mapV376ShotsToJobs(params: {
     const parameters: Record<string, unknown> = {
       ...baseParameters,
       ...(characters.length > 0
-        ? { characters, nativeCharacters: shot.nativeCharacters }
+        ? { characters, nativeCharacters: shot.nativeCharacters, characterTags: characters.map(c => ({ tags: c.prompt })) }
         : {})
     };
 
@@ -186,6 +187,14 @@ export async function prepareV376FreshReroll(params: {
   nativeCharacters?: V376NativeCharacter[];
 }> {
   const { slot, config, imageConnection } = params;
+
+  const lightboardShot = slot.rawShot as V376Shot | undefined;
+  if (lightboardShot?.lightboard) {
+    const compiled = compileLightboardDescriptor(lightboardShot.lightboard, config, lightboardShot.paragraph, lightboardShot.lightboardTitle);
+    const parameters = await buildImageParameters(config, imageConnection, compiled.prompt, compiled.negative, compiled.nativeCharacters);
+    parameters.seed = Math.floor(Math.random() * 2147483646) + 1;
+    return { ...compiled, parameters };
+  }
 
   // If raw source shot is preserved, recompile with latest affixes and config
   if (slot.rawShot && typeof slot.rawShot === "object") {

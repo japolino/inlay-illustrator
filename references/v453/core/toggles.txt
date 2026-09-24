@@ -1,0 +1,37 @@
+=🔦백엔드=group
+lightboard.active=전원
+lightboard.language=언어　명시=select=한국어,영어,일본어,명시 안함
+=——————⚙️요　　청=divider
+lightboard.routing=라우팅 식별자
+=지원하는 프로바이더 플러그인에서 모듈별 요청 분리 가능=caption
+lightboard.streaming=응답 스트리밍
+=524 오류가 발생할 때 도움이 될 수 있음=caption
+lightboard.maxCtx=최대　컨텍=text
+=↑ 기억력 향상, 비용 증가. 커뮤니티 모듈 사용 시 높게 설정=caption
+=최소 8,000, 기본 8,000, 최대 리스 설정=caption
+lightboard.maxLogs=포함채팅수=text
+=↑ 기억력 향상, 비용 증가. 커뮤니티 모듈 사용 시 높게 설정=caption
+=최소 1, 기본 4=caption
+lightboard.noUser=유저메시지=select=포함,제외
+={{user}} 메시지를 보조모델 요청에 포함? 제외?=caption
+lightboard.concurrent=동시요청수=text
+=최소 1, 기본 1, 최대 5=caption
+=——————🧩호　　환=divider
+lightboard.preserveXML=XML 태그 보존
+=⛔이상징후가 있을 때만 활성화=caption
+=로어북을 못 읽는 것 같거나, 삽화가 본문 사이에 들어가질 않는 등=caption
+lightboard.position=출력　위치=select=아래,위,분리
+=번역 또는 봇과 충돌 시 분리 권장=caption
+=——————🔧자동수정=divider
+lightboard.maxRetries=최대　시도=text
+=오류 발생 시 수정 요청 전송. 데이터 오류가 줄어들지만 보조 모델 비용 발생 가능=caption
+=최소 0, 권장 1-2=caption
+lightboard.retryMode=시도　모델=select=모듈별 설정,메인 강제,보조 강제
+=보조 강제 권장=caption
+=——————⚙️고　　급=divider
+lightboard.skipUpdateCheck=업데이트 알림 끄기
+lightboard.logLevel=로그　수준=select=VERBOSE,INFO,NONE
+=브라우저 콘솔 로그=caption
+==divider
+=라이트보드 백엔드 4.5.3 · amonamona=caption
+==groupEnd

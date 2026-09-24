@@ -71,6 +71,8 @@ export interface V376Panel {
 }
 
 export interface V376Shot {
+  lightboard?: import("../v453/types.js").LightboardDescriptor;
+  lightboardTitle?: string;
   paragraph: number;
   camera?: string;
   situation?: string;

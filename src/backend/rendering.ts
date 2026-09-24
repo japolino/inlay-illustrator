@@ -108,7 +108,7 @@ function renderSlotPlaceholder(
   illustrationNumber = index + 1
 ): string {
   const subject = placement === "cover" ? "Cover image" : `Illustration ${illustrationNumber}`;
-  const label = status === "failed"
+  const label = status === "planned" ? `${subject} prompts are ready. Use Generate prepared images in Inlay settings.` : status === "failed"
     ? `${subject} failed. Use Generate latest to retry.`
     : status === "cancelled"
       ? `${subject} cancelled.`
@@ -166,7 +166,7 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
   const tokens = cleanOriginal.trimEnd().split(/(\r?\n\s*\r?\n)/);
   let paragraph = 0;
   const output: string[] = [];
-  if (coverBlocks.length) output.push(`${coverBlocks.join("\n\n")}\n\n`);
+  if (coverBlocks.length && config.coverImagePosition !== "bottom") output.push(`${coverBlocks.join("\n\n")}\n\n`);
   for (const token of tokens) {
     if (!token.trim()) {
       output.push(token);
@@ -179,5 +179,6 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
   }
   const unused = [...blocks.entries()].filter(([number]) => number > paragraph).flatMap(([, inlays]) => inlays);
   if (unused.length) output.push(`\n\n${unused.join("\n\n")}`);
+  if (coverBlocks.length && config.coverImagePosition === "bottom") output.push(`\n\n${coverBlocks.join("\n\n")}`);
   return output.join("");
 }
