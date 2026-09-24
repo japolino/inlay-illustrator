@@ -216,6 +216,12 @@ export function normalizeComicMinPanels(value: unknown): number {
 }
 
 export type Config = {
+  lightboardJailbreak: "none" | "memoir" | "authority";
+  lightboardForcedInsertion: boolean;
+  lightboardJapanese: boolean;
+  lightboardThoughts: "draft" | "internal" | "off";
+  lightboardReiterations: number;
+
   generateImagesImmediately: boolean;
   coverImagePosition: "top" | "bottom";
   coverImageAspect: InlayImageAspect;
@@ -329,6 +335,11 @@ export type RawConfig = Partial<Config> & {
 };
 
 export const DEFAULT_CONFIG: Config = {
+  lightboardJailbreak: "none",
+  lightboardForcedInsertion: false,
+  lightboardJapanese: false,
+  lightboardThoughts: "draft",
+  lightboardReiterations: 0,
   generateImagesImmediately: true,
   coverImagePosition: "top",
   coverImageAspect: "wide",
@@ -473,6 +484,11 @@ export function normalizeConfig(raw: RawConfig): Config {
   return {
     ...DEFAULT_CONFIG,
     ...current,
+    lightboardJailbreak: raw.lightboardJailbreak === "memoir" || raw.lightboardJailbreak === "authority" ? raw.lightboardJailbreak : "none",
+    lightboardForcedInsertion: raw.lightboardForcedInsertion === true,
+    lightboardJapanese: raw.lightboardJapanese === true,
+    lightboardThoughts: raw.lightboardThoughts === "internal" || raw.lightboardThoughts === "off" ? raw.lightboardThoughts : "draft",
+    lightboardReiterations: clampInt(raw.lightboardReiterations, 0, 10, 0),
     generateImagesImmediately: raw.generateImagesImmediately !== false,
     coverImagePosition: raw.coverImagePosition === "bottom" ? "bottom" : "top",
     coverImageAspect: raw.coverImageAspect === undefined ? "wide" : normalizeInlayImageAspect(raw.coverImageAspect),

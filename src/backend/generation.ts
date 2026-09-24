@@ -1524,6 +1524,11 @@ async function runGenerationForMessage(
       userId,
       signal
     });
+    if (!compiled.length) {
+      reportGenerationProgress(operation, "completed", userId, "No illustrations selected for this message.");
+      spindle.sendToFrontend({ type: "status", chatId, status: "No illustrations selected for this message." }, userId);
+      return;
+    }
     parsed = payload as unknown as ParsedPayload;
     const v376Options = v376OptionsFromConfig(config);
 

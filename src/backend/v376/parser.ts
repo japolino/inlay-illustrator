@@ -116,6 +116,7 @@ export async function defaultSpindleInvoker(
     signal?: AbortSignal;
     encodingMode?: V376EncodingMode;
     expectJson?: boolean;
+    preserveProviderDefaults?: boolean;
   }
 ): Promise<string> {
   const { connection, config, userId, signal, encodingMode, expectJson = true } = params;
@@ -129,7 +130,7 @@ export async function defaultSpindleInvoker(
   const explicitParams = config.parserParameters || {};
   const parameters: Record<string, unknown> = { ...explicitParams };
   if (parameters.max_tokens === undefined && parameters.max_completion_tokens === undefined) {
-    parameters.max_tokens = config.parserMaxTokens || 4096;
+    if (config.parserMaxTokens > 0 || !params.preserveProviderDefaults) parameters.max_tokens = config.parserMaxTokens || 4096;
   }
 
   // Note: trigger_runtime.lua never modifies or injects response_format = { type: "json_object" }.
@@ -155,7 +156,7 @@ export async function defaultSpindleInvoker(
       connection_id: connection.id,
       messages: spindleMessages,
       parameters,
-      reasoning: { source: "off" },
+      reasoning: { source: params.preserveProviderDefaults ? "inherit" : "off" },
       userId,
       signal: controller.signal,
     } as ParserGenerationRequest);

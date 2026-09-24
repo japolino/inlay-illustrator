@@ -74,14 +74,29 @@ export function renderParserSection({ ui, config, parserConnections, actions, re
     "Maximum token budget",
     0,
     32768,
-    "0 uses the automatic model and parser-stage budget. Explicit max_tokens or max_completion_tokens in Parser parameters takes precedence."
+    "0 keeps the provider default output budget. Explicit max_tokens or max_completion_tokens in Parser parameters takes precedence."
   );
 
   ui.addSummary(section, "Lightboard 4.5.3 returns slot-based TOON descriptors. Saved 3.7.6 images remain available in the gallery and lightbox.");
-  ui.addNumber(section, "includeMinMessages", "Prior context messages", 0, 32, "Previous turns included in the first parser request.");
-  ui.addNumber(section, "includeMaxMessages", "Maximum context messages", 0, 32, "Upper limit as retries expand the context.");
+  ui.addNumber(section, "includeMinMessages", "Prior context messages", 0, 32, "Previous turns included in the parser request.");
+  ui.addNumber(section, "includeMaxMessages", "Maximum context messages", 0, 32, "Upper limit on prior turns included in the request.");
   ui.addSwitch(section, "includeUserMessage", "Include user messages", "Include user turns in prior context.");
-  ui.addNumber(section, "parserRetries", "Parser retries", 0, 5, "Retry invalid responses with the validation error and more context.");
+  ui.addNumber(section, "parserRetries", "Parser retries", 0, 5, "Send the previous response and validation error back for correction, preserving its data.");
+  ui.addSubtitle(section, "Source prompt options");
+  ui.addSwitch(section, "nsfwInstructions", "NSFW prompts", "Enable the original Lightboard NSFW prompt instructions.");
+  ui.addSelect(section, "lightboardJailbreak", "Jailbreak method", [
+    { value: "none", label: "None" },
+    { value: "memoir", label: "Memoir (Freya)" },
+    { value: "authority", label: "Authority" }
+  ], "Original 4.5.3 methods and prefills. Memoir ends with a user turn; Authority ends with an assistant prefill and needs a compatible provider.");
+  ui.addSelect(section, "lightboardThoughts", "Planning assistance", [
+    { value: "draft", label: "Write draft, then remove" },
+    { value: "internal", label: "Internal guide" },
+    { value: "off", label: "Off" }
+  ], "Original scene-planning checklist. Provider reasoning settings are inherited from the parser connection.");
+  ui.addSwitch(section, "lightboardForcedInsertion", "Tag splitting", "Original tag-obfuscation option. Restores split tags before image generation. The source recommends Internal guide with this option.");
+  ui.addSwitch(section, "lightboardJapanese", "Japanese output", "Original Japanese prompt-output option; field names remain unchanged.");
+  ui.addNumber(section, "lightboardReiterations", "Refinement passes", 0, 10, "Original multi-turn review before validation. Each pass makes another parser request.");
   ui.addSelect(section, "lightboardDescription", "Description detail", [
     { value: "high", label: "Tags and detailed prose" },
     { value: "low", label: "Tags and concise prose" },

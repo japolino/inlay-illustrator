@@ -1,5 +1,5 @@
 /*! Lightboard 4.5.3 adaptation. Copyright (c) 2026 amonamona. CC BY-NC-SA 4.0. See references/v453/README.md and THIRD_PARTY_NOTICES.md. */
-import { decode } from "@toon-format/toon";
+import { decodeLightboardToon as decode } from "./toon.js";
 import type { LightboardCharacter, LightboardDescriptor, LightboardResponse } from "./types.js";
 
 /** The source accepts folded description blocks even though these are not TOON. */
@@ -33,9 +33,9 @@ function characters(value: unknown, label: string): LightboardCharacter[] {
   if (!Array.isArray(value)) throw new Error(`${label}.characters must be an array.`);
   return value.map((raw, i) => {
     const c = object(raw, `${label}.characters[${i}]`);
-    if (c.negative !== undefined && typeof c.negative !== "string") throw new Error("Character negative must be a string.");
-    return { name: c.name == null ? "" : typeof c.name === "string" ? c.name.trim() : string(c.name, "Character name"), positive: string(c.positive, "Character positive"),
-      description: string(c.description, "Character description"), negative: c.negative as string | undefined };
+    if (c.negative != null && typeof c.negative !== "string") throw new Error("Character negative must be a string.");
+    return { name: typeof c.name === "string" ? c.name.trim() : "", positive: string(c.positive, "Character positive"),
+      description: string(c.description, "Character description"), negative: c.negative == null ? undefined : c.negative as string };
   });
 }
 export function validateDescriptor(value: unknown, comic: boolean, slotRequired: boolean): LightboardDescriptor {
@@ -63,16 +63,18 @@ export function parseLightboardResponse(raw: string, slots: Set<number>, comic =
   const nodes = [...raw.matchAll(/<lb-xnai\b[^>]*>([\s\S]*?)(?:<\/lb-xnai>|$)/g)];
   let body = (nodes.at(-1)?.[1] ?? raw).trim().replace(/^```(?:json|toon)?\s*\n?|\n?```$/g, "");
   body = cleanDescriptionBlocks(body);
+  // Retain the earlier port's support for standard empty-array spellings.
+  // Lightboard's Lua decoder itself uses the zero-count header instead.
+  if (!body.startsWith("{")) body = body.replace(/^( *)(scenes|characters|panels):\s*\[\]\s*$/gm, "$1$2[0]:");
   const parsed = object(body.startsWith("{") ? JSON.parse(body) : decode(body), "Lightboard response");
-  if (!Array.isArray(parsed.scenes)) throw new Error("Response needs a scenes array.");
+  if (parsed.scenes != null && !Array.isArray(parsed.scenes)) throw new Error("Response scenes must be an array.");
   const seen = new Set<number>();
-  const scenes = parsed.scenes.map(rawScene => {
+  const scenes = ((parsed.scenes ?? []) as unknown[]).map(rawScene => {
     const scene = validateDescriptor(rawScene, comic, true);
     if (!slots.has(scene.slot!)) throw new Error(`Scene slot ${scene.slot} does not exist in the target message.`);
     if (seen.has(scene.slot!)) throw new Error(`Duplicate scene slot ${scene.slot}.`);
     seen.add(scene.slot!); return scene;
   });
   const keyvis = parsed.keyvis == null ? undefined : validateDescriptor(parsed.keyvis, false, false);
-  if (!scenes.length && !keyvis) throw new Error("No scenes or key visual returned.");
   return { scenes, keyvis };
 }

@@ -17,7 +17,7 @@ The active parser and prompt compiler use the supplied 4.5.3 sources. The older 
 | Manual generation and descriptor changes | Prepare-first generation, lightbox field editor, reroll and reparse actions |
 | Image calls and display | Spindle image generation, stored records, progressive chat markup, gallery and lightbox |
 
-The port uses Lumiverse paragraphs rather than Risu newline offsets. It uses the existing Lumiverse lightbox/settings UI rather than injecting the Risu webview or chat-command JSON patch protocol. Risu-specific prefill, obfuscation, and reasoning-book injection are not part of the active request. Asset portraits remain a Lumiverse-specific mode. Legacy configuration values and records are retained for compatibility.
+The port uses Lumiverse paragraphs rather than Risu newline offsets. It uses the existing Lumiverse lightbox/settings UI rather than injecting the Risu webview or chat-command JSON patch protocol. The source jailbreak books, assistant/user prefills, tag splitting, Japanese output, planning checklist and refinement passes are available in Parser and context. The default planning mode writes a draft which is removed before image-prompt decoding. Provider reasoning and output-token defaults are inherited unless the user explicitly sets an output-token limit. Asset portraits remain a Lumiverse-specific mode. Legacy configuration values and records are retained for compatibility.
 
 ## Provider boundary
 
@@ -35,6 +35,16 @@ The cache is isolated by user and keyed by chat, character/cast names, connectio
 
 ## Verification
 
-Regression tests cover source-template branches, TOON and slot validation, optional names, prompt/weight compilation, parser retry/context/history behavior, cancellation, snapshot isolation and reuse, dedicated cast sheets, ComfyUI zero-strength forwarding, NovelAI wire parameters, prepare-then-generate, descriptor editing, and legacy rerolls. The repository's broader host/context/storage/rendering tests remain in place.
+Regression tests cover source-template branches, TOON and slot validation, optional names, prompt/weight compilation, parser retry/context/history behavior, original request roles and ordering, jailbreak prefills, planning-mode branches, tag restoration, refinement passes, provider reasoning/budget inheritance, cancellation, snapshot isolation and reuse, dedicated cast sheets, ComfyUI zero-strength forwarding, NovelAI wire parameters, prepare-then-generate, descriptor editing, and legacy rerolls. The repository's broader host/context/storage/rendering tests remain in place.
 
 Live image-provider output and visual quality have not been tested. No provider credentials or active Lumiverse session were used for verification. Host behavior was checked against the pinned source revisions in [source provenance](../references/v453/README.md).
+
+## Port correction: parser compatibility
+
+The first port incorrectly substituted the standard TOON decoder for Lightboard's custom Lua decoder, omitted the source prompt methods, collapsed its request into a system/user pair, disabled provider reasoning, and applied a 4,096-token fallback. Those adaptations have been removed from the active 4.5.3 path.
+
+The source intro, role-preserving narrative log, end marker, output instructions, client overrides, closing instruction and optional assistant/user prefills now retain their original ordering. Failed outputs are appended as assistant messages followed by the source correction request. Refinement passes use the original review instruction before validation. Requested scene counts remain prompt instructions, as in the source; the port's extra hard count rejection was removed. Source-valid key-visual-only and empty-scene responses are accepted.
+
+`src/backend/v453/toon.ts` adapts `references/v453/core/6.txt`. It was compared directly against that Lua implementation in Fengari on 43 cases, including the source illustration/comic examples, nested lists, tabular rows, malformed counts and generated fixtures, with matching results. Regression tests preserve the relevant grammar differences. The earlier port's JSON and standard empty-array input compatibility is retained. Array counts and descriptor requirements still follow source validation; no stricter output requirements were added.
+
+The reported error, `Expected 4 list-form items, but got 1`, originated in the substituted decoder. The error alone does not establish whether the original Lua decoder would accept that particular response; the raw response was not supplied. Source-compatible decoding and repair are restored, but live verification with the same model is still needed.

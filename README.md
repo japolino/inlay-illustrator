@@ -3,6 +3,7 @@
 Lightboard 4.5.3 illustration and comic generation adapted to Lumiverse.
 
 - Source-derived TOON scene descriptors, camera and appearance controls, and optional key visuals.
+- Original jailbreak methods, prefills, planning modes, tag splitting, Japanese output, refinement passes and response repair.
 - Saved style presets with selection, editing, renaming and deletion; NovelAI and ComfyUI prompt formatting.
 - Lumiverse character, persona and activated lorebook context, plus recent descriptor history.
 - Dedicated reference portraits for character continuity. Reference images are generated separately and never taken from chat illustrations.

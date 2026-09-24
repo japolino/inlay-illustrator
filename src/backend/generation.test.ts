@@ -655,7 +655,7 @@ describe("Fast Mode sidecar rerun", () => {
     );
 
     expect(requests).toHaveLength(1);
-    expect((requests[0].messages as Array<{ content: string }>)[0].content).toContain("Image Prompt Details");
+    expect((requests[0].messages as Array<{ content: string }>).map(m => m.content).join("\n")).toContain("Image Prompt Details");
     expect((requests[0].messages as Array<{ content: string }>)[0].content).not.toContain("Creative Illustration Concept Ideator");
     expect(committed.index).toBe(0);
     expect(committed.record.slots[0]?.imageUrl).toBe("/rerun.png");
@@ -886,7 +886,7 @@ describe("Lightboard 4.5.3 generation and legacy rerolls", () => {
 
     // 1. Verifies parser was invoked with V3.7.6 context framing
     expect(parserRequests.length).toBeGreaterThanOrEqual(1);
-    expect((parserRequests[0].messages as Array<{ content: string }>)[0].content).toContain("Image Prompt Details");
+    expect((parserRequests[0].messages as Array<{ content: string }>).map(m => m.content).join("\n")).toContain("Image Prompt Details");
 
     // 2. Verifies image request preserved native character channels in parameters
     expect(imageRequests).toHaveLength(1);
