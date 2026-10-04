@@ -1,0 +1,4875 @@
+{
+ "formatter": [
+  {
+   "input": {
+    "provider": "novelai",
+    "plan": {
+     "globalPositive": "  1girl, 1.2::smile::, artist:some_artist, score_9, best_quality  ",
+     "negativePrompt": " lowres, target#bad, worst quality ",
+     "bodyAction": "She waves.",
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "uc": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "uc": ""
+      }
+     ]
+    },
+    "novelAIModel": " nai-diffusion-4-5-full "
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "profileId": "nai-diffusion-4-5-full",
+     "profileRevision": 0,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "novelai",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "1girl, 1.2::smile::, artist:some_artist, score_9, best_quality",
+     "globalNegativePrompt": "lowres, target#bad, worst quality",
+     "positivePrompt": "1girl, 1.2::smile::, artist:some_artist, score_9, best_quality",
+     "negativePrompt": "lowres, target#bad, worst quality",
+     "characterPrompts": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "negativePrompt": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "chan-server",
+    "plan": {
+     "globalPositive": "  1girl, 1.2::smile::, artist:some_artist, score_9, best_quality  ",
+     "negativePrompt": " lowres, target#bad, worst quality ",
+     "bodyAction": "She waves.",
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "uc": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "uc": ""
+      }
+     ]
+    }
+   },
+   "expected": {
+    "ok": {
+     "provider": "chan-server",
+     "profileId": "anima-base",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres",
+     "positivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.\n\nsilver hair, \\(ribbon\\), hug\n\nblack hoodie, kiss",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres\n\nbad hands",
+     "characterPrompts": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "negativePrompt": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "chan-server",
+    "plan": {
+     "globalPositive": "  1girl, 1.2::smile::, artist:some_artist, score_9, best_quality  ",
+     "negativePrompt": " lowres, target#bad, worst quality ",
+     "bodyAction": "She waves.",
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "uc": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "uc": ""
+      }
+     ]
+    },
+    "animaPositivePrefix": "",
+    "animaNegativePrefix": "custom neg"
+   },
+   "expected": {
+    "ok": {
+     "provider": "chan-server",
+     "profileId": "anima-base",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "1girl, smile, @some artist, score_9, best quality\n\nShe waves.",
+     "globalNegativePrompt": "custom neg, lowres, worst quality",
+     "positivePrompt": "1girl, smile, @some artist, score_9, best quality\n\nShe waves.\n\nsilver hair, \\(ribbon\\), hug\n\nblack hoodie, kiss",
+     "negativePrompt": "custom neg, lowres, worst quality\n\nbad hands",
+     "characterPrompts": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "negativePrompt": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "  1girl, 1.2::smile::, artist:some_artist, score_9, best_quality  ",
+     "negativePrompt": " lowres, target#bad, worst quality ",
+     "bodyAction": "She waves.",
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "uc": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "uc": ""
+      }
+     ]
+    },
+    "comfyUIProfile": "@bundled"
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "asset-maid-comfy-ui-workflow-v1",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres",
+     "positivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.\n\nsilver hair, \\(ribbon\\), hug\n\nblack hoodie, kiss",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres\n\nbad hands",
+     "characterPrompts": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "negativePrompt": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "  1girl, 1.2::smile::, artist:some_artist, score_9, best_quality  ",
+     "negativePrompt": " lowres, target#bad, worst quality ",
+     "bodyAction": "She waves.",
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "uc": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "uc": ""
+      }
+     ]
+    },
+    "comfyUIProfile": "@restyler",
+    "outfitReferenceEnabled": true
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "restyler-test",
+     "profileRevision": 3,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres",
+     "positivePrompt": "outfit restyle, masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.\n\nsilver hair, \\(ribbon\\), hug\n\nblack hoodie, kiss",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres\n\nbad hands",
+     "characterPrompts": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "negativePrompt": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "  1girl, 1.2::smile::, artist:some_artist, score_9, best_quality  ",
+     "negativePrompt": " lowres, target#bad, worst quality ",
+     "bodyAction": "She waves.",
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "uc": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "uc": ""
+      }
+     ]
+    },
+    "comfyUIProfile": "@restyler",
+    "outfitReferenceEnabled": false
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "restyler-test",
+     "profileRevision": 3,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres",
+     "positivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.\n\nsilver hair, \\(ribbon\\), hug\n\nblack hoodie, kiss",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres\n\nbad hands",
+     "characterPrompts": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "negativePrompt": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "  1girl, 1.2::smile::, artist:some_artist, score_9, best_quality  ",
+     "negativePrompt": " lowres, target#bad, worst quality ",
+     "bodyAction": "She waves.",
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "uc": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "uc": ""
+      }
+     ]
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "Anima Base UI 워크플로 프로필이 필요합니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "novelai",
+    "plan": {
+     "globalPositive": "  1girl, 1.2::smile::, artist:some_artist, score_9, best_quality  ",
+     "negativePrompt": " lowres, target#bad, worst quality ",
+     "bodyAction": "She waves.",
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "uc": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "uc": ""
+      }
+     ]
+    },
+    "v5PromptPlan": {
+     "format": "novelai-v5-hybrid-v1",
+     "global": {
+      "serializedPrompt": "g"
+     },
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "serializedPrompt": "c",
+       "negativePrompt": "n",
+       "centerX": 0.3,
+       "centerY": 0.5,
+       "depth": 1
+      }
+     ]
+    }
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "profileId": "",
+     "profileRevision": 0,
+     "sourceFormat": "novelai-v5-hybrid-v1",
+     "requestFormat": "novelai-v5-hybrid",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "g",
+     "globalNegativePrompt": "lowres, target#bad, worst quality",
+     "positivePrompt": "g",
+     "negativePrompt": "lowres, target#bad, worst quality",
+     "characterPrompts": [
+      {
+       "actorSlot": "primary",
+       "prompt": "c",
+       "negativePrompt": "n",
+       "centerX": 0.3,
+       "centerY": 0.5,
+       "depth": 1
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "  1girl, 1.2::smile::, artist:some_artist, score_9, best_quality  ",
+     "negativePrompt": " lowres, target#bad, worst quality ",
+     "bodyAction": "She waves.",
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "prompt": "silver_hair, (ribbon), source#hug",
+       "uc": "bad hands"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "black_hoodie, mutual#kiss",
+       "uc": ""
+      }
+     ]
+    },
+    "comfyUIProfile": "@bundled",
+    "v5PromptPlan": {
+     "format": "x"
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "NovelAI V5 하이브리드 프롬프트는 NovelAI 공급자에서만 사용할 수 있습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "novelai",
+    "plan": {
+     "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": []
+    },
+    "novelAIModel": " nai-diffusion-4-5-full "
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "profileId": "nai-diffusion-4-5-full",
+     "profileRevision": 0,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "novelai",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "globalNegativePrompt": "",
+     "positivePrompt": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "chan-server",
+    "plan": {
+     "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": []
+    }
+   },
+   "expected": {
+    "ok": {
+     "provider": "chan-server",
+     "profileId": "anima-base",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "positivePrompt": "masterpiece, best quality, score_7, safe, kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "characterPrompts": [],
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 84
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 42
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -1.",
+       "offset": 56
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "chan-server",
+    "plan": {
+     "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": []
+    },
+    "animaPositivePrefix": "",
+    "animaNegativePrefix": "custom neg"
+   },
+   "expected": {
+    "ok": {
+     "provider": "chan-server",
+     "profileId": "anima-base",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "globalNegativePrompt": "custom neg",
+     "positivePrompt": "kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "custom neg",
+     "characterPrompts": [],
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 42
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -1.",
+       "offset": 14
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": []
+    },
+    "comfyUIProfile": "@bundled"
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "asset-maid-comfy-ui-workflow-v1",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "positivePrompt": "masterpiece, best quality, score_7, safe, kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "characterPrompts": [],
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 84
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 42
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -1.",
+       "offset": 56
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": []
+    },
+    "comfyUIProfile": "@restyler",
+    "outfitReferenceEnabled": true
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "restyler-test",
+     "profileRevision": 3,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "positivePrompt": "outfit restyle, masterpiece, best quality, score_7, safe, kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "characterPrompts": [],
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 84
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 42
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -1.",
+       "offset": 56
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": []
+    },
+    "comfyUIProfile": "@restyler",
+    "outfitReferenceEnabled": false
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "restyler-test",
+     "profileRevision": 3,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "positivePrompt": "masterpiece, best quality, score_7, safe, kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "characterPrompts": [],
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 84
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 42
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -1.",
+       "offset": 56
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": []
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "Anima Base UI 워크플로 프로필이 필요합니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "novelai",
+    "plan": {
+     "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": []
+    },
+    "v5PromptPlan": {
+     "format": "novelai-v5-hybrid-v1",
+     "global": {
+      "serializedPrompt": "g"
+     },
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "serializedPrompt": "c",
+       "negativePrompt": "n",
+       "centerX": 0.3,
+       "centerY": 0.5,
+       "depth": 1
+      }
+     ]
+    }
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "profileId": "",
+     "profileRevision": 0,
+     "sourceFormat": "novelai-v5-hybrid-v1",
+     "requestFormat": "novelai-v5-hybrid",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "g",
+     "globalNegativePrompt": "",
+     "positivePrompt": "g",
+     "negativePrompt": "",
+     "characterPrompts": [
+      {
+       "actorSlot": "primary",
+       "prompt": "c",
+       "negativePrompt": "n",
+       "centerX": 0.3,
+       "centerY": 0.5,
+       "depth": 1
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": []
+    },
+    "comfyUIProfile": "@bundled",
+    "v5PromptPlan": {
+     "format": "x"
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "NovelAI V5 하이브리드 프롬프트는 NovelAI 공급자에서만 사용할 수 있습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "novelai",
+    "plan": {
+     "globalPositive": "a\n\nb, B\n\n\n1girl, 1GIRL",
+     "negativePrompt": "x\n\ny",
+     "bodyAction": "Line",
+     "characters": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "uc": "::"
+      }
+     ]
+    },
+    "novelAIModel": " nai-diffusion-4-5-full "
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "profileId": "nai-diffusion-4-5-full",
+     "profileRevision": 0,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "novelai",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "a\n\nb, B\n\n\n1girl, 1GIRL",
+     "globalNegativePrompt": "x\n\ny",
+     "positivePrompt": "a\n\nb, B\n\n\n1girl, 1GIRL",
+     "negativePrompt": "x\n\ny",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "negativePrompt": "::"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "chan-server",
+    "plan": {
+     "globalPositive": "a\n\nb, B\n\n\n1girl, 1GIRL",
+     "negativePrompt": "x\n\ny",
+     "bodyAction": "Line",
+     "characters": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "uc": "::"
+      }
+     ]
+    }
+   },
+   "expected": {
+    "ok": {
+     "provider": "chan-server",
+     "profileId": "anima-base",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
+     "positivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine\n\nunclosed",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "negativePrompt": "::"
+      }
+     ],
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "chan-server",
+    "plan": {
+     "globalPositive": "a\n\nb, B\n\n\n1girl, 1GIRL",
+     "negativePrompt": "x\n\ny",
+     "bodyAction": "Line",
+     "characters": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "uc": "::"
+      }
+     ]
+    },
+    "animaPositivePrefix": "",
+    "animaNegativePrefix": "custom neg"
+   },
+   "expected": {
+    "ok": {
+     "provider": "chan-server",
+     "profileId": "anima-base",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "a\n\nb\n\n1girl\n\nLine",
+     "globalNegativePrompt": "custom neg, x\n\ny",
+     "positivePrompt": "a\n\nb\n\n1girl\n\nLine\n\nunclosed",
+     "negativePrompt": "custom neg, x\n\ny",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "negativePrompt": "::"
+      }
+     ],
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "a\n\nb, B\n\n\n1girl, 1GIRL",
+     "negativePrompt": "x\n\ny",
+     "bodyAction": "Line",
+     "characters": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "uc": "::"
+      }
+     ]
+    },
+    "comfyUIProfile": "@bundled"
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "asset-maid-comfy-ui-workflow-v1",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
+     "positivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine\n\nunclosed",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "negativePrompt": "::"
+      }
+     ],
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "a\n\nb, B\n\n\n1girl, 1GIRL",
+     "negativePrompt": "x\n\ny",
+     "bodyAction": "Line",
+     "characters": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "uc": "::"
+      }
+     ]
+    },
+    "comfyUIProfile": "@restyler",
+    "outfitReferenceEnabled": true
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "restyler-test",
+     "profileRevision": 3,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
+     "positivePrompt": "outfit restyle, masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine\n\nunclosed",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "negativePrompt": "::"
+      }
+     ],
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "a\n\nb, B\n\n\n1girl, 1GIRL",
+     "negativePrompt": "x\n\ny",
+     "bodyAction": "Line",
+     "characters": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "uc": "::"
+      }
+     ]
+    },
+    "comfyUIProfile": "@restyler",
+    "outfitReferenceEnabled": false
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "restyler-test",
+     "profileRevision": 3,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
+     "positivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine\n\nunclosed",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "negativePrompt": "::"
+      }
+     ],
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "a\n\nb, B\n\n\n1girl, 1GIRL",
+     "negativePrompt": "x\n\ny",
+     "bodyAction": "Line",
+     "characters": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "uc": "::"
+      }
+     ]
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "Anima Base UI 워크플로 프로필이 필요합니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "novelai",
+    "plan": {
+     "globalPositive": "a\n\nb, B\n\n\n1girl, 1GIRL",
+     "negativePrompt": "x\n\ny",
+     "bodyAction": "Line",
+     "characters": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "uc": "::"
+      }
+     ]
+    },
+    "v5PromptPlan": {
+     "format": "novelai-v5-hybrid-v1",
+     "global": {
+      "serializedPrompt": "g"
+     },
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "serializedPrompt": "c",
+       "negativePrompt": "n",
+       "centerX": 0.3,
+       "centerY": 0.5,
+       "depth": 1
+      }
+     ]
+    }
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "profileId": "",
+     "profileRevision": 0,
+     "sourceFormat": "novelai-v5-hybrid-v1",
+     "requestFormat": "novelai-v5-hybrid",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "g",
+     "globalNegativePrompt": "x\n\ny",
+     "positivePrompt": "g",
+     "negativePrompt": "x\n\ny",
+     "characterPrompts": [
+      {
+       "actorSlot": "primary",
+       "prompt": "c",
+       "negativePrompt": "n",
+       "centerX": 0.3,
+       "centerY": 0.5,
+       "depth": 1
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "a\n\nb, B\n\n\n1girl, 1GIRL",
+     "negativePrompt": "x\n\ny",
+     "bodyAction": "Line",
+     "characters": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "1.1::unclosed",
+       "uc": "::"
+      }
+     ]
+    },
+    "comfyUIProfile": "@bundled",
+    "v5PromptPlan": {
+     "format": "x"
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "NovelAI V5 하이브리드 프롬프트는 NovelAI 공급자에서만 사용할 수 있습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "novelai",
+    "plan": {
+     "globalPositive": "",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": [
+      {
+       "prompt": "",
+       "uc": ""
+      }
+     ]
+    },
+    "novelAIModel": " nai-diffusion-4-5-full "
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "profileId": "nai-diffusion-4-5-full",
+     "profileRevision": 0,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "novelai",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "",
+     "globalNegativePrompt": "",
+     "positivePrompt": "",
+     "negativePrompt": "",
+     "characterPrompts": [
+      {
+       "prompt": "",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "chan-server",
+    "plan": {
+     "globalPositive": "",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": [
+      {
+       "prompt": "",
+       "uc": ""
+      }
+     ]
+    }
+   },
+   "expected": {
+    "ok": {
+     "provider": "chan-server",
+     "profileId": "anima-base",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "positivePrompt": "masterpiece, best quality, score_7, safe",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "characterPrompts": [
+      {
+       "prompt": "",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "chan-server",
+    "plan": {
+     "globalPositive": "",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": [
+      {
+       "prompt": "",
+       "uc": ""
+      }
+     ]
+    },
+    "animaPositivePrefix": "",
+    "animaNegativePrefix": "custom neg"
+   },
+   "expected": {
+    "ok": {
+     "provider": "chan-server",
+     "profileId": "anima-base",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "",
+     "globalNegativePrompt": "custom neg",
+     "positivePrompt": "",
+     "negativePrompt": "custom neg",
+     "characterPrompts": [
+      {
+       "prompt": "",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": [
+      {
+       "prompt": "",
+       "uc": ""
+      }
+     ]
+    },
+    "comfyUIProfile": "@bundled"
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "asset-maid-comfy-ui-workflow-v1",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "positivePrompt": "masterpiece, best quality, score_7, safe",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "characterPrompts": [
+      {
+       "prompt": "",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": [
+      {
+       "prompt": "",
+       "uc": ""
+      }
+     ]
+    },
+    "comfyUIProfile": "@restyler",
+    "outfitReferenceEnabled": true
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "restyler-test",
+     "profileRevision": 3,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "positivePrompt": "outfit restyle, masterpiece, best quality, score_7, safe",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "characterPrompts": [
+      {
+       "prompt": "",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": [
+      {
+       "prompt": "",
+       "uc": ""
+      }
+     ]
+    },
+    "comfyUIProfile": "@restyler",
+    "outfitReferenceEnabled": false
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "restyler-test",
+     "profileRevision": 3,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "positivePrompt": "masterpiece, best quality, score_7, safe",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "characterPrompts": [
+      {
+       "prompt": "",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": [
+      {
+       "prompt": "",
+       "uc": ""
+      }
+     ]
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "Anima Base UI 워크플로 프로필이 필요합니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "novelai",
+    "plan": {
+     "globalPositive": "",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": [
+      {
+       "prompt": "",
+       "uc": ""
+      }
+     ]
+    },
+    "v5PromptPlan": {
+     "format": "novelai-v5-hybrid-v1",
+     "global": {
+      "serializedPrompt": "g"
+     },
+     "characters": [
+      {
+       "actorSlot": "primary",
+       "serializedPrompt": "c",
+       "negativePrompt": "n",
+       "centerX": 0.3,
+       "centerY": 0.5,
+       "depth": 1
+      }
+     ]
+    }
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "profileId": "",
+     "profileRevision": 0,
+     "sourceFormat": "novelai-v5-hybrid-v1",
+     "requestFormat": "novelai-v5-hybrid",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "g",
+     "globalNegativePrompt": "",
+     "positivePrompt": "g",
+     "negativePrompt": "",
+     "characterPrompts": [
+      {
+       "actorSlot": "primary",
+       "prompt": "c",
+       "negativePrompt": "n",
+       "centerX": 0.3,
+       "centerY": 0.5,
+       "depth": 1
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": [
+      {
+       "prompt": "",
+       "uc": ""
+      }
+     ]
+    },
+    "comfyUIProfile": "@bundled",
+    "v5PromptPlan": {
+     "format": "x"
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "NovelAI V5 하이브리드 프롬프트는 NovelAI 공급자에서만 사용할 수 있습니다."
+    }
+   }
+  }
+ ],
+ "anima": [
+  {
+   "input": [
+    "artist:foo_bar, 1.2::snake_case::, score_7, (paren), source#x, target#y, mutual#z",
+    "positivePrompt",
+    true
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "@foo bar, snake case, score_7, \\(paren\\), x, z",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": [
+    "artist:foo_bar, 1.2::snake_case::, score_7, (paren), source#x, target#y, mutual#z",
+    "positivePrompt",
+    false
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "@foo bar, snake case, score_7, \\(paren\\), x, z",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": [
+    "a, A, a_b, a b, @a b",
+    "positivePrompt",
+    true
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "a, a b, @a b",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": [
+    "a, A, a_b, a b, @a b",
+    "positivePrompt",
+    false
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "a, a b, @a b",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": [
+    "::lonely",
+    "positivePrompt",
+    true
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "lonely",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": [
+    "::lonely",
+    "positivePrompt",
+    false
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "lonely",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": [
+    "1::unclosed",
+    "positivePrompt",
+    true
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "unclosed",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": [
+    "1::unclosed",
+    "positivePrompt",
+    false
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "unclosed",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": [
+    "2::::",
+    "positivePrompt",
+    true
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_EMPTY_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An empty NovelAI numeric-emphasis block was removed.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": [
+    "2::::",
+    "positivePrompt",
+    false
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_EMPTY_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An empty NovelAI numeric-emphasis block was removed.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": [
+    "0::zero::, -0.5::neg::, abc::def::",
+    "positivePrompt",
+    true
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "abcdef",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 27
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 32
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -0.5.",
+       "offset": 11
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": [
+    "0::zero::, -0.5::neg::, abc::def::",
+    "positivePrompt",
+    false
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "abcdef",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 27
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 32
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -0.5.",
+       "offset": 11
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": [
+    "x\n\ny\n\n\nz",
+    "positivePrompt",
+    true
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "x\n\ny\n\nz",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": [
+    "x\n\ny\n\n\nz",
+    "positivePrompt",
+    false
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "x\n\ny\n\n\nz",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": [
+    "",
+    "positivePrompt",
+    true
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": [
+    "",
+    "positivePrompt",
+    false
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": [
+    "http://example.com/a_b, /usr/local_x",
+    "positivePrompt",
+    true
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "http://example.com/a_b, /usr/local_x",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": [
+    "http://example.com/a_b, /usr/local_x",
+    "positivePrompt",
+    false
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "http://example.com/a_b, /usr/local_x",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": [
+    "\\(already\\), {curly}, [square]",
+    "positivePrompt",
+    true
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "\\(already\\), {curly}, [square]",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": [
+    "\\(already\\), {curly}, [square]",
+    "positivePrompt",
+    false
+   ],
+   "expected": {
+    "ok": {
+     "prompt": "\\(already\\), {curly}, [square]",
+     "diagnostics": []
+    }
+   }
+  }
+ ],
+ "animaFlat": [
+  {
+   "input": {
+    "positivePrompt": "artist:foo_bar, 1.2::snake_case::, score_7, (paren), source#x, target#y, mutual#z",
+    "negativePrompt": "artist:foo_bar, 1.2::snake_case::, score_7, (paren), source#x, target#y, mutual#z"
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, best quality, score_7, safe, @foo bar, snake case, \\(paren\\), x, z",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, @foo bar, snake case, score_7, \\(paren\\), x, z",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "artist:foo_bar, 1.2::snake_case::, score_7, (paren), source#x, target#y, mutual#z",
+    "negativePrompt": "artist:foo_bar, 1.2::snake_case::, score_7, (paren), source#x, target#y, mutual#z",
+    "positivePrefix": "",
+    "negativePrefix": ""
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "@foo bar, snake case, score_7, \\(paren\\), x, z",
+     "negativePrompt": "@foo bar, snake case, score_7, \\(paren\\), x, z",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "artist:foo_bar, 1.2::snake_case::, score_7, (paren), source#x, target#y, mutual#z",
+    "negativePrompt": "artist:foo_bar, 1.2::snake_case::, score_7, (paren), source#x, target#y, mutual#z",
+    "positivePrefix": "masterpiece",
+    "negativePrefix": "bad",
+    "preserveBlankLineGroups": true
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, @foo bar, snake case, score_7, \\(paren\\), x, z",
+     "negativePrompt": "bad, @foo bar, snake case, score_7, \\(paren\\), x, z",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "a, A, a_b, a b, @a b",
+    "negativePrompt": "a, A, a_b, a b, @a b"
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, best quality, score_7, safe, a, a b, @a b",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, a, a b, @a b",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "a, A, a_b, a b, @a b",
+    "negativePrompt": "a, A, a_b, a b, @a b",
+    "positivePrefix": "",
+    "negativePrefix": ""
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "a, a b, @a b",
+     "negativePrompt": "a, a b, @a b",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "a, A, a_b, a b, @a b",
+    "negativePrompt": "a, A, a_b, a b, @a b",
+    "positivePrefix": "masterpiece",
+    "negativePrefix": "bad",
+    "preserveBlankLineGroups": true
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, a, a b, @a b",
+     "negativePrompt": "bad, a, a b, @a b",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "::lonely",
+    "negativePrompt": "::lonely"
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, best quality, score_7, safe, lonely",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lonely",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 42
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 114
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "::lonely",
+    "negativePrompt": "::lonely",
+    "positivePrefix": "",
+    "negativePrefix": ""
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "lonely",
+     "negativePrompt": "lonely",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "::lonely",
+    "negativePrompt": "::lonely",
+    "positivePrefix": "masterpiece",
+    "negativePrefix": "bad",
+    "preserveBlankLineGroups": true
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, lonely",
+     "negativePrompt": "bad, lonely",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 13
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "1::unclosed",
+    "negativePrompt": "1::unclosed"
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, best quality, score_7, safe, unclosed",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, unclosed",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 42
+      },
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "negativePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 114
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "1::unclosed",
+    "negativePrompt": "1::unclosed",
+    "positivePrefix": "",
+    "negativePrefix": ""
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "unclosed",
+     "negativePrompt": "unclosed",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "negativePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "1::unclosed",
+    "negativePrompt": "1::unclosed",
+    "positivePrefix": "masterpiece",
+    "negativePrefix": "bad",
+    "preserveBlankLineGroups": true
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, unclosed",
+     "negativePrompt": "bad, unclosed",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 13
+      },
+      {
+       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+       "field": "negativePrompt",
+       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+       "offset": 5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "2::::",
+    "negativePrompt": "2::::"
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, best quality, score_7, safe",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_EMPTY_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An empty NovelAI numeric-emphasis block was removed.",
+       "offset": 42
+      },
+      {
+       "code": "ANIMA_PROMPT_EMPTY_EMPHASIS",
+       "field": "negativePrompt",
+       "message": "An empty NovelAI numeric-emphasis block was removed.",
+       "offset": 114
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "2::::",
+    "negativePrompt": "2::::",
+    "positivePrefix": "",
+    "negativePrefix": ""
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "",
+     "negativePrompt": "",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_EMPTY_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An empty NovelAI numeric-emphasis block was removed.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_EMPTY_EMPHASIS",
+       "field": "negativePrompt",
+       "message": "An empty NovelAI numeric-emphasis block was removed.",
+       "offset": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "2::::",
+    "negativePrompt": "2::::",
+    "positivePrefix": "masterpiece",
+    "negativePrefix": "bad",
+    "preserveBlankLineGroups": true
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece",
+     "negativePrompt": "bad",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_EMPTY_EMPHASIS",
+       "field": "positivePrompt",
+       "message": "An empty NovelAI numeric-emphasis block was removed.",
+       "offset": 13
+      },
+      {
+       "code": "ANIMA_PROMPT_EMPTY_EMPHASIS",
+       "field": "negativePrompt",
+       "message": "An empty NovelAI numeric-emphasis block was removed.",
+       "offset": 5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "0::zero::, -0.5::neg::, abc::def::",
+    "negativePrompt": "0::zero::, -0.5::neg::, abc::def::"
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, best quality, score_7, safe, abcdef",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, abcdef",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 69
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 74
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 42
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -0.5.",
+       "offset": 53
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 141
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 146
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "negativePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 114
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "negativePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -0.5.",
+       "offset": 125
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "0::zero::, -0.5::neg::, abc::def::",
+    "negativePrompt": "0::zero::, -0.5::neg::, abc::def::",
+    "positivePrefix": "",
+    "negativePrefix": ""
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "abcdef",
+     "negativePrompt": "abcdef",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 27
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 32
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -0.5.",
+       "offset": 11
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 27
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 32
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "negativePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "negativePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -0.5.",
+       "offset": 11
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "0::zero::, -0.5::neg::, abc::def::",
+    "negativePrompt": "0::zero::, -0.5::neg::, abc::def::",
+    "positivePrefix": "masterpiece",
+    "negativePrefix": "bad",
+    "preserveBlankLineGroups": true
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, abcdef",
+     "negativePrompt": "bad, abcdef",
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 40
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 45
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 13
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -0.5.",
+       "offset": 24
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 32
+      },
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "negativePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 37
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "negativePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 5
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "negativePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -0.5.",
+       "offset": 16
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "x\n\ny\n\n\nz",
+    "negativePrompt": "x\n\ny\n\n\nz"
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, best quality, score_7, safe, x\n\ny\n\n\nz",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny\n\n\nz",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "x\n\ny\n\n\nz",
+    "negativePrompt": "x\n\ny\n\n\nz",
+    "positivePrefix": "",
+    "negativePrefix": ""
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "x\n\ny\n\n\nz",
+     "negativePrompt": "x\n\ny\n\n\nz",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "x\n\ny\n\n\nz",
+    "negativePrompt": "x\n\ny\n\n\nz",
+    "positivePrefix": "masterpiece",
+    "negativePrefix": "bad",
+    "preserveBlankLineGroups": true
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, x\n\ny\n\nz",
+     "negativePrompt": "bad, x\n\ny\n\nz",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "",
+    "negativePrompt": ""
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, best quality, score_7, safe",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "",
+    "negativePrompt": "",
+    "positivePrefix": "",
+    "negativePrefix": ""
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "",
+     "negativePrompt": "",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "",
+    "negativePrompt": "",
+    "positivePrefix": "masterpiece",
+    "negativePrefix": "bad",
+    "preserveBlankLineGroups": true
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece",
+     "negativePrompt": "bad",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "http://example.com/a_b, /usr/local_x",
+    "negativePrompt": "http://example.com/a_b, /usr/local_x"
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, best quality, score_7, safe, http://example.com/a_b, /usr/local_x",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, http://example.com/a_b, /usr/local_x",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "http://example.com/a_b, /usr/local_x",
+    "negativePrompt": "http://example.com/a_b, /usr/local_x",
+    "positivePrefix": "",
+    "negativePrefix": ""
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "http://example.com/a_b, /usr/local_x",
+     "negativePrompt": "http://example.com/a_b, /usr/local_x",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "http://example.com/a_b, /usr/local_x",
+    "negativePrompt": "http://example.com/a_b, /usr/local_x",
+    "positivePrefix": "masterpiece",
+    "negativePrefix": "bad",
+    "preserveBlankLineGroups": true
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, http://example.com/a_b, /usr/local_x",
+     "negativePrompt": "bad, http://example.com/a_b, /usr/local_x",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "\\(already\\), {curly}, [square]",
+    "negativePrompt": "\\(already\\), {curly}, [square]"
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, best quality, score_7, safe, \\(already\\), {curly}, [square]",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, \\(already\\), {curly}, [square]",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "\\(already\\), {curly}, [square]",
+    "negativePrompt": "\\(already\\), {curly}, [square]",
+    "positivePrefix": "",
+    "negativePrefix": ""
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "\\(already\\), {curly}, [square]",
+     "negativePrompt": "\\(already\\), {curly}, [square]",
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "positivePrompt": "\\(already\\), {curly}, [square]",
+    "negativePrompt": "\\(already\\), {curly}, [square]",
+    "positivePrefix": "masterpiece",
+    "negativePrefix": "bad",
+    "preserveBlankLineGroups": true
+   },
+   "expected": {
+    "ok": {
+     "positivePrompt": "masterpiece, \\(already\\), {curly}, [square]",
+     "negativePrompt": "bad, \\(already\\), {curly}, [square]",
+     "diagnostics": []
+    }
+   }
+  }
+ ],
+ "bundledProfile": {
+  "id": "asset-maid-comfy-ui-workflow-v1",
+  "revision": 1,
+  "workflowId": "asset-maid-comfy-ui-workflow-v1",
+  "workflow": {
+   "id": "3b6f7c8d-8fa2-4cb1-9dd8-45e96f0fa8d0",
+   "revision": 0,
+   "last_node_id": 53,
+   "last_link_id": 20,
+   "nodes": [
+    {
+     "id": 30,
+     "type": "MarkdownNote",
+     "pos": [
+      20,
+      1400
+     ],
+     "size": [
+      760,
+      760
+     ],
+     "flags": {},
+     "order": 0,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [],
+     "title": "[AssetMaid:metadata]",
+     "properties": {},
+     "widgets_values": [
+      "# Asset Maid Comfy UI 기본 워크플로\n\n이 워크플로는 레퍼런스가 없어도 동작하는 Anima Base T2I 기본 골격입니다.\n\nAsset Maid Workflow Bridge는 현재 UI 워크플로를 Comfy UI 실행 그래프로 자동 동기화합니다. Queue 실행이나 별도 API JSON 내보내기는 필요하지 않습니다.\n\n## 예약 노드\n\n| 예약 제목 | 플러그인이 전달하거나 읽는 값 |\n|---|---|\n| `[AssetMaid:positive]` | Anima 긍정 프롬프트 |\n| `[AssetMaid:negative]` | Anima 부정 프롬프트 |\n| `[AssetMaid:size]` | 요청 이미지 너비와 높이 |\n| `[AssetMaid:reference-enabled]` | 예약 IMAGE 노드가 최종 출력 경로에 연결되고 입력이 있으면 `true`, 그 밖에는 `false` |\n| `[AssetMaid:seed-progress]` | 생성 시드 |\n| `[AssetMaid:vanilla-progress]` | KSampler 실행 진행률 |\n| `[AssetMaid:output]` | 최종 생성 이미지 |\n\n`[AssetMaid:outfit-reference]`와 `[AssetMaid:character-reference]`는 각각 선택된 의상 이미지와 캐릭터 크롭 이미지를 받습니다. 두 슬롯은 기본 `EmptyImage`와 `PreviewImage`로 연결되어 레퍼런스가 없어도 오류 없이 실행됩니다. 레퍼런스가 있으면 플러그인이 실행 그래프의 슬롯을 기본 `LoadImage`로 자동 변환하므로 별도 노드 설정 없이 미리보기에 표시됩니다. `[AssetMaid:reference-enabled]`는 생성 경로와 분리된 기본 `PrimitiveBoolean`이며 레퍼런스 IMAGE 노드가 최종 출력 경로에 연결될 때만 `true`가 됩니다. 기본 미리보기 가지에서는 `false`를 유지하므로 생성 결과에 직접 영향을 주지 않습니다.\n\n모델, LoRA, Steps, CFG, Sampler, Scheduler, VAE 및 후처리는 사용자가 자유롭게 편집할 수 있습니다. 위 예약 노드의 Title은 변경하지 않아야 합니다.\n\n```assetmaid\n{\n  \"schema\": \"asset-maid.comfy-ui-workflow\",\n  \"version\": 1,\n  \"workflowId\": \"asset-maid-comfy-ui-workflow-v1\",\n  \"revision\": 1,\n  \"provider\": \"comfy-ui\",\n  \"promptDialect\": \"anima\",\n  \"bindings\": {\n    \"positive\": \"[AssetMaid:positive]\",\n    \"negative\": \"[AssetMaid:negative]\",\n    \"size\": \"[AssetMaid:size]\",\n    \"referenceEnabled\": \"[AssetMaid:reference-enabled]\",\n    \"seedProgress\": \"[AssetMaid:seed-progress]\",\n    \"vanillaProgress\": \"[AssetMaid:vanilla-progress]\",\n    \"output\": \"[AssetMaid:output]\",\n    \"outfitReference\": \"[AssetMaid:outfit-reference]\",\n    \"characterReference\": \"[AssetMaid:character-reference]\"\n  }\n}\n```"
+     ]
+    },
+    {
+     "id": 41,
+     "type": "PrimitiveStringMultiline",
+     "pos": [
+      20,
+      40
+     ],
+     "size": [
+      420,
+      210
+     ],
+     "flags": {},
+     "order": 1,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "STRING",
+       "type": "STRING",
+       "links": [
+        7
+       ]
+      }
+     ],
+     "title": "[AssetMaid:positive]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PrimitiveStringMultiline"
+     },
+     "widgets_values": [
+      "masterpiece, best quality, score_7, safe, 1girl, solo, detailed anime illustration"
+     ]
+    },
+    {
+     "id": 42,
+     "type": "PrimitiveStringMultiline",
+     "pos": [
+      20,
+      290
+     ],
+     "size": [
+      420,
+      190
+     ],
+     "flags": {},
+     "order": 2,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "STRING",
+       "type": "STRING",
+       "links": [
+        8
+       ]
+      }
+     ],
+     "title": "[AssetMaid:negative]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PrimitiveStringMultiline"
+     },
+     "widgets_values": [
+      "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration"
+     ]
+    },
+    {
+     "id": 4,
+     "type": "EmptyImage",
+     "pos": [
+      20,
+      530
+     ],
+     "size": [
+      300,
+      130
+     ],
+     "flags": {},
+     "order": 3,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "IMAGE",
+       "type": "IMAGE",
+       "links": [
+        1
+       ]
+      }
+     ],
+     "title": "[AssetMaid:size]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "EmptyImage"
+     },
+     "widgets_values": [
+      1024,
+      1024,
+      1,
+      16777215
+     ]
+    },
+    {
+     "id": 28,
+     "type": "GetImageSize",
+     "pos": [
+      370,
+      530
+     ],
+     "size": [
+      230,
+      140
+     ],
+     "flags": {},
+     "order": 4,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "image",
+       "type": "IMAGE",
+       "link": 1
+      }
+     ],
+     "outputs": [
+      {
+       "name": "width",
+       "type": "INT",
+       "links": [
+        11
+       ]
+      },
+      {
+       "name": "height",
+       "type": "INT",
+       "links": [
+        12
+       ]
+      },
+      {
+       "name": "batch_size",
+       "type": "INT",
+       "links": []
+      }
+     ],
+     "title": "Requested Final Width / Height",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "GetImageSize"
+     },
+     "widgets_values": []
+    },
+    {
+     "id": 43,
+     "type": "PrimitiveInt",
+     "pos": [
+      20,
+      710
+     ],
+     "size": [
+      300,
+      82
+     ],
+     "flags": {},
+     "order": 5,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "INT",
+       "type": "INT",
+       "links": [
+        14
+       ]
+      }
+     ],
+     "title": "[AssetMaid:seed-progress]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PrimitiveInt"
+     },
+     "widgets_values": [
+      123456789,
+      "fixed"
+     ]
+    },
+    {
+     "id": 15,
+     "type": "EmptyImage",
+     "pos": [
+      20,
+      930
+     ],
+     "size": [
+      340,
+      130
+     ],
+     "flags": {},
+     "order": 6,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "IMAGE",
+       "type": "IMAGE",
+       "links": [
+        19
+       ]
+      }
+     ],
+     "title": "[AssetMaid:outfit-reference]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "EmptyImage"
+     },
+     "widgets_values": [
+      64,
+      64,
+      1,
+      16777215
+     ]
+    },
+    {
+     "id": 16,
+     "type": "EmptyImage",
+     "pos": [
+      400,
+      930
+     ],
+     "size": [
+      340,
+      130
+     ],
+     "flags": {},
+     "order": 7,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "IMAGE",
+       "type": "IMAGE",
+       "links": [
+        20
+       ]
+      }
+     ],
+     "title": "[AssetMaid:character-reference]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "EmptyImage"
+     },
+     "widgets_values": [
+      64,
+      64,
+      1,
+      16777215
+     ]
+    },
+    {
+     "id": 1,
+     "type": "UNETLoader",
+     "pos": [
+      820,
+      60
+     ],
+     "size": [
+      330,
+      82
+     ],
+     "flags": {},
+     "order": 8,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "MODEL",
+       "type": "MODEL",
+       "links": [
+        2
+       ]
+      }
+     ],
+     "title": "Anima Base v1.0",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "UNETLoader"
+     },
+     "widgets_values": [
+      "anima-base-v1.0.safetensors",
+      "default"
+     ]
+    },
+    {
+     "id": 2,
+     "type": "CLIPLoader",
+     "pos": [
+      820,
+      190
+     ],
+     "size": [
+      330,
+      106
+     ],
+     "flags": {},
+     "order": 9,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "CLIP",
+       "type": "CLIP",
+       "links": [
+        5,
+        6
+       ]
+      }
+     ],
+     "title": "Qwen 3 0.6B Text Encoder",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "CLIPLoader"
+     },
+     "widgets_values": [
+      "qwen_3_06b_base.safetensors",
+      "stable_diffusion",
+      "default"
+     ]
+    },
+    {
+     "id": 3,
+     "type": "VAELoader",
+     "pos": [
+      820,
+      340
+     ],
+     "size": [
+      330,
+      58
+     ],
+     "flags": {},
+     "order": 10,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "VAE",
+       "type": "VAE",
+       "links": [
+        16
+       ]
+      }
+     ],
+     "title": "Qwen Image VAE",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "VAELoader"
+     },
+     "widgets_values": [
+      "qwen_image_vae.safetensors"
+     ]
+    },
+    {
+     "id": 44,
+     "type": "LoraLoaderModelOnly",
+     "pos": [
+      1210,
+      60
+     ],
+     "size": [
+      310,
+      82
+     ],
+     "flags": {},
+     "order": 11,
+     "mode": 4,
+     "inputs": [
+      {
+       "name": "model",
+       "type": "MODEL",
+       "link": 2
+      }
+     ],
+     "outputs": [
+      {
+       "name": "MODEL",
+       "type": "MODEL",
+       "links": [
+        3
+       ]
+      }
+     ],
+     "title": "Optional Anima LoRA 1 (Bypassed)",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "LoraLoaderModelOnly"
+     },
+     "widgets_values": [
+      "AnimeEditV2.safetensors",
+      0
+     ]
+    },
+    {
+     "id": 45,
+     "type": "LoraLoaderModelOnly",
+     "pos": [
+      1570,
+      60
+     ],
+     "size": [
+      310,
+      82
+     ],
+     "flags": {},
+     "order": 12,
+     "mode": 4,
+     "inputs": [
+      {
+       "name": "model",
+       "type": "MODEL",
+       "link": 3
+      }
+     ],
+     "outputs": [
+      {
+       "name": "MODEL",
+       "type": "MODEL",
+       "links": [
+        4
+       ]
+      }
+     ],
+     "title": "Optional Anima LoRA 2 (Bypassed)",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "LoraLoaderModelOnly"
+     },
+     "widgets_values": [
+      "AnimeEditV2.safetensors",
+      0
+     ]
+    },
+    {
+     "id": 46,
+     "type": "CLIPTextEncode",
+     "pos": [
+      1210,
+      200
+     ],
+     "size": [
+      500,
+      210
+     ],
+     "flags": {},
+     "order": 13,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "clip",
+       "type": "CLIP",
+       "link": 5
+      },
+      {
+       "name": "text",
+       "type": "STRING",
+       "widget": {
+        "name": "text"
+       },
+       "link": 7
+      }
+     ],
+     "outputs": [
+      {
+       "name": "CONDITIONING",
+       "type": "CONDITIONING",
+       "links": [
+        9
+       ]
+      }
+     ],
+     "title": "Positive Prompt Encode",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "CLIPTextEncode"
+     },
+     "widgets_values": [
+      "masterpiece, best quality, score_7, safe, 1girl, solo, detailed anime illustration"
+     ]
+    },
+    {
+     "id": 47,
+     "type": "CLIPTextEncode",
+     "pos": [
+      1210,
+      450
+     ],
+     "size": [
+      500,
+      190
+     ],
+     "flags": {},
+     "order": 14,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "clip",
+       "type": "CLIP",
+       "link": 6
+      },
+      {
+       "name": "text",
+       "type": "STRING",
+       "widget": {
+        "name": "text"
+       },
+       "link": 8
+      }
+     ],
+     "outputs": [
+      {
+       "name": "CONDITIONING",
+       "type": "CONDITIONING",
+       "links": [
+        10
+       ]
+      }
+     ],
+     "title": "Negative Prompt Encode",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "CLIPTextEncode"
+     },
+     "widgets_values": [
+      "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration"
+     ]
+    },
+    {
+     "id": 48,
+     "type": "EmptyLatentImage",
+     "pos": [
+      1770,
+      470
+     ],
+     "size": [
+      300,
+      130
+     ],
+     "flags": {},
+     "order": 15,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "width",
+       "type": "INT",
+       "widget": {
+        "name": "width"
+       },
+       "link": 11
+      },
+      {
+       "name": "height",
+       "type": "INT",
+       "widget": {
+        "name": "height"
+       },
+       "link": 12
+      }
+     ],
+     "outputs": [
+      {
+       "name": "LATENT",
+       "type": "LATENT",
+       "links": [
+        13
+       ]
+      }
+     ],
+     "title": "Empty Latent",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "EmptyLatentImage"
+     },
+     "widgets_values": [
+      1024,
+      1024,
+      1
+     ]
+    },
+    {
+     "id": 49,
+     "type": "KSampler",
+     "pos": [
+      2130,
+      170
+     ],
+     "size": [
+      330,
+      330
+     ],
+     "flags": {},
+     "order": 16,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "model",
+       "type": "MODEL",
+       "link": 4
+      },
+      {
+       "name": "positive",
+       "type": "CONDITIONING",
+       "link": 9
+      },
+      {
+       "name": "negative",
+       "type": "CONDITIONING",
+       "link": 10
+      },
+      {
+       "name": "latent_image",
+       "type": "LATENT",
+       "link": 13
+      },
+      {
+       "name": "seed",
+       "type": "INT",
+       "widget": {
+        "name": "seed"
+       },
+       "link": 14
+      }
+     ],
+     "outputs": [
+      {
+       "name": "LATENT",
+       "type": "LATENT",
+       "links": [
+        15
+       ]
+      }
+     ],
+     "title": "[AssetMaid:vanilla-progress]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "KSampler"
+     },
+     "widgets_values": [
+      123456789,
+      "fixed",
+      30,
+      4,
+      "er_sde",
+      "simple",
+      1
+     ]
+    },
+    {
+     "id": 50,
+     "type": "VAEDecode",
+     "pos": [
+      2520,
+      260
+     ],
+     "size": [
+      250,
+      70
+     ],
+     "flags": {},
+     "order": 17,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "samples",
+       "type": "LATENT",
+       "link": 15
+      },
+      {
+       "name": "vae",
+       "type": "VAE",
+       "link": 16
+      }
+     ],
+     "outputs": [
+      {
+       "name": "IMAGE",
+       "type": "IMAGE",
+       "links": [
+        17,
+        18
+       ]
+      }
+     ],
+     "title": "VAE Decode",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "VAEDecode"
+     },
+     "widgets_values": []
+    },
+    {
+     "id": 10,
+     "type": "PreviewImage",
+     "pos": [
+      2910,
+      80
+     ],
+     "size": [
+      500,
+      470
+     ],
+     "flags": {},
+     "order": 18,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "images",
+       "type": "IMAGE",
+       "link": 17
+      }
+     ],
+     "outputs": [],
+     "title": "Preview Image",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PreviewImage"
+     },
+     "widgets_values": []
+    },
+    {
+     "id": 9,
+     "type": "SaveImage",
+     "pos": [
+      2910,
+      620
+     ],
+     "size": [
+      500,
+      200
+     ],
+     "flags": {},
+     "order": 19,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "images",
+       "type": "IMAGE",
+       "link": 18
+      }
+     ],
+     "outputs": [],
+     "title": "[AssetMaid:output]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "SaveImage"
+     },
+     "widgets_values": [
+      "AssetMaid_AnimaBase"
+     ]
+    },
+    {
+     "id": 51,
+     "type": "PreviewImage",
+     "pos": [
+      20,
+      1070
+     ],
+     "size": [
+      340,
+      230
+     ],
+     "flags": {},
+     "order": 20,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "images",
+       "type": "IMAGE",
+       "link": 19
+      }
+     ],
+     "outputs": [],
+     "title": "Outfit Reference Preview",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PreviewImage"
+     },
+     "widgets_values": []
+    },
+    {
+     "id": 52,
+     "type": "PreviewImage",
+     "pos": [
+      400,
+      1070
+     ],
+     "size": [
+      340,
+      230
+     ],
+     "flags": {},
+     "order": 21,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "images",
+       "type": "IMAGE",
+       "link": 20
+      }
+     ],
+     "outputs": [],
+     "title": "Character Crop Preview",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PreviewImage"
+     },
+     "widgets_values": []
+    },
+    {
+     "id": 53,
+     "type": "PrimitiveBoolean",
+     "pos": [
+      400,
+      710
+     ],
+     "size": [
+      300,
+      82
+     ],
+     "flags": {},
+     "order": 22,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "BOOLEAN",
+       "type": "BOOLEAN",
+       "links": []
+      }
+     ],
+     "title": "[AssetMaid:reference-enabled]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PrimitiveBoolean"
+     },
+     "widgets_values": [
+      false
+     ]
+    }
+   ],
+   "links": [
+    [
+     1,
+     4,
+     0,
+     28,
+     0,
+     "IMAGE"
+    ],
+    [
+     2,
+     1,
+     0,
+     44,
+     0,
+     "MODEL"
+    ],
+    [
+     3,
+     44,
+     0,
+     45,
+     0,
+     "MODEL"
+    ],
+    [
+     4,
+     45,
+     0,
+     49,
+     0,
+     "MODEL"
+    ],
+    [
+     5,
+     2,
+     0,
+     46,
+     0,
+     "CLIP"
+    ],
+    [
+     6,
+     2,
+     0,
+     47,
+     0,
+     "CLIP"
+    ],
+    [
+     7,
+     41,
+     0,
+     46,
+     1,
+     "STRING"
+    ],
+    [
+     8,
+     42,
+     0,
+     47,
+     1,
+     "STRING"
+    ],
+    [
+     9,
+     46,
+     0,
+     49,
+     1,
+     "CONDITIONING"
+    ],
+    [
+     10,
+     47,
+     0,
+     49,
+     2,
+     "CONDITIONING"
+    ],
+    [
+     11,
+     28,
+     0,
+     48,
+     0,
+     "INT"
+    ],
+    [
+     12,
+     28,
+     1,
+     48,
+     1,
+     "INT"
+    ],
+    [
+     13,
+     48,
+     0,
+     49,
+     3,
+     "LATENT"
+    ],
+    [
+     14,
+     43,
+     0,
+     49,
+     4,
+     "INT"
+    ],
+    [
+     15,
+     49,
+     0,
+     50,
+     0,
+     "LATENT"
+    ],
+    [
+     16,
+     3,
+     0,
+     50,
+     1,
+     "VAE"
+    ],
+    [
+     17,
+     50,
+     0,
+     10,
+     0,
+     "IMAGE"
+    ],
+    [
+     18,
+     50,
+     0,
+     9,
+     0,
+     "IMAGE"
+    ],
+    [
+     19,
+     15,
+     0,
+     51,
+     0,
+     "IMAGE"
+    ],
+    [
+     20,
+     16,
+     0,
+     52,
+     0,
+     "IMAGE"
+    ]
+   ],
+   "groups": [
+    {
+     "id": 1,
+     "title": "Asset Maid Contract ? Inputs",
+     "bounding": [
+      0,
+      0,
+      780,
+      1320
+     ],
+     "color": "#3f789e",
+     "font_size": 26,
+     "flags": {}
+    },
+    {
+     "id": 2,
+     "title": "Anima Base ? Custom T2I Pipeline",
+     "bounding": [
+      760,
+      0,
+      2100,
+      760
+     ],
+     "color": "#4f6f52",
+     "font_size": 28,
+     "flags": {}
+    },
+    {
+     "id": 3,
+     "title": "Asset Maid Contract ? Result",
+     "bounding": [
+      2880,
+      0,
+      560,
+      850
+     ],
+     "color": "#3f9e6b",
+     "font_size": 26,
+     "flags": {}
+    },
+    {
+     "id": 4,
+     "title": "Asset Maid ? Workflow Guide",
+     "bounding": [
+      0,
+      1360,
+      800,
+      820
+     ],
+     "color": "#6b5f8d",
+     "font_size": 24,
+     "flags": {}
+    }
+   ],
+   "config": {},
+   "extra": {
+    "ds": {
+     "scale": 0.65,
+     "offset": [
+      28,
+      72
+     ]
+    },
+    "workflowRendererVersion": "LG"
+   },
+   "version": 0.4
+  },
+  "metadata": {
+   "schema": "asset-maid.comfy-ui-workflow",
+   "version": 1,
+   "workflowId": "asset-maid-comfy-ui-workflow-v1",
+   "revision": 1,
+   "provider": "comfy-ui",
+   "modelProfile": "anima-base",
+   "promptDialect": "anima",
+   "bindings": {
+    "positive": "[AssetMaid:positive]",
+    "negative": "[AssetMaid:negative]",
+    "size": "[AssetMaid:size]",
+    "seedProgress": "[AssetMaid:seed-progress]",
+    "vanillaProgress": "[AssetMaid:vanilla-progress]",
+    "output": "[AssetMaid:output]",
+    "referenceEnabled": "[AssetMaid:reference-enabled]",
+    "outfitReference": "[AssetMaid:outfit-reference]",
+    "characterReference": "[AssetMaid:character-reference]"
+   }
+  },
+  "source": "bundled",
+  "fingerprint": "da5e209d"
+ },
+ "restylerProfile": {
+  "id": "restyler-test",
+  "revision": 3,
+  "workflowId": "asset-maid-comfy-ui-workflow-v1",
+  "workflow": {
+   "id": "3b6f7c8d-8fa2-4cb1-9dd8-45e96f0fa8d0",
+   "revision": 0,
+   "last_node_id": 53,
+   "last_link_id": 20,
+   "nodes": [
+    {
+     "id": 30,
+     "type": "MarkdownNote",
+     "pos": [
+      20,
+      1400
+     ],
+     "size": [
+      760,
+      760
+     ],
+     "flags": {},
+     "order": 0,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [],
+     "title": "[AssetMaid:metadata]",
+     "properties": {},
+     "widgets_values": [
+      "# Asset Maid Comfy UI 기본 워크플로\n\n이 워크플로는 레퍼런스가 없어도 동작하는 Anima Base T2I 기본 골격입니다.\n\nAsset Maid Workflow Bridge는 현재 UI 워크플로를 Comfy UI 실행 그래프로 자동 동기화합니다. Queue 실행이나 별도 API JSON 내보내기는 필요하지 않습니다.\n\n## 예약 노드\n\n| 예약 제목 | 플러그인이 전달하거나 읽는 값 |\n|---|---|\n| `[AssetMaid:positive]` | Anima 긍정 프롬프트 |\n| `[AssetMaid:negative]` | Anima 부정 프롬프트 |\n| `[AssetMaid:size]` | 요청 이미지 너비와 높이 |\n| `[AssetMaid:reference-enabled]` | 예약 IMAGE 노드가 최종 출력 경로에 연결되고 입력이 있으면 `true`, 그 밖에는 `false` |\n| `[AssetMaid:seed-progress]` | 생성 시드 |\n| `[AssetMaid:vanilla-progress]` | KSampler 실행 진행률 |\n| `[AssetMaid:output]` | 최종 생성 이미지 |\n\n`[AssetMaid:outfit-reference]`와 `[AssetMaid:character-reference]`는 각각 선택된 의상 이미지와 캐릭터 크롭 이미지를 받습니다. 두 슬롯은 기본 `EmptyImage`와 `PreviewImage`로 연결되어 레퍼런스가 없어도 오류 없이 실행됩니다. 레퍼런스가 있으면 플러그인이 실행 그래프의 슬롯을 기본 `LoadImage`로 자동 변환하므로 별도 노드 설정 없이 미리보기에 표시됩니다. `[AssetMaid:reference-enabled]`는 생성 경로와 분리된 기본 `PrimitiveBoolean`이며 레퍼런스 IMAGE 노드가 최종 출력 경로에 연결될 때만 `true`가 됩니다. 기본 미리보기 가지에서는 `false`를 유지하므로 생성 결과에 직접 영향을 주지 않습니다.\n\n모델, LoRA, Steps, CFG, Sampler, Scheduler, VAE 및 후처리는 사용자가 자유롭게 편집할 수 있습니다. 위 예약 노드의 Title은 변경하지 않아야 합니다.\n\n```assetmaid\n{\n  \"schema\": \"asset-maid.comfy-ui-workflow\",\n  \"version\": 1,\n  \"workflowId\": \"asset-maid-comfy-ui-workflow-v1\",\n  \"revision\": 1,\n  \"provider\": \"comfy-ui\",\n  \"promptDialect\": \"anima\",\n  \"bindings\": {\n    \"positive\": \"[AssetMaid:positive]\",\n    \"negative\": \"[AssetMaid:negative]\",\n    \"size\": \"[AssetMaid:size]\",\n    \"referenceEnabled\": \"[AssetMaid:reference-enabled]\",\n    \"seedProgress\": \"[AssetMaid:seed-progress]\",\n    \"vanillaProgress\": \"[AssetMaid:vanilla-progress]\",\n    \"output\": \"[AssetMaid:output]\",\n    \"outfitReference\": \"[AssetMaid:outfit-reference]\",\n    \"characterReference\": \"[AssetMaid:character-reference]\"\n  }\n}\n```"
+     ]
+    },
+    {
+     "id": 41,
+     "type": "PrimitiveStringMultiline",
+     "pos": [
+      20,
+      40
+     ],
+     "size": [
+      420,
+      210
+     ],
+     "flags": {},
+     "order": 1,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "STRING",
+       "type": "STRING",
+       "links": [
+        7
+       ]
+      }
+     ],
+     "title": "[AssetMaid:positive]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PrimitiveStringMultiline"
+     },
+     "widgets_values": [
+      "masterpiece, best quality, score_7, safe, 1girl, solo, detailed anime illustration"
+     ]
+    },
+    {
+     "id": 42,
+     "type": "PrimitiveStringMultiline",
+     "pos": [
+      20,
+      290
+     ],
+     "size": [
+      420,
+      190
+     ],
+     "flags": {},
+     "order": 2,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "STRING",
+       "type": "STRING",
+       "links": [
+        8
+       ]
+      }
+     ],
+     "title": "[AssetMaid:negative]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PrimitiveStringMultiline"
+     },
+     "widgets_values": [
+      "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration"
+     ]
+    },
+    {
+     "id": 4,
+     "type": "EmptyImage",
+     "pos": [
+      20,
+      530
+     ],
+     "size": [
+      300,
+      130
+     ],
+     "flags": {},
+     "order": 3,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "IMAGE",
+       "type": "IMAGE",
+       "links": [
+        1
+       ]
+      }
+     ],
+     "title": "[AssetMaid:size]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "EmptyImage"
+     },
+     "widgets_values": [
+      1024,
+      1024,
+      1,
+      16777215
+     ]
+    },
+    {
+     "id": 28,
+     "type": "GetImageSize",
+     "pos": [
+      370,
+      530
+     ],
+     "size": [
+      230,
+      140
+     ],
+     "flags": {},
+     "order": 4,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "image",
+       "type": "IMAGE",
+       "link": 1
+      }
+     ],
+     "outputs": [
+      {
+       "name": "width",
+       "type": "INT",
+       "links": [
+        11
+       ]
+      },
+      {
+       "name": "height",
+       "type": "INT",
+       "links": [
+        12
+       ]
+      },
+      {
+       "name": "batch_size",
+       "type": "INT",
+       "links": []
+      }
+     ],
+     "title": "Requested Final Width / Height",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "GetImageSize"
+     },
+     "widgets_values": []
+    },
+    {
+     "id": 43,
+     "type": "PrimitiveInt",
+     "pos": [
+      20,
+      710
+     ],
+     "size": [
+      300,
+      82
+     ],
+     "flags": {},
+     "order": 5,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "INT",
+       "type": "INT",
+       "links": [
+        14
+       ]
+      }
+     ],
+     "title": "[AssetMaid:seed-progress]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PrimitiveInt"
+     },
+     "widgets_values": [
+      123456789,
+      "fixed"
+     ]
+    },
+    {
+     "id": 15,
+     "type": "EmptyImage",
+     "pos": [
+      20,
+      930
+     ],
+     "size": [
+      340,
+      130
+     ],
+     "flags": {},
+     "order": 6,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "IMAGE",
+       "type": "IMAGE",
+       "links": [
+        19
+       ]
+      }
+     ],
+     "title": "[AssetMaid:outfit-reference]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "EmptyImage"
+     },
+     "widgets_values": [
+      64,
+      64,
+      1,
+      16777215
+     ]
+    },
+    {
+     "id": 16,
+     "type": "EmptyImage",
+     "pos": [
+      400,
+      930
+     ],
+     "size": [
+      340,
+      130
+     ],
+     "flags": {},
+     "order": 7,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "IMAGE",
+       "type": "IMAGE",
+       "links": [
+        20
+       ]
+      }
+     ],
+     "title": "[AssetMaid:character-reference]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "EmptyImage"
+     },
+     "widgets_values": [
+      64,
+      64,
+      1,
+      16777215
+     ]
+    },
+    {
+     "id": 1,
+     "type": "UNETLoader",
+     "pos": [
+      820,
+      60
+     ],
+     "size": [
+      330,
+      82
+     ],
+     "flags": {},
+     "order": 8,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "MODEL",
+       "type": "MODEL",
+       "links": [
+        2
+       ]
+      }
+     ],
+     "title": "Anima Base v1.0",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "UNETLoader"
+     },
+     "widgets_values": [
+      "anima-base-v1.0.safetensors",
+      "default"
+     ]
+    },
+    {
+     "id": 2,
+     "type": "CLIPLoader",
+     "pos": [
+      820,
+      190
+     ],
+     "size": [
+      330,
+      106
+     ],
+     "flags": {},
+     "order": 9,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "CLIP",
+       "type": "CLIP",
+       "links": [
+        5,
+        6
+       ]
+      }
+     ],
+     "title": "Qwen 3 0.6B Text Encoder",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "CLIPLoader"
+     },
+     "widgets_values": [
+      "qwen_3_06b_base.safetensors",
+      "stable_diffusion",
+      "default"
+     ]
+    },
+    {
+     "id": 3,
+     "type": "VAELoader",
+     "pos": [
+      820,
+      340
+     ],
+     "size": [
+      330,
+      58
+     ],
+     "flags": {},
+     "order": 10,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "VAE",
+       "type": "VAE",
+       "links": [
+        16
+       ]
+      }
+     ],
+     "title": "Qwen Image VAE",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "VAELoader"
+     },
+     "widgets_values": [
+      "qwen_image_vae.safetensors"
+     ]
+    },
+    {
+     "id": 44,
+     "type": "LoraLoaderModelOnly",
+     "pos": [
+      1210,
+      60
+     ],
+     "size": [
+      310,
+      82
+     ],
+     "flags": {},
+     "order": 11,
+     "mode": 4,
+     "inputs": [
+      {
+       "name": "model",
+       "type": "MODEL",
+       "link": 2
+      }
+     ],
+     "outputs": [
+      {
+       "name": "MODEL",
+       "type": "MODEL",
+       "links": [
+        3
+       ]
+      }
+     ],
+     "title": "Optional Anima LoRA 1 (Bypassed)",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "LoraLoaderModelOnly"
+     },
+     "widgets_values": [
+      "AnimeEditV2.safetensors",
+      0
+     ]
+    },
+    {
+     "id": 45,
+     "type": "LoraLoaderModelOnly",
+     "pos": [
+      1570,
+      60
+     ],
+     "size": [
+      310,
+      82
+     ],
+     "flags": {},
+     "order": 12,
+     "mode": 4,
+     "inputs": [
+      {
+       "name": "model",
+       "type": "MODEL",
+       "link": 3
+      }
+     ],
+     "outputs": [
+      {
+       "name": "MODEL",
+       "type": "MODEL",
+       "links": [
+        4
+       ]
+      }
+     ],
+     "title": "Optional Anima LoRA 2 (Bypassed)",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "LoraLoaderModelOnly"
+     },
+     "widgets_values": [
+      "AnimeEditV2.safetensors",
+      0
+     ]
+    },
+    {
+     "id": 46,
+     "type": "CLIPTextEncode",
+     "pos": [
+      1210,
+      200
+     ],
+     "size": [
+      500,
+      210
+     ],
+     "flags": {},
+     "order": 13,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "clip",
+       "type": "CLIP",
+       "link": 5
+      },
+      {
+       "name": "text",
+       "type": "STRING",
+       "widget": {
+        "name": "text"
+       },
+       "link": 7
+      }
+     ],
+     "outputs": [
+      {
+       "name": "CONDITIONING",
+       "type": "CONDITIONING",
+       "links": [
+        9
+       ]
+      }
+     ],
+     "title": "Positive Prompt Encode",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "CLIPTextEncode"
+     },
+     "widgets_values": [
+      "masterpiece, best quality, score_7, safe, 1girl, solo, detailed anime illustration"
+     ]
+    },
+    {
+     "id": 47,
+     "type": "CLIPTextEncode",
+     "pos": [
+      1210,
+      450
+     ],
+     "size": [
+      500,
+      190
+     ],
+     "flags": {},
+     "order": 14,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "clip",
+       "type": "CLIP",
+       "link": 6
+      },
+      {
+       "name": "text",
+       "type": "STRING",
+       "widget": {
+        "name": "text"
+       },
+       "link": 8
+      }
+     ],
+     "outputs": [
+      {
+       "name": "CONDITIONING",
+       "type": "CONDITIONING",
+       "links": [
+        10
+       ]
+      }
+     ],
+     "title": "Negative Prompt Encode",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "CLIPTextEncode"
+     },
+     "widgets_values": [
+      "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration"
+     ]
+    },
+    {
+     "id": 48,
+     "type": "EmptyLatentImage",
+     "pos": [
+      1770,
+      470
+     ],
+     "size": [
+      300,
+      130
+     ],
+     "flags": {},
+     "order": 15,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "width",
+       "type": "INT",
+       "widget": {
+        "name": "width"
+       },
+       "link": 11
+      },
+      {
+       "name": "height",
+       "type": "INT",
+       "widget": {
+        "name": "height"
+       },
+       "link": 12
+      }
+     ],
+     "outputs": [
+      {
+       "name": "LATENT",
+       "type": "LATENT",
+       "links": [
+        13
+       ]
+      }
+     ],
+     "title": "Empty Latent",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "EmptyLatentImage"
+     },
+     "widgets_values": [
+      1024,
+      1024,
+      1
+     ]
+    },
+    {
+     "id": 49,
+     "type": "KSampler",
+     "pos": [
+      2130,
+      170
+     ],
+     "size": [
+      330,
+      330
+     ],
+     "flags": {},
+     "order": 16,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "model",
+       "type": "MODEL",
+       "link": 4
+      },
+      {
+       "name": "positive",
+       "type": "CONDITIONING",
+       "link": 9
+      },
+      {
+       "name": "negative",
+       "type": "CONDITIONING",
+       "link": 10
+      },
+      {
+       "name": "latent_image",
+       "type": "LATENT",
+       "link": 13
+      },
+      {
+       "name": "seed",
+       "type": "INT",
+       "widget": {
+        "name": "seed"
+       },
+       "link": 14
+      }
+     ],
+     "outputs": [
+      {
+       "name": "LATENT",
+       "type": "LATENT",
+       "links": [
+        15
+       ]
+      }
+     ],
+     "title": "[AssetMaid:vanilla-progress]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "KSampler"
+     },
+     "widgets_values": [
+      123456789,
+      "fixed",
+      30,
+      4,
+      "er_sde",
+      "simple",
+      1
+     ]
+    },
+    {
+     "id": 50,
+     "type": "VAEDecode",
+     "pos": [
+      2520,
+      260
+     ],
+     "size": [
+      250,
+      70
+     ],
+     "flags": {},
+     "order": 17,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "samples",
+       "type": "LATENT",
+       "link": 15
+      },
+      {
+       "name": "vae",
+       "type": "VAE",
+       "link": 16
+      }
+     ],
+     "outputs": [
+      {
+       "name": "IMAGE",
+       "type": "IMAGE",
+       "links": [
+        17,
+        18
+       ]
+      }
+     ],
+     "title": "VAE Decode",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "VAEDecode"
+     },
+     "widgets_values": []
+    },
+    {
+     "id": 10,
+     "type": "PreviewImage",
+     "pos": [
+      2910,
+      80
+     ],
+     "size": [
+      500,
+      470
+     ],
+     "flags": {},
+     "order": 18,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "images",
+       "type": "IMAGE",
+       "link": 17
+      }
+     ],
+     "outputs": [],
+     "title": "Preview Image",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PreviewImage"
+     },
+     "widgets_values": []
+    },
+    {
+     "id": 9,
+     "type": "SaveImage",
+     "pos": [
+      2910,
+      620
+     ],
+     "size": [
+      500,
+      200
+     ],
+     "flags": {},
+     "order": 19,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "images",
+       "type": "IMAGE",
+       "link": 18
+      }
+     ],
+     "outputs": [],
+     "title": "[AssetMaid:output]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "SaveImage"
+     },
+     "widgets_values": [
+      "AssetMaid_AnimaBase"
+     ]
+    },
+    {
+     "id": 51,
+     "type": "PreviewImage",
+     "pos": [
+      20,
+      1070
+     ],
+     "size": [
+      340,
+      230
+     ],
+     "flags": {},
+     "order": 20,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "images",
+       "type": "IMAGE",
+       "link": 19
+      }
+     ],
+     "outputs": [],
+     "title": "Outfit Reference Preview",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PreviewImage"
+     },
+     "widgets_values": []
+    },
+    {
+     "id": 52,
+     "type": "PreviewImage",
+     "pos": [
+      400,
+      1070
+     ],
+     "size": [
+      340,
+      230
+     ],
+     "flags": {},
+     "order": 21,
+     "mode": 0,
+     "inputs": [
+      {
+       "name": "images",
+       "type": "IMAGE",
+       "link": 20
+      }
+     ],
+     "outputs": [],
+     "title": "Character Crop Preview",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PreviewImage"
+     },
+     "widgets_values": []
+    },
+    {
+     "id": 53,
+     "type": "PrimitiveBoolean",
+     "pos": [
+      400,
+      710
+     ],
+     "size": [
+      300,
+      82
+     ],
+     "flags": {},
+     "order": 22,
+     "mode": 0,
+     "inputs": [],
+     "outputs": [
+      {
+       "name": "BOOLEAN",
+       "type": "BOOLEAN",
+       "links": []
+      }
+     ],
+     "title": "[AssetMaid:reference-enabled]",
+     "properties": {
+      "cnr_id": "comfy-core",
+      "Node name for S&R": "PrimitiveBoolean"
+     },
+     "widgets_values": [
+      false
+     ]
+    }
+   ],
+   "links": [
+    [
+     1,
+     4,
+     0,
+     28,
+     0,
+     "IMAGE"
+    ],
+    [
+     2,
+     1,
+     0,
+     44,
+     0,
+     "MODEL"
+    ],
+    [
+     3,
+     44,
+     0,
+     45,
+     0,
+     "MODEL"
+    ],
+    [
+     4,
+     45,
+     0,
+     49,
+     0,
+     "MODEL"
+    ],
+    [
+     5,
+     2,
+     0,
+     46,
+     0,
+     "CLIP"
+    ],
+    [
+     6,
+     2,
+     0,
+     47,
+     0,
+     "CLIP"
+    ],
+    [
+     7,
+     41,
+     0,
+     46,
+     1,
+     "STRING"
+    ],
+    [
+     8,
+     42,
+     0,
+     47,
+     1,
+     "STRING"
+    ],
+    [
+     9,
+     46,
+     0,
+     49,
+     1,
+     "CONDITIONING"
+    ],
+    [
+     10,
+     47,
+     0,
+     49,
+     2,
+     "CONDITIONING"
+    ],
+    [
+     11,
+     28,
+     0,
+     48,
+     0,
+     "INT"
+    ],
+    [
+     12,
+     28,
+     1,
+     48,
+     1,
+     "INT"
+    ],
+    [
+     13,
+     48,
+     0,
+     49,
+     3,
+     "LATENT"
+    ],
+    [
+     14,
+     43,
+     0,
+     49,
+     4,
+     "INT"
+    ],
+    [
+     15,
+     49,
+     0,
+     50,
+     0,
+     "LATENT"
+    ],
+    [
+     16,
+     3,
+     0,
+     50,
+     1,
+     "VAE"
+    ],
+    [
+     17,
+     50,
+     0,
+     10,
+     0,
+     "IMAGE"
+    ],
+    [
+     18,
+     50,
+     0,
+     9,
+     0,
+     "IMAGE"
+    ],
+    [
+     19,
+     15,
+     0,
+     51,
+     0,
+     "IMAGE"
+    ],
+    [
+     20,
+     16,
+     0,
+     52,
+     0,
+     "IMAGE"
+    ]
+   ],
+   "groups": [
+    {
+     "id": 1,
+     "title": "Asset Maid Contract ? Inputs",
+     "bounding": [
+      0,
+      0,
+      780,
+      1320
+     ],
+     "color": "#3f789e",
+     "font_size": 26,
+     "flags": {}
+    },
+    {
+     "id": 2,
+     "title": "Anima Base ? Custom T2I Pipeline",
+     "bounding": [
+      760,
+      0,
+      2100,
+      760
+     ],
+     "color": "#4f6f52",
+     "font_size": 28,
+     "flags": {}
+    },
+    {
+     "id": 3,
+     "title": "Asset Maid Contract ? Result",
+     "bounding": [
+      2880,
+      0,
+      560,
+      850
+     ],
+     "color": "#3f9e6b",
+     "font_size": 26,
+     "flags": {}
+    },
+    {
+     "id": 4,
+     "title": "Asset Maid ? Workflow Guide",
+     "bounding": [
+      0,
+      1360,
+      800,
+      820
+     ],
+     "color": "#6b5f8d",
+     "font_size": 24,
+     "flags": {}
+    }
+   ],
+   "config": {},
+   "extra": {
+    "ds": {
+     "scale": 0.65,
+     "offset": [
+      28,
+      72
+     ]
+    },
+    "workflowRendererVersion": "LG"
+   },
+   "version": 0.4
+  },
+  "metadata": {
+   "schema": "asset-maid.comfy-ui-workflow",
+   "version": 1,
+   "workflowId": "asset-maid-comfy-ui-workflow-v1",
+   "revision": 1,
+   "provider": "comfy-ui",
+   "modelProfile": "anima-base",
+   "promptDialect": "anima",
+   "bindings": {
+    "positive": "[AssetMaid:positive]",
+    "negative": "[AssetMaid:negative]",
+    "size": "[AssetMaid:size]",
+    "seedProgress": "[AssetMaid:seed-progress]",
+    "vanillaProgress": "[AssetMaid:vanilla-progress]",
+    "output": "[AssetMaid:output]",
+    "referenceEnabled": "[AssetMaid:reference-enabled]",
+    "outfitReference": "[AssetMaid:outfit-reference]",
+    "characterReference": "[AssetMaid:character-reference]"
+   },
+   "reference": {
+    "mode": "outfit-restyler",
+    "positivePrefix": "outfit restyle, "
+   }
+  },
+  "source": "bundled",
+  "fingerprint": "da5e209d"
+ }
+}

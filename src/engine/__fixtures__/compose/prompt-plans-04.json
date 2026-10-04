@@ -1,0 +1,1357 @@
+{
+ "cases": [
+  {
+   "name": "unknown-size",
+   "spec": {
+    "presetId": "1girl_solo.general.free",
+    "bodyAction": "She waves from the school gate.",
+    "requestedModifiers": {
+     "camera.view": "",
+     "scene.background": [],
+     "scene.environment": "outdoors",
+     "scene.lighting": "",
+     "scene.location": [
+      "school gate"
+     ],
+     "scene.location.theme": [],
+     "scene.props": [],
+     "scene.time": "day",
+     "scene.weather": "",
+     "primary": {
+      "action.freeform": [
+       "waving"
+      ],
+      "framing.crop": "upper_body",
+      "expression.blush": "",
+      "expression.eye.openness": "",
+      "expression.eye.reaction": "",
+      "expression.general": [
+       "light_smile"
+      ],
+      "expression.mouth": [],
+      "expression.tear": "",
+      "gaze.direction": "looking_at_viewer",
+      "pose.body.female": "",
+      "pose.freeform": [],
+      "state.body.condition": [],
+      "state.body.surface": [],
+      "state.clothing.arrangement": "",
+      "state.clothing.surface": []
+     }
+    },
+    "variantId": "default",
+    "frameId": "upper_body",
+    "frameSizeId": 1,
+    "sizeId": 42,
+    "providerId": "novelai",
+    "chanceSeed": "slot:s1",
+    "ruleSelections": {
+     "global": {
+      "camera.view": "",
+      "scene.background": [],
+      "scene.environment": "outdoors",
+      "scene.lighting": "",
+      "scene.location": [
+       "school gate"
+      ],
+      "scene.location.theme": [],
+      "scene.props": [],
+      "scene.time": "day",
+      "scene.weather": ""
+     },
+     "actors": {
+      "primary": {
+       "action.freeform": [
+        "waving"
+       ],
+       "camera.framing.crop": "upper_body",
+       "expression.blush": "",
+       "expression.eye.openness": "",
+       "expression.eye.reaction": "",
+       "expression.general": [
+        "light_smile"
+       ],
+       "expression.mouth": [],
+       "expression.tear": "",
+       "gaze.direction": "looking_at_viewer",
+       "pose.body.female": "",
+       "pose.freeform": [],
+       "state.body.condition": [],
+       "state.body.surface": [],
+       "state.clothing.arrangement": "",
+       "state.clothing.surface": []
+      },
+      "secondary": {},
+      "persona": {}
+     }
+    },
+    "participants": [
+     {
+      "actorSlot": "primary",
+      "type": "character",
+      "gender": "female",
+      "lorebookPromptKey": "lore:alice",
+      "characterName": "Alice",
+      "sourceImageToken": "slot:s1",
+      "outfitId": "outfit_1",
+      "formId": "form_default"
+     }
+    ]
+   },
+   "inputs": {
+    "identityCandidates": [
+     {
+      "key": "lore:alice",
+      "prompt": "silver hair, blue eyes, long hair, 1.2::ahoge::",
+      "basePromptGroups": {
+       "hair.color": [
+        "silver hair"
+       ],
+       "eyes.color": [
+        "blue eyes"
+       ],
+       "custom": [
+        "long hair",
+        "1.2::ahoge::"
+       ]
+      },
+      "negativePrompt": "bad hands",
+      "appearanceForms": [
+       {
+        "id": "form_default",
+        "label": "기본",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {
+         "hair.color": [
+          "silver hair"
+         ],
+         "eyes.color": [
+          "blue eyes"
+         ],
+         "custom": [
+          "long hair",
+          "1.2::ahoge::"
+         ]
+        },
+        "negativePrompt": "bad hands",
+        "reference": null,
+        "defaultOutfitId": "outfit_1",
+        "outfits": [
+         {
+          "id": "outfit_1",
+          "label": "Navy sailor school uniform",
+          "top": "white sailor shirt, navy sailor collar, red neckerchief",
+          "bottom": "navy pleated skirt",
+          "legs": "black thighhighs",
+          "feet": "brown loafers",
+          "description": "",
+          "candidateEnabled": true,
+          "head": ""
+         },
+         {
+          "id": "outfit_2",
+          "label": "White summer sundress",
+          "head": "straw hat",
+          "top": "white sundress",
+          "feet": "sandals",
+          "description": "",
+          "candidateEnabled": true,
+          "bottom": "",
+          "legs": ""
+         }
+        ]
+       }
+      ],
+      "defaultFormId": "form_default",
+      "canonicalName": "Alice",
+      "ownerName": "Alice",
+      "aliasSources": {
+       "lorebookTitle": [
+        "Alice"
+       ],
+       "activationKeys": [
+        "Alice"
+       ],
+       "customMatchingKeys": [],
+       "assetClassificationKeys": []
+      }
+     },
+     {
+      "key": "lore:bob",
+      "prompt": "black hair, tall",
+      "basePromptGroups": {
+       "hair.color": [
+        "black hair"
+       ],
+       "custom": [
+        "tall"
+       ]
+      },
+      "negativePrompt": "",
+      "appearanceForms": [
+       {
+        "id": "form_default",
+        "label": "기본",
+        "description": "",
+        "humanlike": true,
+        "gender": "male",
+        "basePromptGroups": {
+         "hair.color": [
+          "black hair"
+         ],
+         "custom": [
+          "tall"
+         ]
+        },
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_1",
+        "outfits": [
+         {
+          "id": "outfit_1",
+          "label": "Grey business suit",
+          "top": "grey suit jacket, white shirt, blue necktie",
+          "bottom": "grey suit pants",
+          "feet": "black dress shoes",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "legs": ""
+         }
+        ]
+       }
+      ],
+      "defaultFormId": "form_default",
+      "canonicalName": "Bob",
+      "ownerName": "Bob",
+      "aliasSources": {
+       "lorebookTitle": [
+        "Bob"
+       ],
+       "activationKeys": [
+        "Bob"
+       ],
+       "customMatchingKeys": [],
+       "assetClassificationKeys": []
+      }
+     }
+    ],
+    "outfitsByPromptKey": {
+     "lore:alice": [
+      {
+       "id": "outfit_1",
+       "label": "Navy sailor school uniform",
+       "top": "white sailor shirt, navy sailor collar, red neckerchief",
+       "bottom": "navy pleated skirt",
+       "legs": "black thighhighs",
+       "feet": "brown loafers",
+       "description": "",
+       "candidateEnabled": true,
+       "head": ""
+      },
+      {
+       "id": "outfit_2",
+       "label": "White summer sundress",
+       "head": "straw hat",
+       "top": "white sundress",
+       "feet": "sandals",
+       "description": "",
+       "candidateEnabled": true,
+       "bottom": "",
+       "legs": ""
+      }
+     ],
+     "lore:bob": [
+      {
+       "id": "outfit_1",
+       "label": "Grey business suit",
+       "top": "grey suit jacket, white shirt, blue necktie",
+       "bottom": "grey suit pants",
+       "feet": "black dress shoes",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "legs": ""
+      }
+     ],
+     "persona::p1": [
+      {
+       "id": "outfit_1",
+       "label": "Casual hoodie",
+       "top": "black hoodie",
+       "bottom": "jeans",
+       "feet": "sneakers",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "legs": ""
+      }
+     ]
+    },
+    "fixedPositivePrompt": "",
+    "negativePrompt": "",
+    "personaPrompt": "1::kazehaya shouta::",
+    "personaBasePromptGroups": {
+     "custom": [
+      "1::kazehaya shouta::"
+     ]
+    },
+    "personaNegativePrompt": "",
+    "personaName": "Shouta",
+    "personaGender": "male",
+    "personaPromptKey": "persona::p1",
+    "personaDefaultOutfitId": "outfit_1",
+    "personaAppearanceForms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {
+       "custom": [
+        "1::kazehaya shouta::"
+       ]
+      },
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_1",
+      "outfits": [
+       {
+        "id": "outfit_1",
+        "label": "Casual hoodie",
+        "top": "black hoodie",
+        "bottom": "jeans",
+        "feet": "sneakers",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "legs": ""
+       }
+      ]
+     }
+    ],
+    "personaDefaultFormId": "form_default",
+    "artistId": "detail_anime_illustration_style",
+    "artistName": "v5 검증 그림체",
+    "artistPrompt": "1.5::artist:hwansang ::, 0.9::artist:solipsist ::, 0.4::artist:natwjeq ::, 0.6::artist:channel (caststation) ::, 1.2::artist:sushispin ::, 0.4::artist:wanke ::, year 2024, year 2025, incredibly absurdres, hyper detail, very aesthetic, highres, masterpiece, best quality, amazing quality, best illustration, novel illustration",
+    "artistNegativePrompt": "lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page, watermark, reference, username, signature, artist:xinzoruo, artist:milkpanda, artist collaboration, variant set, large variant set, toon (style), oekaki, chibi, turnaround, monochrome, screentones, dated, old, 1990s (style), distorted composition, bad perspective, animation error, disorganized colors, vertical lines, vertical banding, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, subpar, poor, displeasing, bad illustration, bad portrait",
+    "localContinuitySelections": {
+     "primary": {},
+     "secondary": {},
+     "persona": {}
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "Unknown compiled prompt size: 42"
+    }
+   }
+  },
+  {
+   "name": "no-identity",
+   "spec": {
+    "presetId": "1girl_solo.general.free",
+    "bodyAction": "She waves from the school gate.",
+    "requestedModifiers": {
+     "camera.view": "",
+     "scene.background": [],
+     "scene.environment": "outdoors",
+     "scene.lighting": "",
+     "scene.location": [
+      "school gate"
+     ],
+     "scene.location.theme": [],
+     "scene.props": [],
+     "scene.time": "day",
+     "scene.weather": "",
+     "primary": {
+      "action.freeform": [
+       "waving"
+      ],
+      "framing.crop": "upper_body",
+      "expression.blush": "",
+      "expression.eye.openness": "",
+      "expression.eye.reaction": "",
+      "expression.general": [
+       "light_smile"
+      ],
+      "expression.mouth": [],
+      "expression.tear": "",
+      "gaze.direction": "looking_at_viewer",
+      "pose.body.female": "",
+      "pose.freeform": [],
+      "state.body.condition": [],
+      "state.body.surface": [],
+      "state.clothing.arrangement": "",
+      "state.clothing.surface": []
+     }
+    },
+    "variantId": "default",
+    "frameId": "upper_body",
+    "frameSizeId": 1,
+    "sizeId": 1,
+    "providerId": "novelai",
+    "chanceSeed": "slot:s1",
+    "ruleSelections": {
+     "global": {
+      "camera.view": "",
+      "scene.background": [],
+      "scene.environment": "outdoors",
+      "scene.lighting": "",
+      "scene.location": [
+       "school gate"
+      ],
+      "scene.location.theme": [],
+      "scene.props": [],
+      "scene.time": "day",
+      "scene.weather": ""
+     },
+     "actors": {
+      "primary": {
+       "action.freeform": [
+        "waving"
+       ],
+       "camera.framing.crop": "upper_body",
+       "expression.blush": "",
+       "expression.eye.openness": "",
+       "expression.eye.reaction": "",
+       "expression.general": [
+        "light_smile"
+       ],
+       "expression.mouth": [],
+       "expression.tear": "",
+       "gaze.direction": "looking_at_viewer",
+       "pose.body.female": "",
+       "pose.freeform": [],
+       "state.body.condition": [],
+       "state.body.surface": [],
+       "state.clothing.arrangement": "",
+       "state.clothing.surface": []
+      },
+      "secondary": {},
+      "persona": {}
+     }
+    },
+    "participants": [
+     {
+      "actorSlot": "primary",
+      "type": "character",
+      "gender": "female",
+      "lorebookPromptKey": "",
+      "characterName": "Nobody",
+      "sourceImageToken": "",
+      "outfitId": "outfit_1",
+      "formId": "form_default"
+     }
+    ]
+   },
+   "inputs": {
+    "identityCandidates": [
+     {
+      "key": "lore:alice",
+      "prompt": "silver hair, blue eyes, long hair, 1.2::ahoge::",
+      "basePromptGroups": {
+       "hair.color": [
+        "silver hair"
+       ],
+       "eyes.color": [
+        "blue eyes"
+       ],
+       "custom": [
+        "long hair",
+        "1.2::ahoge::"
+       ]
+      },
+      "negativePrompt": "bad hands",
+      "appearanceForms": [
+       {
+        "id": "form_default",
+        "label": "기본",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {
+         "hair.color": [
+          "silver hair"
+         ],
+         "eyes.color": [
+          "blue eyes"
+         ],
+         "custom": [
+          "long hair",
+          "1.2::ahoge::"
+         ]
+        },
+        "negativePrompt": "bad hands",
+        "reference": null,
+        "defaultOutfitId": "outfit_1",
+        "outfits": [
+         {
+          "id": "outfit_1",
+          "label": "Navy sailor school uniform",
+          "top": "white sailor shirt, navy sailor collar, red neckerchief",
+          "bottom": "navy pleated skirt",
+          "legs": "black thighhighs",
+          "feet": "brown loafers",
+          "description": "",
+          "candidateEnabled": true,
+          "head": ""
+         },
+         {
+          "id": "outfit_2",
+          "label": "White summer sundress",
+          "head": "straw hat",
+          "top": "white sundress",
+          "feet": "sandals",
+          "description": "",
+          "candidateEnabled": true,
+          "bottom": "",
+          "legs": ""
+         }
+        ]
+       }
+      ],
+      "defaultFormId": "form_default",
+      "canonicalName": "Alice",
+      "ownerName": "Alice",
+      "aliasSources": {
+       "lorebookTitle": [
+        "Alice"
+       ],
+       "activationKeys": [
+        "Alice"
+       ],
+       "customMatchingKeys": [],
+       "assetClassificationKeys": []
+      }
+     },
+     {
+      "key": "lore:bob",
+      "prompt": "black hair, tall",
+      "basePromptGroups": {
+       "hair.color": [
+        "black hair"
+       ],
+       "custom": [
+        "tall"
+       ]
+      },
+      "negativePrompt": "",
+      "appearanceForms": [
+       {
+        "id": "form_default",
+        "label": "기본",
+        "description": "",
+        "humanlike": true,
+        "gender": "male",
+        "basePromptGroups": {
+         "hair.color": [
+          "black hair"
+         ],
+         "custom": [
+          "tall"
+         ]
+        },
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_1",
+        "outfits": [
+         {
+          "id": "outfit_1",
+          "label": "Grey business suit",
+          "top": "grey suit jacket, white shirt, blue necktie",
+          "bottom": "grey suit pants",
+          "feet": "black dress shoes",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "legs": ""
+         }
+        ]
+       }
+      ],
+      "defaultFormId": "form_default",
+      "canonicalName": "Bob",
+      "ownerName": "Bob",
+      "aliasSources": {
+       "lorebookTitle": [
+        "Bob"
+       ],
+       "activationKeys": [
+        "Bob"
+       ],
+       "customMatchingKeys": [],
+       "assetClassificationKeys": []
+      }
+     }
+    ],
+    "outfitsByPromptKey": {
+     "lore:alice": [
+      {
+       "id": "outfit_1",
+       "label": "Navy sailor school uniform",
+       "top": "white sailor shirt, navy sailor collar, red neckerchief",
+       "bottom": "navy pleated skirt",
+       "legs": "black thighhighs",
+       "feet": "brown loafers",
+       "description": "",
+       "candidateEnabled": true,
+       "head": ""
+      },
+      {
+       "id": "outfit_2",
+       "label": "White summer sundress",
+       "head": "straw hat",
+       "top": "white sundress",
+       "feet": "sandals",
+       "description": "",
+       "candidateEnabled": true,
+       "bottom": "",
+       "legs": ""
+      }
+     ],
+     "lore:bob": [
+      {
+       "id": "outfit_1",
+       "label": "Grey business suit",
+       "top": "grey suit jacket, white shirt, blue necktie",
+       "bottom": "grey suit pants",
+       "feet": "black dress shoes",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "legs": ""
+      }
+     ],
+     "persona::p1": [
+      {
+       "id": "outfit_1",
+       "label": "Casual hoodie",
+       "top": "black hoodie",
+       "bottom": "jeans",
+       "feet": "sneakers",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "legs": ""
+      }
+     ]
+    },
+    "fixedPositivePrompt": "",
+    "negativePrompt": "",
+    "personaPrompt": "1::kazehaya shouta::",
+    "personaBasePromptGroups": {
+     "custom": [
+      "1::kazehaya shouta::"
+     ]
+    },
+    "personaNegativePrompt": "",
+    "personaName": "Shouta",
+    "personaGender": "male",
+    "personaPromptKey": "persona::p1",
+    "personaDefaultOutfitId": "outfit_1",
+    "personaAppearanceForms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {
+       "custom": [
+        "1::kazehaya shouta::"
+       ]
+      },
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_1",
+      "outfits": [
+       {
+        "id": "outfit_1",
+        "label": "Casual hoodie",
+        "top": "black hoodie",
+        "bottom": "jeans",
+        "feet": "sneakers",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "legs": ""
+       }
+      ]
+     }
+    ],
+    "personaDefaultFormId": "form_default",
+    "artistId": "detail_anime_illustration_style",
+    "artistName": "v5 검증 그림체",
+    "artistPrompt": "1.5::artist:hwansang ::, 0.9::artist:solipsist ::, 0.4::artist:natwjeq ::, 0.6::artist:channel (caststation) ::, 1.2::artist:sushispin ::, 0.4::artist:wanke ::, year 2024, year 2025, incredibly absurdres, hyper detail, very aesthetic, highres, masterpiece, best quality, amazing quality, best illustration, novel illustration",
+    "artistNegativePrompt": "lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page, watermark, reference, username, signature, artist:xinzoruo, artist:milkpanda, artist collaboration, variant set, large variant set, toon (style), oekaki, chibi, turnaround, monochrome, screentones, dated, old, 1990s (style), distorted composition, bad perspective, animation error, disorganized colors, vertical lines, vertical banding, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, subpar, poor, displeasing, bad illustration, bad portrait",
+    "localContinuitySelections": {
+     "primary": {},
+     "secondary": {},
+     "persona": {}
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "GenerationPromptInvariantError",
+     "message": "Generation invariant violated: canonical participants contain no matched identity prompt."
+    }
+   }
+  },
+  {
+   "name": "no-participants",
+   "spec": {
+    "presetId": "1girl_solo.general.free",
+    "bodyAction": "She waves from the school gate.",
+    "requestedModifiers": {
+     "camera.view": "",
+     "scene.background": [],
+     "scene.environment": "outdoors",
+     "scene.lighting": "",
+     "scene.location": [
+      "school gate"
+     ],
+     "scene.location.theme": [],
+     "scene.props": [],
+     "scene.time": "day",
+     "scene.weather": "",
+     "primary": {
+      "action.freeform": [
+       "waving"
+      ],
+      "framing.crop": "upper_body",
+      "expression.blush": "",
+      "expression.eye.openness": "",
+      "expression.eye.reaction": "",
+      "expression.general": [
+       "light_smile"
+      ],
+      "expression.mouth": [],
+      "expression.tear": "",
+      "gaze.direction": "looking_at_viewer",
+      "pose.body.female": "",
+      "pose.freeform": [],
+      "state.body.condition": [],
+      "state.body.surface": [],
+      "state.clothing.arrangement": "",
+      "state.clothing.surface": []
+     }
+    },
+    "variantId": "default",
+    "frameId": "upper_body",
+    "frameSizeId": 1,
+    "sizeId": 1,
+    "providerId": "novelai",
+    "chanceSeed": "slot:s1",
+    "ruleSelections": {
+     "global": {
+      "camera.view": "",
+      "scene.background": [],
+      "scene.environment": "outdoors",
+      "scene.lighting": "",
+      "scene.location": [
+       "school gate"
+      ],
+      "scene.location.theme": [],
+      "scene.props": [],
+      "scene.time": "day",
+      "scene.weather": ""
+     },
+     "actors": {
+      "primary": {
+       "action.freeform": [
+        "waving"
+       ],
+       "camera.framing.crop": "upper_body",
+       "expression.blush": "",
+       "expression.eye.openness": "",
+       "expression.eye.reaction": "",
+       "expression.general": [
+        "light_smile"
+       ],
+       "expression.mouth": [],
+       "expression.tear": "",
+       "gaze.direction": "looking_at_viewer",
+       "pose.body.female": "",
+       "pose.freeform": [],
+       "state.body.condition": [],
+       "state.body.surface": [],
+       "state.clothing.arrangement": "",
+       "state.clothing.surface": []
+      },
+      "secondary": {},
+      "persona": {}
+     }
+    },
+    "participants": []
+   },
+   "inputs": {
+    "identityCandidates": [
+     {
+      "key": "lore:alice",
+      "prompt": "silver hair, blue eyes, long hair, 1.2::ahoge::",
+      "basePromptGroups": {
+       "hair.color": [
+        "silver hair"
+       ],
+       "eyes.color": [
+        "blue eyes"
+       ],
+       "custom": [
+        "long hair",
+        "1.2::ahoge::"
+       ]
+      },
+      "negativePrompt": "bad hands",
+      "appearanceForms": [
+       {
+        "id": "form_default",
+        "label": "기본",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {
+         "hair.color": [
+          "silver hair"
+         ],
+         "eyes.color": [
+          "blue eyes"
+         ],
+         "custom": [
+          "long hair",
+          "1.2::ahoge::"
+         ]
+        },
+        "negativePrompt": "bad hands",
+        "reference": null,
+        "defaultOutfitId": "outfit_1",
+        "outfits": [
+         {
+          "id": "outfit_1",
+          "label": "Navy sailor school uniform",
+          "top": "white sailor shirt, navy sailor collar, red neckerchief",
+          "bottom": "navy pleated skirt",
+          "legs": "black thighhighs",
+          "feet": "brown loafers",
+          "description": "",
+          "candidateEnabled": true,
+          "head": ""
+         },
+         {
+          "id": "outfit_2",
+          "label": "White summer sundress",
+          "head": "straw hat",
+          "top": "white sundress",
+          "feet": "sandals",
+          "description": "",
+          "candidateEnabled": true,
+          "bottom": "",
+          "legs": ""
+         }
+        ]
+       }
+      ],
+      "defaultFormId": "form_default",
+      "canonicalName": "Alice",
+      "ownerName": "Alice",
+      "aliasSources": {
+       "lorebookTitle": [
+        "Alice"
+       ],
+       "activationKeys": [
+        "Alice"
+       ],
+       "customMatchingKeys": [],
+       "assetClassificationKeys": []
+      }
+     },
+     {
+      "key": "lore:bob",
+      "prompt": "black hair, tall",
+      "basePromptGroups": {
+       "hair.color": [
+        "black hair"
+       ],
+       "custom": [
+        "tall"
+       ]
+      },
+      "negativePrompt": "",
+      "appearanceForms": [
+       {
+        "id": "form_default",
+        "label": "기본",
+        "description": "",
+        "humanlike": true,
+        "gender": "male",
+        "basePromptGroups": {
+         "hair.color": [
+          "black hair"
+         ],
+         "custom": [
+          "tall"
+         ]
+        },
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_1",
+        "outfits": [
+         {
+          "id": "outfit_1",
+          "label": "Grey business suit",
+          "top": "grey suit jacket, white shirt, blue necktie",
+          "bottom": "grey suit pants",
+          "feet": "black dress shoes",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "legs": ""
+         }
+        ]
+       }
+      ],
+      "defaultFormId": "form_default",
+      "canonicalName": "Bob",
+      "ownerName": "Bob",
+      "aliasSources": {
+       "lorebookTitle": [
+        "Bob"
+       ],
+       "activationKeys": [
+        "Bob"
+       ],
+       "customMatchingKeys": [],
+       "assetClassificationKeys": []
+      }
+     }
+    ],
+    "outfitsByPromptKey": {
+     "lore:alice": [
+      {
+       "id": "outfit_1",
+       "label": "Navy sailor school uniform",
+       "top": "white sailor shirt, navy sailor collar, red neckerchief",
+       "bottom": "navy pleated skirt",
+       "legs": "black thighhighs",
+       "feet": "brown loafers",
+       "description": "",
+       "candidateEnabled": true,
+       "head": ""
+      },
+      {
+       "id": "outfit_2",
+       "label": "White summer sundress",
+       "head": "straw hat",
+       "top": "white sundress",
+       "feet": "sandals",
+       "description": "",
+       "candidateEnabled": true,
+       "bottom": "",
+       "legs": ""
+      }
+     ],
+     "lore:bob": [
+      {
+       "id": "outfit_1",
+       "label": "Grey business suit",
+       "top": "grey suit jacket, white shirt, blue necktie",
+       "bottom": "grey suit pants",
+       "feet": "black dress shoes",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "legs": ""
+      }
+     ],
+     "persona::p1": [
+      {
+       "id": "outfit_1",
+       "label": "Casual hoodie",
+       "top": "black hoodie",
+       "bottom": "jeans",
+       "feet": "sneakers",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "legs": ""
+      }
+     ]
+    },
+    "fixedPositivePrompt": "",
+    "negativePrompt": "",
+    "personaPrompt": "1::kazehaya shouta::",
+    "personaBasePromptGroups": {
+     "custom": [
+      "1::kazehaya shouta::"
+     ]
+    },
+    "personaNegativePrompt": "",
+    "personaName": "Shouta",
+    "personaGender": "male",
+    "personaPromptKey": "persona::p1",
+    "personaDefaultOutfitId": "outfit_1",
+    "personaAppearanceForms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {
+       "custom": [
+        "1::kazehaya shouta::"
+       ]
+      },
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_1",
+      "outfits": [
+       {
+        "id": "outfit_1",
+        "label": "Casual hoodie",
+        "top": "black hoodie",
+        "bottom": "jeans",
+        "feet": "sneakers",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "legs": ""
+       }
+      ]
+     }
+    ],
+    "personaDefaultFormId": "form_default",
+    "artistId": "detail_anime_illustration_style",
+    "artistName": "v5 검증 그림체",
+    "artistPrompt": "1.5::artist:hwansang ::, 0.9::artist:solipsist ::, 0.4::artist:natwjeq ::, 0.6::artist:channel (caststation) ::, 1.2::artist:sushispin ::, 0.4::artist:wanke ::, year 2024, year 2025, incredibly absurdres, hyper detail, very aesthetic, highres, masterpiece, best quality, amazing quality, best illustration, novel illustration",
+    "artistNegativePrompt": "lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page, watermark, reference, username, signature, artist:xinzoruo, artist:milkpanda, artist collaboration, variant set, large variant set, toon (style), oekaki, chibi, turnaround, monochrome, screentones, dated, old, 1990s (style), distorted composition, bad perspective, animation error, disorganized colors, vertical lines, vertical banding, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, subpar, poor, displeasing, bad illustration, bad portrait",
+    "localContinuitySelections": {
+     "primary": {},
+     "secondary": {},
+     "persona": {}
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "GenerationPromptInvariantError",
+     "message": "Generation invariant violated: canonical participants contain no matched identity prompt."
+    }
+   }
+  },
+  {
+   "name": "no-rule-selections",
+   "spec": {
+    "presetId": "1girl_solo.general.free",
+    "bodyAction": "She waves from the school gate.",
+    "requestedModifiers": {
+     "camera.view": "",
+     "scene.background": [],
+     "scene.environment": "outdoors",
+     "scene.lighting": "",
+     "scene.location": [
+      "school gate"
+     ],
+     "scene.location.theme": [],
+     "scene.props": [],
+     "scene.time": "day",
+     "scene.weather": "",
+     "primary": {
+      "action.freeform": [
+       "waving"
+      ],
+      "framing.crop": "upper_body",
+      "expression.blush": "",
+      "expression.eye.openness": "",
+      "expression.eye.reaction": "",
+      "expression.general": [
+       "light_smile"
+      ],
+      "expression.mouth": [],
+      "expression.tear": "",
+      "gaze.direction": "looking_at_viewer",
+      "pose.body.female": "",
+      "pose.freeform": [],
+      "state.body.condition": [],
+      "state.body.surface": [],
+      "state.clothing.arrangement": "",
+      "state.clothing.surface": []
+     }
+    },
+    "variantId": "default",
+    "frameId": "upper_body",
+    "frameSizeId": 1,
+    "sizeId": 1,
+    "providerId": "novelai",
+    "chanceSeed": "slot:s1",
+    "participants": [
+     {
+      "actorSlot": "primary",
+      "type": "character",
+      "gender": "female",
+      "lorebookPromptKey": "lore:alice",
+      "characterName": "Alice",
+      "sourceImageToken": "slot:s1",
+      "outfitId": "outfit_1",
+      "formId": "form_default"
+     }
+    ]
+   },
+   "inputs": {
+    "identityCandidates": [
+     {
+      "key": "lore:alice",
+      "prompt": "silver hair, blue eyes, long hair, 1.2::ahoge::",
+      "basePromptGroups": {
+       "hair.color": [
+        "silver hair"
+       ],
+       "eyes.color": [
+        "blue eyes"
+       ],
+       "custom": [
+        "long hair",
+        "1.2::ahoge::"
+       ]
+      },
+      "negativePrompt": "bad hands",
+      "appearanceForms": [
+       {
+        "id": "form_default",
+        "label": "기본",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {
+         "hair.color": [
+          "silver hair"
+         ],
+         "eyes.color": [
+          "blue eyes"
+         ],
+         "custom": [
+          "long hair",
+          "1.2::ahoge::"
+         ]
+        },
+        "negativePrompt": "bad hands",
+        "reference": null,
+        "defaultOutfitId": "outfit_1",
+        "outfits": [
+         {
+          "id": "outfit_1",
+          "label": "Navy sailor school uniform",
+          "top": "white sailor shirt, navy sailor collar, red neckerchief",
+          "bottom": "navy pleated skirt",
+          "legs": "black thighhighs",
+          "feet": "brown loafers",
+          "description": "",
+          "candidateEnabled": true,
+          "head": ""
+         },
+         {
+          "id": "outfit_2",
+          "label": "White summer sundress",
+          "head": "straw hat",
+          "top": "white sundress",
+          "feet": "sandals",
+          "description": "",
+          "candidateEnabled": true,
+          "bottom": "",
+          "legs": ""
+         }
+        ]
+       }
+      ],
+      "defaultFormId": "form_default",
+      "canonicalName": "Alice",
+      "ownerName": "Alice",
+      "aliasSources": {
+       "lorebookTitle": [
+        "Alice"
+       ],
+       "activationKeys": [
+        "Alice"
+       ],
+       "customMatchingKeys": [],
+       "assetClassificationKeys": []
+      }
+     },
+     {
+      "key": "lore:bob",
+      "prompt": "black hair, tall",
+      "basePromptGroups": {
+       "hair.color": [
+        "black hair"
+       ],
+       "custom": [
+        "tall"
+       ]
+      },
+      "negativePrompt": "",
+      "appearanceForms": [
+       {
+        "id": "form_default",
+        "label": "기본",
+        "description": "",
+        "humanlike": true,
+        "gender": "male",
+        "basePromptGroups": {
+         "hair.color": [
+          "black hair"
+         ],
+         "custom": [
+          "tall"
+         ]
+        },
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_1",
+        "outfits": [
+         {
+          "id": "outfit_1",
+          "label": "Grey business suit",
+          "top": "grey suit jacket, white shirt, blue necktie",
+          "bottom": "grey suit pants",
+          "feet": "black dress shoes",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "legs": ""
+         }
+        ]
+       }
+      ],
+      "defaultFormId": "form_default",
+      "canonicalName": "Bob",
+      "ownerName": "Bob",
+      "aliasSources": {
+       "lorebookTitle": [
+        "Bob"
+       ],
+       "activationKeys": [
+        "Bob"
+       ],
+       "customMatchingKeys": [],
+       "assetClassificationKeys": []
+      }
+     }
+    ],
+    "outfitsByPromptKey": {
+     "lore:alice": [
+      {
+       "id": "outfit_1",
+       "label": "Navy sailor school uniform",
+       "top": "white sailor shirt, navy sailor collar, red neckerchief",
+       "bottom": "navy pleated skirt",
+       "legs": "black thighhighs",
+       "feet": "brown loafers",
+       "description": "",
+       "candidateEnabled": true,
+       "head": ""
+      },
+      {
+       "id": "outfit_2",
+       "label": "White summer sundress",
+       "head": "straw hat",
+       "top": "white sundress",
+       "feet": "sandals",
+       "description": "",
+       "candidateEnabled": true,
+       "bottom": "",
+       "legs": ""
+      }
+     ],
+     "lore:bob": [
+      {
+       "id": "outfit_1",
+       "label": "Grey business suit",
+       "top": "grey suit jacket, white shirt, blue necktie",
+       "bottom": "grey suit pants",
+       "feet": "black dress shoes",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "legs": ""
+      }
+     ],
+     "persona::p1": [
+      {
+       "id": "outfit_1",
+       "label": "Casual hoodie",
+       "top": "black hoodie",
+       "bottom": "jeans",
+       "feet": "sneakers",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "legs": ""
+      }
+     ]
+    },
+    "fixedPositivePrompt": "",
+    "negativePrompt": "",
+    "personaPrompt": "1::kazehaya shouta::",
+    "personaBasePromptGroups": {
+     "custom": [
+      "1::kazehaya shouta::"
+     ]
+    },
+    "personaNegativePrompt": "",
+    "personaName": "Shouta",
+    "personaGender": "male",
+    "personaPromptKey": "persona::p1",
+    "personaDefaultOutfitId": "outfit_1",
+    "personaAppearanceForms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {
+       "custom": [
+        "1::kazehaya shouta::"
+       ]
+      },
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_1",
+      "outfits": [
+       {
+        "id": "outfit_1",
+        "label": "Casual hoodie",
+        "top": "black hoodie",
+        "bottom": "jeans",
+        "feet": "sneakers",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "legs": ""
+       }
+      ]
+     }
+    ],
+    "personaDefaultFormId": "form_default",
+    "artistId": "detail_anime_illustration_style",
+    "artistName": "v5 검증 그림체",
+    "artistPrompt": "1.5::artist:hwansang ::, 0.9::artist:solipsist ::, 0.4::artist:natwjeq ::, 0.6::artist:channel (caststation) ::, 1.2::artist:sushispin ::, 0.4::artist:wanke ::, year 2024, year 2025, incredibly absurdres, hyper detail, very aesthetic, highres, masterpiece, best quality, amazing quality, best illustration, novel illustration",
+    "artistNegativePrompt": "lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page, watermark, reference, username, signature, artist:xinzoruo, artist:milkpanda, artist collaboration, variant set, large variant set, toon (style), oekaki, chibi, turnaround, monochrome, screentones, dated, old, 1990s (style), distorted composition, bad perspective, animation error, disorganized colors, vertical lines, vertical banding, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, subpar, poor, displeasing, bad illustration, bad portrait",
+    "localContinuitySelections": {
+     "primary": {},
+     "secondary": {},
+     "persona": {}
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "Rule IR prompt generation requires canonical modifier selections."
+    }
+   }
+  }
+ ]
+}

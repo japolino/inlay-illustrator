@@ -1,0 +1,900 @@
+{
+ "nsfw": [
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl, solo",
+     "globalPositivePrompt": "nsfw, 1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl, solo",
+     "globalPositivePrompt": "nsfw, 1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl",
+     "globalPositivePrompt": "1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl",
+     "globalPositivePrompt": "1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl",
+     "globalPositivePrompt": "1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl",
+     "globalPositivePrompt": "1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl, rating:explicit",
+     "globalPositivePrompt": "nsfw, 1girl, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl, rating:explicit",
+     "globalPositivePrompt": "nsfw, 1girl, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "scenery",
+     "globalPositivePrompt": "scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "scenery",
+     "globalPositivePrompt": "scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "nsfw, 1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "nsfw, 1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": "extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": "extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw",
+     "globalPositivePrompt": "nsfw, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw",
+     "globalPositivePrompt": "nsfw, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "a",
+     "globalPositivePrompt": "a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "a",
+     "globalPositivePrompt": "a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, a",
+     "globalPositivePrompt": "nsfw, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, a",
+     "globalPositivePrompt": "nsfw, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "scenery",
+     "globalPositivePrompt": "scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "scenery",
+     "globalPositivePrompt": "scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, scenery, rating:general",
+     "globalPositivePrompt": "nsfw, scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    },
+    "force": true,
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, scenery, rating:general",
+     "globalPositivePrompt": "nsfw, scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [],
+     "diagnostics": []
+    }
+   }
+  }
+ ],
+ "prepend": [
+  {
+   "input": "1girl, solo",
+   "expected": {
+    "ok": "nsfw, 1girl, solo"
+   }
+  },
+  {
+   "input": "nsfw, 1girl",
+   "expected": {
+    "ok": "nsfw, 1girl"
+   }
+  },
+  {
+   "input": "1girl, NSFW, rating:explicit",
+   "expected": {
+    "ok": "nsfw, 1girl, rating:explicit"
+   }
+  },
+  {
+   "input": "1.2::nsfw, rating:safe::, sfw, scenery",
+   "expected": {
+    "ok": "nsfw, 1.2::nsfw, rating:safe::, sfw, scenery"
+   }
+  },
+  {
+   "input": "",
+   "expected": {
+    "ok": "nsfw"
+   }
+  },
+  {
+   "input": "2::nsfw::, a",
+   "expected": {
+    "ok": "nsfw, a"
+   }
+  },
+  {
+   "input": "scenery, rating:general",
+   "expected": {
+    "ok": "nsfw, scenery, rating:general"
+   }
+  },
+  {
+   "input": "a::b, nsfw::c, nsfw",
+   "expected": {
+    "ok": "nsfw, a::b, nsfw::c"
+   }
+  },
+  {
+   "input": "1::nsfw::",
+   "expected": {
+    "ok": "nsfw"
+   }
+  }
+ ]
+}

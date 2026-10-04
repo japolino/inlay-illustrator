@@ -1,0 +1,1884 @@
+{
+ "coords": [
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [],
+    "seed": "77",
+    "force": false
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28,
+     "forceCharacterCoordinates": true
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [],
+    "seed": "77",
+    "force": false
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "forceCharacterCoordinates": true,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [],
+    "seed": "77",
+    "force": true
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [],
+     "useCoords": false
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28,
+     "forceCharacterCoordinates": true
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [],
+    "seed": "77",
+    "force": true
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "forceCharacterCoordinates": true,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     }
+    ],
+    "seed": "77",
+    "force": false
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.5,
+       "centerY": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28,
+     "forceCharacterCoordinates": true
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     }
+    ],
+    "seed": "77",
+    "force": false
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "forceCharacterCoordinates": true,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.5,
+       "centerY": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     }
+    ],
+    "seed": "77",
+    "force": true
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.5,
+       "centerY": 0.5,
+       "coordinateMode": "automatic"
+      }
+     ],
+     "useCoords": false
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28,
+     "forceCharacterCoordinates": true
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     }
+    ],
+    "seed": "77",
+    "force": true
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "forceCharacterCoordinates": true,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.5,
+       "centerY": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "p1",
+      "negativePrompt": "uc1"
+     }
+    ],
+    "seed": "77",
+    "force": false
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.3333333333333333,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "p1",
+       "uc": "uc1",
+       "centerX": 0.6666666666666666,
+       "centerY": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28,
+     "forceCharacterCoordinates": true
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "p1",
+      "negativePrompt": "uc1"
+     }
+    ],
+    "seed": "77",
+    "force": false
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "forceCharacterCoordinates": true,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.3333333333333333,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "p1",
+       "uc": "uc1",
+       "centerX": 0.6666666666666666,
+       "centerY": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "p1",
+      "negativePrompt": "uc1"
+     }
+    ],
+    "seed": "77",
+    "force": true
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.3333333333333333,
+       "centerY": 0.5,
+       "coordinateMode": "automatic"
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "p1",
+       "uc": "uc1",
+       "centerX": 0.6666666666666666,
+       "centerY": 0.5,
+       "coordinateMode": "automatic"
+      }
+     ],
+     "useCoords": false
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28,
+     "forceCharacterCoordinates": true
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "p1",
+      "negativePrompt": "uc1"
+     }
+    ],
+    "seed": "77",
+    "force": true
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "forceCharacterCoordinates": true,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.3333333333333333,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "p1",
+       "uc": "uc1",
+       "centerX": 0.6666666666666666,
+       "centerY": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "p1",
+      "negativePrompt": "uc1"
+     },
+     {
+      "actorId": "actor_3",
+      "actorIndex": 2,
+      "prompt": "",
+      "negativePrompt": ""
+     }
+    ],
+    "seed": "77",
+    "force": false
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.3333333333333333,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "p1",
+       "uc": "uc1",
+       "centerX": 0.6666666666666666,
+       "centerY": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28,
+     "forceCharacterCoordinates": true
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "p1",
+      "negativePrompt": "uc1"
+     },
+     {
+      "actorId": "actor_3",
+      "actorIndex": 2,
+      "prompt": "",
+      "negativePrompt": ""
+     }
+    ],
+    "seed": "77",
+    "force": false
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "forceCharacterCoordinates": true,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.3333333333333333,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "p1",
+       "uc": "uc1",
+       "centerX": 0.6666666666666666,
+       "centerY": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "p1",
+      "negativePrompt": "uc1"
+     },
+     {
+      "actorId": "actor_3",
+      "actorIndex": 2,
+      "prompt": "",
+      "negativePrompt": ""
+     }
+    ],
+    "seed": "77",
+    "force": true
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.3333333333333333,
+       "centerY": 0.5,
+       "coordinateMode": "automatic"
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "p1",
+       "uc": "uc1",
+       "centerX": 0.6666666666666666,
+       "centerY": 0.5,
+       "coordinateMode": "automatic"
+      }
+     ],
+     "useCoords": false
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28,
+     "forceCharacterCoordinates": true
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "p1",
+      "negativePrompt": "uc1"
+     },
+     {
+      "actorId": "actor_3",
+      "actorIndex": 2,
+      "prompt": "",
+      "negativePrompt": ""
+     }
+    ],
+    "seed": "77",
+    "force": true
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "forceCharacterCoordinates": true,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.3333333333333333,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "p1",
+       "uc": "uc1",
+       "centerX": 0.6666666666666666,
+       "centerY": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "p1",
+      "negativePrompt": "uc1"
+     },
+     {
+      "actorId": "actor_3",
+      "actorIndex": 2,
+      "prompt": "",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_4",
+      "actorIndex": 3,
+      "prompt": "p3",
+      "negativePrompt": ""
+     }
+    ],
+    "seed": "77",
+    "force": false
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.25,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "p1",
+       "uc": "uc1",
+       "centerX": 0.5,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_4",
+       "actorIndex": 3,
+       "prompt": "p3",
+       "uc": "",
+       "centerX": 0.75,
+       "centerY": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28,
+     "forceCharacterCoordinates": true
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "p1",
+      "negativePrompt": "uc1"
+     },
+     {
+      "actorId": "actor_3",
+      "actorIndex": 2,
+      "prompt": "",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_4",
+      "actorIndex": 3,
+      "prompt": "p3",
+      "negativePrompt": ""
+     }
+    ],
+    "seed": "77",
+    "force": false
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "forceCharacterCoordinates": true,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.25,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "p1",
+       "uc": "uc1",
+       "centerX": 0.5,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_4",
+       "actorIndex": 3,
+       "prompt": "p3",
+       "uc": "",
+       "centerX": 0.75,
+       "centerY": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "p1",
+      "negativePrompt": "uc1"
+     },
+     {
+      "actorId": "actor_3",
+      "actorIndex": 2,
+      "prompt": "",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_4",
+      "actorIndex": 3,
+      "prompt": "p3",
+      "negativePrompt": ""
+     }
+    ],
+    "seed": "77",
+    "force": true
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.25,
+       "centerY": 0.5,
+       "coordinateMode": "automatic"
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "p1",
+       "uc": "uc1",
+       "centerX": 0.5,
+       "centerY": 0.5,
+       "coordinateMode": "automatic"
+      },
+      {
+       "actorId": "actor_4",
+       "actorIndex": 3,
+       "prompt": "p3",
+       "uc": "",
+       "centerX": 0.75,
+       "centerY": 0.5,
+       "coordinateMode": "automatic"
+      }
+     ],
+     "useCoords": false
+    }
+   }
+  },
+  {
+   "input": {
+    "config": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "",
+     "steps": 28,
+     "forceCharacterCoordinates": true
+    },
+    "plan": {
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres"
+    },
+    "actors": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "p0",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "p1",
+      "negativePrompt": "uc1"
+     },
+     {
+      "actorId": "actor_3",
+      "actorIndex": 2,
+      "prompt": "",
+      "negativePrompt": ""
+     },
+     {
+      "actorId": "actor_4",
+      "actorIndex": 3,
+      "prompt": "p3",
+      "negativePrompt": ""
+     }
+    ],
+    "seed": "77",
+    "force": true
+   },
+   "expected": {
+    "ok": {
+     "apiKey": "k",
+     "naiModel": "nai-diffusion-4-5-full",
+     "seed": "77",
+     "steps": 28,
+     "forceCharacterCoordinates": true,
+     "analysisProfile": "v4-5",
+     "width": 832,
+     "height": 1216,
+     "negativePrompt": "lowres",
+     "characterPrompts": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "p0",
+       "uc": "",
+       "centerX": 0.25,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "p1",
+       "uc": "uc1",
+       "centerX": 0.5,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_4",
+       "actorIndex": 3,
+       "prompt": "p3",
+       "uc": "",
+       "centerX": 0.75,
+       "centerY": 0.5
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "captions": [
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "x",
+      "centerX": 0.2,
+      "centerY": 0.4
+     }
+    ],
+    "key": "prompt",
+    "v5": false
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "a",
+      "centers": [
+       {
+        "x": 0.5,
+        "y": 0.5
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "x",
+      "centerX": 0.2,
+      "centerY": 0.4
+     }
+    ],
+    "key": "prompt",
+    "v5": true
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "a",
+      "centers": [
+       {
+        "x": 0.2,
+        "y": 0.4
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "x",
+      "centerX": 0.2,
+      "centerY": 0.4
+     }
+    ],
+    "key": "uc",
+    "v5": false
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "x",
+      "centers": [
+       {
+        "x": 0.5,
+        "y": 0.5
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "x",
+      "centerX": 0.2,
+      "centerY": 0.4
+     }
+    ],
+    "key": "uc",
+    "v5": true
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "x",
+      "centers": [
+       {
+        "x": 0.2,
+        "y": 0.4
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "x",
+      "centerX": 0.2,
+      "centerY": 0.4,
+      "coordinateMode": "automatic"
+     }
+    ],
+    "key": "prompt",
+    "v5": false
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "a",
+      "centers": [
+       {
+        "x": 0,
+        "y": 0
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "x",
+      "centerX": 0.2,
+      "centerY": 0.4,
+      "coordinateMode": "automatic"
+     }
+    ],
+    "key": "prompt",
+    "v5": true
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "a",
+      "centers": [
+       {
+        "x": 0,
+        "y": 0
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "x",
+      "centerX": 0.2,
+      "centerY": 0.4,
+      "coordinateMode": "automatic"
+     }
+    ],
+    "key": "uc",
+    "v5": false
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "x",
+      "centers": [
+       {
+        "x": 0,
+        "y": 0
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "x",
+      "centerX": 0.2,
+      "centerY": 0.4,
+      "coordinateMode": "automatic"
+     }
+    ],
+    "key": "uc",
+    "v5": true
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "x",
+      "centers": [
+       {
+        "x": 0,
+        "y": 0
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "",
+      "centerX": 0.3,
+      "centerY": 0.5
+     },
+     {
+      "prompt": "b",
+      "uc": "y",
+      "centerX": 0.7,
+      "centerY": 0.5
+     }
+    ],
+    "key": "prompt",
+    "v5": false
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "a",
+      "centers": [
+       {
+        "x": 0.3,
+        "y": 0.5
+       }
+      ]
+     },
+     {
+      "char_caption": "b",
+      "centers": [
+       {
+        "x": 0.7,
+        "y": 0.5
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "",
+      "centerX": 0.3,
+      "centerY": 0.5
+     },
+     {
+      "prompt": "b",
+      "uc": "y",
+      "centerX": 0.7,
+      "centerY": 0.5
+     }
+    ],
+    "key": "prompt",
+    "v5": true
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "a",
+      "centers": [
+       {
+        "x": 0.3,
+        "y": 0.5
+       }
+      ]
+     },
+     {
+      "char_caption": "b",
+      "centers": [
+       {
+        "x": 0.7,
+        "y": 0.5
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "",
+      "centerX": 0.3,
+      "centerY": 0.5
+     },
+     {
+      "prompt": "b",
+      "uc": "y",
+      "centerX": 0.7,
+      "centerY": 0.5
+     }
+    ],
+    "key": "uc",
+    "v5": false
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "",
+      "centers": [
+       {
+        "x": 0.3,
+        "y": 0.5
+       }
+      ]
+     },
+     {
+      "char_caption": "y",
+      "centers": [
+       {
+        "x": 0.7,
+        "y": 0.5
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "",
+      "centerX": 0.3,
+      "centerY": 0.5
+     },
+     {
+      "prompt": "b",
+      "uc": "y",
+      "centerX": 0.7,
+      "centerY": 0.5
+     }
+    ],
+    "key": "uc",
+    "v5": true
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "",
+      "centers": [
+       {
+        "x": 0.3,
+        "y": 0.5
+       }
+      ]
+     },
+     {
+      "char_caption": "y",
+      "centers": [
+       {
+        "x": 0.7,
+        "y": 0.5
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "",
+      "centerX": 0.3,
+      "centerY": 0.5,
+      "coordinateMode": "automatic"
+     },
+     {
+      "prompt": "b",
+      "uc": "y",
+      "centerX": 0.7,
+      "centerY": 0.5
+     }
+    ],
+    "key": "prompt",
+    "v5": false
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "a",
+      "centers": [
+       {
+        "x": 0,
+        "y": 0
+       }
+      ]
+     },
+     {
+      "char_caption": "b",
+      "centers": [
+       {
+        "x": 0.7,
+        "y": 0.5
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "",
+      "centerX": 0.3,
+      "centerY": 0.5,
+      "coordinateMode": "automatic"
+     },
+     {
+      "prompt": "b",
+      "uc": "y",
+      "centerX": 0.7,
+      "centerY": 0.5
+     }
+    ],
+    "key": "prompt",
+    "v5": true
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "a",
+      "centers": [
+       {
+        "x": 0,
+        "y": 0
+       }
+      ]
+     },
+     {
+      "char_caption": "b",
+      "centers": [
+       {
+        "x": 0.7,
+        "y": 0.5
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "",
+      "centerX": 0.3,
+      "centerY": 0.5,
+      "coordinateMode": "automatic"
+     },
+     {
+      "prompt": "b",
+      "uc": "y",
+      "centerX": 0.7,
+      "centerY": 0.5
+     }
+    ],
+    "key": "uc",
+    "v5": false
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "",
+      "centers": [
+       {
+        "x": 0,
+        "y": 0
+       }
+      ]
+     },
+     {
+      "char_caption": "y",
+      "centers": [
+       {
+        "x": 0.7,
+        "y": 0.5
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "chars": [
+     {
+      "prompt": "a",
+      "uc": "",
+      "centerX": 0.3,
+      "centerY": 0.5,
+      "coordinateMode": "automatic"
+     },
+     {
+      "prompt": "b",
+      "uc": "y",
+      "centerX": 0.7,
+      "centerY": 0.5
+     }
+    ],
+    "key": "uc",
+    "v5": true
+   },
+   "expected": {
+    "ok": [
+     {
+      "char_caption": "",
+      "centers": [
+       {
+        "x": 0,
+        "y": 0
+       }
+      ]
+     },
+     {
+      "char_caption": "y",
+      "centers": [
+       {
+        "x": 0.7,
+        "y": 0.5
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "aiChoice": [
+  {
+   "input": [
+    {
+     "characterPrompts": [
+      {
+       "prompt": "a"
+      },
+      null,
+      "x"
+     ]
+    },
+    true
+   ],
+   "expected": {
+    "ok": {
+     "characterPrompts": [
+      {
+       "prompt": "a",
+       "coordinateMode": "automatic"
+      },
+      null,
+      "x"
+     ],
+     "useCoords": false
+    }
+   }
+  },
+  {
+   "input": [
+    {
+     "characterPrompts": [
+      {
+       "prompt": "a"
+      }
+     ],
+     "forceCharacterCoordinates": true
+    },
+    true
+   ],
+   "expected": {
+    "ok": {
+     "characterPrompts": [
+      {
+       "prompt": "a"
+      }
+     ],
+     "forceCharacterCoordinates": true
+    }
+   }
+  },
+  {
+   "input": [
+    {
+     "characterPrompts": "nope"
+    },
+    true
+   ],
+   "expected": {
+    "ok": {
+     "characterPrompts": "nope",
+     "useCoords": false
+    }
+   }
+  },
+  {
+   "input": [
+    {
+     "characterPrompts": [
+      {
+       "prompt": "a"
+      }
+     ]
+    },
+    false
+   ],
+   "expected": {
+    "ok": {
+     "characterPrompts": [
+      {
+       "prompt": "a"
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "attach": [
+  {
+   "input": [
+    {
+     "characterPrompts": [
+      {
+       "actorSlot": "primary",
+       "prompt": "a"
+      },
+      {
+       "actorSlot": "persona",
+       "prompt": "b"
+      },
+      {
+       "prompt": "c"
+      }
+     ]
+    },
+    [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1
+     }
+    ]
+   ],
+   "expected": {
+    "ok": {
+     "characterPrompts": [
+      {
+       "prompt": "a",
+       "actorId": "actor_1",
+       "actorIndex": 0
+      },
+      {
+       "prompt": "b",
+       "actorId": "actor_2",
+       "actorIndex": 1
+      },
+      {
+       "prompt": "c"
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

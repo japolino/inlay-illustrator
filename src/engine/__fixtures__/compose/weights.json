@@ -1,0 +1,4350 @@
+{
+ "weight": [
+  {
+   "input": [
+    "",
+    1
+   ],
+   "expected": {
+    "ok": ""
+   }
+  },
+  {
+   "input": [
+    "",
+    0.7
+   ],
+   "expected": {
+    "ok": ""
+   }
+  },
+  {
+   "input": [
+    "",
+    0.5
+   ],
+   "expected": {
+    "ok": ""
+   }
+  },
+  {
+   "input": [
+    "",
+    0.95
+   ],
+   "expected": {
+    "ok": ""
+   }
+  },
+  {
+   "input": [
+    "",
+    1.3
+   ],
+   "expected": {
+    "ok": ""
+   }
+  },
+  {
+   "input": [
+    "   ",
+    1
+   ],
+   "expected": {
+    "ok": "   "
+   }
+  },
+  {
+   "input": [
+    "   ",
+    0.7
+   ],
+   "expected": {
+    "ok": "   "
+   }
+  },
+  {
+   "input": [
+    "   ",
+    0.5
+   ],
+   "expected": {
+    "ok": "   "
+   }
+  },
+  {
+   "input": [
+    "   ",
+    0.95
+   ],
+   "expected": {
+    "ok": "   "
+   }
+  },
+  {
+   "input": [
+    "   ",
+    1.3
+   ],
+   "expected": {
+    "ok": "   "
+   }
+  },
+  {
+   "input": [
+    "1girl, solo",
+    1
+   ],
+   "expected": {
+    "ok": "1girl, solo"
+   }
+  },
+  {
+   "input": [
+    "1girl, solo",
+    0.7
+   ],
+   "expected": {
+    "ok": "0.7::1girl, solo ::"
+   }
+  },
+  {
+   "input": [
+    "1girl, solo",
+    0.5
+   ],
+   "expected": {
+    "ok": "0.5::1girl, solo ::"
+   }
+  },
+  {
+   "input": [
+    "1girl, solo",
+    0.95
+   ],
+   "expected": {
+    "ok": "0.95::1girl, solo ::"
+   }
+  },
+  {
+   "input": [
+    "1girl, solo",
+    1.3
+   ],
+   "expected": {
+    "ok": "1.3::1girl, solo ::"
+   }
+  },
+  {
+   "input": [
+    "1girl, 1.2::smile::, {blush}, [frown]",
+    1
+   ],
+   "expected": {
+    "ok": "1girl, 1.2::smile::, {blush}, [frown]"
+   }
+  },
+  {
+   "input": [
+    "1girl, 1.2::smile::, {blush}, [frown]",
+    0.7
+   ],
+   "expected": {
+    "ok": "0.7::1girl ::, 0.84::smile ::, 0.735::blush ::, 0.666666666666667::frown ::"
+   }
+  },
+  {
+   "input": [
+    "1girl, 1.2::smile::, {blush}, [frown]",
+    0.5
+   ],
+   "expected": {
+    "ok": "0.5::1girl ::, 0.6::smile ::, 0.525::blush ::, 0.476190476190476::frown ::"
+   }
+  },
+  {
+   "input": [
+    "1girl, 1.2::smile::, {blush}, [frown]",
+    0.95
+   ],
+   "expected": {
+    "ok": "0.95::1girl ::, 1.14::smile ::, 0.9975::blush ::, 0.904761904761905::frown ::"
+   }
+  },
+  {
+   "input": [
+    "1girl, 1.2::smile::, {blush}, [frown]",
+    1.3
+   ],
+   "expected": {
+    "ok": "1.3::1girl ::, 1.56::smile ::, 1.365::blush ::, 1.23809523809524::frown ::"
+   }
+  },
+  {
+   "input": [
+    "nsfw, 1girl, artist:foo",
+    1
+   ],
+   "expected": {
+    "ok": "nsfw, 1girl, artist:foo"
+   }
+  },
+  {
+   "input": [
+    "nsfw, 1girl, artist:foo",
+    0.7
+   ],
+   "expected": {
+    "ok": "0.7::nsfw, 1girl, artist:foo ::"
+   }
+  },
+  {
+   "input": [
+    "nsfw, 1girl, artist:foo",
+    0.5
+   ],
+   "expected": {
+    "ok": "0.5::nsfw, 1girl, artist:foo ::"
+   }
+  },
+  {
+   "input": [
+    "nsfw, 1girl, artist:foo",
+    0.95
+   ],
+   "expected": {
+    "ok": "0.95::nsfw, 1girl, artist:foo ::"
+   }
+  },
+  {
+   "input": [
+    "nsfw, 1girl, artist:foo",
+    1.3
+   ],
+   "expected": {
+    "ok": "1.3::nsfw, 1girl, artist:foo ::"
+   }
+  },
+  {
+   "input": [
+    "2::a, b::, c",
+    1
+   ],
+   "expected": {
+    "ok": "2::a, b::, c"
+   }
+  },
+  {
+   "input": [
+    "2::a, b::, c",
+    0.7
+   ],
+   "expected": {
+    "ok": "1.4::a, b ::, 0.7::c ::"
+   }
+  },
+  {
+   "input": [
+    "2::a, b::, c",
+    0.5
+   ],
+   "expected": {
+    "ok": "1::a, b ::, 0.5::c ::"
+   }
+  },
+  {
+   "input": [
+    "2::a, b::, c",
+    0.95
+   ],
+   "expected": {
+    "ok": "1.9::a, b ::, 0.95::c ::"
+   }
+  },
+  {
+   "input": [
+    "2::a, b::, c",
+    1.3
+   ],
+   "expected": {
+    "ok": "2.6::a, b ::, 1.3::c ::"
+   }
+  },
+  {
+   "input": [
+    "\\(escaped\\), d",
+    1
+   ],
+   "expected": {
+    "ok": "\\(escaped\\), d"
+   }
+  },
+  {
+   "input": [
+    "\\(escaped\\), d",
+    0.7
+   ],
+   "expected": {
+    "ok": "0.7::\\(escaped\\), d ::"
+   }
+  },
+  {
+   "input": [
+    "\\(escaped\\), d",
+    0.5
+   ],
+   "expected": {
+    "ok": "0.5::\\(escaped\\), d ::"
+   }
+  },
+  {
+   "input": [
+    "\\(escaped\\), d",
+    0.95
+   ],
+   "expected": {
+    "ok": "0.95::\\(escaped\\), d ::"
+   }
+  },
+  {
+   "input": [
+    "\\(escaped\\), d",
+    1.3
+   ],
+   "expected": {
+    "ok": "1.3::\\(escaped\\), d ::"
+   }
+  },
+  {
+   "input": [
+    "-1::bad::, ::stray, x",
+    1
+   ],
+   "expected": {
+    "ok": "-1::bad::, ::stray, x"
+   }
+  },
+  {
+   "input": [
+    "-1::bad::, ::stray, x",
+    0.7
+   ],
+   "expected": {
+    "ok": "-0.7::bad ::,0.7::stray, x ::"
+   }
+  },
+  {
+   "input": [
+    "-1::bad::, ::stray, x",
+    0.5
+   ],
+   "expected": {
+    "ok": "-0.5::bad ::,0.5::stray, x ::"
+   }
+  },
+  {
+   "input": [
+    "-1::bad::, ::stray, x",
+    0.95
+   ],
+   "expected": {
+    "ok": "-0.95::bad ::,0.95::stray, x ::"
+   }
+  },
+  {
+   "input": [
+    "-1::bad::, ::stray, x",
+    1.3
+   ],
+   "expected": {
+    "ok": "-1.3::bad ::,1.3::stray, x ::"
+   }
+  },
+  {
+   "input": [
+    "a, 0.5::b::  ,  c",
+    1
+   ],
+   "expected": {
+    "ok": "a, 0.5::b::  ,  c"
+   }
+  },
+  {
+   "input": [
+    "a, 0.5::b::  ,  c",
+    0.7
+   ],
+   "expected": {
+    "ok": "0.7::a ::, 0.35::b ::  ,  0.7::c ::"
+   }
+  },
+  {
+   "input": [
+    "a, 0.5::b::  ,  c",
+    0.5
+   ],
+   "expected": {
+    "ok": "0.5::a ::, 0.25::b ::  ,  0.5::c ::"
+   }
+  },
+  {
+   "input": [
+    "a, 0.5::b::  ,  c",
+    0.95
+   ],
+   "expected": {
+    "ok": "0.95::a ::, 0.475::b ::  ,  0.95::c ::"
+   }
+  },
+  {
+   "input": [
+    "a, 0.5::b::  ,  c",
+    1.3
+   ],
+   "expected": {
+    "ok": "1.3::a ::, 0.65::b ::  ,  1.3::c ::"
+   }
+  },
+  {
+   "input": [
+    "{{double}}, [[half]]",
+    1
+   ],
+   "expected": {
+    "ok": "{{double}}, [[half]]"
+   }
+  },
+  {
+   "input": [
+    "{{double}}, [[half]]",
+    0.7
+   ],
+   "expected": {
+    "ok": "0.77175::double ::, 0.634920634920635::half ::"
+   }
+  },
+  {
+   "input": [
+    "{{double}}, [[half]]",
+    0.5
+   ],
+   "expected": {
+    "ok": "0.55125::double ::, 0.453514739229025::half ::"
+   }
+  },
+  {
+   "input": [
+    "{{double}}, [[half]]",
+    0.95
+   ],
+   "expected": {
+    "ok": "1.047375::double ::, 0.861678004535147::half ::"
+   }
+  },
+  {
+   "input": [
+    "{{double}}, [[half]]",
+    1.3
+   ],
+   "expected": {
+    "ok": "1.43325::double ::, 1.17913832199546::half ::"
+   }
+  },
+  {
+   "input": [
+    "1.5::artist:hwansang ::, year 2024",
+    1
+   ],
+   "expected": {
+    "ok": "1.5::artist:hwansang ::, year 2024"
+   }
+  },
+  {
+   "input": [
+    "1.5::artist:hwansang ::, year 2024",
+    0.7
+   ],
+   "expected": {
+    "ok": "1.05::artist:hwansang ::, 0.7::year 2024 ::"
+   }
+  },
+  {
+   "input": [
+    "1.5::artist:hwansang ::, year 2024",
+    0.5
+   ],
+   "expected": {
+    "ok": "0.75::artist:hwansang ::, 0.5::year 2024 ::"
+   }
+  },
+  {
+   "input": [
+    "1.5::artist:hwansang ::, year 2024",
+    0.95
+   ],
+   "expected": {
+    "ok": "1.425::artist:hwansang ::, 0.95::year 2024 ::"
+   }
+  },
+  {
+   "input": [
+    "1.5::artist:hwansang ::, year 2024",
+    1.3
+   ],
+   "expected": {
+    "ok": "1.95::artist:hwansang ::, 1.3::year 2024 ::"
+   }
+  },
+  {
+   "input": [
+    "|pipe, (paren)",
+    1
+   ],
+   "expected": {
+    "ok": "|pipe, (paren)"
+   }
+  },
+  {
+   "input": [
+    "|pipe, (paren)",
+    0.7
+   ],
+   "expected": {
+    "ok": "0.7::|pipe, (paren) ::"
+   }
+  },
+  {
+   "input": [
+    "|pipe, (paren)",
+    0.5
+   ],
+   "expected": {
+    "ok": "0.5::|pipe, (paren) ::"
+   }
+  },
+  {
+   "input": [
+    "|pipe, (paren)",
+    0.95
+   ],
+   "expected": {
+    "ok": "0.95::|pipe, (paren) ::"
+   }
+  },
+  {
+   "input": [
+    "|pipe, (paren)",
+    1.3
+   ],
+   "expected": {
+    "ok": "1.3::|pipe, (paren) ::"
+   }
+  },
+  {
+   "input": [
+    "x::y",
+    1
+   ],
+   "expected": {
+    "ok": "x::y"
+   }
+  },
+  {
+   "input": [
+    "x::y",
+    0.7
+   ],
+   "expected": {
+    "ok": "0.7::x ::0.7::y ::"
+   }
+  },
+  {
+   "input": [
+    "x::y",
+    0.5
+   ],
+   "expected": {
+    "ok": "0.5::x ::0.5::y ::"
+   }
+  },
+  {
+   "input": [
+    "x::y",
+    0.95
+   ],
+   "expected": {
+    "ok": "0.95::x ::0.95::y ::"
+   }
+  },
+  {
+   "input": [
+    "x::y",
+    1.3
+   ],
+   "expected": {
+    "ok": "1.3::x ::1.3::y ::"
+   }
+  },
+  {
+   "input": [
+    "multi\nline, tags",
+    1
+   ],
+   "expected": {
+    "ok": "multi\nline, tags"
+   }
+  },
+  {
+   "input": [
+    "multi\nline, tags",
+    0.7
+   ],
+   "expected": {
+    "ok": "0.7::multi\nline, tags ::"
+   }
+  },
+  {
+   "input": [
+    "multi\nline, tags",
+    0.5
+   ],
+   "expected": {
+    "ok": "0.5::multi\nline, tags ::"
+   }
+  },
+  {
+   "input": [
+    "multi\nline, tags",
+    0.95
+   ],
+   "expected": {
+    "ok": "0.95::multi\nline, tags ::"
+   }
+  },
+  {
+   "input": [
+    "multi\nline, tags",
+    1.3
+   ],
+   "expected": {
+    "ok": "1.3::multi\nline, tags ::"
+   }
+  },
+  {
+   "input": [
+    ".5::dot::",
+    1
+   ],
+   "expected": {
+    "ok": ".5::dot::"
+   }
+  },
+  {
+   "input": [
+    ".5::dot::",
+    0.7
+   ],
+   "expected": {
+    "ok": "0.35::dot ::"
+   }
+  },
+  {
+   "input": [
+    ".5::dot::",
+    0.5
+   ],
+   "expected": {
+    "ok": "0.25::dot ::"
+   }
+  },
+  {
+   "input": [
+    ".5::dot::",
+    0.95
+   ],
+   "expected": {
+    "ok": "0.475::dot ::"
+   }
+  },
+  {
+   "input": [
+    ".5::dot::",
+    1.3
+   ],
+   "expected": {
+    "ok": "0.65::dot ::"
+   }
+  },
+  {
+   "input": [
+    "+2::plus::",
+    1
+   ],
+   "expected": {
+    "ok": "+2::plus::"
+   }
+  },
+  {
+   "input": [
+    "+2::plus::",
+    0.7
+   ],
+   "expected": {
+    "ok": "1.4::plus ::"
+   }
+  },
+  {
+   "input": [
+    "+2::plus::",
+    0.5
+   ],
+   "expected": {
+    "ok": "1::plus ::"
+   }
+  },
+  {
+   "input": [
+    "+2::plus::",
+    0.95
+   ],
+   "expected": {
+    "ok": "1.9::plus ::"
+   }
+  },
+  {
+   "input": [
+    "+2::plus::",
+    1.3
+   ],
+   "expected": {
+    "ok": "2.6::plus ::"
+   }
+  }
+ ],
+ "nonArtist": [
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {}
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negativePrompt": "blurry, lowres",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {},
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negativePrompt": "blurry, lowres",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": false,
+      "multiplier": 0.7
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negativePrompt": "blurry, lowres",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ]
+     },
+     "source": {
+      "option": {
+       "enabled": false,
+       "multiplier": 0.7
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [
+       {
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": false,
+      "multiplier": 0.7
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negativePrompt": "blurry, lowres",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ]
+     },
+     "source": {
+      "option": {
+       "enabled": false,
+       "multiplier": 0.7
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [
+       {
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 1
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negativePrompt": "blurry, lowres",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ]
+     },
+     "source": {
+      "option": {
+       "enabled": true,
+       "multiplier": 1
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [
+       {
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 1
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negativePrompt": "blurry, lowres",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ]
+     },
+     "source": {
+      "option": {
+       "enabled": true,
+       "multiplier": 1
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [
+       {
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.7
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres"
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a1",
+      "artistName": "A1",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.7
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [
+       {
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      },
+      "artistNegative": {
+       "start": 8,
+       "end": 14
+      }
+     },
+     "prompt": {
+      "positivePrompt": "0.7::1girl, solo ::, artist:foo, 0.8::artist:bar ::, 0.7::best quality ::",
+      "negativePrompt": "0.7::blurry ::, lowres",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "0.7::silver hair ::, 0.84::smile ::",
+        "negativePrompt": "0.7::bad hands ::"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.7
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres"
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a1",
+      "artistName": "A1",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.7
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [
+       {
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     },
+     "prompt": {
+      "positivePrompt": "1girl, 0.7::solo, artist:foo ::, 0.56::artist:bar ::, 0.7::best quality ::",
+      "negativePrompt": "0.7::blurry, lowres ::",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "0.7::silver hair ::, 0.84::smile ::",
+        "negativePrompt": "0.7::bad hands ::"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.66
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": ""
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a1",
+      "artistName": "A1",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.65
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [
+       {
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      }
+     },
+     "prompt": {
+      "positivePrompt": "0.65::1girl, solo ::, artist:foo, 0.8::artist:bar ::, 0.65::best quality ::",
+      "negativePrompt": "0.65::blurry, lowres ::",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "0.65::silver hair ::, 0.78::smile ::",
+        "negativePrompt": "0.65::bad hands ::"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.66
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": ""
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a1",
+      "artistName": "A1",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.65
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [
+       {
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     },
+     "prompt": {
+      "positivePrompt": "1girl, 0.65::solo, artist:foo ::, 0.52::artist:bar ::, 0.65::best quality ::",
+      "negativePrompt": "0.65::blurry, lowres ::",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "0.65::silver hair ::, 0.78::smile ::",
+        "negativePrompt": "0.65::bad hands ::"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.5
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a2",
+      "positive": "artist:missing",
+      "negative": ""
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "작가 외 가중치 적용을 위한 작가 프롬프트 구간을 확인하지 못했습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.5
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a2",
+      "positive": "artist:missing",
+      "negative": ""
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a2",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.5
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [
+       {
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     },
+     "prompt": {
+      "positivePrompt": "1girl, 0.5::solo, artist:foo ::, 0.4::artist:bar ::, 0.5::best quality ::",
+      "negativePrompt": "0.5::blurry, lowres ::",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "0.5::silver hair ::, 0.6::smile ::",
+        "negativePrompt": "0.5::bad hands ::"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {
+     "nonArtistPromptSource": {
+      "option": {
+       "enabled": true,
+       "multiplier": 0.6
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      },
+      "artistId": "src"
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "src",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.6
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [
+       {
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      }
+     },
+     "prompt": {
+      "positivePrompt": "0.6::1girl, solo ::, artist:foo, 0.8::artist:bar ::, 0.6::best quality ::",
+      "negativePrompt": "0.6::blurry, lowres ::",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "0.6::silver hair ::, 0.72::smile ::",
+        "negativePrompt": "0.6::bad hands ::"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+     "negativePrompt": "blurry, lowres",
+     "characterPrompts": [
+      {
+       "actorIndex": 0,
+       "prompt": "silver hair, 1.2::smile::",
+       "negativePrompt": "bad hands"
+      }
+     ]
+    },
+    "config": {
+     "nonArtistPromptSource": {
+      "option": {
+       "enabled": true,
+       "multiplier": 0.6
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      },
+      "artistId": "src"
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "src",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.6
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [
+       {
+        "prompt": "silver hair, 1.2::smile::",
+        "negativePrompt": "bad hands"
+       }
+      ],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      }
+     },
+     "prompt": {
+      "positivePrompt": "0.6::1girl, solo ::, artist:foo, 0.8::artist:bar ::, 0.6::best quality ::",
+      "negativePrompt": "0.6::blurry, lowres ::",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "0.6::silver hair ::, 0.72::smile ::",
+        "negativePrompt": "0.6::bad hands ::"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {}
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {},
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": false,
+      "multiplier": 0.7
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     },
+     "source": {
+      "option": {
+       "enabled": false,
+       "multiplier": 0.7
+      },
+      "positive": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres",
+      "characters": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": false,
+      "multiplier": 0.7
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     },
+     "source": {
+      "option": {
+       "enabled": false,
+       "multiplier": 0.7
+      },
+      "positive": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 1
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     },
+     "source": {
+      "option": {
+       "enabled": true,
+       "multiplier": 1
+      },
+      "positive": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres",
+      "characters": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 1
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     },
+     "source": {
+      "option": {
+       "enabled": true,
+       "multiplier": 1
+      },
+      "positive": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.7
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres"
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a1",
+      "artistName": "A1",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.7
+      },
+      "positive": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      },
+      "artistNegative": {
+       "start": 0,
+       "end": 6
+      }
+     },
+     "prompt": {
+      "positivePrompt": "nsfw, 0.7::1girl ::, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.7
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres"
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a1",
+      "artistName": "A1",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.7
+      },
+      "positive": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     },
+     "prompt": {
+      "positivePrompt": "nsfw, 0.7::1girl, artist:foo ::, 0.56::artist:bar ::",
+      "negativePrompt": "0.7::lowres ::",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.66
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": ""
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a1",
+      "artistName": "A1",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.65
+      },
+      "positive": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      }
+     },
+     "prompt": {
+      "positivePrompt": "nsfw, 0.65::1girl ::, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "0.65::lowres ::",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.66
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": ""
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a1",
+      "artistName": "A1",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.65
+      },
+      "positive": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     },
+     "prompt": {
+      "positivePrompt": "nsfw, 0.65::1girl, artist:foo ::, 0.52::artist:bar ::",
+      "negativePrompt": "0.65::lowres ::",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.5
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a2",
+      "positive": "artist:missing",
+      "negative": ""
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "작가 외 가중치 적용을 위한 작가 프롬프트 구간을 확인하지 못했습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.5
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a2",
+      "positive": "artist:missing",
+      "negative": ""
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a2",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.5
+      },
+      "positive": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     },
+     "prompt": {
+      "positivePrompt": "nsfw, 0.5::1girl, artist:foo ::, 0.4::artist:bar ::",
+      "negativePrompt": "0.5::lowres ::",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptSource": {
+      "option": {
+       "enabled": true,
+       "multiplier": 0.6
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      },
+      "artistId": "src"
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "편집으로 작가 프롬프트 구간을 확인할 수 없습니다. 원본에서 작가 구간과 나머지 내용을 나누어 편집해 주세요."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "nsfw, 1girl, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptSource": {
+      "option": {
+       "enabled": true,
+       "multiplier": 0.6
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      },
+      "artistId": "src"
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "편집으로 작가 프롬프트 구간을 확인할 수 없습니다. 원본에서 작가 구간과 나머지 내용을 나누어 편집해 주세요."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {}
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {},
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": false,
+      "multiplier": 0.7
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "",
+      "characterPrompts": []
+     },
+     "source": {
+      "option": {
+       "enabled": false,
+       "multiplier": 0.7
+      },
+      "positive": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negative": "",
+      "characters": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": false,
+      "multiplier": 0.7
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "",
+      "characterPrompts": []
+     },
+     "source": {
+      "option": {
+       "enabled": false,
+       "multiplier": 0.7
+      },
+      "positive": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negative": "",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 1
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "",
+      "characterPrompts": []
+     },
+     "source": {
+      "option": {
+       "enabled": true,
+       "multiplier": 1
+      },
+      "positive": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negative": "",
+      "characters": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 1
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "",
+      "characterPrompts": []
+     },
+     "source": {
+      "option": {
+       "enabled": true,
+       "multiplier": 1
+      },
+      "positive": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negative": "",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.7
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres"
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "작가 외 가중치 적용을 위한 작가 프롬프트 구간을 확인하지 못했습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.7
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres"
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a1",
+      "artistName": "A1",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.7
+      },
+      "positive": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negative": "",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     },
+     "prompt": {
+      "positivePrompt": "artis0.7::t:foo ::, 0.56::artist:bar ::, 0.7::artist:foo ::, 0.56::artist:bar ::",
+      "negativePrompt": "",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.66
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": ""
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "작가 외 가중치 적용을 위한 작가 프롬프트 구간을 확인하지 못했습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.66
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": ""
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a1",
+      "artistName": "A1",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.65
+      },
+      "positive": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negative": "",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     },
+     "prompt": {
+      "positivePrompt": "artis0.65::t:foo ::, 0.52::artist:bar ::, 0.65::artist:foo ::, 0.52::artist:bar ::",
+      "negativePrompt": "",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.5
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a2",
+      "positive": "artist:missing",
+      "negative": ""
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "작가 외 가중치 적용을 위한 작가 프롬프트 구간을 확인하지 못했습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.5
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a2",
+      "positive": "artist:missing",
+      "negative": ""
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a2",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.5
+      },
+      "positive": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+      "negative": "",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     },
+     "prompt": {
+      "positivePrompt": "artis0.5::t:foo ::, 0.4::artist:bar ::, 0.5::artist:foo ::, 0.4::artist:bar ::",
+      "negativePrompt": "",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptSource": {
+      "option": {
+       "enabled": true,
+       "multiplier": 0.6
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      },
+      "artistId": "src"
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "편집으로 작가 프롬프트 구간을 확인할 수 없습니다. 원본에서 작가 구간과 나머지 내용을 나누어 편집해 주세요."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "artist:foo, 0.8::artist:bar ::, artist:foo, 0.8::artist:bar ::",
+     "negativePrompt": "",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptSource": {
+      "option": {
+       "enabled": true,
+       "multiplier": 0.6
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      },
+      "artistId": "src"
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "편집으로 작가 프롬프트 구간을 확인할 수 없습니다. 원본에서 작가 구간과 나머지 내용을 나누어 편집해 주세요."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {}
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "1girl, no artist here",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {},
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "1girl, no artist here",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": false,
+      "multiplier": 0.7
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "1girl, no artist here",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     },
+     "source": {
+      "option": {
+       "enabled": false,
+       "multiplier": 0.7
+      },
+      "positive": "1girl, no artist here",
+      "negative": "lowres",
+      "characters": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": false,
+      "multiplier": 0.7
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "1girl, no artist here",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     },
+     "source": {
+      "option": {
+       "enabled": false,
+       "multiplier": 0.7
+      },
+      "positive": "1girl, no artist here",
+      "negative": "lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 1
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "1girl, no artist here",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     },
+     "source": {
+      "option": {
+       "enabled": true,
+       "multiplier": 1
+      },
+      "positive": "1girl, no artist here",
+      "negative": "lowres",
+      "characters": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 1
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "prompt": {
+      "positivePrompt": "1girl, no artist here",
+      "negativePrompt": "lowres",
+      "characterPrompts": []
+     },
+     "source": {
+      "option": {
+       "enabled": true,
+       "multiplier": 1
+      },
+      "positive": "1girl, no artist here",
+      "negative": "lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.7
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres"
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "작가 외 가중치 적용을 위한 작가 프롬프트 구간을 확인하지 못했습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.7
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres"
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a1",
+      "artistName": "A1",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.7
+      },
+      "positive": "1girl, no artist here",
+      "negative": "lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     },
+     "prompt": {
+      "positivePrompt": "1girl, 0.7::no artist here ::",
+      "negativePrompt": "0.7::lowres ::",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.66
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": ""
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "작가 외 가중치 적용을 위한 작가 프롬프트 구간을 확인하지 못했습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.66
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": ""
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a1",
+      "artistName": "A1",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.65
+      },
+      "positive": "1girl, no artist here",
+      "negative": "lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     },
+     "prompt": {
+      "positivePrompt": "1girl, 0.65::no artist here ::",
+      "negativePrompt": "0.65::lowres ::",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.5
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a2",
+      "positive": "artist:missing",
+      "negative": ""
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "작가 외 가중치 적용을 위한 작가 프롬프트 구간을 확인하지 못했습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.5
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a2",
+      "positive": "artist:missing",
+      "negative": ""
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "source": {
+      "artistId": "a2",
+      "option": {
+       "enabled": true,
+       "multiplier": 0.5
+      },
+      "positive": "1girl, no artist here",
+      "negative": "lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 0,
+       "end": 5
+      }
+     },
+     "prompt": {
+      "positivePrompt": "1girl, 0.5::no artist here ::",
+      "negativePrompt": "0.5::lowres ::",
+      "characterPrompts": []
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptSource": {
+      "option": {
+       "enabled": true,
+       "multiplier": 0.6
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      },
+      "artistId": "src"
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "편집으로 작가 프롬프트 구간을 확인할 수 없습니다. 원본에서 작가 구간과 나머지 내용을 나누어 편집해 주세요."
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "positivePrompt": "1girl, no artist here",
+     "negativePrompt": "lowres",
+     "characterPrompts": []
+    },
+    "config": {
+     "nonArtistPromptSource": {
+      "option": {
+       "enabled": true,
+       "multiplier": 0.6
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      },
+      "artistId": "src"
+     }
+    },
+    "segments": {
+     "artistPositive": {
+      "start": 0,
+      "end": 5
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "편집으로 작가 프롬프트 구간을 확인할 수 없습니다. 원본에서 작가 구간과 나머지 내용을 나누어 편집해 주세요."
+    }
+   }
+  }
+ ],
+ "requestWeight": [
+  {
+   "input": {
+    "body": {
+     "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+     "parameters": {
+      "negative_prompt": "lowres, blurry",
+      "v4_prompt": {
+       "caption": {
+        "base_caption": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+        "char_captions": [
+         {
+          "char_caption": "silver hair",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "black hair",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       "use_coords": true
+      },
+      "v4_negative_prompt": {
+       "caption": {
+        "base_caption": "lowres, blurry",
+        "char_captions": [
+         {
+          "char_caption": "bad hands",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    },
+    "config": {}
+   },
+   "expected": {
+    "ok": {
+     "body": {
+      "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+      "parameters": {
+       "negative_prompt": "lowres, blurry",
+       "v4_prompt": {
+        "caption": {
+         "base_caption": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+         "char_captions": [
+          {
+           "char_caption": "silver hair",
+           "centers": [
+            {
+             "x": 0.3,
+             "y": 0.5
+            }
+           ]
+          },
+          {
+           "char_caption": "black hair",
+           "centers": [
+            {
+             "x": 0.7,
+             "y": 0.5
+            }
+           ]
+          }
+         ]
+        },
+        "use_coords": true
+       },
+       "v4_negative_prompt": {
+        "caption": {
+         "base_caption": "lowres, blurry",
+         "char_captions": [
+          {
+           "char_caption": "bad hands",
+           "centers": [
+            {
+             "x": 0.3,
+             "y": 0.5
+            }
+           ]
+          },
+          {
+           "char_caption": "",
+           "centers": [
+            {
+             "x": 0.7,
+             "y": 0.5
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     },
+     "finalizedPrompt": {
+      "positivePrompt": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+      "negativePrompt": "lowres, blurry",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "silver hair",
+        "negativePrompt": "bad hands",
+        "centerX": 0.3,
+        "centerY": 0.5
+       },
+       {
+        "actorIndex": 1,
+        "prompt": "black hair",
+        "negativePrompt": "",
+        "centerX": 0.7,
+        "centerY": 0.5
+       }
+      ],
+      "weight": {
+       "status": "unconfigured"
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+     "parameters": {
+      "negative_prompt": "lowres, blurry",
+      "v4_prompt": {
+       "caption": {
+        "base_caption": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+        "char_captions": [
+         {
+          "char_caption": "silver hair",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "black hair",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       "use_coords": true
+      },
+      "v4_negative_prompt": {
+       "caption": {
+        "base_caption": "lowres, blurry",
+        "char_captions": [
+         {
+          "char_caption": "bad hands",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": false,
+      "multiplier": 0.7
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "body": {
+      "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+      "parameters": {
+       "negative_prompt": "lowres, blurry",
+       "v4_prompt": {
+        "caption": {
+         "base_caption": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+         "char_captions": [
+          {
+           "char_caption": "silver hair",
+           "centers": [
+            {
+             "x": 0.3,
+             "y": 0.5
+            }
+           ]
+          },
+          {
+           "char_caption": "black hair",
+           "centers": [
+            {
+             "x": 0.7,
+             "y": 0.5
+            }
+           ]
+          }
+         ]
+        },
+        "use_coords": true
+       },
+       "v4_negative_prompt": {
+        "caption": {
+         "base_caption": "lowres, blurry",
+         "char_captions": [
+          {
+           "char_caption": "bad hands",
+           "centers": [
+            {
+             "x": 0.3,
+             "y": 0.5
+            }
+           ]
+          },
+          {
+           "char_caption": "",
+           "centers": [
+            {
+             "x": 0.7,
+             "y": 0.5
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     },
+     "finalizedPrompt": {
+      "positivePrompt": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+      "negativePrompt": "lowres, blurry",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "silver hair",
+        "negativePrompt": "bad hands",
+        "centerX": 0.3,
+        "centerY": 0.5
+       },
+       {
+        "actorIndex": 1,
+        "prompt": "black hair",
+        "negativePrompt": "",
+        "centerX": 0.7,
+        "centerY": 0.5
+       }
+      ],
+      "source": {
+       "option": {
+        "enabled": false,
+        "multiplier": 0.7
+       },
+       "positive": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+       "negative": "lowres, blurry",
+       "characters": [
+        {
+         "prompt": "silver hair",
+         "negativePrompt": "bad hands"
+        },
+        {
+         "prompt": "black hair",
+         "negativePrompt": ""
+        }
+       ]
+      },
+      "weight": {
+       "status": "disabled",
+       "multiplier": 0.7
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+     "parameters": {
+      "negative_prompt": "lowres, blurry",
+      "v4_prompt": {
+       "caption": {
+        "base_caption": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+        "char_captions": [
+         {
+          "char_caption": "silver hair",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "black hair",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       "use_coords": true
+      },
+      "v4_negative_prompt": {
+       "caption": {
+        "base_caption": "lowres, blurry",
+        "char_captions": [
+         {
+          "char_caption": "bad hands",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 1
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "body": {
+      "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+      "parameters": {
+       "negative_prompt": "lowres, blurry",
+       "v4_prompt": {
+        "caption": {
+         "base_caption": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+         "char_captions": [
+          {
+           "char_caption": "silver hair",
+           "centers": [
+            {
+             "x": 0.3,
+             "y": 0.5
+            }
+           ]
+          },
+          {
+           "char_caption": "black hair",
+           "centers": [
+            {
+             "x": 0.7,
+             "y": 0.5
+            }
+           ]
+          }
+         ]
+        },
+        "use_coords": true
+       },
+       "v4_negative_prompt": {
+        "caption": {
+         "base_caption": "lowres, blurry",
+         "char_captions": [
+          {
+           "char_caption": "bad hands",
+           "centers": [
+            {
+             "x": 0.3,
+             "y": 0.5
+            }
+           ]
+          },
+          {
+           "char_caption": "",
+           "centers": [
+            {
+             "x": 0.7,
+             "y": 0.5
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     },
+     "finalizedPrompt": {
+      "positivePrompt": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+      "negativePrompt": "lowres, blurry",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "silver hair",
+        "negativePrompt": "bad hands",
+        "centerX": 0.3,
+        "centerY": 0.5
+       },
+       {
+        "actorIndex": 1,
+        "prompt": "black hair",
+        "negativePrompt": "",
+        "centerX": 0.7,
+        "centerY": 0.5
+       }
+      ],
+      "source": {
+       "option": {
+        "enabled": true,
+        "multiplier": 1
+       },
+       "positive": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+       "negative": "lowres, blurry",
+       "characters": [
+        {
+         "prompt": "silver hair",
+         "negativePrompt": "bad hands"
+        },
+        {
+         "prompt": "black hair",
+         "negativePrompt": ""
+        }
+       ]
+      },
+      "weight": {
+       "status": "identity",
+       "multiplier": 1
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+     "parameters": {
+      "negative_prompt": "lowres, blurry",
+      "v4_prompt": {
+       "caption": {
+        "base_caption": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+        "char_captions": [
+         {
+          "char_caption": "silver hair",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "black hair",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       "use_coords": true
+      },
+      "v4_negative_prompt": {
+       "caption": {
+        "base_caption": "lowres, blurry",
+        "char_captions": [
+         {
+          "char_caption": "bad hands",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.7
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres"
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "finalizedPrompt": {
+      "positivePrompt": "0.7::1girl ::, artist:foo, 0.8::artist:bar ::, 0.7::scenery ::",
+      "negativePrompt": "lowres, 0.7::blurry ::",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "0.7::silver hair ::",
+        "negativePrompt": "0.7::bad hands ::",
+        "centerX": 0.3,
+        "centerY": 0.5
+       },
+       {
+        "actorIndex": 1,
+        "prompt": "0.7::black hair ::",
+        "negativePrompt": "",
+        "centerX": 0.7,
+        "centerY": 0.5
+       }
+      ],
+      "source": {
+       "artistId": "a1",
+       "artistName": "A1",
+       "option": {
+        "enabled": true,
+        "multiplier": 0.7
+       },
+       "positive": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+       "negative": "lowres, blurry",
+       "characters": [
+        {
+         "prompt": "silver hair",
+         "negativePrompt": "bad hands"
+        },
+        {
+         "prompt": "black hair",
+         "negativePrompt": ""
+        }
+       ],
+       "artistPositive": {
+        "start": 7,
+        "end": 37
+       },
+       "artistNegative": {
+        "start": 0,
+        "end": 6
+       }
+      },
+      "weight": {
+       "status": "applied",
+       "multiplier": 0.7,
+       "artistId": "a1"
+      }
+     },
+     "body": {
+      "input": "0.7::1girl ::, artist:foo, 0.8::artist:bar ::, 0.7::scenery ::",
+      "parameters": {
+       "negative_prompt": "lowres, 0.7::blurry ::",
+       "v4_prompt": {
+        "caption": {
+         "base_caption": "0.7::1girl ::, artist:foo, 0.8::artist:bar ::, 0.7::scenery ::",
+         "char_captions": [
+          {
+           "char_caption": "0.7::silver hair ::",
+           "centers": [
+            {
+             "x": 0.3,
+             "y": 0.5
+            }
+           ]
+          },
+          {
+           "char_caption": "0.7::black hair ::",
+           "centers": [
+            {
+             "x": 0.7,
+             "y": 0.5
+            }
+           ]
+          }
+         ]
+        },
+        "use_coords": true
+       },
+       "v4_negative_prompt": {
+        "caption": {
+         "base_caption": "lowres, 0.7::blurry ::",
+         "char_captions": [
+          {
+           "char_caption": "0.7::bad hands ::",
+           "centers": [
+            {
+             "x": 0.3,
+             "y": 0.5
+            }
+           ]
+          },
+          {
+           "char_caption": "",
+           "centers": [
+            {
+             "x": 0.7,
+             "y": 0.5
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+     "parameters": {
+      "negative_prompt": "lowres, blurry",
+      "v4_prompt": {
+       "caption": {
+        "base_caption": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+        "char_captions": [
+         {
+          "char_caption": "silver hair",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "black hair",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       "use_coords": true
+      },
+      "v4_negative_prompt": {
+       "caption": {
+        "base_caption": "lowres, blurry",
+        "char_captions": [
+         {
+          "char_caption": "bad hands",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.66
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": ""
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "finalizedPrompt": {
+      "positivePrompt": "0.65::1girl ::, artist:foo, 0.8::artist:bar ::, 0.65::scenery ::",
+      "negativePrompt": "0.65::lowres, blurry ::",
+      "characterPrompts": [
+       {
+        "actorIndex": 0,
+        "prompt": "0.65::silver hair ::",
+        "negativePrompt": "0.65::bad hands ::",
+        "centerX": 0.3,
+        "centerY": 0.5
+       },
+       {
+        "actorIndex": 1,
+        "prompt": "0.65::black hair ::",
+        "negativePrompt": "",
+        "centerX": 0.7,
+        "centerY": 0.5
+       }
+      ],
+      "source": {
+       "artistId": "a1",
+       "artistName": "A1",
+       "option": {
+        "enabled": true,
+        "multiplier": 0.65
+       },
+       "positive": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+       "negative": "lowres, blurry",
+       "characters": [
+        {
+         "prompt": "silver hair",
+         "negativePrompt": "bad hands"
+        },
+        {
+         "prompt": "black hair",
+         "negativePrompt": ""
+        }
+       ],
+       "artistPositive": {
+        "start": 7,
+        "end": 37
+       }
+      },
+      "weight": {
+       "status": "applied",
+       "multiplier": 0.65,
+       "artistId": "a1"
+      }
+     },
+     "body": {
+      "input": "0.65::1girl ::, artist:foo, 0.8::artist:bar ::, 0.65::scenery ::",
+      "parameters": {
+       "negative_prompt": "0.65::lowres, blurry ::",
+       "v4_prompt": {
+        "caption": {
+         "base_caption": "0.65::1girl ::, artist:foo, 0.8::artist:bar ::, 0.65::scenery ::",
+         "char_captions": [
+          {
+           "char_caption": "0.65::silver hair ::",
+           "centers": [
+            {
+             "x": 0.3,
+             "y": 0.5
+            }
+           ]
+          },
+          {
+           "char_caption": "0.65::black hair ::",
+           "centers": [
+            {
+             "x": 0.7,
+             "y": 0.5
+            }
+           ]
+          }
+         ]
+        },
+        "use_coords": true
+       },
+       "v4_negative_prompt": {
+        "caption": {
+         "base_caption": "0.65::lowres, blurry ::",
+         "char_captions": [
+          {
+           "char_caption": "0.65::bad hands ::",
+           "centers": [
+            {
+             "x": 0.3,
+             "y": 0.5
+            }
+           ]
+          },
+          {
+           "char_caption": "",
+           "centers": [
+            {
+             "x": 0.7,
+             "y": 0.5
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+     "parameters": {
+      "negative_prompt": "lowres, blurry",
+      "v4_prompt": {
+       "caption": {
+        "base_caption": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+        "char_captions": [
+         {
+          "char_caption": "silver hair",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "black hair",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       "use_coords": true
+      },
+      "v4_negative_prompt": {
+       "caption": {
+        "base_caption": "lowres, blurry",
+        "char_captions": [
+         {
+          "char_caption": "bad hands",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.5
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a2",
+      "positive": "artist:missing",
+      "negative": ""
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "작가 외 가중치 적용을 위한 작가 프롬프트 구간을 확인하지 못했습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+     "parameters": {
+      "negative_prompt": "lowres, blurry",
+      "v4_prompt": {
+       "caption": {
+        "base_caption": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
+        "char_captions": [
+         {
+          "char_caption": "silver hair",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "black hair",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       },
+       "use_coords": true
+      },
+      "v4_negative_prompt": {
+       "caption": {
+        "base_caption": "lowres, blurry",
+        "char_captions": [
+         {
+          "char_caption": "bad hands",
+          "centers": [
+           {
+            "x": 0.3,
+            "y": 0.5
+           }
+          ]
+         },
+         {
+          "char_caption": "",
+          "centers": [
+           {
+            "x": 0.7,
+            "y": 0.5
+           }
+          ]
+         }
+        ]
+       }
+      }
+     }
+    },
+    "config": {
+     "nonArtistPromptSource": {
+      "option": {
+       "enabled": true,
+       "multiplier": 0.6
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      },
+      "artistId": "src"
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "편집으로 작가 프롬프트 구간을 확인할 수 없습니다. 원본에서 작가 구간과 나머지 내용을 나누어 편집해 주세요."
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+     "parameters": {
+      "negative_prompt": "lowres"
+     }
+    },
+    "config": {}
+   },
+   "expected": {
+    "ok": {
+     "body": {
+      "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+      "parameters": {
+       "negative_prompt": "lowres"
+      }
+     },
+     "finalizedPrompt": {
+      "positivePrompt": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "lowres",
+      "characterPrompts": [],
+      "weight": {
+       "status": "unconfigured"
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+     "parameters": {
+      "negative_prompt": "lowres"
+     }
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": false,
+      "multiplier": 0.7
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "body": {
+      "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+      "parameters": {
+       "negative_prompt": "lowres"
+      }
+     },
+     "finalizedPrompt": {
+      "positivePrompt": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "lowres",
+      "characterPrompts": [],
+      "source": {
+       "option": {
+        "enabled": false,
+        "multiplier": 0.7
+       },
+       "positive": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+       "negative": "lowres",
+       "characters": []
+      },
+      "weight": {
+       "status": "disabled",
+       "multiplier": 0.7
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+     "parameters": {
+      "negative_prompt": "lowres"
+     }
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 1
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "body": {
+      "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+      "parameters": {
+       "negative_prompt": "lowres"
+      }
+     },
+     "finalizedPrompt": {
+      "positivePrompt": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "lowres",
+      "characterPrompts": [],
+      "source": {
+       "option": {
+        "enabled": true,
+        "multiplier": 1
+       },
+       "positive": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+       "negative": "lowres",
+       "characters": []
+      },
+      "weight": {
+       "status": "identity",
+       "multiplier": 1
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+     "parameters": {
+      "negative_prompt": "lowres"
+     }
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.7
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": "lowres"
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "finalizedPrompt": {
+      "positivePrompt": "nsfw, 0.7::solo ::, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "lowres",
+      "characterPrompts": [],
+      "source": {
+       "artistId": "a1",
+       "artistName": "A1",
+       "option": {
+        "enabled": true,
+        "multiplier": 0.7
+       },
+       "positive": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+       "negative": "lowres",
+       "characters": [],
+       "artistPositive": {
+        "start": 12,
+        "end": 42
+       },
+       "artistNegative": {
+        "start": 0,
+        "end": 6
+       }
+      },
+      "weight": {
+       "status": "applied",
+       "multiplier": 0.7,
+       "artistId": "a1"
+      }
+     },
+     "body": {
+      "input": "nsfw, 0.7::solo ::, artist:foo, 0.8::artist:bar ::",
+      "parameters": {
+       "negative_prompt": "lowres"
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+     "parameters": {
+      "negative_prompt": "lowres"
+     }
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.66
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a1",
+      "name": "A1",
+      "positive": "artist:foo, 0.8::artist:bar ::",
+      "negative": ""
+     }
+    }
+   },
+   "expected": {
+    "ok": {
+     "finalizedPrompt": {
+      "positivePrompt": "nsfw, 0.65::solo ::, artist:foo, 0.8::artist:bar ::",
+      "negativePrompt": "0.65::lowres ::",
+      "characterPrompts": [],
+      "source": {
+       "artistId": "a1",
+       "artistName": "A1",
+       "option": {
+        "enabled": true,
+        "multiplier": 0.65
+       },
+       "positive": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+       "negative": "lowres",
+       "characters": [],
+       "artistPositive": {
+        "start": 12,
+        "end": 42
+       }
+      },
+      "weight": {
+       "status": "applied",
+       "multiplier": 0.65,
+       "artistId": "a1"
+      }
+     },
+     "body": {
+      "input": "nsfw, 0.65::solo ::, artist:foo, 0.8::artist:bar ::",
+      "parameters": {
+       "negative_prompt": "0.65::lowres ::"
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+     "parameters": {
+      "negative_prompt": "lowres"
+     }
+    },
+    "config": {
+     "nonArtistPromptWeight": {
+      "enabled": true,
+      "multiplier": 0.5
+     },
+     "nonArtistPromptWeightArtist": {
+      "id": "a2",
+      "positive": "artist:missing",
+      "negative": ""
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "작가 외 가중치 적용을 위한 작가 프롬프트 구간을 확인하지 못했습니다."
+    }
+   }
+  },
+  {
+   "input": {
+    "body": {
+     "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
+     "parameters": {
+      "negative_prompt": "lowres"
+     }
+    },
+    "config": {
+     "nonArtistPromptSource": {
+      "option": {
+       "enabled": true,
+       "multiplier": 0.6
+      },
+      "positive": "1girl, solo, artist:foo, 0.8::artist:bar ::, best quality",
+      "negative": "blurry, lowres",
+      "characters": [],
+      "artistPositive": {
+       "start": 13,
+       "end": 43
+      },
+      "artistId": "src"
+     }
+    }
+   },
+   "expected": {
+    "error": {
+     "name": "Error",
+     "message": "편집으로 작가 프롬프트 구간을 확인할 수 없습니다. 원본에서 작가 구간과 나머지 내용을 나누어 편집해 주세요."
+    }
+   }
+  }
+ ]
+}
