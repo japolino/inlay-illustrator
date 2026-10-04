@@ -63,6 +63,9 @@ describe("image bytes bridge", () => {
     const crop = await bytes.getAsset({ name: "__asset_maid_crop_1.png", key: "x", extension: "png", sourceType: "character", moduleId: "", moduleName: "", characterTarget: { chaId: "c1" } });
     expect(crop).toEqual({ data: bytesToBase64(new Uint8Array([1, 2, 3])), mimeType: "image/png" });
     expect(await bytes.getAsset({ name: "a.jpg", key: "u1", extension: "jpg", sourceType: "upload", moduleId: "", moduleName: "" })).toEqual({ data: "BA==", mimeType: "image/jpeg" });
+    expect(await bytes.getAsset({ name: "up.webp", key: "storage:uploads/u1.jpg", extension: "webp", sourceType: "upload", moduleId: "", moduleName: "" })).toEqual({ data: "BA==", mimeType: "image/jpeg" });
+    await expect(bytes.getAsset({ name: "x", key: "storage:uploads/none.png", extension: "png", sourceType: "upload", moduleId: "", moduleName: "" })).rejects.toMatchObject({ error: { code: "not-found" } });
+    await expect(bytes.getAsset({ name: "x", key: "storage:../secret.png", extension: "png", sourceType: "upload", moduleId: "", moduleName: "" })).rejects.toMatchObject({ error: { code: "bad-request" } });
     fake.addImage({ id: "g1", url: "/api/v1/images/g1" });
     answerFetchBridge(fake, { "/api/v1/images/g1": { data: TINY_PNG_BASE64, mimeType: "image/webp" } });
     expect((await bytes.getAsset({ name: "smile.webp", key: "g1", extension: "webp", sourceType: "character", moduleId: "", moduleName: "" })).mimeType).toBe("image/webp");

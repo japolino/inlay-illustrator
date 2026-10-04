@@ -6,6 +6,7 @@
  *
  * Assets (AssetRef by sourceType, docs/CONTRACT.md §2):
  * - crop (`cropReference` / `__asset_maid_crop_*` names): userStorage `characters/<chaId>/reference-crops/<name>.png`
+ * - key `storage:<userStorage path>` (analysis uploads / crops stored by the extension): bytes from userStorage
  * - upload: userStorage `uploads/<key>.<ext>` when present, else the key is a Lumiverse image id
  * - character / generated / persona / gallery / expression / risu asset / avatar: `key` = Lumiverse image id
  */
@@ -25,6 +26,8 @@ import type { ImageBytes, ImageBytesService, RunLog, SpindleHost, StorageService
 import { abortError, asRecord, errorMessage, str } from "./util.js";
 
 export const FETCH_BRIDGE_TIMEOUT_MS = 15_000;
+/** AssetRef key prefix for images kept in the extension's userStorage (`storage:<path>`). */
+export const STORAGE_KEY_PREFIX = "storage:";
 const IMAGE_MIME = /^image\/(?:png|jpe?g|webp|gif|avif)$/;
 
 export interface ImageBytesServiceDeps {
@@ -128,6 +131,14 @@ export function createImageBytesService(deps: ImageBytesServiceDeps): ImageBytes
     return bytes ? { data: bytesToBase64(bytes), mimeType: mimeTypeForExtension(extension) } : null;
   }
 
+  async function fromStorageKey(key: string): Promise<ImageBytes> {
+    const path = key.slice(STORAGE_KEY_PREFIX.length).replace(/\\/g, "/").replace(/^\/+/, "");
+    if (!path || path.split("/").some((part) => part === ".." || part === ".")) fail("bad-request", `Invalid storage asset key: ${key}`, { detailCode: "ASSET_KEY_INVALID" });
+    const bytes = await fromStorage(path, path.split(".").at(-1) ?? "png");
+    if (!bytes) fail("not-found", `Stored image not found: ${path}`, { detailCode: "IMAGE_NOT_FOUND" });
+    return bytes;
+  }
+
   const service = {
     pendingCount: () => pending.size,
 
@@ -139,6 +150,7 @@ export function createImageBytesService(deps: ImageBytesServiceDeps): ImageBytes
 
     async getAsset(raw: AssetRef, options: { signal?: AbortSignal } = {}) {
       const asset = normalizeAssetRef(raw);
+      if (asset.key.startsWith(STORAGE_KEY_PREFIX)) return fromStorageKey(asset.key);
       const crop = asRecord(asset.cropReference);
       const characterId = str(asset.characterTarget?.chaId);
       if ((Object.keys(crop).length || asset.name.startsWith(CROP_ASSET_NAME_PREFIX)) && characterId) {
@@ -147,6 +159,7 @@ export function createImageBytesService(deps: ImageBytesServiceDeps): ImageBytes
         if (bytes) return bytes;
         // Fall through to the source image of the crop.
         const sourceKey = str(crop.assetKey);
+        if (sourceKey.startsWith(STORAGE_KEY_PREFIX)) return fromStorageKey(sourceKey);
         if (sourceKey) return service.getImage(sourceKey.startsWith("/api/") ? { url: sourceKey } : { imageId: sourceKey }, options);
       }
       if (asset.sourceType === "upload" && asset.key) {

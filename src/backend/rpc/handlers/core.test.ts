@@ -9,7 +9,7 @@ function setup() {
   const fake = createFakeHost();
   const services = createServices(fake.host, fake.userId);
   fake.host.onFrontendMessage((payload) => void services.imageBytes.acceptFrontendMessage(payload as Record<string, unknown>));
-  const ctx: RpcContext = { ...services, modules: {} };
+  const ctx: RpcContext = { ...services, modules: {} as RpcContext["modules"] };
   const call = async <M extends RpcMethod>(method: M, params: RpcParams<M>): Promise<RpcResult<M>> => {
     const handler = coreHandlers[method] as ((p: RpcParams<M>, c: RpcContext) => Promise<RpcResult<M>> | RpcResult<M>) | undefined;
     if (!handler) throw new Error(`no handler ${method}`);
