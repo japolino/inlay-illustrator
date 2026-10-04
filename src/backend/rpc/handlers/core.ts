@@ -148,6 +148,15 @@ export const coreHandlers: HandlerGroup = {
     return { protocol: RPC_PROTOCOL_VERSION, status: await backendStatus(ctx) };
   },
   "session.getStatus": (_params, ctx) => backendStatus(ctx),
+  async "session.closeHostDrawer"(_params, ctx) {
+    const ui = (ctx.host as { ui?: { closeDrawer?: (options?: { userId?: string }) => Promise<void> | void } }).ui;
+    try {
+      await ui?.closeDrawer?.(ctx.userId ? { userId: ctx.userId } : undefined);
+    } catch (error) {
+      ctx.log.append("debug", "ui", `closeDrawer failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    return { ok: true };
+  },
 
   /* settings */
   async "config.get"(_params, ctx) {

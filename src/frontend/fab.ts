@@ -66,6 +66,10 @@ body:has([class*="_wrapperOpen_"] > [data-lumiverse-surface="viewport-drawer"]) 
 body:has([class*="_wrapperOpen_"] > [data-lumiverse-surface="viewport-drawer"]) .ii-am-root.ii-am-chat-runtime-host:not([data-ii-zoom="true"]) {
   visibility: hidden !important;
 }
+/* The drawer's edge handle stays above the app overlay (same isolation): hide it while our overlay is open. */
+body:has(.ii-am-overlay[data-state="open"]) [data-app-root] button[class*="_drawerTab_"] {
+  visibility: hidden !important;
+}
 .inlay-fab {
   position: fixed;
   width: 48px;

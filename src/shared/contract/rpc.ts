@@ -339,6 +339,8 @@ export interface RpcMethods {
   /* session / status */
   "session.hello": { params: { protocol: number; clientId: string; surface: "overlay" | "drawer" | "chat" }; result: { protocol: number; status: BackendStatus } };
   "session.getStatus": { params: Empty; result: BackendStatus };
+  /** Close the host's sidebar drawer (`spindle.ui.closeDrawer`): it is layered above the app overlay. No-op when unavailable. */
+  "session.closeHostDrawer": { params: Empty; result: Ok };
 
   /* settings (analysis-profile, model, image-model, system pages) */
   "config.get": { params: Empty; result: { config: InlayConfig; chatImageGeneration: ChatImageGenerationSettings; uiState: UiState } };
@@ -548,7 +550,7 @@ export type RpcEnvelope = RpcRequest | RpcResponse | RpcEvent;
 
 /** Runtime list of methods (for validation / routing tables). */
 export const RPC_METHODS = [
-  "session.hello", "session.getStatus",
+  "session.hello", "session.getStatus", "session.closeHostDrawer",
   "config.get", "config.update", "config.factoryReset", "chatImageGeneration.set", "uiState.set",
   "connections.listLlm", "connections.listImage", "connections.listImageModels", "connections.listLlmModels", "analyzer.testMessage", "image.testConnection",
   "workspace.listCharacters", "workspace.load", "roster.setRegistered", "roster.setActive", "roster.setSourceConnected", "recognitionKeys.set",

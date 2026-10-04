@@ -46,6 +46,14 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
     }
   });
 
+  // The host drawer is layered above the app overlay (z-index 9992 > 9990): close it whenever the overlay opens.
+  let overlayWasOpen = store.get().overlayOpen;
+  const unsubOverlayDrawer = store.subscribe(() => {
+    const open = store.get().overlayOpen;
+    if (open && !overlayWasOpen) void app.call("session.closeHostDrawer", {}).catch(() => undefined);
+    overlayWasOpen = open;
+  });
+
   // Chat side: zoom viewer + controls around baked illustrations.
   const zoom = createZoomViewer(ctx, app);
   const removeChatSide = installChatSide(ctx, app, {
@@ -159,6 +167,7 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
   const cleanup = () => {
     unsubForeign();
     unsubChatSwitched();
+    unsubOverlayDrawer();
     removeChatSide();
     zoom.destroy();
     removeInputBarClick?.();
