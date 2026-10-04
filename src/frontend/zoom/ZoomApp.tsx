@@ -4,7 +4,7 @@
  * board, AI prompt edit, slot deletion and the chat state window. State and actions: ./session.ts.
  */
 import type { ComponentChildren } from "preact";
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ZoomPromptSection } from "../../shared/contract/rpc.js";
 import { cn } from "../overlay/ui/cn.js";
 import { Dialog, IconButton } from "../overlay/ui/index.js";
@@ -153,17 +153,20 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
     : null;
 
   // Arrow keys: ←/→ chat images, ↑/↓ generation log (AM 164811); not while locked or typing.
+  const latest = useRef({ session, locked });
+  latest.current = { session, locked };
   useEffect(() => {
     const win = doc.defaultView;
     if (!win) return undefined;
     const onKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-      if (locked || isEditableTarget(event.target)) return;
+      const { session: current, locked: isLocked } = latest.current;
+      if (isLocked || isEditableTarget(event.target)) return;
       const map: Record<string, () => void> = {
-        ArrowLeft: () => session.stepItem(-1),
-        ArrowRight: () => session.stepItem(1),
-        ArrowUp: () => session.stepHistory(-1),
-        ArrowDown: () => session.stepHistory(1)
+        ArrowLeft: () => current.stepItem(-1),
+        ArrowRight: () => current.stepItem(1),
+        ArrowUp: () => current.stepHistory(-1),
+        ArrowDown: () => current.stepHistory(1)
       };
       const action = map[event.key];
       if (!action) return;
@@ -173,7 +176,7 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
     };
     win.addEventListener("keydown", onKey, true);
     return () => win.removeEventListener("keydown", onKey, true);
-  });
+  }, [doc]);
 
   const position = Math.max(0, session.items.findIndex((i) => i.slotId === session.target.slotId)) + (session.items.length ? 1 : 0);
   const chatImagesBadge = `${position}/${session.items.length}`;

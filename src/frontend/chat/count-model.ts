@@ -64,7 +64,7 @@ export function countView(settings: ChatImageGenerationSettings, limits: CountLi
   const policy = normalizeCountPolicy(settings.countPolicy, 1, limits.maximumCount);
   const values = policy.values ?? { fixed: policy.max, min: policy.min, max: policy.max };
   const mode: CountMode = settings.analysisMode === "split" && limits.splitSupported ? "split" : policy.mode;
-  const totalCap = Math.min(SPLIT_ANALYSIS_MAX_TOTAL, Math.max(1, limits.maximumCount));
+  const totalCap = SPLIT_ANALYSIS_MAX_TOTAL;
   const total = clamp(settings.splitAnalysis.totalCount ?? Math.min(limits.maximumCount, policy.max), 1, totalCap);
   const batchCap = maxSplitBatchSize(total);
   return {

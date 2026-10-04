@@ -6,7 +6,7 @@
  */
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
 import { render } from "preact";
-import { pagerStep, type ChatMessageUiState } from "../../shared/contract/chat-dom.js";
+import { CHAT_IMAGE_WIDTH_VAR, pagerStep, type ChatMessageUiState } from "../../shared/contract/chat-dom.js";
 import type { GenerationJobSnapshot } from "../../shared/contract/rpc.js";
 import { toRpcError } from "../rpc/client.js";
 import type { AppController } from "../state/app-state.js";
@@ -437,9 +437,24 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
     if (recent) return;
     runtime.notice({ tone: notice.tone, message: notice.message, key: notice.key });
   }));
+  // Live image width (AM `wbt`): baked blocks read `--ii-am-chat-image-width`; set it only after the width
+  // setting changes in this session (blocks baked earlier carry the old percent inline).
+  let widthPercent = app.state.config?.runtime.chatImageWidthPercent ?? null;
+  let removeWidthStyle: (() => void) | null = null;
+  const syncWidth = () => {
+    const next = app.state.config?.runtime.chatImageWidthPercent ?? null;
+    if (next === null || next === widthPercent) return;
+    const changed = widthPercent !== null;
+    widthPercent = next;
+    if (!changed) return;
+    removeWidthStyle?.();
+    removeWidthStyle = ctx.dom.addStyle(`[${"data-inlay-illustrator"}="true"]{${CHAT_IMAGE_WIDTH_VAR}:${Math.min(100, Math.max(30, Math.round(next)))}%}`);
+  };
+  disposers.push(() => removeWidthStyle?.());
   let lastJobs = app.state.generationJobs;
   let lastSettings = app.state.chatImageGeneration;
   disposers.push(app.store.subscribe(() => {
+    syncWidth();
     const s = app.state;
     if (s.generationJobs !== lastJobs || s.chatImageGeneration !== lastSettings) {
       lastJobs = s.generationJobs;
