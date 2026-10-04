@@ -148,7 +148,7 @@ function styleSelectors(css: string): string[] {
 describe("chat-side stylesheet", () => {
   test("every rule is anchored on our own markup", () => {
     // `.inlay-illustrator-frame` is our own baked frame class; the scope checker only knows `.ii-am-root`.
-    const violations = findScopeViolations(CHAT_SIDE_CSS.replace(/\.inlay-illustrator-frame:hover /gu, ".ii-am-root "));
+    const violations = findScopeViolations(CHAT_SIDE_CSS.replace(/\.inlay-illustrator-frame(:hover)? /gu, ".ii-am-root ").replace(/\.inlay-illustrator-frame > /gu, ".ii-am-root > "));
     expect(violations).toEqual([]);
     for (const selector of styleSelectors(CHAT_SIDE_CSS)) {
       expect(/^\.(?:ii-am-root|inlay-illustrator-frame)[.:\s[]/u.test(selector) || selector === ".ii-am-root").toBe(true);

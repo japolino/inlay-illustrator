@@ -160,7 +160,9 @@ export function illustrationBlockStyles(width: number, height: number, widthPerc
   return {
     wrapper: "display:flex;flex-direction:column;align-items:center;margin:10px 0;width:100%;",
     frame: `position:relative;display:block;width:var(${CHAT_IMAGE_WIDTH_VAR},${pct}%);max-width:100%;max-height:min(994px,85vh);aspect-ratio:${ratio};overflow:hidden;border-radius:8px;`,
-    image: `display:block;width:100%;height:100%;aspect-ratio:${ratio};object-fit:contain;border-radius:8px;cursor:zoom-in;`,
+    // max-height:none: host prose CSS caps message images (`--prose-image-max-height`, 240px) and would shrink the image
+    // inside the frame.
+    image: `display:block;width:100%;height:100%;max-width:100%;max-height:none;aspect-ratio:${ratio};object-fit:contain;border-radius:8px;cursor:zoom-in;`,
   };
 }
 

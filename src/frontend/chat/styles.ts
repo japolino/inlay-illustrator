@@ -168,6 +168,9 @@ export const CHAT_SIDE_CSS = String.raw`
   opacity: 0;
   transition: opacity .16s ease;
 }
+/* Host prose CSS caps message images (max-height: var(--prose-image-max-height, 240px)); blocks baked before the inline
+   max-height:none fix still need this override. */
+.inlay-illustrator-frame > img.inlay-illustrator-img { max-height: none !important; max-width: 100% !important; height: 100% !important; }
 .inlay-illustrator-frame:hover .ii-am-root.ii-am-chat-edge,
 .ii-am-root.ii-am-chat-edge:focus-within,
 .ii-am-root.ii-am-chat-edge[data-ii-busy="true"] { opacity: 1; }
