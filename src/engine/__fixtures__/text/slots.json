@@ -1,0 +1,3445 @@
+{
+ "generatedAssetName": "Alice.__am__.chat.00000000-0000-4000-8000-000000000000",
+ "cases": [
+  {
+   "input": {
+    "name": "simple/none",
+    "messageKey": "illustration:msg-1",
+    "content": "First paragraph.\n\nSecond paragraph.\n\nThird paragraph.",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "First paragraph.",
+       "Second paragraph.",
+       "Third paragraph."
+      ],
+      "insertionOffsets": [
+       18,
+       37
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "First paragraph.",
+        "afterText": "Second paragraph."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Second paragraph.",
+        "afterText": "Third paragraph."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "First paragraph.\n\nSecond paragraph.\n\nThird paragraph."
+    },
+    "stripNames": {
+     "ok": "First paragraph.\n\nSecond paragraph.\n\nThird paragraph."
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "First paragraph.",
+       "Second paragraph.",
+       "Third paragraph."
+      ],
+      "insertionOffsets": [
+       18,
+       37
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "First paragraph.",
+        "afterText": "Second paragraph."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Second paragraph.",
+        "afterText": "Third paragraph."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "single/none",
+    "messageKey": "illustration:msg-1",
+    "content": "Only one paragraph here.",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Only one paragraph here."
+      ],
+      "insertionOffsets": [],
+      "slots": []
+     }
+    },
+    "strip": {
+     "ok": "Only one paragraph here."
+    },
+    "stripNames": {
+     "ok": "Only one paragraph here."
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Only one paragraph here."
+      ],
+      "insertionOffsets": [],
+      "slots": [],
+      "noSlotsDiagnostics": {
+       "unfilteredSlotCount": 0,
+       "filteredSlotCount": 0,
+       "assetMatchCount": 0,
+       "nativeAssetDetectorNames": []
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "empty/none",
+    "messageKey": "illustration:msg-1",
+    "content": "",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [],
+      "insertionOffsets": [],
+      "slots": []
+     }
+    },
+    "strip": {
+     "ok": ""
+    },
+    "stripNames": {
+     "ok": ""
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [],
+      "insertionOffsets": [],
+      "slots": [],
+      "noSlotsDiagnostics": {
+       "unfilteredSlotCount": 0,
+       "filteredSlotCount": 0,
+       "assetMatchCount": 0,
+       "nativeAssetDetectorNames": []
+      }
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "crlf/none",
+    "messageKey": "illustration:msg-1",
+    "content": "Line one.\r\n\r\nLine two.\r\n \t\r\n\r\nLine three.\r\n",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Line one.",
+       "Line two.",
+       "Line three."
+      ],
+      "insertionOffsets": [
+       13,
+       30
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Line one.",
+        "afterText": "Line two."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Line two.",
+        "afterText": "Line three."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Line one.\r\n\r\nLine two.\r\n \t\r\n\r\nLine three.\r\n"
+    },
+    "stripNames": {
+     "ok": "Line one.\r\n\r\nLine two.\r\n \t\r\n\r\nLine three.\r\n"
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Line one.",
+       "Line two.",
+       "Line three."
+      ],
+      "insertionOffsets": [
+       13,
+       30
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Line one.",
+        "afterText": "Line two."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Line two.",
+        "afterText": "Line three."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "blankRuns/none",
+    "messageKey": "illustration:msg-1",
+    "content": "\n\n\nA\n\n\n\n\nB\n  \n\t\n\nC\n\n\n",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "A",
+       "B",
+       "C"
+      ],
+      "insertionOffsets": [
+       9,
+       17
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "A",
+        "afterText": "B"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "B",
+        "afterText": "C"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "\n\n\nA\n\n\n\n\nB\n  \n\t\n\nC\n\n\n"
+    },
+    "stripNames": {
+     "ok": "\n\n\nA\n\n\n\n\nB\n  \n\t\n\nC\n\n\n"
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "A",
+       "B",
+       "C"
+      ],
+      "insertionOffsets": [
+       9,
+       17
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "A",
+        "afterText": "B"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "B",
+        "afterText": "C"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "thoughts/none",
+    "messageKey": "illustration:msg-1",
+    "content": "<Thoughts>\nplanning\n\nmore planning\n</Thoughts>\n\nVisible one.\n\nVisible two.",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "<Thoughts> planning more planning </Thoughts>",
+       "Visible one.",
+       "Visible two."
+      ],
+      "insertionOffsets": [
+       48,
+       62
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<Thoughts> planning more planning </Thoughts>",
+        "afterText": "Visible one."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Visible one.",
+        "afterText": "Visible two."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "<Thoughts>\nplanning\n\nmore planning\n</Thoughts>\n\nVisible one.\n\nVisible two."
+    },
+    "stripNames": {
+     "ok": "<Thoughts>\nplanning\n\nmore planning\n</Thoughts>\n\nVisible one.\n\nVisible two."
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "<Thoughts> planning more planning </Thoughts>",
+       "Visible one.",
+       "Visible two."
+      ],
+      "insertionOffsets": [
+       48,
+       62
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<Thoughts> planning more planning </Thoughts>",
+        "afterText": "Visible one."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Visible one.",
+        "afterText": "Visible two."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "nestedThoughts/none",
+    "messageKey": "illustration:msg-1",
+    "content": "<Thoughts>a\n\n<Thoughts>b\n\nc</Thoughts>\n\nd</Thoughts>\n\nX\n\nY",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "<Thoughts>a <Thoughts>b c</Thoughts> d</Thoughts>",
+       "X",
+       "Y"
+      ],
+      "insertionOffsets": [
+       54,
+       57
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<Thoughts>a <Thoughts>b c</Thoughts> d</Thoughts>",
+        "afterText": "X"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "X",
+        "afterText": "Y"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "<Thoughts>a\n\n<Thoughts>b\n\nc</Thoughts>\n\nd</Thoughts>\n\nX\n\nY"
+    },
+    "stripNames": {
+     "ok": "<Thoughts>a\n\n<Thoughts>b\n\nc</Thoughts>\n\nd</Thoughts>\n\nX\n\nY"
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "<Thoughts>a <Thoughts>b c</Thoughts> d</Thoughts>",
+       "X",
+       "Y"
+      ],
+      "insertionOffsets": [
+       54,
+       57
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<Thoughts>a <Thoughts>b c</Thoughts> d</Thoughts>",
+        "afterText": "X"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "X",
+        "afterText": "Y"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "unclosedThoughts/none",
+    "messageKey": "illustration:msg-1",
+    "content": "Start.\n\n<Thoughts>never closed\n\nstill\n\nEnd.",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Start.",
+       "<Thoughts>never closed",
+       "still",
+       "End."
+      ],
+      "insertionOffsets": [
+       8,
+       32,
+       39
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Start.",
+        "afterText": "<Thoughts>never closed"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "<Thoughts>never closed",
+        "afterText": "still"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:2",
+        "sourceImageToken": "slot:illustration:msg-1:slot:2",
+        "index": 2,
+        "beforeText": "still",
+        "afterText": "End."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Start.\n\n<Thoughts>never closed\n\nstill\n\nEnd."
+    },
+    "stripNames": {
+     "ok": "Start.\n\n<Thoughts>never closed\n\nstill\n\nEnd."
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Start.",
+       "<Thoughts>never closed",
+       "still",
+       "End."
+      ],
+      "insertionOffsets": [
+       8,
+       32,
+       39
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Start.",
+        "afterText": "<Thoughts>never closed"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "<Thoughts>never closed",
+        "afterText": "still"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:2",
+        "sourceImageToken": "slot:illustration:msg-1:slot:2",
+        "index": 2,
+        "beforeText": "still",
+        "afterText": "End."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "nativeTokens/none",
+    "messageKey": "illustration:msg-1",
+    "content": "Alice smiles. {{img::alice_smile}}\n\n{{image::bob.png}}\n\nBob waves <img src=\"carol.webp\">\n\nThe end.",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Alice smiles. {{img::alice_smile}}",
+       "{{image::bob.png}}",
+       "Bob waves <img src=\"carol.webp\">",
+       "The end."
+      ],
+      "insertionOffsets": [
+       36,
+       56,
+       90
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Alice smiles. {{img::alice_smile}}",
+        "afterText": "{{image::bob.png}}"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "{{image::bob.png}}",
+        "afterText": "Bob waves <img src=\"carol.webp\">"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:2",
+        "sourceImageToken": "slot:illustration:msg-1:slot:2",
+        "index": 2,
+        "beforeText": "Bob waves <img src=\"carol.webp\">",
+        "afterText": "The end."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Alice smiles. {{img::alice_smile}}\n\n{{image::bob.png}}\n\nBob waves <img src=\"carol.webp\">\n\nThe end."
+    },
+    "stripNames": {
+     "ok": "Alice smiles. \n\n{{image::bob.png}}\n\nBob waves <img src=\"carol.webp\">\n\nThe end."
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "{{img::alice_smile}}",
+       "sourceOffset": 14,
+       "detectorName": ""
+      },
+      {
+       "sourceMarkup": "{{image::bob.png}}",
+       "sourceOffset": 36,
+       "detectorName": ""
+      },
+      {
+       "sourceMarkup": "<img src=\"carol.webp\">",
+       "sourceOffset": 66,
+       "detectorName": ""
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "{{img::alice_smile}}",
+       "tokenName": "alice_smile",
+       "characterName": "alice_smile",
+       "markupType": "risu_img",
+       "index": 0,
+       "offset": 14,
+       "end": 34,
+       "before": "Alice smiles. ",
+       "after": "\n\n{{image::bob.png}}\n\nBob waves <img src=\"carol.webp\">\n\nThe end."
+      },
+      {
+       "full": "{{image::bob.png}}",
+       "tokenName": "bob.png",
+       "characterName": "bob",
+       "markupType": "risu_image",
+       "index": 1,
+       "offset": 36,
+       "end": 54,
+       "before": "Alice smiles. {{img::alice_smile}}\n\n",
+       "after": "\n\nBob waves <img src=\"carol.webp\">\n\nThe end."
+      },
+      {
+       "full": "<img src=\"carol.webp\">",
+       "tokenName": "carol.webp",
+       "characterName": "carol",
+       "markupType": "html_img_src",
+       "index": 2,
+       "offset": 66,
+       "end": 88,
+       "before": "Alice smiles. {{img::alice_smile}}\n\n{{image::bob.png}}\n\nBob waves ",
+       "after": "\n\nThe end."
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Alice smiles.",
+       "Bob waves",
+       "The end."
+      ],
+      "insertionOffsets": [
+       36,
+       90
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Alice smiles.",
+        "afterText": "Bob waves"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Bob waves",
+        "afterText": "The end."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "nativeTokens/charx",
+    "messageKey": "illustration:msg-1",
+    "content": "Alice smiles. {{img::alice_smile}}\n\n{{image::bob.png}}\n\nBob waves <img src=\"carol.webp\">\n\nThe end.",
+    "detectors": [
+     {
+      "scriptName": "img_tag",
+      "source": "\\[IMG:([^\\]]+)\\]",
+      "flags": "g"
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Alice smiles. {{img::alice_smile}}",
+       "{{image::bob.png}}",
+       "Bob waves <img src=\"carol.webp\">",
+       "The end."
+      ],
+      "insertionOffsets": [
+       36,
+       56,
+       90
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Alice smiles. {{img::alice_smile}}",
+        "afterText": "{{image::bob.png}}"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "{{image::bob.png}}",
+        "afterText": "Bob waves <img src=\"carol.webp\">"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:2",
+        "sourceImageToken": "slot:illustration:msg-1:slot:2",
+        "index": 2,
+        "beforeText": "Bob waves <img src=\"carol.webp\">",
+        "afterText": "The end."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Alice smiles. {{img::alice_smile}}\n\n{{image::bob.png}}\n\nBob waves <img src=\"carol.webp\">\n\nThe end."
+    },
+    "stripNames": {
+     "ok": "Alice smiles. \n\n{{image::bob.png}}\n\nBob waves <img src=\"carol.webp\">\n\nThe end."
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "{{img::alice_smile}}",
+       "sourceOffset": 14,
+       "detectorName": ""
+      },
+      {
+       "sourceMarkup": "{{image::bob.png}}",
+       "sourceOffset": 36,
+       "detectorName": ""
+      },
+      {
+       "sourceMarkup": "<img src=\"carol.webp\">",
+       "sourceOffset": 66,
+       "detectorName": ""
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "{{img::alice_smile}}",
+       "tokenName": "alice_smile",
+       "characterName": "alice_smile",
+       "markupType": "risu_img",
+       "index": 0,
+       "offset": 14,
+       "end": 34,
+       "before": "Alice smiles. ",
+       "after": "\n\n{{image::bob.png}}\n\nBob waves <img src=\"carol.webp\">\n\nThe end."
+      },
+      {
+       "full": "{{image::bob.png}}",
+       "tokenName": "bob.png",
+       "characterName": "bob",
+       "markupType": "risu_image",
+       "index": 1,
+       "offset": 36,
+       "end": 54,
+       "before": "Alice smiles. {{img::alice_smile}}\n\n",
+       "after": "\n\nBob waves <img src=\"carol.webp\">\n\nThe end."
+      },
+      {
+       "full": "<img src=\"carol.webp\">",
+       "tokenName": "carol.webp",
+       "characterName": "carol",
+       "markupType": "html_img_src",
+       "index": 2,
+       "offset": 66,
+       "end": 88,
+       "before": "Alice smiles. {{img::alice_smile}}\n\n{{image::bob.png}}\n\nBob waves ",
+       "after": "\n\nThe end."
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Alice smiles.",
+       "Bob waves",
+       "The end."
+      ],
+      "insertionOffsets": [
+       36,
+       90
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Alice smiles.",
+        "afterText": "Bob waves"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Bob waves",
+        "afterText": "The end."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "nativeTokens/charxNamed",
+    "messageKey": "illustration:msg-1",
+    "content": "Alice smiles. {{img::alice_smile}}\n\n{{image::bob.png}}\n\nBob waves <img src=\"carol.webp\">\n\nThe end.",
+    "detectors": [
+     {
+      "scriptName": "named",
+      "source": "\\[(?:IMG|img):(?<asset>[^\\]]+)\\]",
+      "flags": "gi"
+     },
+     {
+      "scriptName": "nonGlobal",
+      "source": "\\{\\{img::([^}]+)\\}\\}",
+      "flags": ""
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Alice smiles. {{img::alice_smile}}",
+       "{{image::bob.png}}",
+       "Bob waves <img src=\"carol.webp\">",
+       "The end."
+      ],
+      "insertionOffsets": [
+       36,
+       56,
+       90
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Alice smiles. {{img::alice_smile}}",
+        "afterText": "{{image::bob.png}}"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "{{image::bob.png}}",
+        "afterText": "Bob waves <img src=\"carol.webp\">"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:2",
+        "sourceImageToken": "slot:illustration:msg-1:slot:2",
+        "index": 2,
+        "beforeText": "Bob waves <img src=\"carol.webp\">",
+        "afterText": "The end."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Alice smiles. {{img::alice_smile}}\n\n{{image::bob.png}}\n\nBob waves <img src=\"carol.webp\">\n\nThe end."
+    },
+    "stripNames": {
+     "ok": "Alice smiles. \n\n{{image::bob.png}}\n\nBob waves <img src=\"carol.webp\">\n\nThe end."
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "{{img::alice_smile}}",
+       "sourceOffset": 14,
+       "detectorName": "nonGlobal"
+      },
+      {
+       "sourceMarkup": "{{image::bob.png}}",
+       "sourceOffset": 36,
+       "detectorName": ""
+      },
+      {
+       "sourceMarkup": "<img src=\"carol.webp\">",
+       "sourceOffset": 66,
+       "detectorName": ""
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "{{img::alice_smile}}",
+       "tokenName": "alice_smile",
+       "characterName": "alice_smile",
+       "markupType": "charx_regex",
+       "offset": 14,
+       "end": 34,
+       "detectorName": "nonGlobal",
+       "index": 0,
+       "before": "Alice smiles. ",
+       "after": "\n\n{{image::bob.png}}\n\nBob waves <img src=\"carol.webp\">\n\nThe end."
+      },
+      {
+       "full": "{{image::bob.png}}",
+       "tokenName": "bob.png",
+       "characterName": "bob",
+       "markupType": "risu_image",
+       "index": 1,
+       "offset": 36,
+       "end": 54,
+       "before": "Alice smiles. {{img::alice_smile}}\n\n",
+       "after": "\n\nBob waves <img src=\"carol.webp\">\n\nThe end."
+      },
+      {
+       "full": "<img src=\"carol.webp\">",
+       "tokenName": "carol.webp",
+       "characterName": "carol",
+       "markupType": "html_img_src",
+       "index": 2,
+       "offset": 66,
+       "end": 88,
+       "before": "Alice smiles. {{img::alice_smile}}\n\n{{image::bob.png}}\n\nBob waves ",
+       "after": "\n\nThe end."
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Alice smiles.",
+       "Bob waves",
+       "The end."
+      ],
+      "insertionOffsets": [
+       36,
+       90
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Alice smiles.",
+        "afterText": "Bob waves"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Bob waves",
+        "afterText": "The end."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "onlyTokenParagraph/none",
+    "messageKey": "illustration:msg-1",
+    "content": "Intro.\n\n{{asset::x}}\n\nOutro.",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Intro.",
+       "{{asset::x}}",
+       "Outro."
+      ],
+      "insertionOffsets": [
+       8,
+       22
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Intro.",
+        "afterText": "{{asset::x}}"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "{{asset::x}}",
+        "afterText": "Outro."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Intro.\n\n{{asset::x}}\n\nOutro."
+    },
+    "stripNames": {
+     "ok": "Intro.\n\n{{asset::x}}\n\nOutro."
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "{{asset::x}}",
+       "sourceOffset": 8,
+       "detectorName": ""
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "{{asset::x}}",
+       "tokenName": "x",
+       "characterName": "x",
+       "markupType": "risu_asset",
+       "index": 0,
+       "offset": 8,
+       "end": 20,
+       "before": "Intro.\n\n",
+       "after": "\n\nOutro."
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Intro.",
+       "Outro."
+      ],
+      "insertionOffsets": [
+       8
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Intro.",
+        "afterText": "Outro."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "amGenerated/none",
+    "messageKey": "illustration:msg-1",
+    "content": "Before.\n\n<div class=\"am-illustration-projection\" data-am-slot=\"x\"><span class=\"am-image\" data-am-slot-id=\"s\"><img class=\"am-image__media\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\"></span></div>\n\nAfter one.\n\nAfter two.",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Before.",
+       "<div class=\"am-illustration-projection\" data-am-slot=\"x\"><span class=\"am-image\" data-am-slot-id=\"s\"><img class=\"am-image__media\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\"></span></div>",
+       "After one.",
+       "After two."
+      ],
+      "insertionOffsets": [
+       9,
+       249,
+       261
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Before.",
+        "afterText": "<div class=\"am-illustration-projection\" data-am-slot=\"x\"><span class=\"am-image\" data-am-slot-id=\"s\"><img class=\"am-image__media\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\"></span></div>"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "<div class=\"am-illustration-projection\" data-am-slot=\"x\"><span class=\"am-image\" data-am-slot-id=\"s\"><img class=\"am-image__media\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\"></span></div>",
+        "afterText": "After one."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:2",
+        "sourceImageToken": "slot:illustration:msg-1:slot:2",
+        "index": 2,
+        "beforeText": "After one.",
+        "afterText": "After two."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Before.\n\nAfter one.\n\nAfter two."
+    },
+    "stripNames": {
+     "ok": "Before.\n\nAfter one.\n\nAfter two."
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Before.",
+       "After one.",
+       "After two."
+      ],
+      "insertionOffsets": [
+       9,
+       21
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Before.",
+        "afterText": "After one."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "After one.",
+        "afterText": "After two."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "amGenerated/charx",
+    "messageKey": "illustration:msg-1",
+    "content": "Before.\n\n<div class=\"am-illustration-projection\" data-am-slot=\"x\"><span class=\"am-image\" data-am-slot-id=\"s\"><img class=\"am-image__media\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\"></span></div>\n\nAfter one.\n\nAfter two.",
+    "detectors": [
+     {
+      "scriptName": "img_tag",
+      "source": "\\[IMG:([^\\]]+)\\]",
+      "flags": "g"
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Before.",
+       "<div class=\"am-illustration-projection\" data-am-slot=\"x\"><span class=\"am-image\" data-am-slot-id=\"s\"><img class=\"am-image__media\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\"></span></div>",
+       "After one.",
+       "After two."
+      ],
+      "insertionOffsets": [
+       9,
+       249,
+       261
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Before.",
+        "afterText": "<div class=\"am-illustration-projection\" data-am-slot=\"x\"><span class=\"am-image\" data-am-slot-id=\"s\"><img class=\"am-image__media\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\"></span></div>"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "<div class=\"am-illustration-projection\" data-am-slot=\"x\"><span class=\"am-image\" data-am-slot-id=\"s\"><img class=\"am-image__media\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\"></span></div>",
+        "afterText": "After one."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:2",
+        "sourceImageToken": "slot:illustration:msg-1:slot:2",
+        "index": 2,
+        "beforeText": "After one.",
+        "afterText": "After two."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Before.\n\nAfter one.\n\nAfter two."
+    },
+    "stripNames": {
+     "ok": "Before.\n\nAfter one.\n\nAfter two."
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Before.",
+       "After one.",
+       "After two."
+      ],
+      "insertionOffsets": [
+       9,
+       21
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Before.",
+        "afterText": "After one."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "After one.",
+        "afterText": "After two."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "amGenerated/charxNamed",
+    "messageKey": "illustration:msg-1",
+    "content": "Before.\n\n<div class=\"am-illustration-projection\" data-am-slot=\"x\"><span class=\"am-image\" data-am-slot-id=\"s\"><img class=\"am-image__media\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\"></span></div>\n\nAfter one.\n\nAfter two.",
+    "detectors": [
+     {
+      "scriptName": "named",
+      "source": "\\[(?:IMG|img):(?<asset>[^\\]]+)\\]",
+      "flags": "gi"
+     },
+     {
+      "scriptName": "nonGlobal",
+      "source": "\\{\\{img::([^}]+)\\}\\}",
+      "flags": ""
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Before.",
+       "<div class=\"am-illustration-projection\" data-am-slot=\"x\"><span class=\"am-image\" data-am-slot-id=\"s\"><img class=\"am-image__media\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\"></span></div>",
+       "After one.",
+       "After two."
+      ],
+      "insertionOffsets": [
+       9,
+       249,
+       261
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Before.",
+        "afterText": "<div class=\"am-illustration-projection\" data-am-slot=\"x\"><span class=\"am-image\" data-am-slot-id=\"s\"><img class=\"am-image__media\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\"></span></div>"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "<div class=\"am-illustration-projection\" data-am-slot=\"x\"><span class=\"am-image\" data-am-slot-id=\"s\"><img class=\"am-image__media\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\"></span></div>",
+        "afterText": "After one."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:2",
+        "sourceImageToken": "slot:illustration:msg-1:slot:2",
+        "index": 2,
+        "beforeText": "After one.",
+        "afterText": "After two."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Before.\n\nAfter one.\n\nAfter two."
+    },
+    "stripNames": {
+     "ok": "Before.\n\nAfter one.\n\nAfter two."
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Before.",
+       "After one.",
+       "After two."
+      ],
+      "insertionOffsets": [
+       9,
+       21
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Before.",
+        "afterText": "After one."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "After one.",
+        "afterText": "After two."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "amSpanInline/none",
+    "messageKey": "illustration:msg-1",
+    "content": "Hello <span class=\"am-image\" data-am-slot-id=\"chat:1:token:alice\"><img class=\"am-image__media\" data-am-asset=\"Alice.__am__.chat.00000000-0000-4000-8000-000000000000\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\" alt=\"\"></span> world.\n\nNext.\n\n{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\n\nLast.",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Hello <span class=\"am-image\" data-am-slot-id=\"chat:1:token:alice\"><img class=\"am-image__media\" data-am-asset=\"Alice.__am__.chat.00000000-0000-4000-8000-000000000000\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\" alt=\"\"></span> world.",
+       "Next.",
+       "{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}",
+       "Last."
+      ],
+      "insertionOffsets": [
+       285,
+       292,
+       357
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Hello <span class=\"am-image\" data-am-slot-id=\"chat:1:token:alice\"><img class=\"am-image__media\" data-am-asset=\"Alice.__am__.chat.00000000-0000-4000-8000-000000000000\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\" alt=\"\"></span> world.",
+        "afterText": "Next."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Next.",
+        "afterText": "{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:2",
+        "sourceImageToken": "slot:illustration:msg-1:slot:2",
+        "index": 2,
+        "beforeText": "{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}",
+        "afterText": "Last."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Hello  world.\n\nNext.\n\nLast."
+    },
+    "stripNames": {
+     "ok": "Hello  world.\n\nNext.\n\nLast."
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Hello world.",
+       "Next.",
+       "Last."
+      ],
+      "insertionOffsets": [
+       15,
+       22
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Hello world.",
+        "afterText": "Next."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Next.",
+        "afterText": "Last."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "amSpanInline/charx",
+    "messageKey": "illustration:msg-1",
+    "content": "Hello <span class=\"am-image\" data-am-slot-id=\"chat:1:token:alice\"><img class=\"am-image__media\" data-am-asset=\"Alice.__am__.chat.00000000-0000-4000-8000-000000000000\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\" alt=\"\"></span> world.\n\nNext.\n\n{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\n\nLast.",
+    "detectors": [
+     {
+      "scriptName": "img_tag",
+      "source": "\\[IMG:([^\\]]+)\\]",
+      "flags": "g"
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Hello <span class=\"am-image\" data-am-slot-id=\"chat:1:token:alice\"><img class=\"am-image__media\" data-am-asset=\"Alice.__am__.chat.00000000-0000-4000-8000-000000000000\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\" alt=\"\"></span> world.",
+       "Next.",
+       "{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}",
+       "Last."
+      ],
+      "insertionOffsets": [
+       285,
+       292,
+       357
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Hello <span class=\"am-image\" data-am-slot-id=\"chat:1:token:alice\"><img class=\"am-image__media\" data-am-asset=\"Alice.__am__.chat.00000000-0000-4000-8000-000000000000\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\" alt=\"\"></span> world.",
+        "afterText": "Next."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Next.",
+        "afterText": "{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:2",
+        "sourceImageToken": "slot:illustration:msg-1:slot:2",
+        "index": 2,
+        "beforeText": "{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}",
+        "afterText": "Last."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Hello  world.\n\nNext.\n\nLast."
+    },
+    "stripNames": {
+     "ok": "Hello  world.\n\nNext.\n\nLast."
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Hello world.",
+       "Next.",
+       "Last."
+      ],
+      "insertionOffsets": [
+       15,
+       22
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Hello world.",
+        "afterText": "Next."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Next.",
+        "afterText": "Last."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "amSpanInline/charxNamed",
+    "messageKey": "illustration:msg-1",
+    "content": "Hello <span class=\"am-image\" data-am-slot-id=\"chat:1:token:alice\"><img class=\"am-image__media\" data-am-asset=\"Alice.__am__.chat.00000000-0000-4000-8000-000000000000\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\" alt=\"\"></span> world.\n\nNext.\n\n{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\n\nLast.",
+    "detectors": [
+     {
+      "scriptName": "named",
+      "source": "\\[(?:IMG|img):(?<asset>[^\\]]+)\\]",
+      "flags": "gi"
+     },
+     {
+      "scriptName": "nonGlobal",
+      "source": "\\{\\{img::([^}]+)\\}\\}",
+      "flags": ""
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Hello <span class=\"am-image\" data-am-slot-id=\"chat:1:token:alice\"><img class=\"am-image__media\" data-am-asset=\"Alice.__am__.chat.00000000-0000-4000-8000-000000000000\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\" alt=\"\"></span> world.",
+       "Next.",
+       "{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}",
+       "Last."
+      ],
+      "insertionOffsets": [
+       285,
+       292,
+       357
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Hello <span class=\"am-image\" data-am-slot-id=\"chat:1:token:alice\"><img class=\"am-image__media\" data-am-asset=\"Alice.__am__.chat.00000000-0000-4000-8000-000000000000\" src=\"{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}\" width=\"832\" height=\"1216\" alt=\"\"></span> world.",
+        "afterText": "Next."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Next.",
+        "afterText": "{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:2",
+        "sourceImageToken": "slot:illustration:msg-1:slot:2",
+        "index": 2,
+        "beforeText": "{{raw::Alice.__am__.chat.00000000-0000-4000-8000-000000000000}}",
+        "afterText": "Last."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Hello  world.\n\nNext.\n\nLast."
+    },
+    "stripNames": {
+     "ok": "Hello  world.\n\nNext.\n\nLast."
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Hello world.",
+       "Next.",
+       "Last."
+      ],
+      "insertionOffsets": [
+       15,
+       22
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Hello world.",
+        "afterText": "Next."
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "Next.",
+        "afterText": "Last."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "codeSpans/none",
+    "messageKey": "illustration:msg-1",
+    "content": "Text `{{img::code}}` here.\n\n~~~\n{{img::fenced}}\n~~~\n\nTail {{img::real}}.",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Text `{{img::code}}` here.",
+       "~~~ {{img::fenced}} ~~~",
+       "Tail {{img::real}}."
+      ],
+      "insertionOffsets": [
+       28,
+       53
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Text `{{img::code}}` here.",
+        "afterText": "~~~ {{img::fenced}} ~~~"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "~~~ {{img::fenced}} ~~~",
+        "afterText": "Tail {{img::real}}."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Text `{{img::code}}` here.\n\n~~~\n{{img::fenced}}\n~~~\n\nTail {{img::real}}."
+    },
+    "stripNames": {
+     "ok": "Text `{{img::code}}` here.\n\n~~~\n{{img::fenced}}\n~~~\n\nTail {{img::real}}."
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "{{img::real}}",
+       "sourceOffset": 58,
+       "detectorName": ""
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "{{img::real}}",
+       "tokenName": "real",
+       "characterName": "real",
+       "markupType": "risu_img",
+       "index": 0,
+       "offset": 58,
+       "end": 71,
+       "before": "Text `{{img::code}}` here.\n\n~~~\n{{img::fenced}}\n~~~\n\nTail ",
+       "after": "."
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Text `{{img::code}}` here.",
+       "~~~ {{img::fenced}} ~~~",
+       "Tail ."
+      ],
+      "insertionOffsets": [
+       28,
+       53
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Text `{{img::code}}` here.",
+        "afterText": "~~~ {{img::fenced}} ~~~"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "~~~ {{img::fenced}} ~~~",
+        "afterText": "Tail ."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "codeSpans/charx",
+    "messageKey": "illustration:msg-1",
+    "content": "Text `{{img::code}}` here.\n\n~~~\n{{img::fenced}}\n~~~\n\nTail {{img::real}}.",
+    "detectors": [
+     {
+      "scriptName": "img_tag",
+      "source": "\\[IMG:([^\\]]+)\\]",
+      "flags": "g"
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Text `{{img::code}}` here.",
+       "~~~ {{img::fenced}} ~~~",
+       "Tail {{img::real}}."
+      ],
+      "insertionOffsets": [
+       28,
+       53
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Text `{{img::code}}` here.",
+        "afterText": "~~~ {{img::fenced}} ~~~"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "~~~ {{img::fenced}} ~~~",
+        "afterText": "Tail {{img::real}}."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Text `{{img::code}}` here.\n\n~~~\n{{img::fenced}}\n~~~\n\nTail {{img::real}}."
+    },
+    "stripNames": {
+     "ok": "Text `{{img::code}}` here.\n\n~~~\n{{img::fenced}}\n~~~\n\nTail {{img::real}}."
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "{{img::real}}",
+       "sourceOffset": 58,
+       "detectorName": ""
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "{{img::real}}",
+       "tokenName": "real",
+       "characterName": "real",
+       "markupType": "risu_img",
+       "index": 0,
+       "offset": 58,
+       "end": 71,
+       "before": "Text `{{img::code}}` here.\n\n~~~\n{{img::fenced}}\n~~~\n\nTail ",
+       "after": "."
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Text `{{img::code}}` here.",
+       "~~~ {{img::fenced}} ~~~",
+       "Tail ."
+      ],
+      "insertionOffsets": [
+       28,
+       53
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Text `{{img::code}}` here.",
+        "afterText": "~~~ {{img::fenced}} ~~~"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "~~~ {{img::fenced}} ~~~",
+        "afterText": "Tail ."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "codeSpans/charxNamed",
+    "messageKey": "illustration:msg-1",
+    "content": "Text `{{img::code}}` here.\n\n~~~\n{{img::fenced}}\n~~~\n\nTail {{img::real}}.",
+    "detectors": [
+     {
+      "scriptName": "named",
+      "source": "\\[(?:IMG|img):(?<asset>[^\\]]+)\\]",
+      "flags": "gi"
+     },
+     {
+      "scriptName": "nonGlobal",
+      "source": "\\{\\{img::([^}]+)\\}\\}",
+      "flags": ""
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "Text `{{img::code}}` here.",
+       "~~~ {{img::fenced}} ~~~",
+       "Tail {{img::real}}."
+      ],
+      "insertionOffsets": [
+       28,
+       53
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Text `{{img::code}}` here.",
+        "afterText": "~~~ {{img::fenced}} ~~~"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "~~~ {{img::fenced}} ~~~",
+        "afterText": "Tail {{img::real}}."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "Text `{{img::code}}` here.\n\n~~~\n{{img::fenced}}\n~~~\n\nTail {{img::real}}."
+    },
+    "stripNames": {
+     "ok": "Text `{{img::code}}` here.\n\n~~~\n{{img::fenced}}\n~~~\n\nTail {{img::real}}."
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "{{img::real}}",
+       "sourceOffset": 58,
+       "detectorName": ""
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "{{img::real}}",
+       "tokenName": "real",
+       "characterName": "real",
+       "markupType": "risu_img",
+       "index": 0,
+       "offset": 58,
+       "end": 71,
+       "before": "Text `{{img::code}}` here.\n\n~~~\n{{img::fenced}}\n~~~\n\nTail ",
+       "after": "."
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "Text `{{img::code}}` here.",
+       "~~~ {{img::fenced}} ~~~",
+       "Tail ."
+      ],
+      "insertionOffsets": [
+       28,
+       53
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "Text `{{img::code}}` here.",
+        "afterText": "~~~ {{img::fenced}} ~~~"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "~~~ {{img::fenced}} ~~~",
+        "afterText": "Tail ."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "whitespace/none",
+    "messageKey": "illustration:msg-1",
+    "content": "  lots   of\tspace  \n\n   \n\n\tindented\tpara  ",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "lots of space",
+       "indented para"
+      ],
+      "insertionOffsets": [
+       26
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "lots of space",
+        "afterText": "indented para"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "  lots   of\tspace  \n\n   \n\n\tindented\tpara  "
+    },
+    "stripNames": {
+     "ok": "  lots   of\tspace  \n\n   \n\n\tindented\tpara  "
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "lots of space",
+       "indented para"
+      ],
+      "insertionOffsets": [
+       26
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "lots of space",
+        "afterText": "indented para"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "korean/none",
+    "messageKey": "illustration:msg-1",
+    "content": "앨리스가 웃었다.\n\n\"늦었잖아!\"\n\n밥이 한숨을 쉬었다.",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "앨리스가 웃었다.",
+       "\"늦었잖아!\"",
+       "밥이 한숨을 쉬었다."
+      ],
+      "insertionOffsets": [
+       11,
+       20
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "앨리스가 웃었다.",
+        "afterText": "\"늦었잖아!\""
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "\"늦었잖아!\"",
+        "afterText": "밥이 한숨을 쉬었다."
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "앨리스가 웃었다.\n\n\"늦었잖아!\"\n\n밥이 한숨을 쉬었다."
+    },
+    "stripNames": {
+     "ok": "앨리스가 웃었다.\n\n\"늦었잖아!\"\n\n밥이 한숨을 쉬었다."
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "앨리스가 웃었다.",
+       "\"늦었잖아!\"",
+       "밥이 한숨을 쉬었다."
+      ],
+      "insertionOffsets": [
+       11,
+       20
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "앨리스가 웃었다.",
+        "afterText": "\"늦었잖아!\""
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "\"늦었잖아!\"",
+        "afterText": "밥이 한숨을 쉬었다."
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "charxRegex/none",
+    "messageKey": "illustration:msg-1",
+    "content": "She posed. [IMG:alice_pose.png]\n\nMore text [IMG:bob]\n\nEnd [img:lower]",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "She posed. [IMG:alice_pose.png]",
+       "More text [IMG:bob]",
+       "End [img:lower]"
+      ],
+      "insertionOffsets": [
+       33,
+       54
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "She posed. [IMG:alice_pose.png]",
+        "afterText": "More text [IMG:bob]"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "More text [IMG:bob]",
+        "afterText": "End [img:lower]"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "She posed. [IMG:alice_pose.png]\n\nMore text [IMG:bob]\n\nEnd [img:lower]"
+    },
+    "stripNames": {
+     "ok": "She posed. [IMG:alice_pose.png]\n\nMore text [IMG:bob]\n\nEnd [img:lower]"
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "She posed. [IMG:alice_pose.png]",
+       "More text [IMG:bob]",
+       "End [img:lower]"
+      ],
+      "insertionOffsets": [
+       33,
+       54
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "She posed. [IMG:alice_pose.png]",
+        "afterText": "More text [IMG:bob]"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "More text [IMG:bob]",
+        "afterText": "End [img:lower]"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "charxRegex/charx",
+    "messageKey": "illustration:msg-1",
+    "content": "She posed. [IMG:alice_pose.png]\n\nMore text [IMG:bob]\n\nEnd [img:lower]",
+    "detectors": [
+     {
+      "scriptName": "img_tag",
+      "source": "\\[IMG:([^\\]]+)\\]",
+      "flags": "g"
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "She posed. [IMG:alice_pose.png]",
+       "More text [IMG:bob]",
+       "End [img:lower]"
+      ],
+      "insertionOffsets": [
+       33,
+       54
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "She posed. [IMG:alice_pose.png]",
+        "afterText": "More text [IMG:bob]"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "More text [IMG:bob]",
+        "afterText": "End [img:lower]"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "She posed. [IMG:alice_pose.png]\n\nMore text [IMG:bob]\n\nEnd [img:lower]"
+    },
+    "stripNames": {
+     "ok": "She posed. [IMG:alice_pose.png]\n\nMore text [IMG:bob]\n\nEnd [img:lower]"
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "[IMG:alice_pose.png]",
+       "sourceOffset": 11,
+       "detectorName": "img_tag"
+      },
+      {
+       "sourceMarkup": "[IMG:bob]",
+       "sourceOffset": 43,
+       "detectorName": "img_tag"
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "[IMG:alice_pose.png]",
+       "tokenName": "alice_pose.png",
+       "characterName": "alice_pose",
+       "markupType": "charx_regex",
+       "offset": 11,
+       "end": 31,
+       "detectorName": "img_tag",
+       "index": 0,
+       "before": "She posed. ",
+       "after": "\n\nMore text [IMG:bob]\n\nEnd [img:lower]"
+      },
+      {
+       "full": "[IMG:bob]",
+       "tokenName": "bob",
+       "characterName": "bob",
+       "markupType": "charx_regex",
+       "offset": 43,
+       "end": 52,
+       "detectorName": "img_tag",
+       "index": 1,
+       "before": "She posed. [IMG:alice_pose.png]\n\nMore text ",
+       "after": "\n\nEnd [img:lower]"
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "She posed.",
+       "More text",
+       "End [img:lower]"
+      ],
+      "insertionOffsets": [
+       33,
+       54
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "She posed.",
+        "afterText": "More text"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "More text",
+        "afterText": "End [img:lower]"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "charxRegex/charxNamed",
+    "messageKey": "illustration:msg-1",
+    "content": "She posed. [IMG:alice_pose.png]\n\nMore text [IMG:bob]\n\nEnd [img:lower]",
+    "detectors": [
+     {
+      "scriptName": "named",
+      "source": "\\[(?:IMG|img):(?<asset>[^\\]]+)\\]",
+      "flags": "gi"
+     },
+     {
+      "scriptName": "nonGlobal",
+      "source": "\\{\\{img::([^}]+)\\}\\}",
+      "flags": ""
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "She posed. [IMG:alice_pose.png]",
+       "More text [IMG:bob]",
+       "End [img:lower]"
+      ],
+      "insertionOffsets": [
+       33,
+       54
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "She posed. [IMG:alice_pose.png]",
+        "afterText": "More text [IMG:bob]"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "More text [IMG:bob]",
+        "afterText": "End [img:lower]"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "She posed. [IMG:alice_pose.png]\n\nMore text [IMG:bob]\n\nEnd [img:lower]"
+    },
+    "stripNames": {
+     "ok": "She posed. [IMG:alice_pose.png]\n\nMore text [IMG:bob]\n\nEnd [img:lower]"
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "[IMG:alice_pose.png]",
+       "sourceOffset": 11,
+       "detectorName": "named"
+      },
+      {
+       "sourceMarkup": "[IMG:bob]",
+       "sourceOffset": 43,
+       "detectorName": "named"
+      },
+      {
+       "sourceMarkup": "[img:lower]",
+       "sourceOffset": 58,
+       "detectorName": "named"
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "[IMG:alice_pose.png]",
+       "tokenName": "alice_pose.png",
+       "characterName": "alice_pose",
+       "markupType": "charx_regex",
+       "offset": 11,
+       "end": 31,
+       "detectorName": "named",
+       "index": 0,
+       "before": "She posed. ",
+       "after": "\n\nMore text [IMG:bob]\n\nEnd [img:lower]"
+      },
+      {
+       "full": "[IMG:bob]",
+       "tokenName": "bob",
+       "characterName": "bob",
+       "markupType": "charx_regex",
+       "offset": 43,
+       "end": 52,
+       "detectorName": "named",
+       "index": 1,
+       "before": "She posed. [IMG:alice_pose.png]\n\nMore text ",
+       "after": "\n\nEnd [img:lower]"
+      },
+      {
+       "full": "[img:lower]",
+       "tokenName": "lower",
+       "characterName": "lower",
+       "markupType": "charx_regex",
+       "offset": 58,
+       "end": 69,
+       "detectorName": "named",
+       "index": 2,
+       "before": "She posed. [IMG:alice_pose.png]\n\nMore text [IMG:bob]\n\nEnd ",
+       "after": ""
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "She posed.",
+       "More text",
+       "End"
+      ],
+      "insertionOffsets": [
+       33,
+       54
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "She posed.",
+        "afterText": "More text"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "More text",
+        "afterText": "End"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "suppression/none",
+    "messageKey": "illustration:msg-1",
+    "content": "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B\n\nC\n\nD",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B",
+       "C",
+       "D"
+      ],
+      "insertionOffsets": [
+       71,
+       74
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B",
+        "afterText": "C"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "C",
+        "afterText": "D"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B\n\nC\n\nD"
+    },
+    "stripNames": {
+     "ok": "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B\n\nC\n\nD"
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "{{img::hidden}}",
+       "sourceOffset": 45,
+       "detectorName": ""
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "{{img::hidden}}",
+       "tokenName": "hidden",
+       "characterName": "hidden",
+       "markupType": "risu_img",
+       "index": 0,
+       "offset": 45,
+       "end": 60,
+       "before": "A <span data-am-native-asset-suppression=\"1\">",
+       "after": "</span> B\n\nC\n\nD"
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "A B",
+       "C",
+       "D"
+      ],
+      "insertionOffsets": [
+       71,
+       74
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "A B",
+        "afterText": "C"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "C",
+        "afterText": "D"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "suppression/charx",
+    "messageKey": "illustration:msg-1",
+    "content": "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B\n\nC\n\nD",
+    "detectors": [
+     {
+      "scriptName": "img_tag",
+      "source": "\\[IMG:([^\\]]+)\\]",
+      "flags": "g"
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B",
+       "C",
+       "D"
+      ],
+      "insertionOffsets": [
+       71,
+       74
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B",
+        "afterText": "C"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "C",
+        "afterText": "D"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B\n\nC\n\nD"
+    },
+    "stripNames": {
+     "ok": "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B\n\nC\n\nD"
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "{{img::hidden}}",
+       "sourceOffset": 45,
+       "detectorName": ""
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "{{img::hidden}}",
+       "tokenName": "hidden",
+       "characterName": "hidden",
+       "markupType": "risu_img",
+       "index": 0,
+       "offset": 45,
+       "end": 60,
+       "before": "A <span data-am-native-asset-suppression=\"1\">",
+       "after": "</span> B\n\nC\n\nD"
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "A B",
+       "C",
+       "D"
+      ],
+      "insertionOffsets": [
+       71,
+       74
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "A B",
+        "afterText": "C"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "C",
+        "afterText": "D"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "suppression/charxNamed",
+    "messageKey": "illustration:msg-1",
+    "content": "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B\n\nC\n\nD",
+    "detectors": [
+     {
+      "scriptName": "named",
+      "source": "\\[(?:IMG|img):(?<asset>[^\\]]+)\\]",
+      "flags": "gi"
+     },
+     {
+      "scriptName": "nonGlobal",
+      "source": "\\{\\{img::([^}]+)\\}\\}",
+      "flags": ""
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B",
+       "C",
+       "D"
+      ],
+      "insertionOffsets": [
+       71,
+       74
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B",
+        "afterText": "C"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "C",
+        "afterText": "D"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B\n\nC\n\nD"
+    },
+    "stripNames": {
+     "ok": "A <span data-am-native-asset-suppression=\"1\">{{img::hidden}}</span> B\n\nC\n\nD"
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "{{img::hidden}}",
+       "sourceOffset": 45,
+       "detectorName": "nonGlobal"
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "{{img::hidden}}",
+       "tokenName": "hidden",
+       "characterName": "hidden",
+       "markupType": "charx_regex",
+       "offset": 45,
+       "end": 60,
+       "detectorName": "nonGlobal",
+       "index": 0,
+       "before": "A <span data-am-native-asset-suppression=\"1\">",
+       "after": "</span> B\n\nC\n\nD"
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "A B",
+       "C",
+       "D"
+      ],
+      "insertionOffsets": [
+       71,
+       74
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "A B",
+        "afterText": "C"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "C",
+        "afterText": "D"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "imgEquals/none",
+    "messageKey": "illustration:msg-1",
+    "content": "<img=\"dana\">\n\nE\n\nF <img src='g h.png'/>",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "<img=\"dana\">",
+       "E",
+       "F <img src='g h.png'/>"
+      ],
+      "insertionOffsets": [
+       14,
+       17
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<img=\"dana\">",
+        "afterText": "E"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "E",
+        "afterText": "F <img src='g h.png'/>"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "<img=\"dana\">\n\nE\n\nF <img src='g h.png'/>"
+    },
+    "stripNames": {
+     "ok": "<img=\"dana\">\n\nE\n\nF <img src='g h.png'/>"
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "<img=\"dana\">",
+       "sourceOffset": 0,
+       "detectorName": ""
+      },
+      {
+       "sourceMarkup": "<img src='g h.png'/>",
+       "sourceOffset": 19,
+       "detectorName": ""
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "<img=\"dana\">",
+       "tokenName": "dana",
+       "characterName": "dana",
+       "markupType": "html_img_equals",
+       "index": 0,
+       "offset": 0,
+       "end": 12,
+       "before": "",
+       "after": "\n\nE\n\nF <img src='g h.png'/>"
+      },
+      {
+       "full": "<img src='g h.png'/>",
+       "tokenName": "g h.png",
+       "characterName": "g h",
+       "markupType": "html_img_src",
+       "index": 1,
+       "offset": 19,
+       "end": 39,
+       "before": "<img=\"dana\">\n\nE\n\nF ",
+       "after": ""
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "E",
+       "F"
+      ],
+      "insertionOffsets": [
+       17
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "E",
+        "afterText": "F"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "imgEquals/charx",
+    "messageKey": "illustration:msg-1",
+    "content": "<img=\"dana\">\n\nE\n\nF <img src='g h.png'/>",
+    "detectors": [
+     {
+      "scriptName": "img_tag",
+      "source": "\\[IMG:([^\\]]+)\\]",
+      "flags": "g"
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "<img=\"dana\">",
+       "E",
+       "F <img src='g h.png'/>"
+      ],
+      "insertionOffsets": [
+       14,
+       17
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<img=\"dana\">",
+        "afterText": "E"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "E",
+        "afterText": "F <img src='g h.png'/>"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "<img=\"dana\">\n\nE\n\nF <img src='g h.png'/>"
+    },
+    "stripNames": {
+     "ok": "<img=\"dana\">\n\nE\n\nF <img src='g h.png'/>"
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "<img=\"dana\">",
+       "sourceOffset": 0,
+       "detectorName": ""
+      },
+      {
+       "sourceMarkup": "<img src='g h.png'/>",
+       "sourceOffset": 19,
+       "detectorName": ""
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "<img=\"dana\">",
+       "tokenName": "dana",
+       "characterName": "dana",
+       "markupType": "html_img_equals",
+       "index": 0,
+       "offset": 0,
+       "end": 12,
+       "before": "",
+       "after": "\n\nE\n\nF <img src='g h.png'/>"
+      },
+      {
+       "full": "<img src='g h.png'/>",
+       "tokenName": "g h.png",
+       "characterName": "g h",
+       "markupType": "html_img_src",
+       "index": 1,
+       "offset": 19,
+       "end": 39,
+       "before": "<img=\"dana\">\n\nE\n\nF ",
+       "after": ""
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "E",
+       "F"
+      ],
+      "insertionOffsets": [
+       17
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "E",
+        "afterText": "F"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "imgEquals/charxNamed",
+    "messageKey": "illustration:msg-1",
+    "content": "<img=\"dana\">\n\nE\n\nF <img src='g h.png'/>",
+    "detectors": [
+     {
+      "scriptName": "named",
+      "source": "\\[(?:IMG|img):(?<asset>[^\\]]+)\\]",
+      "flags": "gi"
+     },
+     {
+      "scriptName": "nonGlobal",
+      "source": "\\{\\{img::([^}]+)\\}\\}",
+      "flags": ""
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "<img=\"dana\">",
+       "E",
+       "F <img src='g h.png'/>"
+      ],
+      "insertionOffsets": [
+       14,
+       17
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<img=\"dana\">",
+        "afterText": "E"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "E",
+        "afterText": "F <img src='g h.png'/>"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "<img=\"dana\">\n\nE\n\nF <img src='g h.png'/>"
+    },
+    "stripNames": {
+     "ok": "<img=\"dana\">\n\nE\n\nF <img src='g h.png'/>"
+    },
+    "native": {
+     "ok": [
+      {
+       "sourceMarkup": "<img=\"dana\">",
+       "sourceOffset": 0,
+       "detectorName": ""
+      },
+      {
+       "sourceMarkup": "<img src='g h.png'/>",
+       "sourceOffset": 19,
+       "detectorName": ""
+      }
+     ]
+    },
+    "tokens": {
+     "ok": [
+      {
+       "full": "<img=\"dana\">",
+       "tokenName": "dana",
+       "characterName": "dana",
+       "markupType": "html_img_equals",
+       "index": 0,
+       "offset": 0,
+       "end": 12,
+       "before": "",
+       "after": "\n\nE\n\nF <img src='g h.png'/>"
+      },
+      {
+       "full": "<img src='g h.png'/>",
+       "tokenName": "g h.png",
+       "characterName": "g h",
+       "markupType": "html_img_src",
+       "index": 1,
+       "offset": 19,
+       "end": 39,
+       "before": "<img=\"dana\">\n\nE\n\nF ",
+       "after": ""
+      }
+     ]
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "E",
+       "F"
+      ],
+      "insertionOffsets": [
+       17
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "E",
+        "afterText": "F"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "dataUri/none",
+    "messageKey": "illustration:msg-1",
+    "content": "<img src=\"data:image/png;base64,AAAA\">\n\nG\n\nH",
+    "detectors": []
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "<img src=\"data:image/png;base64,AAAA\">",
+       "G",
+       "H"
+      ],
+      "insertionOffsets": [
+       40,
+       43
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<img src=\"data:image/png;base64,AAAA\">",
+        "afterText": "G"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "G",
+        "afterText": "H"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "<img src=\"data:image/png;base64,AAAA\">\n\nG\n\nH"
+    },
+    "stripNames": {
+     "ok": "<img src=\"data:image/png;base64,AAAA\">\n\nG\n\nH"
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "<img src=\"data:image/png;base64,AAAA\">",
+       "G",
+       "H"
+      ],
+      "insertionOffsets": [
+       40,
+       43
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<img src=\"data:image/png;base64,AAAA\">",
+        "afterText": "G"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "G",
+        "afterText": "H"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "dataUri/charx",
+    "messageKey": "illustration:msg-1",
+    "content": "<img src=\"data:image/png;base64,AAAA\">\n\nG\n\nH",
+    "detectors": [
+     {
+      "scriptName": "img_tag",
+      "source": "\\[IMG:([^\\]]+)\\]",
+      "flags": "g"
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "<img src=\"data:image/png;base64,AAAA\">",
+       "G",
+       "H"
+      ],
+      "insertionOffsets": [
+       40,
+       43
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<img src=\"data:image/png;base64,AAAA\">",
+        "afterText": "G"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "G",
+        "afterText": "H"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "<img src=\"data:image/png;base64,AAAA\">\n\nG\n\nH"
+    },
+    "stripNames": {
+     "ok": "<img src=\"data:image/png;base64,AAAA\">\n\nG\n\nH"
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "<img src=\"data:image/png;base64,AAAA\">",
+       "G",
+       "H"
+      ],
+      "insertionOffsets": [
+       40,
+       43
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<img src=\"data:image/png;base64,AAAA\">",
+        "afterText": "G"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "G",
+        "afterText": "H"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": {
+    "name": "dataUri/charxNamed",
+    "messageKey": "illustration:msg-1",
+    "content": "<img src=\"data:image/png;base64,AAAA\">\n\nG\n\nH",
+    "detectors": [
+     {
+      "scriptName": "named",
+      "source": "\\[(?:IMG|img):(?<asset>[^\\]]+)\\]",
+      "flags": "gi"
+     },
+     {
+      "scriptName": "nonGlobal",
+      "source": "\\{\\{img::([^}]+)\\}\\}",
+      "flags": ""
+     }
+    ]
+   },
+   "expected": {
+    "split": {
+     "ok": {
+      "paragraphs": [
+       "<img src=\"data:image/png;base64,AAAA\">",
+       "G",
+       "H"
+      ],
+      "insertionOffsets": [
+       40,
+       43
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<img src=\"data:image/png;base64,AAAA\">",
+        "afterText": "G"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "G",
+        "afterText": "H"
+       }
+      ]
+     }
+    },
+    "strip": {
+     "ok": "<img src=\"data:image/png;base64,AAAA\">\n\nG\n\nH"
+    },
+    "stripNames": {
+     "ok": "<img src=\"data:image/png;base64,AAAA\">\n\nG\n\nH"
+    },
+    "native": {
+     "ok": []
+    },
+    "tokens": {
+     "ok": []
+    },
+    "slots": {
+     "ok": {
+      "paragraphs": [
+       "<img src=\"data:image/png;base64,AAAA\">",
+       "G",
+       "H"
+      ],
+      "insertionOffsets": [
+       40,
+       43
+      ],
+      "slots": [
+       {
+        "slotId": "illustration:msg-1:slot:0",
+        "sourceImageToken": "slot:illustration:msg-1:slot:0",
+        "index": 0,
+        "beforeText": "<img src=\"data:image/png;base64,AAAA\">",
+        "afterText": "G"
+       },
+       {
+        "slotId": "illustration:msg-1:slot:1",
+        "sourceImageToken": "slot:illustration:msg-1:slot:1",
+        "index": 1,
+        "beforeText": "G",
+        "afterText": "H"
+       }
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "slotIds": [
+  {
+   "input": [
+    "illustration:m",
+    0
+   ],
+   "expected": {
+    "ok": "illustration:m:slot:0"
+   }
+  },
+  {
+   "input": [
+    "  k  ",
+    2.6
+   ],
+   "expected": {
+    "ok": "k:slot:3"
+   }
+  },
+  {
+   "input": [
+    "k",
+    -3
+   ],
+   "expected": {
+    "ok": "k:slot:0"
+   }
+  },
+  {
+   "input": [
+    "",
+    1
+   ],
+   "expected": {
+    "error": {
+     "name": "TypeError",
+     "message": "Illustration slot requires a messageKey."
+    }
+   }
+  },
+  {
+   "input": [
+    null,
+    0
+   ],
+   "expected": {
+    "error": {
+     "name": "TypeError",
+     "message": "Illustration slot requires a messageKey."
+    }
+   }
+  },
+  {
+   "input": [
+    42,
+    1
+   ],
+   "expected": {
+    "ok": "42:slot:1"
+   }
+  }
+ ]
+}

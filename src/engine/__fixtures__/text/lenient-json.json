@@ -1,0 +1,237 @@
+{
+ "cases": [
+  {
+   "input": "{\"a\":1}",
+   "expected": {
+    "ok": {
+     "a": 1
+    }
+   }
+  },
+  {
+   "input": "```json\n{\"a\":[1,2]}\n```",
+   "expected": {
+    "ok": {
+     "a": [
+      1,
+      2
+     ]
+    }
+   }
+  },
+  {
+   "input": "```\n[1,2,3]\n```",
+   "expected": {
+    "ok": [
+     1,
+     2,
+     3
+    ]
+   }
+  },
+  {
+   "input": "Sure! Here you go: {\"x\": \"y\"} hope it helps",
+   "expected": {
+    "ok": {
+     "x": "y"
+    }
+   }
+  },
+  {
+   "input": "first {\"a\":1} then {\"b\":2}",
+   "expected": {
+    "ok": {
+     "b": 2
+    }
+   }
+  },
+  {
+   "input": "{\"a\":1} and broken {\"b\":",
+   "expected": {
+    "ok": {
+     "a": 1
+    }
+   }
+  },
+  {
+   "input": "text with \"{not json}\" then {\"ok\":true}",
+   "expected": {
+    "ok": {
+     "ok": true
+    }
+   }
+  },
+  {
+   "input": "{\"s\":\"brace } inside { string\",\"e\":\"esc \\\" quote\"}",
+   "expected": {
+    "ok": {
+     "s": "brace } inside { string",
+     "e": "esc \" quote"
+    }
+   }
+  },
+  {
+   "input": "prefix [1, {\"a\": \"]\"}] suffix",
+   "expected": {
+    "ok": [
+     1,
+     {
+      "a": "]"
+     }
+    ]
+   }
+  },
+  {
+   "input": "",
+   "expected": {
+    "error": {
+     "name": "AnalyzerClientError",
+     "message": "Analyzer did not return JSON: ",
+     "code": "ANALYZER_JSON_PARSE",
+     "analyzerRaw": ""
+    }
+   }
+  },
+  {
+   "input": "   ",
+   "expected": {
+    "error": {
+     "name": "AnalyzerClientError",
+     "message": "Analyzer did not return JSON: ",
+     "code": "ANALYZER_JSON_PARSE",
+     "analyzerRaw": ""
+    }
+   }
+  },
+  {
+   "input": "no json at all",
+   "expected": {
+    "error": {
+     "name": "AnalyzerClientError",
+     "message": "Analyzer did not return JSON: no json at all",
+     "code": "ANALYZER_JSON_PARSE",
+     "analyzerRaw": "no json at all"
+    }
+   }
+  },
+  {
+   "input": "{\"outer\": {\"inner\": [1, 2, {\"deep\": \"}\"}]}} trailing",
+   "expected": {
+    "ok": {
+     "outer": {
+      "inner": [
+       1,
+       2,
+       {
+        "deep": "}"
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "input": "{bad json} {\"good\": 1} [also, bad]",
+   "expected": {
+    "ok": {
+     "good": 1
+    }
+   }
+  },
+  {
+   "input": "[]",
+   "expected": {
+    "ok": []
+   }
+  },
+  {
+   "input": "42",
+   "expected": {
+    "ok": 42
+   }
+  },
+  {
+   "input": "\"str\"",
+   "expected": {
+    "ok": "str"
+   }
+  },
+  {
+   "input": "null",
+   "expected": {
+    "ok": null
+   }
+  },
+  {
+   "input": "```JSON\n{\"upper\":true}\n```",
+   "expected": {
+    "ok": {
+     "upper": true
+    }
+   }
+  },
+  {
+   "input": "{\"unterminated\": \"string}",
+   "expected": {
+    "error": {
+     "name": "AnalyzerClientError",
+     "message": "Analyzer did not return JSON: {\"unterminated\": \"string}",
+     "code": "ANALYZER_JSON_PARSE",
+     "analyzerRaw": "{\"unterminated\": \"string}"
+    }
+   }
+  },
+  {
+   "input": 12345,
+   "expected": {
+    "ok": 12345
+   }
+  },
+  {
+   "input": null,
+   "expected": {
+    "error": {
+     "name": "AnalyzerClientError",
+     "message": "Analyzer did not return JSON: ",
+     "code": "ANALYZER_JSON_PARSE",
+     "analyzerRaw": ""
+    }
+   }
+  },
+  {
+   "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx {broken",
+   "expected": {
+    "error": {
+     "name": "AnalyzerClientError",
+     "message": "Analyzer did not return JSON: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "code": "ANALYZER_JSON_PARSE",
+     "analyzerRaw": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx {broken"
+    }
+   }
+  },
+  {
+   "input": "<Thoughts>{\"thinking\": 1}</Thoughts>\n{\"answer\": 2}",
+   "expected": {
+    "ok": {
+     "answer": 2
+    }
+   }
+  },
+  {
+   "input": "}{ \"a\": 1 }",
+   "expected": {
+    "ok": {
+     "a": 1
+    }
+   }
+  },
+  {
+   "input": "[1,2] [3]",
+   "expected": {
+    "ok": [
+     3
+    ]
+   }
+  }
+ ]
+}
