@@ -91,7 +91,6 @@ export const BASE_PROMPT_LABELS = {
   none: "None", // 선택 안 함
   breastMaleTitle: "Breast size is not edited for male forms", // 남성 폼에서는 가슴 크기를 편집하지 않습니다
   tagPlaceholder: "tag, tag", // 태그, 태그
-  uniqueSearch: "Unique search", // 고유검색
   groups: {
     final: "Combined", // 종합
     identity: "Identity", // 고유
@@ -333,13 +332,3 @@ export const FILTER_GROUP_LABELS = {
   reference: { label: "Reference", yes: "Present", no: "None" } // 레퍼런스 / 있음 / 없음
 } as const;
 
-/** Unique tag search (stub; spec §3.1.4). */
-export const UNIQUE_TAG_LABELS = {
-  paneTitle: "Unique tag search", // 고유태그검색
-  open: "Open unique tag search", // 고유태그검색 열기
-  unavailable: "Unique tag search (Danbooru character tags) is not available yet in Inlay Illustrator.",
-  manualHint: "Enter the character tag by hand in the Identity tab of the base prompt editor.",
-  targets: "Prompt characters", 
-  tagMissing: "No character tag",
-  empty: "No prompt characters to analyze." // 분석할 프롬프트 캐릭터가 없습니다.
-} as const;

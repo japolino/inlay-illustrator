@@ -7,12 +7,12 @@ import type { RosterItem } from "../../../shared/contract/rpc.js";
 import { useAppState } from "../../state/app-state.js";
 import { FilterPopover, SearchField, useFilteredList, type FilterValues } from "../shell/filters.js";
 import { DockLayout } from "../shell/dock.js";
-import { Button, IconButton, SearchIcon, cn } from "../ui/index.js";
+import { IconButton } from "../ui/index.js";
 import { useWorkspaceCtx, type WorkspaceCtx } from "./context.js";
 import { formSaver } from "./data.js";
 import { draftKeyForCharacter, useDraftsSummary } from "./drafts.js";
 import { BadgeCheckIcon, ShirtIcon, ShuffleIcon, SparklesIcon } from "./icons.js";
-import { COMMON_LABELS, FORM_LABELS, GENDER_LABELS, UNIQUE_TAG_LABELS, BASE_PROMPT_LABELS } from "./labels/common.js";
+import { COMMON_LABELS, FORM_LABELS, GENDER_LABELS } from "./labels/common.js";
 import { PROMPTS_LABELS } from "./labels/prompts.js";
 import { FILTER_GROUPS, characterCollection, findForm, formReferenceAsset, formReferenceEnabled, hasEmptyForm, isRosterActive, matchesFilters, registeredRows, rosterOrigin, triState } from "./model.js";
 import { useRunningJob } from "./notices.js";
@@ -31,10 +31,6 @@ export function usePromptsCount(ctx: WorkspaceCtx): number | undefined {
 export function PromptsHeaderEnd() {
   const { ui, characterId, sourceUi } = useWorkspaceCtx();
   return <SearchField className="w-56 mobile:w-32" value={sourceUi.search[SEARCH_SCOPE] ?? ""} onChange={(q) => ui.setSearch(characterId, SEARCH_SCOPE, q)} label={PROMPTS_LABELS.search} />;
-}
-
-function openUniqueTags(ctx: WorkspaceCtx): void {
-  ctx.ui.openSecondary(ctx.characterId, "character-tags");
 }
 
 function PromptRow({ ctx, item, hidden, commandLocked }: { ctx: WorkspaceCtx; item: RosterItem; hidden: boolean; commandLocked: boolean }) {
@@ -81,9 +77,6 @@ function PromptRow({ ctx, item, hidden, commandLocked }: { ctx: WorkspaceCtx; it
       evidenceText={session.evidence.prompts === "text"}
       reclass={session.reclass.prompts}
       commandLocked={commandLocked}
-      identityActions={() => (
-        <Button size="sm" variant="ghost" className="h-7.5 shrink-0" onClick={() => openUniqueTags(ctx)} title={UNIQUE_TAG_LABELS.open}>{BASE_PROMPT_LABELS.uniqueSearch}</Button>
-      )}
     />
   );
 }
@@ -153,8 +146,6 @@ export function PromptsDock() {
   const leading = (
     <>
       <SaveButton label={PROMPTS_LABELS.savePrompts} dirty={summary.dirty} saving={summary.saving} error={summary.error} disabled={busy} onSave={() => void saveAll()} />
-      <IconButton variant="commandAction" size="command" label={PROMPTS_LABELS.uniqueTagOpen} disabled={!selected.length}
-        aria-pressed={sourceUi.secondaryOpen && sourceUi.secondaryMode === "character-tags"} onClick={() => openUniqueTags(ctx)}><SearchIcon /></IconButton>
       <FilterPopover compact={false} label={PROMPTS_LABELS.filter} groups={FILTER_GROUPS.prompts} values={sourceUi.filters[FILTER_SCOPE] ?? {}}
         onChange={(g, v) => ui.setFilter(characterId, FILTER_SCOPE, { ...(sourceUi.filters[FILTER_SCOPE] ?? {}), [g]: v })}
         onReset={() => ui.setFilter(characterId, FILTER_SCOPE, {})} onRefresh={() => sessions.bumpFilter(characterId, FILTER_SCOPE)} />

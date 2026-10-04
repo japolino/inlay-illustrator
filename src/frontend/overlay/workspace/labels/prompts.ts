@@ -9,7 +9,6 @@ export const PROMPTS_LABELS = {
   outfitPromptOf: (title: string) => `${title} outfit prompt`,
   savePrompts: "Save prompts", // 프롬프트 저장
   filter: "Prompt display filter", // 프롬프트 표시 필터
-  uniqueTagOpen: "Open unique tag search", // 고유태그검색 열기
   bulkReferenceTitle: "Toggle reference use for the listed characters",
   modeToReclass: "Switch to AI reclassification", // AI 재분류로 전환
   modeToReference: "Switch to reference analysis", // 레퍼런스 분석으로 전환

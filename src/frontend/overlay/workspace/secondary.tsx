@@ -1,6 +1,6 @@
 /**
  * Right-side editor pane routing (spec/ui.md §3.4, AM `Tl` titles 155851 and back button `Cc`/`jIt` 153190):
- * unique tags, asset pickers, outfit list / outfit generation (character and persona).
+ * asset pickers, outfit list / outfit generation (character and persona).
  */
 import { useMemo } from "preact/hooks";
 import type { TabView } from "../workspace-ui.js";
@@ -9,12 +9,11 @@ import { useWorkspaceCtx, type WorkspaceCtx } from "./context.js";
 import { usePersonas } from "./data.js";
 import { draftKeyForCharacter, draftKeyForPersona } from "./drafts.js";
 import { GenerationDock, GenerationPanel } from "./generation.js";
-import { GENERATION_LABELS, OUTFIT_LABELS, PICKER_LABELS, UNIQUE_TAG_LABELS } from "./labels/common.js";
+import { GENERATION_LABELS, OUTFIT_LABELS, PICKER_LABELS } from "./labels/common.js";
 import { PERSONA_LABELS } from "./labels/persona.js";
 import { characterCollection, personaDisplayName, pickerKind, pickerPaneTitle } from "./model.js";
 import { OutfitDock, OutfitPanel, type OutfitOwner } from "./outfits.js";
 import { PickerDock, PickerPanel, usePickerDockExpanded } from "./picker.js";
-import { UniqueTagPanel } from "./unique-tags.js";
 
 /** Back from a picker (AM `Pc` 155542): return target `closed` closes the pane, else back to the outfit pane. */
 function backFromPicker(ctx: WorkspaceCtx): void {
@@ -34,10 +33,8 @@ export function useSecondaryView(tab: WorkspaceTab, mobile: boolean): TabView["s
   if (!sourceUi.secondaryOpen || !characterId || !workspace) return null;
   const close = () => { sessions.closeGeneration(characterId); ui.closeSecondary(characterId); };
 
-  if (sourceUi.secondaryMode === "character-tags") {
-    if (tab !== "prompts") return null;
-    return { title: UNIQUE_TAG_LABELS.paneTitle, content: <UniqueTagPanel />, back: { label: PICKER_LABELS.closeWorkspace, onClick: close } };
-  }
+  // Unique tag search (Danbooru) is not part of the port: a stored "character-tags" pane shows nothing.
+  if (sourceUi.secondaryMode === "character-tags") return null;
 
   if (sourceUi.secondaryMode === "asset-picker") {
     const target = sourceUi.pickerTarget;
