@@ -286,6 +286,7 @@ export function DirectionEditor({ kind, settingKey, title, saved, developerMode,
           );
         })}
       </div>
+      {kind === "analysis" && !editing && builtInText ? <p class="px-0.5 text-2xs leading-relaxed text-muted-foreground" data-v5-preset-description="">{builtInText}</p> : null}
       <div class={cn("grid min-h-0 gap-2.5 rounded-lg bg-card p-2.5 md:h-56 md:min-h-56", kind === "aspect-ratio" && "md:grid-cols-[max-content_minmax(0,1fr)]", controls.length > 0 && "md:grid-cols-[minmax(0,1fr)_max-content]")}
         data-v5-instruction-frame={kind}>
         {kind === "aspect-ratio" ? (

@@ -182,8 +182,8 @@ async function until<T>(read: () => T | null | undefined | false, timeoutMs = 30
   }
 }
 
-async function openSettings(section: string, setup?: (mock: MockBackend) => void) {
-  const mock = createFullMockBackend({ timeScale: 0 });
+async function openSettings(section: string, setup?: (mock: MockBackend) => void, latencyMs = 0) {
+  const mock = createFullMockBackend({ timeScale: 0, latencyMs });
   setup?.(mock);
   const app = new AppController(new RpcClient(mock.transport));
   await app.init();
@@ -239,6 +239,20 @@ describe("settings pages (DOM)", () => {
     expect(mock.db.config.characterPrompt.charxGenerationDefaults.nsfwAlwaysEnabled).toBe(false);
     (doc.querySelector("[data-charx-reset-scope]") as HTMLButtonElement).click();
     await until(() => !doc.querySelector('[data-charx-field="nsfwAlwaysEnabled"]')?.textContent?.includes("Custom"));
+    controller.destroy();
+  });
+
+  test("current character settings: quick successive writes keep the last value", async () => {
+    const { controller } = await openSettings("charx", undefined, 40);
+    const field = (name: string) => doc.querySelector(`[data-charx-field="${name}"]`)!;
+    (await until(() => field("nsfwAlwaysEnabled")?.querySelector('[role="switch"]')) as HTMLButtonElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    (field("fixedResolution").querySelector('[role="switch"]') as HTMLButtonElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    (field("nativeAssetVisibility").querySelector('button[aria-pressed="false"]') as HTMLButtonElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(field("nativeAssetVisibility").querySelector('button[aria-pressed="true"]')?.textContent).toBe("Show");
+    expect(field("fixedResolution").querySelector('[role="switch"]')?.getAttribute("aria-checked")).toBe("true");
     controller.destroy();
   });
 

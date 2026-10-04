@@ -10,7 +10,7 @@ function typeInto(element: HTMLInputElement | HTMLTextAreaElement, value: string
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const SETTINGS_SCENES: Record<string, PreviewScene> = {
+const RAW_SCENES: Record<string, PreviewScene> = {
   /** Model page with an unsaved draft (amber dot + enabled save button). Use with settings=model. */
   "settings-dirty": async ({ doc }) => {
     const input = await waitFor<HTMLInputElement>(doc, '[data-settings-page="model"] input[type="number"]');
@@ -19,12 +19,13 @@ export const SETTINGS_SCENES: Record<string, PreviewScene> = {
   /** Current character settings with per-character overrides ("Custom" markers). Use with settings=charx. */
   "charx-override": async ({ doc }) => {
     await clickWhenReady(doc, '[data-charx-field="nsfwAlwaysEnabled"] [role="switch"]');
-    await sleep(400);
+    await sleep(700);
     await clickWhenReady(doc, '[data-charx-field="fixedResolution"] [role="switch"]');
-    await sleep(400);
+    await sleep(700);
     await clickWhenReady(doc, '[data-charx-field="nativeAssetVisibility"] button[aria-pressed="false"]');
-    await sleep(300);
+    await sleep(700);
     typeInto(await waitFor<HTMLTextAreaElement>(doc, "[data-charx-prompt]"), "masterpiece, best quality, school uniform");
+    await sleep(500);
   },
   /** Reset-character confirm dialog. Use with settings=charx. */
   "charx-reset-confirm": async ({ doc }) => {
@@ -65,10 +66,24 @@ export const SETTINGS_SCENES: Record<string, PreviewScene> = {
     typeInto(inputs[1]!, "960");
     (doc.querySelector('[data-custom-sizes] button[aria-label="Save custom resolution"]') as HTMLElement | null)?.click();
   },
+  /** Run logs page (opened through the navigation: the shell shows "charx" until the config says developer mode). Use with settings=logs&dev=1. */
+  "logs-open": async ({ doc }) => {
+    await clickWhenReady(doc, '[data-settings-navigation-item="logs"]');
+    await waitFor(doc, "[data-run-log-list]");
+  },
   /** Live log entries arriving. Use with settings=logs&dev=1. */
   "logs-live": async ({ doc, mock }) => {
+    await clickWhenReady(doc, '[data-settings-navigation-item="logs"]');
     await waitFor(doc, "[data-run-log-list]");
     appendMockLog(mock.db, mock, { level: "info", scope: "chat-image", message: "Live entry: image 2/2 committed." });
     appendMockLog(mock.db, mock, { level: "error", scope: "ai-analysis", message: "Analyzer timeout after 180s (ANALYZER_TIMEOUT).", details: { attempt: 1, total: 5 } });
   }
 };
+
+/** Every scene ends with a short pause: headless Chrome can capture the frame before the last DOM change is painted. */
+export const SETTINGS_SCENES: Record<string, PreviewScene> = Object.fromEntries(
+  Object.entries(RAW_SCENES).map(([name, scene]) => [name, async (input: Parameters<PreviewScene>[0]) => {
+    await scene(input);
+    await sleep(400);
+  }])
+);

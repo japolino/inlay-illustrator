@@ -294,7 +294,7 @@ export function ChoiceCard({ selected, label, description, onSelect, gradient, i
 } & Record<`data-${string}`, string>) {
   return (
     <button type="button" role="radio" aria-checked={selected} disabled={disabled} onClick={onSelect}
-      class="group relative isolate min-h-34 min-w-0 overflow-hidden rounded-lg border border-border/70 bg-surface-prompt-field text-left outline-none transition-[border-color,background-color,box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-ring/55 disabled:cursor-default mobile:min-h-28"
+      class="group relative isolate min-h-34 min-w-0 overflow-hidden rounded-lg border border-border/70 bg-surface-prompt-field text-left outline-none transition-[border-color,background-color,box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-ring/55 disabled:cursor-not-allowed disabled:opacity-55 mobile:min-h-28"
       {...rest}>
       {image ? (
         <img src={image.src} alt="" aria-hidden="true" referrerpolicy="no-referrer"
