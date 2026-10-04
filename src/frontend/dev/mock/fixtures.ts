@@ -77,6 +77,8 @@ function asset(characterId: string, name: string, hue: number, kind: AssetListIt
 }
 
 function forms(main: string[], hair: string[], eyes: string[], outfit: { label: string; top: string; bottom: string }[], gender: "female" | "male" = "female"): FormCollection {
+  // Group keys are catalog field ids (BASE_PROMPT_GROUP_IDS); free tags go to "custom".
+  const [length, color, ...style] = hair;
   return normalizeFormCollection({
     defaultFormId: "default",
     forms: [{
@@ -85,7 +87,13 @@ function forms(main: string[], hair: string[], eyes: string[], outfit: { label: 
       description: "",
       humanlike: true,
       gender,
-      basePromptGroups: { identity: main, hair, eyes },
+      basePromptGroups: {
+        "identity.character_tag": main.filter((tag) => tag !== "1girl" && tag !== "1boy"),
+        ...(length ? { "hair.length": [length] } : {}),
+        ...(color ? { "hair.color": [color] } : {}),
+        ...(style.length ? { "hair.style": style } : {}),
+        "eyes.color": eyes
+      },
       negativePrompt: "",
       reference: null,
       defaultOutfitId: "outfit_1",

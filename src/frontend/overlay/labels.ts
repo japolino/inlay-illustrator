@@ -32,7 +32,10 @@ export const SHELL_LABELS = {
   rosterSplitAdjust: "Roster / main area width adjust", // 로스터와 메인 영역 너비 조절
   widthAdjust: (label: string) => `${label} width adjust`, // ${c} 너비 조절
   connectionFailed: "Could not reach the Inlay Illustrator backend.",
-  retry: "Retry"
+  retry: "Retry",
+  unsavedTitle: "Discard unsaved changes?",
+  unsavedDescription: (n: number) => `${n} prompt or outfit edit${n === 1 ? " is" : "s are"} not saved. They will be lost.`,
+  discardChanges: "Discard changes"
 } as const;
 
 export type WorkspaceTab = "assets" | "prompts" | "artists" | "persona";

@@ -263,7 +263,8 @@ export class AppController {
   async startAnalysis(params: ClientParams<"analysis.start">): Promise<string | null> {
     try {
       const { jobId } = await this.call("analysis.start", params);
-      this.upsertAnalysisJob({ jobId, kind: params.kind, characterId: params.characterId, status: "queued", progress: { label: "Queued" }, rows: [], startedAt: Date.now() });
+      // An early analysis.progress event may already have created the job.
+      if (!this.state.analysisJobs[jobId]) this.upsertAnalysisJob({ jobId, kind: params.kind, characterId: params.characterId, status: "queued", progress: { label: "Queued" }, rows: [], startedAt: Date.now() });
       return jobId;
     } catch (error) {
       this.notifyError(error);

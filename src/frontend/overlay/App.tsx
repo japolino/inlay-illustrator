@@ -28,13 +28,14 @@ import {
   ChevronDownIcon,
   cn,
   tabPanelProps,
+  useConfirm,
   useFocusTrap,
   useLayer
 } from "./ui/index.js";
 import { useIsMobile } from "./viewport.js";
 import { AppContext, useApp, useAppState, type AppController } from "../state/app-state.js";
 import { CommandDock, PageHeader } from "./shell/dock.js";
-import { useWorkspaceTabView } from "./workspace/index.js";
+import { discardWorkspaceDrafts, unsavedWorkspaceDrafts, useWorkspaceTabView } from "./workspace/index.js";
 import { SPLIT_MAX, SPLIT_MIN, WorkspaceUiContext, WorkspaceUiStore, useSourceUi, useWorkspaceUi, type TabView } from "./workspace-ui.js";
 import { CharxPickerGrid, CharxRail, CustomCharacterEditor, EDITOR_LABELS, RosterInfoPanel, RosterSidebar, ROSTER_LABELS } from "./roster/index.js";
 
@@ -127,43 +128,45 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
 
   const setActiveTab = (tab: WorkspaceTab) => workspaceUi.updateSource(characterId, { activeTab: tab, secondaryOpen: false, infoPromptKey: null });
 
+  // A requested tab is applied to the character that is selected (or selected next, when none is loaded yet).
+  const pendingTab = useRef<WorkspaceTab | null>(null);
   useEffect(() => {
     if (!navigation.requestId) return;
     if (navigation.settings) {
       setSection(navigation.settings);
       setSettingsOpen(true);
     } else if (navigation.tab) {
+      pendingTab.current = characterId ? null : navigation.tab;
       setActiveTab(navigation.tab);
       setSettingsOpen(false);
     }
   }, [navigation.requestId]);
+  useEffect(() => {
+    if (characterId && pendingTab.current) {
+      setActiveTab(pendingTab.current);
+      pendingTab.current = null;
+    }
+  }, [characterId]);
 
   const configLoaded = useAppState((s) => s.config !== null);
   useEffect(() => {
     if (configLoaded && !sectionVisible(section, developerMode)) setSection(DEFAULT_SETTINGS_SECTION);
   }, [developerMode, section, configLoaded]);
 
-  // AM `Uo` 154814: 1.5 s after a character prompt / persona analysis completes, show its result tab.
-  const analysisJobs = useAppState((s) => s.analysisJobs);
-  const finishedJobs = Object.values(analysisJobs).filter((job) => job.finishedAt && (job.status === "success" || job.status === "partial"));
-  const seenJobs = useRef(new Set<string>());
-  useEffect(() => {
-    for (const job of finishedJobs) {
-      if (seenJobs.current.has(job.jobId)) continue;
-      seenJobs.current.add(job.jobId);
-      const target: WorkspaceTab | null = job.kind === "character-prompts" ? "prompts" : job.kind === "persona" ? "persona" : null;
-      const from: WorkspaceTab = "assets";
-      if (!target || job.characterId !== characterId || activeTab !== from) continue;
-      const tabAtFinish = activeTab;
-      const characterAtFinish = characterId;
-      setTimeout(() => {
-        const current = workspaceUi.source(characterAtFinish).activeTab;
-        if (app.state.selectedCharacterId === characterAtFinish && current === tabAtFinish) setActiveTab(target);
-      }, 1500);
+  const confirm = useConfirm();
+  /** Unsaved-edit guard: custom character editor prompt (AM `Te`), then unsaved prompt/outfit drafts. */
+  const guarded = (action: () => void) => workspaceUi.runGuarded(() => {
+    const keys = unsavedWorkspaceDrafts(app, characterId);
+    if (keys.length === 0) {
+      action();
+      return;
     }
-  }, [finishedJobs.length]);
-
-  const guarded = (action: () => void) => workspaceUi.runGuarded(action);
+    void confirm({ title: SHELL_LABELS.unsavedTitle, description: SHELL_LABELS.unsavedDescription(keys.length), confirmLabel: SHELL_LABELS.discardChanges, tone: "danger" }).then((ok) => {
+      if (!ok) return;
+      discardWorkspaceDrafts(app, keys);
+      action();
+    });
+  });
   const toggleSettings = () => guarded(() => {
     setSettingsOpen((open) => !open);
     setDrawerOpen(false);
@@ -373,7 +376,7 @@ function WorkspaceMain({ tab, view }: { tab: WorkspaceTab; view: TabView }) {
   return (
     <div class="relative flex min-h-0 min-w-0 flex-1 flex-col" data-workspace-pane="primary">
       <div {...tabPanelProps(TAB_ID_PREFIX, tab)} class="min-h-0 flex-1 overflow-y-auto outline-none" data-workspace-scroll="" style={{ paddingBottom: view.dock ? (view.dockExpanded ? "19rem" : "4.375rem") : undefined }}>
-        <div class={cn("mx-auto grid w-full content-start gap-4 px-5 py-5 mobile:px-3", view.layout === "character-grid" ? "max-w-none" : "max-w-190")} data-workspace-content="">
+        <div class={cn("mx-auto grid w-full grid-cols-[minmax(0,1fr)] content-start gap-4 px-5 py-5 mobile:px-3", view.layout === "character-grid" ? "max-w-none" : "max-w-190")} data-workspace-content="">
           <PageHeader title={view.title} count={view.count} end={view.headerEnd} />
           {view.content}
         </div>

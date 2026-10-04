@@ -68,12 +68,12 @@ export function DockLayout({ anchor, leading, controls, trailing }: { anchor?: C
 /** Page frame header (AM `Fc`): title, optional "Selected N" badge, header end slot. */
 export function PageHeader({ title, count, countLabel = (n: number) => `Selected ${n}`, end, className }: { title: string; count?: number; countLabel?: (n: number) => string; end?: ComponentChildren; className?: string }) {
   return (
-    <header class={cn("flex min-h-8 w-full items-center justify-between gap-3", className)} data-page-header="">
+    <header class={cn("flex min-h-8 w-full flex-wrap items-center justify-between gap-x-3 gap-y-2", className)} data-page-header="">
       <div class="flex min-w-0 items-center gap-2">
         <h1 class="truncate text-lg leading-tight font-extrabold">{title}</h1>
         {count !== undefined ? <span class="inline-flex h-5 shrink-0 items-center rounded-full bg-secondary px-2 text-2xs font-bold text-muted-foreground tabular-nums">{countLabel(count)}</span> : null}
       </div>
-      {end ? <div class="flex min-w-0 items-center gap-2">{end}</div> : null}
+      {end ? <div class="flex min-w-0 max-w-full flex-wrap items-center gap-2">{end}</div> : null}
     </header>
   );
 }
