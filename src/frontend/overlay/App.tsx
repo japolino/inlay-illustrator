@@ -1,6 +1,9 @@
 import type { ComponentChildren } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { Config } from "../../shared/config.js";
+import { CommandDock, PageHeader } from "./shell/dock.js";
+import { useWorkspaceTabView } from "./workspace/index.js";
+import { WorkspaceUiContext, WorkspaceUiStore, useSourceUi, useWorkspaceUi, type TabView } from "./workspace-ui.js";
 import {
   SETTINGS_GROUPS,
   SHELL_LABELS,
@@ -10,7 +13,7 @@ import {
   type WorkspaceTab
 } from "./labels.js";
 import { Placeholder } from "./placeholder.js";
-import { SettingsPage } from "./settings.js";
+import { SettingsPage } from "./settings/index.js";
 import { useStore, type FrontendStore } from "./store.js";
 import {
   ArrowLeftIcon,
@@ -35,12 +38,14 @@ import {
   useLayer
 } from "./ui/index.js";
 import { useIsMobile } from "./viewport.js";
+import { AppContext, useApp, useAppState, type AppController } from "../state/app-state.js";
 
 /** External navigation request (launchers may ask for a tab or a settings page). */
 export type OverlayNavigation = { requestId: number; tab?: WorkspaceTab; settings?: SettingsSection };
 
 export type OverlayAppProps = {
   store: FrontendStore;
+  app: AppController;
   layers: LayerStack;
   toasts: ToastStore;
   portal: () => HTMLElement | null;
@@ -53,8 +58,10 @@ const TAB_ID_PREFIX = "ii-am-workspace";
 const SIDEBAR_WIDTH = 292;
 
 /** Root of the overlay tree: providers + the Asset Maid shell. */
-export function OverlayApp({ layers, toasts, portal, ...props }: OverlayAppProps) {
+export function OverlayApp({ layers, toasts, portal, app, ...props }: OverlayAppProps) {
+  useEffect(() => app.onNotice((notice) => toasts.show({ message: notice.message, tone: notice.tone, durationMs: notice.durationMs })), [app, toasts]);
   return (
+    <AppContext.Provider value={app}>
     <OverlayEnvironmentContext.Provider value={{ layers, portal }}>
       <ToastProvider store={toasts}>
         <ConfirmProvider defaultCancelLabel={SHELL_LABELS.cancel}>
@@ -63,18 +70,33 @@ export function OverlayApp({ layers, toasts, portal, ...props }: OverlayAppProps
         </ConfirmProvider>
       </ToastProvider>
     </OverlayEnvironmentContext.Provider>
+    </AppContext.Provider>
   );
 }
 
-function Shell({ store, navigation, onClose, patchConfig }: Omit<OverlayAppProps, "layers" | "toasts" | "portal">) {
-  const snapshot = useStore(store);
+function Shell({ navigation, onClose }: Omit<OverlayAppProps, "layers" | "toasts" | "portal" | "app">) {
+  const app = useApp();
+  const workspaceUi = useMemo(() => new WorkspaceUiStore(), []);
+  return (
+    <WorkspaceUiContext.Provider value={workspaceUi}>
+      <ShellInner navigation={navigation} onClose={onClose} app={app} workspaceUi={workspaceUi} />
+    </WorkspaceUiContext.Provider>
+  );
+}
+
+function ShellInner({ navigation, onClose, app, workspaceUi }: { navigation: OverlayNavigation; onClose: () => void; app: AppController; workspaceUi: WorkspaceUiStore }) {
   const mobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>(navigation.tab ?? "assets");
+  const characterId = useAppState((s) => s.selectedCharacterId);
+  const developerMode = useAppState((s) => s.config?.ui.developerModeEnabled ?? false);
+  const sourceUi = useSourceUi(characterId);
+  const activeTab = sourceUi.activeTab;
+  const setActiveTab = (tab: WorkspaceTab) => workspaceUi.updateSource(characterId, { activeTab: tab, secondaryOpen: false });
   const [settingsOpen, setSettingsOpen] = useState(Boolean(navigation.settings));
   const [section, setSection] = useState<SettingsSection>(navigation.settings ?? DEFAULT_SETTINGS_SECTION);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const sidebarOpen = useWorkspaceUi((ui) => ui.sidebarOpen);
+  const setSidebarOpen = (open: boolean) => workspaceUi.updateGlobal({ sidebarOpen: open });
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [developerMode, setDeveloperMode] = useState(false);
+  void app;
 
   useEffect(() => {
     if (!navigation.requestId) return;
@@ -104,21 +126,19 @@ function Shell({ store, navigation, onClose, patchConfig }: Omit<OverlayAppProps
     setSettingsOpen(false);
   };
 
+  const view = useWorkspaceTabView({ characterId, tab: activeTab, mobile });
   const sidebarLabel = settingsOpen ? SHELL_LABELS.settingsList : SHELL_LABELS.rosterList;
   const sidebar = settingsOpen
     ? <SettingsNavigation active={section} developerMode={developerMode} onSelect={selectSection} onBack={toggleSettings} />
     : <RosterPlaceholder />;
   const main = settingsOpen
-    ? (
-      <SettingsPage
-        section={section}
-        config={snapshot.config}
-        patchConfig={patchConfig}
-        developerMode={developerMode}
-        onDeveloperModeChange={setDeveloperMode}
-      />
-    )
-    : <WorkspacePlaceholder tab={activeTab} />;
+    ? <div class="min-h-0 flex-1 overflow-y-auto" data-workspace-scroll=""><SettingsPage section={section} /></div>
+    : (
+      <div class="flex min-h-0 flex-1">
+        <WorkspaceMain tab={activeTab} view={view} />
+        {view.secondary && !mobile ? <WorkspaceSecondary secondary={view.secondary} /> : null}
+      </div>
+    );
 
   if (mobile) {
     return (
@@ -145,7 +165,7 @@ function Shell({ store, navigation, onClose, patchConfig }: Omit<OverlayAppProps
             onValueChange={selectTab}
           />
         ) : null}
-        <main class="min-h-0 flex-1 overflow-y-auto">{main}</main>
+        <main class="flex min-h-0 flex-1 flex-col">{view.secondary && !settingsOpen ? <WorkspaceSecondary secondary={view.secondary} /> : main}</main>
         <MobileDrawer open={drawerOpen} label={sidebarLabel} onClose={() => setDrawerOpen(false)}>{sidebar}</MobileDrawer>
       </div>
     );
@@ -189,7 +209,7 @@ function Shell({ store, navigation, onClose, patchConfig }: Omit<OverlayAppProps
           ) : <div class="min-w-0 flex-1" />}
           <IconButton label={SHELL_LABELS.close} onClick={onClose}><XIcon /></IconButton>
         </header>
-        <div class="min-h-0 flex-1 overflow-y-auto" data-workspace-scroll="">{main}</div>
+        <div class="flex min-h-0 flex-1 flex-col">{main}</div>
       </section>
     </div>
   );
@@ -276,12 +296,34 @@ function RosterPlaceholder() {
   );
 }
 
-function WorkspacePlaceholder({ tab }: { tab: WorkspaceTab }) {
-  const definition = WORKSPACE_TABS.find((entry) => entry.id === tab)!;
+/** Primary pane of a workspace tab: page header + content + Command Dock (AM `y5` + `Fc`). */
+function WorkspaceMain({ tab, view }: { tab: WorkspaceTab; view: TabView }) {
   return (
-    <div {...tabPanelProps(TAB_ID_PREFIX, tab)} class="mx-auto grid w-full max-w-190 content-start gap-4 p-5 outline-none">
-      <h1 class="text-lg leading-tight font-extrabold">{definition.label}</h1>
-      <Placeholder>{definition.description}</Placeholder>
+    <div class="relative flex min-h-0 flex-1 flex-col" data-workspace-pane="primary">
+      <div {...tabPanelProps(TAB_ID_PREFIX, tab)} class="min-h-0 flex-1 overflow-y-auto outline-none" data-workspace-scroll="" style={{ paddingBottom: view.dock ? (view.dockExpanded ? "19rem" : "4.375rem") : undefined }}>
+        <div class={cn("mx-auto grid w-full content-start gap-4 px-5 py-5 mobile:px-3", view.layout === "character-grid" ? "max-w-none" : "max-w-190")} data-workspace-content="">
+          <PageHeader title={view.title} count={view.count} end={view.headerEnd} />
+          {view.content}
+        </div>
+      </div>
+      {view.notices ? <div class="pointer-events-none absolute inset-x-0 bottom-16 z-40 grid justify-items-center gap-1.5 px-5" data-workspace-progress-notices="">{view.notices}</div> : null}
+      {view.dock ? <CommandDock expanded={view.dockExpanded}>{view.dock}</CommandDock> : null}
+    </div>
+  );
+}
+
+/** Secondary (right) pane (AM secondary `y5`). */
+function WorkspaceSecondary({ secondary }: { secondary: NonNullable<TabView["secondary"]> }) {
+  return (
+    <div class="relative flex min-h-0 flex-1 flex-col border-l border-border" data-workspace-pane="secondary">
+      <header class="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3" data-workspace-secondary-header="">
+        {secondary.back ? <IconButton label={secondary.back.label} title={secondary.back.label} onClick={secondary.back.onClick}><ArrowLeftIcon /></IconButton> : null}
+        <h2 class="min-w-0 flex-1 truncate text-sm font-extrabold">{secondary.title}</h2>
+      </header>
+      <div class="min-h-0 flex-1 overflow-y-auto" data-workspace-scroll="" style={{ paddingBottom: secondary.dock ? (secondary.dockExpanded ? "19rem" : "4.375rem") : undefined }}>
+        <div class="grid content-start gap-3 p-4">{secondary.content}</div>
+      </div>
+      {secondary.dock ? <CommandDock expanded={secondary.dockExpanded}>{secondary.dock}</CommandDock> : null}
     </div>
   );
 }

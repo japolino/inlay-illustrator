@@ -1,12 +1,14 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { FAB_CORNER_OPTIONS, INLAY_IMAGE_ASPECT_PRESETS, type Config, type FabCorner, type InlayImageAspect } from "../../shared/config.js";
-import { SETTINGS_GROUPS, SYSTEM_SETTINGS_LABELS as L, type SettingsSection } from "./labels.js";
-import { Placeholder } from "./placeholder.js";
-import { Select, Slider, Switch, cn, useToasts } from "./ui/index.js";
+import { FAB_CORNER_OPTIONS, INLAY_IMAGE_ASPECT_PRESETS, type Config, type FabCorner, type InlayImageAspect } from "../../../shared/config.js";
+import { SETTINGS_GROUPS, SYSTEM_SETTINGS_LABELS as L, type SettingsSection } from "../labels.js";
+import { Placeholder } from "../placeholder.js";
+import { Select, Slider, Switch, cn, useToasts } from "../ui/index.js";
 
 export type SettingsPageProps = {
   section: SettingsSection;
+};
+type LegacyProps = SettingsPageProps & {
   config: Config;
   patchConfig: (patch: Partial<Config>) => void;
   developerMode: boolean;
@@ -22,14 +24,15 @@ function sectionLabel(section: SettingsSection): string {
 }
 
 /** Settings page frame (`C0t` header + centred body, max-w-190). */
-export function SettingsPage(props: SettingsPageProps) {
+export function SettingsPage({ section }: SettingsPageProps) {
+  const props = { section } as LegacyProps;
   return (
     <div class="grid content-start gap-6 px-5 py-5" data-settings-page={props.section}>
       <header class="mx-auto flex min-h-8 w-full max-w-190 items-center justify-between gap-3" data-settings-page-header="">
         <h1 class="truncate text-lg leading-tight font-extrabold">{sectionLabel(props.section)}</h1>
       </header>
       <div class="mx-auto grid w-full max-w-190 content-start gap-2">
-        {props.section === "system" ? <SystemSettings {...props} /> : <Placeholder />}
+        {props.section === "system" && props.config ? <SystemSettings {...props} /> : <Placeholder />}
       </div>
     </div>
   );
@@ -64,7 +67,7 @@ export function SettingsRow({ title, description, children, labelId, className }
   );
 }
 
-function SystemSettings({ config, patchConfig, developerMode, onDeveloperModeChange }: SettingsPageProps) {
+function SystemSettings({ config, patchConfig, developerMode, onDeveloperModeChange }: LegacyProps) {
   const toasts = useToasts();
   const clicks = useRef({ count: 0, at: 0 });
   // Asset Maid toggles developer mode with 5 clicks on an invisible row in System settings.

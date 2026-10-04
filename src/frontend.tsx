@@ -17,11 +17,22 @@ import { LAUNCHER_LABELS } from "./frontend/overlay/labels.js";
 import { LauncherPanel } from "./frontend/overlay/launcher.js";
 import { FrontendStore } from "./frontend/overlay/store.js";
 import { OVERLAY_CSS } from "./frontend/overlay/styles/index.js";
+import { RpcClient, spindleTransport } from "./frontend/rpc/client.js";
+import { AppController } from "./frontend/state/app-state.js";
+import type { OverlayController } from "./frontend/overlay/controller.js";
+import { installChatSide } from "./frontend/chat/index.js";
+import { createZoomViewer, type ZoomViewer } from "./frontend/zoom/index.js";
 
-export function setup(ctx: SpindleFrontendContext) {
+/** Handles exposed to dev tools (preview page, tests). */
+export type FrontendHandles = { app: AppController; client: RpcClient; overlay: OverlayController; zoom: ZoomViewer };
+export type SetupOptions = { onReady?: (handles: FrontendHandles) => void };
+
+export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
   const previousCleanup = (globalThis as Record<string, unknown>)[CLEANUP_KEY];
   if (typeof previousCleanup === "function") previousCleanup();
 
+  const client = new RpcClient(spindleTransport(ctx), { clientId: "ui" });
+  const app = new AppController(client, { surface: "overlay" });
   const store = new FrontendStore();
   const removeStyle = ctx.dom.addStyle(HOST_STYLES);
   const removeOverlayStyle = ctx.dom.addStyle(OVERLAY_CSS);
@@ -49,11 +60,16 @@ export function setup(ctx: SpindleFrontendContext) {
 
   const overlay = createOverlayController(ctx, {
     store,
+    app,
     patchConfig,
     onHostFallback: (kind, error) => {
       console.warn(`[Inlay Illustrator] overlay mount fell back to ${kind}:`, error);
     }
   });
+
+  // Chat side: zoom viewer + controls around baked illustrations.
+  const zoom = createZoomViewer(ctx, app);
+  const removeChatSide = installChatSide(ctx, app, { openZoom: (target) => zoom.open(target), getActiveChatId: activeChatId });
 
   // Launcher 1: the drawer tab is a small status panel with an "Open" button.
   const tab = ctx.ui.registerDrawerTab(DRAWER_TAB_OPTIONS);
@@ -97,7 +113,8 @@ export function setup(ctx: SpindleFrontendContext) {
     }, delayMs);
   }
 
-  const unsub = ctx.onBackendMessage((payload: unknown) => {
+  // Legacy (non-RPC) backend messages: avatar bridge and the interim state/config messages.
+  const unsub = client.onForeign((payload: unknown) => {
     const message = payload as BackendMessage & Record<string, unknown>;
     if (message.type === "avatar_image_request") {
       void respondToAvatarImageRequest(message, (response) => ctx.sendToBackend(response));
@@ -130,11 +147,17 @@ export function setup(ctx: SpindleFrontendContext) {
   });
 
   requestState();
+  void app.init();
   ctx.ready();
+  options.onReady?.({ app, client, overlay, zoom });
 
   const cleanup = () => {
     unsub();
     unsubChatSwitched();
+    removeChatSide();
+    zoom.destroy();
+    app.destroy();
+    client.destroy();
     if (inlayDisplayTimer) clearTimeout(inlayDisplayTimer);
     removeInputBarClick?.();
     inputBarAction?.destroy();
