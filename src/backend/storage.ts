@@ -3,12 +3,12 @@
  * getJson/setJson feature detection, per-path serialized read-modify-write,
  * serialized config updates and content-hash ComfyUI workflow dedupe.
  *
+ * LEGACY (0.9.x): still used by src/backend.ts until it is rewired to src/backend/services (createServices).
  * The storage layout of the Asset Maid port (characters/<id>/asset-maid.json,
  * chats/<chatId>/chat-data.json, config/*.json) is defined in
  * `src/shared/contract/**`; this module only provides the primitives.
  */
 import { DEFAULT_CONFIG, normalizeConfig, type Config, type RawConfig } from "../shared/config.js";
-import { listLlmConnections } from "./llm-client.js";
 import type { ImageConnection } from "./types.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
@@ -178,6 +178,14 @@ export async function hydrateWorkflowParameters(parameters: Record<string, unkno
 }
 
 // --- Connection lists and the frontend state snapshot ---
+
+async function listLlmConnections(userId?: string): Promise<Array<{ id: string; name: string; provider: string; model: string }>> {
+  try {
+    return (await spindle.connections.list(userId)).map((c) => ({ id: c.id, name: c.name, provider: c.provider, model: c.model }));
+  } catch {
+    return [];
+  }
+}
 
 export async function getImageConnections(userId?: string): Promise<ImageConnection[]> {
   try {
