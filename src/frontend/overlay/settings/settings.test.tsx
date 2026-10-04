@@ -30,15 +30,18 @@ import { connectionPatch, resolveImageConnection } from "./image-model.js";
 
 const win = new Window({ url: "http://localhost/" });
 const doc = win.document as unknown as Document;
-const frameGlobals = globalThis as { requestAnimationFrame?: unknown; cancelAnimationFrame?: unknown };
-const savedFrames = { request: frameGlobals.requestAnimationFrame, cancel: frameGlobals.cancelAnimationFrame };
+const frameGlobals = globalThis as { requestAnimationFrame?: unknown; cancelAnimationFrame?: unknown; CSS?: unknown };
+const savedFrames = { request: frameGlobals.requestAnimationFrame, cancel: frameGlobals.cancelAnimationFrame, css: frameGlobals.CSS };
 beforeAll(() => {
+  // The shell rail uses CSS.escape; the private happy-dom window does not install globals.
+  frameGlobals.CSS ??= { escape: (value: string) => value.replace(/["\\]/g, "\\$&") };
   frameGlobals.requestAnimationFrame = (callback: (time: number) => void) => setTimeout(() => callback(Date.now()), 0);
   frameGlobals.cancelAnimationFrame = (handle: ReturnType<typeof setTimeout>) => clearTimeout(handle);
 });
 afterAll(() => {
   frameGlobals.requestAnimationFrame = savedFrames.request;
   frameGlobals.cancelAnimationFrame = savedFrames.cancel;
+  frameGlobals.CSS = savedFrames.css;
   win.happyDOM.abort();
 });
 afterEach(() => {
@@ -93,7 +96,7 @@ describe("settings form helpers", () => {
   test("prunePatch drops values equal to the saved config", () => {
     const config = createDefaultConfig();
     expect(prunePatch({ analysis: { temperature: config.analysis.temperature } }, config)).toBeUndefined();
-    expect(prunePatch({ analysis: { temperature: 0.7, timeoutMs: config.analysis.timeoutMs } }, config)).toEqual({ analysis: { temperature: 0.7 } });
+    expect(prunePatch<unknown>({ analysis: { temperature: 0.7, timeoutMs: config.analysis.timeoutMs } }, config)).toEqual({ analysis: { temperature: 0.7 } });
   });
   test("custom sizes are validated, rounded to 64 and deduplicated", () => {
     expect(saveCustomSize([], { id: 1e9, width: "30", height: "960" })).toEqual({ error: "Enter integers from 64 to 2048 for width and height." });
@@ -186,7 +189,7 @@ async function openSettings(section: string, setup?: (mock: MockBackend) => void
   await app.init();
   const { createOverlayController } = await import("../controller.js");
   const { FrontendStore } = await import("../store.js");
-  const controller = createOverlayController(fakeCtx(), { store: new FrontendStore(), app, patchConfig: () => undefined, doc });
+  const controller = createOverlayController(fakeCtx(), { store: new FrontendStore(), app, doc });
   controller.open({ settings: section as never });
   return { mock, app, controller };
 }

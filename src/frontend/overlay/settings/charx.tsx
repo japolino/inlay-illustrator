@@ -9,6 +9,7 @@ import type { CharxSettingField, MetadataAvailability } from "../../../shared/co
 import {
   IMAGE_SIZE_PRESETS,
   charxScopeFor,
+  generationProviderFromLumiverse,
   promptCodecForProvider,
   resetAllCharxOverrides,
   type CharxSettingsPatch,
@@ -232,7 +233,7 @@ export function CharxSettingsPage({ scope }: { scope: CharxScope }) {
 
   const marker = (key: keyof EffectiveCharxSettings) =>
     dirtyFields.has(PATCH_FIELD[key]) ? <Badge tone="primary" className="px-1.5 text-3xs" title={X.overrideBadgeTitle}>{X.overrideBadge}</Badge> : null;
-  const anima = promptCodecForProvider(config.runtime.generationProvider) === "anima-flat";
+  const anima = promptCodecForProvider(config.image.provider ? generationProviderFromLumiverse(config.image.provider) : config.runtime.generationProvider) === "anima-flat";
   const positiveField: PromptField = anima ? "animaPositivePrompt" : "fixedPositivePrompt";
   const negativeField: PromptField = anima ? "animaNegativePrompt" : "negativePrompt";
   const metadataState = sourceMetadataState(workspace?.metadataAvailability);
