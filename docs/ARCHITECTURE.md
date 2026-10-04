@@ -74,7 +74,7 @@ bun install --frozen-lockfile
 bun test                 # all unit tests (includes the CSS scope test, which runs the Tailwind CLI)
 bun run typecheck        # tsc over src/** including tests
 bun run css              # compile + scope the overlay CSS into overlay.generated.css
-bun run build            # css + typecheck:build + bun build -> dist/backend.js, dist/frontend.js
+bun run build            # css + typecheck:build + bun build -> dist/backend.js (readable), dist/frontend.js (minified whitespace+syntax)
 bun run dev:mcp          # optional live-test MCP driver (see src/dev/lumiverse-mcp/README.md)
 ```
 
