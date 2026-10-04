@@ -50,6 +50,10 @@ export function saveFabCorner(corner: FabCorner, storage: Pick<Storage, "setItem
 export type Edges = Partial<Record<"left" | "right" | "top" | "bottom", string>>;
 
 export const FAB_INSET_PX = 20;
+/** Bottom corners sit above the host composer (send button) at the height of the chat count toggle. */
+export const FAB_BOTTOM_INSET_PX = 66;
+/** Bottom-right: left of the chat count toggle (runtime host right 18px + 42px toggle + gap). */
+export const FAB_BOTTOM_RIGHT_INSET_PX = 70;
 export const FAB_MENU_GAP_PX = 8;
 export const FAB_MENU_MARGIN_PX = 8;
 
@@ -233,8 +237,9 @@ function clamp(value: number, min: number, max: number): number {
 
 export function fabButtonEdges(corner: FabCorner): Edges {
   const inset = px(FAB_INSET_PX);
-  if (corner === "bottom-right") return { right: inset, bottom: inset, left: "auto", top: "auto" };
-  if (corner === "bottom-left") return { left: inset, bottom: inset, right: "auto", top: "auto" };
+  const bottom = px(FAB_BOTTOM_INSET_PX);
+  if (corner === "bottom-right") return { right: px(FAB_BOTTOM_RIGHT_INSET_PX), bottom, left: "auto", top: "auto" };
+  if (corner === "bottom-left") return { left: inset, bottom, right: "auto", top: "auto" };
   if (corner === "top-right") return { right: inset, top: inset, left: "auto", bottom: "auto" };
   return { left: inset, top: inset, right: "auto", bottom: "auto" };
 }
@@ -243,8 +248,9 @@ export type FabRect = { left: number; right: number; top: number; bottom: number
 
 export function fabButtonRect(corner: FabCorner, viewport: { width: number; height: number }): FabRect {
   const size = 48;
-  const left = corner.endsWith("-right") ? viewport.width - FAB_INSET_PX - size : FAB_INSET_PX;
-  const top = corner.startsWith("top") ? FAB_INSET_PX : viewport.height - FAB_INSET_PX - size;
+  const right = corner === "bottom-right" ? FAB_BOTTOM_RIGHT_INSET_PX : FAB_INSET_PX;
+  const left = corner.endsWith("-right") ? viewport.width - right - size : FAB_INSET_PX;
+  const top = corner.startsWith("top") ? FAB_INSET_PX : viewport.height - FAB_BOTTOM_INSET_PX - size;
   return { left, top, right: left + size, bottom: top + size, width: size, height: size };
 }
 
@@ -297,6 +303,8 @@ export function installInlayFab(
     subscribeBusy?: (listener: (busy: boolean) => void) => () => void;
     /** Corner changes (launcher setting). */
     subscribeCorner?: (listener: (corner: FabCorner) => void) => () => void;
+    /** Hidden while our overlay or the zoom viewer covers the page (the FAB must not sit above them). */
+    subscribeHidden?: (listener: (hidden: boolean) => void) => () => void;
   }
 ): (() => void) & { setCorner?: (corner: FabCorner) => void } {
   if (typeof document === "undefined") return () => {};
@@ -566,10 +574,16 @@ export function installInlayFab(
     checkTurnState();
   }) ?? (() => undefined);
   const unsubscribeCorner = options.subscribeCorner?.((next) => setCorner(next)) ?? (() => undefined);
+  const unsubscribeHidden = options.subscribeHidden?.((hidden) => {
+    if (hidden) closeMenu();
+    button.hidden = hidden;
+    button.style.display = hidden ? "none" : "";
+  }) ?? (() => undefined);
 
   return () => {
     unsubscribeBusy();
     unsubscribeCorner();
+    unsubscribeHidden();
     if (checkDebounceTimer) clearTimeout(checkDebounceTimer);
     chatObserver?.disconnect();
     document.removeEventListener("click", onDocumentClick, true);

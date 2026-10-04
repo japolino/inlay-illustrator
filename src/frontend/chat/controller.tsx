@@ -26,6 +26,8 @@ export interface ChatSideOptions {
   openZoom(target: ZoomOpenTarget): void;
   /** Active chat id (host). */
   getActiveChatId(): string;
+  /** Overlay open/close notifications (hide the count toggle / toasts at once, not on the next reconcile). */
+  subscribeOverlay?: (listener: (open: boolean) => void) => () => void;
 }
 
 export interface ChatSideInternalOptions extends ChatSideOptions {
@@ -111,6 +113,7 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
   render(<ChatRuntime app={app} store={runtime} onToastCommand={(toast, command) => void onToastCommand(toast, command)} />, hostRoot);
   runtime.setFlags({ zoomOpen: zoom.isOpen() });
   disposers.push(zoom.subscribe((open) => runtime.setFlags({ zoomOpen: open })));
+  if (options.subscribeOverlay) disposers.push(options.subscribeOverlay((open) => runtime.setFlags({ overlayOpen: open })));
 
   /* ---------------- helpers ---------------- */
   function schedule(delay = debounceMs): void {

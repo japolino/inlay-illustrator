@@ -13,6 +13,7 @@ import { AppController } from "./frontend/state/app-state.js";
 import { installChatSide } from "./frontend/chat/index.js";
 import { answerFetchBridge } from "./frontend/fetch-bridge.js";
 import { createZoomViewer, type ZoomViewer } from "./frontend/zoom/index.js";
+import { zoomVisibility } from "./frontend/zoom/signal.js";
 import { isFetchBridgeRequest } from "./shared/contract/bridge.js";
 
 /** Handles exposed to dev tools (preview page, tests). */
@@ -47,7 +48,11 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
 
   // Chat side: zoom viewer + controls around baked illustrations.
   const zoom = createZoomViewer(ctx, app);
-  const removeChatSide = installChatSide(ctx, app, { openZoom: (target) => zoom.open(target), getActiveChatId: activeChatId });
+  const removeChatSide = installChatSide(ctx, app, {
+    openZoom: (target) => zoom.open(target),
+    getActiveChatId: activeChatId,
+    subscribeOverlay: (listener) => store.subscribe(() => listener(store.get().overlayOpen))
+  });
 
   // FAB corner is a device preference; the launcher panel edits it.
   const cornerListeners = new Set<(corner: FabCorner) => void>();
@@ -123,6 +128,17 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
     subscribeCorner: (listener) => {
       cornerListeners.add(listener);
       return () => cornerListeners.delete(listener);
+    },
+    subscribeHidden: (listener) => {
+      const zoomSignal = zoomVisibility(app);
+      const update = () => listener(store.get().overlayOpen || zoomSignal.isOpen());
+      const offStore = store.subscribe(update);
+      const offZoom = zoomSignal.subscribe(update);
+      update();
+      return () => {
+        offStore();
+        offZoom();
+      };
     }
   });
 

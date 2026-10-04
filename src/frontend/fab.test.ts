@@ -12,14 +12,15 @@ describe("FAB corner placement helpers", () => {
   const viewport = { width: 1280, height: 800 };
 
   test("button anchors to each configured corner with a fixed inset", () => {
-    expect(fabButtonEdges("bottom-right")).toEqual({ right: "20px", bottom: "20px", left: "auto", top: "auto" });
-    expect(fabButtonEdges("bottom-left")).toEqual({ left: "20px", bottom: "20px", right: "auto", top: "auto" });
+    // Bottom corners clear the host composer; bottom-right sits left of the chat count toggle.
+    expect(fabButtonEdges("bottom-right")).toEqual({ right: "70px", bottom: "66px", left: "auto", top: "auto" });
+    expect(fabButtonEdges("bottom-left")).toEqual({ left: "20px", bottom: "66px", right: "auto", top: "auto" });
     expect(fabButtonEdges("top-right")).toEqual({ right: "20px", top: "20px", left: "auto", bottom: "auto" });
     expect(fabButtonEdges("top-left")).toEqual({ left: "20px", top: "20px", right: "auto", bottom: "auto" });
 
     const rect = fabButtonRect("bottom-right", viewport);
-    expect(rect.left).toBe(1280 - 20 - 48);
-    expect(rect.top).toBe(800 - 20 - 48);
+    expect(rect.left).toBe(1280 - 70 - 48);
+    expect(rect.top).toBe(800 - 66 - 48);
 
     const topLeft = fabButtonRect("top-left", { width: 600, height: 400 });
     expect(topLeft.left).toBe(20);
@@ -185,6 +186,23 @@ describe("FAB turn-aware behavior and hover animation", () => {
     button.click();
     expect(sent).toEqual(["generate"]);
 
+    destroy();
+  });
+
+  test("hides while the overlay or the zoom viewer is open", () => {
+    const [body] = setupDom();
+    const ctx: any = { dom: { addStyle: () => () => {} }, getActiveChat: () => ({ chatId: "chat-42" }), events: { on: () => () => {} } };
+    let setHidden: (hidden: boolean) => void = () => {};
+    const destroy = installInlayFab(ctx as any, {
+      getCorner: () => "bottom-right", openGallery: () => {}, generateLatest: () => {}, rerollLatest: () => {},
+      subscribeHidden: (listener) => { setHidden = listener; return () => {}; }
+    });
+    const button = body.children[0];
+    setHidden(true);
+    expect(button.hidden).toBe(true);
+    expect(button.style.display).toBe("none");
+    setHidden(false);
+    expect(button.hidden).toBe(false);
     destroy();
   });
 
