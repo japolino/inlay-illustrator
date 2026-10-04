@@ -456,7 +456,7 @@ export const CHAT_SIDE_CSS = String.raw`
 }
 .ii-am-root .ii-am-chat-count__option { flex: 0 0 auto; width: 42px; height: 32px; border-radius: 8px; background: var(--ii-am-chat-control-bg); font: var(--ii-am-chat-font); }
 .ii-am-root .ii-am-chat-count__scene { position: relative; flex: 0 0 auto; }
-.ii-am-root .ii-am-chat-count__scene-button { width: 66px; height: 32px; overflow: hidden; padding: 0 8px; border-radius: 8px; background: var(--ii-am-chat-control-bg); font: var(--ii-am-chat-font); white-space: nowrap; }
+.ii-am-root .ii-am-chat-count__scene-button { width: auto; min-width: 66px; max-width: 104px; height: 32px; overflow: hidden; padding: 0 8px; border-radius: 8px; background: var(--ii-am-chat-control-bg); font: var(--ii-am-chat-font); white-space: nowrap; }
 .ii-am-root .ii-am-chat-count__scene-label { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .ii-am-root .ii-am-chat-count__mode { position: relative; flex: 0 0 auto; }
 .ii-am-root .ii-am-chat-count__values { display: flex; min-width: 0; align-items: center; gap: 4px; }
