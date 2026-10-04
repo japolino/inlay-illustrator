@@ -32,8 +32,9 @@ export function toPlain(value: unknown, seen: WeakSet<object> = new WeakSet()): 
 }
 
 function isMapLike(object: object): boolean {
-  // NovelAIV5ImmutableMap (w1e) wraps a private Map and exposes entries().
-  return Object.prototype.toString.call(object) === "[object NovelAIV5ImmutableMap]";
+  // NovelAIV5ImmutableMap (w1e) and the V4.5 ImmutableMap (Z5e) wrap a private Map and expose entries().
+  const tag = Object.prototype.toString.call(object);
+  return tag === "[object NovelAIV5ImmutableMap]" || tag === "[object ImmutableMap]";
 }
 
 function plainProps(object: object, seen: WeakSet<object>): Record<string, unknown> {
