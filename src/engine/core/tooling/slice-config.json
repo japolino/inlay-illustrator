@@ -122,7 +122,11 @@
   "Tne",
   "hlt",
   "sH",
-  "NBe"
+  "NBe",
+  "M_e",
+  "d1t",
+  "u1t",
+  "f1t"
  ],
  "renames": {
   "uV": "NovelAIV5RawValidationError",
@@ -258,6 +262,10 @@
   "flt": "DEFAULT_CATALOG_COMPILERS",
   "n$e": "compileCustomV45Catalog",
   "sH": "buildCharxAssetRegexDetectors",
-  "NBe": "writeContinuityCheckpointsToChatStore"
+  "NBe": "writeContinuityCheckpointsToChatStore",
+  "M_e": "resolveAnalyzerExecutionMode",
+  "d1t": "assertAnalyzerReady",
+  "u1t": "resolveCheckpointPolicy",
+  "f1t": "resolveGenerationType"
  }
 }

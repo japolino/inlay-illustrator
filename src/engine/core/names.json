@@ -122,7 +122,11 @@
   "writeLocalLoreActorState",
   "createCatalogSourceResolver",
   "buildCharxAssetRegexDetectors",
-  "writeContinuityCheckpointsToChatStore"
+  "writeContinuityCheckpointsToChatStore",
+  "resolveAnalyzerExecutionMode",
+  "assertAnalyzerReady",
+  "resolveCheckpointPolicy",
+  "resolveGenerationType"
  ],
  "renames": {
   "uV": "NovelAIV5RawValidationError",
@@ -258,7 +262,11 @@
   "flt": "DEFAULT_CATALOG_COMPILERS",
   "n$e": "compileCustomV45Catalog",
   "sH": "buildCharxAssetRegexDetectors",
-  "NBe": "writeContinuityCheckpointsToChatStore"
+  "NBe": "writeContinuityCheckpointsToChatStore",
+  "M_e": "resolveAnalyzerExecutionMode",
+  "d1t": "assertAnalyzerReady",
+  "u1t": "resolveCheckpointPolicy",
+  "f1t": "resolveGenerationType"
  },
  "units": [
   {
@@ -12160,6 +12168,41 @@
    "orig": "MAt",
    "name": "buildAnalyzerContextInputs",
    "line": 167588
+  },
+  {
+   "orig": "M_e",
+   "name": "resolveAnalyzerExecutionMode",
+   "line": 168762
+  },
+  {
+   "orig": "s1t",
+   "name": "s1t",
+   "line": 168766
+  },
+  {
+   "orig": "l1t",
+   "name": "l1t",
+   "line": 168793
+  },
+  {
+   "orig": "d1t",
+   "name": "assertAnalyzerReady",
+   "line": 168807
+  },
+  {
+   "orig": "u1t",
+   "name": "resolveCheckpointPolicy",
+   "line": 168814
+  },
+  {
+   "orig": "f1t",
+   "name": "resolveGenerationType",
+   "line": 168821
+  },
+  {
+   "orig": "Xa",
+   "name": "Xa",
+   "line": 168829
   },
   {
    "orig": "rIe",

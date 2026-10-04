@@ -52060,6 +52060,54 @@ function buildAnalyzerContextInputs(e) {
       },
     };
   }
+// AM M_e @168762
+function resolveAnalyzerExecutionMode(e = {}) {
+    const t = e.requestedMode ?? "single-stage";
+    return e.catalogSource === "default" && t === "single-stage" ? "single-stage" : "two-stage";
+  }
+// AM s1t @168766
+function s1t(e) {
+    return e.analyzerIdentityCandidates.length > 0 || (e.analyzerPersonaCandidates?.length ?? 0) > 0;
+  }
+// AM l1t @168793
+function l1t(e) {
+    const t = e.readiness,
+      r = Xa(t?.sourceId);
+    return !!(
+      t &&
+      t.characterIndex === e.characterIndex &&
+      t.chatIndex === e.chatIndex &&
+      Number.isInteger(t.hydrationRevision) &&
+      t.hydrationRevision > 0 &&
+      r &&
+      e.sourceSnapshot?.currentSourceId === r &&
+      e.sourceSnapshot.sources.some((n) => n.id === r)
+    );
+  }
+// AM d1t @168807
+function assertAnalyzerReady(e) {
+    return e.requiresSourceReadiness && !l1t(e)
+      ? "source-unavailable"
+      : e.analysisProfile === "v5-hybrid" || s1t(e) || e.freeCharacterGenerationEnabled
+        ? "ready"
+        : "no-candidates";
+  }
+// AM u1t @168814
+function resolveCheckpointPolicy(e) {
+    return e === "automatic" || e === "initial" || e === "reroll"
+      ? "restart-analysis"
+      : e === "regenerate"
+        ? "reuse-plan"
+        : "resume";
+  }
+// AM f1t @168821
+function resolveGenerationType(e, t, r = !1) {
+    return r ? "ai-prompt-edit" : e === "retry" ? "illustration-retry" : t ? "manual-all" : "chat-auto";
+  }
+// AM Xa @168829
+function Xa(e) {
+    return e == null ? "" : String(e).trim();
+  }
 // AM rIe @171433
 function rIe(e, t, r) {
     const n = [...new Set(r.map((o) => String(o ?? "")).filter(Boolean))].sort((o, a) => a.length - o.length);
@@ -54474,6 +54522,13 @@ export {
   JU,
   RAt,
   buildAnalyzerContextInputs,
+  resolveAnalyzerExecutionMode,
+  s1t,
+  l1t,
+  assertAnalyzerReady,
+  resolveCheckpointPolicy,
+  resolveGenerationType,
+  Xa,
   rIe,
   buildIllustrationSlots,
 };
