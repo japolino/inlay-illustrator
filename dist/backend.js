@@ -4409,6 +4409,7 @@ var RPC_MESSAGE_TYPE = "inlay-illustrator:rpc";
 var RPC_METHODS = [
   "session.hello",
   "session.getStatus",
+  "session.closeHostDrawer",
   "config.get",
   "config.update",
   "config.factoryReset",
@@ -64065,7 +64066,7 @@ function createChatPipelineController(services, engine, options = {}) {
     for (const job of [...messageJobs.values(), ...slotJobs.values()])
       if (job.target.chatId === chatId && job.target.messageId === messageId && (swipe === undefined || job.target.swipeIndex >= swipe))
         job.controller.abort("message-removed");
-    await services.storage.updateChatData(chatId, (doc) => {
+    const written = await services.storage.updateChatData(chatId, (doc) => {
       const keys = Object.values(doc.history.messagesByKey).filter((m) => matches(m.messageId)).map((m) => m.messageKey);
       let tree = doc.history;
       if (keys.length)
@@ -64083,9 +64084,20 @@ function createChatPipelineController(services, engine, options = {}) {
       const json = JSON.stringify(doc).replace(pattern, (m, n) => Number(n) > swipe ? `${messageId}@${Number(n) - 1}` : m);
       return JSON.parse(json);
     });
+    if (swipe === undefined)
+      await updateSidecar(services.storage, chatId, () => {
+        return;
+      }, written.history).catch(() => {
+        return;
+      });
     if (swipe !== undefined) {
       const pattern = new RegExp(`${messageId.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}@(\\d+)(?![0-9])`, "gu");
       await services.storage.updateJson(sidecarPath(chatId), null, (current) => current ? JSON.parse(JSON.stringify(current).replace(pattern, (m, n) => Number(n) > swipe ? `${messageId}@${Number(n) - 1}` : m)) : current).catch(() => {
+        return;
+      });
+      await updateSidecar(services.storage, chatId, () => {
+        return;
+      }, written.history).catch(() => {
         return;
       });
       const doc = await services.storage.loadChatData(chatId);
@@ -65398,6 +65410,15 @@ var coreHandlers = {
     return { protocol: RPC_PROTOCOL_VERSION, status: await backendStatus(ctx) };
   },
   "session.getStatus": (_params, ctx) => backendStatus(ctx),
+  async "session.closeHostDrawer"(_params, ctx) {
+    const ui = ctx.host.ui;
+    try {
+      await ui?.closeDrawer?.(ctx.userId ? { userId: ctx.userId } : undefined);
+    } catch (error) {
+      ctx.log.append("debug", "ui", `closeDrawer failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    return { ok: true };
+  },
   async "config.get"(_params, ctx) {
     const [config, chatImageGeneration, uiState] = await Promise.all([ctx.storage.loadConfig(), ctx.storage.loadChatImageGenerationSettings(), ctx.storage.loadUiState()]);
     return { config, chatImageGeneration, uiState };
