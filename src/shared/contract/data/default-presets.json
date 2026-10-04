@@ -1,0 +1,83 @@
+{
+  "DEFAULT_ARTIST_PRESETS": [
+    {
+      "id": "none",
+      "title": "none",
+      "prompt": "",
+      "negativePrompt": "",
+      "description": "작가 프롬프트를 적용하지 않습니다."
+    },
+    {
+      "id": "detail_anime_illustration_style",
+      "title": "v5 검증 그림체",
+      "prompt": "1.5::artist:hwansang ::, 0.9::artist:solipsist ::, 0.4::artist:natwjeq ::, 0.6::artist:channel (caststation) ::, 1.2::artist:sushispin ::, 0.4::artist:wanke ::, year 2024, year 2025, incredibly absurdres, hyper detail, very aesthetic, highres, masterpiece, best quality, amazing quality, best illustration, novel illustration",
+      "negativePrompt": "lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page, watermark, reference, username, signature, artist:xinzoruo, artist:milkpanda, artist collaboration, variant set, large variant set, toon (style), oekaki, chibi, turnaround, monochrome, screentones, dated, old, 1990s (style), distorted composition, bad perspective, animation error, disorganized colors, vertical lines, vertical banding, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, subpar, poor, displeasing, bad illustration, bad portrait",
+      "description": "NovelAI V5 테스트와 검증을 위한 기본 그림체 프롬프트입니다."
+    },
+    {
+      "id": "comic_page_illustration_style",
+      "title": "만화 추천 그림체",
+      "prompt": "0.6::rusellunt ::, 0.3::mikozin ::, 0.6::wagashi (dagashiya) ::, 0.7::michiking, ::, 0.9::manglife ::, 0.6::typehatena ::, 1.3::healthyman ::, 0.4::artist:qiandaiyiyu ::, year 2026, year 2025, masterpiece, best quality, very aesthetic, best illustration, newest, highres, incredibly absurdres, hyper detail",
+      "negativePrompt": "lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, 3::signature, artist name ::, negative space, blank page, mismatched pupils, bad anatomy, bad face, ugly, bad eyes, 2::smudged eyes, poorly drawn eyes, messy eye details ::, 3::simple eyes, blurry eyes ::, bad hands, extra digits, missing fingers, 2::fused fingers, fused arms, merged arms, fused limbs, merged limbs ::, missing arms, extra arms, extra legs, bad feet, 2::artist collaboration ::, artist:bkub, artist:xinzoruo, artist:milkpanda, artist:kurukurumagical, 0.5::artist:ratatatat74 ::, chibi, toon (style), 1980s (style), 1990s (style), one-hour drawing challenge, 1.5::3d ::, flat color, pale color, character doll, character plush, character plush doll, too many accessories, censored, official style, official art",
+      "description": "카툰·만화 페이지 연출에 적합한 기본 그림체 프롬프트입니다."
+    }
+  ],
+  "DEFAULT_MALE_PERSONA_PROMPT": "kazehaya shouta",
+  "DEFAULT_OUTFIT_PART_FRAMING_WEIGHTS": {
+    "head": {
+      "portrait": 1,
+      "upper body": 1,
+      "cowboy shot": 1,
+      "lower body": 0,
+      "feet out of frame": 1,
+      "full body": 1
+    },
+    "top": {
+      "portrait": 1,
+      "upper body": 1,
+      "cowboy shot": 1,
+      "lower body": 0,
+      "feet out of frame": 1,
+      "full body": 1
+    },
+    "bottom": {
+      "portrait": 0,
+      "upper body": 0.5,
+      "cowboy shot": 1,
+      "lower body": 1,
+      "feet out of frame": 1,
+      "full body": 1
+    },
+    "legs": {
+      "portrait": 0,
+      "upper body": 0,
+      "cowboy shot": 0.8,
+      "lower body": 1,
+      "feet out of frame": 1,
+      "full body": 1
+    },
+    "feet": {
+      "portrait": 0,
+      "upper body": 0,
+      "cowboy shot": 0,
+      "lower body": 1,
+      "feet out of frame": 0,
+      "full body": 1
+    }
+  },
+  "DEFAULT_OUTFIT_PART_CONTEXT_WEIGHT_RULES": [
+    {
+      "id": "insertion_bottom_low",
+      "match": {
+        "pathIncludes": [
+          "insertion"
+        ]
+      },
+      "weights": {
+        "bottom": 1
+      }
+    }
+  ],
+  "ANIMA_DEFAULT_POSITIVE_PROMPT": "masterpiece, best quality, score_7, safe",
+  "ANIMA_DEFAULT_NEGATIVE_PROMPT": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration"
+}

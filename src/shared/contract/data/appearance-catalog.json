@@ -1,0 +1,294 @@
+{
+  "version": 5,
+  "id": "character_main_prompt_analysis",
+  "required_policy": {
+    "group_key": "always_return_when_applicable",
+    "value": "select_when_explicit_or_directly_observable",
+    "unknown": "return_empty_array",
+    "inference": "forbidden_except_known_character_tag_identification"
+  },
+  "tag_format": {
+    "analysis": "novelai_space_separated",
+    "compiled_prompt": "space_separated",
+    "invalid_tag_policy": "drop"
+  },
+  "evidence_rules": {
+    "image": [
+      "For physical appearance, return only persistent traits clearly visible in the image. Only identity.character_tag may use the character identification policy.",
+      "Do not infer physical traits hidden by clothing or cropping; return an empty array for that group.",
+      "Do not return expressions, poses, camera, background, lighting, or clothing."
+    ],
+    "text": [
+      "For physical appearance, return only traits explicitly stated in the lorebook body. Only identity.character_tag may use the character identification policy.",
+      "Do not infer appearance from personality, speech style, occupation, or narrative settings.",
+      "Do not expand ambiguous wording into arbitrary Danbooru tags."
+    ],
+    "metadata": [
+      "Return only tags explicitly present in the selected metadata prompt or charCaptions.",
+      "Do not supplement visual traits from filenames, character names, or external knowledge. Only identity.character_tag may use the character identification policy."
+    ]
+  },
+  "groups": [
+    {
+      "id": "identity.character_tag",
+      "mode": "freeform",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "selection": {
+        "type": "single",
+        "required": false
+      },
+      "description": "For identity.character_tag only, you may use model knowledge to return at most one known existing Danbooru character tag when the designated evidence or scene context clearly identifies that character. Preserve an explicit metadata character tag when applicable. Omit the tag when uncertain, ambiguous, or newly invented. Never fabricate a tag by translating a name, substitute a merely similar character or the character being cosplayed, or return a standalone copyright, artist, or style tag. This permission does not authorize inferring unobserved appearance, clothing, gender, or form differences during evidence analysis; a character tag alone is not physical appearance evidence.",
+      "allow_unlisted": true
+    },
+    {
+      "id": "hair.color",
+      "mode": "freeform",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "selection": {
+        "type": "multi",
+        "required": true,
+        "max_tags": 3
+      },
+      "description": "Return only persistent hair color and multicolor structure.",
+      "allow_unlisted": true
+    },
+    {
+      "id": "hair.length",
+      "mode": "options",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "selection": {
+        "type": "single",
+        "required": true
+      },
+      "description": "Return only one identifiable representative hair-length Danbooru tag.",
+      "options": [
+        {
+          "id": "bald",
+          "prompt": "bald"
+        },
+        {
+          "id": "very_short_hair",
+          "prompt": "very short hair"
+        },
+        {
+          "id": "short_hair",
+          "prompt": "short hair"
+        },
+        {
+          "id": "medium_hair",
+          "prompt": "medium hair"
+        },
+        {
+          "id": "long_hair",
+          "prompt": "long hair"
+        },
+        {
+          "id": "very_long_hair",
+          "prompt": "very long hair"
+        },
+        {
+          "id": "absurdly_long_hair",
+          "prompt": "absurdly long hair"
+        }
+      ]
+    },
+    {
+      "id": "hair.style",
+      "mode": "freeform",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "selection": {
+        "type": "multi",
+        "required": false,
+        "max_tags": 4
+      },
+      "description": "Return only persistent hairstyles; exclude temporary states caused by wetness, wind, or hand movements.",
+      "allow_unlisted": true
+    },
+    {
+      "id": "head.other",
+      "mode": "freeform",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "selection": {
+        "type": "multi",
+        "required": false,
+        "max_tags": 4
+      },
+      "description": "Return only fixed head traits other than hair and eyes. Include horns, animal ears, pointy ears, antennae, and facial markings; exclude hats, glasses, and hair ornaments.",
+      "allow_unlisted": true
+    },
+    {
+      "id": "eyes.color",
+      "mode": "freeform",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "selection": {
+        "type": "multi",
+        "required": true,
+        "max_tags": 2
+      },
+      "description": "Return only eye color. Put heterochromia in eyes.structure.",
+      "allow_unlisted": true
+    },
+    {
+      "id": "eyes.structure",
+      "mode": "freeform",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "selection": {
+        "type": "multi",
+        "required": false,
+        "max_tags": 2
+      },
+      "description": "Return only persistent iris, pupil, and eye-count traits; exclude expressive eye states.",
+      "allow_unlisted": true
+    },
+    {
+      "id": "body.skin",
+      "mode": "freeform",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "selection": {
+        "type": "multi",
+        "required": false,
+        "max_tags": 2
+      },
+      "description": "Return only persistent skin color; exclude lighting, blushing, and stains.",
+      "allow_unlisted": true
+    },
+    {
+      "id": "body.build",
+      "mode": "freeform",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "selection": {
+        "type": "multi",
+        "required": false,
+        "max_tags": 2
+      },
+      "description": "Return the corresponding Danbooru tag only when overall body build is clear.",
+      "allow_unlisted": true
+    },
+    {
+      "id": "body.proportions",
+      "mode": "freeform",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "selection": {
+        "type": "multi",
+        "required": false,
+        "max_tags": 3
+      },
+      "description": "Return only Danbooru tags for clear, persistent body proportions.",
+      "allow_unlisted": true
+    },
+    {
+      "id": "body.breast_size",
+      "mode": "options",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "genders": [
+        "female"
+      ],
+      "selection": {
+        "type": "single",
+        "required": true
+      },
+      "description": "Select only one when the breasts are visible and their size can be clearly determined.",
+      "options": [
+        {
+          "id": "small_breasts",
+          "prompt": "small breasts"
+        },
+        {
+          "id": "medium_breasts",
+          "prompt": "medium breasts"
+        },
+        {
+          "id": "large_breasts",
+          "prompt": "large breasts"
+        },
+        {
+          "id": "huge_breasts",
+          "prompt": "huge breasts"
+        },
+        {
+          "id": "gigantic_breasts",
+          "prompt": "gigantic breasts",
+          "evidence_modes": [
+            "metadata"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "marks.distinctive",
+      "mode": "freeform",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "selection": {
+        "type": "multi",
+        "required": false,
+        "max_tags": 4
+      },
+      "description": "Return persistent moles, freckles, scars, tattoos, and birthmarks on body parts other than the head.",
+      "allow_unlisted": true
+    },
+    {
+      "id": "nonhuman.features",
+      "mode": "freeform",
+      "evidence_modes": [
+        "metadata",
+        "image",
+        "text"
+      ],
+      "selection": {
+        "type": "multi",
+        "required": false,
+        "max_tags": 4
+      },
+      "description": "Return only persistent nonhuman body structures outside the head, such as wings and tails.",
+      "allow_unlisted": true
+    }
+  ]
+}

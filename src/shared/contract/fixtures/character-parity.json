@@ -1,0 +1,4474 @@
+{
+ "Qs": [
+  {
+   "input": {
+    "hair.color": "Silver_Hair, blue hair; RED HAIR | green hair",
+    "hair.length": [
+     "long_hair",
+     "LONG HAIR",
+     "unknown"
+    ],
+    "eyes.color": [
+     "blue eyes",
+     "한국어"
+    ],
+    "body.breast_size": "gigantic breasts",
+    "custom": "1::foo::, bar_baz",
+    "bogus": [
+     "x"
+    ]
+   },
+   "options": {},
+   "output": {
+    "hair.color": [
+     "silver hair",
+     "blue hair",
+     "red hair"
+    ],
+    "hair.length": [
+     "long hair"
+    ],
+    "eyes.color": [
+     "blue eyes"
+    ],
+    "body.breast_size": [
+     "gigantic breasts"
+    ],
+    "custom": [
+     "1::foo::",
+     "bar baz"
+    ]
+   }
+  },
+  {
+   "input": {
+    "hair.color": "Silver_Hair, blue hair; RED HAIR | green hair",
+    "hair.length": [
+     "long_hair",
+     "LONG HAIR",
+     "unknown"
+    ],
+    "eyes.color": [
+     "blue eyes",
+     "한국어"
+    ],
+    "body.breast_size": "gigantic breasts",
+    "custom": "1::foo::, bar_baz",
+    "bogus": [
+     "x"
+    ]
+   },
+   "options": {
+    "allowPromptFragments": true
+   },
+   "output": {
+    "hair.color": [
+     "Silver Hair",
+     "blue hair",
+     "RED HAIR",
+     "green hair"
+    ],
+    "hair.length": [
+     "long hair",
+     "LONG HAIR",
+     "unknown"
+    ],
+    "eyes.color": [
+     "blue eyes",
+     "한국어"
+    ],
+    "body.breast_size": [
+     "gigantic breasts"
+    ],
+    "custom": [
+     "1::foo::",
+     "bar baz"
+    ]
+   }
+  },
+  {
+   "input": {
+    "hair.color": "Silver_Hair, blue hair; RED HAIR | green hair",
+    "hair.length": [
+     "long_hair",
+     "LONG HAIR",
+     "unknown"
+    ],
+    "eyes.color": [
+     "blue eyes",
+     "한국어"
+    ],
+    "body.breast_size": "gigantic breasts",
+    "custom": "1::foo::, bar_baz",
+    "bogus": [
+     "x"
+    ]
+   },
+   "options": {
+    "gender": "male"
+   },
+   "output": {
+    "hair.color": [
+     "silver hair",
+     "blue hair",
+     "red hair"
+    ],
+    "hair.length": [
+     "long hair"
+    ],
+    "eyes.color": [
+     "blue eyes"
+    ],
+    "custom": [
+     "1::foo::",
+     "bar baz"
+    ]
+   }
+  },
+  {
+   "input": {
+    "hair.color": "Silver_Hair, blue hair; RED HAIR | green hair",
+    "hair.length": [
+     "long_hair",
+     "LONG HAIR",
+     "unknown"
+    ],
+    "eyes.color": [
+     "blue eyes",
+     "한국어"
+    ],
+    "body.breast_size": "gigantic breasts",
+    "custom": "1::foo::, bar_baz",
+    "bogus": [
+     "x"
+    ]
+   },
+   "options": {
+    "gender": "female",
+    "evidenceMode": "image"
+   },
+   "output": {
+    "hair.color": [
+     "silver hair",
+     "blue hair",
+     "red hair"
+    ],
+    "hair.length": [
+     "long hair"
+    ],
+    "eyes.color": [
+     "blue eyes"
+    ],
+    "custom": [
+     "1::foo::",
+     "bar baz"
+    ]
+   }
+  },
+  {
+   "input": {
+    "hair.color": "Silver_Hair, blue hair; RED HAIR | green hair",
+    "hair.length": [
+     "long_hair",
+     "LONG HAIR",
+     "unknown"
+    ],
+    "eyes.color": [
+     "blue eyes",
+     "한국어"
+    ],
+    "body.breast_size": "gigantic breasts",
+    "custom": "1::foo::, bar_baz",
+    "bogus": [
+     "x"
+    ]
+   },
+   "options": {
+    "gender": "female",
+    "evidenceMode": "metadata"
+   },
+   "output": {
+    "hair.color": [
+     "silver hair",
+     "blue hair",
+     "red hair"
+    ],
+    "hair.length": [
+     "long hair"
+    ],
+    "eyes.color": [
+     "blue eyes"
+    ],
+    "body.breast_size": [
+     "gigantic breasts"
+    ],
+    "custom": [
+     "1::foo::",
+     "bar baz"
+    ]
+   }
+  },
+  {
+   "input": {
+    "hair.color": "Silver_Hair, blue hair; RED HAIR | green hair",
+    "hair.length": [
+     "long_hair",
+     "LONG HAIR",
+     "unknown"
+    ],
+    "eyes.color": [
+     "blue eyes",
+     "한국어"
+    ],
+    "body.breast_size": "gigantic breasts",
+    "custom": "1::foo::, bar_baz",
+    "bogus": [
+     "x"
+    ]
+   },
+   "options": {
+    "includeCustom": false
+   },
+   "output": {
+    "hair.color": [
+     "silver hair",
+     "blue hair",
+     "red hair"
+    ],
+    "hair.length": [
+     "long hair"
+    ],
+    "eyes.color": [
+     "blue eyes"
+    ],
+    "body.breast_size": [
+     "gigantic breasts"
+    ]
+   }
+  },
+  {
+   "input": {
+    "hair.color": "Silver_Hair, blue hair; RED HAIR | green hair",
+    "hair.length": [
+     "long_hair",
+     "LONG HAIR",
+     "unknown"
+    ],
+    "eyes.color": [
+     "blue eyes",
+     "한국어"
+    ],
+    "body.breast_size": "gigantic breasts",
+    "custom": "1::foo::, bar_baz",
+    "bogus": [
+     "x"
+    ]
+   },
+   "options": {
+    "applyCatalogSelectionLimits": false
+   },
+   "output": {
+    "hair.color": [
+     "silver hair",
+     "blue hair",
+     "red hair",
+     "green hair"
+    ],
+    "hair.length": [
+     "long hair"
+    ],
+    "eyes.color": [
+     "blue eyes"
+    ],
+    "body.breast_size": [
+     "gigantic breasts"
+    ],
+    "custom": [
+     "1::foo::",
+     "bar baz"
+    ]
+   }
+  },
+  {
+   "input": {
+    "identity.character_tag": "hatsune miku",
+    "body.breast_size": [
+     "large_breasts",
+     "small breasts"
+    ],
+    "hair.style": "a,b,c,d,e,f",
+    "custom": [
+     "x",
+     "x",
+     " "
+    ]
+   },
+   "options": {},
+   "output": {
+    "identity.character_tag": [
+     "hatsune miku"
+    ],
+    "hair.style": [
+     "a",
+     "b",
+     "c",
+     "d"
+    ],
+    "body.breast_size": [
+     "large breasts"
+    ],
+    "custom": [
+     "x"
+    ]
+   }
+  },
+  {
+   "input": {
+    "identity.character_tag": "hatsune miku",
+    "body.breast_size": [
+     "large_breasts",
+     "small breasts"
+    ],
+    "hair.style": "a,b,c,d,e,f",
+    "custom": [
+     "x",
+     "x",
+     " "
+    ]
+   },
+   "options": {
+    "allowPromptFragments": true
+   },
+   "output": {
+    "identity.character_tag": [
+     "hatsune miku"
+    ],
+    "hair.style": [
+     "a",
+     "b",
+     "c",
+     "d",
+     "e",
+     "f"
+    ],
+    "body.breast_size": [
+     "large breasts",
+     "small breasts"
+    ],
+    "custom": [
+     "x"
+    ]
+   }
+  },
+  {
+   "input": {
+    "identity.character_tag": "hatsune miku",
+    "body.breast_size": [
+     "large_breasts",
+     "small breasts"
+    ],
+    "hair.style": "a,b,c,d,e,f",
+    "custom": [
+     "x",
+     "x",
+     " "
+    ]
+   },
+   "options": {
+    "gender": "male"
+   },
+   "output": {
+    "identity.character_tag": [
+     "hatsune miku"
+    ],
+    "hair.style": [
+     "a",
+     "b",
+     "c",
+     "d"
+    ],
+    "custom": [
+     "x"
+    ]
+   }
+  },
+  {
+   "input": {
+    "identity.character_tag": "hatsune miku",
+    "body.breast_size": [
+     "large_breasts",
+     "small breasts"
+    ],
+    "hair.style": "a,b,c,d,e,f",
+    "custom": [
+     "x",
+     "x",
+     " "
+    ]
+   },
+   "options": {
+    "gender": "female",
+    "evidenceMode": "image"
+   },
+   "output": {
+    "identity.character_tag": [
+     "hatsune miku"
+    ],
+    "hair.style": [
+     "a",
+     "b",
+     "c",
+     "d"
+    ],
+    "body.breast_size": [
+     "large breasts"
+    ],
+    "custom": [
+     "x"
+    ]
+   }
+  },
+  {
+   "input": {
+    "identity.character_tag": "hatsune miku",
+    "body.breast_size": [
+     "large_breasts",
+     "small breasts"
+    ],
+    "hair.style": "a,b,c,d,e,f",
+    "custom": [
+     "x",
+     "x",
+     " "
+    ]
+   },
+   "options": {
+    "gender": "female",
+    "evidenceMode": "metadata"
+   },
+   "output": {
+    "identity.character_tag": [
+     "hatsune miku"
+    ],
+    "hair.style": [
+     "a",
+     "b",
+     "c",
+     "d"
+    ],
+    "body.breast_size": [
+     "large breasts"
+    ],
+    "custom": [
+     "x"
+    ]
+   }
+  },
+  {
+   "input": {
+    "identity.character_tag": "hatsune miku",
+    "body.breast_size": [
+     "large_breasts",
+     "small breasts"
+    ],
+    "hair.style": "a,b,c,d,e,f",
+    "custom": [
+     "x",
+     "x",
+     " "
+    ]
+   },
+   "options": {
+    "includeCustom": false
+   },
+   "output": {
+    "identity.character_tag": [
+     "hatsune miku"
+    ],
+    "hair.style": [
+     "a",
+     "b",
+     "c",
+     "d"
+    ],
+    "body.breast_size": [
+     "large breasts"
+    ]
+   }
+  },
+  {
+   "input": {
+    "identity.character_tag": "hatsune miku",
+    "body.breast_size": [
+     "large_breasts",
+     "small breasts"
+    ],
+    "hair.style": "a,b,c,d,e,f",
+    "custom": [
+     "x",
+     "x",
+     " "
+    ]
+   },
+   "options": {
+    "applyCatalogSelectionLimits": false
+   },
+   "output": {
+    "identity.character_tag": [
+     "hatsune miku"
+    ],
+    "hair.style": [
+     "a",
+     "b",
+     "c",
+     "d",
+     "e",
+     "f"
+    ],
+    "body.breast_size": [
+     "large breasts",
+     "small breasts"
+    ],
+    "custom": [
+     "x"
+    ]
+   }
+  },
+  {
+   "input": "not an object",
+   "options": {},
+   "output": {}
+  },
+  {
+   "input": "not an object",
+   "options": {
+    "allowPromptFragments": true
+   },
+   "output": {}
+  },
+  {
+   "input": "not an object",
+   "options": {
+    "gender": "male"
+   },
+   "output": {}
+  },
+  {
+   "input": "not an object",
+   "options": {
+    "gender": "female",
+    "evidenceMode": "image"
+   },
+   "output": {}
+  },
+  {
+   "input": "not an object",
+   "options": {
+    "gender": "female",
+    "evidenceMode": "metadata"
+   },
+   "output": {}
+  },
+  {
+   "input": "not an object",
+   "options": {
+    "includeCustom": false
+   },
+   "output": {}
+  },
+  {
+   "input": "not an object",
+   "options": {
+    "applyCatalogSelectionLimits": false
+   },
+   "output": {}
+  },
+  {
+   "input": {
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ],
+    "marks.distinctive": "mole under eye"
+   },
+   "options": {},
+   "output": {
+    "marks.distinctive": [
+     "mole under eye"
+    ],
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ]
+   }
+  },
+  {
+   "input": {
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ],
+    "marks.distinctive": "mole under eye"
+   },
+   "options": {
+    "allowPromptFragments": true
+   },
+   "output": {
+    "marks.distinctive": [
+     "mole under eye"
+    ],
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ]
+   }
+  },
+  {
+   "input": {
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ],
+    "marks.distinctive": "mole under eye"
+   },
+   "options": {
+    "gender": "male"
+   },
+   "output": {
+    "marks.distinctive": [
+     "mole under eye"
+    ],
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ]
+   }
+  },
+  {
+   "input": {
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ],
+    "marks.distinctive": "mole under eye"
+   },
+   "options": {
+    "gender": "female",
+    "evidenceMode": "image"
+   },
+   "output": {
+    "marks.distinctive": [
+     "mole under eye"
+    ],
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ]
+   }
+  },
+  {
+   "input": {
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ],
+    "marks.distinctive": "mole under eye"
+   },
+   "options": {
+    "gender": "female",
+    "evidenceMode": "metadata"
+   },
+   "output": {
+    "marks.distinctive": [
+     "mole under eye"
+    ],
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ]
+   }
+  },
+  {
+   "input": {
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ],
+    "marks.distinctive": "mole under eye"
+   },
+   "options": {
+    "includeCustom": false
+   },
+   "output": {
+    "marks.distinctive": [
+     "mole under eye"
+    ],
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ]
+   }
+  },
+  {
+   "input": {
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ],
+    "marks.distinctive": "mole under eye"
+   },
+   "options": {
+    "applyCatalogSelectionLimits": false
+   },
+   "output": {
+    "marks.distinctive": [
+     "mole under eye"
+    ],
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ]
+   }
+  }
+ ],
+ "Si": [
+  {
+   "input": {
+    "hair.color": "Silver_Hair, blue hair; RED HAIR | green hair",
+    "hair.length": [
+     "long_hair",
+     "LONG HAIR",
+     "unknown"
+    ],
+    "eyes.color": [
+     "blue eyes",
+     "한국어"
+    ],
+    "body.breast_size": "gigantic breasts",
+    "custom": "1::foo::, bar_baz",
+    "bogus": [
+     "x"
+    ]
+   },
+   "gender": null,
+   "output": "Silver Hair, blue hair, RED HAIR, green hair, long hair, unknown, blue eyes, 한국어, gigantic breasts, 1::foo::, bar baz"
+  },
+  {
+   "input": {
+    "hair.color": "Silver_Hair, blue hair; RED HAIR | green hair",
+    "hair.length": [
+     "long_hair",
+     "LONG HAIR",
+     "unknown"
+    ],
+    "eyes.color": [
+     "blue eyes",
+     "한국어"
+    ],
+    "body.breast_size": "gigantic breasts",
+    "custom": "1::foo::, bar_baz",
+    "bogus": [
+     "x"
+    ]
+   },
+   "gender": "female",
+   "output": "Silver Hair, blue hair, RED HAIR, green hair, long hair, unknown, blue eyes, 한국어, gigantic breasts, 1::foo::, bar baz"
+  },
+  {
+   "input": {
+    "hair.color": "Silver_Hair, blue hair; RED HAIR | green hair",
+    "hair.length": [
+     "long_hair",
+     "LONG HAIR",
+     "unknown"
+    ],
+    "eyes.color": [
+     "blue eyes",
+     "한국어"
+    ],
+    "body.breast_size": "gigantic breasts",
+    "custom": "1::foo::, bar_baz",
+    "bogus": [
+     "x"
+    ]
+   },
+   "gender": "male",
+   "output": "Silver Hair, blue hair, RED HAIR, green hair, long hair, unknown, blue eyes, 한국어, 1::foo::, bar baz"
+  },
+  {
+   "input": {
+    "identity.character_tag": "hatsune miku",
+    "body.breast_size": [
+     "large_breasts",
+     "small breasts"
+    ],
+    "hair.style": "a,b,c,d,e,f",
+    "custom": [
+     "x",
+     "x",
+     " "
+    ]
+   },
+   "gender": null,
+   "output": "hatsune miku, a, b, c, d, e, f, large breasts, small breasts, x"
+  },
+  {
+   "input": {
+    "identity.character_tag": "hatsune miku",
+    "body.breast_size": [
+     "large_breasts",
+     "small breasts"
+    ],
+    "hair.style": "a,b,c,d,e,f",
+    "custom": [
+     "x",
+     "x",
+     " "
+    ]
+   },
+   "gender": "female",
+   "output": "hatsune miku, a, b, c, d, e, f, large breasts, small breasts, x"
+  },
+  {
+   "input": {
+    "identity.character_tag": "hatsune miku",
+    "body.breast_size": [
+     "large_breasts",
+     "small breasts"
+    ],
+    "hair.style": "a,b,c,d,e,f",
+    "custom": [
+     "x",
+     "x",
+     " "
+    ]
+   },
+   "gender": "male",
+   "output": "hatsune miku, a, b, c, d, e, f, x"
+  },
+  {
+   "input": "not an object",
+   "gender": null,
+   "output": ""
+  },
+  {
+   "input": "not an object",
+   "gender": "female",
+   "output": ""
+  },
+  {
+   "input": "not an object",
+   "gender": "male",
+   "output": ""
+  },
+  {
+   "input": {
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ],
+    "marks.distinctive": "mole under eye"
+   },
+   "gender": null,
+   "output": "mole under eye, wings, tail"
+  },
+  {
+   "input": {
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ],
+    "marks.distinctive": "mole under eye"
+   },
+   "gender": "female",
+   "output": "mole under eye, wings, tail"
+  },
+  {
+   "input": {
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ],
+    "marks.distinctive": "mole under eye"
+   },
+   "gender": "male",
+   "output": "mole under eye, wings, tail"
+  }
+ ],
+ "bW": [
+  {
+   "current": {
+    "identity.character_tag": [
+     "tag"
+    ],
+    "custom": [
+     "c"
+    ],
+    "hair.color": [
+     "old hair"
+    ]
+   },
+   "analyzed": {
+    "hair.color": "Silver_Hair, blue hair; RED HAIR | green hair",
+    "hair.length": [
+     "long_hair",
+     "LONG HAIR",
+     "unknown"
+    ],
+    "eyes.color": [
+     "blue eyes",
+     "한국어"
+    ],
+    "body.breast_size": "gigantic breasts",
+    "custom": "1::foo::, bar_baz",
+    "bogus": [
+     "x"
+    ]
+   },
+   "gender": "female",
+   "output": {
+    "hair.color": [
+     "silver hair",
+     "blue hair",
+     "red hair"
+    ],
+    "hair.length": [
+     "long hair"
+    ],
+    "eyes.color": [
+     "blue eyes"
+    ],
+    "body.breast_size": [
+     "gigantic breasts"
+    ],
+    "identity.character_tag": [
+     "tag"
+    ],
+    "custom": [
+     "c"
+    ]
+   }
+  },
+  {
+   "current": {
+    "identity.character_tag": [
+     "tag"
+    ],
+    "custom": [
+     "c"
+    ],
+    "hair.color": [
+     "old hair"
+    ]
+   },
+   "analyzed": {
+    "identity.character_tag": "hatsune miku",
+    "body.breast_size": [
+     "large_breasts",
+     "small breasts"
+    ],
+    "hair.style": "a,b,c,d,e,f",
+    "custom": [
+     "x",
+     "x",
+     " "
+    ]
+   },
+   "gender": "male",
+   "output": {
+    "identity.character_tag": [
+     "tag"
+    ],
+    "hair.style": [
+     "a",
+     "b",
+     "c",
+     "d"
+    ],
+    "custom": [
+     "c"
+    ]
+   }
+  },
+  {
+   "current": {
+    "identity.character_tag": [
+     "tag"
+    ],
+    "custom": [
+     "c"
+    ],
+    "hair.color": [
+     "old hair"
+    ]
+   },
+   "analyzed": "not an object",
+   "gender": "female",
+   "output": {
+    "identity.character_tag": [
+     "tag"
+    ],
+    "custom": [
+     "c"
+    ],
+    "hair.color": [
+     "old hair"
+    ]
+   }
+  },
+  {
+   "current": {
+    "identity.character_tag": [
+     "tag"
+    ],
+    "custom": [
+     "c"
+    ],
+    "hair.color": [
+     "old hair"
+    ]
+   },
+   "analyzed": {
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ],
+    "marks.distinctive": "mole under eye"
+   },
+   "gender": "male",
+   "output": {
+    "marks.distinctive": [
+     "mole under eye"
+    ],
+    "nonhuman.features": [
+     "wings",
+     "tail"
+    ],
+    "identity.character_tag": [
+     "tag"
+    ],
+    "custom": [
+     "c"
+    ]
+   }
+  }
+ ],
+ "go": [
+  {
+   "input": null,
+   "fallbackGender": null,
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   },
+   "revision": "1pu4u5c"
+  },
+  {
+   "input": null,
+   "fallbackGender": "male",
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   },
+   "revision": "1pu4u5c"
+  },
+  {
+   "input": {},
+   "fallbackGender": null,
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   },
+   "revision": "1pu4u5c"
+  },
+  {
+   "input": {},
+   "fallbackGender": "male",
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   },
+   "revision": "1pu4u5c"
+  },
+  {
+   "input": {
+    "forms": []
+   },
+   "fallbackGender": null,
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   },
+   "revision": "1pu4u5c"
+  },
+  {
+   "input": {
+    "forms": []
+   },
+   "fallbackGender": "male",
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   },
+   "revision": "1pu4u5c"
+  },
+  {
+   "input": {
+    "defaultFormId": "form_alt",
+    "forms": [
+     {
+      "label": "Alt",
+      "id": "Alt Form!",
+      "gender": "MALE",
+      "humanlike": false,
+      "basePromptGroups": {
+       "hair.color": "black hair, black_hair"
+      },
+      "negative_prompt": " ugly ",
+      "reference": {
+       "enabled": true,
+       "referenceAnalysisEnabled": false
+      },
+      "default_outfit_id": "Outfit_B",
+      "outfits": [
+       {
+        "name": "A",
+        "head": " hat ",
+        "candidate_enabled": false,
+        "extra": 1
+       },
+       {
+        "outfitId": "outfit_b",
+        "label": "B"
+       },
+       {
+        "id": "outfit_b"
+       },
+       {}
+      ]
+     },
+     {
+      "id": "form_default",
+      "outfits": []
+     }
+    ]
+   },
+   "fallbackGender": null,
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_alt_form",
+      "label": "Alt",
+      "description": "",
+      "humanlike": false,
+      "gender": "male",
+      "basePromptGroups": {
+       "hair.color": [
+        "black hair"
+       ]
+      },
+      "negativePrompt": "ugly",
+      "reference": {
+       "enabled": true,
+       "referenceAnalysisEnabled": false
+      },
+      "defaultOutfitId": "outfit_b",
+      "outfits": [
+       {
+        "label": "B",
+        "id": "outfit_b",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       },
+       {
+        "head": "hat",
+        "extra": 1,
+        "id": "outfit_t2ezh7",
+        "label": "A",
+        "description": "",
+        "candidateEnabled": false,
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       },
+       {
+        "id": "outfit_b_copy",
+        "label": "의상 3",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       },
+       {
+        "id": "outfit_194fkyw",
+        "label": "의상 4",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     },
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   },
+   "revision": "1rqty49"
+  },
+  {
+   "input": {
+    "defaultFormId": "form_alt",
+    "forms": [
+     {
+      "label": "Alt",
+      "id": "Alt Form!",
+      "gender": "MALE",
+      "humanlike": false,
+      "basePromptGroups": {
+       "hair.color": "black hair, black_hair"
+      },
+      "negative_prompt": " ugly ",
+      "reference": {
+       "enabled": true,
+       "referenceAnalysisEnabled": false
+      },
+      "default_outfit_id": "Outfit_B",
+      "outfits": [
+       {
+        "name": "A",
+        "head": " hat ",
+        "candidate_enabled": false,
+        "extra": 1
+       },
+       {
+        "outfitId": "outfit_b",
+        "label": "B"
+       },
+       {
+        "id": "outfit_b"
+       },
+       {}
+      ]
+     },
+     {
+      "id": "form_default",
+      "outfits": []
+     }
+    ]
+   },
+   "fallbackGender": "male",
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_alt_form",
+      "label": "Alt",
+      "description": "",
+      "humanlike": false,
+      "gender": "male",
+      "basePromptGroups": {
+       "hair.color": [
+        "black hair"
+       ]
+      },
+      "negativePrompt": "ugly",
+      "reference": {
+       "enabled": true,
+       "referenceAnalysisEnabled": false
+      },
+      "defaultOutfitId": "outfit_b",
+      "outfits": [
+       {
+        "label": "B",
+        "id": "outfit_b",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       },
+       {
+        "head": "hat",
+        "extra": 1,
+        "id": "outfit_t2ezh7",
+        "label": "A",
+        "description": "",
+        "candidateEnabled": false,
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       },
+       {
+        "id": "outfit_b_copy",
+        "label": "의상 3",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       },
+       {
+        "id": "outfit_194fkyw",
+        "label": "의상 4",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     },
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   },
+   "revision": "1rqty49"
+  },
+  {
+   "input": {
+    "forms": [
+     {
+      "id": "form_default"
+     },
+     {
+      "id": "form_default",
+      "label": "Dup"
+     },
+     {
+      "label": "폼 이름"
+     },
+     {
+      "name": "Second",
+      "outfits": [
+       {
+        "label": "의상"
+       },
+       {
+        "label": "의상"
+       }
+      ]
+     }
+    ],
+    "defaultFormId": "missing"
+   },
+   "fallbackGender": null,
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     },
+     {
+      "id": "form_flj93a",
+      "label": "Dup",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_vnuop6",
+      "outfits": [
+       {
+        "id": "outfit_vnuop6",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     },
+     {
+      "id": "form_x69hdd",
+      "label": "폼 이름",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_1t2nvky",
+      "outfits": [
+       {
+        "id": "outfit_1t2nvky",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     },
+     {
+      "id": "form_1vui5tp",
+      "label": "Second",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_1qmrtrd",
+      "outfits": [
+       {
+        "label": "의상",
+        "id": "outfit_1qmrtrd",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       },
+       {
+        "label": "의상",
+        "id": "outfit_ekcpgf",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   },
+   "revision": "1v089rb"
+  },
+  {
+   "input": {
+    "forms": [
+     {
+      "id": "form_default"
+     },
+     {
+      "id": "form_default",
+      "label": "Dup"
+     },
+     {
+      "label": "폼 이름"
+     },
+     {
+      "name": "Second",
+      "outfits": [
+       {
+        "label": "의상"
+       },
+       {
+        "label": "의상"
+       }
+      ]
+     }
+    ],
+    "defaultFormId": "missing"
+   },
+   "fallbackGender": "male",
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     },
+     {
+      "id": "form_flj93a",
+      "label": "Dup",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_vnuop6",
+      "outfits": [
+       {
+        "id": "outfit_vnuop6",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     },
+     {
+      "id": "form_x69hdd",
+      "label": "폼 이름",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_1t2nvky",
+      "outfits": [
+       {
+        "id": "outfit_1t2nvky",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     },
+     {
+      "id": "form_1vui5tp",
+      "label": "Second",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_1qmrtrd",
+      "outfits": [
+       {
+        "label": "의상",
+        "id": "outfit_1qmrtrd",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       },
+       {
+        "label": "의상",
+        "id": "outfit_ekcpgf",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   },
+   "revision": "1v089rb"
+  },
+  {
+   "input": {
+    "forms": [
+     {
+      "label": "X",
+      "gender": "weird"
+     }
+    ]
+   },
+   "fallbackGender": null,
+   "output": {
+    "defaultFormId": "form_1pbzacn",
+    "forms": [
+     {
+      "id": "form_1pbzacn",
+      "label": "X",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_1lzjm28",
+      "outfits": [
+       {
+        "id": "outfit_1lzjm28",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   },
+   "revision": "v7fya0"
+  },
+  {
+   "input": {
+    "forms": [
+     {
+      "label": "X",
+      "gender": "weird"
+     }
+    ]
+   },
+   "fallbackGender": "male",
+   "output": {
+    "defaultFormId": "form_1pbzacn",
+    "forms": [
+     {
+      "id": "form_1pbzacn",
+      "label": "X",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_1lzjm28",
+      "outfits": [
+       {
+        "id": "outfit_1lzjm28",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   },
+   "revision": "v7fya0"
+  }
+ ],
+ "LY": [
+  {
+   "input": {
+    "basePromptGroups": {
+     "hair.color": [
+      "red hair"
+     ]
+    },
+    "gender": "male",
+    "negativePrompt": " neg ",
+    "outfits": [
+     {
+      "label": "Suit",
+      "top": "suit"
+     }
+    ],
+    "defaultOutfitId": "x"
+   },
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {
+       "hair.color": [
+        "red hair"
+       ]
+      },
+      "negativePrompt": "neg",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "label": "Suit",
+        "top": "suit",
+        "id": "outfit_default",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "fallbackPrompt": "silver hair, blue_eyes; tall",
+    "fallbackGender": "male"
+   },
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {
+       "custom": [
+        "silver hair",
+        "blue eyes",
+        "tall"
+       ]
+      },
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "basePromptGroups": {},
+    "fallbackPrompt": "ignored"
+   },
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "input": {
+    "reference": {
+     "enabled": true
+    },
+    "humanlike": false,
+    "description": " d "
+   },
+   "output": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "d",
+      "humanlike": false,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": {
+       "enabled": true
+      },
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "formOps": {
+  "base": {
+   "defaultFormId": "form_default",
+   "forms": [
+    {
+     "id": "form_default",
+     "label": "Base",
+     "description": "",
+     "humanlike": true,
+     "gender": "female",
+     "basePromptGroups": {
+      "hair.color": [
+       "red hair"
+      ]
+     },
+     "negativePrompt": "",
+     "reference": null,
+     "defaultOutfitId": "outfit_default",
+     "outfits": [
+      {
+       "id": "outfit_default",
+       "label": "Uniform",
+       "top": "shirt",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "bottom": "",
+       "legs": "",
+       "feet": ""
+      },
+      {
+       "id": "outfit_casual",
+       "label": "Casual",
+       "top": "tee",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "bottom": "",
+       "legs": "",
+       "feet": ""
+      }
+     ]
+    },
+    {
+     "id": "form_beast",
+     "label": "Beast",
+     "description": "",
+     "humanlike": true,
+     "gender": "female",
+     "basePromptGroups": {},
+     "negativePrompt": "",
+     "reference": null,
+     "defaultOutfitId": "outfit_8n0d5q",
+     "outfits": [
+      {
+       "label": "Empty",
+       "id": "outfit_8n0d5q",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "top": "",
+       "bottom": "",
+       "legs": "",
+       "feet": ""
+      }
+     ]
+    }
+   ]
+  },
+  "ops": [
+   {
+    "name": "addForm",
+    "args": [
+     {
+      "label": "New Form",
+      "sourceFormId": "form_default"
+     }
+    ],
+    "output": {
+     "collection": {
+      "defaultFormId": "form_default",
+      "forms": [
+       {
+        "id": "form_default",
+        "label": "Base",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {
+         "hair.color": [
+          "red hair"
+         ]
+        },
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_default",
+        "outfits": [
+         {
+          "id": "outfit_default",
+          "label": "Uniform",
+          "top": "shirt",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         },
+         {
+          "id": "outfit_casual",
+          "label": "Casual",
+          "top": "tee",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       },
+       {
+        "id": "form_beast",
+        "label": "Beast",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {},
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_8n0d5q",
+        "outfits": [
+         {
+          "label": "Empty",
+          "id": "outfit_8n0d5q",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "top": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       },
+       {
+        "id": "form_zdmq41",
+        "label": "New Form",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {
+         "hair.color": [
+          "red hair"
+         ]
+        },
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_apsljy",
+        "outfits": [
+         {
+          "id": "outfit_apsljy",
+          "label": "기본 의상",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "top": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       }
+      ]
+     },
+     "formId": "form_zdmq41"
+    }
+   },
+   {
+    "name": "addForm",
+    "args": [
+     {
+      "label": "Plain",
+      "gender": "male",
+      "humanlike": false,
+      "id": "custom id"
+     }
+    ],
+    "output": {
+     "collection": {
+      "defaultFormId": "form_default",
+      "forms": [
+       {
+        "id": "form_default",
+        "label": "Base",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {
+         "hair.color": [
+          "red hair"
+         ]
+        },
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_default",
+        "outfits": [
+         {
+          "id": "outfit_default",
+          "label": "Uniform",
+          "top": "shirt",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         },
+         {
+          "id": "outfit_casual",
+          "label": "Casual",
+          "top": "tee",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       },
+       {
+        "id": "form_beast",
+        "label": "Beast",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {},
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_8n0d5q",
+        "outfits": [
+         {
+          "label": "Empty",
+          "id": "outfit_8n0d5q",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "top": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       },
+       {
+        "id": "form_custom_id",
+        "label": "Plain",
+        "description": "",
+        "humanlike": false,
+        "gender": "male",
+        "basePromptGroups": {},
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_1q6lb1o",
+        "outfits": [
+         {
+          "id": "outfit_1q6lb1o",
+          "label": "기본 의상",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "top": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       }
+      ]
+     },
+     "formId": "form_custom_id"
+    }
+   },
+   {
+    "name": "addForm",
+    "args": [
+     {
+      "label": "  "
+     }
+    ],
+    "output": {
+     "collection": {
+      "defaultFormId": "form_default",
+      "forms": [
+       {
+        "id": "form_default",
+        "label": "Base",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {
+         "hair.color": [
+          "red hair"
+         ]
+        },
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_default",
+        "outfits": [
+         {
+          "id": "outfit_default",
+          "label": "Uniform",
+          "top": "shirt",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         },
+         {
+          "id": "outfit_casual",
+          "label": "Casual",
+          "top": "tee",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       },
+       {
+        "id": "form_beast",
+        "label": "Beast",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {},
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_8n0d5q",
+        "outfits": [
+         {
+          "label": "Empty",
+          "id": "outfit_8n0d5q",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "top": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       }
+      ]
+     },
+     "formId": ""
+    }
+   },
+   {
+    "name": "patchForm",
+    "args": [
+     "form_beast",
+     {
+      "label": "Beast2",
+      "gender": "male",
+      "basePromptGroups": {
+       "hair.color": "blue_hair"
+      },
+      "negativePrompt": 5,
+      "reference": {
+       "enabled": true
+      }
+     }
+    ],
+    "output": {
+     "defaultFormId": "form_default",
+     "forms": [
+      {
+       "id": "form_default",
+       "label": "Base",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "red hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Uniform",
+         "top": "shirt",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        },
+        {
+         "id": "outfit_casual",
+         "label": "Casual",
+         "top": "tee",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      },
+      {
+       "id": "form_beast",
+       "label": "Beast2",
+       "description": "",
+       "humanlike": true,
+       "gender": "male",
+       "basePromptGroups": {
+        "hair.color": [
+         "blue hair"
+        ]
+       },
+       "negativePrompt": "5",
+       "reference": {
+        "enabled": true
+       },
+       "defaultOutfitId": "outfit_8n0d5q",
+       "outfits": [
+        {
+         "label": "Empty",
+         "id": "outfit_8n0d5q",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "patchForm",
+    "args": [
+     "form_beast",
+     {
+      "label": ""
+     }
+    ],
+    "output": {
+     "defaultFormId": "form_default",
+     "forms": [
+      {
+       "id": "form_default",
+       "label": "Base",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "red hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Uniform",
+         "top": "shirt",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        },
+        {
+         "id": "outfit_casual",
+         "label": "Casual",
+         "top": "tee",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      },
+      {
+       "id": "form_beast",
+       "label": "Beast",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {},
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_8n0d5q",
+       "outfits": [
+        {
+         "label": "Empty",
+         "id": "outfit_8n0d5q",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "deleteForm",
+    "args": [
+     "form_beast"
+    ],
+    "output": {
+     "defaultFormId": "form_default",
+     "forms": [
+      {
+       "id": "form_default",
+       "label": "Base",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "red hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Uniform",
+         "top": "shirt",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        },
+        {
+         "id": "outfit_casual",
+         "label": "Casual",
+         "top": "tee",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "deleteForm",
+    "args": [
+     "form_default"
+    ],
+    "output": {
+     "defaultFormId": "form_default",
+     "forms": [
+      {
+       "id": "form_default",
+       "label": "Base",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "red hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Uniform",
+         "top": "shirt",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        },
+        {
+         "id": "outfit_casual",
+         "label": "Casual",
+         "top": "tee",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      },
+      {
+       "id": "form_beast",
+       "label": "Beast",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {},
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_8n0d5q",
+       "outfits": [
+        {
+         "label": "Empty",
+         "id": "outfit_8n0d5q",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "setDefaultForm",
+    "args": [
+     "form_beast"
+    ],
+    "output": {
+     "defaultFormId": "form_beast",
+     "forms": [
+      {
+       "id": "form_default",
+       "label": "Base",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "red hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Uniform",
+         "top": "shirt",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        },
+        {
+         "id": "outfit_casual",
+         "label": "Casual",
+         "top": "tee",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      },
+      {
+       "id": "form_beast",
+       "label": "Beast",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {},
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_8n0d5q",
+       "outfits": [
+        {
+         "label": "Empty",
+         "id": "outfit_8n0d5q",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "patchOutfit",
+    "args": [
+     "form_default",
+     "outfit_casual",
+     {
+      "label": "",
+      "top": "hoodie",
+      "keywords": [
+       "k"
+      ]
+     }
+    ],
+    "output": {
+     "defaultFormId": "form_default",
+     "forms": [
+      {
+       "id": "form_default",
+       "label": "Base",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "red hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Uniform",
+         "top": "shirt",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        },
+        {
+         "id": "outfit_casual",
+         "label": "Casual",
+         "top": "hoodie",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": "",
+         "keywords": [
+          "k"
+         ]
+        }
+       ]
+      },
+      {
+       "id": "form_beast",
+       "label": "Beast",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {},
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_8n0d5q",
+       "outfits": [
+        {
+         "label": "Empty",
+         "id": "outfit_8n0d5q",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "addOutfit",
+    "args": [
+     "form_default",
+     {
+      "label": "Swim",
+      "patch": {
+       "top": "bikini"
+      }
+     }
+    ],
+    "output": {
+     "collection": {
+      "defaultFormId": "form_default",
+      "forms": [
+       {
+        "id": "form_default",
+        "label": "Base",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {
+         "hair.color": [
+          "red hair"
+         ]
+        },
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_default",
+        "outfits": [
+         {
+          "id": "outfit_default",
+          "label": "Uniform",
+          "top": "shirt",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         },
+         {
+          "id": "outfit_casual",
+          "label": "Casual",
+          "top": "tee",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         },
+         {
+          "id": "outfit_mqmvdj",
+          "label": "Swim",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "top": "bikini",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       },
+       {
+        "id": "form_beast",
+        "label": "Beast",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {},
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_8n0d5q",
+        "outfits": [
+         {
+          "label": "Empty",
+          "id": "outfit_8n0d5q",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "top": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       }
+      ]
+     },
+     "outfitId": "outfit_mqmvdj"
+    }
+   },
+   {
+    "name": "addOutfit",
+    "args": [
+     "form_beast",
+     {}
+    ],
+    "output": {
+     "collection": {
+      "defaultFormId": "form_default",
+      "forms": [
+       {
+        "id": "form_default",
+        "label": "Base",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {
+         "hair.color": [
+          "red hair"
+         ]
+        },
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_default",
+        "outfits": [
+         {
+          "id": "outfit_default",
+          "label": "Uniform",
+          "top": "shirt",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         },
+         {
+          "id": "outfit_casual",
+          "label": "Casual",
+          "top": "tee",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       },
+       {
+        "id": "form_beast",
+        "label": "Beast",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {},
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_8n0d5q",
+        "outfits": [
+         {
+          "label": "Empty",
+          "id": "outfit_8n0d5q",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "top": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         },
+         {
+          "id": "outfit_polxn0",
+          "label": "의상 2",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "top": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       }
+      ]
+     },
+     "outfitId": "outfit_polxn0"
+    }
+   },
+   {
+    "name": "replaceEmptyDefaultOutfit",
+    "args": [
+     "form_beast",
+     {
+      "label": "Fur",
+      "patch": {
+       "top": "fur"
+      }
+     }
+    ],
+    "output": {
+     "collection": {
+      "defaultFormId": "form_default",
+      "forms": [
+       {
+        "id": "form_default",
+        "label": "Base",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {
+         "hair.color": [
+          "red hair"
+         ]
+        },
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_default",
+        "outfits": [
+         {
+          "id": "outfit_default",
+          "label": "Uniform",
+          "top": "shirt",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         },
+         {
+          "id": "outfit_casual",
+          "label": "Casual",
+          "top": "tee",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       },
+       {
+        "id": "form_beast",
+        "label": "Beast",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {},
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_12ro142",
+        "outfits": [
+         {
+          "label": "Fur",
+          "id": "outfit_12ro142",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "top": "fur",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       }
+      ]
+     },
+     "outfitId": "outfit_12ro142"
+    }
+   },
+   {
+    "name": "replaceEmptyDefaultOutfit",
+    "args": [
+     "form_default",
+     {
+      "label": "X"
+     }
+    ],
+    "output": {
+     "collection": {
+      "defaultFormId": "form_default",
+      "forms": [
+       {
+        "id": "form_default",
+        "label": "Base",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {
+         "hair.color": [
+          "red hair"
+         ]
+        },
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_default",
+        "outfits": [
+         {
+          "id": "outfit_default",
+          "label": "Uniform",
+          "top": "shirt",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         },
+         {
+          "id": "outfit_casual",
+          "label": "Casual",
+          "top": "tee",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       },
+       {
+        "id": "form_beast",
+        "label": "Beast",
+        "description": "",
+        "humanlike": true,
+        "gender": "female",
+        "basePromptGroups": {},
+        "negativePrompt": "",
+        "reference": null,
+        "defaultOutfitId": "outfit_8n0d5q",
+        "outfits": [
+         {
+          "label": "Empty",
+          "id": "outfit_8n0d5q",
+          "description": "",
+          "candidateEnabled": true,
+          "head": "",
+          "top": "",
+          "bottom": "",
+          "legs": "",
+          "feet": ""
+         }
+        ]
+       }
+      ]
+     },
+     "outfitId": ""
+    }
+   },
+   {
+    "name": "deleteOutfit",
+    "args": [
+     "form_default",
+     "outfit_casual"
+    ],
+    "output": {
+     "defaultFormId": "form_default",
+     "forms": [
+      {
+       "id": "form_default",
+       "label": "Base",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "red hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Uniform",
+         "top": "shirt",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      },
+      {
+       "id": "form_beast",
+       "label": "Beast",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {},
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_8n0d5q",
+       "outfits": [
+        {
+         "label": "Empty",
+         "id": "outfit_8n0d5q",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "deleteOutfit",
+    "args": [
+     "form_default",
+     "outfit_default"
+    ],
+    "output": {
+     "defaultFormId": "form_default",
+     "forms": [
+      {
+       "id": "form_default",
+       "label": "Base",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "red hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Uniform",
+         "top": "shirt",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        },
+        {
+         "id": "outfit_casual",
+         "label": "Casual",
+         "top": "tee",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      },
+      {
+       "id": "form_beast",
+       "label": "Beast",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {},
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_8n0d5q",
+       "outfits": [
+        {
+         "label": "Empty",
+         "id": "outfit_8n0d5q",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "promoteOutfitToDefault",
+    "args": [
+     "form_default",
+     "outfit_casual"
+    ],
+    "output": {
+     "defaultFormId": "form_default",
+     "forms": [
+      {
+       "id": "form_default",
+       "label": "Base",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "red hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_casual",
+       "outfits": [
+        {
+         "id": "outfit_casual",
+         "label": "Casual",
+         "top": "tee",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        },
+        {
+         "id": "outfit_default",
+         "label": "Uniform",
+         "top": "shirt",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      },
+      {
+       "id": "form_beast",
+       "label": "Beast",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {},
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_8n0d5q",
+       "outfits": [
+        {
+         "label": "Empty",
+         "id": "outfit_8n0d5q",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "moveOutfit",
+    "args": [
+     "form_default",
+     "form_beast",
+     "outfit_casual"
+    ],
+    "output": {
+     "defaultFormId": "form_default",
+     "forms": [
+      {
+       "id": "form_default",
+       "label": "Base",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "red hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Uniform",
+         "top": "shirt",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      },
+      {
+       "id": "form_beast",
+       "label": "Beast",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {},
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_8n0d5q",
+       "outfits": [
+        {
+         "label": "Empty",
+         "id": "outfit_8n0d5q",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        },
+        {
+         "id": "outfit_casual",
+         "label": "Casual",
+         "top": "tee",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "moveOutfit",
+    "args": [
+     "form_default",
+     "form_beast",
+     "outfit_default"
+    ],
+    "output": {
+     "defaultFormId": "form_default",
+     "forms": [
+      {
+       "id": "form_default",
+       "label": "Base",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "red hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Uniform",
+         "top": "shirt",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        },
+        {
+         "id": "outfit_casual",
+         "label": "Casual",
+         "top": "tee",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      },
+      {
+       "id": "form_beast",
+       "label": "Beast",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {},
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_8n0d5q",
+       "outfits": [
+        {
+         "label": "Empty",
+         "id": "outfit_8n0d5q",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "name": "resolveFormOutfit",
+    "args": [
+     "form_beast",
+     "nope"
+    ],
+    "output": {
+     "formId": "form_beast",
+     "outfitId": "outfit_8n0d5q",
+     "form": {
+      "id": "form_beast",
+      "label": "Beast",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_8n0d5q",
+      "outfits": [
+       {
+        "label": "Empty",
+        "id": "outfit_8n0d5q",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     },
+     "outfit": {
+      "label": "Empty",
+      "id": "outfit_8n0d5q",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "top": "",
+      "bottom": "",
+      "legs": "",
+      "feet": ""
+     },
+     "usedFormFallback": false,
+     "usedOutfitFallback": true
+    }
+   },
+   {
+    "name": "resolveFormOutfit",
+    "args": [
+     "",
+     "outfit_casual"
+    ],
+    "output": {
+     "formId": "form_default",
+     "outfitId": "outfit_casual",
+     "form": {
+      "id": "form_default",
+      "label": "Base",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {
+       "hair.color": [
+        "red hair"
+       ]
+      },
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "Uniform",
+        "top": "shirt",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       },
+       {
+        "id": "outfit_casual",
+        "label": "Casual",
+        "top": "tee",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     },
+     "outfit": {
+      "id": "outfit_casual",
+      "label": "Casual",
+      "top": "tee",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "bottom": "",
+      "legs": "",
+      "feet": ""
+     },
+     "usedFormFallback": true,
+     "usedOutfitFallback": false
+    }
+   },
+   {
+    "name": "resolveFormOutfitByOutfit",
+    "args": [
+     "",
+     "outfit_casual"
+    ],
+    "output": {
+     "formId": "form_default",
+     "outfitId": "outfit_casual",
+     "form": {
+      "id": "form_default",
+      "label": "Base",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {
+       "hair.color": [
+        "red hair"
+       ]
+      },
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "Uniform",
+        "top": "shirt",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       },
+       {
+        "id": "outfit_casual",
+        "label": "Casual",
+        "top": "tee",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     },
+     "outfit": {
+      "id": "outfit_casual",
+      "label": "Casual",
+      "top": "tee",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "bottom": "",
+      "legs": "",
+      "feet": ""
+     },
+     "usedFormFallback": true,
+     "usedOutfitFallback": false
+    }
+   },
+   {
+    "name": "resolveFormOutfitByOutfit",
+    "args": [
+     "form_beast",
+     "outfit_casual"
+    ],
+    "output": {
+     "formId": "form_beast",
+     "outfitId": "outfit_8n0d5q",
+     "form": {
+      "id": "form_beast",
+      "label": "Beast",
+      "description": "",
+      "humanlike": true,
+      "gender": "female",
+      "basePromptGroups": {},
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_8n0d5q",
+      "outfits": [
+       {
+        "label": "Empty",
+        "id": "outfit_8n0d5q",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     },
+     "outfit": {
+      "label": "Empty",
+      "id": "outfit_8n0d5q",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "top": "",
+      "bottom": "",
+      "legs": "",
+      "feet": ""
+     },
+     "usedFormFallback": false,
+     "usedOutfitFallback": true
+    }
+   },
+   {
+    "name": "isFormTargetCurrent",
+    "args": [
+     {
+      "collectionRevision": "1x91uad",
+      "formId": "form_default",
+      "outfitId": "outfit_casual"
+     }
+    ],
+    "output": true
+   },
+   {
+    "name": "isFormTargetCurrent",
+    "args": [
+     {
+      "collectionRevision": "zzz",
+      "formId": "form_default"
+     }
+    ],
+    "output": false
+   }
+  ]
+ },
+ "outfitEmpty": [
+  {
+   "input": {},
+   "empty": true,
+   "candidate": false
+  },
+  {
+   "input": {
+    "head": " "
+   },
+   "empty": true,
+   "candidate": false
+  },
+  {
+   "input": {
+    "keywords": []
+   },
+   "empty": true,
+   "candidate": false
+  },
+  {
+   "input": {
+    "keywords": [
+     "a"
+    ]
+   },
+   "empty": false,
+   "candidate": true
+  },
+  {
+   "input": {
+    "prompt": {
+     "top": "x"
+    }
+   },
+   "empty": false,
+   "candidate": true
+  },
+  {
+   "input": {
+    "referenceAsset": {
+     "name": "a"
+    }
+   },
+   "empty": false,
+   "candidate": true
+  },
+  {
+   "input": {
+    "candidateEnabled": false,
+    "top": "x"
+   },
+   "empty": false,
+   "candidate": false
+  },
+  {
+   "input": {
+    "candidate_enabled": false,
+    "top": "x"
+   },
+   "empty": false,
+   "candidate": false
+  }
+ ],
+ "customCharacters": [
+  {
+   "input": {
+    "id": "character_1",
+    "title": " Alice ",
+    "recognitionKeys": [
+     "alice",
+     "Ally"
+    ],
+    "appearanceDescription": " tall "
+   },
+   "output": {
+    "id": "character_1",
+    "title": "Alice",
+    "recognitionKeys": [
+     "alice",
+     "Ally"
+    ],
+    "appearanceDescription": "tall"
+   }
+  },
+  {
+   "input": {
+    "id": "character_2",
+    "title": "Bob",
+    "recognitionKeys": [
+     "bob"
+    ],
+    "rosterRegistered": false,
+    "workspaceEnabled": false,
+    "origin": "ai-auto"
+   },
+   "output": {
+    "id": "character_2",
+    "title": "Bob",
+    "recognitionKeys": [
+     "bob"
+    ],
+    "appearanceDescription": "",
+    "rosterRegistered": false,
+    "workspaceEnabled": false,
+    "origin": "ai-auto"
+   }
+  },
+  {
+   "input": {
+    "id": "character_3",
+    "title": "Old",
+    "recognitionKeys": [
+     "o"
+    ],
+    "analyzerEnabled": false
+   },
+   "output": {
+    "id": "character_3",
+    "title": "Old",
+    "recognitionKeys": [
+     "o"
+    ],
+    "appearanceDescription": "",
+    "workspaceEnabled": false
+   }
+  },
+  {
+   "input": {
+    "id": "character_4",
+    "title": "Bad",
+    "recognitionKeys": [
+     "a",
+     "a"
+    ]
+   },
+   "output": null
+  },
+  {
+   "input": {
+    "id": "character_5",
+    "title": "Bad",
+    "recognitionKeys": "a"
+   },
+   "output": null
+  },
+  {
+   "input": {
+    "id": "char_6",
+    "title": "Bad",
+    "recognitionKeys": [
+     "a"
+    ]
+   },
+   "output": null
+  },
+  {
+   "input": {
+    "id": "character_7",
+    "title": "Bad",
+    "recognitionKeys": [
+     "a"
+    ],
+    "rosterRegistered": true
+   },
+   "output": null
+  },
+  {
+   "input": {
+    "id": "character_8",
+    "title": "Bad",
+    "recognitionKeys": [
+     "a"
+    ],
+    "extra": 1
+   },
+   "output": null
+  },
+  {
+   "input": {
+    "id": "character_9",
+    "title": "",
+    "recognitionKeys": [
+     "a"
+    ]
+   },
+   "output": null
+  },
+  {
+   "input": {
+    "id": "character_10",
+    "title": "x",
+    "recognitionKeys": [
+     "a"
+    ],
+    "origin": "auto"
+   },
+   "output": null
+  }
+ ],
+ "splitKeys": [
+  {
+   "input": "a, b\nc,,a",
+   "output": [
+    "a",
+    "b",
+    "c"
+   ]
+  },
+  {
+   "input": [
+    "x",
+    " y ",
+    "x"
+   ],
+   "output": [
+    "x",
+    "y"
+   ]
+  },
+  {
+   "input": 5,
+   "output": []
+  }
+ ],
+ "gD": [
+  {
+   "input": {
+    "title": "",
+    "recognitionKeys": ""
+   },
+   "output": [
+    {
+     "field": "title",
+     "message": "캐릭터 이름을 입력해주세요."
+    },
+    {
+     "field": "recognitionKeys",
+     "message": "인식 키를 하나 이상 입력해주세요."
+    }
+   ]
+  },
+  {
+   "input": {
+    "title": "a",
+    "recognitionKeys": "k"
+   },
+   "output": []
+  }
+ ],
+ "loreKeys": [
+  {
+   "value": "a; b|c",
+   "base": [
+    "base",
+    "B"
+   ],
+   "parsed": {
+    "keys": [
+     "a",
+     "b",
+     "c"
+    ],
+    "replacesBaseKeys": false
+   },
+   "effective": [
+    "base",
+    "B",
+    "a",
+    "c",
+    "Title"
+   ]
+  },
+  {
+   "value": {
+    "version": 1,
+    "mode": "replace",
+    "keys": [
+     "X",
+     "x",
+     "y"
+    ]
+   },
+   "base": [
+    "base"
+   ],
+   "parsed": {
+    "keys": [
+     "X",
+     "y"
+    ],
+    "replacesBaseKeys": true
+   },
+   "effective": [
+    "X",
+    "y"
+   ]
+  },
+  {
+   "value": [
+    "Extra",
+    "base"
+   ],
+   "base": [
+    "Base"
+   ],
+   "parsed": {
+    "keys": [
+     "Extra",
+     "base"
+    ],
+    "replacesBaseKeys": false
+   },
+   "effective": [
+    "Base",
+    "Extra",
+    "Title"
+   ]
+  },
+  {
+   "value": {
+    "mode": "extend",
+    "keys": [
+     "k"
+    ]
+   },
+   "base": [
+    "b"
+   ],
+   "parsed": {
+    "keys": [
+     "[object Object]"
+    ],
+    "replacesBaseKeys": false
+   },
+   "effective": [
+    "b",
+    "[object Object]",
+    "Title"
+   ]
+  }
+ ],
+ "Ja": [
+  {
+   "input": {
+    "steps": "60.6",
+    "scale": -1,
+    "cfgRescale": 0.33
+   },
+   "output": {
+    "steps": 50,
+    "scale": 0,
+    "cfgRescale": 0.33
+   }
+  },
+  {
+   "input": {},
+   "output": null
+  },
+  {
+   "input": {
+    "steps": "x"
+   },
+   "output": null
+  },
+  {
+   "input": null,
+   "output": null
+  },
+  {
+   "input": {
+    "scale": 21
+   },
+   "output": {
+    "scale": 20
+   }
+  }
+ ],
+ "Aa": [
+  {
+   "input": {
+    "enabled": true,
+    "multiplier": 0.83
+   },
+   "output": {
+    "enabled": true,
+    "multiplier": 0.85
+   }
+  },
+  {
+   "input": {
+    "multiplier": 0.1
+   },
+   "output": {
+    "enabled": false,
+    "multiplier": 0.5
+   }
+  },
+  {
+   "input": {
+    "enabled": "yes",
+    "multiplier": "0.9"
+   },
+   "output": {
+    "enabled": false,
+    "multiplier": 0.7
+   }
+  },
+  {
+   "input": null,
+   "output": null
+  },
+  {
+   "input": [],
+   "output": null
+  }
+ ],
+ "Mu": [
+  {
+   "input": "1.2::artist:foo::, 0.5::bar ::",
+   "output": "1.2::artist:foo ::, 0.5::bar ::"
+  },
+  {
+   "input": "plain",
+   "output": "plain"
+  },
+  {
+   "input": "a::b::c",
+   "output": "a::b::c"
+  },
+  {
+   "input": "1.5::x   ::, -2::y::",
+   "output": "1.5::x ::, -2::y ::"
+  },
+  {
+   "input": "::0.5::q::",
+   "output": "::0.5::q::"
+  }
+ ],
+ "FP": {
+  "artistPrompts": [
+   {
+    "id": "detail_anime_illustration_style",
+    "novelAIOverrides": {
+     "steps": 30
+    },
+    "nonArtistPromptWeight": {
+     "enabled": true,
+     "multiplier": 0.66
+    }
+   },
+   {
+    "id": "artist_x",
+    "title": "X",
+    "sourceName": "Card",
+    "prompt": "1.2::a::",
+    "negative_prompt": "n"
+   },
+   {},
+   {
+    "name": "NoId",
+    "artistPrompt": "p"
+   },
+   {
+    "id": "artist_x",
+    "title": "dup"
+   },
+   {
+    "id": "none",
+    "title": "override none",
+    "novelAIOverrides": {
+     "steps": 3
+    }
+   }
+  ],
+  "output": [
+   {
+    "id": "none",
+    "title": "none",
+    "prompt": "",
+    "negativePrompt": "",
+    "description": "작가 프롬프트를 적용하지 않습니다.",
+    "displayTitle": "none",
+    "userDefined": false
+   },
+   {
+    "id": "detail_anime_illustration_style",
+    "title": "v5 검증 그림체",
+    "prompt": "1.5::artist:hwansang ::, 0.9::artist:solipsist ::, 0.4::artist:natwjeq ::, 0.6::artist:channel (caststation) ::, 1.2::artist:sushispin ::, 0.4::artist:wanke ::, year 2024, year 2025, incredibly absurdres, hyper detail, very aesthetic, highres, masterpiece, best quality, amazing quality, best illustration, novel illustration",
+    "negativePrompt": "lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page, watermark, reference, username, signature, artist:xinzoruo, artist:milkpanda, artist collaboration, variant set, large variant set, toon (style), oekaki, chibi, turnaround, monochrome, screentones, dated, old, 1990s (style), distorted composition, bad perspective, animation error, disorganized colors, vertical lines, vertical banding, blurry, upscaled, fewer details, unfinished, incomplete, amateur, cheesy, unsatisfactory, inadequate, deficient, subpar, poor, displeasing, bad illustration, bad portrait",
+    "description": "NovelAI V5 테스트와 검증을 위한 기본 그림체 프롬프트입니다.",
+    "novelAIOverrides": {
+     "steps": 30
+    },
+    "nonArtistPromptWeight": {
+     "enabled": true,
+     "multiplier": 0.65
+    },
+    "displayTitle": "v5 검증 그림체",
+    "userDefined": false
+   },
+   {
+    "id": "comic_page_illustration_style",
+    "title": "만화 추천 그림체",
+    "prompt": "0.6::rusellunt ::, 0.3::mikozin ::, 0.6::wagashi (dagashiya) ::, 0.7::michiking, ::, 0.9::manglife ::, 0.6::typehatena ::, 1.3::healthyman ::, 0.4::artist:qiandaiyiyu ::, year 2026, year 2025, masterpiece, best quality, very aesthetic, best illustration, newest, highres, incredibly absurdres, hyper detail",
+    "negativePrompt": "lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, 3::signature, artist name ::, negative space, blank page, mismatched pupils, bad anatomy, bad face, ugly, bad eyes, 2::smudged eyes, poorly drawn eyes, messy eye details ::, 3::simple eyes, blurry eyes ::, bad hands, extra digits, missing fingers, 2::fused fingers, fused arms, merged arms, fused limbs, merged limbs ::, missing arms, extra arms, extra legs, bad feet, 2::artist collaboration ::, artist:bkub, artist:xinzoruo, artist:milkpanda, artist:kurukurumagical, 0.5::artist:ratatatat74 ::, chibi, toon (style), 1980s (style), 1990s (style), one-hour drawing challenge, 1.5::3d ::, flat color, pale color, character doll, character plush, character plush doll, too many accessories, censored, official style, official art",
+    "description": "카툰·만화 페이지 연출에 적합한 기본 그림체 프롬프트입니다.",
+    "displayTitle": "만화 추천 그림체",
+    "userDefined": false
+   },
+   {
+    "id": "artist_x",
+    "title": "X",
+    "displayTitle": "X - Card",
+    "prompt": "1.2::a ::",
+    "negativePrompt": "n",
+    "description": "",
+    "userDefined": true
+   },
+   {
+    "id": "artist_4",
+    "title": "NoId",
+    "displayTitle": "NoId",
+    "prompt": "p",
+    "negativePrompt": "",
+    "description": "",
+    "userDefined": true
+   }
+  ]
+ },
+ "assetRefs": [
+  {
+   "input": [
+    "a.png",
+    "assets/a.png"
+   ],
+   "output": {
+    "name": "a.png",
+    "key": "assets/a.png",
+    "extension": "png",
+    "sourceType": "",
+    "moduleId": "",
+    "moduleName": ""
+   },
+   "identity": "key:assets/a.png"
+  },
+  {
+   "input": {
+    "name": " n ",
+    "key": "k",
+    "ext": ".PNG",
+    "source_type": "module",
+    "characterTarget": {
+     "chaId": "c",
+     "indexHint": "2"
+    },
+    "characterIndex": null
+   },
+   "output": {
+    "name": "n",
+    "key": "k",
+    "extension": "png",
+    "sourceType": "module",
+    "moduleId": "",
+    "moduleName": "",
+    "characterTarget": {
+     "chaId": "c",
+     "indexHint": 2
+    }
+   },
+   "identity": "key:k"
+  },
+  {
+   "input": "k/path/img.webp",
+   "output": {
+    "name": "",
+    "key": "k/path/img.webp",
+    "extension": "webp",
+    "sourceType": "",
+    "moduleId": "",
+    "moduleName": ""
+   },
+   "identity": "key:k/path/img.webp"
+  },
+  {
+   "input": {
+    "name": "x",
+    "key": "y",
+    "cropReference": {
+     "a": 1
+    },
+    "character_index": 3
+   },
+   "output": {
+    "name": "x",
+    "key": "y",
+    "extension": "x",
+    "sourceType": "",
+    "moduleId": "",
+    "moduleName": "",
+    "characterIndex": 3,
+    "cropReference": {
+     "a": 1
+    }
+   },
+   "identity": "key:y"
+  }
+ ],
+ "Ai": [
+  {
+   "name": "a",
+   "key": "k1",
+   "extension": "png",
+   "sourceType": "",
+   "moduleId": "",
+   "moduleName": ""
+  },
+  {
+   "name": "d",
+   "key": "k2",
+   "extension": "d",
+   "sourceType": "",
+   "moduleId": "",
+   "moduleName": ""
+  }
+ ]
+}

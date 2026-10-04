@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "label": "Portrait 832 x 1216",
+    "width": 832,
+    "height": 1216
+  },
+  {
+    "id": 2,
+    "label": "Landscape 1216 x 832",
+    "width": 1216,
+    "height": 832
+  },
+  {
+    "id": 3,
+    "label": "Portrait 896 x 1152",
+    "width": 896,
+    "height": 1152
+  },
+  {
+    "id": 4,
+    "label": "Landscape 1152 x 896",
+    "width": 1152,
+    "height": 896
+  },
+  {
+    "id": 5,
+    "label": "Square 1024 x 1024",
+    "width": 1024,
+    "height": 1024
+  }
+]

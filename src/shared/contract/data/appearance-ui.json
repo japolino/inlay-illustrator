@@ -1,0 +1,215 @@
+{
+  "APPEARANCE_FIELD_GROUPS_UI": [
+    {
+      "id": "final",
+      "label": "종합",
+      "fields": []
+    },
+    {
+      "id": "identity",
+      "label": "고유",
+      "fields": [
+        {
+          "id": "identity.character_tag",
+          "label": "캐릭터 태그",
+          "placeholder": "예: hatsune miku"
+        }
+      ]
+    },
+    {
+      "id": "hair",
+      "label": "머리",
+      "fields": [
+        {
+          "id": "hair.color",
+          "label": "색",
+          "placeholder": "예: black hair"
+        },
+        {
+          "id": "hair.length",
+          "label": "길이",
+          "placeholder": "머리 길이 선택"
+        },
+        {
+          "id": "hair.style",
+          "label": "스타일",
+          "placeholder": "예: ponytail"
+        },
+        {
+          "id": "head.other",
+          "label": "기타",
+          "placeholder": "예: horns, animal ears"
+        }
+      ]
+    },
+    {
+      "id": "eyes",
+      "label": "눈",
+      "fields": [
+        {
+          "id": "eyes.color",
+          "label": "색",
+          "placeholder": "예: blue eyes"
+        },
+        {
+          "id": "eyes.structure",
+          "label": "형태",
+          "placeholder": "예: slit pupils"
+        }
+      ]
+    },
+    {
+      "id": "breast",
+      "label": "가슴",
+      "fields": [
+        {
+          "id": "body.breast_size",
+          "label": "크기",
+          "placeholder": "가슴 크기 선택"
+        }
+      ]
+    },
+    {
+      "id": "other",
+      "label": "기타",
+      "fields": [
+        {
+          "id": "body.skin",
+          "label": "피부",
+          "placeholder": "예: dark skin"
+        },
+        {
+          "id": "body.build",
+          "label": "체형",
+          "placeholder": "예: muscular female"
+        },
+        {
+          "id": "body.proportions",
+          "label": "비율",
+          "placeholder": "예: wide hips"
+        },
+        {
+          "id": "marks.distinctive",
+          "label": "신체 표식",
+          "placeholder": "예: body tattoo"
+        },
+        {
+          "id": "nonhuman.features",
+          "label": "기타 신체",
+          "placeholder": "예: wings, tail"
+        },
+        {
+          "id": "custom",
+          "label": "기타 프롬프트",
+          "placeholder": "태그 또는 프롬프트 조각"
+        }
+      ],
+      "fallbackFieldId": "custom",
+      "placeholder": "피부, 체형, 비율, 표식, 날개·꼬리, 기타 프롬프트"
+    }
+  ],
+  "APPEARANCE_EMPTY_OPTION_SENTINEL": "__asset_maid_empty_base_prompt_option__",
+  "FIELD_LABELS_KO": {
+    "identity.character_tag": "고유 / 캐릭터 태그",
+    "hair.color": "머리 / 색",
+    "hair.length": "머리 / 길이",
+    "hair.style": "머리 / 스타일",
+    "head.other": "머리 / 기타",
+    "eyes.color": "눈 / 색",
+    "eyes.structure": "눈 / 형태",
+    "body.skin": "기타 / 피부",
+    "body.build": "기타 / 체형",
+    "body.proportions": "기타 / 비율",
+    "body.breast_size": "가슴 / 크기",
+    "marks.distinctive": "기타 / 신체 표식",
+    "nonhuman.features": "기타 / 신체",
+    "custom": "기타 프롬프트",
+    "head": "머리",
+    "top": "상의",
+    "bottom": "하의",
+    "legs": "다리",
+    "feet": "발"
+  },
+  "BASE_PROMPT_GROUP_ORDER": [
+    "identity.character_tag",
+    "hair.color",
+    "hair.length",
+    "hair.style",
+    "head.other",
+    "eyes.color",
+    "eyes.structure",
+    "body.skin",
+    "body.build",
+    "body.proportions",
+    "body.breast_size",
+    "marks.distinctive",
+    "nonhuman.features"
+  ],
+  "GROUP_TO_OUTFIT_PART_RELEVANCE": {
+    "identity.character_tag": [
+      "head",
+      "top",
+      "bottom"
+    ],
+    "hair.color": [
+      "head"
+    ],
+    "hair.length": [
+      "head"
+    ],
+    "hair.style": [
+      "head"
+    ],
+    "head.other": [
+      "head"
+    ],
+    "eyes.color": [
+      "head"
+    ],
+    "eyes.structure": [
+      "head"
+    ],
+    "body.skin": [
+      "top",
+      "bottom"
+    ],
+    "body.build": [
+      "top",
+      "bottom"
+    ],
+    "body.proportions": [
+      "top",
+      "bottom",
+      "legs"
+    ],
+    "body.breast_size": [
+      "top"
+    ],
+    "marks.distinctive": [
+      "head",
+      "top",
+      "bottom"
+    ],
+    "nonhuman.features": [
+      "head",
+      "top",
+      "bottom"
+    ],
+    "custom": []
+  },
+  "OUTFIT_PARTS": [
+    "head",
+    "top",
+    "bottom",
+    "legs",
+    "feet"
+  ],
+  "DEFAULT_FORM": {
+    "id": "form_default",
+    "label": "기본"
+  },
+  "DEFAULT_OUTFIT": {
+    "id": "outfit_default",
+    "label": "기본 의상"
+  }
+}

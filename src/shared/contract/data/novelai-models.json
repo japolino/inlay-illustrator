@@ -1,0 +1,21 @@
+{
+  "defaultModel": "nai-diffusion-5-full",
+  "models": [
+    {
+      "value": "nai-diffusion-4-5-full",
+      "label": "nai-diffusion-4-5-full"
+    },
+    {
+      "value": "nai-diffusion-4-5-curated",
+      "label": "nai-diffusion-4-5-curated"
+    },
+    {
+      "value": "nai-diffusion-5-full",
+      "label": "nai-diffusion-5-full"
+    },
+    {
+      "value": "nai-diffusion-5-curated",
+      "label": "nai-diffusion-5-curated"
+    }
+  ]
+}
