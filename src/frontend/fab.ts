@@ -58,6 +58,14 @@ export const FAB_MENU_GAP_PX = 8;
 export const FAB_MENU_MARGIN_PX = 8;
 
 const FAB_CSS = `
+/* The host app root is isolated, so its drawer (wrapper z-index 9992) cannot cover body-level layers whatever their
+   z-index. Hide the FAB and the chat runtime layer (count toggle, toasts) while the viewport drawer is open.
+   The open class is a CSS-module name with a build hash, so match its prefix. */
+body:has([class*="_wrapperOpen_"] > [data-lumiverse-surface="viewport-drawer"]) .inlay-fab,
+body:has([class*="_wrapperOpen_"] > [data-lumiverse-surface="viewport-drawer"]) .inlay-fab-menu,
+body:has([class*="_wrapperOpen_"] > [data-lumiverse-surface="viewport-drawer"]) .ii-am-root.ii-am-chat-runtime-host:not([data-ii-zoom="true"]) {
+  visibility: hidden !important;
+}
 .inlay-fab {
   position: fixed;
   width: 48px;
