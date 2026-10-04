@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { LlmMessageDTO } from "lumiverse-spindle-types";
 import { MARKER } from "./constants.js";
-import { stripInlayContent, stripInlayFromMessages } from "./inlay-content.js";
+import { encodeSuppressionCarrier, stripInlayContent, stripInlayFromMessages } from "./inlay-content.js";
 
 function currentBlock(prompt: string, withMarker = true): string {
   const marker = withMarker ? `${MARKER}\n` : "";
@@ -104,5 +104,13 @@ describe("assistant message sanitization", () => {
     expect(parts[0]).toEqual({ type: "text", text: "Narrative.", cache_control: { type: "ephemeral" } });
     expect(parts[1]).toBe(imagePart);
     expect(parts[2]).toBe(toolPart);
+  });
+});
+
+describe("native asset suppression carriers", () => {
+  test("assistant turns get carriers decoded back to the original markup", () => {
+    const markup = "{{img::alice smile}}";
+    const output = stripInlayFromMessages([{ role: "assistant", content: `A ${encodeSuppressionCarrier(markup)} B` }]);
+    expect(output[0]!.content).toBe(`A ${markup} B`);
   });
 });

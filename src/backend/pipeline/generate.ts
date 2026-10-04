@@ -50,6 +50,7 @@ import {
   readContinuityFromChat,
   readLocalLoreActorState,
   rebuildContinuityAtMessage,
+  serializeContinuityState,
   writeContinuityToChat,
   writeLocalLoreActorState,
   type ContinuityChat,
@@ -446,7 +447,8 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       const current = readContinuityFromChat(doc.store as unknown as ContinuityChatStore, chatObj, chatKey) ?? createEmptyContinuityState();
       const controller = createMemoryContinuityController(current);
       await apply(controller, info);
-      writeContinuityToChat(doc.store as unknown as ContinuityChatStore, chatObj, controller.state, chatKey);
+      // The storage adapter takes the serialized document (AM pKe persists `Ete(state)`; `gDe` reads the string form).
+      writeContinuityToChat(doc.store as unknown as ContinuityChatStore, chatObj, serializeContinuityState(controller.state), chatKey);
       const actorState = readLocalLoreActorState(chatObj);
       doc.actorState = { revision: actorState.revision, actors: actorState.actors } as unknown as CurrentActorState;
     };

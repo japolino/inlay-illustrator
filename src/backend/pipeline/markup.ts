@@ -2,15 +2,10 @@
  * Message markup of the chat pipeline (pure, no host calls):
  * - strip our baked blocks (contract `chat-dom.ts`, legacy 0.9.x blocks too) and decode native-asset suppression carriers
  *   (AM `F5` 168870 = `obt(lbt(...))`: the LLM and the slotter see the original text with the original native tokens);
- * - native asset suppression carriers (AM `Vyt` 120803 / `zbe` 120771 / `cH` 120818 / `Yyt` 120824) with the port's attribute names;
+ * - native asset suppression carriers (AM `Vyt` 120803 / `zbe` 120771 / `cH` 120818 in ../inlay-content.ts, `Yyt` 120824 here);
  * - bake: insert illustration blocks at Asset Maid's paragraph insertion offsets (AM `oIe` 171484-171538).
  */
-import {
-  SUPPRESSION_CLASS,
-  SUPPRESSION_ID_ATTR,
-  SUPPRESSION_PAYLOAD_ATTR,
-  type BakeBlock,
-} from "../../shared/contract/index.js";
+import type { BakeBlock } from "../../shared/contract/index.js";
 import {
   buildIllustrationSlots,
   detectNativeAssetMarkups,
@@ -20,76 +15,9 @@ import {
   type NativeAssetMarkup,
   type ParagraphSlotSplit,
 } from "../../engine/text/index.js";
-import { stripInlayContent } from "../inlay-content.js";
+import { cleanInlayText, decodeSuppressionCarriers, encodeSuppressionCarrier, removeSuppressionCarriers, suppressionCarrierId } from "../inlay-content.js";
 
-/* ------------------------------------------------------------------------------------------------
- * Native asset suppression carrier
- * ---------------------------------------------------------------------------------------------- */
-
-/** AM `cv` 22226: FNV-1a 32, 8 lowercase hex digits. */
-function fnvHex(text: string): string {
-  let hash = 2166136261;
-  for (let i = 0; i < text.length; i += 1) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
-}
-
-/** AM `zbe` 120771: `NAS1<FNV1a32 hex upper><length base36 upper>`. */
-export function suppressionCarrierId(markup: string): string {
-  return `NAS1${fnvHex(markup).toUpperCase()}${markup.length.toString(36).toUpperCase()}`;
-}
-
-/** AM `Vyt` 120803 with the port attribute names (contract chat-dom.ts). */
-export function encodeSuppressionCarrier(markup: string): string {
-  const text = String(markup ?? "");
-  if (!text) return text;
-  return `<span class="${SUPPRESSION_CLASS}" ${SUPPRESSION_ID_ATTR}="${suppressionCarrierId(text)}" ${SUPPRESSION_PAYLOAD_ATTR}="${encodeURIComponent(text)}" aria-hidden="true" hidden></span>`;
-}
-
-/** Carriers in our format and in Asset Maid's original format (imported chats). */
-const CARRIER_ATTRS: ReadonlyArray<readonly [string, string]> = [
-  [SUPPRESSION_ID_ATTR, SUPPRESSION_PAYLOAD_ATTR],
-  ["data-am-native-asset-suppression", "data-am-native-asset-suppression-payload"],
-];
-const CARRIER_PATTERN = /<span\b(?=[^>]*\b(?:data-inlay-illustrator-suppressed|data-am-native-asset-suppression)\s*=)[^>]*>[\s\S]*?<\/span>/giu;
-
-function readAttr(html: string, name: string): string {
-  const match = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "iu").exec(html);
-  return match ? String(match[1] ?? match[2] ?? "").trim() : "";
-}
-
-/** AM `Gyt` 120784: payload when the id verifies, else null. */
-function decodeCarrier(html: string): string | null {
-  for (const [idAttr, payloadAttr] of CARRIER_ATTRS) {
-    const id = readAttr(html, idAttr);
-    const payload = readAttr(html, payloadAttr);
-    if (!id || !payload) continue;
-    try {
-      const decoded = decodeURIComponent(payload);
-      return suppressionCarrierId(decoded) === id ? decoded : null;
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
-
-function replaceCarriers(text: string, replace: (decoded: string | null) => string): string {
-  if (!text || (!text.includes(SUPPRESSION_ID_ATTR) && !text.includes("data-am-native-asset-suppression"))) return text;
-  return text.replace(CARRIER_PATTERN, (html) => replace(decodeCarrier(html)));
-}
-
-/** AM `cH` 120818: carriers back to their original markup (invalid carriers decode to ""). */
-export function decodeSuppressionCarriers(text: string): string {
-  return replaceCarriers(text, (decoded) => decoded ?? "");
-}
-
-/** AM `Wyt` 120821: carriers removed. */
-export function removeSuppressionCarriers(text: string): string {
-  return replaceCarriers(text, () => "");
-}
+export { decodeSuppressionCarriers, encodeSuppressionCarrier, removeSuppressionCarriers, suppressionCarrierId };
 
 /** AM `Yyt` 120824: wrap each native markup occurrence (verified at its offset; overlaps keep the first) into a carrier. */
 export function suppressNativeMarkups(text: string, markups: readonly NativeAssetMarkup[]): string {
@@ -118,7 +46,7 @@ export function suppressNativeMarkups(text: string, markups: readonly NativeAsse
 
 /** Strip every baked block (current + legacy) and decode suppression carriers. Idempotent. */
 export function cleanMessageContent(content: string): string {
-  return decodeSuppressionCarriers(stripInlayContent(String(content ?? "")));
+  return cleanInlayText(String(content ?? ""));
 }
 
 /** Interceptor message shape (subset of `LlmMessageDTO`). */

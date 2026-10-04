@@ -1,4 +1,5 @@
 import type { LlmMessageDTO } from "lumiverse-spindle-types";
+import { SUPPRESSION_CLASS, SUPPRESSION_ID_ATTR, SUPPRESSION_PAYLOAD_ATTR } from "../shared/contract/index.js";
 
 const MARKER_PATTERN = String.raw`<!--\s*inlay_illustrator\s*-->`;
 const CURRENT_DIV_PATTERN = String.raw`<div\b(?=[^>]*[\t\n\f\r ]data-inlay-illustrator\s*=\s*(?:"true"|'true'|true(?=[\s>])))[^>]*>[\s\S]*?<\/div\s*>`;
@@ -43,20 +44,94 @@ export function stripInlayContent(content: string): string {
     .replace(PROMPT_ATTRIBUTE, "");
 }
 
-/** Returns a context-only copy with Inlay text removed from assistant turns. */
+/* ------------------------------------------------------------------------------------------------
+ * Native asset suppression carrier
+ * ---------------------------------------------------------------------------------------------- */
+
+/** AM `cv` 22226: FNV-1a 32, 8 lowercase hex digits. */
+function fnvHex(text: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+/** AM `zbe` 120771: `NAS1<FNV1a32 hex upper><length base36 upper>`. */
+export function suppressionCarrierId(markup: string): string {
+  return `NAS1${fnvHex(markup).toUpperCase()}${markup.length.toString(36).toUpperCase()}`;
+}
+
+/** AM `Vyt` 120803 with the port attribute names (contract chat-dom.ts). */
+export function encodeSuppressionCarrier(markup: string): string {
+  const text = String(markup ?? "");
+  if (!text) return text;
+  return `<span class="${SUPPRESSION_CLASS}" ${SUPPRESSION_ID_ATTR}="${suppressionCarrierId(text)}" ${SUPPRESSION_PAYLOAD_ATTR}="${encodeURIComponent(text)}" aria-hidden="true" hidden></span>`;
+}
+
+/** Carriers in our format and in Asset Maid's original format (imported chats). */
+const CARRIER_ATTRS: ReadonlyArray<readonly [string, string]> = [
+  [SUPPRESSION_ID_ATTR, SUPPRESSION_PAYLOAD_ATTR],
+  ["data-am-native-asset-suppression", "data-am-native-asset-suppression-payload"],
+];
+const CARRIER_PATTERN = /<span\b(?=[^>]*\b(?:data-inlay-illustrator-suppressed|data-am-native-asset-suppression)\s*=)[^>]*>[\s\S]*?<\/span>/giu;
+
+function readAttr(html: string, name: string): string {
+  const match = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "iu").exec(html);
+  return match ? String(match[1] ?? match[2] ?? "").trim() : "";
+}
+
+/** AM `Gyt` 120784: payload when the id verifies, else null. */
+function decodeCarrier(html: string): string | null {
+  for (const [idAttr, payloadAttr] of CARRIER_ATTRS) {
+    const id = readAttr(html, idAttr);
+    const payload = readAttr(html, payloadAttr);
+    if (!id || !payload) continue;
+    try {
+      const decoded = decodeURIComponent(payload);
+      return suppressionCarrierId(decoded) === id ? decoded : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function replaceCarriers(text: string, replace: (decoded: string | null) => string): string {
+  if (!text || (!text.includes(SUPPRESSION_ID_ATTR) && !text.includes("data-am-native-asset-suppression"))) return text;
+  return text.replace(CARRIER_PATTERN, (html) => replace(decodeCarrier(html)));
+}
+
+/** AM `cH` 120818: carriers back to their original markup (invalid carriers decode to ""). */
+export function decodeSuppressionCarriers(text: string): string {
+  return replaceCarriers(text, (decoded) => decoded ?? "");
+}
+
+/** AM `Wyt` 120821: carriers removed. */
+export function removeSuppressionCarriers(text: string): string {
+  return replaceCarriers(text, () => "");
+}
+
+/** Strip our blocks (current + legacy) and decode native-asset suppression carriers (AM `F5` 168870). */
+export function cleanInlayText(content: string): string {
+  return decodeSuppressionCarriers(stripInlayContent(content));
+}
+
+/** Returns a context-only copy with Inlay text removed (and suppression carriers decoded) in assistant turns. */
 export function stripInlayFromMessages(messages: LlmMessageDTO[]): LlmMessageDTO[] {
   return messages.map((message) => {
     if (message.role !== "assistant") return message;
 
     if (typeof message.content === "string") {
-      const content = stripInlayContent(message.content);
+      const content = cleanInlayText(message.content);
       return content === message.content ? message : { ...message, content };
     }
 
     let changed = false;
     const content = message.content.map((part) => {
       if (part.type !== "text") return part;
-      const text = stripInlayContent(part.text);
+      const text = cleanInlayText(part.text);
       if (text === part.text) return part;
       changed = true;
       return { ...part, text };

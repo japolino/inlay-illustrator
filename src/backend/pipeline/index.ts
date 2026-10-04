@@ -37,7 +37,9 @@ export function createPipelineModule(services: BackendServices, _getModules?: ()
     createEnginePort(services, {
       onAnalyzerDiagnostic: (event) => {
         try {
-          services.log.append("debug", "analyzer", event.event, event.detail);
+          // Keep the 250-entry run log readable: large details (whole analyzer requests) are summarized.
+          const text = event.detail === undefined ? "" : JSON.stringify(event.detail);
+          services.log.append("debug", "analyzer", event.event, text.length > 2000 ? { size: text.length } : event.detail);
         } catch {
           /* ignore */
         }

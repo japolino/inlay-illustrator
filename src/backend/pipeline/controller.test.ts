@@ -290,7 +290,7 @@ describe("swipes, events, recovery", () => {
   test("recover marks interrupted plans as error (footer retry)", async () => {
     const { fx, pipeline } = setup();
     await fx.services.storage.updateChatData(CHAT_ID, (doc) => {
-      doc.plans["illustration:m1@0"] = { ...({} as never), key: "illustration:m1@0", characterIndex: -1, chatIndex: -1, messageIndex: 1, messageId: "m1@0", countPolicy: { mode: "fixed", min: 1, max: 1, values: { fixed: 1, min: 1, max: 2 } }, requestedCount: 1, status: "generating", slots: [], entries: [], assetHints: [], nativeAssetSuppressed: false, revisions: [], activeRevisionId: "", error: "", updatedAt: 0 };
+      doc.plans["illustration:m1@0"] = { key: "illustration:m1@0", characterIndex: -1, chatIndex: -1, messageIndex: 1, messageId: "m1@0", countPolicy: { mode: "fixed", min: 1, max: 1, values: { fixed: 1, min: 1, max: 2 } }, requestedCount: 1, status: "generating", slots: [], entries: [], assetHints: [], nativeAssetSuppressed: false, revisions: [], activeRevisionId: "", error: "", updatedAt: 0 };
       return doc;
     });
     fx.json.set("chats/chat-1/chat-data.json", {});
