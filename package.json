@@ -15,7 +15,9 @@
     "dev:mcp": "bun run src/dev/lumiverse-mcp/server.ts",
     "dev:mcp:smoke": "bun run src/dev/lumiverse-mcp/smoke.ts",
     "verify": "bun run test && bun run typecheck",
-    "build": "bun run css && bun run typecheck:build && bun build ./src/backend.ts ./src/frontend.tsx --outdir ./dist --target browser --format esm"
+    "build": "bun run css && bun run typecheck:build && bun run build:backend && bun run build:frontend",
+    "build:backend": "bun build ./src/backend.ts --outdir ./dist --target browser --format esm",
+    "build:frontend": "bun build ./src/frontend.tsx --outdir ./dist --target browser --format esm --minify-whitespace --minify-syntax"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
