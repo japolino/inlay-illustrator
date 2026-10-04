@@ -52,8 +52,8 @@ export const PAGE_TITLES = {
 export const ANALYSIS_LABELS = {
   profileGroup: "NovelAI analysis method", // NovelAI 분석 방식
   profiles: {
-    "v5-hybrid": { label: "Asset Maid V5", description: "Builds the scene flexibly by combining natural language and tags." }, // 에셋 메이드 V5 / 자연어와 태그를 결합해 장면을 유연하게 구성합니다.
-    "v4-5": { label: "Asset Maid V4.5", description: "Makes predictable results with verified presets." } // 에셋 메이드 V4.5 / 검증된 프리셋으로 예측 가능한 결과를 만듭니다.
+    "v5-hybrid": { label: "Inlay V5", description: "Builds the scene flexibly by combining natural language and tags." }, // 에셋 메이드 V5 / 자연어와 태그를 결합해 장면을 유연하게 구성합니다.
+    "v4-5": { label: "Inlay V4.5", description: "Makes predictable results with verified presets." } // 에셋 메이드 V4.5 / 검증된 프리셋으로 예측 가능한 결과를 만듭니다.
   },
   sceneTitle: "Scene direction guide", // 장면 연출 지침
   imageRatioTitle: "Image ratio decision guide", // 이미지 비율 결정 지침
@@ -169,7 +169,7 @@ export const CHARX_LABELS = {
   resetCharacter: { title: "Reset current character", description: "Keeps chat and zoom images and resets settings and analysis records." }, // 현재 charx 초기화
   reset: "Reset", // 초기화
   resetConfirmTitle: "Reset current character", // 현재 charx 초기화
-  resetConfirmDescription: "Keeps chat and zoom images, and resets this character's Asset Maid settings and analysis records. This cannot be undone.", // 채팅과 확대 이미지는 유지하고, …
+  resetConfirmDescription: "Keeps chat and zoom images, and resets this character's Inlay settings and analysis records. This cannot be undone.", // 채팅과 확대 이미지는 유지하고, …
   resetConfirmButton: "Reset character", // charx 초기화
   resetDone: "Character data was reset.",
   resetFailed: (message: string) => `Character reset failed: ${message}`, // charx 초기화 실패: …
@@ -325,7 +325,7 @@ export const SYSTEM_LABELS = {
   countIncrease: "1 image more",
   countMin: "Minimum count",
   countMax: "Maximum count",
-  analysisMode: { title: "Analysis mode", description: "Split analysis plans a total count and analyses it in batches (Asset Maid V5)." },
+  analysisMode: { title: "Analysis mode", description: "Split analysis plans a total count and analyses it in batches (Inlay V5)." },
   analysisModes: { single: "Single", split: "Split" },
   splitTotal: "Total count",
   splitBatch: "Batch size",
@@ -333,7 +333,7 @@ export const SYSTEM_LABELS = {
   factoryReset: { title: "Factory reset", description: "Deletes all Inlay Illustrator settings and character data. Chats and generated images stay." },
   factoryResetButton: "Factory reset",
   factoryResetConfirmTitle: "Factory reset",
-  factoryResetConfirmDescription: "All Inlay Illustrator settings and Asset Maid data of every character are deleted. Chats and generated images stay. This cannot be undone.",
+  factoryResetConfirmDescription: "All Inlay Illustrator settings and the Inlay data of every character are deleted. Chats and generated images stay. This cannot be undone.",
   factoryResetDone: "All settings were reset."
 } as const;
 

@@ -19,7 +19,7 @@ export const SHELL_LABELS = {
   noChat: "Open a chat to start.",
   rosterTitle: "Roster", // 로스터
   rosterPlaceholder: "Characters from the current card and its lorebooks appear here.",
-  placeholderNote: "This screen is part of the Asset Maid port and is not available yet.",
+  placeholderNote: "This screen is not available yet.",
   stopTask: "Stop task", // 작업 중지
   closeNotification: "Close notification", // 알림 닫기
   cancel: "Cancel", // 취소
@@ -27,7 +27,7 @@ export const SHELL_LABELS = {
   backToWorkspaceShort: "Back to workspace", // 작업공간으로 돌아가기
   noCharacterSelected: "Pick a character in the rail, or open a character chat.",
   reload: "Reload", // 다시 불러오기
-  loadingData: "Loading Asset Maid data", // Asset Maid 데이터 불러오는 중
+  loadingData: "Loading Inlay data", // Asset Maid 데이터 불러오는 중
   splitAdjust: "Main area / workspace width adjust", // 메인 영역과 작업 영역 너비 조절
   rosterSplitAdjust: "Roster / main area width adjust", // 로스터와 메인 영역 너비 조절
   widthAdjust: (label: string) => `${label} width adjust`, // ${c} 너비 조절
@@ -95,7 +95,7 @@ export const SYSTEM_SETTINGS_LABELS = {
 
 export const LAUNCHER_LABELS = {
   title: "Inlay Illustrator",
-  subtitle: "Scene illustrations and character assets (Asset Maid port).",
+  subtitle: "Scene illustrations and character assets.",
   open: "Open Inlay Illustrator",
   settings: "Open settings",
   status: "Status",

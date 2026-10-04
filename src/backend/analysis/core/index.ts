@@ -12,6 +12,6 @@ export const AM = raw as unknown as Record<string, any>;
 /** A function export of the slice (throws when the slice lost it, so a bad regeneration fails loudly). */
 export function amFn(name: string): AmFn {
   const fn = AM[name];
-  if (typeof fn !== "function") throw new Error(`Asset Maid analysis core is missing function ${name}`);
+  if (typeof fn !== "function") throw new Error(`Analysis core is missing function ${name}`);
   return fn as AmFn;
 }

@@ -1,7 +1,7 @@
 # Inlay Illustrator
 
-Inlay Illustrator draws illustrations into your Lumiverse chats. Version 0.10 is a port of the RisuAI plugin
-[Asset Maid](https://github.com/acahaAM/Asset-Maid) 0.9.88. It replaces the old Lightboard pipeline of 0.9.x.
+Inlay Illustrator draws illustrations into your Lumiverse chats and manages the look of your characters. Version 0.10
+replaces the old Lightboard pipeline of 0.9.x.
 
 ## What it does
 
@@ -39,9 +39,9 @@ Inlay Illustrator draws illustrations into your Lumiverse chats. Version 0.10 is
 
 ## Known gaps
 
-- Unique tag search (Danbooru) and the community Maid Library are not available.
-- Asset Maid's direct provider settings, prompt caching and PDF transport are not used: all LLM calls go through
-  Lumiverse connection profiles.
+- Unique tag search (Danbooru) and community preset sharing are not available.
+- All LLM calls go through Lumiverse connection profiles: there are no direct provider settings, prompt caching or PDF
+  transport.
 - Settings and character data from 0.9.x are not migrated. Old 0.9.x images stay in the messages but have no controls.
 - The UI is in English only.
 
@@ -58,3 +58,8 @@ bun run build
 `dist/frontend.js` (minified, identifiers kept). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 [docs/BACKEND.md](docs/BACKEND.md) and [docs/CONTRACT.md](docs/CONTRACT.md), and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution.
+
+## Credits
+
+The analyzer, prompt engine and workspace design are ported from the RisuAI plugin
+[Asset Maid](https://github.com/acahaAM/Asset-Maid) 0.9.88 by acahaAM.

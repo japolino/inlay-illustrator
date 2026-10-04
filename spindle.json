@@ -5,7 +5,7 @@
   "author": "japolino",
   "github": "https://github.com/japolino/inlay-illustrator",
   "homepage": "https://github.com/japolino/inlay-illustrator",
-  "description": "Asset Maid-based scene illustration and character asset manager for Lumiverse.",
+  "description": "Scene illustration and character asset manager for Lumiverse: plans pictures for chat replies and renders them with NovelAI or ComfyUI.",
   "permissions": [
     "generation",
     "interceptor",

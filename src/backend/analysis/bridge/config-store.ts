@@ -145,7 +145,7 @@ export async function persistAmConfigChange(
       return holder.m as Record<string, unknown>;
     });
   }
-  if (diff.ignored.length) services.log.append("warn", "analysis", `Ignored Asset Maid config change outside characterPrompt: ${diff.ignored.join(", ")}`);
+  if (diff.ignored.length) services.log.append("warn", "analysis", `Ignored config change outside characterPrompt: ${diff.ignored.join(", ")}`);
   return { document, diff };
 }
 

@@ -47,7 +47,7 @@ export function sampleLogEntries(now = Date.now()): RuntimeLogEntry[] {
   const at = (offsetSec: number) => new Date(now - offsetSec * 1000).toISOString();
   return [
     { seq: 1, at: at(240), level: "info", scope: "chat-lifecycle", message: "AI reply finished; automatic generation queued (1 image).", details: { chatId: "chat-1", messageKey: "m-41@0" } },
-    { seq: 2, at: at(236), level: "debug", scope: "ai-analysis", message: "Analyzer request sent (Asset Maid V5, scene preset: Illustration).", details: { model: "gpt-5.5", promptChars: 18234, timeoutMs: 180000 } },
+    { seq: 2, at: at(236), level: "debug", scope: "ai-analysis", message: "Analyzer request sent (Inlay V5, scene preset: Illustration).", details: { model: "gpt-5.5", promptChars: 18234, timeoutMs: 180000 } },
     { seq: 3, at: at(214), level: "info", scope: "ai-analysis", message: "Analyzer answered in 21.4s; 2 actors, sizeId 1.", details: { actors: ["han seo-yeon", "kim mina"], sizeId: 1 } },
     { seq: 4, at: at(212), level: "info", scope: "chat-image", message: "NovelAI request 1/1 started." },
     { seq: 5, at: at(190), level: "warn", scope: "chat-image", message: "NovelAI returned 429; retry 1/5 in 4s." },

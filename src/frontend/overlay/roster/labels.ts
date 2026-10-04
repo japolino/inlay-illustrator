@@ -89,7 +89,7 @@ export const ROSTER_LABELS = {
   // rail
   characterSelection: "Character selection", // 캐릭터 선택
   characterSelectionOf: (name: string) => `Character selection: ${name}`, // 캐릭터 선택: ${i}
-  settings: "Asset Maid settings", // Asset Maid 설정
+  settings: "Inlay Illustrator settings", // Asset Maid 설정
   backToWorkspace: "Back to workspace", // 작업공간으로 돌아가기
   noCharacters: "No characters yet.",
   railLoading: "Loading characters"

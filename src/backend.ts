@@ -91,4 +91,4 @@ spindle.onFrontendMessage(async (payload: unknown, userId, frontendSessionId) =>
   }
 });
 
-spindle.log.info("Inlay Illustrator (Asset Maid port) loaded.");
+spindle.log.info("Inlay Illustrator loaded.");

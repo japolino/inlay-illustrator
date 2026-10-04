@@ -57735,7 +57735,7 @@ var AM = exports_analysis_core;
 function amFn(name) {
   const fn = AM[name];
   if (typeof fn !== "function")
-    throw new Error(`Asset Maid analysis core is missing function ${name}`);
+    throw new Error(`Analysis core is missing function ${name}`);
   return fn;
 }
 
@@ -57840,7 +57840,7 @@ async function persistAmConfigChange(services, characterId, before, after, optio
     });
   }
   if (diff.ignored.length)
-    services.log.append("warn", "analysis", `Ignored Asset Maid config change outside characterPrompt: ${diff.ignored.join(", ")}`);
+    services.log.append("warn", "analysis", `Ignored config change outside characterPrompt: ${diff.ignored.join(", ")}`);
   return { document: document2, diff };
 }
 async function mutateAmConfig(services, characterId, mutate, options = {}) {
@@ -67166,6 +67166,9 @@ function createLlmService(deps) {
 
 // src/backend/services/run-log.ts
 var RUN_LOG_LIMIT = 250;
+function brandLogMessage(message) {
+  return message.replace(/^\[Asset Maid(?: React)?\]\s*/u, "[Inlay] ");
+}
 function safeDetails(details) {
   if (details === undefined)
     return;
@@ -67185,7 +67188,7 @@ function createRunLog(options = {}) {
   return {
     append(level, scope, message, details) {
       seq += 1;
-      const entry = { seq, at: now().toISOString(), level, scope, message };
+      const entry = { seq, at: now().toISOString(), level, scope, message: brandLogMessage(message) };
       const d = safeDetails(details);
       if (d !== undefined)
         entry.details = d;
@@ -67194,7 +67197,7 @@ function createRunLog(options = {}) {
         entries = entries.slice(entries.length - limit);
       if (level === "warn" || level === "error") {
         try {
-          options.host?.log[level](`[Inlay:${scope}] ${message}`);
+          options.host?.log[level](`[Inlay:${scope}] ${entry.message}`);
         } catch {}
       }
       options.events?.emit("log.appended", { entry });
@@ -68268,4 +68271,4 @@ spindle.onFrontendMessage(async (payload, userId, frontendSessionId) => {
     }
   }
 });
-spindle.log.info("Inlay Illustrator (Asset Maid port) loaded.");
+spindle.log.info("Inlay Illustrator loaded.");

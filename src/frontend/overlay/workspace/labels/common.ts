@@ -31,8 +31,7 @@ export const COMMON_LABELS = {
   savingLabel: (label: string) => `${label} in progress`, // ${n} 중
   retrySave: (label: string, error: string) => `${label} retry: ${error}`, // ${n} 다시 시도: ${r}
   saveConflict: "The data changed elsewhere. Your edits are kept; save again to overwrite.",
-  savedNotice: "Saved.",
-  maidLibraryUnavailable: "Maid Library is not available in Inlay Illustrator." // (port: community sharing dropped)
+  savedNotice: "Saved."
 } as const;
 
 /** Evidence mode toggle (`rce` 62139, options `I$` 62134). */

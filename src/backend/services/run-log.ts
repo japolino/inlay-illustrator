@@ -7,6 +7,11 @@ import type { EventBus, RunLog, SpindleHost } from "./types.js";
 
 export const RUN_LOG_LIMIT = 250;
 
+/** The ported cores log with the original "[Asset Maid]" / "[Asset Maid React]" prefixes; show our own name instead. */
+export function brandLogMessage(message: string): string {
+  return message.replace(/^\[Asset Maid(?: React)?\]\s*/u, "[Inlay] ");
+}
+
 function safeDetails(details: unknown): unknown {
   if (details === undefined) return undefined;
   if (details instanceof Error) return { name: details.name, message: details.message, code: (details as { code?: unknown }).code };
@@ -26,14 +31,14 @@ export function createRunLog(options: { events?: EventBus; host?: Pick<SpindleHo
   return {
     append(level, scope, message, details) {
       seq += 1;
-      const entry: RuntimeLogEntry = { seq, at: now().toISOString(), level, scope, message };
+      const entry: RuntimeLogEntry = { seq, at: now().toISOString(), level, scope, message: brandLogMessage(message) };
       const d = safeDetails(details);
       if (d !== undefined) entry.details = d;
       entries.push(entry);
       if (entries.length > limit) entries = entries.slice(entries.length - limit);
       if (level === "warn" || level === "error") {
         try {
-          options.host?.log[level](`[Inlay:${scope}] ${message}`);
+          options.host?.log[level](`[Inlay:${scope}] ${entry.message}`);
         } catch {
           /* host log unavailable */
         }
