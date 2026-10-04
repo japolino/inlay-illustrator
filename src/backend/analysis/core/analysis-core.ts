@@ -884,6 +884,54 @@ function vCe(e, t) {
 function PX(e, t) {
     return wX(e.subarray(bCe(e, t && t.dictionary), -4), { i: 2 }, t && t.out, t && t.dictionary);
   }
+// AM ECe @8197
+function ECe(e) {
+    const t = [];
+    let r = 0;
+    for (; r < e.length;) {
+      for (; r < e.length && /[\s,]/.test(e[r]);) r += 1;
+      if (r >= e.length) break;
+      const n = e.slice(r).match(/^\s*-?\d+(?:\.\d+)?::/);
+      if (n) {
+        const i = r + n[0].length,
+          s = e.indexOf("::", i);
+        if (s >= 0) {
+          (t.push(e.slice(r, s + 2).trim()), (r = s + 2));
+          continue;
+        }
+      }
+      const o = e.indexOf(",", r),
+        a = o >= 0 ? o : e.length;
+      (t.push(e.slice(r, a).trim()), (r = a + 1));
+    }
+    return t.filter(Boolean);
+  }
+// AM hg @8218
+function hg(e, t) {
+    const r = new Set(
+      t
+        .flatMap((n) => n.split(","))
+        .map((n) => n.trim().toLowerCase())
+        .filter(Boolean),
+    );
+    return !e.trim() || !r.size
+      ? e.trim()
+      : ECe(e)
+          .map((n) => {
+            const o = n.match(/^(-?\d+(?:\.\d+)?)::([\s\S]*?)::$/),
+              a = (o?.[2] ?? n)
+                .split(",")
+                .map((c) => c.trim())
+                .filter(Boolean),
+              i = a.filter((c) => !r.has(c.toLowerCase()));
+            if (i.length === a.length) return n;
+            if (!i.length) return "";
+            const s = i.join(", ");
+            return o ? `${o[1]}::${s}::` : s;
+          })
+          .filter(Boolean)
+          .join(", ");
+  }
 // AM V0 @11575
 var V0 = [
     "identity.character_tag",
@@ -1127,6 +1175,13 @@ var W0 = Object.freeze({
         }),
       }),
     });
+// AM kW @20625
+var kW = "novelai";
+// AM Vj @20634
+function Vj(e) {
+    const t = String(e ?? "").trim();
+    return hk(t) ? t : kW;
+  }
 // AM hk @20638
 function hk(e) {
     return typeof e == "string" && Object.hasOwn(W0, e);
@@ -1134,6 +1189,23 @@ function hk(e) {
 // AM Nc @20644
 function Nc(e) {
     return hk(e) && W0[e].capabilities.promptCodecId === "anima-flat";
+  }
+// AM Tu @20647
+function Tu(e, t, r) {
+    const n = Vj(e);
+    return n === "novelai" ? t !== !1 : n === "comfy-ui" ? r !== !1 : !1;
+  }
+// AM iL @20651
+function iL(e) {
+    return W0[Vj(e)].capabilities;
+  }
+// AM up @20660
+function up(e) {
+    return iL(e).outfitImageGeneration === "enabled";
+  }
+// AM EW @20678
+function EW(e) {
+    return String(e ?? "").trim() || "asset-maid-comfy-ui-workflow-v1";
   }
 // AM lL @20730
 var lL = "masterpiece, best quality, score_7, safe";
@@ -8891,6 +8963,716 @@ function Hy(e, t, r, n = {}) {
     else return i;
     return i;
   }
+// AM Yct @105270
+function Yct(e, t) {
+    return t ? (e.trim() ? `nsfw, ${e}` : "nsfw") : e;
+  }
+// AM Glt @106720
+var Glt = "3b6f7c8d-8fa2-4cb1-9dd8-45e96f0fa8d0";
+// AM Vlt @106724
+var Vlt = [
+      {
+        id: 30,
+        type: "MarkdownNote",
+        pos: [20, 1400],
+        size: [760, 760],
+        flags: {},
+        order: 0,
+        mode: 0,
+        inputs: [],
+        outputs: [],
+        title: "[AssetMaid:metadata]",
+        properties: {},
+        widgets_values: [
+          '# Asset Maid Comfy UI 기본 워크플로\n\n이 워크플로는 레퍼런스가 없어도 동작하는 Anima Base T2I 기본 골격입니다.\n\nAsset Maid Workflow Bridge는 현재 UI 워크플로를 Comfy UI 실행 그래프로 자동 동기화합니다. Queue 실행이나 별도 API JSON 내보내기는 필요하지 않습니다.\n\n## 예약 노드\n\n| 예약 제목 | 플러그인이 전달하거나 읽는 값 |\n|---|---|\n| `[AssetMaid:positive]` | Anima 긍정 프롬프트 |\n| `[AssetMaid:negative]` | Anima 부정 프롬프트 |\n| `[AssetMaid:size]` | 요청 이미지 너비와 높이 |\n| `[AssetMaid:reference-enabled]` | 예약 IMAGE 노드가 최종 출력 경로에 연결되고 입력이 있으면 `true`, 그 밖에는 `false` |\n| `[AssetMaid:seed-progress]` | 생성 시드 |\n| `[AssetMaid:vanilla-progress]` | KSampler 실행 진행률 |\n| `[AssetMaid:output]` | 최종 생성 이미지 |\n\n`[AssetMaid:outfit-reference]`와 `[AssetMaid:character-reference]`는 각각 선택된 의상 이미지와 캐릭터 크롭 이미지를 받습니다. 두 슬롯은 기본 `EmptyImage`와 `PreviewImage`로 연결되어 레퍼런스가 없어도 오류 없이 실행됩니다. 레퍼런스가 있으면 플러그인이 실행 그래프의 슬롯을 기본 `LoadImage`로 자동 변환하므로 별도 노드 설정 없이 미리보기에 표시됩니다. `[AssetMaid:reference-enabled]`는 생성 경로와 분리된 기본 `PrimitiveBoolean`이며 레퍼런스 IMAGE 노드가 최종 출력 경로에 연결될 때만 `true`가 됩니다. 기본 미리보기 가지에서는 `false`를 유지하므로 생성 결과에 직접 영향을 주지 않습니다.\n\n모델, LoRA, Steps, CFG, Sampler, Scheduler, VAE 및 후처리는 사용자가 자유롭게 편집할 수 있습니다. 위 예약 노드의 Title은 변경하지 않아야 합니다.\n\n```assetmaid\n{\n  "schema": "asset-maid.comfy-ui-workflow",\n  "version": 1,\n  "workflowId": "asset-maid-comfy-ui-workflow-v1",\n  "revision": 1,\n  "provider": "comfy-ui",\n  "promptDialect": "anima",\n  "bindings": {\n    "positive": "[AssetMaid:positive]",\n    "negative": "[AssetMaid:negative]",\n    "size": "[AssetMaid:size]",\n    "referenceEnabled": "[AssetMaid:reference-enabled]",\n    "seedProgress": "[AssetMaid:seed-progress]",\n    "vanillaProgress": "[AssetMaid:vanilla-progress]",\n    "output": "[AssetMaid:output]",\n    "outfitReference": "[AssetMaid:outfit-reference]",\n    "characterReference": "[AssetMaid:character-reference]"\n  }\n}\n```',
+        ],
+      },
+      {
+        id: 41,
+        type: "PrimitiveStringMultiline",
+        pos: [20, 40],
+        size: [420, 210],
+        flags: {},
+        order: 1,
+        mode: 0,
+        inputs: [],
+        outputs: [{ name: "STRING", type: "STRING", links: [7] }],
+        title: "[AssetMaid:positive]",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "PrimitiveStringMultiline" },
+        widgets_values: ["masterpiece, best quality, score_7, safe, 1girl, solo, detailed anime illustration"],
+      },
+      {
+        id: 42,
+        type: "PrimitiveStringMultiline",
+        pos: [20, 290],
+        size: [420, 190],
+        flags: {},
+        order: 2,
+        mode: 0,
+        inputs: [],
+        outputs: [{ name: "STRING", type: "STRING", links: [8] }],
+        title: "[AssetMaid:negative]",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "PrimitiveStringMultiline" },
+        widgets_values: [
+          "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+        ],
+      },
+      {
+        id: 4,
+        type: "EmptyImage",
+        pos: [20, 530],
+        size: [300, 130],
+        flags: {},
+        order: 3,
+        mode: 0,
+        inputs: [],
+        outputs: [{ name: "IMAGE", type: "IMAGE", links: [1] }],
+        title: "[AssetMaid:size]",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "EmptyImage" },
+        widgets_values: [1024, 1024, 1, 16777215],
+      },
+      {
+        id: 28,
+        type: "GetImageSize",
+        pos: [370, 530],
+        size: [230, 140],
+        flags: {},
+        order: 4,
+        mode: 0,
+        inputs: [{ name: "image", type: "IMAGE", link: 1 }],
+        outputs: [
+          { name: "width", type: "INT", links: [11] },
+          { name: "height", type: "INT", links: [12] },
+          { name: "batch_size", type: "INT", links: [] },
+        ],
+        title: "Requested Final Width / Height",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "GetImageSize" },
+        widgets_values: [],
+      },
+      {
+        id: 43,
+        type: "PrimitiveInt",
+        pos: [20, 710],
+        size: [300, 82],
+        flags: {},
+        order: 5,
+        mode: 0,
+        inputs: [],
+        outputs: [{ name: "INT", type: "INT", links: [14] }],
+        title: "[AssetMaid:seed-progress]",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "PrimitiveInt" },
+        widgets_values: [123456789, "fixed"],
+      },
+      {
+        id: 15,
+        type: "EmptyImage",
+        pos: [20, 930],
+        size: [340, 130],
+        flags: {},
+        order: 6,
+        mode: 0,
+        inputs: [],
+        outputs: [{ name: "IMAGE", type: "IMAGE", links: [19] }],
+        title: "[AssetMaid:outfit-reference]",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "EmptyImage" },
+        widgets_values: [64, 64, 1, 16777215],
+      },
+      {
+        id: 16,
+        type: "EmptyImage",
+        pos: [400, 930],
+        size: [340, 130],
+        flags: {},
+        order: 7,
+        mode: 0,
+        inputs: [],
+        outputs: [{ name: "IMAGE", type: "IMAGE", links: [20] }],
+        title: "[AssetMaid:character-reference]",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "EmptyImage" },
+        widgets_values: [64, 64, 1, 16777215],
+      },
+      {
+        id: 1,
+        type: "UNETLoader",
+        pos: [820, 60],
+        size: [330, 82],
+        flags: {},
+        order: 8,
+        mode: 0,
+        inputs: [],
+        outputs: [{ name: "MODEL", type: "MODEL", links: [2] }],
+        title: "Anima Base v1.0",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "UNETLoader" },
+        widgets_values: ["anima-base-v1.0.safetensors", "default"],
+      },
+      {
+        id: 2,
+        type: "CLIPLoader",
+        pos: [820, 190],
+        size: [330, 106],
+        flags: {},
+        order: 9,
+        mode: 0,
+        inputs: [],
+        outputs: [{ name: "CLIP", type: "CLIP", links: [5, 6] }],
+        title: "Qwen 3 0.6B Text Encoder",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "CLIPLoader" },
+        widgets_values: ["qwen_3_06b_base.safetensors", "stable_diffusion", "default"],
+      },
+      {
+        id: 3,
+        type: "VAELoader",
+        pos: [820, 340],
+        size: [330, 58],
+        flags: {},
+        order: 10,
+        mode: 0,
+        inputs: [],
+        outputs: [{ name: "VAE", type: "VAE", links: [16] }],
+        title: "Qwen Image VAE",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "VAELoader" },
+        widgets_values: ["qwen_image_vae.safetensors"],
+      },
+      {
+        id: 44,
+        type: "LoraLoaderModelOnly",
+        pos: [1210, 60],
+        size: [310, 82],
+        flags: {},
+        order: 11,
+        mode: 4,
+        inputs: [{ name: "model", type: "MODEL", link: 2 }],
+        outputs: [{ name: "MODEL", type: "MODEL", links: [3] }],
+        title: "Optional Anima LoRA 1 (Bypassed)",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "LoraLoaderModelOnly" },
+        widgets_values: ["AnimeEditV2.safetensors", 0],
+      },
+      {
+        id: 45,
+        type: "LoraLoaderModelOnly",
+        pos: [1570, 60],
+        size: [310, 82],
+        flags: {},
+        order: 12,
+        mode: 4,
+        inputs: [{ name: "model", type: "MODEL", link: 3 }],
+        outputs: [{ name: "MODEL", type: "MODEL", links: [4] }],
+        title: "Optional Anima LoRA 2 (Bypassed)",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "LoraLoaderModelOnly" },
+        widgets_values: ["AnimeEditV2.safetensors", 0],
+      },
+      {
+        id: 46,
+        type: "CLIPTextEncode",
+        pos: [1210, 200],
+        size: [500, 210],
+        flags: {},
+        order: 13,
+        mode: 0,
+        inputs: [
+          { name: "clip", type: "CLIP", link: 5 },
+          { name: "text", type: "STRING", widget: { name: "text" }, link: 7 },
+        ],
+        outputs: [{ name: "CONDITIONING", type: "CONDITIONING", links: [9] }],
+        title: "Positive Prompt Encode",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "CLIPTextEncode" },
+        widgets_values: ["masterpiece, best quality, score_7, safe, 1girl, solo, detailed anime illustration"],
+      },
+      {
+        id: 47,
+        type: "CLIPTextEncode",
+        pos: [1210, 450],
+        size: [500, 190],
+        flags: {},
+        order: 14,
+        mode: 0,
+        inputs: [
+          { name: "clip", type: "CLIP", link: 6 },
+          { name: "text", type: "STRING", widget: { name: "text" }, link: 8 },
+        ],
+        outputs: [{ name: "CONDITIONING", type: "CONDITIONING", links: [10] }],
+        title: "Negative Prompt Encode",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "CLIPTextEncode" },
+        widgets_values: [
+          "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+        ],
+      },
+      {
+        id: 48,
+        type: "EmptyLatentImage",
+        pos: [1770, 470],
+        size: [300, 130],
+        flags: {},
+        order: 15,
+        mode: 0,
+        inputs: [
+          { name: "width", type: "INT", widget: { name: "width" }, link: 11 },
+          { name: "height", type: "INT", widget: { name: "height" }, link: 12 },
+        ],
+        outputs: [{ name: "LATENT", type: "LATENT", links: [13] }],
+        title: "Empty Latent",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "EmptyLatentImage" },
+        widgets_values: [1024, 1024, 1],
+      },
+      {
+        id: 49,
+        type: "KSampler",
+        pos: [2130, 170],
+        size: [330, 330],
+        flags: {},
+        order: 16,
+        mode: 0,
+        inputs: [
+          { name: "model", type: "MODEL", link: 4 },
+          { name: "positive", type: "CONDITIONING", link: 9 },
+          { name: "negative", type: "CONDITIONING", link: 10 },
+          { name: "latent_image", type: "LATENT", link: 13 },
+          { name: "seed", type: "INT", widget: { name: "seed" }, link: 14 },
+        ],
+        outputs: [{ name: "LATENT", type: "LATENT", links: [15] }],
+        title: "[AssetMaid:vanilla-progress]",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "KSampler" },
+        widgets_values: [123456789, "fixed", 30, 4, "er_sde", "simple", 1],
+      },
+      {
+        id: 50,
+        type: "VAEDecode",
+        pos: [2520, 260],
+        size: [250, 70],
+        flags: {},
+        order: 17,
+        mode: 0,
+        inputs: [
+          { name: "samples", type: "LATENT", link: 15 },
+          { name: "vae", type: "VAE", link: 16 },
+        ],
+        outputs: [{ name: "IMAGE", type: "IMAGE", links: [17, 18] }],
+        title: "VAE Decode",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "VAEDecode" },
+        widgets_values: [],
+      },
+      {
+        id: 10,
+        type: "PreviewImage",
+        pos: [2910, 80],
+        size: [500, 470],
+        flags: {},
+        order: 18,
+        mode: 0,
+        inputs: [{ name: "images", type: "IMAGE", link: 17 }],
+        outputs: [],
+        title: "Preview Image",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "PreviewImage" },
+        widgets_values: [],
+      },
+      {
+        id: 9,
+        type: "SaveImage",
+        pos: [2910, 620],
+        size: [500, 200],
+        flags: {},
+        order: 19,
+        mode: 0,
+        inputs: [{ name: "images", type: "IMAGE", link: 18 }],
+        outputs: [],
+        title: "[AssetMaid:output]",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "SaveImage" },
+        widgets_values: ["AssetMaid_AnimaBase"],
+      },
+      {
+        id: 51,
+        type: "PreviewImage",
+        pos: [20, 1070],
+        size: [340, 230],
+        flags: {},
+        order: 20,
+        mode: 0,
+        inputs: [{ name: "images", type: "IMAGE", link: 19 }],
+        outputs: [],
+        title: "Outfit Reference Preview",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "PreviewImage" },
+        widgets_values: [],
+      },
+      {
+        id: 52,
+        type: "PreviewImage",
+        pos: [400, 1070],
+        size: [340, 230],
+        flags: {},
+        order: 21,
+        mode: 0,
+        inputs: [{ name: "images", type: "IMAGE", link: 20 }],
+        outputs: [],
+        title: "Character Crop Preview",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "PreviewImage" },
+        widgets_values: [],
+      },
+      {
+        id: 53,
+        type: "PrimitiveBoolean",
+        pos: [400, 710],
+        size: [300, 82],
+        flags: {},
+        order: 22,
+        mode: 0,
+        inputs: [],
+        outputs: [{ name: "BOOLEAN", type: "BOOLEAN", links: [] }],
+        title: "[AssetMaid:reference-enabled]",
+        properties: { cnr_id: "comfy-core", "Node name for S&R": "PrimitiveBoolean" },
+        widgets_values: [!1],
+      },
+    ];
+// AM Xlt @107076
+var Xlt = [
+      [1, 4, 0, 28, 0, "IMAGE"],
+      [2, 1, 0, 44, 0, "MODEL"],
+      [3, 44, 0, 45, 0, "MODEL"],
+      [4, 45, 0, 49, 0, "MODEL"],
+      [5, 2, 0, 46, 0, "CLIP"],
+      [6, 2, 0, 47, 0, "CLIP"],
+      [7, 41, 0, 46, 1, "STRING"],
+      [8, 42, 0, 47, 1, "STRING"],
+      [9, 46, 0, 49, 1, "CONDITIONING"],
+      [10, 47, 0, 49, 2, "CONDITIONING"],
+      [11, 28, 0, 48, 0, "INT"],
+      [12, 28, 1, 48, 1, "INT"],
+      [13, 48, 0, 49, 3, "LATENT"],
+      [14, 43, 0, 49, 4, "INT"],
+      [15, 49, 0, 50, 0, "LATENT"],
+      [16, 3, 0, 50, 1, "VAE"],
+      [17, 50, 0, 10, 0, "IMAGE"],
+      [18, 50, 0, 9, 0, "IMAGE"],
+      [19, 15, 0, 51, 0, "IMAGE"],
+      [20, 16, 0, 52, 0, "IMAGE"],
+    ];
+// AM Wlt @107098
+var Wlt = [
+      {
+        id: 1,
+        title: "Asset Maid Contract ? Inputs",
+        bounding: [0, 0, 780, 1320],
+        color: "#3f789e",
+        font_size: 26,
+        flags: {},
+      },
+      {
+        id: 2,
+        title: "Anima Base ? Custom T2I Pipeline",
+        bounding: [760, 0, 2100, 760],
+        color: "#4f6f52",
+        font_size: 28,
+        flags: {},
+      },
+      {
+        id: 3,
+        title: "Asset Maid Contract ? Result",
+        bounding: [2880, 0, 560, 850],
+        color: "#3f9e6b",
+        font_size: 26,
+        flags: {},
+      },
+      {
+        id: 4,
+        title: "Asset Maid ? Workflow Guide",
+        bounding: [0, 1360, 800, 820],
+        color: "#6b5f8d",
+        font_size: 24,
+        flags: {},
+      },
+    ];
+// AM Ylt @107132
+var Ylt = {};
+// AM Zlt @107133
+var Zlt = { ds: { scale: 0.65, offset: [28, 72] }, workflowRendererVersion: "LG" };
+// AM Jlt @107134
+var Jlt = 0.4;
+// AM Qlt @107135
+var Qlt = {
+      id: Glt,
+      revision: 0,
+      last_node_id: 53,
+      last_link_id: 20,
+      nodes: Vlt,
+      links: Xlt,
+      groups: Wlt,
+      config: Ylt,
+      extra: Zlt,
+      version: Jlt,
+    };
+// AM Xc @107147
+var Xc = Object.freeze({
+      positive: "[AssetMaid:positive]",
+      negative: "[AssetMaid:negative]",
+      size: "[AssetMaid:size]",
+      referenceEnabled: "[AssetMaid:reference-enabled]",
+      seedProgress: "[AssetMaid:seed-progress]",
+      vanillaProgress: "[AssetMaid:vanilla-progress]",
+      referenceProgress: "[AssetMaid:reference-progress]",
+      output: "[AssetMaid:output]",
+      outfitReference: "[AssetMaid:outfit-reference]",
+      characterReference: "[AssetMaid:character-reference]",
+    });
+// AM Jhe @107400
+var Jhe = "[AssetMaid:metadata]";
+// AM hdt @107401
+var hdt = "asset-maid.comfy-ui-workflow";
+// AM ydt @107403
+var ydt = 2e6;
+// AM Ti @107404
+var Ti = class extends Error {
+      code;
+      constructor(e, t = {}) {
+        (super(e, { cause: t.cause }),
+          (this.name = "ComfyUIUiWorkflowError"),
+          (this.code = t.code ?? "COMFYUI_UI_WORKFLOW"));
+      }
+    };
+// AM xf @107412
+function xf(e) {
+    return e !== null && typeof e == "object" && !Array.isArray(e);
+  }
+// AM bc @107415
+function bc(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM bdt @107418
+function bdt(e) {
+    return JSON.parse(JSON.stringify(e));
+  }
+// AM vdt @107421
+function vdt(e) {
+    const t = String(e ?? "").trim();
+    if (!t) throw new Ti("ComfyUI UI 워크플로 JSON이 비어 있습니다.", { code: "COMFYUI_UI_WORKFLOW_EMPTY" });
+    if (t.length > 2e6)
+      throw new Ti(`ComfyUI UI 워크플로가 ${ydt.toLocaleString()}자를 초과합니다.`, {
+        code: "COMFYUI_UI_WORKFLOW_TOO_LARGE",
+      });
+    try {
+      const r = JSON.parse(t);
+      if (!xf(r)) throw new Error("root");
+      return r;
+    } catch (r) {
+      throw new Ti("ComfyUI UI 워크플로 JSON을 해석할 수 없습니다.", { code: "COMFYUI_UI_WORKFLOW_JSON", cause: r });
+    }
+  }
+// AM Qhe @107436
+function Qhe(e) {
+    if (!Array.isArray(e.nodes) || !Array.isArray(e.links))
+      throw new Ti("ComfyUI의 Save 형식 UI 워크플로를 선택해 주세요. API 형식은 사용할 수 없습니다.", {
+        code: "COMFYUI_UI_WORKFLOW_FORMAT",
+      });
+    const t = e.nodes.map((r, n) => {
+      if (!xf(r))
+        throw new Ti(`UI 워크플로의 ${n + 1}번째 노드가 올바르지 않습니다.`, { code: "COMFYUI_UI_WORKFLOW_NODE" });
+      const o = bc(r.type),
+        a = r.id;
+      if (!o || (typeof a != "string" && typeof a != "number"))
+        throw new Ti(`UI 워크플로의 ${n + 1}번째 노드에 id 또는 type이 없습니다.`, {
+          code: "COMFYUI_UI_WORKFLOW_NODE_SHAPE",
+        });
+      return r;
+    });
+    return bdt({ ...e, nodes: t, links: e.links });
+  }
+// AM wdt @107454
+function wdt(e) {
+    const t = e.widgets_values?.[0];
+    if (typeof t == "string") return t;
+    const r = e.properties?.text;
+    return typeof r == "string" ? r : "";
+  }
+// AM xdt @107460
+function xdt(e) {
+    const t = /```assetmaid\s*\r?\n([\s\S]*?)\r?\n```/u.exec(e);
+    if (!t?.[1])
+      throw new Ti(`${Jhe} 노드에 assetmaid 메타데이터 블록이 없습니다.`, {
+        code: "COMFYUI_UI_WORKFLOW_METADATA_BLOCK",
+      });
+    return t[1].trim();
+  }
+// AM Vy @107468
+function Vy(e, t) {
+    const r = bc(e[t]);
+    if (r) return r;
+    throw new Ti(`Asset Maid 메타데이터에 ${t} 값이 없습니다.`, { code: "COMFYUI_UI_WORKFLOW_METADATA_VALUE" });
+  }
+// AM t2 @107473
+function t2(e, t) {
+    return bc(e[t]) || void 0;
+  }
+// AM _dt @107476
+function _dt(e) {
+    let t;
+    try {
+      t = JSON.parse(xdt(wdt(e)));
+    } catch (s) {
+      throw s instanceof Ti
+        ? s
+        : new Ti("Asset Maid 메타데이터 JSON을 해석할 수 없습니다.", {
+            code: "COMFYUI_UI_WORKFLOW_METADATA_JSON",
+            cause: s,
+          });
+    }
+    if (!xf(t) || !xf(t.bindings))
+      throw new Ti("Asset Maid 메타데이터 형식이 올바르지 않습니다.", { code: "COMFYUI_UI_WORKFLOW_METADATA_SHAPE" });
+    const r = oc(t.version),
+      n = Number(t.revision);
+    if (t.schema !== "asset-maid.comfy-ui-workflow" || r === null)
+      throw new Ti("Asset Maid 워크플로 메타데이터의 schema 또는 version 표식이 올바르지 않습니다.", {
+        code: "COMFYUI_UI_WORKFLOW_METADATA_VERSION",
+      });
+    if (t.provider !== "comfy-ui" || t.promptDialect !== "anima")
+      throw new Ti("이 워크플로는 Anima Base 메타데이터가 아닙니다.", {
+        code: "COMFYUI_UI_WORKFLOW_METADATA_PROVIDER",
+      });
+    const o = t.bindings,
+      a = {
+        positive: Vy(o, "positive"),
+        negative: Vy(o, "negative"),
+        size: Vy(o, "size"),
+        seedProgress: Vy(o, "seedProgress"),
+        vanillaProgress: Vy(o, "vanillaProgress"),
+        output: Vy(o, "output"),
+        referenceEnabled: t2(o, "referenceEnabled"),
+        referenceProgress: t2(o, "referenceProgress"),
+        outfitReference: t2(o, "outfitReference"),
+        characterReference: t2(o, "characterReference"),
+      };
+    for (const s of Object.keys(Xc)) {
+      const c = a[s];
+      if (c !== void 0 && c !== Xc[s])
+        throw new Ti(`Asset Maid ${s} 바인딩 제목이 ${Xc[s]}와 일치하지 않습니다.`, {
+          code: "COMFYUI_UI_WORKFLOW_METADATA_BINDING",
+        });
+    }
+    const i = xf(t.reference)
+      ? { mode: bc(t.reference.mode), positivePrefix: Vy(t.reference, "positivePrefix") }
+      : null;
+    if (i && i.mode !== "outfit-restyler")
+      throw new Ti("Asset Maid reference.mode 값이 지원되지 않습니다.", {
+        code: "COMFYUI_UI_WORKFLOW_METADATA_REFERENCE",
+      });
+    return {
+      schema: hdt,
+      version: r,
+      workflowId: Vy(t, "workflowId"),
+      revision: Number.isSafeInteger(n) && n > 0 ? n : 1,
+      provider: "comfy-ui",
+      modelProfile: "anima-base",
+      promptDialect: "anima",
+      bindings: a,
+      ...(i ? { reference: { mode: "outfit-restyler", positivePrefix: i.positivePrefix } } : {}),
+    };
+  }
+// AM Idt @107539
+function Idt(e) {
+    let t = 2166136261;
+    for (let r = 0; r < e.length; r += 1) ((t ^= e.charCodeAt(r)), (t = Math.imul(t, 16777619)));
+    return (t >>> 0).toString(16).padStart(8, "0");
+  }
+// AM Sdt @107544
+function Sdt(e) {
+    return {
+      nodes: [...e.nodes]
+        .map((t) => ({
+          id: t.id,
+          type: t.type,
+          title: bc(t.title),
+          mode: Number(t.mode) || 0,
+          inputs: t.inputs ?? [],
+          outputs: t.outputs ?? [],
+          widgets_values: t.widgets_values ?? [],
+          properties: t.properties ?? {},
+        }))
+        .sort((t, r) => String(t.id).localeCompare(String(r.id))),
+      links: e.links,
+      reroutes: e.reroutes ?? [],
+      subgraphs: e.subgraphs ?? [],
+    };
+  }
+// AM Om @107563
+function Om(e, t) {
+    const r = e.nodes.filter((n) => bc(n.title) === t);
+    if (r.length !== 1)
+      throw new Ti(r.length ? `${t} 제목의 노드는 하나만 있어야 합니다.` : `${t} 연결 노드가 없습니다.`, {
+        code: r.length ? "COMFYUI_UI_WORKFLOW_BINDING_DUPLICATE" : "COMFYUI_UI_WORKFLOW_BINDING_MISSING",
+      });
+    return String(r[0].id);
+  }
+// AM kdt @107571
+function kdt(e, t) {
+    return {
+      positive: Om(e, t.bindings.positive),
+      negative: Om(e, t.bindings.negative),
+      size: Om(e, t.bindings.size),
+      seedProgress: Om(e, t.bindings.seedProgress),
+      vanillaProgress: Om(e, t.bindings.vanillaProgress),
+      output: Om(e, t.bindings.output),
+      ...(t.bindings.referenceEnabled ? { referenceEnabled: Om(e, t.bindings.referenceEnabled) } : {}),
+      ...(t.bindings.referenceProgress ? { referenceProgress: Om(e, t.bindings.referenceProgress) } : {}),
+      ...(t.bindings.outfitReference ? { outfitReference: Om(e, t.bindings.outfitReference) } : {}),
+      ...(t.bindings.characterReference ? { characterReference: Om(e, t.bindings.characterReference) } : {}),
+    };
+  }
+// AM ege @107589
+function ege(e, t) {
+    const r = Qhe(e);
+    return {
+      workflow: r,
+      metadata: t,
+      nodeCount: r.nodes.length,
+      fingerprint: Idt(JSON.stringify(Sdt(r))),
+      bindingNodeIds: kdt(r, t),
+    };
+  }
+// AM oC @107599
+function oC(e) {
+    const t = Qhe(vdt(e)),
+      r = t.nodes.filter(
+        (n) => (n.type === "MarkdownNote" || n.type === "Note") && bc(n.title) === "[AssetMaid:metadata]",
+      );
+    if (r.length !== 1)
+      throw new Ti(`${Jhe} 노드는 정확히 하나여야 합니다.`, { code: "COMFYUI_UI_WORKFLOW_METADATA_NOTE" });
+    return ege(t, _dt(r[0]));
+  }
+// AM Adt @107608
+function Adt(e, t) {
+    const r = oC(e);
+    return {
+      id: r.metadata.workflowId,
+      revision: r.metadata.revision,
+      workflowId: r.metadata.workflowId,
+      workflow: r.workflow,
+      metadata: r.metadata,
+      source: t,
+      fingerprint: r.fingerprint,
+    };
+  }
+// AM Edt @107747
+var Edt = JSON.stringify(Qlt, null, 2);
+// AM n2 @107748
+var n2 = Adt(Edt, "bundled");
+// AM Ndt @107749
+function Ndt(e) {
+    const t = EW(e);
+    if (t === n2.id) return n2;
+    throw Object.assign(new Error(`지원하지 않는 Anima Base 워크플로 프로필입니다: ${t || "(empty)"}.`), {
+      code: "COMFYUI_WORKFLOW_PROFILE_UNAVAILABLE",
+      retryable: !1,
+    });
+  }
+// AM t7 @107757
+function t7(e) {
+    return Ndt(e);
+  }
+// AM c2 @108822
+function c2(e = amEnv.crypto) {
+    if (e?.getRandomValues) {
+      const t = new Uint32Array(1);
+      return (e.getRandomValues(t), Math.min(z3, Math.max(0, Number(t[0]))));
+    }
+    return Math.floor(amEnv.random() * (z3 + 1));
+  }
 // AM Sf @109266
 function Sf(e) {
     return typeof e == "string" || typeof e == "number" ? String(e).trim() : "";
@@ -8898,6 +9680,36 @@ function Sf(e) {
 // AM xd @109269
 function xd(e) {
     return e.map(Sf).filter(Boolean).join(", ");
+  }
+// AM Sge @109272
+function Sge(e) {
+    const t = Sf(e);
+    if (!t) return [];
+    const r = [];
+    let n = !1,
+      o = 0;
+    for (let i = 0; i < t.length; i += 1) {
+      if (t[i] === ":" && t[i + 1] === ":") {
+        ((n = !n), (i += 1));
+        continue;
+      }
+      if (t[i] !== "," || n) continue;
+      const s = t.slice(o, i).trim();
+      (s && r.push(s), (o = i + 1));
+    }
+    const a = t.slice(o).trim();
+    return (a && r.push(a), r);
+  }
+// AM f2 @109290
+function f2(e) {
+    return Sf(e)
+      .replace(/^[-+]?\d+(?:\.\d+)?::\s*(.*?)\s*::$/, "$1")
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+  }
+// AM d7 @109306
+function d7(e) {
+    return xd(["nsfw", ...Sge(e).filter((t) => f2(t) !== "nsfw")]);
   }
 // AM Zut @109313
 function Zut(e) {
@@ -8934,6 +9746,375 @@ function CI(e, t = 1, r = 1) {
       return Number.isFinite(d) ? ((a = !0), u7(l, d * n)) : s;
     });
     return a ? i : u7(o, r * n);
+  }
+// AM Qut @109345
+var Qut = /[-+]?(?:\d+(?:\s*\.\s*\d*)?|\.\s*\d+)$/u;
+// AM eft @109346
+var eft = /[,|([{]/u;
+// AM tft @109347
+var tft = /(^|[\s,(])artist\s*:\s*([^,]+)/giu;
+// AM rft @109348
+var rft = /[\p{L}\p{N}]+(?:_[\p{L}\p{N}]+)+/gu;
+// AM nft @109349
+var nft = /(?:https?:\/\/|www\.|[\\/]|(?:^|\s)[^\s]+\.[a-z0-9]{2,5}(?:\s|$))/iu;
+// AM Pge @109350
+var Pge = /^score_[1-9]$/iu;
+// AM oft @109351
+var oft = /^(source|target|mutual)#\s*(.+)$/iu;
+// AM dC @109352
+function dC(e, t, r, n) {
+    return { code: t, field: e, message: r, offset: Math.max(0, n) };
+  }
+// AM m2 @109355
+function m2(e, t) {
+    if (!t) return;
+    const r = e.at(-1);
+    if (r?.type === "text") {
+      r.value += t;
+      return;
+    }
+    e.push({ type: "text", value: t });
+  }
+// AM aft @109364
+function aft(e, t, r) {
+    const n = e.slice(t, r),
+      o = Qut.exec(n);
+    if (!o) return null;
+    const a = r - o[0].length;
+    let i = a - 1;
+    for (; i >= 0 && /\s/u.test(e[i] ?? "");) i -= 1;
+    return i >= 0 && !eft.test(e[i] ?? "") ? null : { weight: o[0].replace(/\s+/gu, ""), offset: a };
+  }
+// AM f7 @109373
+function f7(e) {
+    return e.map((t) => (t.type === "text" ? t.value : f7(t.children))).join("");
+  }
+// AM ift @109376
+function ift(e, t) {
+    const r = [],
+      n = [],
+      o = [],
+      a = () => n.at(-1)?.nodes ?? r;
+    let i = 0;
+    for (; i < e.length;) {
+      const s = e.indexOf("::", i);
+      if (s < 0) break;
+      const c = aft(e, i, s);
+      if (c) {
+        (m2(a(), e.slice(i, c.offset)), n.push({ weight: c.weight, nodes: [], offset: c.offset }), (i = s + 2));
+        continue;
+      }
+      if (n.length) {
+        m2(a(), e.slice(i, s));
+        const l = n.pop();
+        (f7(l.nodes).trim()
+          ? a().push({ type: "weighted", weight: l.weight, children: l.nodes, offset: l.offset })
+          : o.push(
+              dC(t, "ANIMA_PROMPT_EMPTY_EMPHASIS", "An empty NovelAI numeric-emphasis block was removed.", l.offset),
+            ),
+          (i = s + 2));
+        continue;
+      }
+      (m2(r, e.slice(i, s)),
+        o.push(
+          dC(
+            t,
+            "ANIMA_PROMPT_STRAY_DELIMITER",
+            "A NovelAI emphasis delimiter without a numeric opener was removed.",
+            s,
+          ),
+        ),
+        (i = s + 2));
+    }
+    for (m2(a(), e.slice(i)); n.length;) {
+      const s = n.pop();
+      (o.push(
+        dC(
+          t,
+          "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
+          "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
+          s.offset,
+        ),
+      ),
+        f7(s.nodes).trim() && a().push({ type: "weighted", weight: s.weight, children: s.nodes, offset: s.offset }));
+    }
+    return { nodes: r, diagnostics: o };
+  }
+// AM sft @109426
+function sft(e) {
+    return e.replace(tft, (t, r, n) => {
+      const o = n.match(/\s*$/u)?.[0] ?? "",
+        a = n.trim();
+      return a ? `${r}@${a.replaceAll("_", " ")}${o}` : t;
+    });
+  }
+// AM cft @109433
+function cft(e) {
+    return e
+      .split(/(,)/u)
+      .map((t) => (t === "," || nft.test(t) ? t : t.replace(rft, (r) => (Pge.test(r) ? r : r.replaceAll("_", " ")))))
+      .join("");
+  }
+// AM lft @109439
+function lft(e) {
+    let t = "";
+    for (let r = 0; r < e.length; r += 1) {
+      const n = e[r] ?? "",
+        o = e[r + 1] ?? "";
+      if (n === "\\" && (o === "(" || o === ")")) {
+        ((t += `${n}${o}`), (r += 1));
+        continue;
+      }
+      t += n === "(" || n === ")" ? `\\${n}` : n;
+    }
+    return t;
+  }
+// AM dft @109452
+function dft(e) {
+    return lft(cft(sft(e)));
+  }
+// AM m7 @109455
+function m7(e, t, r) {
+    return e
+      .map((n) => {
+        if (n.type === "text") return dft(n.value);
+        const o = Number(n.weight);
+        return Number.isFinite(o)
+          ? o <= 0
+            ? (r.push(
+                dC(
+                  t,
+                  "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+                  `A non-positive NovelAI prompt block was removed: ${n.weight}.`,
+                  n.offset,
+                ),
+              ),
+              "")
+            : m7(n.children, t, r)
+          : (r.push(
+              dC(
+                t,
+                "ANIMA_PROMPT_INVALID_WEIGHT",
+                `An invalid NovelAI prompt weight was ignored: ${n.weight}.`,
+                n.offset,
+              ),
+            ),
+            m7(n.children, t, r));
+      })
+      .join("");
+  }
+// AM uft @109484
+function uft(e) {
+    const t = e
+      .trim()
+      .replace(/^artist\s*:\s*/iu, "@")
+      .replace(/\s+/gu, " ")
+      .toLowerCase();
+    return Pge.test(t) ? t : t.replaceAll("_", " ");
+  }
+// AM fft @109492
+function fft(e) {
+    const t = oft.exec(e.trim());
+    return t
+      ? t[1]?.toLowerCase() === "source" || t[1]?.toLowerCase() === "mutual"
+        ? String(t[2] ?? "").trim()
+        : ""
+      : e.trim();
+  }
+// AM Cge @109500
+function Cge(e) {
+    const t = [],
+      r = new Set();
+    for (const n of e.split(",")) {
+      const o = fft(n),
+        a = uft(o);
+      !a || r.has(a) || (r.add(a), t.push(o));
+    }
+    return t;
+  }
+// AM Oge @109510
+function Oge(e, t, r = !1) {
+    const n = ift(e, t),
+      o = m7(n.nodes, t, n.diagnostics);
+    return {
+      prompt: r
+        ? o
+            .split(/\r?\n(?:[^\S\r\n]*\r?\n)+/u)
+            .map((a) => xd(Cge(a)))
+            .filter(Boolean).join(`
+
+`)
+        : xd(Cge(o)),
+      diagnostics: n.diagnostics,
+    };
+  }
+// AM p7 @109525
+function p7(e) {
+    const t = e.positivePrefix === void 0 ? lL : e.positivePrefix,
+      r = e.negativePrefix === void 0 ? dL : e.negativePrefix,
+      n = Oge(xd([t, e.positivePrompt]), "positivePrompt", e.preserveBlankLineGroups),
+      o = Oge(xd([r, e.negativePrompt]), "negativePrompt", e.preserveBlankLineGroups);
+    return { positivePrompt: n.prompt, negativePrompt: o.prompt, diagnostics: [...n.diagnostics, ...o.diagnostics] };
+  }
+// AM hmt @110867
+var hmt = "anima-base";
+// AM P7 @110869
+function P7(e) {
+    return e.map(Sf).filter(Boolean).join(`
+
+`);
+  }
+// AM gmt @110874
+function gmt(e) {
+    const t = e?.metadata.reference;
+    if (!t || typeof t != "object" || Array.isArray(t)) return "";
+    const r = t;
+    return r.mode === "outfit-restyler" ? Sf(r.positivePrefix) : "";
+  }
+// AM ymt @110880
+function ymt(e, t) {
+    const r = Sf(e);
+    let n = Sf(t);
+    if (!r) return n;
+    for (; n.startsWith(r);) n = n.slice(r.length).trimStart();
+    return n ? `${r} ${n}` : r;
+  }
+// AM bmt @110887
+function bmt(e) {
+    const t = p7({
+        positivePrompt: e.plan.globalPositive,
+        negativePrompt: e.plan.negativePrompt,
+        positivePrefix: e.animaPositivePrefix,
+        negativePrefix: e.animaNegativePrefix,
+        preserveBlankLineGroups: !0,
+      }),
+      r = e.plan.characters.map((o) =>
+        p7({
+          positivePrompt: o.prompt,
+          negativePrompt: o.uc,
+          positivePrefix: "",
+          negativePrefix: "",
+          preserveBlankLineGroups: !0,
+        }),
+      ),
+      n = P7([t.positivePrompt, e.plan.bodyAction]);
+    return {
+      globalPositivePrompt: n,
+      globalNegativePrompt: t.negativePrompt,
+      positivePrompt: ymt(
+        e.outfitReferenceEnabled ? gmt(e.comfyUIProfile) : "",
+        P7([n, ...r.map((o) => o.positivePrompt)]),
+      ),
+      negativePrompt: P7([t.negativePrompt, ...r.map((o) => o.negativePrompt)]),
+      diagnostics: [...t.diagnostics, ...r.flatMap((o) => o.diagnostics)],
+    };
+  }
+// AM vmt @110916
+function vmt(e) {
+    const t = e.v5PromptPlan;
+    return t
+      ? {
+          provider: "novelai",
+          profileId: String(e.novelAIModel ?? "").trim(),
+          profileRevision: 0,
+          sourceFormat: t.format,
+          requestFormat: "novelai-v5-hybrid",
+          formatterRevision: 1,
+          globalPositivePrompt: t.global.serializedPrompt,
+          globalNegativePrompt: e.plan.negativePrompt.trim(),
+          positivePrompt: t.global.serializedPrompt,
+          negativePrompt: e.plan.negativePrompt.trim(),
+          characterPrompts: t.characters.map((r) => ({
+            actorSlot: r.actorSlot,
+            prompt: r.serializedPrompt,
+            negativePrompt: r.negativePrompt,
+            centerX: r.centerX,
+            centerY: r.centerY,
+            depth: r.depth,
+          })),
+          diagnostics: [],
+        }
+      : {
+          provider: "novelai",
+          profileId: String(e.novelAIModel ?? "").trim(),
+          profileRevision: 0,
+          sourceFormat: "novelai-canonical-v1",
+          requestFormat: "novelai",
+          formatterRevision: 1,
+          globalPositivePrompt: e.plan.globalPositive.trim(),
+          globalNegativePrompt: e.plan.negativePrompt.trim(),
+          positivePrompt: e.plan.globalPositive.trim(),
+          negativePrompt: e.plan.negativePrompt.trim(),
+          characterPrompts: e.plan.characters.map((r) => ({
+            ...(r.actorSlot === void 0 ? {} : { actorSlot: r.actorSlot }),
+            ...(r.actorId === void 0 ? {} : { actorId: r.actorId }),
+            ...(r.actorIndex === void 0 ? {} : { actorIndex: r.actorIndex }),
+            prompt: r.prompt,
+            negativePrompt: r.uc,
+          })),
+          diagnostics: [],
+        };
+  }
+// AM Hge @110961
+function Hge(e, t, r, n) {
+    const o = bmt(e);
+    return {
+      provider: t,
+      profileId: r,
+      profileRevision: n,
+      sourceFormat: e.sourceFormat ?? "novelai-canonical-v1",
+      requestFormat: "anima",
+      formatterRevision: 1,
+      globalPositivePrompt: o.globalPositivePrompt,
+      globalNegativePrompt: o.globalNegativePrompt,
+      positivePrompt: o.positivePrompt,
+      negativePrompt: o.negativePrompt,
+      characterPrompts: e.plan.characters.map((a) => ({
+        ...(a.actorSlot === void 0 ? {} : { actorSlot: a.actorSlot }),
+        ...(a.actorId === void 0 ? {} : { actorId: a.actorId }),
+        ...(a.actorIndex === void 0 ? {} : { actorIndex: a.actorIndex }),
+        prompt: a.prompt,
+        negativePrompt: a.uc,
+      })),
+      diagnostics: o.diagnostics,
+    };
+  }
+// AM wmt @110984
+var wmt = Object.freeze({
+    novelai: vmt,
+    "chan-server": (e) => Hge(e, "chan-server", hmt, 1),
+    "comfy-ui": (e) => {
+      const t = e.comfyUIProfile;
+      if (!t) throw new Error("Anima Base UI 워크플로 프로필이 필요합니다.");
+      return Hge(e, "comfy-ui", t.id || n2.id, t.revision || n2.revision);
+    },
+  });
+// AM g2 @110993
+function g2(e) {
+    if (e.v5PromptPlan && e.provider !== "novelai")
+      throw new Error("NovelAI V5 하이브리드 프롬프트는 NovelAI 공급자에서만 사용할 수 있습니다.");
+    return wmt[e.provider](e);
+  }
+// AM C7 @110998
+function C7(e, t, r) {
+    if (r === 0) {
+      const a = [
+        "nsfw",
+        "sfw",
+        "rating:general",
+        "rating:sensitive",
+        "rating:questionable",
+        "rating:explicit",
+        "rating:safe",
+      ];
+      return { ...e, positivePrompt: hg(e.positivePrompt, a), globalPositivePrompt: hg(e.globalPositivePrompt, a) };
+    }
+    if (!t) return e;
+    const n = d7(e.positivePrompt),
+      o = d7(e.globalPositivePrompt);
+    return n === e.positivePrompt && o === e.globalPositivePrompt
+      ? e
+      : { ...e, positivePrompt: n, globalPositivePrompt: o };
   }
 // AM ove @132968
 function ove(e, t) {
@@ -12242,6 +13423,30 @@ function uOt(e, t) {
       }),
     );
   }
+// AM mOt @179129
+var mOt = ["head", "top", "bottom", "legs", "feet"];
+// AM Q5 @179130
+function Q5(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM $Ie @179133
+function $Ie(e) {
+    return e !== null && typeof e == "object" && !Array.isArray(e) ? e : {};
+  }
+// AM e4 @179136
+function e4(e) {
+    return e.map(Q5).filter(Boolean).join(", ");
+  }
+// AM jq @179139
+function jq(e, t) {
+    const r = Number(e);
+    return Number.isFinite(r) ? Math.max(0, Math.min(1, r)) : t;
+  }
+// AM pOt @179143
+function pOt(e, t) {
+    const r = $Ie(e.characterPrompt.outfitPartFramingWeights);
+    return e4(mOt.map((n) => CI(t[n], t.humanlike === !1 ? 1 : jq($Ie(r[n])["cowboy shot"], 1), 1)));
+  }
 
 export {
   y3,
@@ -12310,6 +13515,8 @@ export {
   bCe,
   vCe,
   PX,
+  ECe,
+  hg,
   V0,
   bg,
   ije,
@@ -12341,8 +13548,14 @@ export {
   Ns,
   ec,
   W0,
+  kW,
+  Vj,
   hk,
   Nc,
+  Tu,
+  iL,
+  up,
+  EW,
   lL,
   dL,
   xo,
@@ -12839,12 +14052,83 @@ export {
   yf,
   hI,
   Hy,
+  Yct,
+  Glt,
+  Vlt,
+  Xlt,
+  Wlt,
+  Ylt,
+  Zlt,
+  Jlt,
+  Qlt,
+  Xc,
+  Jhe,
+  hdt,
+  ydt,
+  Ti,
+  xf,
+  bc,
+  bdt,
+  vdt,
+  Qhe,
+  wdt,
+  xdt,
+  Vy,
+  t2,
+  _dt,
+  Idt,
+  Sdt,
+  Om,
+  kdt,
+  ege,
+  oC,
+  Adt,
+  Edt,
+  n2,
+  Ndt,
+  t7,
+  c2,
   Sf,
   xd,
+  Sge,
+  f2,
+  d7,
   Zut,
   u7,
   Jut,
   CI,
+  Qut,
+  eft,
+  tft,
+  rft,
+  nft,
+  Pge,
+  oft,
+  dC,
+  m2,
+  aft,
+  f7,
+  ift,
+  sft,
+  cft,
+  lft,
+  dft,
+  m7,
+  uft,
+  fft,
+  Cge,
+  Oge,
+  p7,
+  hmt,
+  P7,
+  gmt,
+  ymt,
+  bmt,
+  vmt,
+  Hge,
+  wmt,
+  g2,
+  C7,
   ove,
   ave,
   ive,
@@ -12970,5 +14254,11 @@ export {
   KIe,
   Oq,
   uOt,
+  mOt,
+  Q5,
+  $Ie,
+  e4,
+  jq,
+  pOt,
   vW,
 };
