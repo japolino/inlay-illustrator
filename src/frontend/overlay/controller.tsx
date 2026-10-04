@@ -6,6 +6,7 @@ import { createOverlayHost, type OverlayHost, type OverlayHostKind } from "./hos
 import type { SettingsSection, WorkspaceTab } from "./labels.js";
 import { OverlayApp, type OverlayNavigation } from "./App.js";
 import type { FrontendStore } from "./store.js";
+import type { AppController } from "../state/app-state.js";
 import { LayerStack } from "./ui/layers.js";
 import { ToastStore } from "./ui/toast.js";
 import { trackKeyboardInset } from "./viewport.js";
@@ -25,7 +26,7 @@ export type OverlayController = {
 
 export type OverlayControllerOptions = {
   store: FrontendStore;
-  patchConfig: (patch: Partial<import("../../shared/config.js").Config>) => void;
+  app: AppController;
   doc?: Document;
   onHostFallback?: (kind: OverlayHostKind, error: unknown) => void;
 };
@@ -57,12 +58,12 @@ export function createOverlayController(ctx: SpindleFrontendContext, options: Ov
     render(
       <OverlayApp
         store={options.store}
+        app={options.app}
         layers={layers}
         toasts={toasts}
         portal={() => layer}
         navigation={navigation}
         onClose={() => controller.close()}
-        patchConfig={options.patchConfig}
       />,
       appMount
     );

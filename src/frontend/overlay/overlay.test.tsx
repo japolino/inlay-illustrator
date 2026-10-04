@@ -8,6 +8,10 @@ import { createOverlayHost } from "./host.js";
 import { LayerStack } from "./ui/layers.js";
 import { placeBelow } from "./ui/popover.js";
 import { keyboardInset } from "./viewport.js";
+import { AppController } from "../state/app-state.js";
+import { RpcClient } from "../rpc/client.js";
+import { createMockBackend } from "../dev/mock-backend.js";
+import { coreMockHandlers } from "../dev/mock/core.js";
 
 // A private happy-dom window: other test files install minimal DOM fakes on globalThis.
 const win = new Window({ url: "http://localhost/" });
@@ -26,6 +30,11 @@ afterAll(() => {
   frameGlobals.cancelAnimationFrame = savedFrames.cancel;
   win.happyDOM.abort();
 });
+
+/** App controller over the dev mock backend (no handshake is started). */
+function testApp(): AppController {
+  return new AppController(new RpcClient(createMockBackend({ handlers: [coreMockHandlers()] }).transport));
+}
 
 type FakeUi = {
   calls: string[];
@@ -160,7 +169,7 @@ describe("overlay controller", () => {
     const { FrontendStore } = await import("./store.js");
     const ui: FakeUi = { calls: [], visible: [] };
     const store = new FrontendStore();
-    const controller = createOverlayController(fakeCtx(ui), { store, patchConfig: () => undefined, doc });
+    const controller = createOverlayController(fakeCtx(ui), { store, app: testApp(), doc });
     expect(controller.hostKind()).toBeNull();
     controller.open();
     controller.close();
@@ -191,12 +200,11 @@ describe("overlay controller", () => {
   test("opens the settings area with the Asset Maid navigation", async () => {
     const { createOverlayController } = await import("./controller.js");
     const { FrontendStore } = await import("./store.js");
-    const controller = createOverlayController(fakeCtx({ calls: [], visible: [] }), { store: new FrontendStore(), patchConfig: () => undefined, doc });
+    const controller = createOverlayController(fakeCtx({ calls: [], visible: [] }), { store: new FrontendStore(), app: testApp(), doc });
     controller.open({ settings: "system" });
     const items = [...doc.querySelectorAll("[data-settings-navigation-item]")].map((item) => item.getAttribute("data-settings-navigation-item"));
     expect(items).toEqual(["analysis-profile", "charx", "all-charx", "model", "image-model", "system"]);
     expect(doc.querySelector('[aria-current="page"]')?.getAttribute("data-settings-navigation-item")).toBe("system");
-    expect(doc.querySelector('[role="switch"]')).not.toBeNull();
     controller.destroy();
   });
 });

@@ -1,6 +1,5 @@
 import type { ComponentChildren } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
-import type { Config } from "../../shared/config.js";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   SETTINGS_GROUPS,
   SHELL_LABELS,
@@ -9,14 +8,12 @@ import {
   type SettingsSection,
   type WorkspaceTab
 } from "./labels.js";
-import { Placeholder } from "./placeholder.js";
-import { SettingsPage } from "./settings.js";
-import { useStore, type FrontendStore } from "./store.js";
+import { AnalyzerErrorNotices, SettingsPage } from "./settings/index.js";
+import type { FrontendStore } from "./store.js";
 import {
   ArrowLeftIcon,
   Button,
   ConfirmProvider,
-  DiamondIcon,
   IconButton,
   LayerStack,
   MenuIcon,
@@ -27,74 +24,154 @@ import {
   ToastHost,
   ToastProvider,
   ToastStore,
-  UsersIcon,
   XIcon,
+  ChevronDownIcon,
   cn,
   tabPanelProps,
+  useConfirm,
   useFocusTrap,
   useLayer
 } from "./ui/index.js";
 import { useIsMobile } from "./viewport.js";
+import { AppContext, useApp, useAppState, type AppController } from "../state/app-state.js";
+import { CommandDock, PageHeader } from "./shell/dock.js";
+import { discardWorkspaceDrafts, unsavedWorkspaceDrafts, useWorkspaceTabView } from "./workspace/index.js";
+import { SPLIT_MAX, SPLIT_MIN, WorkspaceUiContext, WorkspaceUiStore, useSourceUi, useWorkspaceUi, type TabView } from "./workspace-ui.js";
+import { CharxPickerGrid, CharxRail, CustomCharacterEditor, EDITOR_LABELS, RosterInfoPanel, RosterSidebar, ROSTER_LABELS } from "./roster/index.js";
 
 /** External navigation request (launchers may ask for a tab or a settings page). */
 export type OverlayNavigation = { requestId: number; tab?: WorkspaceTab; settings?: SettingsSection };
 
 export type OverlayAppProps = {
   store: FrontendStore;
+  app: AppController;
   layers: LayerStack;
   toasts: ToastStore;
   portal: () => HTMLElement | null;
   navigation: OverlayNavigation;
   onClose: () => void;
-  patchConfig: (patch: Partial<Config>) => void;
 };
 
 const TAB_ID_PREFIX = "ii-am-workspace";
-const SIDEBAR_WIDTH = 292;
+/** AM `tS` / `dU`: sidebar default/max and min width. */
+const SIDEBAR_MAX = 292;
+const SIDEBAR_MIN = 72;
+const RAIL = 60;
 
 /** Root of the overlay tree: providers + the Asset Maid shell. */
-export function OverlayApp({ layers, toasts, portal, ...props }: OverlayAppProps) {
+export function OverlayApp({ layers, toasts, portal, app, navigation, onClose }: OverlayAppProps) {
+  useEffect(() => app.onNotice((notice) => toasts.show({ message: notice.message, tone: notice.tone, durationMs: notice.durationMs })), [app, toasts]);
   return (
-    <OverlayEnvironmentContext.Provider value={{ layers, portal }}>
-      <ToastProvider store={toasts}>
-        <ConfirmProvider defaultCancelLabel={SHELL_LABELS.cancel}>
-          <Shell {...props} />
-          <ToastHost labels={{ stopTask: SHELL_LABELS.stopTask, closeNotification: SHELL_LABELS.closeNotification }} />
-        </ConfirmProvider>
-      </ToastProvider>
-    </OverlayEnvironmentContext.Provider>
+    <AppContext.Provider value={app}>
+      <OverlayEnvironmentContext.Provider value={{ layers, portal }}>
+        <ToastProvider store={toasts}>
+          <ConfirmProvider defaultCancelLabel={SHELL_LABELS.cancel}>
+            <Shell navigation={navigation} onClose={onClose} />
+            <AnalyzerErrorNotices />
+            <ToastHost labels={{ stopTask: SHELL_LABELS.stopTask, closeNotification: SHELL_LABELS.closeNotification }} />
+          </ConfirmProvider>
+        </ToastProvider>
+      </OverlayEnvironmentContext.Provider>
+    </AppContext.Provider>
   );
 }
 
-function Shell({ store, navigation, onClose, patchConfig }: Omit<OverlayAppProps, "layers" | "toasts" | "portal">) {
-  const snapshot = useStore(store);
+function Shell({ navigation, onClose }: { navigation: OverlayNavigation; onClose: () => void }) {
+  const app = useApp();
+  const workspaceUi = useMemo(() => new WorkspaceUiStore(), []);
+  const uiState = useAppState((s) => s.uiState);
+  // Persisted layout (AM: navigationLayout + splitRatio only).
+  useEffect(() => {
+    if (!uiState) return;
+    workspaceUi.updateGlobal({ navigationLayout: uiState.global.navigationLayout, splitRatio: uiState.global.splitRatio });
+  }, [uiState === null]);
+  useEffect(() => {
+    workspaceUi.onPersist = (ui) => {
+      const current = app.state.uiState;
+      if (current) app.setUiState({ ...current, global: { ...current.global, navigationLayout: ui.navigationLayout, splitRatio: ui.splitRatio } });
+    };
+    return () => {
+      workspaceUi.onPersist = null;
+    };
+  }, [app, workspaceUi]);
+  return (
+    <WorkspaceUiContext.Provider value={workspaceUi}>
+      <ShellInner navigation={navigation} onClose={onClose} workspaceUi={workspaceUi} />
+    </WorkspaceUiContext.Provider>
+  );
+}
+
+function sectionVisible(section: SettingsSection, developerMode: boolean): boolean {
+  return section !== "logs" || developerMode;
+}
+
+function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayNavigation; onClose: () => void; workspaceUi: WorkspaceUiStore }) {
+  const app = useApp();
   const mobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>(navigation.tab ?? "assets");
+  const characterId = useAppState((s) => s.selectedCharacterId);
+  const characterName = useAppState((s) => s.characters?.find((c) => c.characterId === s.selectedCharacterId)?.name ?? null);
+  const developerMode = useAppState((s) => s.config?.ui.developerModeEnabled ?? false);
+  const connection = useAppState((s) => s.connection);
+  const connectionError = useAppState((s) => s.connectionError);
+  const sourceUi = useSourceUi(characterId);
+  const activeTab: WorkspaceTab = sourceUi.activeTab === ("settings" as string) ? "assets" : sourceUi.activeTab;
   const [settingsOpen, setSettingsOpen] = useState(Boolean(navigation.settings));
   const [section, setSection] = useState<SettingsSection>(navigation.settings ?? DEFAULT_SETTINGS_SECTION);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const sidebarOpen = useWorkspaceUi((ui) => ui.sidebarOpen);
+  const splitRatio = useWorkspaceUi((ui) => ui.splitRatio);
+  const rosterExpanded = useWorkspaceUi((ui) => ui.rosterExpanded);
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_MAX);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [developerMode, setDeveloperMode] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const editorOpen = !!sourceUi.editor && !settingsOpen;
+  const navigationCount = useAppState((s) => s.workspace?.roster.filter((r) => r.registered && r.workspaceEnabled).length);
 
+  const setActiveTab = (tab: WorkspaceTab) => workspaceUi.updateSource(characterId, { activeTab: tab, secondaryOpen: false, infoPromptKey: null });
+
+  // A requested tab is applied to the character that is selected (or selected next, when none is loaded yet).
+  const pendingTab = useRef<WorkspaceTab | null>(null);
   useEffect(() => {
     if (!navigation.requestId) return;
     if (navigation.settings) {
       setSection(navigation.settings);
       setSettingsOpen(true);
     } else if (navigation.tab) {
+      pendingTab.current = characterId ? null : navigation.tab;
       setActiveTab(navigation.tab);
       setSettingsOpen(false);
     }
   }, [navigation.requestId]);
-
   useEffect(() => {
-    if (!developerMode && section === "logs") setSection(DEFAULT_SETTINGS_SECTION);
-  }, [developerMode, section]);
+    if (characterId && pendingTab.current) {
+      setActiveTab(pendingTab.current);
+      pendingTab.current = null;
+    }
+  }, [characterId]);
 
-  const toggleSettings = () => {
+  const configLoaded = useAppState((s) => s.config !== null);
+  useEffect(() => {
+    if (configLoaded && !sectionVisible(section, developerMode)) setSection(DEFAULT_SETTINGS_SECTION);
+  }, [developerMode, section, configLoaded]);
+
+  const confirm = useConfirm();
+  /** Unsaved-edit guard: custom character editor prompt (AM `Te`), then unsaved prompt/outfit drafts. */
+  const guarded = (action: () => void) => workspaceUi.runGuarded(() => {
+    const keys = unsavedWorkspaceDrafts(app, characterId);
+    if (keys.length === 0) {
+      action();
+      return;
+    }
+    void confirm({ title: SHELL_LABELS.unsavedTitle, description: SHELL_LABELS.unsavedDescription(keys.length), confirmLabel: SHELL_LABELS.discardChanges, tone: "danger" }).then((ok) => {
+      if (!ok) return;
+      discardWorkspaceDrafts(app, keys);
+      action();
+    });
+  });
+  const toggleSettings = () => guarded(() => {
     setSettingsOpen((open) => !open);
     setDrawerOpen(false);
-  };
+    setPickerOpen(false);
+  });
   const selectSection = (id: SettingsSection) => {
     setSection(id);
     setDrawerOpen(false);
@@ -103,39 +180,70 @@ function Shell({ store, navigation, onClose, patchConfig }: Omit<OverlayAppProps
     setActiveTab(id);
     setSettingsOpen(false);
   };
+  const selectCharacter = (id: string) => {
+    setPickerOpen(false);
+    if (id === characterId) return;
+    guarded(() => {
+      workspaceUi.updateSource(characterId, { editor: null });
+      void app.selectCharacter(id);
+    });
+  };
+  const closeOverlay = () => guarded(onClose);
+  const closeEditor = () => guarded(() => workspaceUi.updateSource(characterId, { editor: null }));
 
-  const sidebarLabel = settingsOpen ? SHELL_LABELS.settingsList : SHELL_LABELS.rosterList;
+  const view = useWorkspaceTabView({ characterId, tab: activeTab, mobile });
+  const secondary = !settingsOpen && !editorOpen ? view.secondary ?? null : null;
+
+  const sidebarLabel = settingsOpen ? SHELL_LABELS.settingsList : editorOpen ? ROSTER_LABELS.references : SHELL_LABELS.rosterList;
   const sidebar = settingsOpen
     ? <SettingsNavigation active={section} developerMode={developerMode} onSelect={selectSection} onBack={toggleSettings} />
-    : <RosterPlaceholder />;
-  const main = settingsOpen
-    ? (
-      <SettingsPage
-        section={section}
-        config={snapshot.config}
-        patchConfig={patchConfig}
-        developerMode={developerMode}
-        onDeveloperModeChange={setDeveloperMode}
-      />
-    )
-    : <WorkspacePlaceholder tab={activeTab} />;
+    : <RosterSidebar referenceMode={editorOpen} canExpand={!mobile} />;
+
+  const primary = settingsOpen
+    ? <div class="min-h-0 flex-1 overflow-y-auto" data-workspace-scroll=""><SettingsPage section={section} /></div>
+    : editorOpen
+      ? <CustomCharacterEditor />
+      : <WorkspaceGate tab={activeTab}><WorkspaceMain tab={activeTab} view={view} /></WorkspaceGate>;
+
+  if (connection === "error") {
+    return <ConnectionError message={connectionError?.message ?? ""} onRetry={() => void app.init()} onClose={onClose} />;
+  }
 
   if (mobile) {
+    const secondaryOnMobile = secondary;
     return (
       <div class="flex h-full min-h-0 w-full flex-col bg-workspace-pane text-foreground" data-ii-am-shell="mobile">
         <header class="flex h-14 shrink-0 items-center gap-1 border-b border-border px-2">
-          <IconButton label={SHELL_LABELS.sidebarToggle(sidebarLabel)} aria-expanded={drawerOpen} onClick={() => setDrawerOpen(!drawerOpen)}>
-            <MenuIcon />
-          </IconButton>
-          <div class="min-w-0 flex-1 truncate px-1 text-sm font-extrabold">{SHELL_LABELS.appName}</div>
-          {!settingsOpen ? (
-            <IconButton label={SHELL_LABELS.openSettings} title="Settings" onClick={toggleSettings} data-mobile-settings-entry="">
-              <SettingsIcon />
-            </IconButton>
-          ) : null}
-          <IconButton label={SHELL_LABELS.close} onClick={onClose}><XIcon /></IconButton>
+          {secondaryOnMobile ? (
+            <>
+              <IconButton label={secondaryOnMobile.back?.label ?? returnLabel(activeTab)} onClick={secondaryOnMobile.back?.onClick ?? (() => workspaceUi.closeSecondary(characterId))}><ArrowLeftIcon /></IconButton>
+              <div class="min-w-0 flex-1 truncate px-1 text-sm font-extrabold">{secondaryOnMobile.title}</div>
+            </>
+          ) : (
+            <>
+              <IconButton label={SHELL_LABELS.sidebarToggle(sidebarLabel)} aria-expanded={drawerOpen} onClick={() => setDrawerOpen(!drawerOpen)} className="relative">
+                <MenuIcon />
+                {navigationCount ? <span class="absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-primary px-1 text-3xs leading-4 font-black text-primary-foreground">{navigationCount}</span> : null}
+              </IconButton>
+              {editorOpen ? (
+                <Button variant="ghost" onClick={closeEditor} title={EDITOR_LABELS.backTitle} aria-label={EDITOR_LABELS.backTitle}><ArrowLeftIcon />{EDITOR_LABELS.back}</Button>
+              ) : (
+                <Button variant="ghost" className="min-w-0 flex-1 shrink justify-start px-1" aria-label={ROSTER_LABELS.characterSelectionOf(characterName ?? SHELL_LABELS.noCharacter)} title={characterName ?? undefined} onClick={() => setPickerOpen(true)} data-source-transition-control="">
+                  <span class="min-w-0 truncate text-sm font-extrabold text-foreground">{characterName ?? SHELL_LABELS.appName}</span>
+                  <ChevronDownIcon className="size-3.5" />
+                </Button>
+              )}
+              {editorOpen ? <div class="flex-1" /> : null}
+              {!settingsOpen && !editorOpen ? (
+                <IconButton label={SHELL_LABELS.openSettings} title="Settings" onClick={toggleSettings} data-mobile-settings-entry="">
+                  <SettingsIcon />
+                </IconButton>
+              ) : null}
+            </>
+          )}
+          <IconButton label={SHELL_LABELS.close} onClick={closeOverlay} data-source-transition-control=""><XIcon /></IconButton>
         </header>
-        {!settingsOpen ? (
+        {!settingsOpen && !editorOpen && !secondaryOnMobile ? (
           <Tabs
             idPrefix={TAB_ID_PREFIX}
             aria-label={SHELL_LABELS.workspaceNav}
@@ -145,73 +253,247 @@ function Shell({ store, navigation, onClose, patchConfig }: Omit<OverlayAppProps
             onValueChange={selectTab}
           />
         ) : null}
-        <main class="min-h-0 flex-1 overflow-y-auto">{main}</main>
+        <main class="relative flex min-h-0 flex-1 flex-col">
+          {secondaryOnMobile ? <WorkspaceSecondary secondary={secondaryOnMobile} mobile /> : primary}
+          {!settingsOpen && !editorOpen ? <RosterInfoPanel /> : null}
+        </main>
         <MobileDrawer open={drawerOpen} label={sidebarLabel} onClose={() => setDrawerOpen(false)}>{sidebar}</MobileDrawer>
+        <CharxPickerDialog open={pickerOpen} onClose={() => setPickerOpen(false)} onSelect={selectCharacter} onSettings={() => { setPickerOpen(false); toggleSettings(); }} />
       </div>
     );
   }
 
-  const showSidebar = settingsOpen || sidebarOpen;
+  const showSidebar = settingsOpen || editorOpen || sidebarOpen;
+  const width = showSidebar ? sidebarWidth : 0;
+  const expanded = rosterExpanded && !settingsOpen && !editorOpen;
+  if (expanded) {
+    // Expanded roster (AM 152601-152641): the roster takes the left split; the secondary pane is suspended.
+    return (
+      <div class="grid h-full min-h-0 w-full bg-workspace-pane text-foreground" style={{ gridTemplateColumns: `${RAIL}px minmax(0,1fr)` }} data-ii-am-shell="desktop" data-roster-expanded="">
+        <CharxRail settingsOpen={settingsOpen} onSelect={selectCharacter} onToggleSettings={toggleSettings} />
+        <SplitPanes
+          ratio={splitRatio}
+          onCommit={(ratio) => workspaceUi.updateGlobal({ splitRatio: ratio })}
+          label={SHELL_LABELS.rosterSplitAdjust}
+          first={<aside aria-label={sidebarLabel} class="flex min-h-0 min-w-0 flex-1 flex-col bg-sidebar">{sidebar}</aside>}
+          second={(
+            <section class="flex min-h-0 min-w-0 flex-1 flex-col">
+              <header class="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3" data-workspace-header="">
+                <nav aria-label={SHELL_LABELS.workspaceNav} class="min-w-0 flex-1 overflow-x-auto">
+                  <Tabs idPrefix={TAB_ID_PREFIX} items={WORKSPACE_TABS.map((tab) => ({ id: tab.id, label: tab.label }))} value={activeTab} onValueChange={selectTab} />
+                </nav>
+                <IconButton label={SHELL_LABELS.close} onClick={closeOverlay} data-source-transition-control=""><XIcon /></IconButton>
+              </header>
+              <div class="relative flex min-h-0 flex-1">{primary}<RosterInfoPanel /></div>
+            </section>
+          )}
+        />
+      </div>
+    );
+  }
   return (
     <div
       class="grid h-full min-h-0 w-full bg-workspace-pane text-foreground"
-      style={{ gridTemplateColumns: `60px ${showSidebar ? SIDEBAR_WIDTH : 0}px minmax(0,1fr)` }}
+      style={{ gridTemplateColumns: `${RAIL}px ${width}px minmax(0,1fr)`, ["--character-navigation-width" as string]: `${width}px` }}
       data-ii-am-shell="desktop"
     >
-      <Rail settingsOpen={settingsOpen} onToggleSettings={toggleSettings} />
+      <CharxRail settingsOpen={settingsOpen} onSelect={selectCharacter} onToggleSettings={toggleSettings} />
       <aside
         aria-label={sidebarLabel}
         inert={!showSidebar}
-        class={cn("min-h-0 min-w-0 overflow-hidden border-r border-border bg-sidebar transition-opacity", !showSidebar && "opacity-0")}
+        class={cn("relative min-h-0 min-w-0 overflow-hidden border-r border-border bg-sidebar transition-opacity", !showSidebar && "opacity-0")}
       >
         {sidebar}
+        {showSidebar && !settingsOpen ? <WidthResizer label={sidebarLabel} value={sidebarWidth} onChange={setSidebarWidth} /> : null}
       </aside>
-      <section class="flex min-h-0 min-w-0 flex-col" data-workspace-pane="primary">
-        <header class="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
-          {!settingsOpen ? (
-            <IconButton
-              label={SHELL_LABELS.sidebarToggle(sidebarLabel)}
-              aria-pressed={sidebarOpen}
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
+      <section class="flex min-h-0 min-w-0 flex-col">
+        <header class="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3" data-workspace-header="">
+          {!settingsOpen && !editorOpen ? (
+            <IconButton label={SHELL_LABELS.sidebarToggle(sidebarLabel)} aria-pressed={sidebarOpen} onClick={() => workspaceUi.updateGlobal({ sidebarOpen: !sidebarOpen })}>
               <PanelLeftIcon />
             </IconButton>
           ) : null}
-          {!settingsOpen ? (
-            <Tabs
-              idPrefix={TAB_ID_PREFIX}
-              aria-label={SHELL_LABELS.workspaceNav}
-              className="min-w-0 flex-1 overflow-x-auto"
-              items={WORKSPACE_TABS.map((tab) => ({ id: tab.id, label: tab.label }))}
-              value={activeTab}
-              onValueChange={selectTab}
-            />
+          {editorOpen ? (
+            <Button variant="ghost" onClick={closeEditor} title={EDITOR_LABELS.backTitle} aria-label={EDITOR_LABELS.backTitle}><ArrowLeftIcon />{EDITOR_LABELS.back}</Button>
+          ) : null}
+          {!settingsOpen && !editorOpen ? (
+            <nav aria-label={SHELL_LABELS.workspaceNav} class="min-w-0 flex-1 overflow-x-auto">
+              <Tabs idPrefix={TAB_ID_PREFIX} items={WORKSPACE_TABS.map((tab) => ({ id: tab.id, label: tab.label }))} value={activeTab} onValueChange={selectTab} />
+            </nav>
           ) : <div class="min-w-0 flex-1" />}
-          <IconButton label={SHELL_LABELS.close} onClick={onClose}><XIcon /></IconButton>
+          {secondary ? (
+            <IconButton label={SHELL_LABELS.closeWorkspace} onClick={() => workspaceUi.closeSecondary(characterId)} data-close-secondary=""><PanelLeftIcon className="rotate-180" /></IconButton>
+          ) : null}
+          <IconButton label={SHELL_LABELS.close} onClick={closeOverlay} data-source-transition-control=""><XIcon /></IconButton>
         </header>
-        <div class="min-h-0 flex-1 overflow-y-auto" data-workspace-scroll="">{main}</div>
+        <div class="relative flex min-h-0 flex-1">
+          {secondary ? (
+            <SplitPanes ratio={splitRatio} onCommit={(ratio) => workspaceUi.updateGlobal({ splitRatio: ratio })}
+              first={primary} second={<WorkspaceSecondary secondary={secondary} />} />
+          ) : primary}
+          {!settingsOpen && !editorOpen ? <RosterInfoPanel /> : null}
+        </div>
       </section>
     </div>
   );
 }
 
-function Rail({ settingsOpen, onToggleSettings }: { settingsOpen: boolean; onToggleSettings: () => void }) {
-  return (
-    <nav aria-label={SHELL_LABELS.characterSelection} class="flex min-h-0 flex-col items-center gap-2 border-r border-border bg-sidebar py-3">
-      <div class="grid size-10 place-items-center rounded-lg bg-surface-navigation-selected text-primary" title={SHELL_LABELS.appName} aria-hidden="true">
-        <DiamondIcon className="size-5" />
+function returnLabel(tab: WorkspaceTab): string {
+  return WORKSPACE_TABS.find((t) => t.id === tab)?.returnLabel ?? SHELL_LABELS.backToWorkspaceShort;
+}
+
+/** Loading / error gate in front of the workspace tabs (AM `N0e` 153844). The persona tab does not need a character. */
+function WorkspaceGate({ tab, children }: { tab: WorkspaceTab; children: ComponentChildren }) {
+  const app = useApp();
+  const characterId = useAppState((s) => s.selectedCharacterId);
+  const state = useAppState((s) => s.workspaceState);
+  const error = useAppState((s) => s.workspaceError);
+  const ready = useAppState((s) => !!s.workspace && s.workspace.characterId === s.selectedCharacterId);
+  const connection = useAppState((s) => s.connection);
+  if (tab === "persona" || ready) return <>{children}</>;
+  if (!characterId && connection === "ready") {
+    return <div class="grid flex-1 place-items-center p-6 text-center text-xs text-muted-foreground" data-workspace-empty="">{SHELL_LABELS.noCharacterSelected}</div>;
+  }
+  if (state === "error") {
+    return (
+      <div class="grid flex-1 content-center justify-items-center gap-3 p-6 text-center" data-workspace-error="">
+        <p class="max-w-120 text-xs text-destructive" role="alert">{error?.message}</p>
+        <Button size="sm" variant="subtle" data-source-transition-control="" onClick={() => void app.reloadWorkspace()}>{SHELL_LABELS.reload}</Button>
       </div>
-      <div class="min-h-0 w-full flex-1" />
-      <IconButton
-        label={SHELL_LABELS.settings}
-        aria-pressed={settingsOpen}
-        data-charx-settings=""
-        onClick={onToggleSettings}
-        className={cn("mt-2 size-8 shrink-0", settingsOpen && "bg-surface-navigation-selected text-selected-foreground")}
-      >
-        <SettingsIcon />
-      </IconButton>
-    </nav>
+    );
+  }
+  return (
+    <div class="mx-auto grid w-full max-w-190 content-start gap-3 px-5 py-5" role="status" aria-live="polite" aria-busy="true" data-workspace-loading="">
+      <span class="sr-only">{SHELL_LABELS.loadingData}</span>
+      <div class="h-8 w-48 animate-pulse rounded-md bg-surface-workbench" />
+      {Array.from({ length: 4 }, (_, i) => <div key={i} class="h-24 animate-pulse rounded-lg bg-surface-workbench" />)}
+    </div>
+  );
+}
+
+/** Primary pane of a workspace tab: page header + content + Command Dock (AM `y5` + `Fc`). */
+function WorkspaceMain({ tab, view }: { tab: WorkspaceTab; view: TabView }) {
+  return (
+    <div class="relative flex min-h-0 min-w-0 flex-1 flex-col" data-workspace-pane="primary">
+      <div {...tabPanelProps(TAB_ID_PREFIX, tab)} class="min-h-0 flex-1 overflow-y-auto outline-none" data-workspace-scroll="" style={{ paddingBottom: view.dock ? (view.dockExpanded ? "19rem" : "4.375rem") : undefined }}>
+        <div class={cn("mx-auto grid w-full grid-cols-[minmax(0,1fr)] content-start gap-4 px-5 py-5 mobile:px-3", view.layout === "character-grid" ? "max-w-none" : "max-w-190")} data-workspace-content="">
+          <PageHeader title={view.title} count={view.count} end={view.headerEnd} />
+          {view.content}
+        </div>
+      </div>
+      {view.notices ? <div class="pointer-events-none absolute inset-x-0 bottom-16 z-40 grid justify-items-center gap-1.5 px-5" data-workspace-progress-notices="">{view.notices}</div> : null}
+      {view.dock ? <CommandDock expanded={view.dockExpanded}>{view.dock}</CommandDock> : null}
+    </div>
+  );
+}
+
+/** Secondary (right) pane (AM secondary `y5`). */
+function WorkspaceSecondary({ secondary, mobile = false }: { secondary: NonNullable<TabView["secondary"]>; mobile?: boolean }) {
+  return (
+    <div class="relative flex min-h-0 min-w-0 flex-1 flex-col animate-mobile-workspace-in" data-workspace-pane="secondary">
+      {!mobile ? (
+        <header class="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3" data-workspace-secondary-header="">
+          {secondary.back ? <IconButton label={secondary.back.label} title={secondary.back.label} onClick={secondary.back.onClick}><ArrowLeftIcon /></IconButton> : null}
+          <h2 class="min-w-0 flex-1 truncate text-sm font-extrabold">{secondary.title}</h2>
+        </header>
+      ) : null}
+      <div class="min-h-0 flex-1 overflow-y-auto" data-workspace-scroll="" style={{ paddingBottom: secondary.dock ? (secondary.dockExpanded ? "19rem" : "4.375rem") : undefined }}>
+        <div class="grid content-start gap-3 p-4 mobile:p-3">{secondary.content}</div>
+      </div>
+      {secondary.dock ? <CommandDock expanded={secondary.dockExpanded}>{secondary.dock}</CommandDock> : null}
+    </div>
+  );
+}
+
+/** Main / secondary split with a keyboard + pointer separator (AM 152814-152853). */
+function SplitPanes({ ratio, onCommit, first, second, label = SHELL_LABELS.splitAdjust }: { ratio: number; onCommit: (ratio: number) => void; first: ComponentChildren; second: ComponentChildren; label?: string }) {
+  const [live, setLive] = useState(ratio);
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => setLive(ratio), [ratio]);
+  const clamp = (value: number) => Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, value));
+  const commit = (value: number) => {
+    const next = clamp(value);
+    setLive(next);
+    onCommit(next);
+  };
+  return (
+    <div ref={container} class="grid min-h-0 min-w-0 flex-1" style={{ gridTemplateColumns: `minmax(0,${live}fr) 6px minmax(0,${1 - live}fr)` }} data-workspace-split="">
+      <div class="flex min-h-0 min-w-0">{first}</div>
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={label}
+        aria-valuemin={35}
+        aria-valuemax={65}
+        aria-valuenow={Math.round(live * 100)}
+        tabIndex={0}
+        class="cursor-col-resize bg-border/40 outline-none hover:bg-primary/30 focus-visible:bg-primary/50"
+        onKeyDown={(event) => {
+          const step = event.shiftKey ? 0.05 : 0.02;
+          if (event.key === "ArrowLeft") { event.preventDefault(); commit(live - step); }
+          else if (event.key === "ArrowRight") { event.preventDefault(); commit(live + step); }
+          else if (event.key === "Home") { event.preventDefault(); commit(SPLIT_MIN); }
+          else if (event.key === "End") { event.preventDefault(); commit(SPLIT_MAX); }
+        }}
+        onPointerDown={(event) => {
+          const element = event.currentTarget as HTMLElement;
+          element.setPointerCapture?.(event.pointerId);
+          const rect = container.current!.getBoundingClientRect();
+          let value = live;
+          const move = (e: PointerEvent) => {
+            value = clamp((e.clientX - rect.left) / Math.max(1, rect.width));
+            setLive(value);
+          };
+          const up = () => {
+            element.removeEventListener("pointermove", move);
+            element.removeEventListener("pointerup", up);
+            element.removeEventListener("pointercancel", up);
+            commit(value);
+          };
+          element.addEventListener("pointermove", move);
+          element.addEventListener("pointerup", up);
+          element.addEventListener("pointercancel", up);
+        }}
+      />
+      <div class="flex min-h-0 min-w-0">{second}</div>
+    </div>
+  );
+}
+
+/** Sidebar width resizer (AM 152559-152597; local state, not persisted). */
+function WidthResizer({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+  const clamp = (v: number) => Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(v)));
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={SHELL_LABELS.widthAdjust(label)}
+      aria-valuemin={SIDEBAR_MIN}
+      aria-valuemax={SIDEBAR_MAX}
+      aria-valuenow={value}
+      tabIndex={0}
+      class="absolute inset-y-0 right-0 z-20 w-1.5 cursor-col-resize outline-none hover:bg-primary/30 focus-visible:bg-primary/50"
+      onKeyDown={(event) => {
+        const step = event.shiftKey ? 24 : 8;
+        if (event.key === "ArrowLeft") { event.preventDefault(); onChange(clamp(value - step)); }
+        else if (event.key === "ArrowRight") { event.preventDefault(); onChange(clamp(value + step)); }
+        else if (event.key === "Home") { event.preventDefault(); onChange(SIDEBAR_MIN); }
+        else if (event.key === "End") { event.preventDefault(); onChange(SIDEBAR_MAX); }
+      }}
+      onPointerDown={(event) => {
+        const element = event.currentTarget as HTMLElement;
+        element.setPointerCapture?.(event.pointerId);
+        const startX = event.clientX;
+        const start = value;
+        const move = (e: PointerEvent) => onChange(clamp(start + e.clientX - startX));
+        const up = () => {
+          element.removeEventListener("pointermove", move);
+          element.removeEventListener("pointerup", up);
+        };
+        element.addEventListener("pointermove", move);
+        element.addEventListener("pointerup", up);
+      }}
+    />
   );
 }
 
@@ -247,7 +529,7 @@ function SettingsNavigation({ active, developerMode, onSelect, onBack }: {
                       aria-current={current ? "page" : undefined}
                       onClick={() => onSelect(item.id)}
                       class={cn(
-                        "flex h-9 w-full items-center rounded-md px-2.5 text-left text-xs font-bold text-muted-foreground outline-none transition-colors hover:bg-surface-navigation-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/55",
+                        "flex h-9 w-full items-center rounded-md px-2.5 text-left text-xs font-bold text-muted-foreground outline-none transition-colors hover:bg-surface-navigation-hover hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/55 max-md:h-11",
                         current && "bg-surface-navigation-selected text-selected-foreground hover:bg-surface-navigation-selected"
                       )}
                     >
@@ -264,24 +546,17 @@ function SettingsNavigation({ active, developerMode, onSelect, onBack }: {
   );
 }
 
-function RosterPlaceholder() {
+function ConnectionError({ message, onRetry, onClose }: { message: string; onRetry: () => void; onClose: () => void }) {
   return (
-    <div class="flex h-full min-h-0 flex-col">
-      <header class="flex h-12 shrink-0 items-center gap-2 px-3">
-        <UsersIcon className="text-muted-foreground" />
-        <h2 class="text-xs font-extrabold">{SHELL_LABELS.rosterTitle}</h2>
-      </header>
-      <div class="m-3 rounded-lg bg-card p-4 text-xs leading-relaxed text-muted-foreground">{SHELL_LABELS.rosterPlaceholder}</div>
-    </div>
-  );
-}
-
-function WorkspacePlaceholder({ tab }: { tab: WorkspaceTab }) {
-  const definition = WORKSPACE_TABS.find((entry) => entry.id === tab)!;
-  return (
-    <div {...tabPanelProps(TAB_ID_PREFIX, tab)} class="mx-auto grid w-full max-w-190 content-start gap-4 p-5 outline-none">
-      <h1 class="text-lg leading-tight font-extrabold">{definition.label}</h1>
-      <Placeholder>{definition.description}</Placeholder>
+    <div class="grid h-full w-full place-items-center bg-workspace-pane p-6 text-foreground" data-connection-error="">
+      <div class="grid max-w-120 justify-items-center gap-3 text-center">
+        <h1 class="text-lg font-extrabold">{SHELL_LABELS.connectionFailed}</h1>
+        <p class="text-xs text-muted-foreground" role="alert">{message}</p>
+        <div class="flex gap-2">
+          <Button onClick={onRetry}>{SHELL_LABELS.retry}</Button>
+          <Button variant="ghost" onClick={onClose}>{SHELL_LABELS.close}</Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -298,5 +573,25 @@ function MobileDrawer({ open, label, onClose, children }: { open: boolean; label
         {children}
       </div>
     </div>
+  );
+}
+
+/** Mobile full-screen character picker (AM charx picker dialog). */
+function CharxPickerDialog({ open, onClose, onSelect, onSettings }: { open: boolean; onClose: () => void; onSelect: (id: string) => void; onSettings: () => void }) {
+  const panel = useRef<HTMLElement>(null);
+  useLayer(open, onClose);
+  useFocusTrap(panel, open);
+  if (!open) return null;
+  return (
+    <section ref={panel} role="dialog" aria-modal="true" aria-label={ROSTER_LABELS.characterSelection} class="fixed inset-0 z-90 flex flex-col bg-workspace-pane animate-mobile-workspace-in">
+      <header class="flex h-14 shrink-0 items-center gap-1 border-b border-border px-2">
+        <IconButton label={ROSTER_LABELS.backToWorkspace} onClick={onClose}><ArrowLeftIcon /></IconButton>
+        <h2 class="min-w-0 flex-1 truncate px-1 text-sm font-extrabold">{ROSTER_LABELS.characterSelection}</h2>
+        <IconButton label={ROSTER_LABELS.settings} data-charx-settings="" onClick={onSettings}><SettingsIcon /></IconButton>
+      </header>
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        <CharxPickerGrid onSelect={onSelect} />
+      </div>
+    </section>
   );
 }

@@ -1,32 +1,33 @@
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
 import { render } from "preact";
-import type { Config } from "./shared/config.js";
 import { respondToAvatarImageRequest } from "./frontend/avatar-image.js";
-import { fetchParserConnections } from "./frontend/api.js";
-import { applyInlayDisplaySettings } from "./frontend/inlay-display.js";
-import { CLEANUP_KEY, DRAWER_TAB_OPTIONS, HOST_STYLES } from "./frontend/constants.js";
-import type { BackendMessage } from "./frontend/contracts.js";
-import { routeBackendMessage } from "./frontend/message-router.js";
-import { installInlayLightbox } from "./frontend/lightbox.js";
-import { installInlayFab } from "./frontend/fab.js";
-import { createInlayGallery } from "./frontend/gallery.js";
-import { cleanupModalStyles } from "./frontend/modal.js";
+import { CLEANUP_KEY, DRAWER_TAB_OPTIONS } from "./frontend/constants.js";
+import { installInlayFab, loadFabCorner, saveFabCorner, type FabCorner } from "./frontend/fab.js";
 import { INPUT_BAR_ACTION_ID, OVERLAY_ROOT_CLASS } from "./frontend/overlay/constants.js";
-import { createOverlayController } from "./frontend/overlay/controller.js";
+import { createOverlayController, type OverlayController } from "./frontend/overlay/controller.js";
 import { LAUNCHER_LABELS } from "./frontend/overlay/labels.js";
 import { LauncherPanel } from "./frontend/overlay/launcher.js";
 import { FrontendStore } from "./frontend/overlay/store.js";
 import { OVERLAY_CSS } from "./frontend/overlay/styles/index.js";
+import { RpcClient, spindleTransport } from "./frontend/rpc/client.js";
+import { AppController } from "./frontend/state/app-state.js";
+import { installChatSide } from "./frontend/chat/index.js";
+import { answerFetchBridge } from "./frontend/fetch-bridge.js";
+import { createZoomViewer, type ZoomViewer } from "./frontend/zoom/index.js";
+import { isFetchBridgeRequest } from "./shared/contract/bridge.js";
 
-export function setup(ctx: SpindleFrontendContext) {
+/** Handles exposed to dev tools (preview page, tests). */
+export type FrontendHandles = { app: AppController; client: RpcClient; overlay: OverlayController; zoom: ZoomViewer };
+export type SetupOptions = { onReady?: (handles: FrontendHandles) => void };
+
+export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
   const previousCleanup = (globalThis as Record<string, unknown>)[CLEANUP_KEY];
   if (typeof previousCleanup === "function") previousCleanup();
 
+  const client = new RpcClient(spindleTransport(ctx), { clientId: "ui" });
+  const app = new AppController(client, { surface: "overlay" });
   const store = new FrontendStore();
-  const removeStyle = ctx.dom.addStyle(HOST_STYLES);
   const removeOverlayStyle = ctx.dom.addStyle(OVERLAY_CSS);
-  const removeLightbox = installInlayLightbox(ctx);
-  const gallery = createInlayGallery(ctx);
 
   function activeChatId(): string {
     try {
@@ -35,32 +36,39 @@ export function setup(ctx: SpindleFrontendContext) {
       return "";
     }
   }
-
-  function requestState(chatId = activeChatId()): void {
-    store.set({ chatId });
-    ctx.sendToBackend({ type: "get_state", chatId });
-  }
-
-  function patchConfig(patch: Partial<Config>): void {
-    store.set({ config: { ...store.get().config, ...patch } });
-    ctx.sendToBackend({ type: "set_config", patch, chatId: activeChatId() });
-    scheduleInlayDisplayRefresh();
-  }
+  store.set({ chatId: activeChatId() });
 
   const overlay = createOverlayController(ctx, {
     store,
-    patchConfig,
+    app,
     onHostFallback: (kind, error) => {
       console.warn(`[Inlay Illustrator] overlay mount fell back to ${kind}:`, error);
     }
   });
 
-  // Launcher 1: the drawer tab is a small status panel with an "Open" button.
+  // Chat side: zoom viewer + controls around baked illustrations.
+  const zoom = createZoomViewer(ctx, app);
+  const removeChatSide = installChatSide(ctx, app, { openZoom: (target) => zoom.open(target), getActiveChatId: activeChatId });
+
+  // FAB corner is a device preference; the launcher panel edits it.
+  const cornerListeners = new Set<(corner: FabCorner) => void>();
+  const fabCorner = {
+    get: () => loadFabCorner(),
+    set: (corner: FabCorner) => {
+      saveFabCorner(corner);
+      for (const listener of cornerListeners) listener(corner);
+    }
+  };
+
+  // Launcher 1: the drawer tab is a status panel with "Open" buttons.
   const tab = ctx.ui.registerDrawerTab(DRAWER_TAB_OPTIONS);
   const launcherRoot = document.createElement("div");
   launcherRoot.className = OVERLAY_ROOT_CLASS;
   tab.root.replaceChildren(launcherRoot);
-  render(<LauncherPanel store={store} onOpen={() => overlay.open()} />, launcherRoot);
+  render(
+    <LauncherPanel app={app} store={store} fabCorner={fabCorner} onOpen={() => overlay.open()} onOpenSettings={() => overlay.open({ settings: true })} />,
+    launcherRoot
+  );
 
   // Launcher 2: an input-bar action (optional host feature).
   let inputBarAction: ReturnType<SpindleFrontendContext["ui"]["registerInputBarAction"]> | null = null;
@@ -77,74 +85,81 @@ export function setup(ctx: SpindleFrontendContext) {
     console.warn("[Inlay Illustrator] input-bar action unavailable:", error);
   }
 
-  // Launcher 3: the floating button's "settings" item opens the overlay.
-  const removeFab = installInlayFab(ctx, {
-    getCorner: () => store.get().config.fabCorner,
-    openGallery: () => gallery.open(activeChatId()),
-    openSettings: () => overlay.open({ settings: true })
-  });
-
-  let inlayDisplayTimer: ReturnType<typeof setTimeout> | null = null;
-  function scheduleInlayDisplayRefresh(delayMs = 40): void {
-    if (inlayDisplayTimer) clearTimeout(inlayDisplayTimer);
-    inlayDisplayTimer = setTimeout(() => {
-      inlayDisplayTimer = null;
-      try {
-        applyInlayDisplaySettings(store.get().config);
-      } catch {
-        // The chat DOM may not be mounted yet; the next pass retries.
-      }
-    }, delayMs);
+  /** Latest eligible assistant message of the active chat (chatDom states are in chat order). */
+  async function latestTarget(): Promise<{ chatId: string; messageId: string; swipeIndex: number } | null> {
+    const chatId = activeChatId();
+    if (!chatId) return null;
+    // getMessageStates without ids only returns messages that already have data; ask for the last mounted bubbles too.
+    let messageIds: string[] | undefined;
+    try {
+      messageIds = ctx.dom.listMessageElements().map((bubble) => bubble.messageId).filter(Boolean).slice(-6);
+    } catch {
+      messageIds = undefined;
+    }
+    const { messages } = await app.call("chatDom.getMessageStates", { chatId, ...(messageIds?.length ? { messageIds } : {}) });
+    const last = [...messages].reverse().find((message) => message.eligible);
+    return last ? { chatId, messageId: last.messageId, swipeIndex: last.swipeIndex } : null;
+  }
+  async function generateLatest(attemptKind?: "reroll"): Promise<void> {
+    try {
+      const target = await latestTarget();
+      if (target) await app.call("generation.start", { ...target, ...(attemptKind ? { attemptKind } : {}) });
+    } catch (error) {
+      app.notifyError(error);
+    }
   }
 
-  const unsub = ctx.onBackendMessage((payload: unknown) => {
-    const message = payload as BackendMessage & Record<string, unknown>;
-    if (message.type === "avatar_image_request") {
-      void respondToAvatarImageRequest(message, (response) => ctx.sendToBackend(response));
+  // Launcher 3: the floating button (generate / reroll / gallery / open the overlay).
+  const removeFab = installInlayFab(ctx, {
+    getCorner: () => fabCorner.get(),
+    openGallery: () => {
+      void zoom.openChat(activeChatId()).then((opened) => {
+        if (!opened) app.notify({ tone: "info", message: "No images in this chat yet." });
+      });
+    },
+    openSettings: () => overlay.open(),
+    generateLatest: () => generateLatest(),
+    rerollLatest: () => generateLatest("reroll"),
+    subscribeBusy: (listener) => app.store.subscribe(() => listener(Object.keys(app.state.generationJobs).length > 0)),
+    subscribeCorner: (listener) => {
+      cornerListeners.add(listener);
+      return () => cornerListeners.delete(listener);
+    }
+  });
+
+  // Non-RPC backend messages: fetch bridge and the legacy avatar bridge.
+  const unsubForeign = client.onForeign((payload: unknown) => {
+    if (isFetchBridgeRequest(payload)) {
+      void answerFetchBridge(payload).then((response) => ctx.sendToBackend(response));
       return;
     }
-    routeBackendMessage(message, activeChatId, {
-      replaceConfig: (config) => { store.set({ config }); scheduleInlayDisplayRefresh(0); },
-      replaceState: (next) => {
-        store.set({
-          config: next.config,
-          parserConnections: next.parserConnections,
-          imageConnections: next.imageConnections,
-          status: next.status
-        });
-        scheduleInlayDisplayRefresh(0);
-      },
-      updateStatus: (status) => store.set({ status }),
-      refreshParserConnections: () => {
-        void fetchParserConnections().then((parserConnections) => {
-          if (parserConnections.length > 0) store.set({ parserConnections });
-        });
-      }
-    });
-    scheduleInlayDisplayRefresh();
+    const message = payload as { type?: unknown };
+    if (message?.type === "avatar_image_request") {
+      void respondToAvatarImageRequest(message as never, (response) => ctx.sendToBackend(response));
+    }
   });
   const unsubChatSwitched = ctx.events.on("CHAT_SWITCHED", (payload) => {
     const chatId = (payload as { chatId?: unknown } | null)?.chatId;
-    requestState(typeof chatId === "string" ? chatId : "");
-    scheduleInlayDisplayRefresh(80);
+    store.set({ chatId: typeof chatId === "string" ? chatId : "" });
+    void app.call("session.getStatus", {}).then((status) => app.store.patch({ status })).catch(() => undefined);
   });
 
-  requestState();
+  void app.init();
   ctx.ready();
+  options.onReady?.({ app, client, overlay, zoom });
 
   const cleanup = () => {
-    unsub();
+    unsubForeign();
     unsubChatSwitched();
-    if (inlayDisplayTimer) clearTimeout(inlayDisplayTimer);
+    removeChatSide();
+    zoom.destroy();
     removeInputBarClick?.();
     inputBarAction?.destroy();
     overlay.destroy();
     removeFab();
-    gallery.destroy();
-    cleanupModalStyles();
-    removeLightbox();
     render(null, launcherRoot);
-    removeStyle();
+    app.destroy();
+    client.destroy();
     removeOverlayStyle();
     tab.destroy();
     if ((globalThis as Record<string, unknown>)[CLEANUP_KEY] === cleanup) {

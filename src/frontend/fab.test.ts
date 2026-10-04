@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_CONFIG, normalizeFabCorner } from "../shared/config.js";
 import {
+  DEFAULT_FAB_CORNER,
+  normalizeFabCorner,
   fabButtonEdges,
   fabButtonRect,
   fabMenuPosition,
@@ -62,7 +63,7 @@ describe("FAB corner placement helpers", () => {
     expect(normalizeFabCorner("Bottom-Right")).toBe("bottom-right");
     expect(normalizeFabCorner("top-LEFT ")).toBe("top-left");
     expect(normalizeFabCorner("invalid")).toBe("bottom-right");
-    expect(DEFAULT_CONFIG.fabCorner).toBe("bottom-right");
+    expect(DEFAULT_FAB_CORNER).toBe("bottom-right");
   });
 });
 
@@ -174,16 +175,15 @@ describe("FAB turn-aware behavior and hover animation", () => {
       events: { on: () => () => {} }
     };
 
-    const destroy = installInlayFab(ctx as any, { getCorner: () => "bottom-right", openGallery: () => {} });
+    const destroy = installInlayFab(ctx as any, { getCorner: () => "bottom-right", openGallery: () => {}, generateLatest: () => { sent.push("generate"); }, rerollLatest: () => { sent.push("reroll"); } });
     const button = body.children[0];
 
     // With no images in DOM, empty turn class is set
     expect(button.classList.contains("inlay-fab-empty-turn")).toBeTrue();
 
-    // Clicking when no images exist triggers generate_latest directly
+    // Clicking when no images exist generates for the latest message
     button.click();
-    expect(sent.length).toBe(1);
-    expect(sent[0]).toEqual({ type: "generate_latest", chatId: "chat-42" });
+    expect(sent).toEqual(["generate"]);
 
     destroy();
   });
@@ -212,7 +212,7 @@ describe("FAB turn-aware behavior and hover animation", () => {
       events: { on: () => () => {} }
     };
 
-    const destroy = installInlayFab(ctx as any, { getCorner: () => "bottom-right", openGallery: () => {} });
+    const destroy = installInlayFab(ctx as any, { getCorner: () => "bottom-right", openGallery: () => {}, generateLatest: () => {}, rerollLatest: () => {} });
     const button = body.children[0];
 
     // Because the latest message has NO images, it must be empty-turn
@@ -249,7 +249,9 @@ describe("FAB turn-aware behavior and hover animation", () => {
     const destroy = installInlayFab(ctx as any, {
       getCorner: () => "bottom-right",
       openGallery: () => { openedGallery = true; },
-      openSettings: () => { openedSettings = true; }
+      openSettings: () => { openedSettings = true; },
+      generateLatest: () => {},
+      rerollLatest: () => { sent.push("reroll"); }
     });
     const button = body.children[0];
     const menu = body.children[1];
@@ -261,11 +263,11 @@ describe("FAB turn-aware behavior and hover animation", () => {
     button.click();
     expect(menu.hidden).toBeFalse();
 
-    // Contains 4 menu items: Reroll, Sidecar, Gallery, Settings
-    expect(menu.children.length).toBe(4);
+    // Contains 3 menu items: Reroll, Gallery, Open Inlay Illustrator
+    expect(menu.children.length).toBe(3);
 
     // Click Gallery item
-    const galleryItem = menu.children[2];
+    const galleryItem = menu.children[1];
     galleryItem.click();
     expect(openedGallery).toBeTrue();
     expect(menu.hidden).toBeTrue();
@@ -273,7 +275,7 @@ describe("FAB turn-aware behavior and hover animation", () => {
     // Reopen menu and click Settings item
     button.click();
     expect(menu.hidden).toBeFalse();
-    const settingsItem = menu.children[3];
+    const settingsItem = menu.children[2];
     settingsItem.click();
     expect(openedSettings).toBeTrue();
     expect(menu.hidden).toBeTrue();
