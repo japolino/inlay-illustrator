@@ -1,18 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { Config } from "../shared/config.js";
-import { updateCache, upsertCharacterTag } from "./memory.js";
 import {
+  compactWorkflowParameters,
   getConfig,
-  isGeneratedRecordReference,
-  loadGeneratedRecord,
-  migrateLegacyGeneratedRecords,
-  rebuildGeneratedImageIndex,
+  hydrateWorkflowParameters,
+  readJson,
   setConfig,
-  storeGeneratedRecord,
-  updateState
+  updateJson
 } from "./storage.js";
-import type { LegacyGeneratedRecord as GeneratedRecord } from "./generated-record-legacy.js";
-import type { State } from "./types.js";
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -35,8 +30,10 @@ function deferred<T>(): Deferred<T> {
   return { promise, resolve, reject };
 }
 
-function emptyState(): State {
-  return { characterAppearance: {}, generated: {} };
+type Doc = { items: Record<string, string> };
+
+function emptyDoc(): Doc {
+  return { items: {} };
 }
 
 class MemoryUserStorage {
@@ -51,12 +48,12 @@ class MemoryUserStorage {
     return JSON.stringify([userId ?? null, path]);
   }
 
-  seedState(chatId: string, userId: string | undefined, state: State): void {
-    this.files.set(this.key(`states/${chatId}.json`, userId), JSON.stringify(state));
+  seed(path: string, userId: string | undefined, value: unknown): void {
+    this.files.set(this.key(path, userId), JSON.stringify(value));
   }
 
-  seedRawState(chatId: string, userId: string | undefined, contents: string): void {
-    this.files.set(this.key(`states/${chatId}.json`, userId), contents);
+  seedRaw(path: string, userId: string | undefined, contents: string): void {
+    this.files.set(this.key(path, userId), contents);
   }
 
   storedConfig(userId?: string): Config {
@@ -65,10 +62,10 @@ class MemoryUserStorage {
     return JSON.parse(contents) as Config;
   }
 
-  storedState(chatId: string, userId?: string): State {
-    const contents = this.files.get(this.key(`states/${chatId}.json`, userId));
-    if (contents === undefined) throw new Error(`No state stored for ${userId || "default"}/${chatId}.`);
-    return JSON.parse(contents) as State;
+  stored<T>(path: string, userId?: string): T {
+    const contents = this.files.get(this.key(path, userId));
+    if (contents === undefined) throw new Error(`No file stored for ${userId || "default"}/${path}.`);
+    return JSON.parse(contents) as T;
   }
 
   gateNextWrite(): WriteGate {
@@ -132,278 +129,119 @@ async function flushAsyncWork(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
 
-describe("serialized state updates", () => {
-  test("merges overlapping manual saves, automatic memory, and generated records into fresh state", async () => {
-    storage.seedState("chat-1", "user-1", emptyState());
+const A = "chats/chat-1/doc.json";
+const B = "chats/chat-2/doc.json";
+const update = (path: string, userId: string, mutate: (doc: Doc) => void) => updateJson<Doc>(path, emptyDoc, mutate, userId);
+
+describe("serialized JSON updates", () => {
+  test("queues overlapping updates of one file and applies each to fresh data", async () => {
+    storage.seed(A, "user-1", emptyDoc());
     const firstWrite = storage.gateNextWrite();
-
-    const manualSave = updateState("chat-1", "user-1", (state) => {
-      upsertCharacterTag(state, "", "Alice", "red hair, standing");
-    });
+    const first = update(A, "user-1", (doc) => { doc.items.a = "1"; });
     await firstWrite.entered.promise;
-
-    const secondManualSave = updateState("chat-1", "user-1", (state) => {
-      upsertCharacterTag(state, "", "Clara", "green eyes");
-    });
-    const automaticMemory = updateState("chat-1", "user-1", (state) => {
-      updateCache(state.characterAppearance, {
-        scenes: [{ shots: [{ paragraph: 1, characters: [{ name: "Bob", appearance: "black hair, portrait" }] }] }]
-      });
-    });
-    const generatedRecord = updateState("chat-1", "user-1", (state) => {
-      state.generated["chat-1:message-1:0"] = { imageIds: ["image-1"] };
-    });
-
+    const second = update(A, "user-1", (doc) => { doc.items.b = "2"; });
+    const third = update(A, "user-1", (doc) => { doc.items.c = "3"; });
     await flushAsyncWork();
     expect(storage.readCalls).toHaveLength(1);
     expect(storage.writeCalls).toHaveLength(1);
-
     firstWrite.release.resolve(undefined);
-    await Promise.all([manualSave, secondManualSave, automaticMemory, generatedRecord]);
-
-    expect(storage.storedState("chat-1", "user-1")).toEqual({
-      characterAppearance: { Alice: "red hair, standing", Clara: "green eyes", Bob: "black hair" },
-      manualCharacterAppearance: { Alice: "red hair, standing", Clara: "green eyes" },
-      generated: { "chat-1:message-1:0": { imageIds: ["image-1"] } }
-    });
-    expect(storage.readCalls).toHaveLength(4);
-    expect(storage.writeCalls).toHaveLength(4);
+    await Promise.all([first, second, third]);
+    expect(storage.stored<Doc>(A, "user-1")).toEqual({ items: { a: "1", b: "2", c: "3" } });
+    expect(storage.writeCalls).toHaveLength(3);
   });
 
-  test("does not block a different chat or user behind a held update", async () => {
-    storage.seedState("chat-1", "user-1", emptyState());
-    storage.seedState("chat-2", "user-1", emptyState());
-    storage.seedState("chat-1", "user-2", emptyState());
+  test("does not block a different file or user behind a held update", async () => {
     const heldWrite = storage.gateNextWrite();
-
-    const held = updateState("chat-1", "user-1", (state) => {
-      state.characterAppearance.Held = "red hair";
-    });
+    const held = update(A, "user-1", (doc) => { doc.items.held = "1"; });
     await heldWrite.entered.promise;
-
-    let otherChatFinished = false;
-    let otherUserFinished = false;
-    const otherChat = updateState("chat-2", "user-1", (state) => {
-      state.characterAppearance.OtherChat = "blue hair";
-    }).then((state) => {
-      otherChatFinished = true;
-      return state;
-    });
-    const otherUser = updateState("chat-1", "user-2", (state) => {
-      state.characterAppearance.OtherUser = "green hair";
-    }).then((state) => {
-      otherUserFinished = true;
-      return state;
-    });
-
+    let otherFile = false;
+    let otherUser = false;
+    const p1 = update(B, "user-1", (doc) => { doc.items.other = "1"; }).then(() => { otherFile = true; });
+    const p2 = update(A, "user-2", (doc) => { doc.items.other = "2"; }).then(() => { otherUser = true; });
     await flushAsyncWork();
-    expect(otherChatFinished).toBe(true);
-    expect(otherUserFinished).toBe(true);
-    expect(storage.storedState("chat-2", "user-1").characterAppearance).toEqual({ OtherChat: "blue hair" });
-    expect(storage.storedState("chat-1", "user-2").characterAppearance).toEqual({ OtherUser: "green hair" });
-
+    expect(otherFile).toBe(true);
+    expect(otherUser).toBe(true);
     heldWrite.release.resolve(undefined);
-    await Promise.all([held, otherChat, otherUser]);
+    await Promise.all([held, p1, p2]);
   });
 
-  test("rejects a case-insensitive add collision against the latest committed state", async () => {
-    storage.seedState("chat-1", "user-1", emptyState());
-    const firstWrite = storage.gateNextWrite();
-
-    const first = updateState("chat-1", "user-1", (state) => {
-      upsertCharacterTag(state, "", "Alice", "red hair");
-    });
-    await firstWrite.entered.promise;
-    const colliding = updateState("chat-1", "user-1", (state) => {
-      upsertCharacterTag(state, "", "alice", "blue hair");
-    });
-    const collisionResult = colliding.then(
-      () => null,
-      (error: unknown) => error
-    );
-
-    firstWrite.release.resolve(undefined);
-    await expect(first).resolves.toMatchObject({ characterAppearance: { Alice: "red hair" } });
-    const collisionError = await collisionResult;
-    expect(collisionError).toBeInstanceOf(Error);
-    expect((collisionError as Error).message).toBe('A character named "alice" already exists.');
-    expect(storage.storedState("chat-1", "user-1").characterAppearance).toEqual({ Alice: "red hair" });
-    expect(storage.writeCalls).toHaveLength(1);
-  });
-
-  test("propagates a state read failure without writing a fallback state", async () => {
-    const original = { characterAppearance: { Alice: "red hair" }, generated: { existing: { imageIds: ["old"] } } };
-    storage.seedState("chat-1", "user-1", original);
-    storage.failNextRead = new Error("state read failed");
-
-    const update = updateState("chat-1", "user-1", (state) => {
-      state.characterAppearance.Bob = "black hair";
-    });
-
-    await expect(update).rejects.toThrow("state read failed");
+  test("propagates a read failure without writing a fallback", async () => {
+    storage.seed(A, "user-1", { items: { keep: "1" } });
+    storage.failNextRead = new Error("read failed");
+    await expect(update(A, "user-1", (doc) => { doc.items.x = "1"; })).rejects.toThrow("read failed");
     expect(storage.writeCalls).toHaveLength(0);
-    expect(storage.storedState("chat-1", "user-1")).toEqual(original);
+    expect(storage.stored<Doc>(A, "user-1")).toEqual({ items: { keep: "1" } });
   });
 
-  test("rejects malformed stored state without replacing it", async () => {
-    storage.seedRawState("chat-1", "user-1", "{not valid JSON");
-
-    const update = updateState("chat-1", "user-1", (state) => {
-      state.characterAppearance.Bob = "black hair";
-    });
-
-    await expect(update).rejects.toBeInstanceOf(SyntaxError);
+  test("rejects malformed stored JSON without replacing it", async () => {
+    storage.seedRaw(A, "user-1", "{not valid JSON");
+    await expect(update(A, "user-1", (doc) => { doc.items.x = "1"; })).rejects.toBeInstanceOf(SyntaxError);
     expect(storage.writeCalls).toHaveLength(0);
-    expect(storage.files.values().next().value).toBe("{not valid JSON");
   });
 
-  test("continues a same-scope queue after a write failure", async () => {
-    storage.seedState("chat-1", "user-1", emptyState());
-    storage.failNextWrite = new Error("state write failed");
-
-    const failed = updateState("chat-1", "user-1", (state) => {
-      state.characterAppearance.Alice = "red hair";
-    });
-    const recovered = updateState("chat-1", "user-1", (state) => {
-      state.characterAppearance.Bob = "black hair";
-    });
-
-    await expect(failed).rejects.toThrow("state write failed");
-    await expect(recovered).resolves.toMatchObject({ characterAppearance: { Bob: "black hair" } });
-    expect(storage.storedState("chat-1", "user-1").characterAppearance).toEqual({ Bob: "black hair" });
+  test("continues the queue after a write failure or a throwing mutator", async () => {
+    storage.failNextWrite = new Error("write failed");
+    const failedWrite = update(A, "user-1", (doc) => { doc.items.a = "1"; });
+    const failure = new Error("mutation rejected");
+    const failedMutation = update(A, "user-1", () => { throw failure; }).then(() => null, (error: unknown) => error);
+    const recovered = update(A, "user-1", (doc) => { doc.items.b = "2"; });
+    await expect(failedWrite).rejects.toThrow("write failed");
+    expect(await failedMutation).toBe(failure);
+    await expect(recovered).resolves.toEqual({ items: { b: "2" } });
     expect(storage.writeCalls).toHaveLength(2);
   });
 
-  test("does not write a throwing mutator and still runs the next queued mutation", async () => {
-    storage.seedState("chat-1", "user-1", emptyState());
-    const failure = new Error("mutation rejected");
-
-    const failed = updateState("chat-1", "user-1", (state) => {
-      state.characterAppearance.Alice = "red hair";
-      throw failure;
-    });
-    const recovered = updateState("chat-1", "user-1", (state) => {
-      state.characterAppearance.Bob = "black hair";
-    });
-
-    await expect(failed).rejects.toBe(failure);
-    await expect(recovered).resolves.toMatchObject({ characterAppearance: { Bob: "black hair" } });
-    expect(storage.storedState("chat-1", "user-1").characterAppearance).toEqual({ Bob: "black hair" });
-    expect(storage.writeCalls).toHaveLength(1);
+  test("lenient reads fall back on failure", async () => {
+    storage.seedRaw(A, "user-1", "{broken");
+    await expect(readJson<Doc>(A, emptyDoc(), "user-1")).resolves.toEqual({ items: {} });
   });
 });
 
 describe("serialized configuration updates", () => {
   test("keeps display reads lenient but rejects updates after a storage read failure", async () => {
-    storage.files.set(JSON.stringify(["user-1", "config.json"]), JSON.stringify({ customParserInstructions: "original" }));
+    storage.seed("config.json", "user-1", { fabCorner: "top-left" });
     storage.failNextRead = new Error("config read failed");
-    await expect(getConfig("user-1")).resolves.toMatchObject({ customParserInstructions: "" });
-
+    await expect(getConfig("user-1")).resolves.toMatchObject({ fabCorner: "bottom-right" });
     storage.failNextRead = new Error("config read failed");
-    await expect(setConfig({ customParserInstructions: "replacement" }, "user-1")).rejects.toThrow("config read failed");
-    expect(storage.storedConfig("user-1").customParserInstructions).toBe("original");
+    await expect(setConfig({ fabCorner: "top-right" }, "user-1")).rejects.toThrow("config read failed");
+    expect(storage.storedConfig("user-1").fabCorner).toBe("top-left");
     expect(storage.writeCalls).toHaveLength(0);
   });
 
   test("keeps the latest value when rapid field changes overlap", async () => {
     const firstWrite = storage.gateNextWrite();
-    const first = setConfig({ customParserInstructions: "a" }, "user-1");
+    const first = setConfig({ parserModel: "a" }, "user-1");
     await firstWrite.entered.promise;
-
-    const second = setConfig({ customParserInstructions: "ab" }, "user-1");
+    const second = setConfig({ parserModel: "ab" }, "user-1");
     await flushAsyncWork();
     expect(storage.writeCalls).toHaveLength(1);
-
     firstWrite.release.resolve(undefined);
     await Promise.all([first, second]);
-
-    expect(storage.storedConfig("user-1").customParserInstructions).toBe("ab");
+    expect(storage.storedConfig("user-1").parserModel).toBe("ab");
     expect(storage.writeCalls).toHaveLength(2);
   });
 });
 
-describe("compact generated-record storage", () => {
-  function record(): GeneratedRecord {
-    const parameters = {
-      seed: 42,
-      workflow: { "1": { class_type: "Text", inputs: { text: "prompt" } } }
-    };
-    return {
-      chatId: "chat-1",
-      messageId: "message-1",
-      swipeId: 0,
-      prompts: ["positive", "positive two"],
-      negativePrompts: ["negative", "negative two"],
-      perspectiveModes: ["dynamic", "static"],
-      perspectiveSources: ["manual", "adaptive"],
-      imageParameters: [structuredClone(parameters), structuredClone(parameters)],
-      paragraphs: [1, 2],
-      imageIds: ["image-1", "image-2"],
-      imageUrls: ["/one", "/two"],
-      rawJson: { scenes: [] },
-      createdAt: "2026-07-18T00:00:00.000Z"
-    };
-  }
+describe("workflow dedupe", () => {
+  const parameters = () => ({ seed: 42, workflow: { "1": { class_type: "Text", inputs: { text: "prompt" } } } });
 
-  test("stores one deduplicated workflow and hydrates exact reroll parameters", async () => {
-    const original = record();
-    const reference = await storeGeneratedRecord("chat-1", "chat-1:message-1:0", original, "user-1");
-    expect(isGeneratedRecordReference(reference)).toBe(true);
-    const workflowFiles = [...storage.files.keys()].filter((key) => key.includes("workflows/"));
-    expect(workflowFiles).toHaveLength(1);
-
-    const hydrated = await loadGeneratedRecord(reference, "user-1");
-    expect(hydrated?.slots.map((slot) => slot.imageParameters)).toEqual(original.imageParameters);
+  test("stores one deduplicated workflow and hydrates exact parameters", async () => {
+    const first = await compactWorkflowParameters(parameters(), "user-1");
+    const second = await compactWorkflowParameters(parameters(), "user-1");
+    expect(first).toEqual(second);
+    expect([...storage.files.keys()].filter((key) => key.includes("workflows/"))).toHaveLength(1);
+    expect(await compactWorkflowParameters(first, "user-1")).toBe(first);
+    expect(await hydrateWorkflowParameters(first, "user-1")).toEqual(parameters());
   });
 
   test("distinguishes missing and corrupt stored workflows", async () => {
-    const original = record();
-    original.imageParameters = original.imageParameters?.map((parameters) => ({
-      ...parameters,
-      workflow: { "error-probe": { class_type: "WorkflowErrorProbe", inputs: {} } }
-    }));
-    const reference = await storeGeneratedRecord("chat-1", "workflow-errors", original, "user-1");
-    const workflowKey = [...storage.files.keys()].find((key) => key.includes("workflows/"));
-    expect(workflowKey).toBeDefined();
-    if (!workflowKey) return;
-
-    const workflow = storage.files.get(workflowKey)!;
-    storage.files.delete(workflowKey);
-    await expect(loadGeneratedRecord(reference, "user-1")).rejects.toThrow(/Stored ComfyUI workflow .* is unavailable/);
-
-    storage.files.set(workflowKey, "{not valid json");
-    await expect(loadGeneratedRecord(reference, "user-1")).rejects.toBeInstanceOf(SyntaxError);
-    storage.files.set(workflowKey, workflow);
-  });
-
-  test("re-saves progressive records without nesting compact workflow references", async () => {
-    const original = record();
-    const firstReference = await storeGeneratedRecord("chat-progress", "progress-key", original, "user-progress");
-    const compact = await loadGeneratedRecord(firstReference, "user-progress", false);
-    expect(compact).not.toBeNull();
-    if (!compact) return;
-    compact.slots[0]!.imageUrl = "/progressive-result.png";
-    const secondReference = await storeGeneratedRecord("chat-progress", "progress-key", compact, "user-progress");
-    const hydrated = await loadGeneratedRecord(secondReference, "user-progress");
-
-    expect(hydrated?.slots[0]?.imageParameters).toEqual(original.imageParameters?.[0]);
-    expect(hydrated?.slots[0]?.imageUrl).toBe("/progressive-result.png");
-  });
-
-  test("migrates legacy records into compact references and builds direct image indexes", async () => {
-    const state: State = { characterAppearance: {}, generated: { legacy: record() } };
-    await migrateLegacyGeneratedRecords("chat-1", state, "user-1");
-    rebuildGeneratedImageIndex(state);
-
-    expect(isGeneratedRecordReference(state.generated.legacy)).toBe(true);
-    expect(state.generated.legacy).toMatchObject({
-      storageVersion: 3,
-      slots: [
-        { paragraph: 1, imageId: "image-1", imageUrl: "/one" },
-        { paragraph: 2, imageId: "image-2", imageUrl: "/two" }
-      ]
-    });
-    expect(state.generatedImageIndex?.["id:image-2"]).toEqual({ key: "legacy", index: 1 });
-    expect((state.generated.legacy as Record<string, unknown>).prompts).toBeUndefined();
+    const compact = await compactWorkflowParameters({ workflow: { probe: { class_type: "Probe", inputs: {} } } }, "user-1");
+    const key = [...storage.files.keys()].find((entry) => entry.includes("workflows/"))!;
+    const saved = storage.files.get(key)!;
+    storage.files.delete(key);
+    await expect(hydrateWorkflowParameters(compact, "user-1")).rejects.toThrow(/Stored ComfyUI workflow .* is unavailable/);
+    storage.files.set(key, "{not valid json");
+    await expect(hydrateWorkflowParameters(compact, "user-1")).rejects.toBeInstanceOf(SyntaxError);
+    storage.files.set(key, saved);
   });
 });

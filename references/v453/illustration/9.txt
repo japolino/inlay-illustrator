@@ -1,1 +1,0 @@
-{{#when::keep::lb-xnai.scene.comic::tisnot::0}}<!-- lb:require:lb-xnai.lb.format.comic -->{{:else}}<!-- lb:require:lb-xnai.lb.format.scene -->{{/}}

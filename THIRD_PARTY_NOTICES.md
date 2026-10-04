@@ -1,11 +1,18 @@
 # Third-party notices
 
-## Lightboard 4.5.3
+## Asset Maid
 
-Copyright (c) 2026 amonamona. Licensed under [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Inlay Illustrator is being rebuilt as a port of the RisuAI plugin **Asset Maid** (version 0.9.88) to Lumiverse.
 
-The extracted material in `references/v453/`, the source-derived templates, descriptor schema, macro renderer, TOON decoder and prompt compiler in `src/backend/v453/`, and their bundled adaptations retain these terms. The adaptations replace Risu APIs with Lumiverse APIs and add the controls described in `docs/V453_PIPELINE_PORT.md`. Attribution and archive hashes are in `references/v453/README.md`. No endorsement by the original author is implied.
+- Source: https://github.com/acahaAM/Asset-Maid
+- License: the Asset Maid repository does not publish a license file. No license terms are stated there, so no license is claimed or granted here for material derived from it.
+- The port reproduces Asset Maid's behaviour, prompts, data shapes and defaults (see `docs/ARCHITECTURE.md`). It replaces RisuAI APIs with Lumiverse Spindle APIs. No endorsement by the original author is implied.
 
-## TOON
+## Bundled runtime libraries
 
-`@toon-format/toon` 4.1.1: https://github.com/toon-format/toon, MIT license. The complete license is included in `references/TOON-LICENSE.txt`. The backend bundle uses its encoder for stored descriptor history. Active response decoding uses the source-derived Lightboard decoder.
+- Preact (https://preactjs.com), MIT license. Bundled into `dist/frontend.js`.
+- Tailwind CSS (https://tailwindcss.com), MIT license. Used at build time; its generated utility CSS is bundled into `dist/frontend.js`.
+
+## Removed material
+
+Earlier versions bundled material derived from Lightboard 4.5.3 (CC BY-NC-SA 4.0) and used `@toon-format/toon` (MIT). Both were removed with the Lightboard pipeline in 0.10.0.

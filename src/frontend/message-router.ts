@@ -1,90 +1,48 @@
-import { DEFAULT_CONFIG, type Config } from "../shared/config.js";
+import { normalizeConfig, type Config } from "../shared/config.js";
 import type { BackendMessage, ImageConnection, ParserConnection } from "./contracts.js";
 
 export type BackendState = {
   config: Config;
   parserConnections: ParserConnection[];
   imageConnections: ImageConnection[];
-  characterAppearance: Record<string, string>;
   status: string;
 };
 
 export type BackendMessageActions = {
   replaceState(state: BackendState): void;
   replaceConfig(config: Config): void;
-  replaceCharacterMemory(characterAppearance: Record<string, string>, status: string): void;
   updateStatus(status: string): void;
   refreshParserConnections(): void;
-  applyImageGenerationDefaults(): void;
 };
 
+/** Routes chat-scoped backend messages (messages for another chat are ignored). */
 export function routeBackendMessage(
   message: BackendMessage,
   getActiveChatId: () => string,
   actions: BackendMessageActions
 ): void {
+  if (message.chatId && message.chatId !== getActiveChatId()) return;
+
   if (message.type === "config_updated" && message.config) {
-    if (message.chatId && message.chatId !== getActiveChatId()) return;
-    actions.replaceConfig({ ...DEFAULT_CONFIG, ...message.config });
+    actions.replaceConfig(normalizeConfig(message.config));
     return;
   }
 
   if (message.type === "state" && message.config) {
-    if (message.chatId && message.chatId !== getActiveChatId()) return;
     const parserConnections = message.parserConnections || [];
-    const imageConnections = message.imageConnections || [];
     actions.replaceState({
-      config: { ...DEFAULT_CONFIG, ...message.config },
+      config: normalizeConfig(message.config),
       parserConnections,
-      imageConnections,
-      characterAppearance: message.characterAppearance || {},
+      imageConnections: message.imageConnections || [],
       status: "Ready"
     });
     if (parserConnections.length === 0) actions.refreshParserConnections();
-    actions.applyImageGenerationDefaults();
-    return;
-  }
-
-  if (message.type === "character_memory_updated") {
-    if (message.chatId && message.chatId !== getActiveChatId()) return;
-    actions.replaceCharacterMemory(
-      message.characterAppearance || {},
-      "Character visual baseline updated."
-    );
-    return;
-  }
-
-  if (message.type === "generation_progress" && message.stage) {
-    if (message.chatId && message.chatId !== getActiveChatId()) return;
-    const labels = {
-      queued: "Queued…",
-      loading: "Loading chat context…",
-      parsing: "Parsing illustration prompts…",
-      preparing: "Preparing image jobs…",
-      generating: message.total
-        ? `Generating illustrations ${message.completed || 0}/${message.total}…`
-        : "Generating illustrations…",
-      persisting: "Saving illustrations…",
-      completed: "Generation complete.",
-      failed: "Generation failed.",
-      cancelled: "Generation cancelled."
-    };
-    actions.updateStatus(message.detail ? `${labels[message.stage]}\n${message.detail}` : labels[message.stage]);
     return;
   }
 
   if (message.type === "status") {
-    if (message.chatId && message.chatId !== getActiveChatId()) return;
-    let status = message.error
-      ? `${message.status}: ${message.error}`
-      : String(message.status || "Ready");
-    const recordImages = message.record?.slots
-      ? message.record.slots.filter((slot) => Boolean(slot.imageUrl)).length
-      : message.record?.imageUrls?.filter(Boolean).length;
-    if (recordImages !== undefined) {
-      status += `\n${recordImages} image(s) generated.`;
-    }
-    actions.updateStatus(status);
-    return;
+    actions.updateStatus(message.error
+      ? `${message.status || "Error"}: ${message.error}`
+      : String(message.status || "Ready"));
   }
 }

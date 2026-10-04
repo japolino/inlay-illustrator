@@ -94,7 +94,6 @@ describe("inlay rendering", () => {
       },
       {
         ...DEFAULT_CONFIG,
-        inlayImageWidth: 812,
         inlayImageAspect: "portrait",
         inlayImageMaxHeightVh: 63
       }
@@ -202,7 +201,7 @@ describe("inlay rendering", () => {
       perspectiveModes: ["dynamic"],
       perspectiveSources: ["adaptive"],
       paragraphs: [1]
-    }, { ...config, adaptiveMode: true, perspectiveMode: "asset" });
+    }, config);
 
     for (const rendered of [asset, adaptiveIllustration]) {
       expect(rendered).toContain("width:min(100%, calc(65vh * 4 / 3))");

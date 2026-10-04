@@ -17,45 +17,15 @@ export type ImageConnection = {
   metadata?: Record<string, unknown>;
 };
 
-export type MountedComponent = {
-  destroy(): void;
-};
-
-export type FrontendSnapshot = {
-  config: Config;
-  parserConnections: ParserConnection[];
-  imageConnections: ImageConnection[];
-  characterAppearance: Record<string, string>;
-  status: string;
-};
-
-export type FrontendActions = {
-  activeChatId(): string;
-  patchConfig(patch: Partial<Config>): void;
-  requestState(): void;
-  sendToBackend(payload: unknown): void;
-  updateStatus(status: string): void;
-  openGallery?(): void;
-};
-
+/** Messages the backend sends to the frontend (loose: unknown fields are ignored). */
 export type BackendMessage = {
   type?: string;
   chatId?: string;
-  config?: Config;
+  config?: Partial<Config>;
   parserConnections?: ParserConnection[];
   imageConnections?: ImageConnection[];
-  characterAppearance?: Record<string, string>;
-  avatarVisualSupplements?: Record<string, unknown>;
-  avatarVisionAttempts?: Record<string, unknown>;
   status?: string;
   error?: string;
-  record?: { imageUrls?: string[]; slots?: Array<{ imageUrl?: string }> };
-  operationId?: string;
-  messageId?: string;
-  stage?: "queued" | "loading" | "parsing" | "preparing" | "generating" | "persisting" | "completed" | "failed" | "cancelled";
-  completed?: number;
-  total?: number;
-  detail?: string;
 };
 
 export type ImageGenerationSettings = {

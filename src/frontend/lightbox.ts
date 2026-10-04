@@ -1,4 +1,3 @@
-import type { LightboardDescriptor } from "../backend/v453/types.js";
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
 
 const INLAY_IMAGE_SELECTOR = '[data-inlay-illustrator="true"] img';
@@ -14,7 +13,6 @@ export function disableNativeInlayLightboxes(root: ParentNode): void {
 }
 
 export type InlayGenerationDetails = {
-  descriptor?: LightboardDescriptor;
   prompt: string;
   negativePrompt: string;
   perspectiveMode: "creative" | "static" | "dynamic" | "asset" | null;
@@ -31,7 +29,6 @@ export type InlayActionTarget = {
   imageUrl: string;
 };
 
-type LightboxControls = { status: HTMLElement; buttons: HTMLButtonElement[] };
 type ModalHandle = ReturnType<SpindleFrontendContext["ui"]["showModal"]>;
 
 export function resolveInlayPrompt(attributePrompt: string | null, fallbackPrompt: string | null): string {
@@ -143,8 +140,7 @@ function promptBlock(label: string, value: string, fallback: string): HTMLElemen
 function appendLightboxContent(
   root: HTMLElement,
   image: HTMLImageElement,
-  details: InlayGenerationDetails,
-  onAction: (operation: "reroll" | "sidecar" | "edit", controls: LightboxControls, descriptor?: LightboardDescriptor) => void
+  details: InlayGenerationDetails
 ): void {
   const layout = document.createElement("div");
   layout.className = "inlay-lightbox-layout";
@@ -181,53 +177,6 @@ function appendLightboxContent(
     promptBlock("Positive prompt", details.prompt, "No prompt was recorded for this image."),
     promptBlock("Negative prompt", details.negativePrompt, "No negative prompt was recorded for this image.")
   );
-  const actions = document.createElement("div");
-  actions.className = "inlay-lightbox-actions";
-  const reroll = document.createElement("button");
-  reroll.type = "button";
-  reroll.textContent = "Reroll image";
-  const sidecar = document.createElement("button");
-  sidecar.type = "button";
-  sidecar.textContent = "Rerun sidecar";
-  const status = document.createElement("div");
-  status.className = "inlay-lightbox-action-status";
-  status.setAttribute("aria-live", "polite");
-  const controls = { status, buttons: [reroll, sidecar] };
-  reroll.addEventListener("click", () => onAction("reroll", controls));
-  sidecar.addEventListener("click", () => onAction("sidecar", controls));
-  if (details.descriptor) {
-    const descriptor = structuredClone(details.descriptor);
-    const editor = document.createElement("details");
-    editor.className = "inlay-lightbox-prompt-block";
-    const summary = document.createElement("summary"); summary.textContent = "Edit scene prompts"; editor.append(summary);
-    const field = (label: string, value: string, set: (value: string) => void) => {
-      const wrapper = document.createElement("label"); wrapper.textContent = label;
-      const input = document.createElement("textarea"); input.value = value;
-      input.className = "inlay-lightbox-prompt"; input.style.width = "100%"; input.style.boxSizing = "border-box";
-      input.setAttribute("aria-label", label); input.addEventListener("input", () => set(input.value));
-      wrapper.append(input); editor.append(wrapper);
-    };
-    field("Cast", descriptor.cast, value => { descriptor.cast = value; });
-    if (!descriptor.panels) {
-      field("Camera", descriptor.camera ?? "", value => { descriptor.camera = value; });
-      field("Scene", descriptor.scene ?? "", value => { descriptor.scene = value; });
-    }
-    const groups = descriptor.panels ?? [{ scene: descriptor.scene ?? "", characters: descriptor.characters ?? [] }];
-    groups.forEach((group, panelIndex) => {
-      if (descriptor.panels) field(`Panel ${panelIndex + 1} scene`, group.scene, value => { group.scene = value; });
-      group.characters.forEach(character => {
-        const prefix = descriptor.panels ? `Panel ${panelIndex + 1}, ${character.name}` : character.name;
-        field(`${prefix}: positive`, character.positive, value => { character.positive = value; });
-        field(`${prefix}: description`, character.description, value => { character.description = value; });
-        field(`${prefix}: negative`, character.negative ?? "", value => { character.negative = value; });
-      });
-    });
-    const save = document.createElement("button"); save.type = "button"; save.textContent = "Generate with edits";
-    save.addEventListener("click", () => onAction("edit", controls, descriptor)); controls.buttons.push(save);
-    editor.append(save); panel.append(editor);
-  }
-  actions.append(reroll, sidecar, status);
-  panel.append(actions);
 
   layout.append(preview, panel);
   root.replaceChildren(layout);
@@ -235,7 +184,6 @@ function appendLightboxContent(
 
 export function installInlayLightbox(ctx: SpindleFrontendContext): () => void {
   let activeModal: ModalHandle | null = null;
-  let activeRequest: { id: string; modal: ModalHandle; controls: LightboxControls } | null = null;
   let activeDetailsRequest: { id: string; modal: ModalHandle; render: (details: InlayGenerationDetails) => void } | null = null;
   disableNativeInlayLightboxes(document);
   const observer = new MutationObserver(() => disableNativeInlayLightboxes(document));
@@ -245,7 +193,7 @@ export function installInlayLightbox(ctx: SpindleFrontendContext): () => void {
     const result = payload as Record<string, unknown>;
     if (result.type === "inlay_image_details_result" && String(result.requestId || "") === activeDetailsRequest?.id) {
       if (result.ok === true) {
-        activeDetailsRequest.render({ ...resolveInlayDetails(
+        activeDetailsRequest.render(resolveInlayDetails(
           typeof result.prompt === "string" ? result.prompt : null,
           null,
           typeof result.negativePrompt === "string" ? result.negativePrompt : null,
@@ -253,21 +201,11 @@ export function installInlayLightbox(ctx: SpindleFrontendContext): () => void {
           typeof result.perspectiveMode === "string" ? result.perspectiveMode : null,
           typeof result.perspectiveSource === "string" ? result.perspectiveSource : null,
           typeof result.creativeConcept === "string" ? result.creativeConcept : null
-        ), ...(result.descriptor && typeof result.descriptor === "object" ? { descriptor: result.descriptor as LightboardDescriptor } : {}) });
+        ));
       }
       activeDetailsRequest = null;
       return;
     }
-    if (result.type !== "inlay_image_action_result" || String(result.requestId || "") !== activeRequest?.id) return;
-    if (result.ok === true) {
-      activeRequest.controls.status.textContent = "Image replaced. Reopening will show its updated details.";
-      activeRequest.modal.dismiss();
-      activeRequest = null;
-      return;
-    }
-    activeRequest.controls.status.textContent = String(result.error || "Image regeneration failed.");
-    activeRequest.controls.buttons.forEach((button) => { button.disabled = false; });
-    activeRequest = null;
   });
 
   const onClick = (event: MouseEvent): void => {
@@ -287,33 +225,7 @@ export function installInlayLightbox(ctx: SpindleFrontendContext): () => void {
         maxHeight: Math.max(480, window.innerHeight - 48)
       });
       activeModal = modal;
-      const render = (nextDetails: InlayGenerationDetails): void => appendLightboxContent(modal.root, image, nextDetails, (operation, controls, descriptor) => {
-        let chatId = actionTarget.chatId || "";
-        if (!chatId) {
-          try {
-            chatId = String(ctx.getActiveChat().chatId || "");
-          } catch {
-            chatId = "";
-          }
-        }
-        if (!chatId) {
-          controls.status.textContent = "Open the image's chat before regenerating it.";
-          return;
-        }
-        const requestId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : `inlay-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        controls.buttons.forEach((button) => { button.disabled = true; });
-        controls.status.textContent = operation === "sidecar" ? "Rerunning sidecar and generating..." : "Rerolling with a fresh seed...";
-        activeRequest = { id: requestId, modal, controls };
-        ctx.sendToBackend({
-          type: operation === "edit" ? "edit_inlay_descriptor" : operation === "sidecar" ? "rerun_image_sidecar" : "reroll_image",
-          ...(descriptor ? { descriptor } : {}),
-          requestId,
-          ...actionTarget,
-          chatId
-        });
-      });
+      const render = (nextDetails: InlayGenerationDetails): void => appendLightboxContent(modal.root, image, nextDetails);
       render(details);
       if (actionTarget.imageId || actionTarget.messageId) {
         let chatId = actionTarget.chatId || "";
@@ -334,7 +246,6 @@ export function installInlayLightbox(ctx: SpindleFrontendContext): () => void {
       }
       modal.onDismiss(() => {
         if (activeModal === modal) activeModal = null;
-        if (activeRequest?.modal === modal) activeRequest = null;
         if (activeDetailsRequest?.modal === modal) activeDetailsRequest = null;
       });
     } catch {

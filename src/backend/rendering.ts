@@ -1,41 +1,46 @@
-import { type Config, type PerspectiveMode } from "../shared/config.js";
+/**
+ * Bakes inlay images into message HTML using the marker contract:
+ * `<!-- inlay_illustrator -->` followed by one `div[data-inlay-illustrator]`
+ * per image, placed before its target paragraph. `stripInlayContent` removes
+ * every block again, so rendering is idempotent and the interceptor can strip
+ * the markup before LLM requests.
+ */
+import type { Config } from "../shared/config.js";
 import { inlayFrameGeometry } from "../shared/inlay-frame.js";
 import { MARKER } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
-import { paragraphCount } from "./paragraphs.js";
-import type { CreativeConcept, GenerationSlotStatus } from "./types.js";
+import type { GenerationSlotStatus } from "./types.js";
 
-type InlaySlot = {
+export type InlaySlot = {
   imageId?: string;
   imageUrl?: string;
-  prompt?: string;
-  negativePrompt?: string;
-  perspectiveMode?: PerspectiveMode;
-  perspectiveSource?: "adaptive" | "manual";
-  creativeConcept?: CreativeConcept | null;
   imageParameters?: Record<string, unknown>;
   placement?: "cover" | "paragraph";
+  /** 1-based target paragraph (blank-line separated blocks of the clean message). */
   paragraph?: number;
   status?: GenerationSlotStatus;
+  /** Callers may pass richer slot objects; extra fields are ignored. */
+  [key: string]: unknown;
 };
 
-type InlayRecord = {
+export type InlayRecord = {
   chatId?: string;
   messageId?: string;
   swipeId?: number;
   slots?: InlaySlot[];
-  /** V2 compatibility fields. New records use slots exclusively. */
+  /** Pre-V3 parallel-array fields, still accepted for old stored records. */
   imageIds?: string[];
   imageUrls?: string[];
-  prompts?: string[];
-  negativePrompts?: string[];
-  perspectiveModes?: PerspectiveMode[];
-  perspectiveSources?: Array<"adaptive" | "manual">;
-  creativeConcepts?: Array<CreativeConcept | null>;
   placements?: Array<"cover" | "paragraph">;
   paragraphs?: number[];
   slotStatuses?: GenerationSlotStatus[];
+  [key: string]: unknown;
 };
+
+/** Number of non-empty blank-line separated paragraphs. */
+export function paragraphCount(content: string): number {
+  return content.split(/(\r?\n\s*\r?\n)/).filter((part) => part.trim()).length;
+}
 
 function normalizedInlaySlots(record: InlayRecord): InlaySlot[] {
   if (record.slots) return record.slots;
@@ -47,11 +52,6 @@ function normalizedInlaySlots(record: InlayRecord): InlaySlot[] {
   return Array.from({ length: count }, (_value, index) => ({
     imageId: record.imageIds?.[index] || "",
     imageUrl: record.imageUrls?.[index] || "",
-    prompt: record.prompts?.[index] || "",
-    negativePrompt: record.negativePrompts?.[index] || "",
-    perspectiveMode: record.perspectiveModes?.[index],
-    perspectiveSource: record.perspectiveSources?.[index],
-    creativeConcept: record.creativeConcepts?.[index],
     placement: record.placements?.[index] || "paragraph",
     paragraph: record.paragraphs?.[index],
     status: record.slotStatuses?.[index]
@@ -78,11 +78,6 @@ function htmlAttr(value: string): string {
 
 function renderInlayBlock(
   url: string,
-  _prompt: string,
-  _negativePrompt: string,
-  _perspectiveMode: PerspectiveMode | undefined,
-  _perspectiveSource: "adaptive" | "manual" | undefined,
-  _creativeConcept: CreativeConcept | null | undefined,
   imageParameters: Record<string, unknown> | undefined,
   imageId: string,
   chatId: string,
@@ -100,7 +95,6 @@ function renderInlayBlock(
 
 function renderSlotPlaceholder(
   status: GenerationSlotStatus,
-  _perspectiveMode: PerspectiveMode | undefined,
   imageParameters: Record<string, unknown> | undefined,
   index: number,
   config: Config,
@@ -108,8 +102,8 @@ function renderSlotPlaceholder(
   illustrationNumber = index + 1
 ): string {
   const subject = placement === "cover" ? "Cover image" : `Illustration ${illustrationNumber}`;
-  const label = status === "planned" ? `${subject} prompts are ready. Use Generate prepared images in Inlay settings.` : status === "failed"
-    ? `${subject} failed. Use Generate latest to retry.`
+  const label = status === "planned" ? `${subject} is planned.` : status === "failed"
+    ? `${subject} failed.`
     : status === "cancelled"
       ? `${subject} cancelled.`
       : `Generating ${subject.toLowerCase()}…`;
@@ -136,11 +130,6 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
     existing.push(url
       ? renderInlayBlock(
         url,
-        slot.prompt || "",
-        slot.negativePrompt || "",
-        slot.perspectiveMode,
-        slot.perspectiveSource,
-        slot.creativeConcept,
         slot.imageParameters,
         slot.imageId || "",
         record.chatId || "",
@@ -153,7 +142,6 @@ export function renderInlaidMessage(original: string, record: InlayRecord, confi
       )
       : renderSlotPlaceholder(
         status || "pending",
-        slot.perspectiveMode,
         slot.imageParameters,
         index,
         config,

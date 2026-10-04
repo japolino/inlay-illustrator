@@ -3,9 +3,24 @@ import { logStage } from "./logging.js";
 import { abortError, throwIfAborted } from "./operation-manager.js";
 import type { ComfyUIConfig, ComfyUIMapping, ImageConnection, PreparedImageJob } from "./types.js";
 import { keysOf } from "./utils.js";
-import { normalizeCharacterPayload } from "./v376/provider.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
+
+export type NovelAiCharacterPayload = { prompt: string; negative: string };
+
+/** Keeps only `{prompt, negative}` pairs with at least one non-empty side. */
+export function normalizeCharacterPayload(characters: unknown): NovelAiCharacterPayload[] {
+  if (!Array.isArray(characters)) return [];
+  const result: NovelAiCharacterPayload[] = [];
+  for (const item of characters) {
+    if (!item || typeof item !== "object") continue;
+    const record = item as Record<string, unknown>;
+    const prompt = typeof record.prompt === "string" ? record.prompt.trim() : "";
+    const negative = typeof record.negative === "string" ? record.negative.trim() : "";
+    if (prompt || negative) result.push({ prompt, negative });
+  }
+  return result;
+}
 
 const imageConnectionCache = new Map<string, { expiresAt: number; connection: ImageConnection | null }>();
 

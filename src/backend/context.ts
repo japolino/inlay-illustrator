@@ -1,9 +1,12 @@
-import type { Config } from "../shared/config.js";
+/**
+ * Chat context loading over Spindle: chat -> character -> persona, the
+ * activated world-book entry snapshot (ranked, macro-resolved, compacted),
+ * and recent assistant prose without our inlay markup.
+ */
 import type { ActivatedWorldInfoEntryDTO, WorldBookEntryDTO, WorldBookSourceDTO } from "lumiverse-spindle-types";
 import { EXTENSION_ID } from "./constants.js";
 import { stripInlayContent } from "./inlay-content.js";
-import { buildContinuityContext } from "./continuity-context.js";
-import type { ChatMessage, ParserContext, PreviousVisualState } from "./types.js";
+import type { ChatMessage } from "./types.js";
 import { asRecord, cleanString, compactBlock, unique } from "./utils.js";
 
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
@@ -49,63 +52,39 @@ export const EMPTY_LOREBOOK_CONTEXT: LorebookContextSnapshot = {
   diagnostics: { lorebookEntries: 0 }
 };
 
-export type ParserContextSources = {
+export type ContextSources = {
   chat: Record<string, unknown> | null;
   persona: Record<string, unknown> | null;
   character: Record<string, unknown> | null;
   diagnostics: Record<string, unknown>;
 };
 
-export async function loadParserContextSources(
+/** Loads the chat, its character and the active persona. Failures are recorded in `diagnostics`. */
+export async function loadContextSources(
   chatId: string,
-  config: Config,
   userId?: string,
-  options: { fastBootstrapCharacter?: boolean } = {}
-): Promise<ParserContextSources> {
+  options: { character?: boolean; persona?: boolean } = {}
+): Promise<ContextSources> {
+  const wantCharacter = options.character !== false;
+  const wantPersona = options.persona !== false;
   const diagnostics: Record<string, unknown> = {};
-  if (config.fastMode) {
-    // Fast Mode skips chat/persona context entirely. The one exception is a
-    // character-card bootstrap on the first generation, when no durable
-    // character tags exist yet; after that, cached character tags carry the
-    // visual baseline without any character RPC.
-    const needsChat = config.includeCharacterInfo && options.fastBootstrapCharacter === true;
-    let chat: Record<string, unknown> | null = null;
-    let character: Record<string, unknown> | null = null;
-    if (needsChat) {
-      try {
-        chat = asRecord(await spindle.chats.get(chatId, userId));
-        if (config.includeCharacterInfo && chat?.character_id) {
-          character = asRecord(await spindle.characters.get(String(chat.character_id), userId));
-        }
-      } catch (error) {
-        diagnostics.characterInfoError = error instanceof Error ? error.message : String(error);
-      }
-      diagnostics.fastBootstrapCharacter = true;
-    } else {
-      diagnostics.fastBootstrapCharacter = false;
-    }
-    diagnostics.fastMode = true;
-    return { chat, persona: null, character, diagnostics };
-  }
-  const needsChat = config.includeCharacterInfo || config.includeLorebook || config.userInstructionsEnabled;
-  const needsPersona = config.includeUserInfo || config.userInstructionsEnabled;
   const [chatResult, personaResult] = await Promise.allSettled([
-    needsChat ? spindle.chats.get(chatId, userId) : Promise.resolve(null),
-    needsPersona ? spindle.personas.getActive(userId) : Promise.resolve(null)
+    spindle.chats.get(chatId, userId),
+    wantPersona ? spindle.personas.getActive(userId) : Promise.resolve(null)
   ]);
   const chat = chatResult.status === "fulfilled" && chatResult.value ? asRecord(chatResult.value) : null;
   const persona = personaResult.status === "fulfilled" && personaResult.value ? asRecord(personaResult.value) : null;
   if (chatResult.status === "rejected") diagnostics.chatLookupError = chatResult.reason instanceof Error
     ? chatResult.reason.message : String(chatResult.reason);
-  if (personaResult.status === "rejected") diagnostics.userInfoError = personaResult.reason instanceof Error
+  if (personaResult.status === "rejected") diagnostics.personaError = personaResult.reason instanceof Error
     ? personaResult.reason.message : String(personaResult.reason);
 
   let character: Record<string, unknown> | null = null;
-  if (config.includeCharacterInfo && chat?.character_id) {
+  if (wantCharacter && chat?.character_id) {
     try {
       character = asRecord(await spindle.characters.get(String(chat.character_id), userId));
     } catch (error) {
-      diagnostics.characterInfoError = error instanceof Error ? error.message : String(error);
+      diagnostics.characterError = error instanceof Error ? error.message : String(error);
     }
   }
   return { chat, persona, character, diagnostics };
@@ -113,32 +92,6 @@ export async function loadParserContextSources(
 
 export function isOwnMessage(message: { content?: string; metadata?: Record<string, unknown> }): boolean {
   return Boolean(message.metadata?.extension === EXTENSION_ID);
-}
-
-function namedField(label: string, value: unknown): string {
-  const text = cleanString(value);
-  return text ? `${label}: ${text}` : "";
-}
-
-function formatInfoBlock(title: string, lines: string[], maxLength = 4000): string {
-  const clean = lines.map((line) => line.trim()).filter(Boolean);
-  return clean.length ? compactBlock([`## ${title}`, ...clean].join("\n"), maxLength) : "";
-}
-
-function findNestedString(root: unknown, path: string[]): string {
-  let current: unknown = root;
-  for (const part of path) current = asRecord(current)[part];
-  return cleanString(current);
-}
-
-function collectExtraInstructionStrings(root: unknown): string[] {
-  const values = [
-    findNestedString(root, ["lb-xnai", "lb", "extra"]),
-    findNestedString(root, ["lb_xnai", "lb", "extra"]),
-    findNestedString(root, ["Inlay", "extra"]),
-    findNestedString(root, ["inlay", "extra"])
-  ];
-  return unique(values.filter(Boolean)).map((value) => compactBlock(value, 2000));
 }
 
 function normalizedTerms(value: string): string[] {
@@ -286,10 +239,8 @@ async function resolveLorebookContent(content: string, chatId: string, userId?: 
 export async function buildLorebookContextSnapshot(
   chatId: string,
   target: string,
-  config: Pick<Config, "includeLorebook">,
   userId?: string
 ): Promise<LorebookContextSnapshot> {
-  if (!config.includeLorebook) return EMPTY_LOREBOOK_CONTEXT;
   try {
     const allActivated = await spindle.world_books.getActivated(chatId, userId);
     const activated = allActivated.map((entry, index) => ({ entry, index }))
@@ -369,97 +320,4 @@ export function formatRecentContext(messages: ChatMessage[], targetIndex: number
   // are available without making later zero-context calls history-dependent.
   const selected = includeCount > 0 ? previous.slice(-includeCount) : previous.length === 1 ? previous : [];
   return compactBlock(selected.map((message) => `${message.role}: ${message.content}`).join("\n\n"), 8000);
-}
-
-function includeCountForAttempt(config: Config, attempt: number): number {
-  if (config.includeMaxMessages <= config.includeMinMessages) return config.includeMinMessages;
-  if (config.parserRetries <= 0) return config.includeMinMessages;
-  const step = Math.ceil((config.includeMaxMessages - config.includeMinMessages) / config.parserRetries);
-  return Math.min(config.includeMaxMessages, config.includeMinMessages + step * attempt);
-}
-
-export async function buildParserContext(
-  chatId: string,
-  messages: ChatMessage[],
-  targetIndex: number,
-  cache: Record<string, string>,
-  config: Config,
-  attempt: number,
-  userId?: string,
-  lorebookSnapshot?: LorebookContextSnapshot,
-  previousVisualState?: PreviousVisualState,
-  preparedSources?: ParserContextSources
-): Promise<ParserContext> {
-  const blocks: string[] = [];
-  const preprocessingBlocks: string[] = [];
-  const overrides: string[] = [];
-  const diagnostics: Record<string, unknown> = { attempt, includeCount: includeCountForAttempt(config, attempt) };
-  const sources = preparedSources || await loadParserContextSources(chatId, config, userId);
-  const chat = sources.chat;
-  Object.assign(diagnostics, sources.diagnostics);
-  const pushBlock = (block: string, includeInPreprocessing = true): void => {
-    if (!block) return;
-    blocks.push(block);
-    if (includeInPreprocessing) preprocessingBlocks.push(block);
-  };
-
-  if (chat) overrides.push(...collectExtraInstructionStrings(chat.metadata));
-
-  if (config.includeUserInfo || config.userInstructionsEnabled) {
-    if (sources.persona) {
-      const record = sources.persona;
-      const block = config.includeUserInfo ? formatInfoBlock("{{user}} Info", [
-        namedField("Name", record.name),
-        namedField("Title", record.title),
-        namedField("Description", record.description)
-      ]) : "";
-      pushBlock(block);
-      overrides.push(...collectExtraInstructionStrings(record.metadata));
-      diagnostics.userInfo = Boolean(block);
-    }
-  }
-
-  if (config.includeCharacterInfo && chat?.character_id) {
-    if (sources.character) {
-      const record = sources.character;
-      const block = formatInfoBlock("{{char}} Info", [
-        namedField("Name", record.name),
-        namedField("Description", record.description),
-        namedField("Personality", record.personality),
-        namedField("Scenario", record.scenario),
-        namedField("Creator notes", record.creator_notes),
-        namedField("System prompt", record.system_prompt),
-        namedField("Post-history instructions", record.post_history_instructions),
-        Array.isArray(record.tags) && record.tags.length ? `Tags: ${record.tags.join(", ")}` : ""
-      ], 6000);
-      pushBlock(block);
-      overrides.push(...collectExtraInstructionStrings(record.extensions));
-      diagnostics.characterInfo = Boolean(block);
-    }
-  }
-
-  if (config.includeLorebook && !config.fastMode) {
-    const target = messages[targetIndex]?.content || "";
-    const snapshot = lorebookSnapshot || await buildLorebookContextSnapshot(chatId, target, config, userId);
-    const block = attempt === 0 ? snapshot.compact : snapshot.full;
-    pushBlock(block, false);
-    Object.assign(diagnostics, snapshot.diagnostics, { lorebookMode: attempt === 0 ? "compact" : "full" });
-  }
-
-  const continuity = buildContinuityContext(cache, previousVisualState, config);
-  continuity.blocks.forEach((block) => pushBlock(block));
-  Object.assign(diagnostics, continuity.diagnostics, {
-    continuityAuthorities: continuity.authorities
-  });
-
-  if (config.userInstructionsEnabled) overrides.unshift(config.customParserInstructions);
-  return {
-    systemContext: blocks.filter(Boolean).join("\n\n"),
-    preprocessingSystemContext: preprocessingBlocks.filter(Boolean).join("\n\n"),
-    recentContext: config.fastMode
-      ? ""
-      : formatRecentContext(messages, targetIndex, includeCountForAttempt(config, attempt)),
-    override: unique(overrides.map((value) => cleanString(value)).filter(Boolean)).join("\n\n"),
-    diagnostics
-  };
 }

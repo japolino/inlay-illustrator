@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { DEFAULT_CONFIG } from "../shared/config.js";
 import { MARKER } from "./constants.js";
-import { buildLorebookContextSnapshot, buildParserContext, formatRecentContext, loadParserContextSources } from "./context.js";
+import { buildLorebookContextSnapshot, formatRecentContext, isOwnMessage, loadContextSources } from "./context.js";
 import type { ChatMessage } from "./types.js";
 
 let activationCalls = 0;
@@ -37,7 +36,7 @@ beforeEach(() => {
   };
 });
 
-describe("recent parser context", () => {
+describe("recent context", () => {
   test("includes prior narrative without Inlay markup or embedded prompts", () => {
     const inlay = `${MARKER}\n<div data-inlay-illustrator="true"><img src="/generated.png" data-inlay-illustrator-prompt="secret prompt"><pre class="inlay-illustrator-prompt" hidden>secret prompt</pre></div>`;
     const messages: ChatMessage[] = [
@@ -80,7 +79,7 @@ describe("recent parser context", () => {
   });
 });
 
-describe("activated lorebook parser context", () => {
+describe("activated lorebook context", () => {
   test("resolves one activated snapshot and ranks target-relevant visual content ahead of unrelated prose", async () => {
     const spindleMock = (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle as Record<string, any>;
     spindleMock.world_books.getActivated = async () => {
@@ -108,7 +107,7 @@ describe("activated lorebook parser context", () => {
       };
     };
 
-    const snapshot = await buildLorebookContextSnapshot("chat-1", "Elara enters the moonlit temple.", { includeLorebook: true }, "user-1");
+    const snapshot = await buildLorebookContextSnapshot("chat-1", "Elara enters the moonlit temple.", "user-1");
 
     expect(activationCalls).toBe(1);
     expect(entryCalls.sort()).toEqual(["elara", "village"]);
@@ -120,91 +119,6 @@ describe("activated lorebook parser context", () => {
     expect(snapshot.full).toContain("A bronze gate marks its entrance");
     expect(snapshot.compacted).toBe(true);
     expect(snapshot.hasCharacterVisualReference).toBe(true);
-  });
-
-  test("uses compact lorebook only for the first JSON attempt and excludes it from preprocessing", async () => {
-    const config = {
-      ...DEFAULT_CONFIG,
-      includeLorebook: true,
-      includeUserInfo: false,
-      includeCharacterInfo: false,
-      characterTagContextEnabled: false,
-      userInstructionsEnabled: false
-    };
-    const messages: ChatMessage[] = [{ id: "target", role: "assistant", content: "Current target." }];
-    const snapshot = {
-      compact: "## Lorebook\n\nCOMPACT ENTRY",
-      full: "## Lorebook\n\nFULL ENTRY",
-      compacted: true,
-      hasCharacterVisualReference: true,
-      diagnostics: { lorebookEntries: 1 }
-    };
-
-    const first = await buildParserContext("chat-1", messages, 0, {}, config, 0, "user-1", snapshot);
-    const retry = await buildParserContext("chat-1", messages, 0, {}, config, 1, "user-1", snapshot);
-
-    expect(first.systemContext).toContain("COMPACT ENTRY");
-    expect(first.systemContext).not.toContain("FULL ENTRY");
-    expect(first.preprocessingSystemContext).not.toContain("COMPACT ENTRY");
-    expect(retry.systemContext).toContain("FULL ENTRY");
-    expect(activationCalls).toBe(0);
-  });
-
-  test("adds previous visual state to parser and preprocessing context only when enabled", async () => {
-    const previousVisualState = {
-      characters: [{
-        name: "Jay",
-        label: "boy",
-        age: "",
-        appearance: "short black hair, brown eyes",
-        body: "slim",
-        attire: "black school uniform",
-        attireInferred: true
-      }],
-      environment: {
-        location: "school clubroom",
-        timeWeather: "late afternoon",
-        lightingMood: ["warm window light"],
-        backgroundElements: ["desks", "bookshelves"]
-      },
-      place: "",
-      updatedAt: "2026-07-18T00:00:00.000Z"
-    };
-    const messages: ChatMessage[] = [{ id: "target", role: "assistant", content: "Current target." }];
-    const enabled = await buildParserContext(
-      "chat-1",
-      messages,
-      0,
-      {},
-      { ...DEFAULT_CONFIG, includeUserInfo: false, includeCharacterInfo: false, userInstructionsEnabled: false },
-      0,
-      "user-1",
-      undefined,
-      previousVisualState
-    );
-    const disabled = await buildParserContext(
-      "chat-1",
-      messages,
-      0,
-      {},
-      {
-        ...DEFAULT_CONFIG,
-        previousVisualStateEnabled: false,
-        includeUserInfo: false,
-        includeCharacterInfo: false,
-        userInstructionsEnabled: false
-      },
-      0,
-      "user-1",
-      undefined,
-      previousVisualState
-    );
-
-    expect(enabled.systemContext).toContain("## Previous Visual State");
-    expect(enabled.systemContext).toContain("late afternoon");
-    expect(enabled.preprocessingSystemContext).toContain("black school uniform");
-    expect(enabled.diagnostics.previousVisualState).toBe(true);
-    expect(disabled.systemContext).not.toContain("Previous Visual State");
   });
 
   test("selects a directly relevant entry before applying the 24-entry fetch limit", async () => {
@@ -221,7 +135,7 @@ describe("activated lorebook parser context", () => {
       return { id, key: [id], comment: id, content: `${id} visual reference`, priority: 0 };
     };
 
-    const snapshot = await buildLorebookContextSnapshot("chat-1", "She raises the Moonblade.", { includeLorebook: true });
+    const snapshot = await buildLorebookContextSnapshot("chat-1", "She raises the Moonblade.");
 
     expect(entryCalls).toHaveLength(24);
     expect(entryCalls).toContain("target-entry");
@@ -230,85 +144,23 @@ describe("activated lorebook parser context", () => {
   });
 });
 
-
-describe("Fast Mode parser context", () => {
-  const characterCache = {
-    Elara: "long silver hair, violet eyes, slim, blue robe"
-  };
-  const previousVisualState = {
-    characters: [{ name: "Elara", label: "girl", age: "", appearance: "", body: "", attire: "", attireInferred: false }],
-    environment: { location: "school clubroom", timeWeather: "late afternoon", lightingMood: ["warm window light"], backgroundElements: ["desks"] },
-    place: "",
-    updatedAt: "2026-07-18T00:00:00.000Z"
-  };
-  const fastConfig = {
-    ...DEFAULT_CONFIG,
-    fastMode: true,
-    includeUserInfo: true,
-    includeCharacterInfo: true,
-    includeLorebook: true,
-    userInstructionsEnabled: true,
-    customParserInstructions: "Custom parser override.",
-    characterTagContextEnabled: true,
-    previousVisualStateEnabled: true
-  };
-  const messages: ChatMessage[] = [
-    { id: "a1", role: "assistant", content: "Earlier narrative." },
-    { id: "target", role: "assistant", content: "Current target." }
-  ];
-
-  test("skips recent history, lorebook, chat, persona, and metadata RPCs while keeping cached tags, previous visual state, and custom instructions", async () => {
-    const calls: string[] = [];
+describe("context sources", () => {
+  test("loads chat, character and persona, and records failures", async () => {
     const spindleMock = (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle as Record<string, any>;
-    spindleMock.chats.get = async () => { calls.push("chats.get"); return { id: "chat-1", character_id: "char-1" }; };
-    spindleMock.personas.getActive = async () => { calls.push("personas.getActive"); return { id: "persona-1", name: "User", description: "profile" }; };
-    spindleMock.characters.get = async () => { calls.push("characters.get"); return { id: "char-1", name: "Elara", description: "long silver hair" }; };
-    spindleMock.world_books.getActivated = async () => { calls.push("world_books.getActivated"); return []; };
-
-    const context = await buildParserContext("chat-1", messages, 1, characterCache, fastConfig, 0, "user-1", undefined, previousVisualState);
-
-    expect(calls).toEqual([]);
-    expect(activationCalls).toBe(0);
-    expect(context.recentContext).toBe("");
-    expect(context.systemContext).not.toContain("Earlier narrative");
-    expect(context.systemContext).not.toContain("Lorebook");
-    expect(context.systemContext).not.toContain("{{user}} Info");
-    expect(context.systemContext).not.toContain("{{char}} Info");
-    expect(context.systemContext).toContain("long silver hair, violet eyes");
-    expect(context.systemContext).toContain("## Previous Visual State");
-    expect(context.override).toContain("Custom parser override.");
-    expect(context.override).not.toContain("profile");
-    expect(context.diagnostics.fastMode).toBe(true);
-  });
-
-  test("bootstraps the character card once when Fast Mode has no durable character tags", async () => {
-    const calls: string[] = [];
-    const spindleMock = (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle as Record<string, any>;
-    spindleMock.chats.get = async () => { calls.push("chats.get"); return { id: "chat-1", character_id: "char-1" }; };
-    spindleMock.personas.getActive = async () => { calls.push("personas.getActive"); return { id: "persona-1" }; };
-    spindleMock.characters.get = async () => { calls.push("characters.get"); return { id: "char-1", name: "Elara", description: "long silver hair" }; };
-    spindleMock.world_books.getActivated = async () => { calls.push("world_books.getActivated"); return []; };
-
-    const sources = await loadParserContextSources("chat-1", fastConfig, "user-1", { fastBootstrapCharacter: true });
-
-    expect(calls).toEqual(["chats.get", "characters.get"]);
+    spindleMock.chats.get = async () => ({ id: "chat-1", character_id: "char-1" });
+    spindleMock.characters.get = async (id: string) => ({ id, name: "Elara" });
+    spindleMock.personas.getActive = async () => { throw new Error("no persona"); };
+    const sources = await loadContextSources("chat-1", "user-1");
     expect(sources.chat).toMatchObject({ id: "chat-1" });
-    expect(sources.character).toMatchObject({ id: "char-1" });
+    expect(sources.character).toMatchObject({ name: "Elara" });
     expect(sources.persona).toBeNull();
-    expect(sources.diagnostics.fastBootstrapCharacter).toBe(true);
+    expect(sources.diagnostics.personaError).toBe("no persona");
+    const withoutCharacter = await loadContextSources("chat-1", "user-1", { character: false, persona: false });
+    expect(withoutCharacter.character).toBeNull();
   });
 
-  test("does not load chat or character sources when durable character tags already exist", async () => {
-    const calls: string[] = [];
-    const spindleMock = (globalThis as typeof globalThis & { spindle: Record<string, unknown> }).spindle as Record<string, any>;
-    spindleMock.chats.get = async () => { calls.push("chats.get"); return { id: "chat-1", character_id: "char-1" }; };
-    spindleMock.characters.get = async () => { calls.push("characters.get"); return { id: "char-1" }; };
-
-    const sources = await loadParserContextSources("chat-1", fastConfig, "user-1", { fastBootstrapCharacter: false });
-
-    expect(calls).toEqual([]);
-    expect(sources.chat).toBeNull();
-    expect(sources.character).toBeNull();
-    expect(sources.diagnostics.fastBootstrapCharacter).toBe(false);
+  test("recognizes messages written by this extension", () => {
+    expect(isOwnMessage({ metadata: { extension: "inlay_illustrator" } })).toBe(true);
+    expect(isOwnMessage({ metadata: {} })).toBe(false);
   });
 });

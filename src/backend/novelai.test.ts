@@ -2,12 +2,9 @@ import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_CONFIG,
   isNovelAiConnection,
-  NOVELAI_RESOLUTION_PRESETS,
-  NOVELAI_SAMPLER_OPTIONS,
   type Config
 } from "../shared/config.js";
-import { buildImageParameters, collectProfileSamplerCandidates, rerollImageParameters } from "./images.js";
-import { renderPromptWithCurrentAffixes } from "./prompt.js";
+import { buildImageParameters, collectProfileSamplerCandidates, NOVELAI_SAMPLER_IDS, rerollImageParameters } from "./images.js";
 import type { ImageConnection } from "./types.js";
 
 describe("NovelAI profile detection and parameters", () => {
@@ -132,19 +129,6 @@ describe("NovelAI profile detection and parameters", () => {
     expect(params.height).toBe(1024);
     expect(params.smea).toBe(true);
     expect(params.smea_dyn).toBe(true);
-  });
-
-  test("renderPromptWithCurrentAffixes sanitizes embedded ComfyUI linebreaks when syntax is NAI", () => {
-    const configWithNai = {
-      ...DEFAULT_CONFIG,
-      promptSyntax: "nai" as const
-    };
-
-    const promptWithComfyDelimiters = "1girl, solo,\n\nmasterpiece, high quality,\ncinematic lighting";
-    const rendered = renderPromptWithCurrentAffixes(promptWithComfyDelimiters, "legacy", configWithNai);
-
-    expect(rendered.includes("\n")).toBeFalse();
-    expect(rendered).toContain("1girl, solo, masterpiece, high quality, cinematic lighting");
   });
 });
 
@@ -487,7 +471,7 @@ describe("Cross-provider isolation and parameter normalization", () => {
     const profile: ImageConnection = { ...naiConn, default_parameters: { sampler: "ddim" } };
     const built = await buildImageParameters(DEFAULT_CONFIG, profile, "p", "n");
     expect(built.sampler).toBe("ddim_v3");
-    expect(NOVELAI_SAMPLER_OPTIONS.some((option) => option.value === "ddim_v3")).toBeTrue();
+    expect(NOVELAI_SAMPLER_IDS).toContain("ddim_v3");
   });
 
   test("finds a canonical sampler stored elsewhere in the profile", () => {

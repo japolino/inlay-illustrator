@@ -10,7 +10,7 @@
  * /api/v1/generate) emits that event; /generate/dry-run never does.
  */
 
-import { DEFAULT_CONFIG, normalizeConfig, type Config } from "../../shared/config.js";
+import { DEFAULT_CONFIG, FAB_CORNER_OPTIONS, INLAY_IMAGE_ASPECT_PRESETS, normalizeConfig, type Config } from "../../shared/config.js";
 import { LumiverseError, type LumiverseClient, type MessageRecord, type GenerateStatusResponse } from "./client.js";
 import { cleanNarrative, extractInlayBlocks, hasInlayMarkup, inferInlayStatus, type InlayBlock } from "./inlay-markers.js";
 
@@ -148,9 +148,11 @@ export async function lumiverseStatus(ctx: ToolContext): Promise<StatusResult> {
 
 const INLAY_EXTENSION_IDENTIFIER = "inlay-illustrator";
 const CONFIG_ENUMS: Partial<Record<keyof Config, readonly string[]>> = {
-  perspectiveMode: ["creative", "static", "dynamic", "asset"],
-  promptStyle: ["default", "anima"],
-  promptSyntax: ["nai", "comfyui"]
+  imageAlignment: ["center", "left"],
+  inlayImageAspect: INLAY_IMAGE_ASPECT_PRESETS.map((preset) => preset.value),
+  coverImageAspect: INLAY_IMAGE_ASPECT_PRESETS.map((preset) => preset.value),
+  coverImagePosition: ["top", "bottom"],
+  fabCorner: FAB_CORNER_OPTIONS.map((option) => option.value)
 };
 
 function configValueType(value: unknown): string {

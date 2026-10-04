@@ -194,16 +194,16 @@ describe("Inlay extension state and stored image details", () => {
     const client = stubClient({
       extensionMessage: async (_id, payload) => ({
         type: "state",
-        config: { ...DEFAULT_CONFIG, perspectiveMode: "asset", autoGenerate: true },
+        config: { ...DEFAULT_CONFIG, fabCorner: "top-left", enabled: true },
         parserConnections: [{ id: "parser1", name: "Deepseek V4 Flash" }],
         chatId: payload.chatId || "",
         characterAppearance: {}
       })
     });
     const result = await inlayDescribeConfig(context(client, fakeClock()));
-    expect((result.config as Record<string, unknown>).perspectiveMode).toBe("asset");
-    const perspective = (result.fields as Array<Record<string, unknown>>).find((field) => field.name === "perspectiveMode");
-    expect(perspective?.allowed_values).toEqual(["creative", "static", "dynamic", "asset"]);
+    expect((result.config as Record<string, unknown>).fabCorner).toBe("top-left");
+    const corner = (result.fields as Array<Record<string, unknown>>).find((field) => field.name === "fabCorner");
+    expect(corner?.allowed_values).toEqual(["bottom-right", "bottom-left", "top-right", "top-left"]);
     expect(result.parser_connections).toEqual([{ id: "parser1", name: "Deepseek V4 Flash" }]);
   });
 
@@ -215,15 +215,15 @@ describe("Inlay extension state and stored image details", () => {
         return { type: "state", config: DEFAULT_CONFIG, parserConnections: [], characterAppearance: {} };
       }
     });
-    const result = await inlayPatchConfig(context(client, fakeClock()), { patch: { perspectiveMode: "asset", maxImages: 99 }, dry_run: true });
+    const result = await inlayPatchConfig(context(client, fakeClock()), { patch: { fabCorner: "top-left", inlayImageMaxHeightVh: 999 }, dry_run: true });
     expect(setCalls).toBe(0);
-    expect((result.after as Record<string, unknown>).perspectiveMode).toBe("asset");
-    expect((result.after as Record<string, unknown>).maxImages).toBe(12);
-    expect(result.changed_fields).toEqual(["perspectiveMode", "maxImages"]);
+    expect((result.after as Record<string, unknown>).fabCorner).toBe("top-left");
+    expect((result.after as Record<string, unknown>).inlayImageMaxHeightVh).toBe(100);
+    expect(result.changed_fields).toEqual(["inlayImageMaxHeightVh", "fabCorner"]);
   });
 
   test("patches and resets allowlisted config fields", async () => {
-    let current = { ...DEFAULT_CONFIG, autoGenerate: true };
+    let current = { ...DEFAULT_CONFIG, enabled: true };
     const client = stubClient({
       extensionMessage: async (_id, payload) => {
         if (payload.type === "get_state") return { type: "state", config: current, parserConnections: [], characterAppearance: {} };
@@ -231,10 +231,10 @@ describe("Inlay extension state and stored image details", () => {
         return { type: "config_updated", config: current };
       }
     });
-    const patched = await inlayPatchConfig(context(client, fakeClock()), { patch: { autoGenerate: false } });
-    expect((patched.after as Record<string, unknown>).autoGenerate).toBe(false);
-    const reset = await inlayResetConfig(context(client, fakeClock()), { fields: ["autoGenerate"] });
-    expect((reset.after as Record<string, unknown>).autoGenerate).toBe(DEFAULT_CONFIG.autoGenerate);
+    const patched = await inlayPatchConfig(context(client, fakeClock()), { patch: { enabled: false } });
+    expect((patched.after as Record<string, unknown>).enabled).toBe(false);
+    const reset = await inlayResetConfig(context(client, fakeClock()), { fields: ["enabled"] });
+    expect((reset.after as Record<string, unknown>).enabled).toBe(DEFAULT_CONFIG.enabled);
     await expect(inlayResetConfig(context(client, fakeClock()), { all: true })).rejects.toThrow("confirm_all=true");
   });
 
