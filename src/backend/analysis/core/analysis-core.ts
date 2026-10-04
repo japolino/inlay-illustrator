@@ -6744,8 +6744,197 @@ function cI(e, t, r) {
 function QB(e, t) {
     return cI(e, t, "reference").filter((r) => r.asset !== null);
   }
+// AM Ime @93778
+var Ime = ["head", "top", "bottom", "legs", "feet"];
+// AM Sme @93779
+var Sme = [...V0, "custom"];
+// AM Yot @93780
+var Yot = {
+      "identity.character_tag": "고유 / 캐릭터 태그",
+      "hair.color": "머리 / 색",
+      "hair.length": "머리 / 길이",
+      "hair.style": "머리 / 스타일",
+      "head.other": "머리 / 기타",
+      "eyes.color": "눈 / 색",
+      "eyes.structure": "눈 / 형태",
+      "body.skin": "기타 / 피부",
+      "body.build": "기타 / 체형",
+      "body.proportions": "기타 / 비율",
+      "body.breast_size": "가슴 / 크기",
+      "marks.distinctive": "기타 / 신체 표식",
+      "nonhuman.features": "기타 / 신체",
+      custom: "기타 프롬프트",
+      head: "머리",
+      top: "상의",
+      bottom: "하의",
+      legs: "다리",
+      feet: "발",
+    };
 // AM t6 @93801
 var t6 = class extends Error {};
+// AM Zot @93802
+function Zot(e, t) {
+    return [...new Set(t.map((r) => r.promptKey))].flatMap((r) =>
+      vn(e, r).forms.flatMap((n) => {
+        const o = Qot(e, r, n.id);
+        return o.targets.length > 0 ? [o] : [];
+      }),
+    );
+  }
+// AM Jot @93810
+function Jot(e, t, r) {
+    const n = bs(e.characterPrompt.characterForms[t]),
+      o = vn(e, t);
+    return {
+      ...e,
+      characterPrompt: {
+        ...e.characterPrompt,
+        characterForms: { ...e.characterPrompt.characterForms, [t]: kme(n, o, r) },
+      },
+    };
+  }
+// AM kme @93821
+function kme(e, t, r) {
+    const n = bs(e),
+      o = (i, s, c) => {
+        const l = { ...bs(i) };
+        for (const d of new Set([...Object.keys(s), ...Object.keys(c)]))
+          JSON.stringify(bs(s)[d]) !== JSON.stringify(bs(c)[d]) &&
+            (Object.hasOwn(c, d) ? (l[d] = bs(c)[d]) : delete l[d]);
+        return l;
+      },
+      a = n.forms;
+    return Array.isArray(a) && a.every((i) => t.forms.some((s) => s.id === bs(i).id))
+      ? {
+          ...n,
+          ...o(n, t, r),
+          forms: r.forms.map((i) => {
+            const s = t.forms.find((d) => d.id === i.id),
+              c = a.find((d) => bs(d).id === i.id);
+            if (!s || !c) return i;
+            const l = o(c, s, i);
+            if (
+              (JSON.stringify(s.basePromptGroups) !== JSON.stringify(i.basePromptGroups) &&
+                (l.basePromptGroups = o(bs(c).basePromptGroups, s.basePromptGroups, i.basePromptGroups)),
+              JSON.stringify(s.outfits) !== JSON.stringify(i.outfits))
+            ) {
+              const d = bs(c).outfits;
+              l.outfits = i.outfits.map((u) => {
+                const f = s.outfits.find((h) => h.id === u.id),
+                  m = Array.isArray(d) ? d.find((h) => bs(h).id === u.id) : void 0;
+                return f && m ? o(m, f, u) : u;
+              });
+            }
+            return l;
+          }),
+        }
+      : r;
+  }
+// AM Ame @93857
+function Ame(e) {
+    const t = [],
+      r = [],
+      n = { "(": ")", "[": "]", "{": "}" };
+    let o = 0,
+      a = !1;
+    for (let s = 0; s < e.length; s++) {
+      const c = e[s];
+      if (c === "\\") {
+        s++;
+        continue;
+      }
+      if (e.slice(s, s + 2) === "::") {
+        ((a = !a), s++);
+        continue;
+      }
+      if (n[c]) r.push(n[c]);
+      else if (")]}".includes(c)) {
+        if (r.pop() !== c) return e.trim() ? [e.trim()] : [];
+      } else if (!r.length && !a && /[,;\r\n]/u.test(c)) {
+        const l = e.slice(o, s).trim();
+        (l && t.push(l), (o = s + 1));
+      }
+    }
+    if (r.length || a) return e.trim() ? [e.trim()] : [];
+    const i = e.slice(o).trim();
+    return (i && t.push(i), t);
+  }
+// AM Qot @93885
+function Qot(e, t, r) {
+    const n = vn(e, t),
+      o = bs(e.characterPrompt.characterForms[t]).forms;
+    return Pme(n, o, t, r);
+  }
+// AM Pme @93890
+function Pme(e, t, r, n, o) {
+    const a = bs(bs(Array.isArray(t) ? t.find((u) => bs(u).id === n) : void 0).basePromptGroups),
+      i = {
+        ...e,
+        forms: e.forms.map((u) =>
+          u.id !== n
+            ? u
+            : {
+                ...u,
+                basePromptGroups: {
+                  ...u.basePromptGroups,
+                  ...Object.fromEntries(
+                    Sme.flatMap((f) => {
+                      const m = a[f];
+                      return Array.isArray(m) && m.every((h) => typeof h == "string") ? [[f, m]] : [];
+                    }),
+                  ),
+                },
+              },
+        ),
+      },
+      s = i.forms.find((u) => u.id === n);
+    if (!s) throw new Error("재분류할 폼을 찾지 못했습니다.");
+    const c = [],
+      l = [],
+      d = (u, f, m = "") => {
+        const h = s.outfits.find((w) => w.id === m),
+          y = Wb.groups.find((w) => w.id === f)?.selection,
+          v = {
+            targetRef: `t${c.length}`,
+            kind: u,
+            field: f,
+            outfitId: m,
+            label: `${u === "base" ? "베이스" : u === "new-outfit" ? "새 의상" : h?.label || m} / ${Yot[f]}`,
+            capacity: u !== "base" || !y ? null : y.type === "single" ? 1 : (y.max_tags ?? null),
+          };
+        return (c.push(v), v);
+      };
+    if (o ? o.base : MP(s.reference)) {
+      for (const u of Sme) d("base", u);
+      for (const u of Ime) d("new-outfit", u);
+    }
+    for (const u of s.outfits) if (o ? o.outfits.has(u.id) : MP(u)) for (const f of Ime) d("outfit", f, u.id);
+    for (const u of c) {
+      if (u.kind === "new-outfit") continue;
+      const f =
+          u.kind === "base"
+            ? Ame((s.basePromptGroups[u.field] ?? []).join(", "))
+            : Ame(s.outfits.find((h) => h.id === u.outfitId)[u.field]),
+        m = c
+          .filter(
+            (h) =>
+              ((u.kind === "base" ? h.kind !== "outfit" : h.kind === "outfit" && h.outfitId === u.outfitId) &&
+                !(h.kind === "base" && h.field === "body.breast_size" && s.gender === "male")) ||
+              h.targetRef === u.targetRef,
+          )
+          .map((h) => h.targetRef);
+      f.forEach((h, y) =>
+        l.push({
+          fragmentId: `f${l.length}`,
+          sourceTargetId: u.targetRef,
+          sourceIndex: y,
+          text: h,
+          allowedTargetRefs: m,
+        }),
+      );
+    }
+    return { promptKey: r, formId: n, collection: i, fingerprint: JSON.stringify(e), targets: c, fragments: l };
+  }
 // AM eat @93959
 function eat(e) {
     const t = {},
@@ -13394,6 +13583,26 @@ function Uwt(e) {
       },
     };
   }
+// AM Vxt @147264
+function Vxt(e) {
+    return e !== null && typeof e == "object" && !Array.isArray(e) ? e : {};
+  }
+// AM Cf @147270
+function Cf(e, t, r) {
+    const n = e.characterPrompt.personaSettings.profiles,
+      o = Vxt(n[t]);
+    return {
+      ...e,
+      characterPrompt: {
+        ...e.characterPrompt,
+        personaSettings: { ...e.characterPrompt.personaSettings, profiles: { ...n, [t]: { ...o, forms: r } } },
+      },
+    };
+  }
+// AM QH @148048
+function QH(e) {
+    return e !== null && typeof e == "object" && !Array.isArray(e) ? e : {};
+  }
 // AM sOt @178859
 var sOt = ["head", "top", "bottom", "legs", "feet"];
 // AM Kh @178860
@@ -13934,7 +14143,16 @@ export {
   MP,
   cI,
   QB,
+  Ime,
+  Sme,
+  Yot,
   t6,
+  Zot,
+  Jot,
+  kme,
+  Ame,
+  Qot,
+  Pme,
   eat,
   Cme,
   bs,
@@ -14248,6 +14466,9 @@ export {
   Hwt,
   ewe,
   Uwt,
+  Vxt,
+  Cf,
+  QH,
   sOt,
   Kh,
   Cq,

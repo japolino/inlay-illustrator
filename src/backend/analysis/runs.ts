@@ -11,13 +11,13 @@
  * | metadata-check      | `$vt.analyzeMetadata` L134787                             | L145272, L154345              |
  * | artist-extraction   | `Mvt.extractArtistPrompt` L134487                         | Artists tab L150269           |
  * | representative-pick | `sve` L133089 (no LLM) + toast `hvt` L133864              | L155676                       |
- * | reclassification    | not wired yet (AM `ope` needs the prompt-editor draft session) -> unsupported |      |
+ * | reclassification    | `ope` L96048 with the prompts adapter `Hct` L105177 (personas: `v_t` L148051) | Prompts tab L154235 |
  * | unique-tag-search   | dropped (Danbooru HF space, PORT-PLAN) -> unsupported     |                               |
  */
 import { rpcError, type AnalysisStartParams, type JobStatus, type ProgressInfo, type RowNotice } from "../../shared/contract/index.js";
 import { fail } from "../rpc/errors.js";
 import { AM, amFn } from "./core/index.js";
-import { createAmAnalyzer, openAnalysisSession, rememberVisionSupport, type AnalysisSession } from "./bridge/session.js";
+import { buildPersonaCatalog, createAmAnalyzer, openAnalysisSession, rememberVisionSupport, type AnalysisSession } from "./bridge/session.js";
 import { amLabel, amMessage } from "./labels.js";
 import type { JobContext, JobOutcome } from "./jobs.js";
 
@@ -258,6 +258,73 @@ export async function runRepresentativePick(ctx: JobContext, params: AnalysisSta
   }
 }
 
+/**
+ * AI reclassification of checked areas (AM `ope` L96048). The checked areas are the reference "analysis" checks stored
+ * on forms/outfits (AM `Pme` L93900 via `MP`), so the port passes the prompt keys (or persona ids) as the editor targets.
+ * The draft session is the store itself (no separate drafts in the backend).
+ */
+export async function runReclassification(ctx: JobContext, params: AnalysisStartParams): Promise<JobOutcome> {
+  const session = await open(ctx, "reclassification");
+  const personaMode = !!params.personaIds?.length;
+  const keys = personaMode ? params.personaIds! : params.promptKeys?.length ? params.promptKeys : promptKeysOf(session);
+  const personas = personaMode ? (await buildPersonaCatalog(ctx.services)).records : [];
+  const adapter = personaMode
+    ? {
+        domain: "settings",
+        capture: (t: Any, r: Any) =>
+          [...new Set(r.targets.map((n: Any) => n.promptKey))].flatMap((key) => {
+            const persona = personas.find((p: Any) => p.key === key);
+            if (!persona) throw new Error("재분류할 페르소나를 찾지 못했습니다.");
+            const collection = AM.bd(t, persona.key);
+            const enabled = (AM.sI(t, r.sourceId, persona, "reclassification") as Any[]).filter((x) => x.enabled);
+            const raw = AM.QH(AM.QH(t.characterPrompt.personaSettings.profiles[persona.key]).forms).forms;
+            return collection.forms
+              .map((form: Any) =>
+                AM.Pme(collection, raw, persona.key, form.id, {
+                  base: enabled.some((x) => x.formId === form.id && x.outfitId === null),
+                  outfits: new Set(enabled.filter((x) => x.formId === form.id && x.outfitId !== null).map((x) => x.outfitId)),
+                }),
+              )
+              .filter((x: Any) => x.targets.length > 0);
+          }),
+        collection: AM.bd,
+        store: (t: Any, r: string, n: Any) => AM.Cf(t, r, AM.kme(AM.QH(t.characterPrompt.personaSettings.profiles[r]).forms, AM.bd(t, r), n)),
+        topics: () => ["reclassification"],
+      }
+    : { domain: "prompts", capture: (t: Any, r: Any) => AM.Zot(t, r.targets), collection: AM.vn, store: AM.Jot, topics: () => ["reclassification"] };
+  const controller = AM.ope({
+    config: session.store,
+    analyzer: analyzer(ctx, "prompt-reclassification"),
+    blocked: () => false,
+    drafts: { flush() {}, getEditRevision: () => 0 },
+    adapter,
+    context: () => ({ sourceId: ctx.characterId, targets: keys.map((promptKey) => ({ promptKey })), generation: 0, available: keys.length > 0 }),
+  });
+  const unsubscribe = controller.subscribe(() => {
+    const snap = controller.getSnapshot();
+    ctx.progress({ ...amLabel(String(snap.message ?? "")), ...(snap.total ? { done: snap.completed, total: snap.total } : {}), ...(snap.retry ? { retry: { attempt: snap.retry.attempt, total: snap.retry.total } } : {}) });
+  });
+  const onAbort = () => controller.cancel();
+  ctx.signal.addEventListener("abort", onAbort, { once: true });
+  try {
+    await controller.start();
+    await session.store.flushSave();
+    const snap = controller.getSnapshot();
+    const { message, messageKo } = amMessage(String(snap.message ?? ""));
+    const status: JobStatus = ctx.signal.aborted ? "cancelled" : snap.activityStatus === "success" ? "success" : snap.activityStatus === "error" ? "error" : "no-evidence";
+    return {
+      status,
+      message: message || status,
+      ...(messageKo ? { messageKo } : {}),
+      ...(status === "error" ? { error: rpcError("provider-error", message, { ...(messageKo ? { messageKo } : {}), retryable: true }) } : {}),
+    };
+  } finally {
+    ctx.signal.removeEventListener("abort", onAbort);
+    unsubscribe?.();
+    session.dispose();
+  }
+}
+
 export async function runAnalysis(ctx: JobContext, params: AnalysisStartParams): Promise<JobOutcome> {
   switch (params.kind) {
     case "character-prompts":
@@ -274,10 +341,12 @@ export async function runAnalysis(ctx: JobContext, params: AnalysisStartParams):
       return runArtistExtraction(ctx, params);
     case "representative-pick":
       return runRepresentativePick(ctx, params);
+    case "reclassification":
+      return runReclassification(ctx, params);
     default:
       return fail("unsupported", `Analysis kind "${params.kind}" is not available in this version.`);
   }
 }
 
 /** Kinds `analysis.start` accepts (validated before a job is created). */
-export const SUPPORTED_ANALYSIS_KINDS = new Set(["character-prompts", "references", "persona", "asset-matching", "metadata-check", "artist-extraction", "representative-pick"]);
+export const SUPPORTED_ANALYSIS_KINDS = new Set(["character-prompts", "references", "persona", "asset-matching", "metadata-check", "artist-extraction", "representative-pick", "reclassification"]);

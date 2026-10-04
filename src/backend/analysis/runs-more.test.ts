@@ -118,3 +118,26 @@ describe("persona analysis (AM bwt)", () => {
     expect(forms.forms[0]!.basePromptGroups["hair.color"]).toEqual(["black hair"]);
   });
 });
+
+describe("reclassification (AM ope)", () => {
+  test("moves clothing from base groups into a new outfit", async () => {
+    const fx = fixture();
+    await fx.services.storage.updateCharacterDocument(CHAR, (d) => ({ ...d, characterPrompt: { ...d.characterPrompt, characterForms: { [ALICE]: { defaultFormId: "form_default", forms: [{ id: "form_default", label: "기본", description: "", humanlike: true, gender: "female", basePromptGroups: { "hair.color": ["red hair", "sailor shirt"] }, negativePrompt: "", reference: null, defaultOutfitId: "outfit_default", outfits: [{ id: "outfit_default", label: "기본 의상", description: "", candidateEnabled: true, head: "", top: "", bottom: "", legs: "", feet: "" }] }] } } } }));
+    let system = "";
+    fx.llmReplies.push((r: LlmCompleteRequest) => {
+      system = r.messages[0]!.content as string;
+      const body = JSON.parse(r.messages[1]!.content as string);
+      const part = body.partitions[0];
+      const top = part.targets.find((t: { kind: string; field: string }) => t.kind === "new-outfit" && t.field === "top").targetRef;
+      const hair = part.targets.find((t: { kind: string; field: string }) => t.kind === "base" && t.field === "hair.color").targetRef;
+      return { partitions: [{ partitionRef: part.partitionRef, assignments: [{ fragmentId: "f0", targetRef: hair, confidence: "high", reason: "hair" }, { fragmentId: "f1", targetRef: top, confidence: "high", reason: "clothing" }], newOutfit: { sourceFragmentIds: ["f1"], name: "Sailor Uniform" } }] };
+    });
+    const jobs = new AnalysisJobs(fx.services);
+    const out = await jobs.start("reclassification", CHAR, (ctx) => runAnalysis(ctx, { kind: "reclassification", characterId: CHAR, promptKeys: [ALICE] })).done;
+    expect(out).toMatchObject({ status: "success", message: "AI reclassification complete · 1/1" });
+    expect(system).toBe(data("analysis-prompt-prompt-reclassification-batch.system.txt"));
+    const form = fx.documents.get(CHAR)!.characterPrompt.characterForms[ALICE]!.forms[0]!;
+    expect(form.basePromptGroups["hair.color"]).toEqual(["red hair"]);
+    expect(form.outfits.some((o) => o.top === "sailor shirt" && o.label === "Sailor Uniform")).toBe(true);
+  });
+});
