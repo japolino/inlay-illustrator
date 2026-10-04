@@ -161,7 +161,7 @@ export function GenerationDock({ ctx, owner, draftKey, source }: GenerationProps
   const update = (patch: Partial<GenerationSession>) => ctx.sessions.updateGeneration(ctx.characterId, patch);
   const persona = owner.kind === "persona";
   const selectedCount = session.selectedResultIds.length;
-  const imageDraft = useMemo((): OutfitImageDraft & { gender: string; referenceType: string; referenceStrength: number; referenceFidelity: number } => ({
+  const imageDraft = useMemo((): OutfitImageDraft => ({
     label: session.draft.label,
     description: session.draft.description,
     head: session.draft.head,

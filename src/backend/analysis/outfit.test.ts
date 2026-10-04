@@ -47,6 +47,17 @@ describe("outfit image prompt (AM fOt)", () => {
     expect(request.novelai?.characterReferences?.[0]).toMatchObject({ mimeType: "image/png", type: "character" });
   });
 
+  test("dock gender and reference settings override the form / config defaults", async () => {
+    const fx = createAnalysisFixture();
+    fx.config.value = { ...fx.config.value, image: { ...fx.config.value.image, provider: "novelai", model: "nai-diffusion-4-5-full" }, novelai: { ...fx.config.value.novelai, characterReferenceEnabled: true } };
+    await withForms(fx);
+    const { plan, request, context } = await buildOutfitImageRequest(fx.services, target, "form_default", draft({ useCharacterReference: true, gender: "male", referenceType: "style", referenceStrength: 0.3, referenceFidelity: 0.8 }));
+    expect(context.gender).toBe("male");
+    expect(plan.positivePrompt).toContain("1boy");
+    expect(plan.positivePrompt).not.toContain("1girl");
+    expect(request.novelai?.characterReferences?.[0]).toMatchObject({ type: "style", strength: 0.3, fidelity: 0.8 });
+  });
+
   test("anima providers: empty negative, anima prefixes from the codec", async () => {
     const fx = createAnalysisFixture();
     fx.config.value = { ...fx.config.value, image: { ...fx.config.value.image, provider: "comfyui" } };

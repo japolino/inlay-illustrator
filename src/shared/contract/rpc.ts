@@ -172,7 +172,25 @@ export interface RowNotice { promptKey: string; status: "idle" | "running" | "su
 
 /** Outfit / reference image generation (AM `fOt`/`hOt`). */
 export type OutfitImageTarget = { kind: "character"; characterId: string; promptKey: string } | { kind: "persona"; personaId: string; characterId?: string };
-export interface OutfitImageDraft { label: string; description?: string; head: string; top: string; bottom: string; legs: string; feet: string; nsfw?: boolean; seed: string; seedFixed: boolean; useCharacterReference: boolean }
+export interface OutfitImageDraft {
+  label: string;
+  description?: string;
+  head: string;
+  top: string;
+  bottom: string;
+  legs: string;
+  feet: string;
+  nsfw?: boolean;
+  seed: string;
+  seedFixed: boolean;
+  useCharacterReference: boolean;
+  /** Gender of the dock (default: the form's gender); drives the 1girl/1boy tag and the main prompt. */
+  gender?: "female" | "male" | "unknown";
+  /** NovelAI V4.5 character reference settings (default: config.novelai.characterReference*). */
+  referenceType?: "character" | "style" | "character&style";
+  referenceStrength?: number;
+  referenceFidelity?: number;
+}
 export interface OutfitImageResult { resultId: string; imageId: string; url: string; seed: string; width: number; height: number; positivePrompt: string; negativePrompt: string; createdAt: string }
 
 /** Chat-side generation attempt kinds (AM `attemptKind`). */

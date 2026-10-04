@@ -139,6 +139,20 @@ export function providerPromptFor(config: Any, plan: OutfitPromptPlan): { positi
   return { positivePrompt: String(prompt.positivePrompt ?? ""), negativePrompt: String(prompt.negativePrompt ?? "") };
 }
 
+/** Dock gender override (`OutfitImageDraft.gender`), when valid. */
+function draftGender(draft: OutfitImageDraft): "female" | "male" | "unknown" | undefined {
+  return draft.gender === "female" || draft.gender === "male" || draft.gender === "unknown" ? draft.gender : undefined;
+}
+
+/** Dock reference settings (`OutfitImageDraft.reference*`); unset fields fall back to the NovelAI config. */
+function draftReferenceSettings(draft: OutfitImageDraft): ReferenceSettings {
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+  const type = draft.referenceType === "character" || draft.referenceType === "style" || draft.referenceType === "character&style" ? draft.referenceType : undefined;
+  const strength = num(draft.referenceStrength);
+  const fidelity = num(draft.referenceFidelity);
+  return { ...(type ? { type } : {}), ...(strength !== undefined ? { strength } : {}), ...(fidelity !== undefined ? { fidelity } : {}) };
+}
+
 async function resolveTargetContext(services: BackendServices, config: Any, target: OutfitImageTarget, formId: string, draft: OutfitImageDraft): Promise<OutfitTargetContext> {
   if (target.kind === "character") {
     const cp = config.characterPrompt;
@@ -158,9 +172,9 @@ async function resolveTargetContext(services: BackendServices, config: Any, targ
       characterName,
       collection,
       formId: form.id,
-      gender: form.gender,
+      gender: draftGender(draft) ?? form.gender,
       humanlike: form.humanlike !== false,
-      mainPrompt: compileMainPrompt(form.basePromptGroups, form.gender),
+      mainPrompt: compileMainPrompt(form.basePromptGroups, draftGender(draft) ?? form.gender),
       formNegativePrompt: form.negativePrompt,
       reference: draft.useCharacterReference && form.reference?.defaultAsset ? (AM.pn(form.reference.defaultAsset) as AssetRef) : null,
       persona: false,
@@ -179,9 +193,9 @@ async function resolveTargetContext(services: BackendServices, config: Any, targ
     characterName: persona?.name ?? target.personaId,
     collection,
     formId: form.id,
-    gender: form.gender,
+    gender: draftGender(draft) ?? form.gender,
     humanlike: form.humanlike !== false,
-    mainPrompt: compileMainPrompt(form.basePromptGroups, form.gender),
+    mainPrompt: compileMainPrompt(form.basePromptGroups, draftGender(draft) ?? form.gender),
     formNegativePrompt: form.negativePrompt,
     reference: draft.useCharacterReference ? ((form.reference?.defaultAsset ? AM.pn(form.reference.defaultAsset) : fallbackReference) as AssetRef | null) : null,
     persona: true,
@@ -292,7 +306,7 @@ export async function buildOutfitImageRequest(services: BackendServices, target:
   const characterId = target.kind === "character" ? target.characterId : target.characterId || (await services.sources.getActiveChat().catch(() => null))?.characterId || "";
   const prepared = await prepareConfig(services, characterId);
   const context = await resolveTargetContext(services, prepared.config, target, formId, draft);
-  const { request, plan } = await requestFromContext(services, characterId, prepared, context, draft);
+  const { request, plan } = await requestFromContext(services, characterId, prepared, context, draft, draftReferenceSettings(draft));
   return { request, plan, context };
 }
 
