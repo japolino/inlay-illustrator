@@ -8,7 +8,7 @@ import type { RosterItem, RosterSource, WorkspaceSnapshot } from "../../../share
 import { matchesQuery } from "../../lib/text-match.js";
 import { useApp, useAppState } from "../../state/app-state.js";
 import { FilterPopover, SearchField, matchFlag, useFilteredList, type FilterGroup, type FilterValues } from "../shell/filters.js";
-import { ArrowLeftIcon, Button, GridIcon, IconButton, ListIcon, PackageIcon, PlusIcon, UserPlusIcon, UsersIcon, cn } from "../ui/index.js";
+import { ArrowLeftIcon, Button, CollapseIcon, ExpandIcon, GridIcon, IconButton, ListIcon, PackageIcon, PlusIcon, UserPlusIcon, UsersIcon, cn } from "../ui/index.js";
 import { useSourceUi, useWorkspaceUi, useWorkspaceUiStore, type NavigationView } from "../workspace-ui.js";
 import { RosterCard, RosterRow, type RosterItemProps } from "./items.js";
 import { ROSTER_LABELS as L } from "./labels.js";
@@ -92,7 +92,7 @@ function bulkLabel(view: NavigationView, allSelected: boolean, filterActive: boo
   return filterActive ? L.registerShown : query ? L.registerSearch : L.registerAll;
 }
 
-export function RosterSidebar({ referenceMode = false }: { referenceMode?: boolean }) {
+export function RosterSidebar({ referenceMode = false, canExpand = false }: { referenceMode?: boolean; canExpand?: boolean }) {
   const app = useApp();
   const ui = useWorkspaceUiStore();
   const characterId = useAppState((s) => s.selectedCharacterId);
@@ -100,6 +100,7 @@ export function RosterSidebar({ referenceMode = false }: { referenceMode?: boole
   const workspaceState = useAppState((s) => s.workspaceState);
   const sourceUi = useSourceUi(characterId);
   const layout = useWorkspaceUi((w) => w.navigationLayout);
+  const expanded = useWorkspaceUi((w) => w.rosterExpanded) && canExpand && !referenceMode;
   const view = sourceUi.navigationView;
   const scope = `roster:${view}`;
   const query = sourceUi.search[scope] ?? "";
@@ -211,7 +212,7 @@ export function RosterSidebar({ referenceMode = false }: { referenceMode?: boole
           const cards = grid && /^withThumbnail$|WithThumbnail$/u.test(section.id);
           return (
             <section key={section.id} data-roster-section={section.id} {...(section.id.startsWith("custom") || section.id.startsWith("ai") ? { "data-roster-custom-section": "" } : {})}>
-              <div class={cn(cards ? "grid grid-cols-3 gap-1.5 max-md:grid-cols-2" : grid ? "grid grid-cols-2 gap-1.5" : "grid gap-0.5")}>
+              <div class={cn(cards ? (expanded ? "grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2" : "grid grid-cols-3 gap-1.5 max-md:grid-cols-2") : grid ? (expanded ? "grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-1.5" : "grid grid-cols-2 gap-1.5") : "grid gap-0.5")}>
                 {section.items.map((item) => (cards
                   ? <RosterCard key={item.promptKey} {...itemProps(item, section.badge)} />
                   : <RosterRow key={item.promptKey} tile={grid} {...itemProps(item, section.badge)} />))}
@@ -228,7 +229,12 @@ export function RosterSidebar({ referenceMode = false }: { referenceMode?: boole
       <header class="grid shrink-0 grid-cols-[minmax(0,1fr)] gap-2 px-2.5 pt-3 pb-2">
         <div class="flex min-h-7 items-center gap-2 px-0.5">
           {view === "modules" ? <IconButton label={L.backToLorebooks} size="sm" className="w-7 px-0" onClick={() => setView("lorebooks")}><ArrowLeftIcon /></IconButton> : null}
-          <h2 class="min-w-0 truncate text-xs font-extrabold">{snapshot?.characterName ?? L.roster}</h2>
+          <h2 class="min-w-0 flex-1 truncate text-xs font-extrabold">{snapshot?.characterName ?? L.roster}</h2>
+          {canExpand && !referenceMode && ready ? (
+            <IconButton size="sm" className="w-7 px-0" label={expanded ? L.collapseRoster : L.expandRoster} onClick={() => ui.updateGlobal({ rosterExpanded: !expanded, sidebarOpen: true })} data-roster-expand="">
+              {expanded ? <CollapseIcon /> : <ExpandIcon />}
+            </IconButton>
+          ) : null}
         </div>
         {(view === "lorebooks" || view === "custom") && !referenceMode ? (
           <nav aria-label={L.registrationMethod}>

@@ -117,6 +117,7 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
   const [section, setSection] = useState<SettingsSection>(navigation.settings ?? DEFAULT_SETTINGS_SECTION);
   const sidebarOpen = useWorkspaceUi((ui) => ui.sidebarOpen);
   const splitRatio = useWorkspaceUi((ui) => ui.splitRatio);
+  const rosterExpanded = useWorkspaceUi((ui) => ui.rosterExpanded);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_MAX);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -191,7 +192,7 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
   const sidebarLabel = settingsOpen ? SHELL_LABELS.settingsList : editorOpen ? ROSTER_LABELS.references : SHELL_LABELS.rosterList;
   const sidebar = settingsOpen
     ? <SettingsNavigation active={section} developerMode={developerMode} onSelect={selectSection} onBack={toggleSettings} />
-    : <RosterSidebar referenceMode={editorOpen} />;
+    : <RosterSidebar referenceMode={editorOpen} canExpand={!mobile} />;
 
   const primary = settingsOpen
     ? <div class="min-h-0 flex-1 overflow-y-auto" data-workspace-scroll=""><SettingsPage section={section} /></div>
@@ -259,6 +260,32 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
 
   const showSidebar = settingsOpen || editorOpen || sidebarOpen;
   const width = showSidebar ? sidebarWidth : 0;
+  const expanded = rosterExpanded && !settingsOpen && !editorOpen;
+  if (expanded) {
+    // Expanded roster (AM 152601-152641): the roster takes the left split; the secondary pane is suspended.
+    return (
+      <div class="grid h-full min-h-0 w-full bg-workspace-pane text-foreground" style={{ gridTemplateColumns: `${RAIL}px minmax(0,1fr)` }} data-ii-am-shell="desktop" data-roster-expanded="">
+        <CharxRail settingsOpen={settingsOpen} onSelect={selectCharacter} onToggleSettings={toggleSettings} />
+        <SplitPanes
+          ratio={splitRatio}
+          onCommit={(ratio) => workspaceUi.updateGlobal({ splitRatio: ratio })}
+          label={SHELL_LABELS.rosterSplitAdjust}
+          first={<aside aria-label={sidebarLabel} class="flex min-h-0 min-w-0 flex-1 flex-col bg-sidebar">{sidebar}</aside>}
+          second={(
+            <section class="flex min-h-0 min-w-0 flex-1 flex-col">
+              <header class="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3" data-workspace-header="">
+                <nav aria-label={SHELL_LABELS.workspaceNav} class="min-w-0 flex-1 overflow-x-auto">
+                  <Tabs idPrefix={TAB_ID_PREFIX} items={WORKSPACE_TABS.map((tab) => ({ id: tab.id, label: tab.label }))} value={activeTab} onValueChange={selectTab} />
+                </nav>
+                <IconButton label={SHELL_LABELS.close} onClick={closeOverlay} data-source-transition-control=""><XIcon /></IconButton>
+              </header>
+              <div class="relative flex min-h-0 flex-1">{primary}<RosterInfoPanel /></div>
+            </section>
+          )}
+        />
+      </div>
+    );
+  }
   return (
     <div
       class="grid h-full min-h-0 w-full bg-workspace-pane text-foreground"
@@ -374,7 +401,7 @@ function WorkspaceSecondary({ secondary, mobile = false }: { secondary: NonNulla
 }
 
 /** Main / secondary split with a keyboard + pointer separator (AM 152814-152853). */
-function SplitPanes({ ratio, onCommit, first, second }: { ratio: number; onCommit: (ratio: number) => void; first: ComponentChildren; second: ComponentChildren }) {
+function SplitPanes({ ratio, onCommit, first, second, label = SHELL_LABELS.splitAdjust }: { ratio: number; onCommit: (ratio: number) => void; first: ComponentChildren; second: ComponentChildren; label?: string }) {
   const [live, setLive] = useState(ratio);
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => setLive(ratio), [ratio]);
@@ -390,7 +417,7 @@ function SplitPanes({ ratio, onCommit, first, second }: { ratio: number; onCommi
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label={SHELL_LABELS.splitAdjust}
+        aria-label={label}
         aria-valuemin={35}
         aria-valuemax={65}
         aria-valuenow={Math.round(live * 100)}

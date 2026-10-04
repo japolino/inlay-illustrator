@@ -70,6 +70,10 @@ const SHELL_SCENES: Record<string, PreviewScene> = {
     const buttons = [...(await waitFor(doc, "[data-roster-sidebar]")).querySelectorAll("button")];
     buttons.find((b) => b.textContent?.includes("Add person"))?.click();
   },
+  "roster-expanded": async ({ doc }) => {
+    await workspaceReady(doc);
+    await clickWhenReady(doc, "[data-roster-expand]");
+  },
   "mobile-drawer": async ({ doc }) => {
     await workspaceReady(doc);
     await clickWhenReady(doc, '[data-ii-am-shell="mobile"] header button');

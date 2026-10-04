@@ -29,6 +29,7 @@ export const SHELL_LABELS = {
   reload: "Reload", // 다시 불러오기
   loadingData: "Loading Asset Maid data", // Asset Maid 데이터 불러오는 중
   splitAdjust: "Main area / workspace width adjust", // 메인 영역과 작업 영역 너비 조절
+  rosterSplitAdjust: "Roster / main area width adjust", // 로스터와 메인 영역 너비 조절
   widthAdjust: (label: string) => `${label} width adjust`, // ${c} 너비 조절
   connectionFailed: "Could not reach the Inlay Illustrator backend.",
   retry: "Retry"

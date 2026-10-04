@@ -44,6 +44,8 @@ export interface SourceUi {
 
 export interface WorkspaceUi {
   sidebarOpen: boolean;
+  /** Roster expanded to the left split (AM `PIt`, not persisted). */
+  rosterExpanded: boolean;
   navigationLayout: "grid" | "list";
   splitRatio: number;
   bySource: Record<string, SourceUi>;
@@ -74,7 +76,7 @@ const NO_SOURCE = "__none__";
 
 /** Store + operations. One per overlay. */
 export class WorkspaceUiStore {
-  readonly store = new Store<WorkspaceUi>({ sidebarOpen: true, navigationLayout: "grid", splitRatio: 0.5, bySource: {} });
+  readonly store = new Store<WorkspaceUi>({ sidebarOpen: true, rosterExpanded: false, navigationLayout: "grid", splitRatio: 0.5, bySource: {} });
   /** Unsaved-editor guard (AM `Te` 154609): the editor reports `dirty`; navigation goes through `runGuarded`. */
   readonly guard = new Store<{ dirty: boolean; pending: (() => void) | null }>({ dirty: false, pending: null });
 
