@@ -12,6 +12,7 @@
  * | artist-extraction   | `Mvt.extractArtistPrompt` L134487                         | Artists tab L150269           |
  * | representative-pick | `sve` L133089 (no LLM) + toast `hvt` L133864              | L155676                       |
  * | reclassification    | `ope` L96048 with the prompts adapter `Hct` L105177 (personas: `v_t` L148051) | Prompts tab L154235 |
+ * | charx-regex         | `Owt.analyzeRegex` L137192 (`Lyt`/`Fyt`), scripts = Lumiverse regex scripts | settings |
  * | unique-tag-search   | dropped (Danbooru HF space, PORT-PLAN) -> unsupported     |                               |
  */
 import { rpcError, type AnalysisStartParams, type JobStatus, type ProgressInfo, type RowNotice } from "../../shared/contract/index.js";
@@ -20,6 +21,7 @@ import { AM, amFn } from "./core/index.js";
 import { buildPersonaCatalog, createAmAnalyzer, openAnalysisSession, rememberVisionSupport, type AnalysisSession } from "./bridge/session.js";
 import { amLabel, amMessage } from "./labels.js";
 import type { JobContext, JobOutcome } from "./jobs.js";
+import { runCharxRegex } from "./charx-regex.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -343,10 +345,12 @@ export async function runAnalysis(ctx: JobContext, params: AnalysisStartParams):
       return runRepresentativePick(ctx, params);
     case "reclassification":
       return runReclassification(ctx, params);
+    case "charx-regex":
+      return runCharxRegex(ctx, { force: params.force === true });
     default:
       return fail("unsupported", `Analysis kind "${params.kind}" is not available in this version.`);
   }
 }
 
 /** Kinds `analysis.start` accepts (validated before a job is created). */
-export const SUPPORTED_ANALYSIS_KINDS = new Set(["character-prompts", "references", "persona", "asset-matching", "metadata-check", "artist-extraction", "representative-pick", "reclassification"]);
+export const SUPPORTED_ANALYSIS_KINDS = new Set(["character-prompts", "references", "persona", "asset-matching", "metadata-check", "artist-extraction", "representative-pick", "reclassification", "charx-regex"]);

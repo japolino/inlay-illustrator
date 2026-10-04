@@ -18,7 +18,7 @@ const WORKSPACE_METHODS = [
   "prompts.saveForms", "prompts.setReferenceEnabled", "prompts.setAnalyzeEnabled", "prompts.setSeed", "prompts.setFramingWeights",
   "assets.list", "assets.setSelection", "assets.clearSelections", "assets.setReference", "assets.inspectMetadata", "assets.clearMetadataRecords", "assets.upload", "assets.saveCrop", "assets.getUrl",
   "analysis.start", "analysis.cancel", "analysis.listActive", "uniqueTags.apply",
-  "outfitImage.generate", "outfitImage.history", "outfitImage.save",
+  "outfitImage.generate", "outfitImage.history", "outfitImage.save", "charxRegex.setDetectors",
 ];
 
 describe("workspace handler group", () => {

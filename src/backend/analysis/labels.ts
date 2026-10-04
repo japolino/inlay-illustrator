@@ -119,6 +119,15 @@ const RULES: Array<[RegExp, string | ((...m: string[]) => string)]> = [
   [/의상 구분이 불명확한 후보 (\d+)장/gu, "$1 candidates with an unclear outfit"],
   [/대표 선택에서 제외된 후보 (\d+)장/gu, "$1 candidates excluded from the pick"],
   [/추가할 이미지 없음/gu, "No images to add"],
+  // charx regex analysis (Owt)
+  [/charx 정규식 분석 대상 확인 중/gu, "Character regex analysis · checking targets"],
+  [/charx 정규식 분석 데이터가 이미 있습니다/gu, "Character regex analysis data already exists"],
+  [/charx 정규식 분석 완료/gu, "Character regex analysis complete"],
+  [/charx 정규식 분석 실패/gu, "Character regex analysis failed"],
+  [/charx 정규식 분석 취소됨/gu, "Character regex analysis cancelled"],
+  [/charx 정규식 분석 중/gu, "Character regex analysis"],
+  [/감지 가능 (\d+)/gu, "detectable $1"],
+  [/대상 없음 (\d+)/gu, "not applicable $1"],
   // counters
   [/정보 없음 (\d+)개/gu, "no info $1"],
   [/정보 없음 (\d+)명/gu, "no info $1 people"],

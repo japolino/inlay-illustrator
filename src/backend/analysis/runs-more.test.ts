@@ -141,3 +141,40 @@ describe("reclassification (AM ope)", () => {
     expect(form.outfits.some((o) => o.top === "sailor shirt" && o.label === "Sailor Uniform")).toBe(true);
   });
 });
+
+describe("charx regex analysis (AM Owt)", () => {
+  test("card regex scripts -> AI detectors stored; manual detectors validated", async () => {
+    const fx = fixture();
+    fx.characters[0]!.extensions = { regex_scripts: [{ scriptName: "img", findRegex: "/<img=(.+?)>/g", replaceString: "{{img::$1}}", placement: [2], markdownOnly: true }] };
+    let system = "";
+    fx.llmReplies.push((r: LlmCompleteRequest) => {
+      system = r.messages[0]!.content as string;
+      const body = JSON.parse(r.messages[1]!.content as string);
+      expect(body.characters[0]).toMatchObject({ charx_id: CHAR, character_name: "Hero" });
+      expect(body.characters[0].customscript[0]).toMatchObject({ in: "<img=(.+?)>", flag: "g", type: "editdisplay" });
+      return { characters: [{ charx_id: CHAR, status: "done", detectors: [{ script_index: 0, in: "<img=(.+?)>" }], reason: "image token" }] };
+    });
+    const jobs = new AnalysisJobs(fx.services);
+    const out = await jobs.start("charx-regex", CHAR, (ctx) => runAnalysis(ctx, { kind: "charx-regex", characterId: CHAR })).done;
+    expect(out.status).toBe("success");
+    expect(out.message).toMatch(/^Character regex analysis complete · detectable 1/);
+    expect(system).toBe(data("analysis-prompt-charx-customscript-detector.system.txt"));
+    const stored = fx.documents.get(CHAR)!.characterPrompt.charxAssetRegexAnalysis[CHAR] as { status: string; detectors: { in: string; source: string }[] };
+    expect(stored.status).toBe("done");
+    expect(stored.detectors[0]).toMatchObject({ in: "<img=(.+?)>", source: "script" });
+    const { setCharxRegexDetectors } = await import("./charx-regex.js");
+    const bad = await setCharxRegexDetectors(fx.services, CHAR, [{ in: "(" }]).catch((e) => e);
+    expect(bad.error.code).toBe("bad-request");
+    const ok = await setCharxRegexDetectors(fx.services, CHAR, [{ in: "\\[pic:(\\w+)\\]", flags: "g" }]);
+    expect(ok.analysis).toMatchObject({ status: "done", detectors: [{ in: "\\[pic:(\\w+)\\]", source: "manual", flags: "g" }] });
+  });
+
+  test("no scripts -> not_applicable, job no-evidence, no LLM call", async () => {
+    const fx = fixture();
+    const jobs = new AnalysisJobs(fx.services);
+    const out = await jobs.start("charx-regex", CHAR, (ctx) => runAnalysis(ctx, { kind: "charx-regex", characterId: CHAR })).done;
+    expect(out.status).toBe("no-evidence");
+    expect(fx.llmRequests).toHaveLength(0);
+    expect((fx.documents.get(CHAR)!.characterPrompt.charxAssetRegexAnalysis[CHAR] as { status: string }).status).toBe("not_applicable");
+  });
+});

@@ -3,6 +3,12 @@ import { translateAmText, amLabel } from "./labels.js";
 
 // Every Korean literal of the sliced controllers (template parts replaced by "3").
 const SAMPLES: string[] = [
+ "charx 정규식 분석 대상 확인 중",
+ "charx 정규식 분석 데이터가 이미 있습니다",
+ "charx 정규식 분석 완료 · 감지 가능 3 · 대상 없음 3",
+ "charx 정규식 분석 중 · 3개",
+ "charx 정규식 분석 실패",
+ "charx 정규식 분석 취소됨",
  "텍스트 AI 배치 3: 3",
  "Alice 분석 결과가 없습니다.",
  "Alice: 분석 대상이 변경되었습니다.",

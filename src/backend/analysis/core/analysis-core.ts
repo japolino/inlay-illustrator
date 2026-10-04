@@ -420,6 +420,25 @@ var fPe = [
       "Creative completion applies only to persistent appearance and outfits. Keep the existing evidence rules for character identification, artist/style tags, and negative_prompt. Preserve output permissions and the existing response format; do not add fields or prose.",
     ].join(`
 `);
+// AM mPe @3305
+var mPe = [
+      "Analyze RisuAI charx customscript entries and return JSON only.",
+      x3,
+      "Goal: select only customscript regular expressions that directly detect image/asset tokens in the current response text.",
+      "Do not generate, repair, rewrite, generalize, or simplify regular expressions. Every detectors[].in must exactly equal the in field of the selected original customscript entry.",
+      "Return one characters[] object for every input charx_id, even when the result is not_applicable.",
+      "Copy each charx_id exactly from the input. Do not substitute a character name, index, or other identifier.",
+      "Return only the following JSON format:",
+      '{"characters":[{"charx_id":"string","status":"done","detectors":[{"script_index":0,"in":"string"}],"reason":"string"}]}',
+      'status must be exactly "done" or "not_applicable". Use done only when at least one valid detector exists. Use not_applicable with an empty detectors array only when there are clearly no customscript entries for image/asset display.',
+      "Every detectors[].script_index must exactly equal the selected input customscript[].index.",
+      "Do not select a customscript merely because its out contains img, a URL, CSS background-image, or image-related strings. Exclude all scripts that render or decorate the HTML, CSS, layout, or state of charx-specific UI, including character cards, profiles, status panels, dialogue boxes, menus, selectors, and galleries.",
+      "Select only entries meeting all conditions: (1) in directly matches the notation of a single asset token itself as recorded in the current response; (2) a named capture called asset, assetName, asset_name, filename, fileName, file, src, path, name, or token, a single named capture with any name, one ordinary capture, or multiple ordinary captures concatenated in original order yields exactly one asset filename/token; and (3) out uses that extracted value as an image or asset reference.",
+      "Exclude entries whose full in match or captured range can include general UI data such as dialogue, explanatory prose, UI state, HTML blocks, CSS, JSON, class, id, title, or content. Conversely, if in specifically matches only an asset token and captures only the asset name, do not exclude it merely because out renders HTML.",
+      'Original regular expressions that extract only an asset name from a single asset notation, such as <img="([^"]+)"> or [asset:(?<asset>...)], are valid candidates. Do not return a newly created example regex; you must use the original in and index from the input customscript.',
+      "Do not include asset_template, Markdown, explanatory prose, comments, or additional keys.",
+    ].join(`
+`);
 // AM pPe @3323
 var pPe = [
       "Analyze selected RisuAI lorebooks and return JSON only.",
@@ -10305,6 +10324,338 @@ function C7(e, t, r) {
       ? e
       : { ...e, positivePrompt: n, globalPositivePrompt: o };
   }
+// AM Jo @120403
+function Jo(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM Cl @120406
+function Cl(e) {
+    return e !== null && typeof e == "object" && !Array.isArray(e) ? e : {};
+  }
+// AM Oyt @120409
+function Oyt(e) {
+    return Array.isArray(e) ? e : [];
+  }
+// AM kbe @120412
+function kbe(e) {
+    return Array.isArray(e) ? e : Object.keys(Cl(e)).length ? [e] : [];
+  }
+// AM jyt @120415
+function jyt(e) {
+    const t = String(e ?? "");
+    let r = 2166136261;
+    for (let n = 0; n < t.length; n += 1) ((r ^= t.charCodeAt(n)), (r = Math.imul(r, 16777619)));
+    return (r >>> 0).toString(16).padStart(8, "0");
+  }
+// AM Eyt @120421
+function Eyt(e) {
+    const t = Cl(e);
+    return Jo(t.chaId ?? t.id ?? t.name);
+  }
+// AM Abe @120425
+function Abe(e) {
+    return Oyt(e).map((t, r) => {
+      const n = Cl(t);
+      return {
+        index: r,
+        comment: Jo(n.comment ?? n.name),
+        type: Jo(n.type),
+        in: String(n.in ?? ""),
+        out: String(n.out ?? ""),
+        flag: Jo(n.flag),
+        ableFlag: n.ableFlag === !0,
+      };
+    });
+  }
+// AM Nyt @120439
+function Nyt(e) {
+    return jyt(
+      JSON.stringify(
+        Abe(e).map((t) => ({
+          index: t.index,
+          in: t.in,
+          out: t.out,
+          flag: t.flag,
+          ableFlag: t.ableFlag,
+          type: t.type,
+          comment: t.comment,
+        })),
+      ),
+    );
+  }
+// AM iH @120454
+function iH(e, t = 0) {
+    const r = Cl(e),
+      n = Eyt(r) || `character-${t}`;
+    if (!n || Jo(r.type) === "group") return null;
+    const o = Abe(r.customscript);
+    return {
+      id: n,
+      name: Jo(r.name ?? r.nickname) || `Character ${t + 1}`,
+      customscript: o,
+      scriptSignature: Nyt(r.customscript),
+    };
+  }
+// AM Ryt @120466
+function Ryt(e) {
+    if (typeof e == "string") {
+      const i = Jo(e);
+      return i ? { scriptIndex: -1, in: i, source: "manual", flags: "" } : null;
+    }
+    if (Array.isArray(e)) {
+      const i = Jo(e[0]);
+      return i ? { scriptIndex: -1, in: i, source: "manual", flags: Jo(e[1]) } : null;
+    }
+    const t = Cl(e),
+      r = Number(t.scriptIndex ?? t.script_index),
+      n = Jo(t.in ?? t.regex ?? t.pattern ?? t.input),
+      o = Jo(t.source ?? t.mode ?? t.kind),
+      a = t.manual === !0 || o === "manual" || o === "user" || !Number.isInteger(r) || r < 0;
+    return !n || (!a && r < 0)
+      ? null
+      : {
+          scriptIndex: Number.isInteger(r) ? r : -1,
+          in: n,
+          source: a ? "manual" : "script",
+          flags: Jo(t.flags ?? t.flag),
+        };
+  }
+// AM FI @120489
+function FI(e) {
+    const t = Cl(e),
+      r = kbe(
+        Array.isArray(e) || typeof e == "string"
+          ? e
+          : (t.detectors ?? t.detector ?? t.regexes ?? t.patterns ?? ((t.in ?? t.regex ?? t.pattern) ? e : [])),
+      )
+        .map(Ryt)
+        .filter((o) => !!o),
+      n = Jo(t.status);
+    return {
+      status: n === "done" || n === "error" ? n : r.length ? "done" : "not_applicable",
+      analyzedAt: Jo(t.analyzedAt ?? t.analyzed_at),
+      scriptSignature: Jo(t.scriptSignature ?? t.script_signature),
+      detectors: r,
+      error: Jo(t.error),
+    };
+  }
+// AM $2 @120507
+function $2(e) {
+    return (
+      (e.ableFlag ? Jo(e.flag || "g") : "g")
+        .replace(/[^dgimsuvy]/g, "")
+        .split("")
+        .filter((t, r, n) => n.indexOf(t) === r)
+        .join("") || "u"
+    );
+  }
+// AM Tyt @120569
+function Tyt(e) {
+    if (e.force) return !0;
+    const t = Cl(e.analysisMap)[e.target.id];
+    return Array.isArray(t) ? t.length === 0 : typeof t == "string" ? !Jo(t) : Object.keys(Cl(t)).length === 0;
+  }
+// AM Obe @120574
+function Obe(e) {
+    const t = e.targets.filter((r) => Tyt({ target: r, analysisMap: e.analysisMap, force: e.force }));
+    return {
+      missing: t,
+      aiTargets: t.filter((r) => r.customscript.length > 0),
+      notApplicableTargets: t.filter((r) => r.customscript.length === 0),
+    };
+  }
+// AM Lyt @120582
+function Lyt(e) {
+    return [
+      { role: "system", content: mPe },
+      {
+        role: "user",
+        content: JSON.stringify({
+          characters: e.map((t) => ({ charx_id: t.id, character_name: t.name, customscript: t.customscript })),
+        }),
+      },
+    ];
+  }
+// AM jbe @120593
+function jbe(e, t) {
+    return {
+      status: "not_applicable",
+      analyzedAt: new Date().toISOString(),
+      scriptSignature: e.scriptSignature,
+      detectors: [],
+      error: t.trim(),
+    };
+  }
+// AM Dyt @120602
+function Dyt(e, t = "No customscript entries.") {
+    return jbe(e, t);
+  }
+// AM Ebe @120605
+function Ebe(e, t) {
+    return {
+      status: "error",
+      analyzedAt: new Date().toISOString(),
+      scriptSignature: e.scriptSignature,
+      detectors: [],
+      error: t instanceof Error ? t.message : Jo(t) || "charx asset regex analysis failed",
+    };
+  }
+// AM Fyt @120614
+function Fyt(e, t) {
+    const r = lP(t, {
+        arrayKeys: ["characters", "character_results", "characterResults", "results", "items"],
+        singleKeys: ["character", "character_result", "characterResult", "item"],
+        allowRootRecord: e.length === 1,
+      }),
+      n = cP(t),
+      o = e.flatMap((l) => (Object.hasOwn(n, l.id) ? [{ charx_id: l.id, detectors: n[l.id] }] : [])),
+      a =
+        e.length === 1 &&
+        ["detectors", "detector", "regexes", "patterns", "regex", "pattern", "in"].some((l) => Object.hasOwn(n, l))
+          ? [n]
+          : [],
+      i = o.length
+        ? o
+        : r.length
+          ? r
+          : ["charx_id", "charxId", "status", "detectors"].some((l) => Object.hasOwn(n, l))
+            ? [n]
+            : a.length
+              ? a
+              : e.length === 1 && Array.isArray(t)
+                ? [{ charx_id: e[0].id, detectors: t }]
+                : [];
+    if (!i.length && e.length) throw new Error("AI response did not include characters[].");
+    const s = new Map();
+    for (let l = 0; l < i.length; l += 1) {
+      const d = i[l],
+        u = Cl(d),
+        f =
+          Jo(u.charx_id ?? u.charxId ?? u.id) ||
+          (i.length === e.length ? e[l]?.id : "") ||
+          (e.length === 1 ? e[0].id : "");
+      f && s.set(f, u);
+    }
+    const c = new Map();
+    for (const l of e) {
+      const d = s.get(l.id);
+      if (!d) {
+        c.set(
+          l.id,
+          Ebe(l, i.length ? `AI response missing charx_id: ${l.id}` : "AI response did not include characters[]."),
+        );
+        continue;
+      }
+      const u = kbe(d.detectors ?? d.detector ?? d.regexes ?? d.patterns ?? d.regex ?? d.pattern ?? d.in).flatMap(
+          (m) => {
+            const h = Cl(m),
+              y = Number(h.script_index ?? h.scriptIndex),
+              v = Number.isInteger(y) ? l.customscript[y] : void 0,
+              w = Jo(typeof m == "string" ? m : (h.in ?? h.regex ?? h.pattern ?? h.input)) || Jo(v?.in),
+              x = v && Jo(v.in) === w ? y : l.customscript.findIndex((k) => Jo(k.in) === w),
+              _ = l.customscript[x];
+            if (!w) return [];
+            const I = _ ? $2(_) : Jo(h.flags ?? h.flag) || "g";
+            try {
+              new RegExp(w, I);
+            } catch {
+              return [];
+            }
+            return [{ scriptIndex: _ ? x : -1, in: w, source: _ ? "script" : "manual", flags: I }];
+          },
+        ),
+        f = [...new Map(u.map((m) => [`${m.in}\0${m.flags}`, m])).values()];
+      c.set(
+        l.id,
+        f.length
+          ? {
+              status: "done",
+              analyzedAt: new Date().toISOString(),
+              scriptSignature: l.scriptSignature,
+              detectors: f,
+              error: "",
+            }
+          : jbe(l, Jo(d.reason)),
+      );
+    }
+    return c;
+  }
+// AM Kyt @120693
+function Kyt(e, t) {
+    const r = { ...Cl(e) };
+    return (
+      t.forEach((n, o) => {
+        const a = FI(r[o]).detectors.filter((s) => s.source === "manual"),
+          i = [...n.detectors];
+        for (const s of a) i.some((c) => c.in === s.in) || i.push(s);
+        r[o] = { ...n, status: i.length ? "done" : n.status, detectors: i, error: i.length ? "" : n.error };
+      }),
+      r
+    );
+  }
+// AM Nbe @120705
+function Nbe(e) {
+    const t = { done: 0, notApplicable: 0, error: 0 };
+    return (
+      Object.values(Cl(e)).forEach((r) => {
+        const n = FI(r).status;
+        n === "done" ? (t.done += 1) : n === "error" ? (t.error += 1) : (t.notApplicable += 1);
+      }),
+      t
+    );
+  }
+// AM kf @120715
+function kf(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM $yt @120718
+function $yt(e) {
+    return Array.from(
+      new Set(
+        [kf(e.chaId), kf(e.id), kf(e.name), ...(Array.isArray(e.characters) ? e.characters.map(kf) : [])].filter(
+          Boolean,
+        ),
+      ),
+    );
+  }
+// AM sH @120727
+function sH(e) {
+    const t = e.character,
+      r = e.analysisMap && typeof e.analysisMap == "object" && !Array.isArray(e.analysisMap) ? e.analysisMap : {},
+      n = Array.from(new Set([...(t ? $yt(t) : []), ...(e.characterIds ?? []).map(kf)].filter(Boolean)));
+    if (!n.length) return [];
+    const o = (t && kf(t.type) !== "group" && Array.isArray(t.customscript) ? t.customscript : []).map((s) =>
+        s && typeof s == "object" ? s : {},
+      ),
+      a =
+        t && kf(t.type) !== "group" && Array.isArray(t.customscript)
+          ? new Set([t.chaId, t.id, t.name].map(kf).filter(Boolean))
+          : new Set(),
+      i = [];
+    for (const s of n) {
+      if (!Object.hasOwn(r, s)) continue;
+      const c = FI(r[s]),
+        l = c.detectors.some((f) => f.source === "manual");
+      if (c.status !== "done" && !l) continue;
+      const d = a.has(s),
+        u = d ? o : [];
+      for (const f of c.detectors) {
+        const m = u[f.scriptIndex],
+          h = m && f.in === kf(m.in) ? m : u.find((y) => f.in === kf(y.in));
+        if (!(f.source === "script" && d && !h))
+          try {
+            i.push({
+              scriptName:
+                f.source === "manual"
+                  ? `manual_regex_${i.length + 1}`
+                  : kf(h?.comment ?? h?.name) || `regex_${f.scriptIndex + 1}`,
+              regex: new RegExp(f.in, h ? $2(h) : f.flags || (f.source === "script" ? "g" : "u")),
+            });
+          } catch {}
+      }
+    }
+    return i;
+  }
 // AM ove @132968
 function ove(e, t) {
     return e < t ? -1 : e > t ? 1 : 0;
@@ -13332,6 +13683,245 @@ function Awt(e) {
       },
     };
   }
+// AM qve @137168
+var qve = {
+    revision: 0,
+    status: "idle",
+    origin: "settings",
+    scope: "current-source",
+    sourceId: "",
+    label: "",
+    completed: 0,
+    total: 0,
+    done: 0,
+    notApplicable: 0,
+    errorCount: 0,
+    progress: 0,
+    error: "",
+  };
+// AM Gve @137183
+function Gve(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM Cwt @137186
+function Cwt(e) {
+    return e instanceof DOMException && e.name === "AbortError";
+  }
+// AM Z2 @137189
+function Z2(e) {
+    return e.getCurrentSnapshot().characterPrompt.charxAssetRegexAnalysis;
+  }
+// AM Owt @137192
+function Owt(e) {
+    const t = new Set();
+    let r = !1,
+      n = 0,
+      o = null,
+      a = null,
+      i = null,
+      s = qve;
+    const c = (h) => {
+        ((n += 1), (s = { ...s, ...h, revision: n }), t.forEach((y) => y()));
+      },
+      l = (h) =>
+        h.size
+          ? (e.config.update(
+              (y) => ({
+                ...y,
+                characterPrompt: {
+                  ...y.characterPrompt,
+                  charxAssetRegexAnalysis: Kyt(y.characterPrompt.charxAssetRegexAnalysis, h),
+                },
+              }),
+              { domains: ["charx-analysis"], persistence: "manual" },
+            ),
+            e.config.flushSave(["charx-analysis"]).then(() => {}))
+          : Promise.resolve(),
+      d = async (h, y) => {
+        if (h.scope === "current-character") {
+          const I = iH(h.currentCharacter ?? (await e.data.getCurrentCharacter().catch(() => null)));
+          return { sourceId: I?.id ?? "", targets: I ? [I] : [] };
+        }
+        let v = e.sourceCatalog.getSnapshot();
+        if (!v) {
+          if (h.scope === "all-sources")
+            throw new Error("Charx rail catalog is not ready for all-source regex analysis.");
+          const I = iH(await e.data.getCurrentCharacter().catch(() => null));
+          return { sourceId: I?.id ?? "", targets: I ? [I] : [] };
+        }
+        h.scope === "all-sources" && !e.sourceCatalog.hasAllSources() && (v = await e.sourceCatalog.loadAllSources());
+        const w = Gve(h.sourceId) || v.currentSourceId,
+          x = h.scope === "all-sources" ? v.sources : v.sources.filter((I) => I.id === w),
+          _ = new Map();
+        for (const I of x.flatMap((k) => k.members)) {
+          if (y.aborted) throw new DOMException("Cancelled", "AbortError");
+          const k = iH(e.sourceCatalog.getCachedCharacter(I.characterTarget)?.character ?? null);
+          k && _.set(k.id, k);
+        }
+        return { sourceId: h.scope === "all-sources" ? "" : w, targets: [..._.values()] };
+      },
+      u = async (h, y, v, w) => {
+        const x = h.scope ?? "current-source",
+          _ = hw(e.analyzer, {
+            retryCount: e.config.getCurrentSnapshot().runtime.generationAutoRetryCount,
+            signal: y.signal,
+            onRetry: (C) => {
+              !r && o === y && c({ retry: C });
+            },
+          }),
+          I = mw("charx-regex");
+        c({
+          status: "running",
+          origin: v,
+          scope: x,
+          sourceId: Gve(h.sourceId),
+          label: "charx 정규식 분석 대상 확인 중",
+          completed: 0,
+          total: 0,
+          progress: 0,
+          error: "",
+        });
+        let k = [],
+          P = !1,
+          A = () => {
+            throw new Error("Source scope is not ready.");
+          };
+        try {
+          A = Xf(e.config);
+          const C = w ?? (await d({ ...h, scope: x }, y.signal));
+          if (y.signal.aborted) throw new DOMException("Cancelled", "AbortError");
+          const E = Obe({ targets: C.targets, analysisMap: Z2(e.config), force: h.force });
+          if (
+            ((k = E.aiTargets),
+            c({
+              sourceId: C.sourceId,
+              total: E.missing.length,
+              label: E.missing.length
+                ? `charx 정규식 분석 중 · ${E.missing.length}개`
+                : "charx 정규식 분석 데이터가 이미 있습니다",
+            }),
+            !E.missing.length)
+          ) {
+            const K = Nbe(Z2(e.config));
+            return (
+              c({ status: "success", done: K.done, notApplicable: K.notApplicable, errorCount: K.error, progress: 1 }),
+              !0
+            );
+          }
+          const N = new Map();
+          (E.notApplicableTargets.forEach((K) => {
+            N.set(K.id, Dyt(K));
+          }),
+            A(),
+            await l(N));
+          let T = E.notApplicableTargets.length;
+          if ((c({ completed: T, progress: T / E.missing.length }), k.length)) {
+            const K = await _.complete(e.config.getCurrentSnapshot().analysis, Lyt(k), {
+              signal: y.signal,
+              timeoutMs: ec,
+              diagnostic: { sessionId: I, analysisKind: "charx-regex", phase: "customscript" },
+            });
+            if (y.signal.aborted) throw new DOMException("Cancelled", "AbortError");
+            const X = Fyt(k, K.parsed);
+            A();
+            const V = l(X);
+            ((P = !0), await V, (T += k.length));
+          }
+          const D = Nbe(Z2(e.config));
+          return (
+            c({
+              status: "success",
+              label: `charx 정규식 분석 완료 · 감지 가능 ${D.done} · 대상 없음 ${D.notApplicable}`,
+              completed: T,
+              total: E.missing.length,
+              done: D.done,
+              notApplicable: D.notApplicable,
+              errorCount: D.error,
+              progress: 1,
+            }),
+            !0
+          );
+        } catch (C) {
+          if (Cwt(C) || y.signal.aborted) return (c({ status: "cancelled", label: "charx 정규식 분석 취소됨" }), !1);
+          if (k.length && !P) {
+            const N = new Map();
+            k.forEach((T) => N.set(T.id, Ebe(T, C)));
+            try {
+              (A(), await l(N));
+            } catch {}
+          }
+          const E = C instanceof Error ? C.message : String(C);
+          return (
+            c({ status: "error", label: "charx 정규식 분석 실패", error: E, progress: 1 }),
+            await e.log?.(`[Asset Maid React] Charx regex analysis failed: ${E}`),
+            !1
+          );
+        }
+      },
+      f = (h, y, v) => {
+        if (r) return Promise.resolve(!1);
+        if (a) return a;
+        const w = new AbortController();
+        o = w;
+        const x = u(h, w, y, v).finally(() => {
+          (o === w && (o = null), a === x && (a = null));
+        });
+        return ((a = x), x);
+      },
+      m = async () => {
+        if ((a && (await a), r)) return !1;
+        try {
+          const h = new AbortController(),
+            y = await d({ scope: "current-source" }, h.signal);
+          return Obe({ targets: y.targets, analysisMap: Z2(e.config) }).missing.length
+            ? f({ scope: "current-source", sourceId: y.sourceId }, "chat", y)
+            : !0;
+        } catch (h) {
+          const y = h instanceof Error ? h.message : String(h);
+          return (
+            c({ status: "error", origin: "chat", label: "charx 정규식 분석 실패", error: y, progress: 1 }),
+            await e.log?.(`[Asset Maid React] Charx regex readiness check failed: ${y}`),
+            !1
+          );
+        }
+      };
+    return {
+      getSnapshot() {
+        return s;
+      },
+      subscribe(h) {
+        return (t.add(h), () => t.delete(h));
+      },
+      async loadTargets(h = {}) {
+        if (r) return [];
+        const y = new AbortController();
+        return (await d({ ...h, scope: h.scope ?? "current-source" }, y.signal)).targets;
+      },
+      analyzeRegex(h = {}) {
+        return a ? Promise.resolve(!1) : f({ ...h, scope: h.scope ?? "current-source" }, "settings");
+      },
+      ensureCurrent: m,
+      scheduleCurrent() {
+        if (r || a || i) return;
+        const h = m()
+          .then(() => {})
+          .catch(() => {})
+          .finally(() => {
+            i === h && (i = null);
+          });
+        i = h;
+      },
+      cancel() {
+        return o ? (o.abort(), !0) : !1;
+      },
+      dismiss() {
+        s.status !== "running" && c({ ...qve, revision: n });
+      },
+      dispose() {
+        r || ((r = !0), o?.abort(), (o = null), t.clear());
+      },
+    };
+  }
 // AM Qve @137805
 var Qve = {
     revision: 0,
@@ -13676,6 +14266,7 @@ export {
   dPe,
   uPe,
   fPe,
+  mPe,
   pPe,
   hPe,
   xj,
@@ -14347,6 +14938,30 @@ export {
   wmt,
   g2,
   C7,
+  Jo,
+  Cl,
+  Oyt,
+  kbe,
+  jyt,
+  Eyt,
+  Abe,
+  Nyt,
+  iH,
+  Ryt,
+  FI,
+  $2,
+  Tyt,
+  Obe,
+  Lyt,
+  jbe,
+  Dyt,
+  Ebe,
+  Fyt,
+  Kyt,
+  Nbe,
+  kf,
+  $yt,
+  sH,
   ove,
   ave,
   ive,
@@ -14461,6 +15076,11 @@ export {
   Uve,
   kwt,
   Awt,
+  qve,
+  Gve,
+  Cwt,
+  Z2,
+  Owt,
   Qve,
   Bwt,
   Hwt,

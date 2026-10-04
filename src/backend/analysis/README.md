@@ -49,6 +49,7 @@ Owner: `analysis` (sub-agent of the backend lead). Specs: `spec/data.md` Part A 
 | artist-extraction | `Mvt.extractArtistPrompt` | `asset` sets `artistExtractionAssetBySourceId` first |
 | representative-pick | `sve` + toast `hvt` | no LLM |
 | reclassification | `ope` + `Hct`/`v_t` adapters | `promptKeys` or `personaIds`; checked areas = reference analysis checks |
+| charx-regex | `Owt.analyzeRegex` (`Lyt`/`Fyt`, system `mPe`) | scripts: host `regex_scripts` (character scope) else card `extensions.regex_scripts`; none -> no-evidence. Manual edit: `charxRegex.setDetectors` |
 | unique-tag-search | dropped | `unsupported` |
 
 ## Gaps / TODO

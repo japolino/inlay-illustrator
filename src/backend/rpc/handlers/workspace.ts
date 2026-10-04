@@ -27,6 +27,7 @@ import {
 } from "../../analysis/workspace.js";
 import { assetUrl, clearMetadataRecords, clearSelections, inspectMetadata, listAssets, saveCrop, setReference, setSelection, uploadAsset } from "../../analysis/assets.js";
 import type { AnalysisController } from "../../analysis/index.js";
+import { setCharxRegexDetectors } from "../../analysis/charx-regex.js";
 
 function analysis(ctx: RpcContext): AnalysisController {
   const module = (ctx.modules as { analysis?: AnalysisController }).analysis;
@@ -145,6 +146,8 @@ export const workspaceHandlers: HandlerGroup = {
     await applyUniqueTags(ctx, requireId(p.characterId, "characterId"), p.choices ?? []);
     return { ok: true };
   },
+
+  "charxRegex.setDetectors": (p, ctx) => setCharxRegexDetectors(ctx, requireId(p.characterId, "characterId"), p.detectors),
 
   /* outfit / reference images */
   "outfitImage.generate": (p, ctx) => analysis(ctx).outfitImages.generate(p),
