@@ -155,6 +155,7 @@ describe("settings form helpers", () => {
     const llm = [{ id: "l1", name: "Main", provider: "openai", model: "gpt", isDefault: true, hasApiKey: true }];
     expect(llmConnectionOptions(llm, "gone").map((o) => o.value)).toEqual(["", "l1", "gone"]);
     expect(modelOptions([{ id: "m1", label: "M1" }], "old", "gpt").map((o) => o.value)).toEqual(["", "old", "m1"]);
+    expect(modelOptions([{ id: "gpt", label: "gpt" }, { id: "m1", label: "M1" }], "", "gpt").map((o) => o.value)).toEqual(["", "m1"]);
     const images = [
       { id: "n", name: "NAI", provider: "novelai", model: "nai", isDefault: false, generationProvider: "novelai" as const, promptCodec: "novelai-structured" as const },
       { id: "c", name: "Comfy", provider: "comfyui", model: "x", isDefault: true, generationProvider: "comfy-ui" as const, promptCodec: "anima-flat" as const }

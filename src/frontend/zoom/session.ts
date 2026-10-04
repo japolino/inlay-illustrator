@@ -193,7 +193,7 @@ export function useZoomSession(app: AppController, initial: ZoomTarget, onClose:
     selectEntry(entryId) {
       if (!details || entryId === details.entryId) return;
       setTarget({ ...targetRef.current, entryId });
-      app.call("history.selectEntry", { chatId: target.chatId, slotId: target.slotId, entryId }).catch(() => undefined);
+      app.call("history.selectEntry", { chatId: target.chatId, slotId: target.slotId, entryId }).catch((error: unknown) => app.notifyError(error));
     },
     stepHistory(delta) {
       if (!details || busy) return;

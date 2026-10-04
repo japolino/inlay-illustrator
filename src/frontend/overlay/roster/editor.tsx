@@ -27,6 +27,8 @@ export function CustomCharacterEditor() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [inspecting, setInspecting] = useState(false);
   const editorKey = editor ? (editor.mode === "edit" ? editor.customId : "create") : "";
+  /** Revision guard: the document revision this client has (a stale snapshot -> `conflict` instead of a lost write). */
+  const baseUpdatedAt = () => (snapshot?.document.updatedAt ? { baseUpdatedAt: snapshot.document.updatedAt } : {});
   useEffect(() => {
     setDraft(baseline);
     setErrors({});
@@ -59,11 +61,11 @@ export function CustomCharacterEditor() {
     setError(null);
     try {
       if (editor!.mode === "create") {
-        await app.mutateWorkspace("customCharacters.create", { characterId: characterId!, input });
+        await app.mutateWorkspace("customCharacters.create", { characterId: characterId!, input, ...baseUpdatedAt() });
         ui.guard.set({ dirty: false, pending: null });
         ui.updateSource(characterId, { editor: null, navigationView: "characters" });
       } else {
-        await app.mutateWorkspace("customCharacters.update", { characterId: characterId!, customId: editor!.customId, input });
+        await app.mutateWorkspace("customCharacters.update", { characterId: characterId!, customId: editor!.customId, input, ...baseUpdatedAt() });
       }
       return true;
     } catch (caught) {

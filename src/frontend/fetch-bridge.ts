@@ -10,7 +10,7 @@ import {
   type FetchBridgeResponse
 } from "../shared/contract/bridge.js";
 
-const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
+const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif", "image/avif"]);
 
 function toBase64(bytes: Uint8Array): string {
   let binary = "";

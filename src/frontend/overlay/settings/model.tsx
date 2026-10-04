@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { THINKING_LEVELS, type InlayConfig, type ReasoningMode, type ThinkingLevel } from "../../../shared/contract/config.js";
 import type { LlmConnectionSummary, RpcError } from "../../../shared/contract/rpc.js";
-import { useApp, useRpcQuery } from "../../state/app-state.js";
+import { useApp, useAppState, useRpcQuery } from "../../state/app-state.js";
 import { toRpcError } from "../../rpc/client.js";
 import { Button, IconButton, Select, StopIcon, Switch, TextArea, TextField, cn, type SelectOption } from "../ui/index.js";
 import { useConfigForm } from "./config-form.js";
@@ -22,7 +22,8 @@ export function llmConnectionOptions(connections: readonly LlmConnectionSummary[
 /** Model select options ("" = the connection's model; the saved model is kept when missing from the list). */
 export function modelOptions(models: readonly { id: string; label: string }[], current: string, connectionModel: string): SelectOption[] {
   const options: SelectOption[] = [{ value: "", label: C.connectionModel(connectionModel) }];
-  for (const model of models) options.push({ value: model.id, label: model.label || model.id });
+  // The connection's own model is the "" option already (the backend lists it first).
+  for (const model of models) if (!connectionModel || model.id !== connectionModel || model.id === current) options.push({ value: model.id, label: model.label || model.id });
   if (current && !models.some((m) => m.id === current)) options.splice(1, 0, { value: current, label: C.existingValue(current) });
   return options;
 }
@@ -123,6 +124,7 @@ export function testErrorMessage(error: RpcError | undefined): string {
 
 /** Message test card (`K0t`). Tests the draft analyzer settings when the page has unsaved changes. */
 function MessageTest({ dirty, analysis }: { dirty: boolean; analysis?: InlayConfig["analysis"] }) {
+  const savedTimeoutMs = useAppState((state) => state.config?.analysis.timeoutMs ?? 0);
   const app = useApp();
   const [message, setMessage] = useState<string>(M.testDefault);
   const [state, setState] = useState<TestState>({ status: "idle" });
@@ -139,7 +141,9 @@ function MessageTest({ dirty, analysis }: { dirty: boolean; analysis?: InlayConf
     setState({ status: "loading" });
     setCopy("idle");
     try {
-      const result = await app.call("analyzer.testMessage", { text: message, ...(analysis ? { analysis } : {}) }, { signal: controller.signal });
+      // The backend waits up to the analyzer timeout (<= 300 s): wait a little longer than that on the client.
+      const timeoutMs = Math.max(60_000, (analysis?.timeoutMs ?? savedTimeoutMs) + 15_000);
+      const result = await app.call("analyzer.testMessage", { text: message, ...(analysis ? { analysis } : {}) }, { signal: controller.signal, timeoutMs });
       if (controller.signal.aborted) return;
       setState(result.ok ? { status: "success", answer: result.reply ?? "", latencyMs: result.latencyMs } : { status: "error", message: testErrorMessage(result.error) });
     } catch (caught) {

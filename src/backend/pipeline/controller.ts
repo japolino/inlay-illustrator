@@ -1603,6 +1603,8 @@ export function createChatPipelineController(services: BackendServices, engine: 
       if (!record) throw new RpcFailure(rpcError("unsupported", "Could not load the regeneration settings of the selected image."));
       const entry = resolved.entries.find((e) => e.entryId === proposal.entryId)!;
       const imageId = imageIdFromResultUrl(entry.savedPath) ?? record.imageId;
+      // Image-gen results live at /api/v1/image-gen/results/<id> (not necessarily a spindle.images id): fetch that URL.
+      const imageRef = entry.savedPath?.startsWith("/api/") ? { url: entry.savedPath } : imageId ? { url: imageResultUrl(imageId) } : { imageId };
       const draft = (await readSidecar(services.storage, chatId)).drafts[slotId]?.overrides;
       const req = proposal.request;
       const revision: RevisionInput = {
@@ -1614,10 +1616,10 @@ export function createChatPipelineController(services: BackendServices, engine: 
         seed: record.seed,
         seedFixed: !!draft?.seedFixed,
         evidenceKey: [proposal.entryId, entry.assetName, record.positivePrompt.length.toString(36)].join(":"),
-        image: async () => ({ type: "image" as const, ...(await services.imageBytes.getImage({ imageId })) }),
+        image: async () => ({ type: "image" as const, ...(await services.imageBytes.getImage(imageRef)) }),
         ...(req.imageToImage
           ? {
-              imageToImage: async () => (await services.imageBytes.getImage({ imageId })).data,
+              imageToImage: async () => (await services.imageBytes.getImage(imageRef)).data,
               imageToImageStrength: Math.min(1, Math.max(0.4, Number(req.strength) || 0.4)),
               imageToImageNoise: Math.min(1, Math.max(0, Number(req.noise) || 0)),
             }
