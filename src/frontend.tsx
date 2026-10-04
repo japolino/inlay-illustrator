@@ -21,6 +21,8 @@ import { RpcClient, spindleTransport } from "./frontend/rpc/client.js";
 import { AppController } from "./frontend/state/app-state.js";
 import type { OverlayController } from "./frontend/overlay/controller.js";
 import { installChatSide } from "./frontend/chat/index.js";
+import { answerFetchBridge } from "./frontend/fetch-bridge.js";
+import { isFetchBridgeRequest } from "./shared/contract/bridge.js";
 import { createZoomViewer, type ZoomViewer } from "./frontend/zoom/index.js";
 
 /** Handles exposed to dev tools (preview page, tests). */
@@ -115,6 +117,10 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
 
   // Legacy (non-RPC) backend messages: avatar bridge and the interim state/config messages.
   const unsub = client.onForeign((payload: unknown) => {
+    if (isFetchBridgeRequest(payload)) {
+      void answerFetchBridge(payload).then((response) => ctx.sendToBackend(response));
+      return;
+    }
     const message = payload as BackendMessage & Record<string, unknown>;
     if (message.type === "avatar_image_request") {
       void respondToAvatarImageRequest(message, (response) => ctx.sendToBackend(response));
