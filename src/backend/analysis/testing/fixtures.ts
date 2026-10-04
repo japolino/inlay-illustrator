@@ -61,3 +61,47 @@ export function createAnalysisFixture(overrides: FakeServicesOverrides = {}): Fa
 export const ALICE = `${CHAR}::lore::wb1:e1`;
 export const BOB = `${CHAR}::lore::wb1:e2`;
 export const HERO = `${CHAR}::lore::asset-maid:charx-description:v1`;
+
+/** Minimal PNG (1x1) with tEXt chunks, base64 (for metadata tests). */
+export function pngWithText(chunks: Record<string, string>): string {
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc32 = (bytes: Uint8Array) => {
+    let c = 0xffffffff;
+    for (const b of bytes) c = crcTable[(c ^ b) & 0xff]! ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const enc = new TextEncoder();
+  const chunk = (type: string, data: Uint8Array) => {
+    const out = new Uint8Array(12 + data.length);
+    const view = new DataView(out.buffer);
+    view.setUint32(0, data.length);
+    out.set(enc.encode(type), 4);
+    out.set(data, 8);
+    view.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length)));
+    return out;
+  };
+  const ihdr = new Uint8Array([0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0]);
+  const idat = new Uint8Array([0x78, 0x9c, 0x63, 0x60, 0x00, 0x02, 0x00, 0x00, 0x05, 0x00, 0x01]);
+  const parts = [new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr)];
+  for (const [k, v] of Object.entries(chunks)) parts.push(chunk("tEXt", new Uint8Array([...enc.encode(k), 0, ...new TextEncoder().encode(v)])));
+  parts.push(chunk("IDAT", idat), chunk("IEND", new Uint8Array()));
+  const total = parts.reduce((n, p) => n + p.length, 0);
+  const all = new Uint8Array(total);
+  let o = 0;
+  for (const p of parts) {
+    all.set(p, o);
+    o += p.length;
+  }
+  let s = "";
+  for (const b of all) s += String.fromCharCode(b);
+  return btoa(s);
+}
+
+export const NAI_PNG = pngWithText({
+  Software: "NovelAI",
+  Comment: JSON.stringify({ prompt: "artist:foo, 1girl, red hair", uc: "lowres, bad anatomy", seed: 7, width: 832, height: 1216, sampler: "k_euler", steps: 28, scale: 5 }),
+});
