@@ -126,7 +126,14 @@
   "resolveAnalyzerExecutionMode",
   "assertAnalyzerReady",
   "resolveCheckpointPolicy",
-  "resolveGenerationType"
+  "resolveGenerationType",
+  "UAt",
+  "g1t",
+  "rI",
+  "ZAt",
+  "OW",
+  "mb",
+  "c1t"
  ],
  "renames": {
   "uV": "NovelAIV5RawValidationError",
@@ -1830,6 +1837,11 @@
    "line": 20542
   },
   {
+   "orig": "Uj",
+   "name": "Uj",
+   "line": 20551
+  },
+  {
    "orig": "W0",
    "name": "IMAGE_PROVIDER_TABLE",
    "line": 20554
@@ -1888,6 +1900,11 @@
    "orig": "Tu",
    "name": "Tu",
    "line": 20647
+  },
+  {
+   "orig": "OW",
+   "name": "OW",
+   "line": 20663
   },
   {
    "orig": "EW",
@@ -9340,6 +9357,51 @@
    "line": 88545
   },
   {
+   "orig": "Vfe",
+   "name": "Vfe",
+   "line": 91051
+  },
+  {
+   "orig": "Xfe",
+   "name": "Xfe",
+   "line": 91052
+  },
+  {
+   "orig": "uT",
+   "name": "uT",
+   "line": 91053
+  },
+  {
+   "orig": "Wfe",
+   "name": "Wfe",
+   "line": 91056
+  },
+  {
+   "orig": "Yfe",
+   "name": "Yfe",
+   "line": 91069
+  },
+  {
+   "orig": "fT",
+   "name": "fT",
+   "line": 91072
+  },
+  {
+   "orig": "Zfe",
+   "name": "Zfe",
+   "line": 91075
+  },
+  {
+   "orig": "fot",
+   "name": "fot",
+   "line": 91082
+  },
+  {
+   "orig": "xm",
+   "name": "xm",
+   "line": 91086
+  },
+  {
    "orig": "Dy",
    "name": "Dy",
    "line": 92769
@@ -9348,6 +9410,56 @@
    "orig": "ch",
    "name": "ch",
    "line": 92808
+  },
+  {
+   "orig": "GB",
+   "name": "GB",
+   "line": 93068
+  },
+  {
+   "orig": "cme",
+   "name": "cme",
+   "line": 93069
+  },
+  {
+   "orig": "lme",
+   "name": "lme",
+   "line": 93070
+  },
+  {
+   "orig": "kw",
+   "name": "kw",
+   "line": 93076
+  },
+  {
+   "orig": "Not",
+   "name": "Not",
+   "line": 93079
+  },
+  {
+   "orig": "Rot",
+   "name": "Rot",
+   "line": 93082
+  },
+  {
+   "orig": "Mot",
+   "name": "Mot",
+   "line": 93097
+  },
+  {
+   "orig": "zot",
+   "name": "zot",
+   "line": 93100
+  },
+  {
+   "orig": "dme",
+   "name": "dme",
+   "line": 93149
+  },
+  {
+   "orig": "rI",
+   "name": "rI",
+   "line": 93161
   },
   {
    "orig": "Tot",
@@ -12170,6 +12282,131 @@
    "line": 167588
   },
   {
+   "orig": "u0",
+   "name": "u0",
+   "line": 167726
+  },
+  {
+   "orig": "zAt",
+   "name": "zAt",
+   "line": 167729
+  },
+  {
+   "orig": "f0",
+   "name": "f0",
+   "line": 167732
+  },
+  {
+   "orig": "QU",
+   "name": "QU",
+   "line": 167743
+  },
+  {
+   "orig": "QC",
+   "name": "QC",
+   "line": 167750
+  },
+  {
+   "orig": "TAt",
+   "name": "TAt",
+   "line": 167753
+  },
+  {
+   "orig": "w_e",
+   "name": "w_e",
+   "line": 167763
+  },
+  {
+   "orig": "x_e",
+   "name": "x_e",
+   "line": 167766
+  },
+  {
+   "orig": "__e",
+   "name": "__e",
+   "line": 167772
+  },
+  {
+   "orig": "I_e",
+   "name": "I_e",
+   "line": 167788
+  },
+  {
+   "orig": "LAt",
+   "name": "LAt",
+   "line": 167804
+  },
+  {
+   "orig": "eq",
+   "name": "eq",
+   "line": 167807
+  },
+  {
+   "orig": "S_e",
+   "name": "S_e",
+   "line": 167810
+  },
+  {
+   "orig": "DAt",
+   "name": "DAt",
+   "line": 167815
+  },
+  {
+   "orig": "FAt",
+   "name": "FAt",
+   "line": 167828
+  },
+  {
+   "orig": "k_e",
+   "name": "k_e",
+   "line": 167842
+  },
+  {
+   "orig": "KAt",
+   "name": "KAt",
+   "line": 167843
+  },
+  {
+   "orig": "tq",
+   "name": "tq",
+   "line": 167903
+  },
+  {
+   "orig": "A_e",
+   "name": "A_e",
+   "line": 167906
+  },
+  {
+   "orig": "P_e",
+   "name": "P_e",
+   "line": 167909
+  },
+  {
+   "orig": "$At",
+   "name": "$At",
+   "line": 167910
+  },
+  {
+   "orig": "BAt",
+   "name": "BAt",
+   "line": 167939
+  },
+  {
+   "orig": "HAt",
+   "name": "HAt",
+   "line": 167950
+  },
+  {
+   "orig": "UAt",
+   "name": "UAt",
+   "line": 167957
+  },
+  {
+   "orig": "ZAt",
+   "name": "ZAt",
+   "line": 168328
+  },
+  {
    "orig": "M_e",
    "name": "resolveAnalyzerExecutionMode",
    "line": 168762
@@ -12178,6 +12415,11 @@
    "orig": "s1t",
    "name": "s1t",
    "line": 168766
+  },
+  {
+   "orig": "c1t",
+   "name": "c1t",
+   "line": 168769
   },
   {
    "orig": "l1t",
@@ -12203,6 +12445,16 @@
    "orig": "Xa",
    "name": "Xa",
    "line": 168829
+  },
+  {
+   "orig": "g1t",
+   "name": "g1t",
+   "line": 168873
+  },
+  {
+   "orig": "mb",
+   "name": "mb",
+   "line": 168948
   },
   {
    "orig": "rIe",

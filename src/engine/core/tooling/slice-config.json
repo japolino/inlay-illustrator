@@ -126,7 +126,14 @@
   "M_e",
   "d1t",
   "u1t",
-  "f1t"
+  "f1t",
+  "UAt",
+  "g1t",
+  "rI",
+  "ZAt",
+  "OW",
+  "mb",
+  "c1t"
  ],
  "renames": {
   "uV": "NovelAIV5RawValidationError",

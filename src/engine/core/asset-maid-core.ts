@@ -17243,6 +17243,10 @@ var NOVELAI_MODELS = Object.freeze([
       Object.freeze({ value: "nai-diffusion-5-full", label: "nai-diffusion-5-full" }),
       Object.freeze({ value: "nai-diffusion-5-curated", label: "nai-diffusion-5-curated" }),
     ]);
+// AM Uj @20551
+function Uj(e) {
+    return /^nai-diffusion-5(?:-|$)/u.test(String(e ?? "").trim());
+  }
 // AM W0 @20554
 var IMAGE_PROVIDER_TABLE = Object.freeze({
       novelai: Object.freeze({
@@ -17333,6 +17337,10 @@ function Nc(e) {
 function Tu(e, t, r) {
     const n = Vj(e);
     return n === "novelai" ? t !== !1 : n === "comfy-ui" ? r !== !1 : !1;
+  }
+// AM OW @20663
+function OW(e, t) {
+    return "all";
   }
 // AM EW @20678
 function EW(e) {
@@ -40820,6 +40828,65 @@ function vw(e, t, r = []) {
     const n = kP(t);
     return n.replacesBaseKeys ? n.keys : Ty([...e, ...n.keys, ...r]);
   }
+// AM Vfe @91051
+var Vfe = /\.(?:png|jpe?g|webp|gif|avif|bmp|tiff?)$/iu;
+// AM Xfe @91052
+var Xfe = /[_\s-]+/gu;
+// AM uT @91053
+function uT(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM Wfe @91056
+function Wfe(e) {
+    const t = uT(e).replace(/[?#].*$/u, "");
+    return t
+      ? (
+          t
+            .split(/[\\/]+/u)
+            .filter(Boolean)
+            .at(-1) ?? t
+        )
+          .replace(Vfe, "")
+          .trim()
+      : "";
+  }
+// AM Yfe @91069
+function Yfe(e) {
+    return Wfe(e).toLocaleLowerCase().replace(Xfe, " ").replace(/\s+/gu, " ").trim();
+  }
+// AM fT @91072
+function fT(e) {
+    return uT(e).toLowerCase().replace(Vfe, "").replace(Xfe, " ").trim();
+  }
+// AM Zfe @91075
+function Zfe(e) {
+    const t = uT(e),
+      r = Wfe(t);
+    return new Set(
+      [t, r, t.split(/[\\/]/u).at(-1) ?? "", Yfe(t), Yfe(r)].map((n) => n.toLocaleLowerCase().trim()).filter(Boolean),
+    );
+  }
+// AM fot @91082
+function fot(e, t) {
+    const r = Zfe(t);
+    return r.size ? [e.name, e.key].flatMap((n) => [...Zfe(n)]).some((n) => r.has(n)) : !1;
+  }
+// AM xm @91086
+function xm(e, t) {
+    const r = uT(t);
+    if (!r) return null;
+    const n = [...e];
+    if (!n.length) return null;
+    const o = n.find((i) => fot(i, r));
+    if (o) return o;
+    const a = fT(r);
+    return a
+      ? (n.find((i) => fT(i.name) === a) ??
+          n.find((i) => fT(i.key) === a) ??
+          n.find((i) => fT(i.name).includes(a)) ??
+          null)
+      : null;
+  }
 // AM Dy @92769
 function Dy(e) {
     if (!e || typeof e != "object" || Array.isArray(e)) return;
@@ -40872,6 +40939,124 @@ function ch(e, t, r) {
     if (i <= r.start) return Object.freeze({ start: r.start + s, end: r.end + s });
     if (n >= r.end) return r;
     if (n >= r.start && i <= r.end) return Object.freeze({ start: r.start, end: Math.max(r.start, r.end + s) });
+  }
+// AM GB @93068
+var GB = () => [];
+// AM cme @93069
+var cme = new WeakMap();
+// AM lme @93070
+function lme(e, t) {
+    let r = cme.get(e);
+    r || ((r = new WeakMap()), cme.set(e, r));
+    let n = r.get(t);
+    return (n || ((n = { members: {}, sources: {} }), r.set(t, n)), n);
+  }
+// AM kw @93076
+function kw(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM Not @93079
+function Not(e) {
+    return [...new Set(e.map(kw).filter(Boolean))];
+  }
+// AM Rot @93082
+function Rot(e) {
+    let t = 2166136261;
+    const r = (n) => {
+      const o = kw(n);
+      for (let a = 0; a < o.length; a += 1) ((t ^= o.charCodeAt(a)), (t = Math.imul(t, 16777619)));
+    };
+    for (const n of e)
+      (r(n.id),
+        r(n.title),
+        n.recognitionKeys.forEach(r),
+        r(n.rosterRegistered === !1 ? "unregistered" : "registered"),
+        r(n.workspaceEnabled === !1 ? "disabled" : "enabled"),
+        r(n.origin ?? "registered"));
+    return (t >>> 0).toString(16).padStart(8, "0");
+  }
+// AM Mot @93097
+function Mot(e) {
+    return `virtual-character:${kw(e)}`;
+  }
+// AM zot @93100
+function zot(e, t) {
+    const r = e.members.reduce((n, o) => n + o.assetCount, 0);
+    return t.flatMap((n) => {
+      const o = kw(n.id),
+        a = kw(n.title),
+        i = Not(n.recognitionKeys),
+        s = n.rosterRegistered !== !1 && n.workspaceEnabled !== !1;
+      if (!o || !a || !i.length) return [];
+      const c = {
+        kind: "lorebook",
+        id: o,
+        selectionId: o,
+        title: a,
+        keys: i,
+        primaryKeys: i,
+        secondaryKeys: [],
+        selective: !1,
+        useRegex: !1,
+        content: "",
+        score: 0,
+        alwaysActive: !1,
+        sourceType: "character",
+        sourceName: e.name,
+        runtimePromptKey: o,
+        runtimeOrigin: { kind: "custom-character", id: o, ...(n.origin === "ai-auto" ? { origin: "ai-auto" } : {}) },
+        runtimeSelected: s,
+        runtimeBasePrompt: "",
+      };
+      return [
+        {
+          sourceId: e.id,
+          id: o,
+          key: Mot(o),
+          name: a,
+          aliases: i,
+          sourceSummary: "",
+          lorebooks: [c],
+          originalAssets: GB(),
+          outfitGeneratedAssets: GB(),
+          chatGeneratedAssets: GB(),
+          assetCount: r,
+          previewAsset: null,
+          characterIndex: e.index,
+          characterTarget: e.characterTarget,
+          assetScope: "source",
+        },
+      ];
+    });
+  }
+// AM dme @93149
+function dme(e, t, r = "active") {
+    const n = lme(e, t),
+      o = (n.members.all ??= zot(e, t));
+    if (r === "all") return o;
+    if (!n.members.registered) {
+      const a = new Set(t.filter((i) => i.rosterRegistered !== !1).map((i) => kw(i.id)));
+      n.members.registered = o.filter((i) => a.has(i.id));
+    }
+    return r === "registered"
+      ? n.members.registered
+      : (n.members.active ??= n.members.registered.filter((a) => a.lorebooks[0].runtimeSelected === !0));
+  }
+// AM rI @93161
+function rI(e, t, r = "active") {
+    if (!e) return null;
+    const n = lme(e, t),
+      o = n.sources[r];
+    if (o) return o;
+    const a = dme(e, t, r);
+    if (!a.length) return (n.sources[r] = e);
+    const i = new Set(a.map((c) => c.id)),
+      s = Rot(t.filter((c) => i.has(kw(c.id))));
+    return (n.sources[r] = {
+      ...e,
+      assetGeneration: `${e.assetGeneration ?? "source"}|runtime-lore:${s}`,
+      members: [...e.members, ...a],
+    });
   }
 // AM Tot @93206
 function Tot(e) {
@@ -52060,6 +52245,421 @@ function buildAnalyzerContextInputs(e) {
       },
     };
   }
+// AM u0 @167726
+function u0(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM zAt @167729
+function zAt(e) {
+    return u0(e.lorebookPromptKey || e.key);
+  }
+// AM f0 @167732
+function f0(e) {
+    const t = new Set(),
+      r = [];
+    for (const n of e) {
+      const o = u0(n);
+      if (!o) continue;
+      const a = o.normalize("NFKC").toLocaleLowerCase();
+      t.has(a) || (t.add(a), r.push(o));
+    }
+    return r;
+  }
+// AM QU @167743
+function QU(e) {
+    return u0(e)
+      .normalize("NFKC")
+      .toLocaleLowerCase()
+      .replace(/\.[a-z0-9]+$/u, "")
+      .replace(/[^\p{L}\p{N}]+/gu, "");
+  }
+// AM QC @167750
+function QC(e) {
+    return u0(e).normalize("NFKC").toLocaleLowerCase().replace(/\s+/gu, "");
+  }
+// AM TAt @167753
+function TAt(e) {
+    const t = u0(e),
+      r = /^\/([\s\S]*)\/([dgimsuvy]*)$/u.exec(t);
+    if (!r) return null;
+    try {
+      return new RegExp(r[1], r[2]);
+    } catch {
+      return null;
+    }
+  }
+// AM w_e @167763
+function w_e(e) {
+    return f0(e).map((t) => ({ value: t, normalized: QC(t) }));
+  }
+// AM x_e @167766
+function x_e(e, t) {
+    return f0(e).map((r) => {
+      const n = t ? TAt(r) : null;
+      return { value: r, normalized: t ? "" : QC(r), regex: n, invalidRegex: t && n === null };
+    });
+  }
+// AM __e @167772
+function __e(e, t, r) {
+    const n = [],
+      o = [];
+    for (const a of r) {
+      if (a.invalidRegex) {
+        o.push(a.value);
+        continue;
+      }
+      if (!a.regex) {
+        a.normalized && t.includes(a.normalized) && n.push(a.value);
+        continue;
+      }
+      ((a.regex.lastIndex = 0), a.regex.test(e) && n.push(a.value));
+    }
+    return { matchedTerms: n, invalidRegexTerms: o };
+  }
+// AM I_e @167788
+function I_e(e, t, r) {
+    if (!e) return { matched: !1, matchedTerms: [], invalidRegexTerms: [] };
+    const n = __e(t, r, e.primaryKeys);
+    if (!e.selective)
+      return {
+        matched: n.matchedTerms.length > 0,
+        matchedTerms: n.matchedTerms,
+        invalidRegexTerms: n.invalidRegexTerms,
+      };
+    const o = __e(t, r, e.secondaryKeys);
+    return {
+      matched: n.matchedTerms.length > 0 && o.matchedTerms.length > 0,
+      matchedTerms: [...n.matchedTerms, ...o.matchedTerms],
+      invalidRegexTerms: [...n.invalidRegexTerms, ...o.invalidRegexTerms],
+    };
+  }
+// AM LAt @167804
+function LAt(e, t) {
+    return t.filter((r) => r.normalized && e.includes(r.normalized)).map((r) => r.value);
+  }
+// AM eq @167807
+function eq(e) {
+    return u0(e).replace(/\s+/gu, " ");
+  }
+// AM S_e @167810
+function S_e(e, t) {
+    let r = e;
+    for (const n of t) n && (r = r.replaceAll(n, " "));
+    return eq(r);
+  }
+// AM DAt @167815
+function DAt(e) {
+    const t = eq(e.beforeText),
+      r = eq(e.afterText),
+      n = `${e.beforeText}
+${e.afterText}`;
+    return {
+      slot: e,
+      text: n,
+      normalizedText: QC(n),
+      beforeProbe: t.slice(-Math.min(120, t.length)),
+      afterProbe: r.slice(0, Math.min(120, r.length)),
+    };
+  }
+// AM FAt @167828
+function FAt(e, t, r) {
+    const n = S_e(e.before, r),
+      o = S_e(e.after, r);
+    let a = 0,
+      i = null,
+      s = !1;
+    for (const c of t) {
+      let l = 0;
+      (c.beforeProbe && n.endsWith(c.beforeProbe) && (l += 2),
+        c.afterProbe && o.startsWith(c.afterProbe) && (l += 3),
+        l > a ? ((a = l), (i = c.slot), (s = !1)) : l > 0 && l === a && (s = !0));
+    }
+    return a > 0 && !s ? i : null;
+  }
+// AM k_e @167842
+var k_e = new WeakMap();
+// AM KAt @167843
+function KAt(e) {
+    const t = k_e.get(e);
+    if (t) return t;
+    const r = new Map(),
+      n = new Map(),
+      o = new Map(),
+      a = new Map(),
+      i = [],
+      s = (l, d, u) => {
+        const f = QU(d);
+        if (!f) return;
+        const m = l.get(f) ?? new Set();
+        (m.add(u), l.set(f, m));
+      },
+      c = {
+        candidates: e.map((l, d) => {
+          const u = zAt(l),
+            f = u.split("::lore::")[0] || u,
+            m = l.identityMetadata,
+            h = m?.loreActivation,
+            y = h?.primaryKeys.length
+              ? {
+                  selective: h.selective,
+                  primaryKeys: x_e(h.primaryKeys, h.useRegex),
+                  secondaryKeys: x_e(h.secondaryKeys, h.useRegex),
+                }
+              : null,
+            v = {
+              key: u,
+              directAliases: w_e([m?.canonicalName, l.characterName, ...(m?.aliasSources.lorebookTitle ?? [])]),
+              classificationTerms: w_e(m?.aliasSources.assetClassificationKeys ?? []),
+              activation: y,
+              alwaysActive: h?.alwaysActive === !0,
+              loreContent: h?.loreContent ?? "",
+            };
+          (r.set(u, d), n.set(u, v));
+          for (const w of f0([l.key, l.lorebookPromptKey, f])) s(o, w, u);
+          for (const w of f0([m?.ownerName, m?.canonicalName, l.characterName, ...(l.aliases ?? [])])) s(a, w, u);
+          return (
+            i.push({
+              key: u,
+              aliases: f0([
+                l.characterName,
+                l.key,
+                l.lorebookPromptKey,
+                ...(l.aliases ?? []),
+                ...(m?.aliasSources.assetClassificationKeys ?? []),
+              ]),
+            }),
+            v
+          );
+        }),
+        candidateOrder: r,
+        candidateByKey: n,
+        ownerStableIdentityIndex: o,
+        ownerSemanticIdentityIndex: a,
+        identitySpecs: i,
+      };
+    return (k_e.set(e, c), c);
+  }
+// AM tq @167903
+function tq() {
+    return typeof amEnv.performance < "u" ? amEnv.performance.now() : amEnv.now();
+  }
+// AM A_e @167906
+function A_e(e) {
+    if (e?.aborted) throw new DOMException(u0(e.reason) || "Identity evidence resolution was cancelled.", "AbortError");
+  }
+// AM P_e @167909
+var P_e = new WeakMap();
+// AM $At @167910
+function $At(e) {
+    const t = new e(),
+      r = [];
+    let n = !1;
+    const o = () => {
+      if (!(n || r.length === 0)) {
+        n = !0;
+        try {
+          t.port2.postMessage(0);
+        } catch (a) {
+          n = !1;
+          const i = r.splice(0);
+          for (const s of i) s.reject(a);
+        }
+      }
+    };
+    return (
+      (t.port1.onmessage = () => {
+        ((n = !1), r.shift()?.resolve(), o());
+      }),
+      t.port1.start?.(),
+      t.port1.unref?.(),
+      t.port2.unref?.(),
+      () =>
+        new Promise((a, i) => {
+          (r.push({ resolve: a, reject: i }), o());
+        })
+    );
+  }
+// AM BAt @167939
+function BAt(e = globalThis) {
+    const t = e.scheduler?.yield;
+    if (typeof t == "function") return t.call(e.scheduler);
+    if (typeof e.MessageChannel == "function") {
+      let r = P_e.get(e);
+      return (r || ((r = $At(e.MessageChannel)), P_e.set(e, r)), r());
+    }
+    return new Promise((r) => {
+      e.setTimeout(r, 0);
+    });
+  }
+// AM HAt @167950
+function HAt(e) {
+    const t = Number.isFinite(e.yieldBudgetMs) ? Math.max(1, Number(e.yieldBudgetMs)) : 8;
+    let r = tq();
+    return async (n = !1) => {
+      (A_e(e.signal), !(!n && tq() - r < t) && (await BAt(), A_e(e.signal), (r = tq())));
+    };
+  }
+// AM UAt @167957
+async function UAt(e) {
+    const t = HAt(e),
+      r = KAt(e.candidates),
+      n = [];
+    for (const u of e.slots) (await t(), n.push(DAt(u)));
+    const o = new Set(),
+      a = (u) =>
+        [...new Set(u)]
+          .filter((f) => r.candidateOrder.has(f))
+          .sort(
+            (f, m) =>
+              (r.candidateOrder.get(f) ?? Number.MAX_SAFE_INTEGER) -
+              (r.candidateOrder.get(m) ?? Number.MAX_SAFE_INTEGER),
+          ),
+      i = new Map();
+    for (const u of n) {
+      await t();
+      const { slot: f, text: m, normalizedText: h } = u,
+        y = new Set(),
+        v = new Set(),
+        w = new Set(),
+        x = new Set(),
+        _ = new Map();
+      for (const E of r.candidates) {
+        await t();
+        const { key: N } = E,
+          T = LAt(h, E.directAliases),
+          D = I_e(E.activation, m, h);
+        (D.invalidRegexTerms.length && o.add(N), (T.length || D.matched) && y.add(N));
+        for (const K of [...T, ...D.matchedTerms]) {
+          const X = QC(K);
+          if (!X) continue;
+          const V = _.get(X) ?? new Set();
+          (V.add(N), _.set(X, V));
+        }
+        (E.classificationTerms.some((K) => !!(K.normalized && h.includes(K.normalized))) && x.add(N),
+          E.alwaysActive && w.add(N));
+      }
+      const I = new Set([...y, ...w]);
+      let k = !0;
+      for (; k;) {
+        (await t(), (k = !1));
+        const E = [...I].map((T) => r.candidateByKey.get(T)?.loreContent ?? "").filter(Boolean).join(`
+`);
+        if (!E) break;
+        const N = QC(E);
+        for (const T of r.candidates) {
+          await t();
+          const { key: D } = T;
+          if (I.has(D)) continue;
+          const K = I_e(T.activation, E, N);
+          (K.invalidRegexTerms.length && o.add(D), K.matched && (I.add(D), v.add(D), (k = !0)));
+        }
+      }
+      const P = [..._.values()].map((E) => a(E)).filter((E) => E.length > 0),
+        A = new Set(P.flat()),
+        C = new Set([...P.filter((E) => E.length === 1).flat(), ...[...y].filter((E) => !A.has(E))]);
+      i.set(f.slotId, {
+        direct: y,
+        unambiguousDirect: C,
+        assets: new Set(),
+        recursive: v,
+        always: w,
+        classification: x,
+        ambiguous: P.filter((E) => E.length > 1),
+      });
+    }
+    const s = f0(e.originalAssetTokens.map((u) => u.full)),
+      c = new Map(),
+      l = new Map();
+    for (const u of e.originalAssetTokens) {
+      await t();
+      let f = c.get(u.tokenName);
+      if (
+        (f ||
+          ((f = {
+            owners: e.source?.members.filter((v) => !!xm(v.originalAssets, u.tokenName)) ?? [],
+            shared: !!(e.source && xm(e.source.sharedModuleAssets, u.tokenName)),
+          }),
+          c.set(u.tokenName, f)),
+        !f.owners.length && !f.shared)
+      )
+        continue;
+      let m = l.get(u.tokenName);
+      if (!m) {
+        const v = new Set(),
+          w = new Set();
+        for (const I of f.owners) {
+          for (const k of [I.id, I.key]) {
+            const P = QU(k);
+            for (const A of r.ownerStableIdentityIndex.get(P) ?? []) v.add(A);
+          }
+          for (const k of [I.id, I.key, I.name, ...I.aliases]) {
+            const P = QU(k);
+            for (const A of r.ownerSemanticIdentityIndex.get(P) ?? []) w.add(A);
+          }
+        }
+        const x = new Set(afe(u.tokenName, r.identitySpecs).promptKeys),
+          _ = (I) => {
+            if (I.size === 1) return Object.freeze([...I]);
+            const k = [...I].filter((P) => x.has(P));
+            return Object.freeze(k.length === 1 ? k : []);
+          };
+        ((m = v.size ? _(v) : w.size ? _(w) : Object.freeze(x.size === 1 ? [...x] : [])), l.set(u.tokenName, m));
+      }
+      if (m.length !== 1) continue;
+      const h = FAt(u, n, s),
+        y = m[0];
+      !h || !r.candidateOrder.has(y) || i.get(h.slotId)?.assets.add(y);
+    }
+    await t();
+    const d = new Map();
+    return {
+      actorHintsBySlot: d,
+      diagnostic: {
+        slots: e.slots.map((u) => {
+          const f = i.get(u.slotId) ?? {
+              direct: new Set(),
+              unambiguousDirect: new Set(),
+              assets: new Set(),
+              recursive: new Set(),
+              always: new Set(),
+              classification: new Set(),
+              ambiguous: [],
+            },
+            m = new Set(f.unambiguousDirect);
+          for (const y of f.ambiguous) {
+            const v = y.filter((w) => f.assets.has(w));
+            for (const w of v.length ? v : y) m.add(w);
+          }
+          const h = a([...m, ...f.assets]);
+          return (
+            d.set(u.slotId, h),
+            {
+              slotId: u.slotId,
+              directCandidateKeys: a(f.direct),
+              assetCandidateKeys: a(f.assets),
+              recursiveCandidateKeys: a(f.recursive),
+              alwaysActiveCandidateKeys: a(f.always),
+              assetClassificationTextCandidateKeys: a(f.classification),
+              ambiguousDirectCandidateGroups: f.ambiguous,
+              actorHints: h,
+            }
+          );
+        }),
+        invalidRegexCandidateKeys: a(o),
+        previousMessageParticipantKeys: f0(e.previousMessageParticipantKeys ?? []),
+      },
+    };
+  }
+// AM ZAt @168328
+function ZAt(e) {
+    const t = e.runtime.generationProvider;
+    return t === "chan-server" || (t === "novelai" && Uj(e.novelai.naiModel))
+      ? "tags-only"
+      : Tu(t, e.novelai.characterReferenceEnabled, e.runtime.comfyuiCharacterReferenceEnabled) ||
+          (t === "comfy-ui" && e.runtime.comfyuiOutfitReferenceEnabled)
+        ? "reference-image"
+        : "tags-only";
+  }
 // AM M_e @168762
 function resolveAnalyzerExecutionMode(e = {}) {
     const t = e.requestedMode ?? "single-stage";
@@ -52068,6 +52668,23 @@ function resolveAnalyzerExecutionMode(e = {}) {
 // AM s1t @168766
 function s1t(e) {
     return e.analyzerIdentityCandidates.length > 0 || (e.analyzerPersonaCandidates?.length ?? 0) > 0;
+  }
+// AM c1t @168769
+function c1t(e, t = []) {
+    const r = new Map(),
+      n = (o, a) => {
+        const i = Xa(o),
+          s = [...new Set([i, ...a.map(Xa)].filter(Boolean))];
+        if (!i || !s.length) return;
+        const c = JSON.stringify([
+          i.normalize("NFKC").toLocaleLowerCase(),
+          s.map((l) => l.normalize("NFKC").toLocaleLowerCase()).sort(),
+        ]);
+        r.has(c) || r.set(c, Object.freeze({ name: i, keys: Object.freeze(s) }));
+      };
+    for (const o of e?.members ?? []) n(o.name, o.aliases);
+    for (const o of t) n(o.name, [o.name]);
+    return Object.freeze([...r.values()]);
   }
 // AM l1t @168793
 function l1t(e) {
@@ -52107,6 +52724,23 @@ function resolveGenerationType(e, t, r = !1) {
 // AM Xa @168829
 function Xa(e) {
     return e == null ? "" : String(e).trim();
+  }
+// AM g1t @168873
+function g1t(e) {
+    return {
+      sourceImageToken: e.tokenName,
+      tokenName: e.tokenName,
+      characterName: e.characterName,
+      markupType: e.markupType,
+      full: e.full,
+      inner: e.full,
+      before: e.before,
+      after: e.after,
+    };
+  }
+// AM mb @168948
+function mb(e) {
+    return e !== null && typeof e == "object" && !Array.isArray(e) ? e : null;
   }
 // AM rIe @171433
 function rIe(e, t, r) {
@@ -52454,6 +53088,7 @@ export {
   ec,
   rL,
   NOVELAI_MODELS,
+  Uj,
   IMAGE_PROVIDER_TABLE,
   Fa,
   qj,
@@ -52466,6 +53101,7 @@ export {
   hk,
   Nc,
   Tu,
+  OW,
   EW,
   ANIMA_DEFAULT_POSITIVE_PREFIX,
   ANIMA_DEFAULT_NEGATIVE_PREFIX,
@@ -53956,8 +54592,27 @@ export {
   bw,
   kP,
   vw,
+  Vfe,
+  Xfe,
+  uT,
+  Wfe,
+  Yfe,
+  fT,
+  Zfe,
+  fot,
+  xm,
   Dy,
   ch,
+  GB,
+  cme,
+  lme,
+  kw,
+  Not,
+  Rot,
+  Mot,
+  zot,
+  dme,
+  rI,
   Tot,
   bd,
   La,
@@ -54522,13 +55177,41 @@ export {
   JU,
   RAt,
   buildAnalyzerContextInputs,
+  u0,
+  zAt,
+  f0,
+  QU,
+  QC,
+  TAt,
+  w_e,
+  x_e,
+  __e,
+  I_e,
+  LAt,
+  eq,
+  S_e,
+  DAt,
+  FAt,
+  k_e,
+  KAt,
+  tq,
+  A_e,
+  P_e,
+  $At,
+  BAt,
+  HAt,
+  UAt,
+  ZAt,
   resolveAnalyzerExecutionMode,
   s1t,
+  c1t,
   l1t,
   assertAnalyzerReady,
   resolveCheckpointPolicy,
   resolveGenerationType,
   Xa,
+  g1t,
+  mb,
   rIe,
   buildIllustrationSlots,
 };
