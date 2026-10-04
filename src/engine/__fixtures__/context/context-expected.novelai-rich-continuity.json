@@ -1,0 +1,2557 @@
+{
+ "inputs": {
+  "analyzerIdentityCandidates": [
+   {
+    "key": "char-123::char-123::lore::lore:alice",
+    "lorebookPromptKey": "char-123::char-123::lore::lore:alice",
+    "characterName": "Alice",
+    "description": "Alice is a cheerful 17-year-old student with long silver hair.",
+    "aliases": [
+     "char-123::char-123::lore::lore:alice",
+     "Story Card",
+     "Alice",
+     "char-123::char-123::lore::lore:alice",
+     "char-123::char-123",
+     "Alice",
+     "Ally",
+     "Silver"
+    ],
+    "source": "lorebook",
+    "gender": "female",
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formId": "form_default",
+      "label": "기본",
+      "humanlike": true,
+      "basePromptGroups": {
+       "hair.color": [
+        "silver hair"
+       ],
+       "hair.length": [
+        "long hair"
+       ],
+       "eyes.color": [
+        "blue eyes"
+       ]
+      },
+      "gender": "female",
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "outfitId": "outfit_default",
+        "candidateEnabled": true,
+        "status": "",
+        "label": "Navy sailor school uniform",
+        "sourceAssetName": "",
+        "head": "",
+        "top": "white sailor shirt, navy sailor collar, red neckerchief",
+        "bottom": "navy pleated skirt",
+        "legs": "black thighhighs",
+        "feet": "brown loafers"
+       },
+       {
+        "outfitId": "outfit_summer",
+        "candidateEnabled": true,
+        "status": "",
+        "label": "White summer sundress",
+        "sourceAssetName": "",
+        "head": "straw hat",
+        "top": "white sundress",
+        "bottom": "",
+        "legs": "",
+        "feet": "sandals"
+       },
+       {
+        "outfitId": "outfit_auto",
+        "candidateEnabled": true,
+        "status": "ready",
+        "label": "Red winter coat",
+        "sourceAssetName": "",
+        "head": "",
+        "top": "red winter coat",
+        "bottom": "",
+        "legs": "",
+        "feet": "",
+        "origin": "ai-auto"
+       },
+       {
+        "outfitId": "outfit_pending",
+        "candidateEnabled": true,
+        "status": "failed",
+        "label": "Pending auto outfit",
+        "sourceAssetName": "",
+        "head": "",
+        "top": "blue coat",
+        "bottom": "",
+        "legs": "",
+        "feet": "",
+        "origin": "ai-auto"
+       }
+      ]
+     },
+     {
+      "formId": "form_cat",
+      "label": "Cat girl",
+      "humanlike": true,
+      "basePromptGroups": {
+       "hair.color": [
+        "silver hair"
+       ],
+       "custom": [
+        "cat ears",
+        "cat tail"
+       ]
+      },
+      "gender": "female",
+      "defaultOutfitId": "outfit_cat_1",
+      "outfits": [
+       {
+        "outfitId": "outfit_cat_1",
+        "candidateEnabled": true,
+        "status": "",
+        "label": "Maid dress",
+        "sourceAssetName": "",
+        "head": "maid headdress",
+        "top": "black maid dress, white apron",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ],
+    "defaultFormId": "form_default",
+    "identityMetadata": {
+     "canonicalName": "Alice",
+     "ownerName": "Story Card",
+     "aliasSources": {
+      "lorebookTitle": [
+       "Alice"
+      ],
+      "activationKeys": [
+       "Alice",
+       "Ally",
+       "Silver"
+      ],
+      "customMatchingKeys": [
+       "Ally",
+       "Silver"
+      ],
+      "assetClassificationKeys": []
+     },
+     "loreActivation": {
+      "primaryKeys": [
+       "Alice",
+       "Ally",
+       "Silver"
+      ],
+      "secondaryKeys": [],
+      "selective": false,
+      "useRegex": false,
+      "alwaysActive": false,
+      "loreContent": "Alice is a cheerful 17-year-old student with long silver hair."
+     }
+    }
+   },
+   {
+    "key": "char-123::char-123::lore::lore:bob",
+    "lorebookPromptKey": "char-123::char-123::lore::lore:bob",
+    "characterName": "Bob",
+    "description": "Bob is Alice's homeroom teacher.",
+    "aliases": [
+     "char-123::char-123::lore::lore:bob",
+     "Story Card",
+     "Bob",
+     "char-123::char-123::lore::lore:bob",
+     "char-123::char-123",
+     "Bob",
+     "Mr. Bob"
+    ],
+    "source": "lorebook",
+    "gender": "male",
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formId": "form_default",
+      "label": "기본",
+      "humanlike": true,
+      "basePromptGroups": {
+       "hair.color": [
+        "black hair"
+       ]
+      },
+      "gender": "male",
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "outfitId": "outfit_default",
+        "candidateEnabled": true,
+        "status": "",
+        "label": "Grey business suit",
+        "sourceAssetName": "",
+        "head": "",
+        "top": "grey suit jacket, white shirt, blue necktie",
+        "bottom": "grey suit pants",
+        "legs": "",
+        "feet": "black dress shoes"
+       }
+      ]
+     }
+    ],
+    "defaultFormId": "form_default",
+    "identityMetadata": {
+     "canonicalName": "Bob",
+     "ownerName": "Story Card",
+     "aliasSources": {
+      "lorebookTitle": [
+       "Bob"
+      ],
+      "activationKeys": [
+       "Bob",
+       "Mr. Bob",
+       "teacher"
+      ],
+      "customMatchingKeys": [],
+      "assetClassificationKeys": []
+     },
+     "loreActivation": {
+      "primaryKeys": [
+       "Bob",
+       "Mr. Bob"
+      ],
+      "secondaryKeys": [
+       "teacher"
+      ],
+      "selective": true,
+      "useRegex": false,
+      "alwaysActive": false,
+      "loreContent": "Bob is Alice's homeroom teacher."
+     }
+    }
+   }
+  ],
+  "analyzerPersonaCandidates": [
+   {
+    "key": "persona::p1",
+    "characterName": "Shouta",
+    "aliases": [
+     "Shouta",
+     "p1",
+     "p1"
+    ],
+    "source": "persona",
+    "gender": "male",
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formId": "form_default",
+      "label": "기본",
+      "humanlike": true,
+      "basePromptGroups": {
+       "hair.color": [
+        "brown hair"
+       ]
+      },
+      "gender": "male",
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "outfitId": "outfit_default",
+        "candidateEnabled": true,
+        "status": "",
+        "label": "Casual hoodie",
+        "sourceAssetName": "",
+        "head": "",
+        "top": "black hoodie",
+        "bottom": "jeans",
+        "legs": "",
+        "feet": "sneakers"
+       }
+      ]
+     }
+    ],
+    "defaultFormId": "form_default",
+    "identityMetadata": {
+     "canonicalName": "Shouta",
+     "ownerName": "Shouta",
+     "aliasSources": {
+      "lorebookTitle": [],
+      "activationKeys": [],
+      "customMatchingKeys": [],
+      "assetClassificationKeys": []
+     }
+    }
+   }
+  ],
+  "analyzerOutfitCandidates": [
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+    "id": "outfit_default",
+    "label": "Navy sailor school uniform",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "top": "white sailor shirt, navy sailor collar, red neckerchief",
+    "bottom": "navy pleated skirt",
+    "legs": "black thighhighs",
+    "feet": "brown loafers"
+   },
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+    "id": "outfit_summer",
+    "label": "White summer sundress",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "head": "straw hat",
+    "top": "white sundress",
+    "feet": "sandals"
+   },
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+    "id": "outfit_auto",
+    "label": "Red winter coat",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "top": "red winter coat",
+    "origin": "ai-auto"
+   },
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:bob",
+    "id": "outfit_default",
+    "label": "Grey business suit",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "top": "grey suit jacket, white shirt, blue necktie",
+    "bottom": "grey suit pants",
+    "feet": "black dress shoes"
+   },
+   {
+    "lorebook_prompt_key": "persona::p1",
+    "id": "outfit_default",
+    "label": "Casual hoodie",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "top": "black hoodie",
+    "bottom": "jeans",
+    "feet": "sneakers"
+   },
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+    "form_id": "form_cat",
+    "id": "outfit_cat_1",
+    "label": "Maid dress",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "head": "maid headdress",
+    "top": "black maid dress, white apron"
+   }
+  ],
+  "v5PersonaCatalogCandidates": [
+   {
+    "key": "persona::p1",
+    "characterName": "Shouta",
+    "aliases": [
+     "Shouta",
+     "p1",
+     "p1"
+    ],
+    "source": "persona",
+    "gender": "male",
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formId": "form_default",
+      "label": "기본",
+      "humanlike": true,
+      "basePromptGroups": {
+       "hair.color": [
+        "brown hair"
+       ]
+      },
+      "gender": "male",
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "outfitId": "outfit_default",
+        "candidateEnabled": true,
+        "status": "",
+        "label": "Casual hoodie",
+        "sourceAssetName": "",
+        "head": "",
+        "top": "black hoodie",
+        "bottom": "jeans",
+        "legs": "",
+        "feet": "sneakers"
+       }
+      ]
+     }
+    ],
+    "defaultFormId": "form_default",
+    "identityMetadata": {
+     "canonicalName": "Shouta",
+     "ownerName": "Shouta",
+     "aliasSources": {
+      "lorebookTitle": [],
+      "activationKeys": [],
+      "customMatchingKeys": [],
+      "assetClassificationKeys": []
+     }
+    }
+   },
+   {
+    "key": "persona::p2",
+    "characterName": "Rival",
+    "aliases": [
+     "Rival",
+     "p2",
+     "p2"
+    ],
+    "source": "persona",
+    "gender": "male",
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formId": "form_default",
+      "label": "기본",
+      "humanlike": true,
+      "basePromptGroups": {
+       "custom": [
+        "kazehaya shouta"
+       ]
+      },
+      "gender": "male",
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "outfitId": "outfit_default",
+        "candidateEnabled": true,
+        "status": "",
+        "label": "기본 의상",
+        "sourceAssetName": "",
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ],
+    "defaultFormId": "form_default",
+    "identityMetadata": {
+     "canonicalName": "Rival",
+     "ownerName": "Rival",
+     "aliasSources": {
+      "lorebookTitle": [],
+      "activationKeys": [],
+      "customMatchingKeys": [],
+      "assetClassificationKeys": []
+     }
+    }
+   }
+  ],
+  "v5OutfitCatalogCandidates": [
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+    "id": "outfit_default",
+    "label": "Navy sailor school uniform",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "top": "white sailor shirt, navy sailor collar, red neckerchief",
+    "bottom": "navy pleated skirt",
+    "legs": "black thighhighs",
+    "feet": "brown loafers"
+   },
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+    "id": "outfit_summer",
+    "label": "White summer sundress",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "head": "straw hat",
+    "top": "white sundress",
+    "feet": "sandals"
+   },
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+    "id": "outfit_auto",
+    "label": "Red winter coat",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "top": "red winter coat",
+    "origin": "ai-auto"
+   },
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+    "form_id": "form_cat",
+    "id": "outfit_cat_1",
+    "label": "Maid dress",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "head": "maid headdress",
+    "top": "black maid dress, white apron"
+   },
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:bob",
+    "id": "outfit_default",
+    "label": "Grey business suit",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "top": "grey suit jacket, white shirt, blue necktie",
+    "bottom": "grey suit pants",
+    "feet": "black dress shoes"
+   },
+   {
+    "lorebook_prompt_key": "persona::p1",
+    "id": "outfit_default",
+    "label": "Casual hoodie",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "top": "black hoodie",
+    "bottom": "jeans",
+    "feet": "sneakers"
+   }
+  ],
+  "analyzerPersonaPromptKey": "persona::p1",
+  "analyzerPersonaDefaultOutfitId": "outfit_default",
+  "personaGender": "male",
+  "visualContinuity": {
+   "previous_modifiers": {
+    "global": {
+     "scene.environment": [
+      "indoors"
+     ],
+     "scene.location": [
+      "classroom"
+     ]
+    },
+    "actors": {
+     "primary": {
+      "expression.general": [
+       "smile"
+      ]
+     },
+     "secondary": {
+      "gaze.direction": [
+       "looking_away"
+      ]
+     },
+     "persona": {
+      "pose.freeform": [
+       "sitting"
+      ]
+     }
+    }
+   },
+   "previous_preset_refs": {
+    "actors": {
+     "primary": "1girl_1boy.foreplay.face_to_face_upright",
+     "secondary": "",
+     "persona": ""
+    }
+   },
+   "previous_outfit_refs": {
+    "actors": {
+     "primary": {
+      "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+      "form_id": "form_default",
+      "outfit_id": "outfit_summer"
+     },
+     "secondary": null,
+     "persona": {
+      "lorebook_prompt_key": "persona::p1",
+      "form_id": "form_default",
+      "outfit_id": "outfit_default"
+     }
+    }
+   },
+   "previous_scene_tags": [
+    "classroom",
+    "school"
+   ],
+   "previous_background_tags": [
+    "classroom"
+   ],
+   "previous_scene_location_tags": [
+    "school"
+   ],
+   "previous_message_participants": {
+    "character_keys": [
+     "char-123::char-123::lore::lore:alice"
+    ],
+    "persona_keys": [
+     "persona::p1"
+    ]
+   }
+  },
+  "previousCharacterStateMap": {
+   "char-123::char-123::lore::lore:alice": {
+    "characterName": "Alice",
+    "expression.general": [
+     "smile"
+    ],
+    "state.fluid.cum.location": [
+     "cum_on_face"
+    ],
+    "cum_count": 1,
+    "_continuity_turn": 2,
+    "updatedAt": 1760000000000,
+    "updatedAtChatIndex": 0,
+    "updatedAtMessageIndex": 2,
+    "updatedAtMessageId": "m-prev"
+   }
+  },
+  "chatContext": {
+   "character": {
+    "name": "Story Card",
+    "description": "A school slice-of-life story."
+   },
+   "persona": {
+    "id": "p1",
+    "name": "Shouta",
+    "gender": "male"
+   },
+   "previous_assistant_response": "",
+   "current_user_input": "I run to the school gate.",
+   "latest_assistant_response": "Alice waved at Shouta from the school gate.\n\n\"You're late again!\" she laughed.\n\nMr. Bob watched them from the staff room."
+  }
+ },
+ "promptInputs": [
+  {
+   "identityCandidates": [
+    {
+     "key": "char-123::char-123::lore::lore:alice",
+     "prompt": "silver hair, long hair, blue eyes",
+     "basePromptGroups": {
+      "hair.color": [
+       "silver hair"
+      ],
+      "hair.length": [
+       "long hair"
+      ],
+      "eyes.color": [
+       "blue eyes"
+      ]
+     },
+     "negativePrompt": "short hair",
+     "appearanceForms": [
+      {
+       "id": "form_default",
+       "label": "기본",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "silver hair"
+        ],
+        "hair.length": [
+         "long hair"
+        ],
+        "eyes.color": [
+         "blue eyes"
+        ]
+       },
+       "negativePrompt": "short hair",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Navy sailor school uniform",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "white sailor shirt, navy sailor collar, red neckerchief",
+         "bottom": "navy pleated skirt",
+         "legs": "black thighhighs",
+         "feet": "brown loafers"
+        },
+        {
+         "id": "outfit_summer",
+         "label": "White summer sundress",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "straw hat",
+         "top": "white sundress",
+         "bottom": "",
+         "legs": "",
+         "feet": "sandals"
+        },
+        {
+         "id": "outfit_auto",
+         "label": "Red winter coat",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "red winter coat",
+         "bottom": "",
+         "legs": "",
+         "feet": "",
+         "origin": "ai-auto",
+         "status": "ready"
+        },
+        {
+         "id": "outfit_pending",
+         "label": "Pending auto outfit",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "blue coat",
+         "bottom": "",
+         "legs": "",
+         "feet": "",
+         "origin": "ai-auto",
+         "status": "failed"
+        }
+       ]
+      },
+      {
+       "id": "form_cat",
+       "label": "Cat girl",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "silver hair"
+        ],
+        "custom": [
+         "cat ears",
+         "cat tail"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_cat_1",
+       "outfits": [
+        {
+         "id": "outfit_cat_1",
+         "label": "Maid dress",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "maid headdress",
+         "top": "black maid dress, white apron",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ],
+     "defaultFormId": "form_default",
+     "canonicalName": "Alice",
+     "ownerName": "Story Card",
+     "aliasSources": {
+      "lorebookTitle": [
+       "Alice"
+      ],
+      "activationKeys": [
+       "Alice",
+       "Ally",
+       "Silver"
+      ],
+      "customMatchingKeys": [
+       "Ally",
+       "Silver"
+      ],
+      "assetClassificationKeys": []
+     },
+     "loreActivation": {
+      "primaryKeys": [
+       "Alice",
+       "Ally",
+       "Silver"
+      ],
+      "secondaryKeys": [],
+      "selective": false,
+      "useRegex": false,
+      "alwaysActive": false,
+      "loreContent": "Alice is a cheerful 17-year-old student with long silver hair."
+     },
+     "memberName": "Story Card",
+     "loreTitle": "Alice",
+     "loreKeys": [
+      "char-123::char-123::lore::lore:alice",
+      "char-123::char-123",
+      "Alice",
+      "Ally",
+      "Silver"
+     ],
+     "loreContent": "Alice is a cheerful 17-year-old student with long silver hair.",
+     "gender": "female"
+    },
+    {
+     "key": "char-123::char-123::lore::lore:bob",
+     "prompt": "black hair",
+     "basePromptGroups": {
+      "hair.color": [
+       "black hair"
+      ]
+     },
+     "negativePrompt": "",
+     "appearanceForms": [
+      {
+       "id": "form_default",
+       "label": "기본",
+       "description": "",
+       "humanlike": true,
+       "gender": "male",
+       "basePromptGroups": {
+        "hair.color": [
+         "black hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Grey business suit",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "grey suit jacket, white shirt, blue necktie",
+         "bottom": "grey suit pants",
+         "legs": "",
+         "feet": "black dress shoes"
+        }
+       ]
+      }
+     ],
+     "defaultFormId": "form_default",
+     "canonicalName": "Bob",
+     "ownerName": "Story Card",
+     "aliasSources": {
+      "lorebookTitle": [
+       "Bob"
+      ],
+      "activationKeys": [
+       "Bob",
+       "Mr. Bob",
+       "teacher"
+      ],
+      "customMatchingKeys": [],
+      "assetClassificationKeys": []
+     },
+     "loreActivation": {
+      "primaryKeys": [
+       "Bob",
+       "Mr. Bob"
+      ],
+      "secondaryKeys": [
+       "teacher"
+      ],
+      "selective": true,
+      "useRegex": false,
+      "alwaysActive": false,
+      "loreContent": "Bob is Alice's homeroom teacher."
+     },
+     "memberName": "Story Card",
+     "loreTitle": "Bob",
+     "loreKeys": [
+      "char-123::char-123::lore::lore:bob",
+      "char-123::char-123",
+      "Bob",
+      "Mr. Bob"
+     ],
+     "loreContent": "Bob is Alice's homeroom teacher.",
+     "gender": "male"
+    }
+   ],
+   "outfitsByPromptKey": {
+    "char-123::char-123::lore::lore:alice": [
+     {
+      "id": "outfit_default",
+      "label": "Navy sailor school uniform",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "top": "white sailor shirt, navy sailor collar, red neckerchief",
+      "bottom": "navy pleated skirt",
+      "legs": "black thighhighs",
+      "feet": "brown loafers"
+     },
+     {
+      "id": "outfit_summer",
+      "label": "White summer sundress",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "straw hat",
+      "top": "white sundress",
+      "bottom": "",
+      "legs": "",
+      "feet": "sandals"
+     },
+     {
+      "id": "outfit_auto",
+      "label": "Red winter coat",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "top": "red winter coat",
+      "bottom": "",
+      "legs": "",
+      "feet": "",
+      "origin": "ai-auto",
+      "status": "ready"
+     },
+     {
+      "id": "outfit_pending",
+      "label": "Pending auto outfit",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "top": "blue coat",
+      "bottom": "",
+      "legs": "",
+      "feet": "",
+      "origin": "ai-auto",
+      "status": "failed"
+     }
+    ],
+    "char-123::char-123::lore::lore:bob": [
+     {
+      "id": "outfit_default",
+      "label": "Grey business suit",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "top": "grey suit jacket, white shirt, blue necktie",
+      "bottom": "grey suit pants",
+      "legs": "",
+      "feet": "black dress shoes"
+     }
+    ],
+    "persona::p1": [
+     {
+      "id": "outfit_default",
+      "label": "Casual hoodie",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "top": "black hoodie",
+      "bottom": "jeans",
+      "legs": "",
+      "feet": "sneakers"
+     }
+    ]
+   },
+   "fixedPositivePrompt": "absurdres",
+   "negativePrompt": "watermark",
+   "personaPrompt": "brown hair",
+   "personaBasePromptGroups": {
+    "hair.color": [
+     "brown hair"
+    ]
+   },
+   "personaNegativePrompt": "",
+   "personaName": "Shouta",
+   "personaGender": "male",
+   "personaPromptKey": "persona::p1",
+   "personaDefaultOutfitId": "outfit_default",
+   "personaAppearanceForms": [
+    {
+     "id": "form_default",
+     "label": "기본",
+     "description": "",
+     "humanlike": true,
+     "gender": "male",
+     "basePromptGroups": {
+      "hair.color": [
+       "brown hair"
+      ]
+     },
+     "negativePrompt": "",
+     "reference": null,
+     "defaultOutfitId": "outfit_default",
+     "outfits": [
+      {
+       "id": "outfit_default",
+       "label": "Casual hoodie",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "top": "black hoodie",
+       "bottom": "jeans",
+       "legs": "",
+       "feet": "sneakers"
+      }
+     ]
+    }
+   ],
+   "personaDefaultFormId": "form_default",
+   "artistId": "artist_user_1",
+   "artistName": "My Artist",
+   "artistPrompt": "artist:foo, {{masterpiece}}, best quality",
+   "artistNegativePrompt": "lowres, bad anatomy"
+  },
+  {
+   "identityCandidates": [
+    {
+     "key": "char-123::char-123::lore::lore:alice",
+     "prompt": "silver hair, long hair, blue eyes",
+     "basePromptGroups": {
+      "hair.color": [
+       "silver hair"
+      ],
+      "hair.length": [
+       "long hair"
+      ],
+      "eyes.color": [
+       "blue eyes"
+      ]
+     },
+     "negativePrompt": "short hair",
+     "appearanceForms": [
+      {
+       "id": "form_default",
+       "label": "기본",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "silver hair"
+        ],
+        "hair.length": [
+         "long hair"
+        ],
+        "eyes.color": [
+         "blue eyes"
+        ]
+       },
+       "negativePrompt": "short hair",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Navy sailor school uniform",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "white sailor shirt, navy sailor collar, red neckerchief",
+         "bottom": "navy pleated skirt",
+         "legs": "black thighhighs",
+         "feet": "brown loafers"
+        },
+        {
+         "id": "outfit_summer",
+         "label": "White summer sundress",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "straw hat",
+         "top": "white sundress",
+         "bottom": "",
+         "legs": "",
+         "feet": "sandals"
+        },
+        {
+         "id": "outfit_auto",
+         "label": "Red winter coat",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "red winter coat",
+         "bottom": "",
+         "legs": "",
+         "feet": "",
+         "origin": "ai-auto",
+         "status": "ready"
+        },
+        {
+         "id": "outfit_pending",
+         "label": "Pending auto outfit",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "blue coat",
+         "bottom": "",
+         "legs": "",
+         "feet": "",
+         "origin": "ai-auto",
+         "status": "failed"
+        }
+       ]
+      },
+      {
+       "id": "form_cat",
+       "label": "Cat girl",
+       "description": "",
+       "humanlike": true,
+       "gender": "female",
+       "basePromptGroups": {
+        "hair.color": [
+         "silver hair"
+        ],
+        "custom": [
+         "cat ears",
+         "cat tail"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_cat_1",
+       "outfits": [
+        {
+         "id": "outfit_cat_1",
+         "label": "Maid dress",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "maid headdress",
+         "top": "black maid dress, white apron",
+         "bottom": "",
+         "legs": "",
+         "feet": ""
+        }
+       ]
+      }
+     ],
+     "defaultFormId": "form_default",
+     "canonicalName": "Alice",
+     "ownerName": "Story Card",
+     "aliasSources": {
+      "lorebookTitle": [
+       "Alice"
+      ],
+      "activationKeys": [
+       "Alice",
+       "Ally",
+       "Silver"
+      ],
+      "customMatchingKeys": [
+       "Ally",
+       "Silver"
+      ],
+      "assetClassificationKeys": []
+     },
+     "loreActivation": {
+      "primaryKeys": [
+       "Alice",
+       "Ally",
+       "Silver"
+      ],
+      "secondaryKeys": [],
+      "selective": false,
+      "useRegex": false,
+      "alwaysActive": false,
+      "loreContent": "Alice is a cheerful 17-year-old student with long silver hair."
+     },
+     "memberName": "Story Card",
+     "loreTitle": "Alice",
+     "loreKeys": [
+      "char-123::char-123::lore::lore:alice",
+      "char-123::char-123",
+      "Alice",
+      "Ally",
+      "Silver"
+     ],
+     "loreContent": "Alice is a cheerful 17-year-old student with long silver hair.",
+     "gender": "female"
+    },
+    {
+     "key": "char-123::char-123::lore::lore:bob",
+     "prompt": "black hair",
+     "basePromptGroups": {
+      "hair.color": [
+       "black hair"
+      ]
+     },
+     "negativePrompt": "",
+     "appearanceForms": [
+      {
+       "id": "form_default",
+       "label": "기본",
+       "description": "",
+       "humanlike": true,
+       "gender": "male",
+       "basePromptGroups": {
+        "hair.color": [
+         "black hair"
+        ]
+       },
+       "negativePrompt": "",
+       "reference": null,
+       "defaultOutfitId": "outfit_default",
+       "outfits": [
+        {
+         "id": "outfit_default",
+         "label": "Grey business suit",
+         "description": "",
+         "candidateEnabled": true,
+         "head": "",
+         "top": "grey suit jacket, white shirt, blue necktie",
+         "bottom": "grey suit pants",
+         "legs": "",
+         "feet": "black dress shoes"
+        }
+       ]
+      }
+     ],
+     "defaultFormId": "form_default",
+     "canonicalName": "Bob",
+     "ownerName": "Story Card",
+     "aliasSources": {
+      "lorebookTitle": [
+       "Bob"
+      ],
+      "activationKeys": [
+       "Bob",
+       "Mr. Bob",
+       "teacher"
+      ],
+      "customMatchingKeys": [],
+      "assetClassificationKeys": []
+     },
+     "loreActivation": {
+      "primaryKeys": [
+       "Bob",
+       "Mr. Bob"
+      ],
+      "secondaryKeys": [
+       "teacher"
+      ],
+      "selective": true,
+      "useRegex": false,
+      "alwaysActive": false,
+      "loreContent": "Bob is Alice's homeroom teacher."
+     },
+     "memberName": "Story Card",
+     "loreTitle": "Bob",
+     "loreKeys": [
+      "char-123::char-123::lore::lore:bob",
+      "char-123::char-123",
+      "Bob",
+      "Mr. Bob"
+     ],
+     "loreContent": "Bob is Alice's homeroom teacher.",
+     "gender": "male"
+    }
+   ],
+   "outfitsByPromptKey": {
+    "char-123::char-123::lore::lore:alice": [
+     {
+      "id": "outfit_default",
+      "label": "Navy sailor school uniform",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "top": "white sailor shirt, navy sailor collar, red neckerchief",
+      "bottom": "navy pleated skirt",
+      "legs": "black thighhighs",
+      "feet": "brown loafers"
+     },
+     {
+      "id": "outfit_summer",
+      "label": "White summer sundress",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "straw hat",
+      "top": "white sundress",
+      "bottom": "",
+      "legs": "",
+      "feet": "sandals"
+     },
+     {
+      "id": "outfit_auto",
+      "label": "Red winter coat",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "top": "red winter coat",
+      "bottom": "",
+      "legs": "",
+      "feet": "",
+      "origin": "ai-auto",
+      "status": "ready"
+     },
+     {
+      "id": "outfit_pending",
+      "label": "Pending auto outfit",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "top": "blue coat",
+      "bottom": "",
+      "legs": "",
+      "feet": "",
+      "origin": "ai-auto",
+      "status": "failed"
+     }
+    ],
+    "char-123::char-123::lore::lore:bob": [
+     {
+      "id": "outfit_default",
+      "label": "Grey business suit",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "top": "grey suit jacket, white shirt, blue necktie",
+      "bottom": "grey suit pants",
+      "legs": "",
+      "feet": "black dress shoes"
+     }
+    ],
+    "persona::p1": [
+     {
+      "id": "outfit_default",
+      "label": "Casual hoodie",
+      "description": "",
+      "candidateEnabled": true,
+      "head": "",
+      "top": "black hoodie",
+      "bottom": "jeans",
+      "legs": "",
+      "feet": "sneakers"
+     }
+    ]
+   },
+   "fixedPositivePrompt": "absurdres",
+   "negativePrompt": "watermark",
+   "personaPrompt": "brown hair",
+   "personaBasePromptGroups": {
+    "hair.color": [
+     "brown hair"
+    ]
+   },
+   "personaNegativePrompt": "",
+   "personaName": "Shouta",
+   "personaGender": "male",
+   "personaPromptKey": "persona::p1",
+   "personaDefaultOutfitId": "outfit_default",
+   "personaAppearanceForms": [
+    {
+     "id": "form_default",
+     "label": "기본",
+     "description": "",
+     "humanlike": true,
+     "gender": "male",
+     "basePromptGroups": {
+      "hair.color": [
+       "brown hair"
+      ]
+     },
+     "negativePrompt": "",
+     "reference": null,
+     "defaultOutfitId": "outfit_default",
+     "outfits": [
+      {
+       "id": "outfit_default",
+       "label": "Casual hoodie",
+       "description": "",
+       "candidateEnabled": true,
+       "head": "",
+       "top": "black hoodie",
+       "bottom": "jeans",
+       "legs": "",
+       "feet": "sneakers"
+      }
+     ]
+    }
+   ],
+   "personaDefaultFormId": "form_default",
+   "artistId": "artist_user_1",
+   "artistName": "My Artist",
+   "artistPrompt": "artist:foo, {{masterpiece}}, best quality",
+   "artistNegativePrompt": "lowres, bad anatomy"
+  }
+ ],
+ "v5PromptContext": {
+  "identities": [
+   {
+    "key": "char-123::char-123::lore::lore:alice",
+    "prompt": "silver hair, long hair, blue eyes",
+    "basePromptGroups": {
+     "hair.color": [
+      "silver hair"
+     ],
+     "hair.length": [
+      "long hair"
+     ],
+     "eyes.color": [
+      "blue eyes"
+     ]
+    },
+    "negativePrompt": "short hair",
+    "outfits": [
+     {
+      "id": "outfit_default",
+      "parts": [
+       {
+        "part": "top",
+        "prompt": "white sailor shirt, navy sailor collar, red neckerchief"
+       },
+       {
+        "part": "bottom",
+        "prompt": "navy pleated skirt"
+       },
+       {
+        "part": "legs",
+        "prompt": "black thighhighs"
+       },
+       {
+        "part": "feet",
+        "prompt": "brown loafers"
+       }
+      ]
+     },
+     {
+      "id": "outfit_summer",
+      "parts": [
+       {
+        "part": "head",
+        "prompt": "straw hat"
+       },
+       {
+        "part": "top",
+        "prompt": "white sundress"
+       },
+       {
+        "part": "feet",
+        "prompt": "sandals"
+       }
+      ]
+     },
+     {
+      "id": "outfit_auto",
+      "parts": [
+       {
+        "part": "top",
+        "prompt": "red winter coat"
+       }
+      ]
+     },
+     {
+      "id": "outfit_pending",
+      "parts": [
+       {
+        "part": "top",
+        "prompt": "blue coat"
+       }
+      ]
+     }
+    ],
+    "defaultOutfitId": "outfit_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "prompt": "silver hair, long hair, blue eyes",
+      "humanlike": true,
+      "basePromptGroups": {
+       "hair.color": [
+        "silver hair"
+       ],
+       "hair.length": [
+        "long hair"
+       ],
+       "eyes.color": [
+        "blue eyes"
+       ]
+      },
+      "negativePrompt": "short hair",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "parts": [
+         {
+          "part": "top",
+          "prompt": "white sailor shirt, navy sailor collar, red neckerchief"
+         },
+         {
+          "part": "bottom",
+          "prompt": "navy pleated skirt"
+         },
+         {
+          "part": "legs",
+          "prompt": "black thighhighs"
+         },
+         {
+          "part": "feet",
+          "prompt": "brown loafers"
+         }
+        ]
+       },
+       {
+        "id": "outfit_summer",
+        "parts": [
+         {
+          "part": "head",
+          "prompt": "straw hat"
+         },
+         {
+          "part": "top",
+          "prompt": "white sundress"
+         },
+         {
+          "part": "feet",
+          "prompt": "sandals"
+         }
+        ]
+       },
+       {
+        "id": "outfit_auto",
+        "parts": [
+         {
+          "part": "top",
+          "prompt": "red winter coat"
+         }
+        ]
+       },
+       {
+        "id": "outfit_pending",
+        "parts": [
+         {
+          "part": "top",
+          "prompt": "blue coat"
+         }
+        ]
+       }
+      ],
+      "defaultOutfitId": "outfit_default"
+     },
+     {
+      "id": "form_cat",
+      "prompt": "silver hair, cat ears, cat tail",
+      "humanlike": true,
+      "basePromptGroups": {
+       "hair.color": [
+        "silver hair"
+       ],
+       "custom": [
+        "cat ears",
+        "cat tail"
+       ]
+      },
+      "negativePrompt": "",
+      "outfits": [
+       {
+        "id": "outfit_cat_1",
+        "parts": [
+         {
+          "part": "head",
+          "prompt": "maid headdress"
+         },
+         {
+          "part": "top",
+          "prompt": "black maid dress, white apron"
+         }
+        ]
+       }
+      ],
+      "defaultOutfitId": "outfit_cat_1"
+     }
+    ],
+    "defaultFormId": "form_default"
+   },
+   {
+    "key": "char-123::char-123::lore::lore:bob",
+    "prompt": "black hair",
+    "basePromptGroups": {
+     "hair.color": [
+      "black hair"
+     ]
+    },
+    "negativePrompt": "",
+    "outfits": [
+     {
+      "id": "outfit_default",
+      "parts": [
+       {
+        "part": "top",
+        "prompt": "grey suit jacket, white shirt, blue necktie"
+       },
+       {
+        "part": "bottom",
+        "prompt": "grey suit pants"
+       },
+       {
+        "part": "feet",
+        "prompt": "black dress shoes"
+       }
+      ]
+     }
+    ],
+    "defaultOutfitId": "outfit_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "prompt": "black hair",
+      "humanlike": true,
+      "basePromptGroups": {
+       "hair.color": [
+        "black hair"
+       ]
+      },
+      "negativePrompt": "",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "parts": [
+         {
+          "part": "top",
+          "prompt": "grey suit jacket, white shirt, blue necktie"
+         },
+         {
+          "part": "bottom",
+          "prompt": "grey suit pants"
+         },
+         {
+          "part": "feet",
+          "prompt": "black dress shoes"
+         }
+        ]
+       }
+      ],
+      "defaultOutfitId": "outfit_default"
+     }
+    ],
+    "defaultFormId": "form_default"
+   }
+  ],
+  "persona": {
+   "key": "persona::p1",
+   "prompt": "brown hair",
+   "basePromptGroups": {
+    "hair.color": [
+     "brown hair"
+    ]
+   },
+   "negativePrompt": "",
+   "outfits": [
+    {
+     "id": "outfit_default",
+     "parts": [
+      {
+       "part": "top",
+       "prompt": "black hoodie"
+      },
+      {
+       "part": "bottom",
+       "prompt": "jeans"
+      },
+      {
+       "part": "feet",
+       "prompt": "sneakers"
+      }
+     ]
+    }
+   ],
+   "defaultOutfitId": "outfit_default",
+   "forms": [
+    {
+     "id": "form_default",
+     "prompt": "brown hair",
+     "humanlike": true,
+     "basePromptGroups": {
+      "hair.color": [
+       "brown hair"
+      ]
+     },
+     "negativePrompt": "",
+     "outfits": [
+      {
+       "id": "outfit_default",
+       "parts": [
+        {
+         "part": "top",
+         "prompt": "black hoodie"
+        },
+        {
+         "part": "bottom",
+         "prompt": "jeans"
+        },
+        {
+         "part": "feet",
+         "prompt": "sneakers"
+        }
+       ]
+      }
+     ],
+     "defaultOutfitId": "outfit_default"
+    }
+   ],
+   "defaultFormId": "form_default"
+  },
+  "artistId": "artist_user_1",
+  "artistName": "My Artist",
+  "artistPrompt": "artist:foo, {{masterpiece}}, best quality",
+  "artistNegativePrompt": "lowres, bad anatomy",
+  "fixedPositivePrompt": "absurdres",
+  "globalNegativePrompt": "watermark"
+ },
+ "references": [
+  [],
+  []
+ ],
+ "outfitReference": [
+  null,
+  null
+ ],
+ "characterReference": [
+  null,
+  null
+ ],
+ "seedSetting": {
+  "key": "",
+  "seed": "",
+  "fixed": false
+ },
+ "outfitContinuityReferences": [
+  {
+   "actorKey": "char-123::char-123::lore::lore:alice",
+   "formId": "form_default",
+   "outfitId": "outfit_summer",
+   "description": ""
+  },
+  {
+   "actorKey": "char-123::char-123::lore::lore:bob",
+   "formId": "form_default",
+   "outfitId": "catalog:outfit:x",
+   "description": ""
+  }
+ ],
+ "helpers": {
+  "sourceSettings": {
+   "nativeAssetVisibility": "hidden",
+   "freeCharacterGenerationEnabled": true,
+   "freeOutfitGenerationEnabled": true,
+   "rosterSelectionEnabled": false,
+   "stateAccumulationEnabled": true,
+   "nsfwAlwaysEnabled": false,
+   "forceAiChoiceCoordinates": true,
+   "autoRemoveConflictingRegex": false,
+   "fixedResolution": {
+    "enabled": false,
+    "sizeId": 1
+   },
+   "fixedPositivePrompt": "absurdres",
+   "negativePrompt": "watermark",
+   "animaPositivePrompt": "masterpiece, best quality, score_7, safe",
+   "animaNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration"
+  },
+  "defaultSourceSettings": {
+   "nativeAssetVisibility": "hidden",
+   "freeCharacterGenerationEnabled": true,
+   "freeOutfitGenerationEnabled": true,
+   "rosterSelectionEnabled": false,
+   "stateAccumulationEnabled": false,
+   "nsfwAlwaysEnabled": false,
+   "forceAiChoiceCoordinates": true,
+   "autoRemoveConflictingRegex": false,
+   "fixedResolution": {
+    "enabled": false,
+    "sizeId": 1
+   },
+   "fixedPositivePrompt": "",
+   "negativePrompt": "",
+   "animaPositivePrompt": "masterpiece, best quality, score_7, safe",
+   "animaNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration"
+  },
+  "novelAIRunConfig": {
+   "analysisProfile": "v4-5",
+   "v5UserDirections": {
+    "scene": {
+     "mode": "preset",
+     "selectedPresetId": "scene-default",
+     "presets": [
+      {
+       "id": "scene-default",
+       "name": "삽화",
+       "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+      },
+      {
+       "id": "scene-pov",
+       "name": "pov 연출",
+       "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when only the persona's hands or arms are visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Use the persona's hands and arms as POV hands to express action, contact, object manipulation, and spatial distance while keeping the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+       "scenePresetId": "pov"
+      },
+      {
+       "id": "scene-ensemble",
+       "name": "다인 연출",
+       "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent, duplicate, split, or restore absent Actors. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+       "scenePresetId": "ensemble"
+      },
+      {
+       "id": "scene-comic",
+       "name": "카툰 연출",
+       "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+       "scenePresetId": "comic"
+      }
+     ],
+     "customText": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+    },
+    "imageRatio": {
+     "mode": "preset",
+     "selectedPresetId": "image-ratio-default",
+     "presets": [
+      {
+       "id": "image-ratio-default",
+       "name": "기본",
+       "instruction": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+       "allowedSizeIds": [
+        1,
+        2,
+        5
+       ]
+      },
+      {
+       "id": "image-ratio-unspecified",
+       "name": "미지정",
+       "instruction": "Choose the sizeId that best fits the current illustration from the allowed candidates. Apply no additional aspect-ratio preference.",
+       "allowedSizeIds": [
+        1,
+        2,
+        5
+       ]
+      }
+     ],
+     "customText": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2."
+    }
+   },
+   "apiKey": "test-key",
+   "endpoint": "https://image.novelai.net/ai/generate-image",
+   "naiModel": "nai-diffusion-5-full",
+   "width": 832,
+   "height": 1216,
+   "sampler": "k_euler_ancestral",
+   "noiseSchedule": "karras",
+   "steps": 28,
+   "scale": 6,
+   "cfgRescale": 0.5,
+   "qualityToggle": true,
+   "useCoords": false,
+   "useOrder": true,
+   "characterReferenceEnabled": false,
+   "characterReferenceType": "character",
+   "characterReferenceStrength": 0.6,
+   "characterReferenceFidelity": 1,
+   "characterPrompts": [],
+   "negativePrompt": "",
+   "nonArtistPromptWeightArtist": {
+    "id": "artist_user_1",
+    "name": "My Artist",
+    "positive": "artist:foo, {{masterpiece}}, best quality",
+    "negative": "lowres, bad anatomy"
+   }
+  },
+  "artistNovelAI": {
+   "id": "artist_user_1",
+   "name": "My Artist",
+   "prompt": "artist:foo, {{masterpiece}}, best quality",
+   "negativePrompt": "lowres, bad anatomy"
+  },
+  "artistAnima": {
+   "id": "anima_1",
+   "name": "Anima Artist",
+   "prompt": "@anima artist",
+   "negativePrompt": ""
+  },
+  "artistDefaultProvider": {
+   "id": "artist_user_1",
+   "name": "My Artist",
+   "prompt": "artist:foo, {{masterpiece}}, best quality",
+   "negativePrompt": "lowres, bad anatomy"
+  },
+  "personaActive": {
+   "key": "persona::p1",
+   "prompt": "brown hair",
+   "basePromptGroups": {
+    "hair.color": [
+     "brown hair"
+    ]
+   },
+   "negativePrompt": "",
+   "gender": "male",
+   "outfits": [
+    {
+     "id": "outfit_default",
+     "label": "Casual hoodie",
+     "description": "",
+     "candidateEnabled": true,
+     "head": "",
+     "top": "black hoodie",
+     "bottom": "jeans",
+     "legs": "",
+     "feet": "sneakers"
+    }
+   ],
+   "defaultOutfitId": "outfit_default",
+   "forms": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {
+       "hair.color": [
+        "brown hair"
+       ]
+      },
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "Casual hoodie",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "black hoodie",
+        "bottom": "jeans",
+        "legs": "",
+        "feet": "sneakers"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "personaUnknown": {
+   "key": "persona::nobody",
+   "prompt": "kazehaya shouta",
+   "basePromptGroups": {
+    "custom": [
+     "kazehaya shouta"
+    ]
+   },
+   "negativePrompt": "",
+   "gender": "male",
+   "outfits": [
+    {
+     "id": "outfit_default",
+     "label": "기본 의상",
+     "description": "",
+     "candidateEnabled": true,
+     "head": "",
+     "top": "",
+     "bottom": "",
+     "legs": "",
+     "feet": ""
+    }
+   ],
+   "defaultOutfitId": "outfit_default",
+   "forms": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {
+       "custom": [
+        "kazehaya shouta"
+       ]
+      },
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "personaNone": {
+   "key": "",
+   "prompt": "kazehaya shouta",
+   "basePromptGroups": {
+    "custom": [
+     "kazehaya shouta"
+    ]
+   },
+   "negativePrompt": "",
+   "gender": "male",
+   "outfits": [
+    {
+     "id": "outfit_default",
+     "label": "기본 의상",
+     "description": "",
+     "candidateEnabled": true,
+     "head": "",
+     "top": "",
+     "bottom": "",
+     "legs": "",
+     "feet": ""
+    }
+   ],
+   "defaultOutfitId": "outfit_default",
+   "forms": {
+    "defaultFormId": "form_default",
+    "forms": [
+     {
+      "id": "form_default",
+      "label": "기본",
+      "description": "",
+      "humanlike": true,
+      "gender": "male",
+      "basePromptGroups": {
+       "custom": [
+        "kazehaya shouta"
+       ]
+      },
+      "negativePrompt": "",
+      "reference": null,
+      "defaultOutfitId": "outfit_default",
+      "outfits": [
+       {
+        "id": "outfit_default",
+        "label": "기본 의상",
+        "description": "",
+        "candidateEnabled": true,
+        "head": "",
+        "top": "",
+        "bottom": "",
+        "legs": "",
+        "feet": ""
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "freeOutfit": true,
+  "hasStoredContinuity": true,
+  "outfitCreationMode": "tags-only",
+  "knownIdentities": [
+   {
+    "name": "Story Card",
+    "keys": [
+     "Story Card",
+     "story card"
+    ]
+   },
+   {
+    "name": "Shouta",
+    "keys": [
+     "Shouta"
+    ]
+   },
+   {
+    "name": "Rival",
+    "keys": [
+     "Rival"
+    ]
+   }
+  ],
+  "outfitCandidates": [
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+    "id": "outfit_default",
+    "label": "Navy sailor school uniform",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "top": "white sailor shirt, navy sailor collar, red neckerchief",
+    "bottom": "navy pleated skirt",
+    "legs": "black thighhighs",
+    "feet": "brown loafers"
+   },
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+    "id": "outfit_summer",
+    "label": "White summer sundress",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "head": "straw hat",
+    "top": "white sundress",
+    "feet": "sandals"
+   },
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+    "id": "outfit_auto",
+    "label": "Red winter coat",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "top": "red winter coat",
+    "origin": "ai-auto"
+   },
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+    "form_id": "form_cat",
+    "id": "outfit_cat_1",
+    "label": "Maid dress",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "head": "maid headdress",
+    "top": "black maid dress, white apron"
+   },
+   {
+    "lorebook_prompt_key": "char-123::char-123::lore::lore:bob",
+    "id": "outfit_default",
+    "label": "Grey business suit",
+    "source_asset_name": "",
+    "has_reference": false,
+    "reference_image_file_name": "",
+    "top": "grey suit jacket, white shirt, blue necktie",
+    "bottom": "grey suit pants",
+    "feet": "black dress shoes"
+   }
+  ],
+  "chatContextWithPrevious": {
+   "previous_assistant_response": "Alice smiled at you from her seat.",
+   "current_user_input": "I run to the school gate.",
+   "latest_assistant_response": "Alice waved at Shouta from the school gate.\n\n\"You're late again!\" she laughed.\n\nMr. Bob watched them from the staff room."
+  },
+  "chatContextWithoutPrevious": {
+   "previous_assistant_response": "",
+   "current_user_input": "I run to the school gate.",
+   "latest_assistant_response": "Alice waved at Shouta from the school gate.\n\n\"You're late again!\" she laughed.\n\nMr. Bob watched them from the staff room."
+  },
+  "visualContinuityDirect": {
+   "previous_modifiers": {
+    "global": {
+     "scene.environment": [
+      "indoors"
+     ],
+     "scene.location": [
+      "classroom"
+     ]
+    },
+    "actors": {
+     "primary": {
+      "gaze.direction": [
+       "looking_away"
+      ]
+     },
+     "secondary": {
+      "expression.general": [
+       "smile"
+      ]
+     },
+     "persona": {
+      "pose.freeform": [
+       "sitting"
+      ]
+     }
+    }
+   },
+   "previous_preset_refs": {
+    "actors": {
+     "primary": "",
+     "secondary": "1girl_1boy.foreplay.face_to_face_upright",
+     "persona": ""
+    }
+   },
+   "previous_outfit_refs": {
+    "actors": {
+     "primary": null,
+     "secondary": {
+      "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+      "form_id": "form_default",
+      "outfit_id": "outfit_default"
+     },
+     "persona": {
+      "lorebook_prompt_key": "persona::p1",
+      "form_id": "form_default",
+      "outfit_id": "outfit_default"
+     }
+    }
+   },
+   "previous_scene_tags": [
+    "classroom",
+    "school"
+   ],
+   "previous_background_tags": [
+    "classroom"
+   ],
+   "previous_scene_location_tags": [
+    "school"
+   ],
+   "previous_message_participants": {
+    "character_keys": [
+     "char-123::char-123::lore::lore:alice"
+    ],
+    "persona_keys": [
+     "persona::p1"
+    ]
+   }
+  }
+ },
+ "identityEvidence": {
+  "actorHintsBySlot": {
+   "__map__": [
+    [
+     "s1",
+     [
+      "char-123::char-123::lore::lore:alice"
+     ]
+    ],
+    [
+     "s2",
+     [
+      "char-123::char-123::lore::lore:bob"
+     ]
+    ],
+    [
+     "s3",
+     [
+      "char-123::char-123::lore::lore:bob"
+     ]
+    ]
+   ]
+  },
+  "diagnostic": {
+   "slots": [
+    {
+     "slotId": "s1",
+     "directCandidateKeys": [
+      "char-123::char-123::lore::lore:alice"
+     ],
+     "assetCandidateKeys": [],
+     "recursiveCandidateKeys": [],
+     "alwaysActiveCandidateKeys": [],
+     "assetClassificationTextCandidateKeys": [],
+     "ambiguousDirectCandidateGroups": [],
+     "actorHints": [
+      "char-123::char-123::lore::lore:alice"
+     ]
+    },
+    {
+     "slotId": "s2",
+     "directCandidateKeys": [
+      "char-123::char-123::lore::lore:bob"
+     ],
+     "assetCandidateKeys": [],
+     "recursiveCandidateKeys": [
+      "char-123::char-123::lore::lore:alice"
+     ],
+     "alwaysActiveCandidateKeys": [],
+     "assetClassificationTextCandidateKeys": [],
+     "ambiguousDirectCandidateGroups": [],
+     "actorHints": [
+      "char-123::char-123::lore::lore:bob"
+     ]
+    },
+    {
+     "slotId": "s3",
+     "directCandidateKeys": [],
+     "assetCandidateKeys": [],
+     "recursiveCandidateKeys": [],
+     "alwaysActiveCandidateKeys": [],
+     "assetClassificationTextCandidateKeys": [],
+     "ambiguousDirectCandidateGroups": [],
+     "actorHints": [
+      "char-123::char-123::lore::lore:bob"
+     ]
+    }
+   ],
+   "invalidRegexCandidateKeys": [],
+   "previousMessageParticipantKeys": []
+  }
+ },
+ "reads": {
+  "config": [
+   "config.characterPrompt",
+   "config.characterPrompt.artistPrompts",
+   "config.characterPrompt.artistPrompts.[]",
+   "config.characterPrompt.artistPrompts.[].description",
+   "config.characterPrompt.artistPrompts.[].id",
+   "config.characterPrompt.artistPrompts.[].negativePrompt",
+   "config.characterPrompt.artistPrompts.[].nonArtistPromptWeight",
+   "config.characterPrompt.artistPrompts.[].novelAIOverrides",
+   "config.characterPrompt.artistPrompts.[].prompt",
+   "config.characterPrompt.artistPrompts.[].sourceCharacterName",
+   "config.characterPrompt.artistPrompts.[].sourceName",
+   "config.characterPrompt.artistPrompts.[].source_character_name",
+   "config.characterPrompt.artistPrompts.[].source_name",
+   "config.characterPrompt.artistPrompts.[].title",
+   "config.characterPrompt.basePromptGroups",
+   "config.characterPrompt.basePromptGroups.<promptKey>",
+   "config.characterPrompt.characterForms",
+   "config.characterPrompt.characterForms.<promptKey>",
+   "config.characterPrompt.characterForms.<promptKey>.defaultFormId",
+   "config.characterPrompt.characterForms.<promptKey>.forms",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[]",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.body.breast_size",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.body.build",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.body.proportions",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.body.skin",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.custom",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.custom.[]",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.eyes.color",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.eyes.color.[]",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.eyes.structure",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.hair.color",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.hair.color.[]",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.hair.length",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.hair.length.[]",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.hair.style",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.head.other",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.identity.character_tag",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.marks.distinctive",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].basePromptGroups.nonhuman.features",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].defaultOutfitId",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].description",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].gender",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].humanlike",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].id",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].label",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].negativePrompt",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[]",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[].bottom",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[].candidateEnabled",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[].candidate_enabled",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[].description",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[].feet",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[].head",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[].id",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[].label",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[].legs",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[].origin",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[].status",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].outfits.[].top",
+   "config.characterPrompt.characterForms.<promptKey>.forms.[].reference",
+   "config.characterPrompt.characterReferences",
+   "config.characterPrompt.characterReferences.<promptKey>",
+   "config.characterPrompt.charxGenerationDefaults",
+   "config.characterPrompt.charxGenerationDefaults.animaNegativePrompt",
+   "config.characterPrompt.charxGenerationDefaults.animaPositivePrompt",
+   "config.characterPrompt.charxGenerationDefaults.autoRemoveConflictingRegex",
+   "config.characterPrompt.charxGenerationDefaults.dirtyFieldsBySourceId",
+   "config.characterPrompt.charxGenerationDefaults.fixedPositivePrompt",
+   "config.characterPrompt.charxGenerationDefaults.fixedResolution",
+   "config.characterPrompt.charxGenerationDefaults.fixedResolution.enabled",
+   "config.characterPrompt.charxGenerationDefaults.fixedResolution.sizeId",
+   "config.characterPrompt.charxGenerationDefaults.forceAiChoiceCoordinates",
+   "config.characterPrompt.charxGenerationDefaults.freeCharacterGeneration",
+   "config.characterPrompt.charxGenerationDefaults.freeOutfitGeneration",
+   "config.characterPrompt.charxGenerationDefaults.nativeAssetVisibility",
+   "config.characterPrompt.charxGenerationDefaults.negativePrompt",
+   "config.characterPrompt.charxGenerationDefaults.nsfwAlwaysEnabled",
+   "config.characterPrompt.charxGenerationDefaults.revisionByField",
+   "config.characterPrompt.charxGenerationDefaults.rosterSelectionEnabled",
+   "config.characterPrompt.charxGenerationDefaults.stateAccumulationEnabled",
+   "config.characterPrompt.charxSettings",
+   "config.characterPrompt.charxSettings.overrides",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.animaNegativePrompt?",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.animaPositivePrompt?",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.autoRemoveConflictingRegex?",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.fixedPositivePrompt",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.fixedResolution?",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.forceAiChoiceCoordinates?",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.freeCharacterGeneration?",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.freeOutfitGeneration?",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.nativeAssetVisibility?",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.negativePrompt",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.nsfwAlwaysEnabled?",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.revisionByField",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.rosterSelectionEnabled?",
+   "config.characterPrompt.charxSettings.overrides.<sourceId>.stateAccumulationEnabled",
+   "config.characterPrompt.customLorebookKeys",
+   "config.characterPrompt.customLorebookKeys.<promptKey>",
+   "config.characterPrompt.customLorebookKeys.<promptKey>.[]",
+   "config.characterPrompt.genders",
+   "config.characterPrompt.lorebookImageFilters",
+   "config.characterPrompt.lorebookImageFilters.",
+   "config.characterPrompt.lorebookImageFilters.<sourceId>",
+   "config.characterPrompt.lorebookNegativePrompts",
+   "config.characterPrompt.lorebookNegativePrompts.<promptKey>",
+   "config.characterPrompt.lorebookPromptGenders",
+   "config.characterPrompt.lorebookPromptGenders.<promptKey>",
+   "config.characterPrompt.lorebookPrompts",
+   "config.characterPrompt.lorebookPrompts.<promptKey>",
+   "config.characterPrompt.malePersonaNegativePrompt",
+   "config.characterPrompt.malePersonaPrompt",
+   "config.characterPrompt.negativePrompts",
+   "config.characterPrompt.outfitPrompts",
+   "config.characterPrompt.outfitPrompts.<promptKey>",
+   "config.characterPrompt.personaGender",
+   "config.characterPrompt.personaSettings",
+   "config.characterPrompt.personaSettings.profiles",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.basePromptGroups",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.defaultOutfitId",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.default_outfit_id",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.defaultFormId",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[]",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.body.breast_size",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.body.build",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.body.proportions",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.body.skin",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.custom",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.eyes.color",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.eyes.structure",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.hair.color",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.hair.color.[]",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.hair.length",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.hair.style",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.head.other",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.identity.character_tag",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.marks.distinctive",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].basePromptGroups.nonhuman.features",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].defaultOutfitId",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].description",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].gender",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].humanlike",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].id",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].label",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].negativePrompt",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].outfits",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].outfits.[]",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].outfits.[].bottom",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].outfits.[].candidateEnabled",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].outfits.[].candidate_enabled",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].outfits.[].description",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].outfits.[].feet",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].outfits.[].head",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].outfits.[].id",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].outfits.[].label",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].outfits.[].legs",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].outfits.[].top",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.forms.forms.[].reference",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.gender",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.mainPrompt?",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.negativePrompt",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.negative_prompt",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.outfits",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.prompt?",
+   "config.characterPrompt.personaSettings.profiles.<personaKey>.reference",
+   "config.characterPrompt.selectedArtistId",
+   "config.characterPrompt.selectedLorebooks",
+   "config.characterPrompt.selectedLorebooks.<memberKey>",
+   "config.characterPrompt.selectedLorebooks.<memberKey>.[]",
+   "config.characterPrompt.workspaceDisabledLorebooks",
+   "config.characterPrompt.workspaceDisabledLorebooks.<memberKey>",
+   "config.characterPrompt.workspaceDisabledLorebooks.<memberKey>.[]",
+   "config.jevConnection",
+   "config.jevConnection.rosterSelectionDefault",
+   "config.novelai",
+   "config.novelai.characterReferenceEnabled",
+   "config.runtime",
+   "config.runtime.comfyuiCharacterReferenceEnabled",
+   "config.runtime.customImageSizes",
+   "config.runtime.generationProvider"
+  ],
+  "source": [
+   "source.id",
+   "source.members",
+   "source.members.[]",
+   "source.members.[].key",
+   "source.members.[].lorebooks",
+   "source.members.[].lorebooks.[]",
+   "source.members.[].lorebooks.[].alwaysActive",
+   "source.members.[].lorebooks.[].content",
+   "source.members.[].lorebooks.[].id",
+   "source.members.[].lorebooks.[].keys",
+   "source.members.[].lorebooks.[].keys.[]",
+   "source.members.[].lorebooks.[].kind",
+   "source.members.[].lorebooks.[].primaryKeys",
+   "source.members.[].lorebooks.[].primaryKeys.[]",
+   "source.members.[].lorebooks.[].runtimeBasePrompt",
+   "source.members.[].lorebooks.[].runtimeOrigin",
+   "source.members.[].lorebooks.[].runtimePromptKey",
+   "source.members.[].lorebooks.[].runtimeSelected",
+   "source.members.[].lorebooks.[].secondaryKeys",
+   "source.members.[].lorebooks.[].secondaryKeys.[]",
+   "source.members.[].lorebooks.[].selectionId",
+   "source.members.[].lorebooks.[].selective",
+   "source.members.[].lorebooks.[].title",
+   "source.members.[].lorebooks.[].useRegex",
+   "source.members.[].name"
+  ],
+  "character": [
+   "character.description",
+   "character.name"
+  ],
+  "continuity": [
+   "continuity.characters",
+   "continuity.characters.<chatKey>",
+   "continuity.modifierRefs",
+   "continuity.modifierRefs.<chatKey>",
+   "continuity.modifierRefs.<chatKey>.actors",
+   "continuity.modifierRefs.<chatKey>.actors.<promptKey>",
+   "continuity.modifierRefs.<chatKey>.actors.__persona__",
+   "continuity.modifierRefs.<chatKey>.global",
+   "continuity.nsfwPositions",
+   "continuity.nsfwPositions.<chatKey>",
+   "continuity.nsfwPositions.<chatKey>.activeSceneIdByCharacter",
+   "continuity.nsfwPositions.<chatKey>.activeSceneIdByCharacter.<promptKey>",
+   "continuity.nsfwPositions.<chatKey>.activeSceneIdByCharacter.__persona__",
+   "continuity.nsfwPositions.<chatKey>.scenes",
+   "continuity.nsfwPositions.<chatKey>.scenes.<sceneId>",
+   "continuity.nsfwPositions.<chatKey>.scenes.<sceneId>.presetPath",
+   "continuity.outfitRefs",
+   "continuity.outfitRefs.<chatKey>",
+   "continuity.outfitRefs.<chatKey>.actors",
+   "continuity.outfitRefs.<chatKey>.actors.<personaPromptKey>",
+   "continuity.outfitRefs.<chatKey>.actors.<personaPromptKey>.formId",
+   "continuity.outfitRefs.<chatKey>.actors.<personaPromptKey>.outfitId",
+   "continuity.outfitRefs.<chatKey>.actors.<promptKey>",
+   "continuity.outfitRefs.<chatKey>.actors.<promptKey>.formId",
+   "continuity.outfitRefs.<chatKey>.actors.<promptKey>.outfitId",
+   "continuity.recentCheckpoints",
+   "continuity.recentCheckpoints.<chatKey>",
+   "continuity.recentCheckpoints.<chatKey>.[]",
+   "continuity.recentCheckpoints.<chatKey>.[].participants",
+   "continuity.recentCheckpoints.<chatKey>.[].participants.characterKeys",
+   "continuity.recentCheckpoints.<chatKey>.[].participants.characterKeys.[]",
+   "continuity.recentCheckpoints.<chatKey>.[].participants.personaKeys",
+   "continuity.recentCheckpoints.<chatKey>.[].participants.personaKeys.[]",
+   "continuity.recentCheckpoints.<chatKey>.[].participants.sceneLayouts",
+   "continuity.recentCheckpoints.<chatKey>.[].participants.scene_layouts",
+   "continuity.scenes",
+   "continuity.scenes.<chatKey>",
+   "continuity.scenes.<chatKey>.backgroundTags",
+   "continuity.scenes.<chatKey>.backgroundTags.[]",
+   "continuity.scenes.<chatKey>.locationTags",
+   "continuity.scenes.<chatKey>.locationTags.[]"
+  ],
+  "activePersona": [
+   "activePersona.id",
+   "activePersona.imageAsset",
+   "activePersona.key",
+   "activePersona.name"
+  ],
+  "messages": [
+   "messages.[]",
+   "messages.[].content",
+   "messages.[].role"
+  ],
+  "imageTokens": [
+   "imageTokens.[]",
+   "imageTokens.[].characterName",
+   "imageTokens.[].matchedPromptKeys",
+   "imageTokens.[].sourceImageToken"
+  ]
+ }
+}

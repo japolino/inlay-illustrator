@@ -1,0 +1,2871 @@
+{
+ "scenarios": [
+  {
+   "name": "novelai-rich-continuity",
+   "input": {
+    "config": {
+     "enabled": true,
+     "ui": {
+      "language": "ko",
+      "developerModeEnabled": false,
+      "popupClickThroughProtectionEnabled": true,
+      "floatingGenerationCountEnabled": false,
+      "floatingGenerationCountPosition": null
+     },
+     "analysis": {
+      "provider": "openai",
+      "format": "openai",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "model": "gpt-5.6-sol",
+      "apiKey": "",
+      "providerConfigMap": {
+       "openai": {
+        "format": "openai",
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "model": "gpt-5.6-sol",
+        "apiKey": "",
+        "customHeaders": [],
+        "temperature": 0.2,
+        "timeoutMs": 180000,
+        "thinkingEnabled": false,
+        "thinkingLevel": "medium",
+        "pdfRequestsEnabled": false,
+        "cacheMode": "off",
+        "modelCacheMetadata": {
+         "canonicalSlug": "",
+         "supportedParameters": []
+        },
+        "modelInputMode": "list"
+       }
+      },
+      "customHeaders": [],
+      "temperature": 0.2,
+      "timeoutMs": 180000,
+      "thinkingEnabled": false,
+      "pdfRequestsEnabled": false,
+      "thinkingLevel": "medium",
+      "cacheMode": "off",
+      "modelCacheMetadata": {
+       "canonicalSlug": "",
+       "supportedParameters": []
+      },
+      "modelInputMode": "list"
+     },
+     "auxAnalysis": {
+      "provider": "openai",
+      "format": "openai",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "model": "gpt-5.6-sol",
+      "apiKey": "",
+      "providerConfigMap": {
+       "openai": {
+        "format": "openai",
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "model": "gpt-5.6-sol",
+        "apiKey": "",
+        "customHeaders": [],
+        "temperature": 0.2,
+        "timeoutMs": 180000,
+        "thinkingEnabled": false,
+        "thinkingLevel": "medium",
+        "pdfRequestsEnabled": false,
+        "cacheMode": "off",
+        "modelCacheMetadata": {
+         "canonicalSlug": "",
+         "supportedParameters": []
+        },
+        "modelInputMode": "list"
+       }
+      },
+      "customHeaders": [],
+      "temperature": 0.2,
+      "timeoutMs": 180000,
+      "thinkingEnabled": false,
+      "pdfRequestsEnabled": false,
+      "thinkingLevel": "medium",
+      "cacheMode": "off",
+      "modelCacheMetadata": {
+       "canonicalSlug": "",
+       "supportedParameters": []
+      },
+      "modelInputMode": "list"
+     },
+     "jevConnection": {
+      "rosterSelectionDefault": false,
+      "apiKey": "",
+      "model": "jev-latest"
+     },
+     "novelai": {
+      "analysisProfile": "v4-5",
+      "v5UserDirections": {
+       "scene": {
+        "mode": "preset",
+        "selectedPresetId": "scene-default",
+        "presets": [
+         {
+          "id": "scene-default",
+          "name": "삽화",
+          "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+         },
+         {
+          "id": "scene-pov",
+          "name": "pov 연출",
+          "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when only the persona's hands or arms are visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Use the persona's hands and arms as POV hands to express action, contact, object manipulation, and spatial distance while keeping the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+          "scenePresetId": "pov"
+         },
+         {
+          "id": "scene-ensemble",
+          "name": "다인 연출",
+          "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent, duplicate, split, or restore absent Actors. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+          "scenePresetId": "ensemble"
+         },
+         {
+          "id": "scene-comic",
+          "name": "카툰 연출",
+          "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+          "scenePresetId": "comic"
+         }
+        ],
+        "customText": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+       },
+       "imageRatio": {
+        "mode": "preset",
+        "selectedPresetId": "image-ratio-default",
+        "presets": [
+         {
+          "id": "image-ratio-default",
+          "name": "기본",
+          "instruction": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+          "allowedSizeIds": [
+           1,
+           2,
+           5
+          ]
+         },
+         {
+          "id": "image-ratio-unspecified",
+          "name": "미지정",
+          "instruction": "Choose the sizeId that best fits the current illustration from the allowed candidates. Apply no additional aspect-ratio preference.",
+          "allowedSizeIds": [
+           1,
+           2,
+           5
+          ]
+         }
+        ],
+        "customText": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2."
+       }
+      },
+      "apiKey": "test-key",
+      "endpoint": "https://image.novelai.net/ai/generate-image",
+      "naiModel": "nai-diffusion-5-full",
+      "width": 832,
+      "height": 1216,
+      "sampler": "k_euler_ancestral",
+      "noiseSchedule": "karras",
+      "steps": 28,
+      "scale": 6,
+      "cfgRescale": 0.5,
+      "qualityToggle": true,
+      "useCoords": false,
+      "useOrder": true,
+      "characterReferenceEnabled": false,
+      "characterReferenceType": "character",
+      "characterReferenceStrength": 0.6,
+      "characterReferenceFidelity": 1,
+      "characterPrompts": [],
+      "negativePrompt": ""
+     },
+     "animaArtists": {
+      "version": 1,
+      "entries": [
+       {
+        "id": "anima_1",
+        "title": "Anima Artist",
+        "text": "@anima artist"
+       }
+      ],
+      "selection": {
+       "defaultId": "anima_1",
+       "bySourceId": {}
+      }
+     },
+     "presetCatalog": {
+      "rawJson": "",
+      "lastError": ""
+     },
+     "characterPrompt": {
+      "selectedSourceId": "char-123",
+      "fixedPositivePrompt": "",
+      "malePersonaPrompt": "kazehaya shouta",
+      "selectedCharacters": [],
+      "characterIdentityPrompts": {},
+      "basePromptGroups": {},
+      "characterForms": {
+       "char-123::char-123::lore::lore:alice": {
+        "defaultFormId": "form_default",
+        "forms": [
+         {
+          "id": "form_default",
+          "label": "기본",
+          "description": "",
+          "humanlike": true,
+          "gender": "female",
+          "basePromptGroups": {
+           "hair.color": [
+            "silver hair"
+           ],
+           "hair.length": [
+            "long hair"
+           ],
+           "eyes.color": [
+            "blue eyes"
+           ]
+          },
+          "negativePrompt": "short hair",
+          "reference": null,
+          "defaultOutfitId": "outfit_default",
+          "outfits": [
+           {
+            "id": "outfit_default",
+            "label": "Navy sailor school uniform",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "",
+            "top": "white sailor shirt, navy sailor collar, red neckerchief",
+            "bottom": "navy pleated skirt",
+            "legs": "black thighhighs",
+            "feet": "brown loafers"
+           },
+           {
+            "id": "outfit_summer",
+            "label": "White summer sundress",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "straw hat",
+            "top": "white sundress",
+            "bottom": "",
+            "legs": "",
+            "feet": "sandals"
+           },
+           {
+            "id": "outfit_auto",
+            "label": "Red winter coat",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "",
+            "top": "red winter coat",
+            "bottom": "",
+            "legs": "",
+            "feet": "",
+            "origin": "ai-auto",
+            "status": "ready"
+           },
+           {
+            "id": "outfit_pending",
+            "label": "Pending auto outfit",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "",
+            "top": "blue coat",
+            "bottom": "",
+            "legs": "",
+            "feet": "",
+            "origin": "ai-auto",
+            "status": "failed"
+           }
+          ]
+         },
+         {
+          "id": "form_cat",
+          "label": "Cat girl",
+          "description": "",
+          "humanlike": true,
+          "gender": "female",
+          "basePromptGroups": {
+           "hair.color": [
+            "silver hair"
+           ],
+           "custom": [
+            "cat ears",
+            "cat tail"
+           ]
+          },
+          "negativePrompt": "",
+          "reference": null,
+          "defaultOutfitId": "outfit_cat_1",
+          "outfits": [
+           {
+            "id": "outfit_cat_1",
+            "label": "Maid dress",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "maid headdress",
+            "top": "black maid dress, white apron",
+            "bottom": "",
+            "legs": "",
+            "feet": ""
+           }
+          ]
+         }
+        ]
+       },
+       "char-123::char-123::lore::lore:bob": {
+        "defaultFormId": "form_default",
+        "forms": [
+         {
+          "id": "form_default",
+          "label": "기본",
+          "description": "",
+          "humanlike": true,
+          "gender": "male",
+          "basePromptGroups": {
+           "hair.color": [
+            "black hair"
+           ]
+          },
+          "negativePrompt": "",
+          "reference": null,
+          "defaultOutfitId": "outfit_default",
+          "outfits": [
+           {
+            "id": "outfit_default",
+            "label": "Grey business suit",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "",
+            "top": "grey suit jacket, white shirt, blue necktie",
+            "bottom": "grey suit pants",
+            "legs": "",
+            "feet": "black dress shoes"
+           }
+          ]
+         }
+        ]
+       }
+      },
+      "lorebookPrompts": {},
+      "lorebookPromptGenders": {
+       "char-123::char-123::lore::lore:alice": "female",
+       "char-123::char-123::lore::lore:bob": "male"
+      },
+      "lorebookNegativePrompts": {},
+      "outfitPrompts": {},
+      "outfitPartFramingWeights": {
+       "head": {
+        "portrait": 1,
+        "upper body": 1,
+        "cowboy shot": 1,
+        "lower body": 0,
+        "feet out of frame": 1,
+        "full body": 1
+       },
+       "top": {
+        "portrait": 1,
+        "upper body": 1,
+        "cowboy shot": 1,
+        "lower body": 0,
+        "feet out of frame": 1,
+        "full body": 1
+       },
+       "bottom": {
+        "portrait": 0,
+        "upper body": 0.5,
+        "cowboy shot": 1,
+        "lower body": 1,
+        "feet out of frame": 1,
+        "full body": 1
+       },
+       "legs": {
+        "portrait": 0,
+        "upper body": 0,
+        "cowboy shot": 0.8,
+        "lower body": 1,
+        "feet out of frame": 1,
+        "full body": 1
+       },
+       "feet": {
+        "portrait": 0,
+        "upper body": 0,
+        "cowboy shot": 0,
+        "lower body": 1,
+        "feet out of frame": 0,
+        "full body": 1
+       }
+      },
+      "characterReferences": {},
+      "seedSettings": {},
+      "selectedLorebooks": {
+       "char-123::char-123": [
+        "lore:alice",
+        "lore:bob",
+        "lore:carol"
+       ]
+      },
+      "workspaceDisabledLorebooks": {
+       "char-123::char-123": [
+        "lore:carol"
+       ]
+      },
+      "activeModules": {},
+      "customLorebookKeys": {
+       "char-123::char-123::lore::lore:alice": [
+        "Ally",
+        "Silver"
+       ]
+      },
+      "lorebookImageFilters": {},
+      "assetSelections": {},
+      "assetMetadata": {},
+      "assetMetadataAvailability": {},
+      "charxAssetRegexAnalysis": {},
+      "overwriteExistingPrompts": false,
+      "characterReferenceBulkEnabled": false,
+      "personaGender": "male",
+      "malePersonaNegativePrompt": "",
+      "personaSettings": {
+       "selectedPersonaKey": "",
+       "profiles": {
+        "p1": {
+         "forms": {
+          "defaultFormId": "form_default",
+          "forms": [
+           {
+            "id": "form_default",
+            "label": "기본",
+            "description": "",
+            "humanlike": true,
+            "gender": "male",
+            "basePromptGroups": {
+             "hair.color": [
+              "brown hair"
+             ]
+            },
+            "negativePrompt": "",
+            "reference": null,
+            "defaultOutfitId": "outfit_default",
+            "outfits": [
+             {
+              "id": "outfit_default",
+              "label": "Casual hoodie",
+              "description": "",
+              "candidateEnabled": true,
+              "head": "",
+              "top": "black hoodie",
+              "bottom": "jeans",
+              "legs": "",
+              "feet": "sneakers"
+             }
+            ]
+           }
+          ]
+         }
+        }
+       },
+       "sourceScopes": {}
+      },
+      "artistPrompts": [
+       {
+        "id": "artist_user_1",
+        "title": "My Artist",
+        "prompt": "artist:foo, {{masterpiece}}, best quality",
+        "negativePrompt": "lowres, bad anatomy"
+       }
+      ],
+      "artistExtractionAssetBySourceId": {},
+      "selectedArtistId": "artist_user_1",
+      "charxSettings": {
+       "overrides": {
+        "char-123": {
+         "fixedPositivePrompt": "absurdres",
+         "negativePrompt": "watermark",
+         "stateAccumulationEnabled": true
+        }
+       }
+      },
+      "charxGenerationDefaults": {
+       "nativeAssetVisibility": "hidden",
+       "freeOutfitGeneration": true,
+       "freeCharacterGeneration": true,
+       "stateAccumulationEnabled": false,
+       "nsfwAlwaysEnabled": false,
+       "forceAiChoiceCoordinates": true,
+       "autoRemoveConflictingRegex": false,
+       "fixedResolution": {
+        "enabled": false,
+        "sizeId": 1
+       },
+       "fixedPositivePrompt": "",
+       "negativePrompt": "",
+       "animaPositivePrompt": "masterpiece, best quality, score_7, safe",
+       "animaNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration"
+      }
+     },
+     "runtime": {
+      "customImageSizes": [],
+      "generationAutoRetryCount": 5,
+      "nsfwAlwaysEnabled": false,
+      "generationProvider": "novelai",
+      "comfyuiTransport": "chan-server-nai",
+      "chanServerRequestUrl": "",
+      "chanServerApiKey": "",
+      "comfyuiEndpoint": "http://127.0.0.1:8188",
+      "comfyuiWorkflowProfileId": "asset-maid-comfy-ui-workflow-v1",
+      "comfyuiWorkflowUiJson": "",
+      "comfyuiCompletionTimeoutMs": 600000,
+      "comfyuiCharacterReferenceEnabled": true,
+      "comfyuiOutfitReferenceEnabled": false,
+      "novelaiCallMode": "sequential",
+      "novelaiParallelIntervalSec": 0,
+      "chatImageWidthPercent": 70
+     }
+    },
+    "continuity": {
+     "version": 1,
+     "scenes": {
+      "chat-key": {
+       "backgroundTags": [
+        "classroom"
+       ],
+       "locationTags": [
+        "school"
+       ],
+       "updatedAt": 1760000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 2,
+       "updatedAtMessageId": "m-prev"
+      }
+     },
+     "characters": {
+      "chat-key": {
+       "char-123::char-123::lore::lore:alice": {
+        "characterName": "Alice",
+        "expression.general": [
+         "smile"
+        ],
+        "state.fluid.cum.location": [
+         "cum_on_face"
+        ],
+        "cum_count": 1,
+        "_continuity_turn": 2,
+        "updatedAt": 1760000000000,
+        "updatedAtChatIndex": 0,
+        "updatedAtMessageIndex": 2,
+        "updatedAtMessageId": "m-prev"
+       }
+      }
+     },
+     "modifierRefs": {
+      "chat-key": {
+       "global": {
+        "scene.environment": [
+         "indoors"
+        ],
+        "scene.location": [
+         "classroom"
+        ]
+       },
+       "actors": {
+        "char-123::char-123::lore::lore:alice": {
+         "expression.general": [
+          "smile"
+         ]
+        },
+        "char-123::char-123::lore::lore:bob": {
+         "gaze.direction": [
+          "looking_away"
+         ]
+        },
+        "__persona__": {
+         "pose.freeform": [
+          "sitting"
+         ]
+        }
+       },
+       "updatedAt": 1760000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 2,
+       "updatedAtMessageId": "m-prev"
+      }
+     },
+     "outfitRefs": {
+      "chat-key": {
+       "actors": {
+        "char-123::char-123::lore::lore:alice": {
+         "formId": "form_default",
+         "outfitId": "outfit_summer",
+         "description": ""
+        },
+        "persona::p1": {
+         "formId": "form_default",
+         "outfitId": "outfit_default",
+         "description": ""
+        }
+       },
+       "updatedAt": 1760000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 2,
+       "updatedAtMessageId": "m-prev"
+      }
+     },
+     "nsfwPositions": {
+      "chat-key": {
+       "activeSceneIdByCharacter": {
+        "char-123::char-123::lore::lore:alice": "scene-1"
+       },
+       "scenes": {
+        "scene-1": {
+         "compositionId": "1girl_1boy",
+         "primaryFemaleKey": "char-123::char-123::lore::lore:alice",
+         "characterName": "Alice",
+         "maleKey": "persona::p1",
+         "category": "foreplay",
+         "positionId": "face_to_face_upright",
+         "presetId": "1girl_1boy.foreplay.face_to_face_upright",
+         "presetPath": "1girl_1boy.foreplay.face_to_face_upright",
+         "modifiers": {},
+         "updatedAt": 1760000000000,
+         "updatedAtChatIndex": 0,
+         "updatedAtMessageIndex": 2,
+         "updatedAtMessageId": "m-prev"
+        }
+       }
+      }
+     },
+     "recentCheckpoints": {
+      "chat-key": [
+       {
+        "messageId": "m-prev",
+        "messageIndex": 2,
+        "capturedAt": 1760000000000,
+        "characters": {},
+        "participants": {
+         "characterKeys": [
+          "char-123::char-123::lore::lore:alice",
+          "char-123::char-123::lore::lore:carol"
+         ],
+         "personaKeys": [
+          "persona::p1"
+         ]
+        }
+       }
+      ]
+     },
+     "historicalStaticBases": {}
+    },
+    "chatKey": "chat-key",
+    "messages": [
+     {
+      "role": "assistant",
+      "content": "Welcome to the school story."
+     },
+     {
+      "role": "user",
+      "content": "Hello."
+     },
+     {
+      "role": "assistant",
+      "content": "Alice smiled at you from her seat."
+     },
+     {
+      "role": "user",
+      "content": "   "
+     },
+     {
+      "role": "user",
+      "content": "I run to the school gate."
+     }
+    ],
+    "content": "Alice waved at Shouta from the school gate.\n\n\"You're late again!\" she laughed.\n\nMr. Bob watched them from the staff room.",
+    "imageTokens": [
+     {
+      "sourceImageToken": "Alice_wave",
+      "tokenName": "Alice_wave",
+      "characterName": "Alice",
+      "markupType": "img",
+      "full": "<img=\"Alice_wave\">",
+      "inner": "<img=\"Alice_wave\">",
+      "before": "",
+      "after": ""
+     },
+     {
+      "sourceImageToken": "Bob_sigh",
+      "tokenName": "Bob_sigh",
+      "characterName": "Bob",
+      "markupType": "img",
+      "full": "<img=\"Bob_sigh\">",
+      "inner": "<img=\"Bob_sigh\">",
+      "before": "",
+      "after": ""
+     }
+    ],
+    "character": {
+     "chaId": "char-123",
+     "name": "Story Card",
+     "description": "A school slice-of-life story."
+    },
+    "source": {
+     "id": "char-123",
+     "index": 0,
+     "characterTarget": {
+      "chaId": "char-123",
+      "indexHint": 0
+     },
+     "name": "Story Card",
+     "type": "character",
+     "chatCount": 1,
+     "attachedModuleIds": [],
+     "activeModuleIds": [],
+     "sharedModuleAssets": [],
+     "chatGeneratedAssets": [],
+     "previewAsset": null,
+     "assetGeneration": "g1",
+     "members": [
+      {
+       "sourceId": "char-123",
+       "id": "char-123",
+       "key": "char-123::char-123",
+       "name": "Story Card",
+       "aliases": [
+        "story card"
+       ],
+       "sourceSummary": "",
+       "lorebooks": [
+        {
+         "kind": "lorebook",
+         "id": "lore:alice",
+         "selectionId": "lore:alice",
+         "title": "Alice",
+         "keys": [
+          "Alice",
+          "Ally"
+         ],
+         "primaryKeys": [
+          "Alice",
+          "Ally"
+         ],
+         "secondaryKeys": [],
+         "selective": false,
+         "useRegex": false,
+         "content": "Alice is a cheerful 17-year-old student with long silver hair.",
+         "score": 0,
+         "alwaysActive": false,
+         "sourceType": "character",
+         "sourceName": "Story Card"
+        },
+        {
+         "kind": "lorebook",
+         "id": "lore:bob",
+         "selectionId": "lore:bob",
+         "title": "Bob",
+         "keys": [
+          "Bob",
+          "Mr. Bob"
+         ],
+         "primaryKeys": [
+          "Bob",
+          "Mr. Bob"
+         ],
+         "secondaryKeys": [
+          "teacher"
+         ],
+         "selective": true,
+         "useRegex": false,
+         "content": "Bob is Alice's homeroom teacher.",
+         "score": 0,
+         "alwaysActive": false,
+         "sourceType": "character",
+         "sourceName": "Story Card"
+        },
+        {
+         "kind": "lorebook",
+         "id": "lore:carol",
+         "selectionId": "lore:carol",
+         "title": "Carol",
+         "keys": [
+          "Carol"
+         ],
+         "primaryKeys": [
+          "Carol"
+         ],
+         "secondaryKeys": [],
+         "selective": false,
+         "useRegex": false,
+         "content": "Carol is disabled in the workspace.",
+         "score": 0,
+         "alwaysActive": false,
+         "sourceType": "character",
+         "sourceName": "Story Card"
+        },
+        {
+         "kind": "lorebook",
+         "id": "lore:world",
+         "selectionId": "lore:world",
+         "title": "School",
+         "keys": [
+          "school"
+         ],
+         "primaryKeys": [
+          "school"
+         ],
+         "secondaryKeys": [],
+         "selective": false,
+         "useRegex": false,
+         "content": "Setting lore (not registered).",
+         "score": 0,
+         "alwaysActive": false,
+         "sourceType": "character",
+         "sourceName": "Story Card"
+        }
+       ],
+       "originalAssets": [],
+       "outfitGeneratedAssets": [],
+       "chatGeneratedAssets": [],
+       "assetCount": 0,
+       "previewAsset": null,
+       "characterIndex": 0,
+       "characterTarget": {
+        "chaId": "char-123",
+        "indexHint": 0
+       }
+      }
+     ]
+    },
+    "activePersona": {
+     "key": "p1",
+     "id": "p1",
+     "name": "Shouta",
+     "imageAsset": null
+    },
+    "personaRecords": [
+     {
+      "key": "p1",
+      "id": "p1",
+      "name": "Shouta",
+      "imageAsset": null
+     },
+     {
+      "key": "p2",
+      "id": "p2",
+      "name": "Rival",
+      "imageAsset": null
+     }
+    ]
+   },
+   "sourceId": "char-123",
+   "rename": {
+    "char-123::char-123::lore::lore:alice": "<promptKey>",
+    "char-123::char-123::lore::lore:bob": "<promptKey>",
+    "char-123::char-123::lore::lore:carol": "<promptKey>",
+    "char-123": "<sourceId>",
+    "char-123::char-123": "<memberKey>",
+    "p1": "<personaKey>",
+    "p2": "<personaKey>",
+    "persona::p1": "<personaPromptKey>",
+    "chat-key": "<chatKey>",
+    "scene-1": "<sceneId>"
+   },
+   "decisions": [
+    {
+     "actors": {
+      "primary": {
+       "lorebook_prompt_key": "char-123::char-123::lore::lore:bob"
+      },
+      "secondary": null,
+      "persona": null
+     },
+     "lorebook_prompt_key": "char-123::char-123::lore::lore:bob"
+    },
+    {
+     "actors": {
+      "primary": null,
+      "secondary": null,
+      "persona": {
+       "lorebook_prompt_key": "persona::p1"
+      }
+     }
+    }
+   ],
+   "v5Keys": [
+    "persona::p1",
+    "char-123::char-123::lore::lore:alice"
+   ],
+   "actors": [
+    [
+     {
+      "actorId": "actor-1",
+      "actorIndex": 0,
+      "kind": "character",
+      "gender": "female",
+      "identityKey": "char-123::char-123::lore::lore:alice",
+      "selectedFormId": "form_default",
+      "selectedOutfitId": "outfit_summer",
+      "identitySuppressed": false
+     },
+     {
+      "actorId": "actor-2",
+      "actorIndex": 1,
+      "kind": "persona",
+      "gender": "male",
+      "identityKey": "persona::p1",
+      "selectedFormId": "",
+      "selectedOutfitId": "outfit_default",
+      "identitySuppressed": false
+     }
+    ],
+    [
+     {
+      "actorId": "actor-1",
+      "actorIndex": 0,
+      "kind": "character",
+      "gender": "female",
+      "identityKey": "char-123::char-123::lore::lore:alice",
+      "selectedFormId": "form_default",
+      "selectedOutfitId": "outfit_summer",
+      "identitySuppressed": false
+     }
+    ]
+   ],
+   "images": [
+    {
+     "outfit_id": "",
+     "actors": {
+      "primary": {
+       "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+       "form_id": "form_cat",
+       "outfit_id": "outfit_cat_1"
+      },
+      "secondary": {
+       "lorebook_prompt_key": "char-123::char-123::lore::lore:bob",
+       "outfit_id": "catalog:outfit:x"
+      },
+      "persona": null
+     }
+    },
+    {
+     "outfit_id": "outfit_summer",
+     "actors": {
+      "primary": {
+       "lorebook_prompt_key": "char-123::char-123::lore::lore:alice"
+      },
+      "secondary": null,
+      "persona": null
+     }
+    }
+   ],
+   "slots": [
+    {
+     "slotId": "s1",
+     "index": 0,
+     "beforeText": "Alice waved at Shouta from the school gate.",
+     "afterText": "\"You're late again!\" she laughed."
+    },
+    {
+     "slotId": "s2",
+     "index": 1,
+     "beforeText": "\"You're late again!\" she laughed.",
+     "afterText": "Mr. Bob watched them from the staff room."
+    },
+    {
+     "slotId": "s3",
+     "index": 2,
+     "beforeText": "The teacher sighed.",
+     "afterText": ""
+    }
+   ],
+   "assetTokens": [
+    {
+     "sourceImageToken": "Alice_wave",
+     "tokenName": "Alice_wave",
+     "characterName": "Alice",
+     "markupType": "img",
+     "full": "<img=\"Alice_wave\">",
+     "inner": "<img=\"Alice_wave\">",
+     "before": "",
+     "after": "",
+     "offset": 0
+    },
+    {
+     "sourceImageToken": "Bob_sigh",
+     "tokenName": "Bob_sigh",
+     "characterName": "Bob",
+     "markupType": "img",
+     "full": "<img=\"Bob_sigh\">",
+     "inner": "<img=\"Bob_sigh\">",
+     "before": "",
+     "after": "",
+     "offset": 0
+    }
+   ]
+  },
+  {
+   "name": "comfyui-empty-continuity",
+   "input": {
+    "config": {
+     "enabled": true,
+     "ui": {
+      "language": "ko",
+      "developerModeEnabled": false,
+      "popupClickThroughProtectionEnabled": true,
+      "floatingGenerationCountEnabled": false,
+      "floatingGenerationCountPosition": null
+     },
+     "analysis": {
+      "provider": "openai",
+      "format": "openai",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "model": "gpt-5.6-sol",
+      "apiKey": "",
+      "providerConfigMap": {
+       "openai": {
+        "format": "openai",
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "model": "gpt-5.6-sol",
+        "apiKey": "",
+        "customHeaders": [],
+        "temperature": 0.2,
+        "timeoutMs": 180000,
+        "thinkingEnabled": false,
+        "thinkingLevel": "medium",
+        "pdfRequestsEnabled": false,
+        "cacheMode": "off",
+        "modelCacheMetadata": {
+         "canonicalSlug": "",
+         "supportedParameters": []
+        },
+        "modelInputMode": "list"
+       }
+      },
+      "customHeaders": [],
+      "temperature": 0.2,
+      "timeoutMs": 180000,
+      "thinkingEnabled": false,
+      "pdfRequestsEnabled": false,
+      "thinkingLevel": "medium",
+      "cacheMode": "off",
+      "modelCacheMetadata": {
+       "canonicalSlug": "",
+       "supportedParameters": []
+      },
+      "modelInputMode": "list"
+     },
+     "auxAnalysis": {
+      "provider": "openai",
+      "format": "openai",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "model": "gpt-5.6-sol",
+      "apiKey": "",
+      "providerConfigMap": {
+       "openai": {
+        "format": "openai",
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "model": "gpt-5.6-sol",
+        "apiKey": "",
+        "customHeaders": [],
+        "temperature": 0.2,
+        "timeoutMs": 180000,
+        "thinkingEnabled": false,
+        "thinkingLevel": "medium",
+        "pdfRequestsEnabled": false,
+        "cacheMode": "off",
+        "modelCacheMetadata": {
+         "canonicalSlug": "",
+         "supportedParameters": []
+        },
+        "modelInputMode": "list"
+       }
+      },
+      "customHeaders": [],
+      "temperature": 0.2,
+      "timeoutMs": 180000,
+      "thinkingEnabled": false,
+      "pdfRequestsEnabled": false,
+      "thinkingLevel": "medium",
+      "cacheMode": "off",
+      "modelCacheMetadata": {
+       "canonicalSlug": "",
+       "supportedParameters": []
+      },
+      "modelInputMode": "list"
+     },
+     "jevConnection": {
+      "rosterSelectionDefault": false,
+      "apiKey": "",
+      "model": "jev-latest"
+     },
+     "novelai": {
+      "analysisProfile": "v4-5",
+      "v5UserDirections": {
+       "scene": {
+        "mode": "preset",
+        "selectedPresetId": "scene-default",
+        "presets": [
+         {
+          "id": "scene-default",
+          "name": "삽화",
+          "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+         },
+         {
+          "id": "scene-pov",
+          "name": "pov 연출",
+          "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when only the persona's hands or arms are visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Use the persona's hands and arms as POV hands to express action, contact, object manipulation, and spatial distance while keeping the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+          "scenePresetId": "pov"
+         },
+         {
+          "id": "scene-ensemble",
+          "name": "다인 연출",
+          "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent, duplicate, split, or restore absent Actors. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+          "scenePresetId": "ensemble"
+         },
+         {
+          "id": "scene-comic",
+          "name": "카툰 연출",
+          "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+          "scenePresetId": "comic"
+         }
+        ],
+        "customText": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+       },
+       "imageRatio": {
+        "mode": "preset",
+        "selectedPresetId": "image-ratio-default",
+        "presets": [
+         {
+          "id": "image-ratio-default",
+          "name": "기본",
+          "instruction": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+          "allowedSizeIds": [
+           1,
+           2,
+           5
+          ]
+         },
+         {
+          "id": "image-ratio-unspecified",
+          "name": "미지정",
+          "instruction": "Choose the sizeId that best fits the current illustration from the allowed candidates. Apply no additional aspect-ratio preference.",
+          "allowedSizeIds": [
+           1,
+           2,
+           5
+          ]
+         }
+        ],
+        "customText": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2."
+       }
+      },
+      "apiKey": "test-key",
+      "endpoint": "https://image.novelai.net/ai/generate-image",
+      "naiModel": "nai-diffusion-5-full",
+      "width": 832,
+      "height": 1216,
+      "sampler": "k_euler_ancestral",
+      "noiseSchedule": "karras",
+      "steps": 28,
+      "scale": 6,
+      "cfgRescale": 0.5,
+      "qualityToggle": true,
+      "useCoords": false,
+      "useOrder": true,
+      "characterReferenceEnabled": false,
+      "characterReferenceType": "character",
+      "characterReferenceStrength": 0.6,
+      "characterReferenceFidelity": 1,
+      "characterPrompts": [],
+      "negativePrompt": ""
+     },
+     "animaArtists": {
+      "version": 1,
+      "entries": [
+       {
+        "id": "anima_1",
+        "title": "Anima Artist",
+        "text": "@anima artist"
+       }
+      ],
+      "selection": {
+       "defaultId": "anima_1",
+       "bySourceId": {}
+      }
+     },
+     "presetCatalog": {
+      "rawJson": "",
+      "lastError": ""
+     },
+     "characterPrompt": {
+      "selectedSourceId": "char-123",
+      "fixedPositivePrompt": "",
+      "malePersonaPrompt": "kazehaya shouta",
+      "selectedCharacters": [],
+      "characterIdentityPrompts": {},
+      "basePromptGroups": {},
+      "characterForms": {
+       "char-123::char-123::lore::lore:alice": {
+        "defaultFormId": "form_default",
+        "forms": [
+         {
+          "id": "form_default",
+          "label": "기본",
+          "description": "",
+          "humanlike": true,
+          "gender": "female",
+          "basePromptGroups": {
+           "hair.color": [
+            "silver hair"
+           ],
+           "hair.length": [
+            "long hair"
+           ],
+           "eyes.color": [
+            "blue eyes"
+           ]
+          },
+          "negativePrompt": "short hair",
+          "reference": null,
+          "defaultOutfitId": "outfit_default",
+          "outfits": [
+           {
+            "id": "outfit_default",
+            "label": "Navy sailor school uniform",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "",
+            "top": "white sailor shirt, navy sailor collar, red neckerchief",
+            "bottom": "navy pleated skirt",
+            "legs": "black thighhighs",
+            "feet": "brown loafers"
+           },
+           {
+            "id": "outfit_summer",
+            "label": "White summer sundress",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "straw hat",
+            "top": "white sundress",
+            "bottom": "",
+            "legs": "",
+            "feet": "sandals"
+           },
+           {
+            "id": "outfit_auto",
+            "label": "Red winter coat",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "",
+            "top": "red winter coat",
+            "bottom": "",
+            "legs": "",
+            "feet": "",
+            "origin": "ai-auto",
+            "status": "ready"
+           },
+           {
+            "id": "outfit_pending",
+            "label": "Pending auto outfit",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "",
+            "top": "blue coat",
+            "bottom": "",
+            "legs": "",
+            "feet": "",
+            "origin": "ai-auto",
+            "status": "failed"
+           }
+          ]
+         },
+         {
+          "id": "form_cat",
+          "label": "Cat girl",
+          "description": "",
+          "humanlike": true,
+          "gender": "female",
+          "basePromptGroups": {
+           "hair.color": [
+            "silver hair"
+           ],
+           "custom": [
+            "cat ears",
+            "cat tail"
+           ]
+          },
+          "negativePrompt": "",
+          "reference": null,
+          "defaultOutfitId": "outfit_cat_1",
+          "outfits": [
+           {
+            "id": "outfit_cat_1",
+            "label": "Maid dress",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "maid headdress",
+            "top": "black maid dress, white apron",
+            "bottom": "",
+            "legs": "",
+            "feet": ""
+           }
+          ]
+         }
+        ]
+       },
+       "char-123::char-123::lore::lore:bob": {
+        "defaultFormId": "form_default",
+        "forms": [
+         {
+          "id": "form_default",
+          "label": "기본",
+          "description": "",
+          "humanlike": true,
+          "gender": "male",
+          "basePromptGroups": {
+           "hair.color": [
+            "black hair"
+           ]
+          },
+          "negativePrompt": "",
+          "reference": null,
+          "defaultOutfitId": "outfit_default",
+          "outfits": [
+           {
+            "id": "outfit_default",
+            "label": "Grey business suit",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "",
+            "top": "grey suit jacket, white shirt, blue necktie",
+            "bottom": "grey suit pants",
+            "legs": "",
+            "feet": "black dress shoes"
+           }
+          ]
+         }
+        ]
+       }
+      },
+      "lorebookPrompts": {},
+      "lorebookPromptGenders": {
+       "char-123::char-123::lore::lore:alice": "female",
+       "char-123::char-123::lore::lore:bob": "male"
+      },
+      "lorebookNegativePrompts": {},
+      "outfitPrompts": {},
+      "outfitPartFramingWeights": {
+       "head": {
+        "portrait": 1,
+        "upper body": 1,
+        "cowboy shot": 1,
+        "lower body": 0,
+        "feet out of frame": 1,
+        "full body": 1
+       },
+       "top": {
+        "portrait": 1,
+        "upper body": 1,
+        "cowboy shot": 1,
+        "lower body": 0,
+        "feet out of frame": 1,
+        "full body": 1
+       },
+       "bottom": {
+        "portrait": 0,
+        "upper body": 0.5,
+        "cowboy shot": 1,
+        "lower body": 1,
+        "feet out of frame": 1,
+        "full body": 1
+       },
+       "legs": {
+        "portrait": 0,
+        "upper body": 0,
+        "cowboy shot": 0.8,
+        "lower body": 1,
+        "feet out of frame": 1,
+        "full body": 1
+       },
+       "feet": {
+        "portrait": 0,
+        "upper body": 0,
+        "cowboy shot": 0,
+        "lower body": 1,
+        "feet out of frame": 0,
+        "full body": 1
+       }
+      },
+      "characterReferences": {},
+      "seedSettings": {},
+      "selectedLorebooks": {
+       "char-123::char-123": [
+        "lore:alice",
+        "lore:bob",
+        "lore:carol"
+       ]
+      },
+      "workspaceDisabledLorebooks": {
+       "char-123::char-123": [
+        "lore:carol"
+       ]
+      },
+      "activeModules": {},
+      "customLorebookKeys": {
+       "char-123::char-123::lore::lore:alice": [
+        "Ally",
+        "Silver"
+       ]
+      },
+      "lorebookImageFilters": {},
+      "assetSelections": {},
+      "assetMetadata": {},
+      "assetMetadataAvailability": {},
+      "charxAssetRegexAnalysis": {},
+      "overwriteExistingPrompts": false,
+      "characterReferenceBulkEnabled": false,
+      "personaGender": "male",
+      "malePersonaNegativePrompt": "",
+      "personaSettings": {
+       "selectedPersonaKey": "",
+       "profiles": {
+        "p1": {
+         "forms": {
+          "defaultFormId": "form_default",
+          "forms": [
+           {
+            "id": "form_default",
+            "label": "기본",
+            "description": "",
+            "humanlike": true,
+            "gender": "male",
+            "basePromptGroups": {
+             "hair.color": [
+              "brown hair"
+             ]
+            },
+            "negativePrompt": "",
+            "reference": null,
+            "defaultOutfitId": "outfit_default",
+            "outfits": [
+             {
+              "id": "outfit_default",
+              "label": "Casual hoodie",
+              "description": "",
+              "candidateEnabled": true,
+              "head": "",
+              "top": "black hoodie",
+              "bottom": "jeans",
+              "legs": "",
+              "feet": "sneakers"
+             }
+            ]
+           }
+          ]
+         }
+        }
+       },
+       "sourceScopes": {}
+      },
+      "artistPrompts": [
+       {
+        "id": "artist_user_1",
+        "title": "My Artist",
+        "prompt": "artist:foo, {{masterpiece}}, best quality",
+        "negativePrompt": "lowres, bad anatomy"
+       }
+      ],
+      "artistExtractionAssetBySourceId": {},
+      "selectedArtistId": "artist_user_1",
+      "charxSettings": {
+       "overrides": {
+        "char-123": {
+         "fixedPositivePrompt": "absurdres",
+         "negativePrompt": "watermark",
+         "stateAccumulationEnabled": true
+        }
+       }
+      },
+      "charxGenerationDefaults": {
+       "nativeAssetVisibility": "hidden",
+       "freeOutfitGeneration": true,
+       "freeCharacterGeneration": true,
+       "stateAccumulationEnabled": false,
+       "nsfwAlwaysEnabled": false,
+       "forceAiChoiceCoordinates": true,
+       "autoRemoveConflictingRegex": false,
+       "fixedResolution": {
+        "enabled": false,
+        "sizeId": 1
+       },
+       "fixedPositivePrompt": "",
+       "negativePrompt": "",
+       "animaPositivePrompt": "masterpiece, best quality, score_7, safe",
+       "animaNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration"
+      }
+     },
+     "runtime": {
+      "customImageSizes": [],
+      "generationAutoRetryCount": 5,
+      "nsfwAlwaysEnabled": false,
+      "generationProvider": "comfy-ui",
+      "comfyuiTransport": "chan-server-nai",
+      "chanServerRequestUrl": "",
+      "chanServerApiKey": "",
+      "comfyuiEndpoint": "http://127.0.0.1:8188",
+      "comfyuiWorkflowProfileId": "asset-maid-comfy-ui-workflow-v1",
+      "comfyuiWorkflowUiJson": "",
+      "comfyuiCompletionTimeoutMs": 600000,
+      "comfyuiCharacterReferenceEnabled": true,
+      "comfyuiOutfitReferenceEnabled": false,
+      "novelaiCallMode": "sequential",
+      "novelaiParallelIntervalSec": 0,
+      "chatImageWidthPercent": 70
+     }
+    },
+    "continuity": {
+     "version": 1,
+     "scenes": {},
+     "characters": {},
+     "modifierRefs": {},
+     "outfitRefs": {},
+     "nsfwPositions": {},
+     "recentCheckpoints": {},
+     "historicalStaticBases": {}
+    },
+    "chatKey": "chat-key",
+    "messages": [
+     {
+      "role": "assistant",
+      "content": "Welcome to the school story."
+     },
+     {
+      "role": "user",
+      "content": "Hello."
+     },
+     {
+      "role": "assistant",
+      "content": "Alice smiled at you from her seat."
+     },
+     {
+      "role": "user",
+      "content": "   "
+     },
+     {
+      "role": "user",
+      "content": "I run to the school gate."
+     }
+    ],
+    "content": "Alice waved at Shouta from the school gate.\n\n\"You're late again!\" she laughed.\n\nMr. Bob watched them from the staff room.",
+    "imageTokens": [
+     {
+      "sourceImageToken": "Alice_wave",
+      "tokenName": "Alice_wave",
+      "characterName": "Alice",
+      "markupType": "img",
+      "full": "<img=\"Alice_wave\">",
+      "inner": "<img=\"Alice_wave\">",
+      "before": "",
+      "after": ""
+     },
+     {
+      "sourceImageToken": "Bob_sigh",
+      "tokenName": "Bob_sigh",
+      "characterName": "Bob",
+      "markupType": "img",
+      "full": "<img=\"Bob_sigh\">",
+      "inner": "<img=\"Bob_sigh\">",
+      "before": "",
+      "after": ""
+     }
+    ],
+    "character": {
+     "chaId": "char-123",
+     "name": "Story Card",
+     "description": "A school slice-of-life story."
+    },
+    "source": {
+     "id": "char-123",
+     "index": 0,
+     "characterTarget": {
+      "chaId": "char-123",
+      "indexHint": 0
+     },
+     "name": "Story Card",
+     "type": "character",
+     "chatCount": 1,
+     "attachedModuleIds": [],
+     "activeModuleIds": [],
+     "sharedModuleAssets": [],
+     "chatGeneratedAssets": [],
+     "previewAsset": null,
+     "assetGeneration": "g1",
+     "members": [
+      {
+       "sourceId": "char-123",
+       "id": "char-123",
+       "key": "char-123::char-123",
+       "name": "Story Card",
+       "aliases": [
+        "story card"
+       ],
+       "sourceSummary": "",
+       "lorebooks": [
+        {
+         "kind": "lorebook",
+         "id": "lore:alice",
+         "selectionId": "lore:alice",
+         "title": "Alice",
+         "keys": [
+          "Alice",
+          "Ally"
+         ],
+         "primaryKeys": [
+          "Alice",
+          "Ally"
+         ],
+         "secondaryKeys": [],
+         "selective": false,
+         "useRegex": false,
+         "content": "Alice is a cheerful 17-year-old student with long silver hair.",
+         "score": 0,
+         "alwaysActive": false,
+         "sourceType": "character",
+         "sourceName": "Story Card"
+        },
+        {
+         "kind": "lorebook",
+         "id": "lore:bob",
+         "selectionId": "lore:bob",
+         "title": "Bob",
+         "keys": [
+          "Bob",
+          "Mr. Bob"
+         ],
+         "primaryKeys": [
+          "Bob",
+          "Mr. Bob"
+         ],
+         "secondaryKeys": [
+          "teacher"
+         ],
+         "selective": true,
+         "useRegex": false,
+         "content": "Bob is Alice's homeroom teacher.",
+         "score": 0,
+         "alwaysActive": false,
+         "sourceType": "character",
+         "sourceName": "Story Card"
+        },
+        {
+         "kind": "lorebook",
+         "id": "lore:carol",
+         "selectionId": "lore:carol",
+         "title": "Carol",
+         "keys": [
+          "Carol"
+         ],
+         "primaryKeys": [
+          "Carol"
+         ],
+         "secondaryKeys": [],
+         "selective": false,
+         "useRegex": false,
+         "content": "Carol is disabled in the workspace.",
+         "score": 0,
+         "alwaysActive": false,
+         "sourceType": "character",
+         "sourceName": "Story Card"
+        },
+        {
+         "kind": "lorebook",
+         "id": "lore:world",
+         "selectionId": "lore:world",
+         "title": "School",
+         "keys": [
+          "school"
+         ],
+         "primaryKeys": [
+          "school"
+         ],
+         "secondaryKeys": [],
+         "selective": false,
+         "useRegex": false,
+         "content": "Setting lore (not registered).",
+         "score": 0,
+         "alwaysActive": false,
+         "sourceType": "character",
+         "sourceName": "Story Card"
+        }
+       ],
+       "originalAssets": [],
+       "outfitGeneratedAssets": [],
+       "chatGeneratedAssets": [],
+       "assetCount": 0,
+       "previewAsset": null,
+       "characterIndex": 0,
+       "characterTarget": {
+        "chaId": "char-123",
+        "indexHint": 0
+       }
+      }
+     ]
+    },
+    "activePersona": {
+     "key": "p1",
+     "id": "p1",
+     "name": "Shouta",
+     "imageAsset": null
+    },
+    "personaRecords": [
+     {
+      "key": "p1",
+      "id": "p1",
+      "name": "Shouta",
+      "imageAsset": null
+     },
+     {
+      "key": "p2",
+      "id": "p2",
+      "name": "Rival",
+      "imageAsset": null
+     }
+    ]
+   },
+   "sourceId": "char-123",
+   "rename": {
+    "char-123::char-123::lore::lore:alice": "<promptKey>",
+    "char-123::char-123::lore::lore:bob": "<promptKey>",
+    "char-123::char-123::lore::lore:carol": "<promptKey>",
+    "char-123": "<sourceId>",
+    "char-123::char-123": "<memberKey>",
+    "p1": "<personaKey>",
+    "p2": "<personaKey>",
+    "persona::p1": "<personaPromptKey>",
+    "chat-key": "<chatKey>",
+    "scene-1": "<sceneId>"
+   },
+   "decisions": [
+    {
+     "actors": {
+      "primary": {
+       "lorebook_prompt_key": "char-123::char-123::lore::lore:bob"
+      },
+      "secondary": null,
+      "persona": null
+     },
+     "lorebook_prompt_key": "char-123::char-123::lore::lore:bob"
+    },
+    {
+     "actors": {
+      "primary": null,
+      "secondary": null,
+      "persona": {
+       "lorebook_prompt_key": "persona::p1"
+      }
+     }
+    }
+   ],
+   "v5Keys": [
+    "persona::p1",
+    "char-123::char-123::lore::lore:alice"
+   ],
+   "actors": [
+    [
+     {
+      "actorId": "actor-1",
+      "actorIndex": 0,
+      "kind": "character",
+      "gender": "female",
+      "identityKey": "char-123::char-123::lore::lore:alice",
+      "selectedFormId": "form_default",
+      "selectedOutfitId": "outfit_summer",
+      "identitySuppressed": false
+     },
+     {
+      "actorId": "actor-2",
+      "actorIndex": 1,
+      "kind": "persona",
+      "gender": "male",
+      "identityKey": "persona::p1",
+      "selectedFormId": "",
+      "selectedOutfitId": "outfit_default",
+      "identitySuppressed": false
+     }
+    ],
+    [
+     {
+      "actorId": "actor-1",
+      "actorIndex": 0,
+      "kind": "character",
+      "gender": "female",
+      "identityKey": "char-123::char-123::lore::lore:alice",
+      "selectedFormId": "form_default",
+      "selectedOutfitId": "outfit_summer",
+      "identitySuppressed": false
+     }
+    ]
+   ],
+   "images": [
+    {
+     "outfit_id": "",
+     "actors": {
+      "primary": {
+       "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+       "form_id": "form_cat",
+       "outfit_id": "outfit_cat_1"
+      },
+      "secondary": {
+       "lorebook_prompt_key": "char-123::char-123::lore::lore:bob",
+       "outfit_id": "catalog:outfit:x"
+      },
+      "persona": null
+     }
+    },
+    {
+     "outfit_id": "outfit_summer",
+     "actors": {
+      "primary": {
+       "lorebook_prompt_key": "char-123::char-123::lore::lore:alice"
+      },
+      "secondary": null,
+      "persona": null
+     }
+    }
+   ],
+   "slots": [
+    {
+     "slotId": "s1",
+     "index": 0,
+     "beforeText": "Alice waved at Shouta from the school gate.",
+     "afterText": "\"You're late again!\" she laughed."
+    },
+    {
+     "slotId": "s2",
+     "index": 1,
+     "beforeText": "\"You're late again!\" she laughed.",
+     "afterText": "Mr. Bob watched them from the staff room."
+    },
+    {
+     "slotId": "s3",
+     "index": 2,
+     "beforeText": "The teacher sighed.",
+     "afterText": ""
+    }
+   ],
+   "assetTokens": [
+    {
+     "sourceImageToken": "Alice_wave",
+     "tokenName": "Alice_wave",
+     "characterName": "Alice",
+     "markupType": "img",
+     "full": "<img=\"Alice_wave\">",
+     "inner": "<img=\"Alice_wave\">",
+     "before": "",
+     "after": "",
+     "offset": 0
+    },
+    {
+     "sourceImageToken": "Bob_sigh",
+     "tokenName": "Bob_sigh",
+     "characterName": "Bob",
+     "markupType": "img",
+     "full": "<img=\"Bob_sigh\">",
+     "inner": "<img=\"Bob_sigh\">",
+     "before": "",
+     "after": "",
+     "offset": 0
+    }
+   ]
+  },
+  {
+   "name": "no-persona-v5",
+   "input": {
+    "config": {
+     "enabled": true,
+     "ui": {
+      "language": "ko",
+      "developerModeEnabled": false,
+      "popupClickThroughProtectionEnabled": true,
+      "floatingGenerationCountEnabled": false,
+      "floatingGenerationCountPosition": null
+     },
+     "analysis": {
+      "provider": "openai",
+      "format": "openai",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "model": "gpt-5.6-sol",
+      "apiKey": "",
+      "providerConfigMap": {
+       "openai": {
+        "format": "openai",
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "model": "gpt-5.6-sol",
+        "apiKey": "",
+        "customHeaders": [],
+        "temperature": 0.2,
+        "timeoutMs": 180000,
+        "thinkingEnabled": false,
+        "thinkingLevel": "medium",
+        "pdfRequestsEnabled": false,
+        "cacheMode": "off",
+        "modelCacheMetadata": {
+         "canonicalSlug": "",
+         "supportedParameters": []
+        },
+        "modelInputMode": "list"
+       }
+      },
+      "customHeaders": [],
+      "temperature": 0.2,
+      "timeoutMs": 180000,
+      "thinkingEnabled": false,
+      "pdfRequestsEnabled": false,
+      "thinkingLevel": "medium",
+      "cacheMode": "off",
+      "modelCacheMetadata": {
+       "canonicalSlug": "",
+       "supportedParameters": []
+      },
+      "modelInputMode": "list"
+     },
+     "auxAnalysis": {
+      "provider": "openai",
+      "format": "openai",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "model": "gpt-5.6-sol",
+      "apiKey": "",
+      "providerConfigMap": {
+       "openai": {
+        "format": "openai",
+        "endpoint": "https://api.openai.com/v1/chat/completions",
+        "model": "gpt-5.6-sol",
+        "apiKey": "",
+        "customHeaders": [],
+        "temperature": 0.2,
+        "timeoutMs": 180000,
+        "thinkingEnabled": false,
+        "thinkingLevel": "medium",
+        "pdfRequestsEnabled": false,
+        "cacheMode": "off",
+        "modelCacheMetadata": {
+         "canonicalSlug": "",
+         "supportedParameters": []
+        },
+        "modelInputMode": "list"
+       }
+      },
+      "customHeaders": [],
+      "temperature": 0.2,
+      "timeoutMs": 180000,
+      "thinkingEnabled": false,
+      "pdfRequestsEnabled": false,
+      "thinkingLevel": "medium",
+      "cacheMode": "off",
+      "modelCacheMetadata": {
+       "canonicalSlug": "",
+       "supportedParameters": []
+      },
+      "modelInputMode": "list"
+     },
+     "jevConnection": {
+      "rosterSelectionDefault": false,
+      "apiKey": "",
+      "model": "jev-latest"
+     },
+     "novelai": {
+      "analysisProfile": "v5-hybrid",
+      "v5UserDirections": {
+       "scene": {
+        "mode": "preset",
+        "selectedPresetId": "scene-default",
+        "presets": [
+         {
+          "id": "scene-default",
+          "name": "삽화",
+          "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+         },
+         {
+          "id": "scene-pov",
+          "name": "pov 연출",
+          "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when only the persona's hands or arms are visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Use the persona's hands and arms as POV hands to express action, contact, object manipulation, and spatial distance while keeping the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+          "scenePresetId": "pov"
+         },
+         {
+          "id": "scene-ensemble",
+          "name": "다인 연출",
+          "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent, duplicate, split, or restore absent Actors. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+          "scenePresetId": "ensemble"
+         },
+         {
+          "id": "scene-comic",
+          "name": "카툰 연출",
+          "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+          "scenePresetId": "comic"
+         }
+        ],
+        "customText": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+       },
+       "imageRatio": {
+        "mode": "preset",
+        "selectedPresetId": "image-ratio-default",
+        "presets": [
+         {
+          "id": "image-ratio-default",
+          "name": "기본",
+          "instruction": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+          "allowedSizeIds": [
+           1,
+           2,
+           5
+          ]
+         },
+         {
+          "id": "image-ratio-unspecified",
+          "name": "미지정",
+          "instruction": "Choose the sizeId that best fits the current illustration from the allowed candidates. Apply no additional aspect-ratio preference.",
+          "allowedSizeIds": [
+           1,
+           2,
+           5
+          ]
+         }
+        ],
+        "customText": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2."
+       }
+      },
+      "apiKey": "test-key",
+      "endpoint": "https://image.novelai.net/ai/generate-image",
+      "naiModel": "nai-diffusion-5-full",
+      "width": 832,
+      "height": 1216,
+      "sampler": "k_euler_ancestral",
+      "noiseSchedule": "karras",
+      "steps": 28,
+      "scale": 6,
+      "cfgRescale": 0.5,
+      "qualityToggle": true,
+      "useCoords": false,
+      "useOrder": true,
+      "characterReferenceEnabled": false,
+      "characterReferenceType": "character",
+      "characterReferenceStrength": 0.6,
+      "characterReferenceFidelity": 1,
+      "characterPrompts": [],
+      "negativePrompt": ""
+     },
+     "animaArtists": {
+      "version": 1,
+      "entries": [
+       {
+        "id": "anima_1",
+        "title": "Anima Artist",
+        "text": "@anima artist"
+       }
+      ],
+      "selection": {
+       "defaultId": "anima_1",
+       "bySourceId": {}
+      }
+     },
+     "presetCatalog": {
+      "rawJson": "",
+      "lastError": ""
+     },
+     "characterPrompt": {
+      "selectedSourceId": "char-123",
+      "fixedPositivePrompt": "",
+      "malePersonaPrompt": "kazehaya shouta",
+      "selectedCharacters": [],
+      "characterIdentityPrompts": {},
+      "basePromptGroups": {},
+      "characterForms": {
+       "char-123::char-123::lore::lore:alice": {
+        "defaultFormId": "form_default",
+        "forms": [
+         {
+          "id": "form_default",
+          "label": "기본",
+          "description": "",
+          "humanlike": true,
+          "gender": "female",
+          "basePromptGroups": {
+           "hair.color": [
+            "silver hair"
+           ],
+           "hair.length": [
+            "long hair"
+           ],
+           "eyes.color": [
+            "blue eyes"
+           ]
+          },
+          "negativePrompt": "short hair",
+          "reference": null,
+          "defaultOutfitId": "outfit_default",
+          "outfits": [
+           {
+            "id": "outfit_default",
+            "label": "Navy sailor school uniform",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "",
+            "top": "white sailor shirt, navy sailor collar, red neckerchief",
+            "bottom": "navy pleated skirt",
+            "legs": "black thighhighs",
+            "feet": "brown loafers"
+           },
+           {
+            "id": "outfit_summer",
+            "label": "White summer sundress",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "straw hat",
+            "top": "white sundress",
+            "bottom": "",
+            "legs": "",
+            "feet": "sandals"
+           },
+           {
+            "id": "outfit_auto",
+            "label": "Red winter coat",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "",
+            "top": "red winter coat",
+            "bottom": "",
+            "legs": "",
+            "feet": "",
+            "origin": "ai-auto",
+            "status": "ready"
+           },
+           {
+            "id": "outfit_pending",
+            "label": "Pending auto outfit",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "",
+            "top": "blue coat",
+            "bottom": "",
+            "legs": "",
+            "feet": "",
+            "origin": "ai-auto",
+            "status": "failed"
+           }
+          ]
+         },
+         {
+          "id": "form_cat",
+          "label": "Cat girl",
+          "description": "",
+          "humanlike": true,
+          "gender": "female",
+          "basePromptGroups": {
+           "hair.color": [
+            "silver hair"
+           ],
+           "custom": [
+            "cat ears",
+            "cat tail"
+           ]
+          },
+          "negativePrompt": "",
+          "reference": null,
+          "defaultOutfitId": "outfit_cat_1",
+          "outfits": [
+           {
+            "id": "outfit_cat_1",
+            "label": "Maid dress",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "maid headdress",
+            "top": "black maid dress, white apron",
+            "bottom": "",
+            "legs": "",
+            "feet": ""
+           }
+          ]
+         }
+        ]
+       },
+       "char-123::char-123::lore::lore:bob": {
+        "defaultFormId": "form_default",
+        "forms": [
+         {
+          "id": "form_default",
+          "label": "기본",
+          "description": "",
+          "humanlike": true,
+          "gender": "male",
+          "basePromptGroups": {
+           "hair.color": [
+            "black hair"
+           ]
+          },
+          "negativePrompt": "",
+          "reference": null,
+          "defaultOutfitId": "outfit_default",
+          "outfits": [
+           {
+            "id": "outfit_default",
+            "label": "Grey business suit",
+            "description": "",
+            "candidateEnabled": true,
+            "head": "",
+            "top": "grey suit jacket, white shirt, blue necktie",
+            "bottom": "grey suit pants",
+            "legs": "",
+            "feet": "black dress shoes"
+           }
+          ]
+         }
+        ]
+       }
+      },
+      "lorebookPrompts": {},
+      "lorebookPromptGenders": {
+       "char-123::char-123::lore::lore:alice": "female",
+       "char-123::char-123::lore::lore:bob": "male"
+      },
+      "lorebookNegativePrompts": {},
+      "outfitPrompts": {},
+      "outfitPartFramingWeights": {
+       "head": {
+        "portrait": 1,
+        "upper body": 1,
+        "cowboy shot": 1,
+        "lower body": 0,
+        "feet out of frame": 1,
+        "full body": 1
+       },
+       "top": {
+        "portrait": 1,
+        "upper body": 1,
+        "cowboy shot": 1,
+        "lower body": 0,
+        "feet out of frame": 1,
+        "full body": 1
+       },
+       "bottom": {
+        "portrait": 0,
+        "upper body": 0.5,
+        "cowboy shot": 1,
+        "lower body": 1,
+        "feet out of frame": 1,
+        "full body": 1
+       },
+       "legs": {
+        "portrait": 0,
+        "upper body": 0,
+        "cowboy shot": 0.8,
+        "lower body": 1,
+        "feet out of frame": 1,
+        "full body": 1
+       },
+       "feet": {
+        "portrait": 0,
+        "upper body": 0,
+        "cowboy shot": 0,
+        "lower body": 1,
+        "feet out of frame": 0,
+        "full body": 1
+       }
+      },
+      "characterReferences": {},
+      "seedSettings": {},
+      "selectedLorebooks": {
+       "char-123::char-123": [
+        "lore:alice",
+        "lore:bob",
+        "lore:carol"
+       ]
+      },
+      "workspaceDisabledLorebooks": {
+       "char-123::char-123": [
+        "lore:carol"
+       ]
+      },
+      "activeModules": {},
+      "customLorebookKeys": {
+       "char-123::char-123::lore::lore:alice": [
+        "Ally",
+        "Silver"
+       ]
+      },
+      "lorebookImageFilters": {},
+      "assetSelections": {},
+      "assetMetadata": {},
+      "assetMetadataAvailability": {},
+      "charxAssetRegexAnalysis": {},
+      "overwriteExistingPrompts": false,
+      "characterReferenceBulkEnabled": false,
+      "personaGender": "male",
+      "malePersonaNegativePrompt": "",
+      "personaSettings": {
+       "selectedPersonaKey": "",
+       "profiles": {
+        "p1": {
+         "forms": {
+          "defaultFormId": "form_default",
+          "forms": [
+           {
+            "id": "form_default",
+            "label": "기본",
+            "description": "",
+            "humanlike": true,
+            "gender": "male",
+            "basePromptGroups": {
+             "hair.color": [
+              "brown hair"
+             ]
+            },
+            "negativePrompt": "",
+            "reference": null,
+            "defaultOutfitId": "outfit_default",
+            "outfits": [
+             {
+              "id": "outfit_default",
+              "label": "Casual hoodie",
+              "description": "",
+              "candidateEnabled": true,
+              "head": "",
+              "top": "black hoodie",
+              "bottom": "jeans",
+              "legs": "",
+              "feet": "sneakers"
+             }
+            ]
+           }
+          ]
+         }
+        }
+       },
+       "sourceScopes": {}
+      },
+      "artistPrompts": [
+       {
+        "id": "artist_user_1",
+        "title": "My Artist",
+        "prompt": "artist:foo, {{masterpiece}}, best quality",
+        "negativePrompt": "lowres, bad anatomy"
+       }
+      ],
+      "artistExtractionAssetBySourceId": {},
+      "selectedArtistId": "artist_user_1",
+      "charxSettings": {
+       "overrides": {
+        "char-123": {
+         "fixedPositivePrompt": "absurdres",
+         "negativePrompt": "watermark",
+         "stateAccumulationEnabled": true,
+         "freeOutfitGeneration": false
+        }
+       }
+      },
+      "charxGenerationDefaults": {
+       "nativeAssetVisibility": "hidden",
+       "freeOutfitGeneration": true,
+       "freeCharacterGeneration": true,
+       "stateAccumulationEnabled": false,
+       "nsfwAlwaysEnabled": false,
+       "forceAiChoiceCoordinates": true,
+       "autoRemoveConflictingRegex": false,
+       "fixedResolution": {
+        "enabled": false,
+        "sizeId": 1
+       },
+       "fixedPositivePrompt": "",
+       "negativePrompt": "",
+       "animaPositivePrompt": "masterpiece, best quality, score_7, safe",
+       "animaNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration"
+      }
+     },
+     "runtime": {
+      "customImageSizes": [],
+      "generationAutoRetryCount": 5,
+      "nsfwAlwaysEnabled": false,
+      "generationProvider": "novelai",
+      "comfyuiTransport": "chan-server-nai",
+      "chanServerRequestUrl": "",
+      "chanServerApiKey": "",
+      "comfyuiEndpoint": "http://127.0.0.1:8188",
+      "comfyuiWorkflowProfileId": "asset-maid-comfy-ui-workflow-v1",
+      "comfyuiWorkflowUiJson": "",
+      "comfyuiCompletionTimeoutMs": 600000,
+      "comfyuiCharacterReferenceEnabled": true,
+      "comfyuiOutfitReferenceEnabled": false,
+      "novelaiCallMode": "sequential",
+      "novelaiParallelIntervalSec": 0,
+      "chatImageWidthPercent": 70
+     }
+    },
+    "continuity": {
+     "version": 1,
+     "scenes": {
+      "chat-key": {
+       "backgroundTags": [
+        "classroom"
+       ],
+       "locationTags": [
+        "school"
+       ],
+       "updatedAt": 1760000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 2,
+       "updatedAtMessageId": "m-prev"
+      }
+     },
+     "characters": {
+      "chat-key": {
+       "char-123::char-123::lore::lore:alice": {
+        "characterName": "Alice",
+        "expression.general": [
+         "smile"
+        ],
+        "state.fluid.cum.location": [
+         "cum_on_face"
+        ],
+        "cum_count": 1,
+        "_continuity_turn": 2,
+        "updatedAt": 1760000000000,
+        "updatedAtChatIndex": 0,
+        "updatedAtMessageIndex": 2,
+        "updatedAtMessageId": "m-prev"
+       }
+      }
+     },
+     "modifierRefs": {
+      "chat-key": {
+       "global": {
+        "scene.environment": [
+         "indoors"
+        ],
+        "scene.location": [
+         "classroom"
+        ]
+       },
+       "actors": {
+        "char-123::char-123::lore::lore:alice": {
+         "expression.general": [
+          "smile"
+         ]
+        },
+        "char-123::char-123::lore::lore:bob": {
+         "gaze.direction": [
+          "looking_away"
+         ]
+        },
+        "__persona__": {
+         "pose.freeform": [
+          "sitting"
+         ]
+        }
+       },
+       "updatedAt": 1760000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 2,
+       "updatedAtMessageId": "m-prev"
+      }
+     },
+     "outfitRefs": {
+      "chat-key": {
+       "actors": {
+        "char-123::char-123::lore::lore:alice": {
+         "formId": "form_default",
+         "outfitId": "outfit_summer",
+         "description": ""
+        },
+        "persona::p1": {
+         "formId": "form_default",
+         "outfitId": "outfit_default",
+         "description": ""
+        }
+       },
+       "updatedAt": 1760000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 2,
+       "updatedAtMessageId": "m-prev"
+      }
+     },
+     "nsfwPositions": {
+      "chat-key": {
+       "activeSceneIdByCharacter": {
+        "char-123::char-123::lore::lore:alice": "scene-1"
+       },
+       "scenes": {
+        "scene-1": {
+         "compositionId": "1girl_1boy",
+         "primaryFemaleKey": "char-123::char-123::lore::lore:alice",
+         "characterName": "Alice",
+         "maleKey": "persona::p1",
+         "category": "foreplay",
+         "positionId": "face_to_face_upright",
+         "presetId": "1girl_1boy.foreplay.face_to_face_upright",
+         "presetPath": "1girl_1boy.foreplay.face_to_face_upright",
+         "modifiers": {},
+         "updatedAt": 1760000000000,
+         "updatedAtChatIndex": 0,
+         "updatedAtMessageIndex": 2,
+         "updatedAtMessageId": "m-prev"
+        }
+       }
+      }
+     },
+     "recentCheckpoints": {
+      "chat-key": [
+       {
+        "messageId": "m-prev",
+        "messageIndex": 2,
+        "capturedAt": 1760000000000,
+        "characters": {},
+        "participants": {
+         "characterKeys": [
+          "char-123::char-123::lore::lore:alice",
+          "char-123::char-123::lore::lore:carol"
+         ],
+         "personaKeys": [
+          "persona::p1"
+         ]
+        }
+       }
+      ]
+     },
+     "historicalStaticBases": {}
+    },
+    "chatKey": "chat-key",
+    "messages": [
+     {
+      "role": "assistant",
+      "content": "Welcome to the school story."
+     },
+     {
+      "role": "user",
+      "content": "Hello."
+     },
+     {
+      "role": "assistant",
+      "content": "Alice smiled at you from her seat."
+     },
+     {
+      "role": "user",
+      "content": "   "
+     },
+     {
+      "role": "user",
+      "content": "I run to the school gate."
+     }
+    ],
+    "content": "Alice waved at Shouta from the school gate.\n\n\"You're late again!\" she laughed.\n\nMr. Bob watched them from the staff room.",
+    "imageTokens": [
+     {
+      "sourceImageToken": "Alice_wave",
+      "tokenName": "Alice_wave",
+      "characterName": "Alice",
+      "markupType": "img",
+      "full": "<img=\"Alice_wave\">",
+      "inner": "<img=\"Alice_wave\">",
+      "before": "",
+      "after": ""
+     },
+     {
+      "sourceImageToken": "Bob_sigh",
+      "tokenName": "Bob_sigh",
+      "characterName": "Bob",
+      "markupType": "img",
+      "full": "<img=\"Bob_sigh\">",
+      "inner": "<img=\"Bob_sigh\">",
+      "before": "",
+      "after": ""
+     }
+    ],
+    "character": {
+     "chaId": "char-123",
+     "name": "Story Card",
+     "description": "A school slice-of-life story."
+    },
+    "source": {
+     "id": "char-123",
+     "index": 0,
+     "characterTarget": {
+      "chaId": "char-123",
+      "indexHint": 0
+     },
+     "name": "Story Card",
+     "type": "character",
+     "chatCount": 1,
+     "attachedModuleIds": [],
+     "activeModuleIds": [],
+     "sharedModuleAssets": [],
+     "chatGeneratedAssets": [],
+     "previewAsset": null,
+     "assetGeneration": "g1",
+     "members": [
+      {
+       "sourceId": "char-123",
+       "id": "char-123",
+       "key": "char-123::char-123",
+       "name": "Story Card",
+       "aliases": [
+        "story card"
+       ],
+       "sourceSummary": "",
+       "lorebooks": [
+        {
+         "kind": "lorebook",
+         "id": "lore:alice",
+         "selectionId": "lore:alice",
+         "title": "Alice",
+         "keys": [
+          "Alice",
+          "Ally"
+         ],
+         "primaryKeys": [
+          "Alice",
+          "Ally"
+         ],
+         "secondaryKeys": [],
+         "selective": false,
+         "useRegex": false,
+         "content": "Alice is a cheerful 17-year-old student with long silver hair.",
+         "score": 0,
+         "alwaysActive": false,
+         "sourceType": "character",
+         "sourceName": "Story Card"
+        },
+        {
+         "kind": "lorebook",
+         "id": "lore:bob",
+         "selectionId": "lore:bob",
+         "title": "Bob",
+         "keys": [
+          "Bob",
+          "Mr. Bob"
+         ],
+         "primaryKeys": [
+          "Bob",
+          "Mr. Bob"
+         ],
+         "secondaryKeys": [
+          "teacher"
+         ],
+         "selective": true,
+         "useRegex": false,
+         "content": "Bob is Alice's homeroom teacher.",
+         "score": 0,
+         "alwaysActive": false,
+         "sourceType": "character",
+         "sourceName": "Story Card"
+        },
+        {
+         "kind": "lorebook",
+         "id": "lore:carol",
+         "selectionId": "lore:carol",
+         "title": "Carol",
+         "keys": [
+          "Carol"
+         ],
+         "primaryKeys": [
+          "Carol"
+         ],
+         "secondaryKeys": [],
+         "selective": false,
+         "useRegex": false,
+         "content": "Carol is disabled in the workspace.",
+         "score": 0,
+         "alwaysActive": false,
+         "sourceType": "character",
+         "sourceName": "Story Card"
+        },
+        {
+         "kind": "lorebook",
+         "id": "lore:world",
+         "selectionId": "lore:world",
+         "title": "School",
+         "keys": [
+          "school"
+         ],
+         "primaryKeys": [
+          "school"
+         ],
+         "secondaryKeys": [],
+         "selective": false,
+         "useRegex": false,
+         "content": "Setting lore (not registered).",
+         "score": 0,
+         "alwaysActive": false,
+         "sourceType": "character",
+         "sourceName": "Story Card"
+        }
+       ],
+       "originalAssets": [],
+       "outfitGeneratedAssets": [],
+       "chatGeneratedAssets": [],
+       "assetCount": 0,
+       "previewAsset": null,
+       "characterIndex": 0,
+       "characterTarget": {
+        "chaId": "char-123",
+        "indexHint": 0
+       }
+      }
+     ]
+    },
+    "activePersona": null,
+    "personaRecords": [
+     {
+      "key": "p1",
+      "id": "p1",
+      "name": "Shouta",
+      "imageAsset": null
+     },
+     {
+      "key": "p2",
+      "id": "p2",
+      "name": "Rival",
+      "imageAsset": null
+     }
+    ]
+   },
+   "sourceId": "char-123",
+   "rename": {
+    "char-123::char-123::lore::lore:alice": "<promptKey>",
+    "char-123::char-123::lore::lore:bob": "<promptKey>",
+    "char-123::char-123::lore::lore:carol": "<promptKey>",
+    "char-123": "<sourceId>",
+    "char-123::char-123": "<memberKey>",
+    "p1": "<personaKey>",
+    "p2": "<personaKey>",
+    "persona::p1": "<personaPromptKey>",
+    "chat-key": "<chatKey>",
+    "scene-1": "<sceneId>"
+   },
+   "decisions": [
+    {
+     "actors": {
+      "primary": {
+       "lorebook_prompt_key": "char-123::char-123::lore::lore:bob"
+      },
+      "secondary": null,
+      "persona": null
+     },
+     "lorebook_prompt_key": "char-123::char-123::lore::lore:bob"
+    },
+    {
+     "actors": {
+      "primary": null,
+      "secondary": null,
+      "persona": {
+       "lorebook_prompt_key": "persona::p1"
+      }
+     }
+    }
+   ],
+   "v5Keys": [
+    "persona::p1",
+    "char-123::char-123::lore::lore:alice"
+   ],
+   "actors": [
+    [
+     {
+      "actorId": "actor-1",
+      "actorIndex": 0,
+      "kind": "character",
+      "gender": "female",
+      "identityKey": "char-123::char-123::lore::lore:alice",
+      "selectedFormId": "form_default",
+      "selectedOutfitId": "outfit_summer",
+      "identitySuppressed": false
+     },
+     {
+      "actorId": "actor-2",
+      "actorIndex": 1,
+      "kind": "persona",
+      "gender": "male",
+      "identityKey": "persona::p1",
+      "selectedFormId": "",
+      "selectedOutfitId": "outfit_default",
+      "identitySuppressed": false
+     }
+    ],
+    [
+     {
+      "actorId": "actor-1",
+      "actorIndex": 0,
+      "kind": "character",
+      "gender": "female",
+      "identityKey": "char-123::char-123::lore::lore:alice",
+      "selectedFormId": "form_default",
+      "selectedOutfitId": "outfit_summer",
+      "identitySuppressed": false
+     }
+    ]
+   ],
+   "images": [
+    {
+     "outfit_id": "",
+     "actors": {
+      "primary": {
+       "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
+       "form_id": "form_cat",
+       "outfit_id": "outfit_cat_1"
+      },
+      "secondary": {
+       "lorebook_prompt_key": "char-123::char-123::lore::lore:bob",
+       "outfit_id": "catalog:outfit:x"
+      },
+      "persona": null
+     }
+    },
+    {
+     "outfit_id": "outfit_summer",
+     "actors": {
+      "primary": {
+       "lorebook_prompt_key": "char-123::char-123::lore::lore:alice"
+      },
+      "secondary": null,
+      "persona": null
+     }
+    }
+   ],
+   "slots": [
+    {
+     "slotId": "s1",
+     "index": 0,
+     "beforeText": "Alice waved at Shouta from the school gate.",
+     "afterText": "\"You're late again!\" she laughed."
+    },
+    {
+     "slotId": "s2",
+     "index": 1,
+     "beforeText": "\"You're late again!\" she laughed.",
+     "afterText": "Mr. Bob watched them from the staff room."
+    },
+    {
+     "slotId": "s3",
+     "index": 2,
+     "beforeText": "The teacher sighed.",
+     "afterText": ""
+    }
+   ],
+   "assetTokens": [
+    {
+     "sourceImageToken": "Alice_wave",
+     "tokenName": "Alice_wave",
+     "characterName": "Alice",
+     "markupType": "img",
+     "full": "<img=\"Alice_wave\">",
+     "inner": "<img=\"Alice_wave\">",
+     "before": "",
+     "after": "",
+     "offset": 0
+    },
+    {
+     "sourceImageToken": "Bob_sigh",
+     "tokenName": "Bob_sigh",
+     "characterName": "Bob",
+     "markupType": "img",
+     "full": "<img=\"Bob_sigh\">",
+     "inner": "<img=\"Bob_sigh\">",
+     "before": "",
+     "after": "",
+     "offset": 0
+    }
+   ]
+  }
+ ]
+}
