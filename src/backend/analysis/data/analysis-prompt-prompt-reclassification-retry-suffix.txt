@@ -1,0 +1,2 @@
+
+These partitions failed validation or were missing. Return every requested partitionRef with assignments and valid newOutfit metadata. Reclassify only these original partitions; do not include previously successful partitions.

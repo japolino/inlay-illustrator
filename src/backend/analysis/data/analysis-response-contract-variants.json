@@ -1,0 +1,2098 @@
+{
+  "image+asset": {
+    "schema": "asset-maid.character-analysis",
+    "version": 5,
+    "visual_profile_contract": {
+      "schema": "asset-maid.character-visual-profile",
+      "version": 1,
+      "fields": [
+        "basePromptGroups",
+        "defaultOutfit"
+      ],
+      "basePromptGroups": {
+        "keys": [
+          "identity.character_tag",
+          "hair.color",
+          "hair.length",
+          "hair.style",
+          "head.other",
+          "eyes.color",
+          "eyes.structure",
+          "body.skin",
+          "body.build",
+          "body.proportions",
+          "body.breast_size",
+          "marks.distinctive",
+          "nonhuman.features",
+          "custom"
+        ],
+        "values": "arrays of normalized English visual prompt tags",
+        "ownership": "persistent body and identity traits only"
+      },
+      "defaultOutfit": {
+        "fields": [
+          "name",
+          "head",
+          "top",
+          "bottom",
+          "legs",
+          "feet"
+        ],
+        "parts": [
+          "head",
+          "top",
+          "bottom",
+          "legs",
+          "feet"
+        ],
+        "ownership": "actual worn items only; use an empty string for an unworn part"
+      },
+      "exclude": "pose, expression, camera, background, lighting, and temporary state"
+    },
+    "derivation": {
+      "mode": "explicit_evidence_extraction",
+      "missing_visual_fact": "leave_empty_never_complete_from_nonvisual_context"
+    },
+    "policies": {
+      "tag_format": "novelai_space_separated",
+      "compiled_identity_format": "novelai_space_separated",
+      "unknown_group": "drop",
+      "invalid_tag": "drop",
+      "forbidden_section": "drop"
+    },
+    "profiles": {
+      "asset": {
+        "evidence_modes": [
+          "metadata",
+          "image",
+          "text"
+        ],
+        "outputs": [
+          "identity",
+          "outfit",
+          "artist"
+        ]
+      }
+    },
+    "sections": {
+      "identity": {
+        "version": 5,
+        "id": "character_main_prompt_analysis",
+        "required_policy": {
+          "group_key": "always_return_when_applicable",
+          "value": "select_when_explicit_or_directly_observable",
+          "unknown": "return_empty_array",
+          "inference": "forbidden_except_known_character_tag_identification"
+        },
+        "tag_format": {
+          "analysis": "novelai_space_separated",
+          "compiled_prompt": "space_separated",
+          "invalid_tag_policy": "drop"
+        },
+        "evidence_rules": {
+          "image": [
+            "For physical appearance, return only persistent traits clearly visible in the image. Only identity.character_tag may use the character identification policy.",
+            "Do not infer physical traits hidden by clothing or cropping; return an empty array for that group.",
+            "Do not return expressions, poses, camera, background, lighting, or clothing."
+          ]
+        },
+        "groups": [
+          {
+            "id": "identity.character_tag",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "single",
+              "required": false
+            },
+            "description": "For identity.character_tag only, you may use model knowledge to return at most one known existing Danbooru character tag when the designated evidence or scene context clearly identifies that character. Preserve an explicit metadata character tag when applicable. Omit the tag when uncertain, ambiguous, or newly invented. Never fabricate a tag by translating a name, substitute a merely similar character or the character being cosplayed, or return a standalone copyright, artist, or style tag. This permission does not authorize inferring unobserved appearance, clothing, gender, or form differences during evidence analysis; a character tag alone is not physical appearance evidence.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "hair.color",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": true,
+              "max_tags": 3
+            },
+            "description": "Return only persistent hair color and multicolor structure.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "hair.length",
+            "mode": "options",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "single",
+              "required": true
+            },
+            "description": "Return only one identifiable representative hair-length Danbooru tag.",
+            "options": [
+              {
+                "id": "bald",
+                "prompt": "bald"
+              },
+              {
+                "id": "very_short_hair",
+                "prompt": "very short hair"
+              },
+              {
+                "id": "short_hair",
+                "prompt": "short hair"
+              },
+              {
+                "id": "medium_hair",
+                "prompt": "medium hair"
+              },
+              {
+                "id": "long_hair",
+                "prompt": "long hair"
+              },
+              {
+                "id": "very_long_hair",
+                "prompt": "very long hair"
+              },
+              {
+                "id": "absurdly_long_hair",
+                "prompt": "absurdly long hair"
+              }
+            ]
+          },
+          {
+            "id": "hair.style",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only persistent hairstyles; exclude temporary states caused by wetness, wind, or hand movements.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "head.other",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only fixed head traits other than hair and eyes. Include horns, animal ears, pointy ears, antennae, and facial markings; exclude hats, glasses, and hair ornaments.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "eyes.color",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": true,
+              "max_tags": 2
+            },
+            "description": "Return only eye color. Put heterochromia in eyes.structure.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "eyes.structure",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return only persistent iris, pupil, and eye-count traits; exclude expressive eye states.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.skin",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return only persistent skin color; exclude lighting, blushing, and stains.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.build",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return the corresponding Danbooru tag only when overall body build is clear.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.proportions",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 3
+            },
+            "description": "Return only Danbooru tags for clear, persistent body proportions.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.breast_size",
+            "mode": "options",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "genders": [
+              "female"
+            ],
+            "selection": {
+              "type": "single",
+              "required": true
+            },
+            "description": "Select only one when the breasts are visible and their size can be clearly determined.",
+            "options": [
+              {
+                "id": "small_breasts",
+                "prompt": "small breasts"
+              },
+              {
+                "id": "medium_breasts",
+                "prompt": "medium breasts"
+              },
+              {
+                "id": "large_breasts",
+                "prompt": "large breasts"
+              },
+              {
+                "id": "huge_breasts",
+                "prompt": "huge breasts"
+              }
+            ]
+          },
+          {
+            "id": "marks.distinctive",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return persistent moles, freckles, scars, tattoos, and birthmarks on body parts other than the head.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "nonhuman.features",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only persistent nonhuman body structures outside the head, such as wings and tails.",
+            "allow_unlisted": true
+          }
+        ]
+      },
+      "outfit": {
+        "output_mode": "detailed_tags_and_short_phrases",
+        "language": "english",
+        "fields": {
+          "outfit_id": "short semantic snake_case id",
+          "source_asset_name": "exactly copied evidence asset name",
+          "label": "Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim.",
+          "keywords": "short scene-matching keywords, not generation prompt fragments",
+          "head": "detailed Danbooru-style tags and short English phrases for headwear and head accessories",
+          "top": "detailed Danbooru-style tags and short English phrases for upper-body clothing, outerwear, dresses and one-pieces",
+          "bottom": "detailed Danbooru-style tags and short English phrases for a separate skirt, pants or other lower garment",
+          "legs": "detailed Danbooru-style tags and short English phrases for hosiery, legwear and leg accessories",
+          "feet": "detailed Danbooru-style tags and short English phrases for footwear and foot accessories"
+        },
+        "rules": [
+          "Write head, top, bottom, legs, and feet as comma-separated combinations of concrete Danbooru-style English tags and short English phrases.",
+          "Preserve colors, materials, shapes, patterns, layers, and identifiable ornament relationships in detail, while avoiding verbose full sentences.",
+          "Do not infer outfit elements not confirmed by the evidence.",
+          "For done targets, generate exactly one outfit per summary in metadata mode or per input image in image mode. If the entire target is no_evidence, leave outfits empty and do not create empty observations or a default outfit.",
+          "Copy the summary's assetName or image's asset_name exactly to source_asset_name. Do not omit or duplicate sources, guess their correspondence by order, or invent new sources.",
+          "In text mode, generate exactly one outfit at the same level of detail as metadata and image modes when clothing is explicitly stated in the text; otherwise return an empty outfits array.",
+          "In text mode, always return an empty source_asset_name and do not reference images or assets.",
+          "Write outfit_id as a short, unique English snake_case identifier describing the outfit, such as green_bikini or white_summer_dress.",
+          "Do not use or copy filenames, paths, extensions, hashes, UUIDs, source_asset_name, or character names as outfit_id.",
+          "If there is no separate bottom garment, put dresses and one-piece dresses in top.",
+          "Build the label only from clothing features confirmed by the designated image, metadata, or text evidence. Do not complete missing design details or infer materials from ambiguous appearances. Write keywords to help later scene matching.",
+          "Return an empty string when a body part has no clothing.",
+          "Do not mix physical traits, poses, expressions, camera, background, lighting, or artist styles into outfit phrases."
+        ]
+      },
+      "artist": {
+        "output_mode": "combined_prompt_string",
+        "max_entries_per_result": 1,
+        "fields": {
+          "title": "short title derived from the strongest artist/style evidence",
+          "prompt": "one combined NovelAI artist/style/media/year/quality prompt string",
+          "negative_prompt": "artist-specific negative delta from the supplied artist_negative_candidate",
+          "source_asset_name": "exactly copied evidence asset name, or empty for text evidence"
+        },
+        "rules": [
+          "Return at most one combined artist_prompts entry.",
+          "Include only artist, style, media, year, and quality elements.",
+          "Preserve the artist prompt's tag order, numeric NovelAI emphasis, and opening/closing :: groups.",
+          "Always put exactly one space before the closing :: and correct only obvious aritst: typos to artist:.",
+          "In metadata and text modes, return only artist/style elements explicitly present in the evidence.",
+          "For metadata negative_prompt, use only artist/style/media/year/quality suppression tags stated in summary.artist_negative_candidate; do not reintroduce other original uc items.",
+          "In image and text modes, return an empty negative_prompt because no explicit negative evidence is available.",
+          "In image mode, use only visual artist/style evidence from the image; return an empty array when uncertain.",
+          "Do not infer artists or styles from filenames, character names, source IDs, lorebook titles, UUIDs, or asset names."
+        ],
+        "persistence": {
+          "scope_key": "source_id",
+          "max_auto_entries_per_source": 1,
+          "when_source_exists": "reuse_without_append_or_overwrite",
+          "excluded_flow": [
+            "artist_selection"
+          ]
+        }
+      }
+    }
+  },
+  "metadata+asset": {
+    "schema": "asset-maid.character-analysis",
+    "version": 5,
+    "visual_profile_contract": {
+      "schema": "asset-maid.character-visual-profile",
+      "version": 1,
+      "fields": [
+        "basePromptGroups",
+        "defaultOutfit"
+      ],
+      "basePromptGroups": {
+        "keys": [
+          "identity.character_tag",
+          "hair.color",
+          "hair.length",
+          "hair.style",
+          "head.other",
+          "eyes.color",
+          "eyes.structure",
+          "body.skin",
+          "body.build",
+          "body.proportions",
+          "body.breast_size",
+          "marks.distinctive",
+          "nonhuman.features",
+          "custom"
+        ],
+        "values": "arrays of normalized English visual prompt tags",
+        "ownership": "persistent body and identity traits only"
+      },
+      "defaultOutfit": {
+        "fields": [
+          "name",
+          "head",
+          "top",
+          "bottom",
+          "legs",
+          "feet"
+        ],
+        "parts": [
+          "head",
+          "top",
+          "bottom",
+          "legs",
+          "feet"
+        ],
+        "ownership": "actual worn items only; use an empty string for an unworn part"
+      },
+      "exclude": "pose, expression, camera, background, lighting, and temporary state"
+    },
+    "derivation": {
+      "mode": "explicit_evidence_extraction",
+      "missing_visual_fact": "leave_empty_never_complete_from_nonvisual_context"
+    },
+    "policies": {
+      "tag_format": "novelai_space_separated",
+      "compiled_identity_format": "novelai_space_separated",
+      "unknown_group": "drop",
+      "invalid_tag": "drop",
+      "forbidden_section": "drop"
+    },
+    "profiles": {
+      "asset": {
+        "evidence_modes": [
+          "metadata",
+          "image",
+          "text"
+        ],
+        "outputs": [
+          "identity",
+          "outfit",
+          "artist"
+        ]
+      }
+    },
+    "sections": {
+      "identity": {
+        "version": 5,
+        "id": "character_main_prompt_analysis",
+        "required_policy": {
+          "group_key": "always_return_when_applicable",
+          "value": "select_when_explicit_or_directly_observable",
+          "unknown": "return_empty_array",
+          "inference": "forbidden_except_known_character_tag_identification"
+        },
+        "tag_format": {
+          "analysis": "novelai_space_separated",
+          "compiled_prompt": "space_separated",
+          "invalid_tag_policy": "drop"
+        },
+        "evidence_rules": {
+          "metadata": [
+            "Return only tags explicitly present in the selected metadata prompt or charCaptions.",
+            "Do not supplement visual traits from filenames, character names, or external knowledge. Only identity.character_tag may use the character identification policy."
+          ]
+        },
+        "groups": [
+          {
+            "id": "identity.character_tag",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "single",
+              "required": false
+            },
+            "description": "For identity.character_tag only, you may use model knowledge to return at most one known existing Danbooru character tag when the designated evidence or scene context clearly identifies that character. Preserve an explicit metadata character tag when applicable. Omit the tag when uncertain, ambiguous, or newly invented. Never fabricate a tag by translating a name, substitute a merely similar character or the character being cosplayed, or return a standalone copyright, artist, or style tag. This permission does not authorize inferring unobserved appearance, clothing, gender, or form differences during evidence analysis; a character tag alone is not physical appearance evidence.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "hair.color",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": true,
+              "max_tags": 3
+            },
+            "description": "Return only persistent hair color and multicolor structure.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "hair.length",
+            "mode": "options",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "single",
+              "required": true
+            },
+            "description": "Return only one identifiable representative hair-length Danbooru tag.",
+            "options": [
+              {
+                "id": "bald",
+                "prompt": "bald"
+              },
+              {
+                "id": "very_short_hair",
+                "prompt": "very short hair"
+              },
+              {
+                "id": "short_hair",
+                "prompt": "short hair"
+              },
+              {
+                "id": "medium_hair",
+                "prompt": "medium hair"
+              },
+              {
+                "id": "long_hair",
+                "prompt": "long hair"
+              },
+              {
+                "id": "very_long_hair",
+                "prompt": "very long hair"
+              },
+              {
+                "id": "absurdly_long_hair",
+                "prompt": "absurdly long hair"
+              }
+            ]
+          },
+          {
+            "id": "hair.style",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only persistent hairstyles; exclude temporary states caused by wetness, wind, or hand movements.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "head.other",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only fixed head traits other than hair and eyes. Include horns, animal ears, pointy ears, antennae, and facial markings; exclude hats, glasses, and hair ornaments.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "eyes.color",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": true,
+              "max_tags": 2
+            },
+            "description": "Return only eye color. Put heterochromia in eyes.structure.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "eyes.structure",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return only persistent iris, pupil, and eye-count traits; exclude expressive eye states.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.skin",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return only persistent skin color; exclude lighting, blushing, and stains.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.build",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return the corresponding Danbooru tag only when overall body build is clear.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.proportions",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 3
+            },
+            "description": "Return only Danbooru tags for clear, persistent body proportions.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.breast_size",
+            "mode": "options",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "genders": [
+              "female"
+            ],
+            "selection": {
+              "type": "single",
+              "required": true
+            },
+            "description": "Select only one when the breasts are visible and their size can be clearly determined.",
+            "options": [
+              {
+                "id": "small_breasts",
+                "prompt": "small breasts"
+              },
+              {
+                "id": "medium_breasts",
+                "prompt": "medium breasts"
+              },
+              {
+                "id": "large_breasts",
+                "prompt": "large breasts"
+              },
+              {
+                "id": "huge_breasts",
+                "prompt": "huge breasts"
+              },
+              {
+                "id": "gigantic_breasts",
+                "prompt": "gigantic breasts"
+              }
+            ]
+          },
+          {
+            "id": "marks.distinctive",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return persistent moles, freckles, scars, tattoos, and birthmarks on body parts other than the head.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "nonhuman.features",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only persistent nonhuman body structures outside the head, such as wings and tails.",
+            "allow_unlisted": true
+          }
+        ]
+      },
+      "outfit": {
+        "output_mode": "detailed_tags_and_short_phrases",
+        "language": "english",
+        "fields": {
+          "outfit_id": "short semantic snake_case id",
+          "source_asset_name": "exactly copied evidence asset name",
+          "label": "Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim.",
+          "keywords": "short scene-matching keywords, not generation prompt fragments",
+          "head": "detailed Danbooru-style tags and short English phrases for headwear and head accessories",
+          "top": "detailed Danbooru-style tags and short English phrases for upper-body clothing, outerwear, dresses and one-pieces",
+          "bottom": "detailed Danbooru-style tags and short English phrases for a separate skirt, pants or other lower garment",
+          "legs": "detailed Danbooru-style tags and short English phrases for hosiery, legwear and leg accessories",
+          "feet": "detailed Danbooru-style tags and short English phrases for footwear and foot accessories"
+        },
+        "rules": [
+          "Write head, top, bottom, legs, and feet as comma-separated combinations of concrete Danbooru-style English tags and short English phrases.",
+          "Preserve colors, materials, shapes, patterns, layers, and identifiable ornament relationships in detail, while avoiding verbose full sentences.",
+          "Do not infer outfit elements not confirmed by the evidence.",
+          "For done targets, generate exactly one outfit per summary in metadata mode or per input image in image mode. If the entire target is no_evidence, leave outfits empty and do not create empty observations or a default outfit.",
+          "Copy the summary's assetName or image's asset_name exactly to source_asset_name. Do not omit or duplicate sources, guess their correspondence by order, or invent new sources.",
+          "In text mode, generate exactly one outfit at the same level of detail as metadata and image modes when clothing is explicitly stated in the text; otherwise return an empty outfits array.",
+          "In text mode, always return an empty source_asset_name and do not reference images or assets.",
+          "Write outfit_id as a short, unique English snake_case identifier describing the outfit, such as green_bikini or white_summer_dress.",
+          "Do not use or copy filenames, paths, extensions, hashes, UUIDs, source_asset_name, or character names as outfit_id.",
+          "If there is no separate bottom garment, put dresses and one-piece dresses in top.",
+          "Build the label only from clothing features confirmed by the designated image, metadata, or text evidence. Do not complete missing design details or infer materials from ambiguous appearances. Write keywords to help later scene matching.",
+          "Return an empty string when a body part has no clothing.",
+          "Do not mix physical traits, poses, expressions, camera, background, lighting, or artist styles into outfit phrases."
+        ]
+      },
+      "artist": {
+        "output_mode": "combined_prompt_string",
+        "max_entries_per_result": 1,
+        "fields": {
+          "title": "short title derived from the strongest artist/style evidence",
+          "prompt": "one combined NovelAI artist/style/media/year/quality prompt string",
+          "negative_prompt": "artist-specific negative delta from the supplied artist_negative_candidate",
+          "source_asset_name": "exactly copied evidence asset name, or empty for text evidence"
+        },
+        "rules": [
+          "Return at most one combined artist_prompts entry.",
+          "Include only artist, style, media, year, and quality elements.",
+          "Preserve the artist prompt's tag order, numeric NovelAI emphasis, and opening/closing :: groups.",
+          "Always put exactly one space before the closing :: and correct only obvious aritst: typos to artist:.",
+          "In metadata and text modes, return only artist/style elements explicitly present in the evidence.",
+          "For metadata negative_prompt, use only artist/style/media/year/quality suppression tags stated in summary.artist_negative_candidate; do not reintroduce other original uc items.",
+          "In image and text modes, return an empty negative_prompt because no explicit negative evidence is available.",
+          "In image mode, use only visual artist/style evidence from the image; return an empty array when uncertain.",
+          "Do not infer artists or styles from filenames, character names, source IDs, lorebook titles, UUIDs, or asset names."
+        ],
+        "persistence": {
+          "scope_key": "source_id",
+          "max_auto_entries_per_source": 1,
+          "when_source_exists": "reuse_without_append_or_overwrite",
+          "excluded_flow": [
+            "artist_selection"
+          ]
+        }
+      }
+    }
+  },
+  "text+asset": {
+    "schema": "asset-maid.character-analysis",
+    "version": 5,
+    "visual_profile_contract": {
+      "schema": "asset-maid.character-visual-profile",
+      "version": 1,
+      "fields": [
+        "basePromptGroups",
+        "defaultOutfit"
+      ],
+      "basePromptGroups": {
+        "keys": [
+          "identity.character_tag",
+          "hair.color",
+          "hair.length",
+          "hair.style",
+          "head.other",
+          "eyes.color",
+          "eyes.structure",
+          "body.skin",
+          "body.build",
+          "body.proportions",
+          "body.breast_size",
+          "marks.distinctive",
+          "nonhuman.features",
+          "custom"
+        ],
+        "values": "arrays of normalized English visual prompt tags",
+        "ownership": "persistent body and identity traits only"
+      },
+      "defaultOutfit": {
+        "fields": [
+          "name",
+          "head",
+          "top",
+          "bottom",
+          "legs",
+          "feet"
+        ],
+        "parts": [
+          "head",
+          "top",
+          "bottom",
+          "legs",
+          "feet"
+        ],
+        "ownership": "actual worn items only; use an empty string for an unworn part"
+      },
+      "exclude": "pose, expression, camera, background, lighting, and temporary state"
+    },
+    "derivation": {
+      "mode": "body_context_visual_design",
+      "missing_visual_fact": "preserve_explicit_constraints_and_complete_from_context_and_existing_profiles"
+    },
+    "policies": {
+      "tag_format": "novelai_space_separated",
+      "compiled_identity_format": "novelai_space_separated",
+      "unknown_group": "drop",
+      "invalid_tag": "drop",
+      "forbidden_section": "drop"
+    },
+    "profiles": {
+      "asset": {
+        "evidence_modes": [
+          "metadata",
+          "image",
+          "text"
+        ],
+        "outputs": [
+          "identity",
+          "outfit",
+          "artist"
+        ]
+      }
+    },
+    "sections": {
+      "identity": {
+        "version": 5,
+        "id": "character_main_prompt_analysis",
+        "required_policy": {
+          "group_key": "always_return_when_applicable",
+          "value": "preserve_explicit_or_established_else_design_coherently",
+          "unknown": "complete_applicable_traits_omit_inapplicable_groups",
+          "inference": "appearance_design_from_body_context_not_character_tag_fabrication"
+        },
+        "tag_format": {
+          "analysis": "novelai_space_separated",
+          "compiled_prompt": "space_separated",
+          "invalid_tag_policy": "drop"
+        },
+        "evidence_rules": {
+          "text": [
+            "Preserve explicit body constraints and established baseline traits; complete unspecified appearance using body context. Do not turn personality or narrative into literal tags.",
+            "Use one coherent persistent design, not alternatives. Do not invent distinct forms or transfer traits between forms. Character identification follows its separate rule."
+          ]
+        },
+        "groups": [
+          {
+            "id": "identity.character_tag",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "single",
+              "required": false
+            },
+            "description": "For identity.character_tag only, you may use model knowledge to return at most one known existing Danbooru character tag when the designated evidence or scene context clearly identifies that character. Preserve an explicit metadata character tag when applicable. Omit the tag when uncertain, ambiguous, or newly invented. Never fabricate a tag by translating a name, substitute a merely similar character or the character being cosplayed, or return a standalone copyright, artist, or style tag.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "hair.color",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": true,
+              "max_tags": 3
+            },
+            "description": "Return only persistent hair color and multicolor structure.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "hair.length",
+            "mode": "options",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "single",
+              "required": true
+            },
+            "description": "Return only one identifiable representative hair-length Danbooru tag.",
+            "options": [
+              {
+                "id": "bald",
+                "prompt": "bald"
+              },
+              {
+                "id": "very_short_hair",
+                "prompt": "very short hair"
+              },
+              {
+                "id": "short_hair",
+                "prompt": "short hair"
+              },
+              {
+                "id": "medium_hair",
+                "prompt": "medium hair"
+              },
+              {
+                "id": "long_hair",
+                "prompt": "long hair"
+              },
+              {
+                "id": "very_long_hair",
+                "prompt": "very long hair"
+              },
+              {
+                "id": "absurdly_long_hair",
+                "prompt": "absurdly long hair"
+              }
+            ]
+          },
+          {
+            "id": "hair.style",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only persistent hairstyles; exclude temporary states caused by wetness, wind, or hand movements.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "head.other",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only fixed head traits other than hair and eyes. Include horns, animal ears, pointy ears, antennae, and facial markings; exclude hats, glasses, and hair ornaments.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "eyes.color",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": true,
+              "max_tags": 2
+            },
+            "description": "Return only eye color. Put heterochromia in eyes.structure.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "eyes.structure",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return only persistent iris, pupil, and eye-count traits; exclude expressive eye states.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.skin",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return only persistent skin color; exclude lighting, blushing, and stains.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.build",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Describe the established or coherently designed persistent body build.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.proportions",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 3
+            },
+            "description": "Describe established or coherently designed persistent body proportions.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.breast_size",
+            "mode": "options",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "genders": [
+              "female"
+            ],
+            "selection": {
+              "type": "single",
+              "required": true
+            },
+            "description": "Choose one allowed size when applicable to the designed anatomy, preserving explicit constraints and baseline traits.",
+            "options": [
+              {
+                "id": "small_breasts",
+                "prompt": "small breasts"
+              },
+              {
+                "id": "medium_breasts",
+                "prompt": "medium breasts"
+              },
+              {
+                "id": "large_breasts",
+                "prompt": "large breasts"
+              },
+              {
+                "id": "huge_breasts",
+                "prompt": "huge breasts"
+              }
+            ]
+          },
+          {
+            "id": "marks.distinctive",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return persistent moles, freckles, scars, tattoos, and birthmarks on body parts other than the head.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "nonhuman.features",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only persistent nonhuman body structures outside the head, such as wings and tails.",
+            "allow_unlisted": true
+          }
+        ]
+      },
+      "outfit": {
+        "output_mode": "detailed_tags_and_short_phrases",
+        "language": "english",
+        "fields": {
+          "outfit_id": "short semantic snake_case id",
+          "source_asset_name": "exactly copied evidence asset name",
+          "label": "Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim. Name the completed outfit design, including only details actually specified in its parts. Distinguish genuinely different outfits within the same form, but reuse an existing matching outfit's name and reference instead of renaming it. Wetness, stains, damage, or partial undressing alone must not create a new outfit name.",
+          "keywords": "short scene-matching keywords, not generation prompt fragments",
+          "head": "detailed Danbooru-style tags and short English phrases for headwear and head accessories",
+          "top": "detailed Danbooru-style tags and short English phrases for upper-body clothing, outerwear, dresses and one-pieces",
+          "bottom": "detailed Danbooru-style tags and short English phrases for a separate skirt, pants or other lower garment",
+          "legs": "detailed Danbooru-style tags and short English phrases for hosiery, legwear and leg accessories",
+          "feet": "detailed Danbooru-style tags and short English phrases for footwear and foot accessories"
+        },
+        "rules": [
+          "Write head, top, bottom, legs, and feet as comma-separated combinations of concrete Danbooru-style English tags and short English phrases.",
+          "Preserve colors, materials, shapes, patterns, layers, and identifiable ornament relationships in detail, while avoiding verbose full sentences.",
+          "Preserve explicit outfit constraints and coherently complete unspecified design details from body context and the matching baseline.",
+          "For done targets, generate exactly one outfit per summary in metadata mode or per input image in image mode. If the entire target is no_evidence, leave outfits empty and do not create empty observations or a default outfit.",
+          "Copy the summary's assetName or image's asset_name exactly to source_asset_name. Do not omit or duplicate sources, guess their correspondence by order, or invent new sources.",
+          "In text mode, complete each explicitly described outfit. When none is described and wearables apply, reuse a suitable baseline outfit or design one default outfit. Omit inapplicable or unworn parts.",
+          "In text mode, always return an empty source_asset_name and do not reference images or assets.",
+          "Write outfit_id as a short, unique English snake_case identifier describing the outfit, such as green_bikini or white_summer_dress.",
+          "Do not use or copy filenames, paths, extensions, hashes, UUIDs, source_asset_name, or character names as outfit_id.",
+          "If there is no separate bottom garment, put dresses and one-piece dresses in top.",
+          "Build the label from the completed outfit parts, including creatively chosen details. Write keywords to help later scene matching.",
+          "Return an empty string when a body part has no clothing.",
+          "Do not mix physical traits, poses, expressions, camera, background, lighting, or artist styles into outfit phrases."
+        ]
+      },
+      "artist": {
+        "output_mode": "combined_prompt_string",
+        "max_entries_per_result": 1,
+        "fields": {
+          "title": "short title derived from the strongest artist/style evidence",
+          "prompt": "one combined NovelAI artist/style/media/year/quality prompt string",
+          "negative_prompt": "artist-specific negative delta from the supplied artist_negative_candidate",
+          "source_asset_name": "exactly copied evidence asset name, or empty for text evidence"
+        },
+        "rules": [
+          "Return at most one combined artist_prompts entry.",
+          "Include only artist, style, media, year, and quality elements.",
+          "Preserve the artist prompt's tag order, numeric NovelAI emphasis, and opening/closing :: groups.",
+          "Always put exactly one space before the closing :: and correct only obvious aritst: typos to artist:.",
+          "In metadata and text modes, return only artist/style elements explicitly present in the evidence.",
+          "For metadata negative_prompt, use only artist/style/media/year/quality suppression tags stated in summary.artist_negative_candidate; do not reintroduce other original uc items.",
+          "In image and text modes, return an empty negative_prompt because no explicit negative evidence is available.",
+          "In image mode, use only visual artist/style evidence from the image; return an empty array when uncertain.",
+          "Do not infer artists or styles from filenames, character names, source IDs, lorebook titles, UUIDs, or asset names."
+        ],
+        "persistence": {
+          "scope_key": "source_id",
+          "max_auto_entries_per_source": 1,
+          "when_source_exists": "reuse_without_append_or_overwrite",
+          "excluded_flow": [
+            "artist_selection"
+          ]
+        }
+      }
+    }
+  },
+  "image+character_reference+outfit_reference": {
+    "schema": "asset-maid.character-analysis",
+    "version": 5,
+    "visual_profile_contract": {
+      "schema": "asset-maid.character-visual-profile",
+      "version": 1,
+      "fields": [
+        "basePromptGroups",
+        "defaultOutfit"
+      ],
+      "basePromptGroups": {
+        "keys": [
+          "identity.character_tag",
+          "hair.color",
+          "hair.length",
+          "hair.style",
+          "head.other",
+          "eyes.color",
+          "eyes.structure",
+          "body.skin",
+          "body.build",
+          "body.proportions",
+          "body.breast_size",
+          "marks.distinctive",
+          "nonhuman.features",
+          "custom"
+        ],
+        "values": "arrays of normalized English visual prompt tags",
+        "ownership": "persistent body and identity traits only"
+      },
+      "defaultOutfit": {
+        "fields": [
+          "name",
+          "head",
+          "top",
+          "bottom",
+          "legs",
+          "feet"
+        ],
+        "parts": [
+          "head",
+          "top",
+          "bottom",
+          "legs",
+          "feet"
+        ],
+        "ownership": "actual worn items only; use an empty string for an unworn part"
+      },
+      "exclude": "pose, expression, camera, background, lighting, and temporary state"
+    },
+    "derivation": {
+      "mode": "explicit_evidence_extraction",
+      "missing_visual_fact": "leave_empty_never_complete_from_nonvisual_context"
+    },
+    "policies": {
+      "tag_format": "novelai_space_separated",
+      "compiled_identity_format": "novelai_space_separated",
+      "unknown_group": "drop",
+      "invalid_tag": "drop",
+      "forbidden_section": "drop"
+    },
+    "profiles": {
+      "character_reference": {
+        "evidence_modes": [
+          "metadata",
+          "image"
+        ],
+        "outputs": [
+          "identity",
+          "artist"
+        ]
+      },
+      "outfit_reference": {
+        "evidence_modes": [
+          "metadata",
+          "image"
+        ],
+        "outputs": [
+          "outfit",
+          "artist"
+        ]
+      }
+    },
+    "sections": {
+      "identity": {
+        "version": 5,
+        "id": "character_main_prompt_analysis",
+        "required_policy": {
+          "group_key": "always_return_when_applicable",
+          "value": "select_when_explicit_or_directly_observable",
+          "unknown": "return_empty_array",
+          "inference": "forbidden_except_known_character_tag_identification"
+        },
+        "tag_format": {
+          "analysis": "novelai_space_separated",
+          "compiled_prompt": "space_separated",
+          "invalid_tag_policy": "drop"
+        },
+        "evidence_rules": {
+          "image": [
+            "For physical appearance, return only persistent traits clearly visible in the image. Only identity.character_tag may use the character identification policy.",
+            "Do not infer physical traits hidden by clothing or cropping; return an empty array for that group.",
+            "Do not return expressions, poses, camera, background, lighting, or clothing."
+          ]
+        },
+        "groups": [
+          {
+            "id": "identity.character_tag",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "single",
+              "required": false
+            },
+            "description": "For identity.character_tag only, you may use model knowledge to return at most one known existing Danbooru character tag when the designated evidence or scene context clearly identifies that character. Preserve an explicit metadata character tag when applicable. Omit the tag when uncertain, ambiguous, or newly invented. Never fabricate a tag by translating a name, substitute a merely similar character or the character being cosplayed, or return a standalone copyright, artist, or style tag. This permission does not authorize inferring unobserved appearance, clothing, gender, or form differences during evidence analysis; a character tag alone is not physical appearance evidence.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "hair.color",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": true,
+              "max_tags": 3
+            },
+            "description": "Return only persistent hair color and multicolor structure.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "hair.length",
+            "mode": "options",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "single",
+              "required": true
+            },
+            "description": "Return only one identifiable representative hair-length Danbooru tag.",
+            "options": [
+              {
+                "id": "bald",
+                "prompt": "bald"
+              },
+              {
+                "id": "very_short_hair",
+                "prompt": "very short hair"
+              },
+              {
+                "id": "short_hair",
+                "prompt": "short hair"
+              },
+              {
+                "id": "medium_hair",
+                "prompt": "medium hair"
+              },
+              {
+                "id": "long_hair",
+                "prompt": "long hair"
+              },
+              {
+                "id": "very_long_hair",
+                "prompt": "very long hair"
+              },
+              {
+                "id": "absurdly_long_hair",
+                "prompt": "absurdly long hair"
+              }
+            ]
+          },
+          {
+            "id": "hair.style",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only persistent hairstyles; exclude temporary states caused by wetness, wind, or hand movements.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "head.other",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only fixed head traits other than hair and eyes. Include horns, animal ears, pointy ears, antennae, and facial markings; exclude hats, glasses, and hair ornaments.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "eyes.color",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": true,
+              "max_tags": 2
+            },
+            "description": "Return only eye color. Put heterochromia in eyes.structure.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "eyes.structure",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return only persistent iris, pupil, and eye-count traits; exclude expressive eye states.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.skin",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return only persistent skin color; exclude lighting, blushing, and stains.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.build",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return the corresponding Danbooru tag only when overall body build is clear.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.proportions",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 3
+            },
+            "description": "Return only Danbooru tags for clear, persistent body proportions.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.breast_size",
+            "mode": "options",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "genders": [
+              "female"
+            ],
+            "selection": {
+              "type": "single",
+              "required": true
+            },
+            "description": "Select only one when the breasts are visible and their size can be clearly determined.",
+            "options": [
+              {
+                "id": "small_breasts",
+                "prompt": "small breasts"
+              },
+              {
+                "id": "medium_breasts",
+                "prompt": "medium breasts"
+              },
+              {
+                "id": "large_breasts",
+                "prompt": "large breasts"
+              },
+              {
+                "id": "huge_breasts",
+                "prompt": "huge breasts"
+              }
+            ]
+          },
+          {
+            "id": "marks.distinctive",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return persistent moles, freckles, scars, tattoos, and birthmarks on body parts other than the head.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "nonhuman.features",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only persistent nonhuman body structures outside the head, such as wings and tails.",
+            "allow_unlisted": true
+          }
+        ]
+      },
+      "outfit": {
+        "output_mode": "detailed_tags_and_short_phrases",
+        "language": "english",
+        "fields": {
+          "outfit_id": "short semantic snake_case id",
+          "source_asset_name": "exactly copied evidence asset name",
+          "label": "Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim.",
+          "keywords": "short scene-matching keywords, not generation prompt fragments",
+          "head": "detailed Danbooru-style tags and short English phrases for headwear and head accessories",
+          "top": "detailed Danbooru-style tags and short English phrases for upper-body clothing, outerwear, dresses and one-pieces",
+          "bottom": "detailed Danbooru-style tags and short English phrases for a separate skirt, pants or other lower garment",
+          "legs": "detailed Danbooru-style tags and short English phrases for hosiery, legwear and leg accessories",
+          "feet": "detailed Danbooru-style tags and short English phrases for footwear and foot accessories"
+        },
+        "rules": [
+          "Write head, top, bottom, legs, and feet as comma-separated combinations of concrete Danbooru-style English tags and short English phrases.",
+          "Preserve colors, materials, shapes, patterns, layers, and identifiable ornament relationships in detail, while avoiding verbose full sentences.",
+          "Do not infer outfit elements not confirmed by the evidence.",
+          "For done targets, generate exactly one outfit per summary in metadata mode or per input image in image mode. If the entire target is no_evidence, leave outfits empty and do not create empty observations or a default outfit.",
+          "Copy the summary's assetName or image's asset_name exactly to source_asset_name. Do not omit or duplicate sources, guess their correspondence by order, or invent new sources.",
+          "In text mode, generate exactly one outfit at the same level of detail as metadata and image modes when clothing is explicitly stated in the text; otherwise return an empty outfits array.",
+          "In text mode, always return an empty source_asset_name and do not reference images or assets.",
+          "Write outfit_id as a short, unique English snake_case identifier describing the outfit, such as green_bikini or white_summer_dress.",
+          "Do not use or copy filenames, paths, extensions, hashes, UUIDs, source_asset_name, or character names as outfit_id.",
+          "If there is no separate bottom garment, put dresses and one-piece dresses in top.",
+          "Build the label only from clothing features confirmed by the designated image, metadata, or text evidence. Do not complete missing design details or infer materials from ambiguous appearances. Write keywords to help later scene matching.",
+          "Return an empty string when a body part has no clothing.",
+          "Do not mix physical traits, poses, expressions, camera, background, lighting, or artist styles into outfit phrases."
+        ]
+      },
+      "artist": {
+        "output_mode": "combined_prompt_string",
+        "max_entries_per_result": 1,
+        "fields": {
+          "title": "short title derived from the strongest artist/style evidence",
+          "prompt": "one combined NovelAI artist/style/media/year/quality prompt string",
+          "negative_prompt": "artist-specific negative delta from the supplied artist_negative_candidate",
+          "source_asset_name": "exactly copied evidence asset name, or empty for text evidence"
+        },
+        "rules": [
+          "Return at most one combined artist_prompts entry.",
+          "Include only artist, style, media, year, and quality elements.",
+          "Preserve the artist prompt's tag order, numeric NovelAI emphasis, and opening/closing :: groups.",
+          "Always put exactly one space before the closing :: and correct only obvious aritst: typos to artist:.",
+          "In metadata and text modes, return only artist/style elements explicitly present in the evidence.",
+          "For metadata negative_prompt, use only artist/style/media/year/quality suppression tags stated in summary.artist_negative_candidate; do not reintroduce other original uc items.",
+          "In image and text modes, return an empty negative_prompt because no explicit negative evidence is available.",
+          "In image mode, use only visual artist/style evidence from the image; return an empty array when uncertain.",
+          "Do not infer artists or styles from filenames, character names, source IDs, lorebook titles, UUIDs, or asset names."
+        ],
+        "persistence": {
+          "scope_key": "source_id",
+          "max_auto_entries_per_source": 1,
+          "when_source_exists": "reuse_without_append_or_overwrite",
+          "excluded_flow": [
+            "artist_selection"
+          ]
+        }
+      }
+    }
+  },
+  "metadata+character_reference+outfit_reference": {
+    "schema": "asset-maid.character-analysis",
+    "version": 5,
+    "visual_profile_contract": {
+      "schema": "asset-maid.character-visual-profile",
+      "version": 1,
+      "fields": [
+        "basePromptGroups",
+        "defaultOutfit"
+      ],
+      "basePromptGroups": {
+        "keys": [
+          "identity.character_tag",
+          "hair.color",
+          "hair.length",
+          "hair.style",
+          "head.other",
+          "eyes.color",
+          "eyes.structure",
+          "body.skin",
+          "body.build",
+          "body.proportions",
+          "body.breast_size",
+          "marks.distinctive",
+          "nonhuman.features",
+          "custom"
+        ],
+        "values": "arrays of normalized English visual prompt tags",
+        "ownership": "persistent body and identity traits only"
+      },
+      "defaultOutfit": {
+        "fields": [
+          "name",
+          "head",
+          "top",
+          "bottom",
+          "legs",
+          "feet"
+        ],
+        "parts": [
+          "head",
+          "top",
+          "bottom",
+          "legs",
+          "feet"
+        ],
+        "ownership": "actual worn items only; use an empty string for an unworn part"
+      },
+      "exclude": "pose, expression, camera, background, lighting, and temporary state"
+    },
+    "derivation": {
+      "mode": "explicit_evidence_extraction",
+      "missing_visual_fact": "leave_empty_never_complete_from_nonvisual_context"
+    },
+    "policies": {
+      "tag_format": "novelai_space_separated",
+      "compiled_identity_format": "novelai_space_separated",
+      "unknown_group": "drop",
+      "invalid_tag": "drop",
+      "forbidden_section": "drop"
+    },
+    "profiles": {
+      "character_reference": {
+        "evidence_modes": [
+          "metadata",
+          "image"
+        ],
+        "outputs": [
+          "identity",
+          "artist"
+        ]
+      },
+      "outfit_reference": {
+        "evidence_modes": [
+          "metadata",
+          "image"
+        ],
+        "outputs": [
+          "outfit",
+          "artist"
+        ]
+      }
+    },
+    "sections": {
+      "identity": {
+        "version": 5,
+        "id": "character_main_prompt_analysis",
+        "required_policy": {
+          "group_key": "always_return_when_applicable",
+          "value": "select_when_explicit_or_directly_observable",
+          "unknown": "return_empty_array",
+          "inference": "forbidden_except_known_character_tag_identification"
+        },
+        "tag_format": {
+          "analysis": "novelai_space_separated",
+          "compiled_prompt": "space_separated",
+          "invalid_tag_policy": "drop"
+        },
+        "evidence_rules": {
+          "metadata": [
+            "Return only tags explicitly present in the selected metadata prompt or charCaptions.",
+            "Do not supplement visual traits from filenames, character names, or external knowledge. Only identity.character_tag may use the character identification policy."
+          ]
+        },
+        "groups": [
+          {
+            "id": "identity.character_tag",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "single",
+              "required": false
+            },
+            "description": "For identity.character_tag only, you may use model knowledge to return at most one known existing Danbooru character tag when the designated evidence or scene context clearly identifies that character. Preserve an explicit metadata character tag when applicable. Omit the tag when uncertain, ambiguous, or newly invented. Never fabricate a tag by translating a name, substitute a merely similar character or the character being cosplayed, or return a standalone copyright, artist, or style tag. This permission does not authorize inferring unobserved appearance, clothing, gender, or form differences during evidence analysis; a character tag alone is not physical appearance evidence.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "hair.color",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": true,
+              "max_tags": 3
+            },
+            "description": "Return only persistent hair color and multicolor structure.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "hair.length",
+            "mode": "options",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "single",
+              "required": true
+            },
+            "description": "Return only one identifiable representative hair-length Danbooru tag.",
+            "options": [
+              {
+                "id": "bald",
+                "prompt": "bald"
+              },
+              {
+                "id": "very_short_hair",
+                "prompt": "very short hair"
+              },
+              {
+                "id": "short_hair",
+                "prompt": "short hair"
+              },
+              {
+                "id": "medium_hair",
+                "prompt": "medium hair"
+              },
+              {
+                "id": "long_hair",
+                "prompt": "long hair"
+              },
+              {
+                "id": "very_long_hair",
+                "prompt": "very long hair"
+              },
+              {
+                "id": "absurdly_long_hair",
+                "prompt": "absurdly long hair"
+              }
+            ]
+          },
+          {
+            "id": "hair.style",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only persistent hairstyles; exclude temporary states caused by wetness, wind, or hand movements.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "head.other",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only fixed head traits other than hair and eyes. Include horns, animal ears, pointy ears, antennae, and facial markings; exclude hats, glasses, and hair ornaments.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "eyes.color",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": true,
+              "max_tags": 2
+            },
+            "description": "Return only eye color. Put heterochromia in eyes.structure.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "eyes.structure",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return only persistent iris, pupil, and eye-count traits; exclude expressive eye states.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.skin",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return only persistent skin color; exclude lighting, blushing, and stains.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.build",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 2
+            },
+            "description": "Return the corresponding Danbooru tag only when overall body build is clear.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.proportions",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 3
+            },
+            "description": "Return only Danbooru tags for clear, persistent body proportions.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "body.breast_size",
+            "mode": "options",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "genders": [
+              "female"
+            ],
+            "selection": {
+              "type": "single",
+              "required": true
+            },
+            "description": "Select only one when the breasts are visible and their size can be clearly determined.",
+            "options": [
+              {
+                "id": "small_breasts",
+                "prompt": "small breasts"
+              },
+              {
+                "id": "medium_breasts",
+                "prompt": "medium breasts"
+              },
+              {
+                "id": "large_breasts",
+                "prompt": "large breasts"
+              },
+              {
+                "id": "huge_breasts",
+                "prompt": "huge breasts"
+              },
+              {
+                "id": "gigantic_breasts",
+                "prompt": "gigantic breasts"
+              }
+            ]
+          },
+          {
+            "id": "marks.distinctive",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return persistent moles, freckles, scars, tattoos, and birthmarks on body parts other than the head.",
+            "allow_unlisted": true
+          },
+          {
+            "id": "nonhuman.features",
+            "mode": "freeform",
+            "evidence_modes": [
+              "metadata",
+              "image",
+              "text"
+            ],
+            "selection": {
+              "type": "multi",
+              "required": false,
+              "max_tags": 4
+            },
+            "description": "Return only persistent nonhuman body structures outside the head, such as wings and tails.",
+            "allow_unlisted": true
+          }
+        ]
+      },
+      "outfit": {
+        "output_mode": "detailed_tags_and_short_phrases",
+        "language": "english",
+        "fields": {
+          "outfit_id": "short semantic snake_case id",
+          "source_asset_name": "exactly copied evidence asset name",
+          "label": "Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim.",
+          "keywords": "short scene-matching keywords, not generation prompt fragments",
+          "head": "detailed Danbooru-style tags and short English phrases for headwear and head accessories",
+          "top": "detailed Danbooru-style tags and short English phrases for upper-body clothing, outerwear, dresses and one-pieces",
+          "bottom": "detailed Danbooru-style tags and short English phrases for a separate skirt, pants or other lower garment",
+          "legs": "detailed Danbooru-style tags and short English phrases for hosiery, legwear and leg accessories",
+          "feet": "detailed Danbooru-style tags and short English phrases for footwear and foot accessories"
+        },
+        "rules": [
+          "Write head, top, bottom, legs, and feet as comma-separated combinations of concrete Danbooru-style English tags and short English phrases.",
+          "Preserve colors, materials, shapes, patterns, layers, and identifiable ornament relationships in detail, while avoiding verbose full sentences.",
+          "Do not infer outfit elements not confirmed by the evidence.",
+          "For done targets, generate exactly one outfit per summary in metadata mode or per input image in image mode. If the entire target is no_evidence, leave outfits empty and do not create empty observations or a default outfit.",
+          "Copy the summary's assetName or image's asset_name exactly to source_asset_name. Do not omit or duplicate sources, guess their correspondence by order, or invent new sources.",
+          "In text mode, generate exactly one outfit at the same level of detail as metadata and image modes when clothing is explicitly stated in the text; otherwise return an empty outfits array.",
+          "In text mode, always return an empty source_asset_name and do not reference images or assets.",
+          "Write outfit_id as a short, unique English snake_case identifier describing the outfit, such as green_bikini or white_summer_dress.",
+          "Do not use or copy filenames, paths, extensions, hashes, UUIDs, source_asset_name, or character names as outfit_id.",
+          "If there is no separate bottom garment, put dresses and one-piece dresses in top.",
+          "Build the label only from clothing features confirmed by the designated image, metadata, or text evidence. Do not complete missing design details or infer materials from ambiguous appearances. Write keywords to help later scene matching.",
+          "Return an empty string when a body part has no clothing.",
+          "Do not mix physical traits, poses, expressions, camera, background, lighting, or artist styles into outfit phrases."
+        ]
+      },
+      "artist": {
+        "output_mode": "combined_prompt_string",
+        "max_entries_per_result": 1,
+        "fields": {
+          "title": "short title derived from the strongest artist/style evidence",
+          "prompt": "one combined NovelAI artist/style/media/year/quality prompt string",
+          "negative_prompt": "artist-specific negative delta from the supplied artist_negative_candidate",
+          "source_asset_name": "exactly copied evidence asset name, or empty for text evidence"
+        },
+        "rules": [
+          "Return at most one combined artist_prompts entry.",
+          "Include only artist, style, media, year, and quality elements.",
+          "Preserve the artist prompt's tag order, numeric NovelAI emphasis, and opening/closing :: groups.",
+          "Always put exactly one space before the closing :: and correct only obvious aritst: typos to artist:.",
+          "In metadata and text modes, return only artist/style elements explicitly present in the evidence.",
+          "For metadata negative_prompt, use only artist/style/media/year/quality suppression tags stated in summary.artist_negative_candidate; do not reintroduce other original uc items.",
+          "In image and text modes, return an empty negative_prompt because no explicit negative evidence is available.",
+          "In image mode, use only visual artist/style evidence from the image; return an empty array when uncertain.",
+          "Do not infer artists or styles from filenames, character names, source IDs, lorebook titles, UUIDs, or asset names."
+        ],
+        "persistence": {
+          "scope_key": "source_id",
+          "max_auto_entries_per_source": 1,
+          "when_source_exists": "reuse_without_append_or_overwrite",
+          "excluded_flow": [
+            "artist_selection"
+          ]
+        }
+      }
+    }
+  }
+}

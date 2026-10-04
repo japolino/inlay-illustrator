@@ -1,0 +1,47 @@
+{
+  "schema": "asset-maid.character-visual-profile",
+  "version": 1,
+  "fields": [
+    "basePromptGroups",
+    "defaultOutfit"
+  ],
+  "basePromptGroups": {
+    "keys": [
+      "identity.character_tag",
+      "hair.color",
+      "hair.length",
+      "hair.style",
+      "head.other",
+      "eyes.color",
+      "eyes.structure",
+      "body.skin",
+      "body.build",
+      "body.proportions",
+      "body.breast_size",
+      "marks.distinctive",
+      "nonhuman.features",
+      "custom"
+    ],
+    "values": "arrays of normalized English visual prompt tags",
+    "ownership": "persistent body and identity traits only"
+  },
+  "defaultOutfit": {
+    "fields": [
+      "name",
+      "head",
+      "top",
+      "bottom",
+      "legs",
+      "feet"
+    ],
+    "parts": [
+      "head",
+      "top",
+      "bottom",
+      "legs",
+      "feet"
+    ],
+    "ownership": "actual worn items only; use an empty string for an unworn part"
+  },
+  "exclude": "pose, expression, camera, background, lighting, and temporary state"
+}

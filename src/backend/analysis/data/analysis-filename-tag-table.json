@@ -1,0 +1,10645 @@
+{
+ "source": "AssetMaid.pretty.js lines 88607-89537 (znt) and 89538-89705 (Sfe)",
+ "rawRows": [
+  [
+   "2boys",
+   "scene",
+   "exclude"
+  ],
+  [
+   "2girls",
+   "scene",
+   "exclude"
+  ],
+  [
+   "3boys",
+   "scene",
+   "exclude"
+  ],
+  [
+   "3d",
+   "composition",
+   "keep"
+  ],
+  [
+   "3girls",
+   "scene",
+   "exclude"
+  ],
+  [
+   "4boys",
+   "scene",
+   "exclude"
+  ],
+  [
+   "4girls",
+   "scene",
+   "exclude"
+  ],
+  [
+   "69",
+   "scene",
+   "exclude"
+  ],
+  [
+   "a-pose",
+   "pose",
+   "prefer"
+  ],
+  [
+   "abstract",
+   "composition",
+   "keep"
+  ],
+  [
+   "abstract_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "affectionate",
+   "emotion",
+   "keep"
+  ],
+  [
+   "afterimage",
+   "composition",
+   "keep"
+  ],
+  [
+   "ahegao",
+   "emotion",
+   "keep",
+   "아헤가오"
+  ],
+  [
+   "akanbe",
+   "emotion",
+   "keep"
+  ],
+  [
+   "all_fours",
+   "pose",
+   "caution"
+  ],
+  [
+   "amazon_position",
+   "scene",
+   "exclude"
+  ],
+  [
+   "american_flag_bikini",
+   "outfit",
+   "keep"
+  ],
+  [
+   "amesuku_gyaru",
+   "outfit",
+   "keep"
+  ],
+  [
+   "amused",
+   "emotion",
+   "keep"
+  ],
+  [
+   "anal",
+   "scene",
+   "exclude"
+  ],
+  [
+   "anal_beads",
+   "scene",
+   "exclude"
+  ],
+  [
+   "anal_fingering",
+   "scene",
+   "exclude"
+  ],
+  [
+   "anal_object_insertion",
+   "scene",
+   "exclude"
+  ],
+  [
+   "anal_tail",
+   "scene",
+   "exclude"
+  ],
+  [
+   "angry",
+   "emotion",
+   "keep",
+   "anger",
+   "분노",
+   "화남",
+   "怒り",
+   "愤怒"
+  ],
+  [
+   "anilingus",
+   "scene",
+   "exclude"
+  ],
+  [
+   "animal_focus",
+   "composition",
+   "keep"
+  ],
+  [
+   "annoyed",
+   "emotion",
+   "keep"
+  ],
+  [
+   "aqua_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "aqua_eyes",
+   "context",
+   "keep"
+  ],
+  [
+   "aqua_hair",
+   "context",
+   "keep"
+  ],
+  [
+   "aqua_pants",
+   "outfit",
+   "keep"
+  ],
+  [
+   "aqua_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "arabian_clothes",
+   "outfit",
+   "keep"
+  ],
+  [
+   "aran_sweater",
+   "outfit",
+   "keep"
+  ],
+  [
+   "arched_back",
+   "pose",
+   "caution"
+  ],
+  [
+   "argyle_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "aristocratic_clothes",
+   "outfit",
+   "keep"
+  ],
+  [
+   "arm_behind_back",
+   "pose",
+   "caution"
+  ],
+  [
+   "arm_behind_head",
+   "pose",
+   "caution"
+  ],
+  [
+   "arm_between_breasts",
+   "pose",
+   "caution"
+  ],
+  [
+   "arm_support",
+   "pose",
+   "caution"
+  ],
+  [
+   "armor",
+   "outfit",
+   "keep",
+   "armour",
+   "갑옷"
+  ],
+  [
+   "armored_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "armpit_focus",
+   "composition",
+   "caution"
+  ],
+  [
+   "armpit_sex",
+   "scene",
+   "exclude"
+  ],
+  [
+   "arms_behind_back",
+   "pose",
+   "caution"
+  ],
+  [
+   "arms_under_breasts",
+   "pose",
+   "caution"
+  ],
+  [
+   "aroused",
+   "emotion",
+   "keep"
+  ],
+  [
+   "artificial_vagina",
+   "scene",
+   "exclude"
+  ],
+  [
+   "asa_no_ha_(pattern)",
+   "composition",
+   "keep"
+  ],
+  [
+   "ass_focus",
+   "composition",
+   "caution"
+  ],
+  [
+   "asset",
+   "context",
+   "keep"
+  ],
+  [
+   "astonished",
+   "emotion",
+   "keep"
+  ],
+  [
+   "asymmetrical_pants",
+   "outfit",
+   "keep"
+  ],
+  [
+   "awestruck",
+   "emotion",
+   "keep"
+  ],
+  [
+   "awkward",
+   "emotion",
+   "keep"
+  ],
+  [
+   "back_focus",
+   "composition",
+   "caution"
+  ],
+  [
+   "back_view",
+   "pose",
+   "caution"
+  ],
+  [
+   "background",
+   "scene",
+   "exclude"
+  ],
+  [
+   "backgroundless",
+   "composition",
+   "keep"
+  ],
+  [
+   "backless_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "backless_leotard",
+   "outfit",
+   "keep"
+  ],
+  [
+   "backless_outfit",
+   "outfit",
+   "keep"
+  ],
+  [
+   "backless_swimsuit",
+   "outfit",
+   "keep"
+  ],
+  [
+   "backlighting",
+   "composition",
+   "keep"
+  ],
+  [
+   "bad_anatomy",
+   "composition",
+   "keep"
+  ],
+  [
+   "ball_gag",
+   "scene",
+   "exclude"
+  ],
+  [
+   "banner",
+   "scene",
+   "exclude"
+  ],
+  [
+   "base",
+   "marker",
+   "keep"
+  ],
+  [
+   "baseball_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "bashful",
+   "emotion",
+   "keep"
+  ],
+  [
+   "basic",
+   "marker",
+   "keep"
+  ],
+  [
+   "basketball_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "bdsm",
+   "scene",
+   "exclude"
+  ],
+  [
+   "bent_over",
+   "pose",
+   "caution"
+  ],
+  [
+   "bestiality",
+   "scene",
+   "exclude"
+  ],
+  [
+   "between_legs",
+   "pose",
+   "caution"
+  ],
+  [
+   "bike_shorts",
+   "outfit",
+   "keep"
+  ],
+  [
+   "bikini",
+   "outfit",
+   "keep",
+   "비키니"
+  ],
+  [
+   "bikini_armor",
+   "outfit",
+   "keep"
+  ],
+  [
+   "biting_own_lip",
+   "emotion",
+   "keep"
+  ],
+  [
+   "black_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "black_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "black_eyes",
+   "context",
+   "keep"
+  ],
+  [
+   "black_hair",
+   "context",
+   "keep"
+  ],
+  [
+   "black_hanfu",
+   "outfit",
+   "keep"
+  ],
+  [
+   "black_serafuku",
+   "outfit",
+   "keep"
+  ],
+  [
+   "black_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "black_tears",
+   "emotion",
+   "keep"
+  ],
+  [
+   "blackout",
+   "scene",
+   "exclude"
+  ],
+  [
+   "blank_stare",
+   "emotion",
+   "keep"
+  ],
+  [
+   "blonde_hair",
+   "context",
+   "keep"
+  ],
+  [
+   "blouse",
+   "outfit",
+   "keep"
+  ],
+  [
+   "blue_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "blue_eyes",
+   "context",
+   "keep"
+  ],
+  [
+   "blue_hair",
+   "context",
+   "keep"
+  ],
+  [
+   "blue_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "blush",
+   "emotion",
+   "keep",
+   "blushing",
+   "홍조"
+  ],
+  [
+   "blush_stickers",
+   "emotion",
+   "keep"
+  ],
+  [
+   "body_blush",
+   "emotion",
+   "keep"
+  ],
+  [
+   "bokeh",
+   "composition",
+   "keep"
+  ],
+  [
+   "bondage",
+   "scene",
+   "exclude"
+  ],
+  [
+   "border",
+   "composition",
+   "keep"
+  ],
+  [
+   "borderless_panels",
+   "composition",
+   "keep"
+  ],
+  [
+   "bored",
+   "emotion",
+   "keep"
+  ],
+  [
+   "bottomless",
+   "clothing-state",
+   "exclude"
+  ],
+  [
+   "bound_ankles",
+   "scene",
+   "exclude"
+  ],
+  [
+   "bound_arms",
+   "scene",
+   "exclude"
+  ],
+  [
+   "bound_legs",
+   "scene",
+   "exclude"
+  ],
+  [
+   "bound_thighs",
+   "scene",
+   "exclude"
+  ],
+  [
+   "bound_together",
+   "scene",
+   "exclude"
+  ],
+  [
+   "bound_torso",
+   "scene",
+   "exclude"
+  ],
+  [
+   "bound_wrists",
+   "scene",
+   "exclude"
+  ],
+  [
+   "bowlegged_pose",
+   "pose",
+   "caution"
+  ],
+  [
+   "bra",
+   "outfit",
+   "keep"
+  ],
+  [
+   "breast_sucking",
+   "scene",
+   "exclude"
+  ],
+  [
+   "bridal",
+   "outfit",
+   "keep"
+  ],
+  [
+   "brown_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "brown_eyes",
+   "context",
+   "keep"
+  ],
+  [
+   "brown_hair",
+   "context",
+   "keep"
+  ],
+  [
+   "brown_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "bubble_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "bukkake",
+   "scene",
+   "exclude"
+  ],
+  [
+   "business",
+   "outfit",
+   "keep"
+  ],
+  [
+   "butt_plug",
+   "scene",
+   "exclude"
+  ],
+  [
+   "butterfly_sitting",
+   "pose",
+   "caution"
+  ],
+  [
+   "buttjob",
+   "scene",
+   "exclude"
+  ],
+  [
+   "calm",
+   "emotion",
+   "keep"
+  ],
+  [
+   "cape",
+   "outfit",
+   "keep"
+  ],
+  [
+   "capri_pants",
+   "outfit",
+   "keep"
+  ],
+  [
+   "cardigan",
+   "outfit",
+   "keep"
+  ],
+  [
+   "caressing_testicles",
+   "scene",
+   "exclude"
+  ],
+  [
+   "casual",
+   "outfit",
+   "keep",
+   "캐주얼"
+  ],
+  [
+   "casualwear",
+   "outfit",
+   "keep"
+  ],
+  [
+   "caustics",
+   "composition",
+   "keep"
+  ],
+  [
+   "censored",
+   "context",
+   "caution"
+  ],
+  [
+   "char",
+   "context",
+   "keep"
+  ],
+  [
+   "character",
+   "context",
+   "keep"
+  ],
+  [
+   "chart",
+   "composition",
+   "keep"
+  ],
+  [
+   "checkered_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "child_carry",
+   "pose",
+   "caution"
+  ],
+  [
+   "chinese_clothes",
+   "outfit",
+   "keep"
+  ],
+  [
+   "circle_formation",
+   "pose",
+   "caution"
+  ],
+  [
+   "classic_lolita",
+   "outfit",
+   "keep"
+  ],
+  [
+   "claw_pose",
+   "pose",
+   "caution"
+  ],
+  [
+   "clenched_hand",
+   "pose",
+   "caution"
+  ],
+  [
+   "clenched_hands",
+   "pose",
+   "caution"
+  ],
+  [
+   "clenched_teeth",
+   "emotion",
+   "keep"
+  ],
+  [
+   "clitoral_stimulation",
+   "scene",
+   "exclude"
+  ],
+  [
+   "close-up",
+   "composition",
+   "caution",
+   "closeup"
+  ],
+  [
+   "closed_eyes",
+   "emotion",
+   "keep"
+  ],
+  [
+   "closed_mouth",
+   "emotion",
+   "keep"
+  ],
+  [
+   "clothed_sex",
+   "scene",
+   "exclude"
+  ],
+  [
+   "clothes",
+   "outfit",
+   "keep"
+  ],
+  [
+   "clothes_lift",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "clothing",
+   "outfit",
+   "keep"
+  ],
+  [
+   "clothing_aside",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "clueless",
+   "emotion",
+   "keep"
+  ],
+  [
+   "coat",
+   "outfit",
+   "keep"
+  ],
+  [
+   "cocked_eyebrow",
+   "emotion",
+   "keep"
+  ],
+  [
+   "cocktail_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "collage",
+   "composition",
+   "keep"
+  ],
+  [
+   "collared_jacket",
+   "outfit",
+   "keep"
+  ],
+  [
+   "column_lineup",
+   "composition",
+   "keep"
+  ],
+  [
+   "comic",
+   "composition",
+   "keep"
+  ],
+  [
+   "completely_nude",
+   "clothing-state",
+   "exclude"
+  ],
+  [
+   "compression_shirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "concentrating",
+   "emotion",
+   "keep"
+  ],
+  [
+   "confident",
+   "emotion",
+   "keep"
+  ],
+  [
+   "confused",
+   "emotion",
+   "keep"
+  ],
+  [
+   "content",
+   "emotion",
+   "keep"
+  ],
+  [
+   "contented",
+   "emotion",
+   "keep"
+  ],
+  [
+   "contrapposto",
+   "pose",
+   "caution"
+  ],
+  [
+   "copy",
+   "context",
+   "keep"
+  ],
+  [
+   "corset",
+   "outfit",
+   "keep"
+  ],
+  [
+   "costume",
+   "outfit",
+   "keep"
+  ],
+  [
+   "covering_face",
+   "pose",
+   "caution"
+  ],
+  [
+   "covering_own_mouth",
+   "pose",
+   "caution"
+  ],
+  [
+   "cowboy_shot",
+   "composition",
+   "keep"
+  ],
+  [
+   "cowgirl",
+   "pose",
+   "caution"
+  ],
+  [
+   "cowgirl_position",
+   "scene",
+   "exclude",
+   "기승위",
+   "騎乗位",
+   "骑乘位"
+  ],
+  [
+   "crazy_grin",
+   "emotion",
+   "keep"
+  ],
+  [
+   "crazy_smile",
+   "emotion",
+   "keep"
+  ],
+  [
+   "creampie",
+   "scene",
+   "exclude"
+  ],
+  [
+   "cropped_arms",
+   "composition",
+   "caution"
+  ],
+  [
+   "cropped_head",
+   "composition",
+   "caution"
+  ],
+  [
+   "cropped_jacket",
+   "outfit",
+   "keep"
+  ],
+  [
+   "cropped_legs",
+   "composition",
+   "caution"
+  ],
+  [
+   "cropped_shoulders",
+   "composition",
+   "caution"
+  ],
+  [
+   "cropped_torso",
+   "composition",
+   "caution"
+  ],
+  [
+   "cross-laced_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "cross-laced_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "crossed_ankles",
+   "pose",
+   "caution"
+  ],
+  [
+   "crossed_arms",
+   "pose",
+   "caution"
+  ],
+  [
+   "crossed_legs",
+   "pose",
+   "caution"
+  ],
+  [
+   "crotch_rope",
+   "scene",
+   "exclude"
+  ],
+  [
+   "crotch_rub",
+   "scene",
+   "exclude"
+  ],
+  [
+   "crouching",
+   "pose",
+   "caution"
+  ],
+  [
+   "crying",
+   "emotion",
+   "keep",
+   "cry",
+   "울음",
+   "우는",
+   "泣く",
+   "哭泣"
+  ],
+  [
+   "crying_with_eyes_open",
+   "emotion",
+   "keep"
+  ],
+  [
+   "cum_in_pussy",
+   "scene",
+   "exclude"
+  ],
+  [
+   "cumshot",
+   "scene",
+   "exclude"
+  ],
+  [
+   "cunnilingus",
+   "scene",
+   "exclude",
+   "커닐링구스"
+  ],
+  [
+   "curious",
+   "emotion",
+   "keep"
+  ],
+  [
+   "curled_fingers",
+   "pose",
+   "caution"
+  ],
+  [
+   "curled_up",
+   "pose",
+   "caution"
+  ],
+  [
+   "curtsey",
+   "pose",
+   "caution"
+  ],
+  [
+   "cyber_fashion",
+   "outfit",
+   "keep"
+  ],
+  [
+   "dailywear",
+   "outfit",
+   "keep"
+  ],
+  [
+   "dancing",
+   "pose",
+   "caution"
+  ],
+  [
+   "dazed",
+   "emotion",
+   "keep"
+  ],
+  [
+   "decora",
+   "outfit",
+   "keep"
+  ],
+  [
+   "deepthroat",
+   "scene",
+   "exclude"
+  ],
+  [
+   "default",
+   "marker",
+   "keep"
+  ],
+  [
+   "denim_shorts",
+   "outfit",
+   "keep"
+  ],
+  [
+   "depressed",
+   "emotion",
+   "keep"
+  ],
+  [
+   "depth_of_field",
+   "composition",
+   "keep"
+  ],
+  [
+   "despair",
+   "emotion",
+   "keep"
+  ],
+  [
+   "determined",
+   "emotion",
+   "keep"
+  ],
+  [
+   "diagonal-striped_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "different_reflection",
+   "composition",
+   "keep"
+  ],
+  [
+   "diffraction_spikes",
+   "composition",
+   "keep"
+  ],
+  [
+   "dildo",
+   "scene",
+   "exclude"
+  ],
+  [
+   "disappointed",
+   "emotion",
+   "keep"
+  ],
+  [
+   "disdain",
+   "emotion",
+   "keep"
+  ],
+  [
+   "disgust",
+   "emotion",
+   "keep",
+   "disgusted",
+   "혐오"
+  ],
+  [
+   "dogeza",
+   "pose",
+   "caution",
+   "도게자",
+   "土下座"
+  ],
+  [
+   "doggystyle",
+   "scene",
+   "exclude",
+   "doggy_style",
+   "후배위",
+   "後背位"
+  ],
+  [
+   "dolphin_shorts",
+   "outfit",
+   "keep"
+  ],
+  [
+   "double_fox_shadow_puppet",
+   "pose",
+   "caution"
+  ],
+  [
+   "double_handjob",
+   "scene",
+   "exclude"
+  ],
+  [
+   "double_v",
+   "pose",
+   "caution"
+  ],
+  [
+   "doyagao",
+   "emotion",
+   "keep"
+  ],
+  [
+   "dress",
+   "outfit",
+   "keep",
+   "드레스"
+  ],
+  [
+   "dress_lift",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "dress_pull",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "dress_shirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "drooling",
+   "emotion",
+   "keep"
+  ],
+  [
+   "drop_shadow",
+   "composition",
+   "keep"
+  ],
+  [
+   "dutch_angle",
+   "composition",
+   "keep"
+  ],
+  [
+   "ear_blush",
+   "emotion",
+   "keep"
+  ],
+  [
+   "edit",
+   "context",
+   "keep"
+  ],
+  [
+   "edited",
+   "context",
+   "keep"
+  ],
+  [
+   "egasumi",
+   "composition",
+   "keep"
+  ],
+  [
+   "elated",
+   "emotion",
+   "keep"
+  ],
+  [
+   "embarrassed",
+   "emotion",
+   "keep",
+   "부끄러움",
+   "당황"
+  ],
+  [
+   "embarrassment",
+   "emotion",
+   "keep"
+  ],
+  [
+   "emo_fashion",
+   "outfit",
+   "keep"
+  ],
+  [
+   "emoticon",
+   "emotion",
+   "keep"
+  ],
+  [
+   "emotion",
+   "context",
+   "keep"
+  ],
+  [
+   "ero",
+   "context",
+   "caution"
+  ],
+  [
+   "evening_gown",
+   "outfit",
+   "keep"
+  ],
+  [
+   "everyday",
+   "outfit",
+   "keep"
+  ],
+  [
+   "everyone",
+   "composition",
+   "keep"
+  ],
+  [
+   "evil_grin",
+   "emotion",
+   "keep"
+  ],
+  [
+   "evil_smile",
+   "emotion",
+   "keep"
+  ],
+  [
+   "excited",
+   "emotion",
+   "keep"
+  ],
+  [
+   "exhausted",
+   "emotion",
+   "keep"
+  ],
+  [
+   "expression",
+   "context",
+   "keep"
+  ],
+  [
+   "expressionless",
+   "emotion",
+   "keep",
+   "무표정"
+  ],
+  [
+   "eyelid_pull",
+   "emotion",
+   "keep"
+  ],
+  [
+   "eyes_out_of_frame",
+   "composition",
+   "caution"
+  ],
+  [
+   "face-to-face",
+   "pose",
+   "caution"
+  ],
+  [
+   "facing_down",
+   "pose",
+   "caution"
+  ],
+  [
+   "facing_up",
+   "pose",
+   "caution"
+  ],
+  [
+   "fake_magazine_cover",
+   "composition",
+   "keep"
+  ],
+  [
+   "fake_screenshot",
+   "composition",
+   "keep"
+  ],
+  [
+   "false_smile",
+   "emotion",
+   "keep"
+  ],
+  [
+   "fanning_self",
+   "pose",
+   "caution"
+  ],
+  [
+   "fashion",
+   "outfit",
+   "keep"
+  ],
+  [
+   "faux_figurine",
+   "composition",
+   "keep"
+  ],
+  [
+   "faux_traditional_media",
+   "composition",
+   "keep"
+  ],
+  [
+   "feet_out_of_frame",
+   "composition",
+   "caution"
+  ],
+  [
+   "fellatio",
+   "scene",
+   "exclude",
+   "blowjob",
+   "펠라치오"
+  ],
+  [
+   "fellatio_gesture",
+   "pose",
+   "caution"
+  ],
+  [
+   "femdom",
+   "scene",
+   "exclude"
+  ],
+  [
+   "fetal_position",
+   "pose",
+   "caution"
+  ],
+  [
+   "fighting_stance",
+   "pose",
+   "caution"
+  ],
+  [
+   "figure_four_sitting",
+   "pose",
+   "caution"
+  ],
+  [
+   "final",
+   "context",
+   "keep"
+  ],
+  [
+   "finger_counting",
+   "pose",
+   "caution"
+  ],
+  [
+   "finger_heart",
+   "pose",
+   "caution"
+  ],
+  [
+   "finger_to_mouth",
+   "pose",
+   "caution"
+  ],
+  [
+   "finger_to_own_chin",
+   "pose",
+   "caution"
+  ],
+  [
+   "fingering",
+   "scene",
+   "exclude"
+  ],
+  [
+   "fingering_through_clothes",
+   "scene",
+   "exclude"
+  ],
+  [
+   "fingering_through_panties",
+   "scene",
+   "exclude"
+  ],
+  [
+   "fisheye",
+   "composition",
+   "keep"
+  ],
+  [
+   "flak_jacket",
+   "outfit",
+   "keep"
+  ],
+  [
+   "flat_color",
+   "composition",
+   "keep"
+  ],
+  [
+   "flexible",
+   "pose",
+   "caution"
+  ],
+  [
+   "flustered",
+   "emotion",
+   "keep"
+  ],
+  [
+   "folded",
+   "pose",
+   "caution"
+  ],
+  [
+   "foot_out_of_frame",
+   "composition",
+   "caution"
+  ],
+  [
+   "footjob",
+   "scene",
+   "exclude"
+  ],
+  [
+   "footjob_with_legwear",
+   "scene",
+   "exclude"
+  ],
+  [
+   "forced_smile",
+   "emotion",
+   "keep"
+  ],
+  [
+   "forehead-to-forehead",
+   "pose",
+   "caution"
+  ],
+  [
+   "foreshortening",
+   "composition",
+   "keep"
+  ],
+  [
+   "formal",
+   "outfit",
+   "keep"
+  ],
+  [
+   "formal_clothes",
+   "outfit",
+   "keep"
+  ],
+  [
+   "foursome",
+   "scene",
+   "exclude"
+  ],
+  [
+   "fox_shadow_puppet",
+   "pose",
+   "caution"
+  ],
+  [
+   "frogtie",
+   "scene",
+   "exclude"
+  ],
+  [
+   "from_above",
+   "composition",
+   "keep"
+  ],
+  [
+   "from_behind",
+   "composition",
+   "caution"
+  ],
+  [
+   "from_below",
+   "composition",
+   "keep"
+  ],
+  [
+   "frottage",
+   "scene",
+   "exclude"
+  ],
+  [
+   "frown",
+   "emotion",
+   "keep",
+   "frowning"
+  ],
+  [
+   "frustrated",
+   "emotion",
+   "keep"
+  ],
+  [
+   "fucked_silly",
+   "emotion",
+   "keep"
+  ],
+  [
+   "full-face_blush",
+   "emotion",
+   "keep"
+  ],
+  [
+   "full_body",
+   "composition",
+   "prefer",
+   "fullbody",
+   "전신"
+  ],
+  [
+   "full_nelson",
+   "pose",
+   "caution"
+  ],
+  [
+   "furious",
+   "emotion",
+   "keep"
+  ],
+  [
+   "furrowed_brow",
+   "emotion",
+   "keep"
+  ],
+  [
+   "gag",
+   "scene",
+   "exclude"
+  ],
+  [
+   "gag_harness",
+   "scene",
+   "exclude"
+  ],
+  [
+   "gakuran",
+   "outfit",
+   "keep"
+  ],
+  [
+   "game_screenshot_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "game_screenshot_inset",
+   "composition",
+   "keep"
+  ],
+  [
+   "gangbang",
+   "scene",
+   "exclude"
+  ],
+  [
+   "ganguro",
+   "outfit",
+   "keep"
+  ],
+  [
+   "gesugao",
+   "emotion",
+   "keep"
+  ],
+  [
+   "ghost_pose",
+   "pose",
+   "caution"
+  ],
+  [
+   "giggling",
+   "emotion",
+   "keep"
+  ],
+  [
+   "gingham_clothes",
+   "outfit",
+   "keep"
+  ],
+  [
+   "girl_on_top",
+   "pose",
+   "caution"
+  ],
+  [
+   "glaring",
+   "emotion",
+   "keep"
+  ],
+  [
+   "gloom_(expression)",
+   "emotion",
+   "keep"
+  ],
+  [
+   "goth_fashion",
+   "outfit",
+   "keep"
+  ],
+  [
+   "gothic",
+   "outfit",
+   "keep"
+  ],
+  [
+   "gothic_lolita",
+   "outfit",
+   "keep"
+  ],
+  [
+   "gothic_punk",
+   "outfit",
+   "keep"
+  ],
+  [
+   "gown",
+   "outfit",
+   "keep"
+  ],
+  [
+   "grabbing_another's_breast",
+   "scene",
+   "exclude"
+  ],
+  [
+   "grabbing_own_breast",
+   "scene",
+   "exclude"
+  ],
+  [
+   "gradient_kimono",
+   "outfit",
+   "keep"
+  ],
+  [
+   "green_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "green_eyes",
+   "context",
+   "keep"
+  ],
+  [
+   "green_hair",
+   "context",
+   "keep"
+  ],
+  [
+   "green_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "grey_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "grey_eyes",
+   "context",
+   "keep"
+  ],
+  [
+   "grey_hair",
+   "context",
+   "keep"
+  ],
+  [
+   "grey_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "grid_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "grimace",
+   "emotion",
+   "keep"
+  ],
+  [
+   "grin",
+   "emotion",
+   "keep",
+   "grinning"
+  ],
+  [
+   "groping",
+   "scene",
+   "exclude"
+  ],
+  [
+   "group_picture",
+   "scene",
+   "exclude"
+  ],
+  [
+   "group_sex",
+   "scene",
+   "exclude"
+  ],
+  [
+   "grumpy",
+   "emotion",
+   "keep"
+  ],
+  [
+   "guided_breast_grab",
+   "scene",
+   "exclude"
+  ],
+  [
+   "guilty",
+   "emotion",
+   "keep"
+  ],
+  [
+   "gyaru",
+   "outfit",
+   "keep"
+  ],
+  [
+   "gyaruo",
+   "outfit",
+   "keep"
+  ],
+  [
+   "gym",
+   "outfit",
+   "keep"
+  ],
+  [
+   "gym_shorts",
+   "outfit",
+   "keep"
+  ],
+  [
+   "gym_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "hairjob",
+   "scene",
+   "exclude"
+  ],
+  [
+   "halftone",
+   "composition",
+   "keep"
+  ],
+  [
+   "halter_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "hanbok",
+   "outfit",
+   "keep",
+   "한복"
+  ],
+  [
+   "hand_behind_head",
+   "pose",
+   "caution"
+  ],
+  [
+   "hand_in_pocket",
+   "pose",
+   "caution"
+  ],
+  [
+   "hand_on_another's_chest",
+   "pose",
+   "caution"
+  ],
+  [
+   "hand_on_another's_shoulder",
+   "pose",
+   "caution"
+  ],
+  [
+   "hand_on_own_ass",
+   "pose",
+   "caution"
+  ],
+  [
+   "hand_on_own_chest",
+   "pose",
+   "caution"
+  ],
+  [
+   "hand_on_own_hip",
+   "pose",
+   "caution"
+  ],
+  [
+   "hand_on_own_neck",
+   "pose",
+   "caution"
+  ],
+  [
+   "hand_on_own_stomach",
+   "pose",
+   "caution"
+  ],
+  [
+   "hand_on_own_thigh",
+   "pose",
+   "caution"
+  ],
+  [
+   "hand_to_own_mouth",
+   "pose",
+   "caution"
+  ],
+  [
+   "handjob",
+   "scene",
+   "exclude"
+  ],
+  [
+   "hands_in_pocket",
+   "pose",
+   "caution"
+  ],
+  [
+   "hands_in_pockets",
+   "pose",
+   "caution"
+  ],
+  [
+   "hands_on_another's_shoulders",
+   "pose",
+   "caution"
+  ],
+  [
+   "hands_on_lap",
+   "pose",
+   "caution"
+  ],
+  [
+   "hands_on_own_hips",
+   "pose",
+   "caution"
+  ],
+  [
+   "hands_on_own_legs",
+   "pose",
+   "caution"
+  ],
+  [
+   "hands_on_own_thighs",
+   "pose",
+   "caution"
+  ],
+  [
+   "hands_up",
+   "pose",
+   "caution"
+  ],
+  [
+   "handsfree_paizuri",
+   "scene",
+   "exclude"
+  ],
+  [
+   "handstand",
+   "pose",
+   "caution"
+  ],
+  [
+   "happy",
+   "emotion",
+   "keep",
+   "happiness",
+   "기쁨",
+   "행복",
+   "快乐"
+  ],
+  [
+   "happy_sex",
+   "scene",
+   "exclude"
+  ],
+  [
+   "happy_tears",
+   "emotion",
+   "keep"
+  ],
+  [
+   "harem_outfit",
+   "outfit",
+   "keep"
+  ],
+  [
+   "head_back",
+   "pose",
+   "caution"
+  ],
+  [
+   "head_down",
+   "pose",
+   "caution"
+  ],
+  [
+   "head_on_head",
+   "pose",
+   "caution"
+  ],
+  [
+   "head_only",
+   "composition",
+   "caution"
+  ],
+  [
+   "head_out_of_frame",
+   "composition",
+   "caution"
+  ],
+  [
+   "heads_together",
+   "pose",
+   "caution"
+  ],
+  [
+   "heart-shaped_boob_challenge",
+   "pose",
+   "caution"
+  ],
+  [
+   "heart_hands",
+   "pose",
+   "caution"
+  ],
+  [
+   "heart_hands_failure",
+   "pose",
+   "caution"
+  ],
+  [
+   "heart_tail",
+   "pose",
+   "caution"
+  ],
+  [
+   "heisei_retro",
+   "outfit",
+   "keep"
+  ],
+  [
+   "hentai",
+   "context",
+   "caution"
+  ],
+  [
+   "hiding",
+   "pose",
+   "caution"
+  ],
+  [
+   "high_contrast",
+   "composition",
+   "keep"
+  ],
+  [
+   "hogtie",
+   "scene",
+   "exclude"
+  ],
+  [
+   "holding_another's_leg",
+   "pose",
+   "caution"
+  ],
+  [
+   "holding_another's_legs",
+   "pose",
+   "caution"
+  ],
+  [
+   "holding_own_leg",
+   "pose",
+   "caution"
+  ],
+  [
+   "holding_own_legs_back",
+   "pose",
+   "caution"
+  ],
+  [
+   "hooded_cloak",
+   "outfit",
+   "keep"
+  ],
+  [
+   "hooded_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "hooded_jacket",
+   "outfit",
+   "keep"
+  ],
+  [
+   "hooded_sweater",
+   "outfit",
+   "keep"
+  ],
+  [
+   "hooded_track_jacket",
+   "outfit",
+   "keep"
+  ],
+  [
+   "hoodie",
+   "outfit",
+   "keep"
+  ],
+  [
+   "hopeful",
+   "emotion",
+   "keep"
+  ],
+  [
+   "horizon",
+   "composition",
+   "keep"
+  ],
+  [
+   "horrified",
+   "emotion",
+   "keep"
+  ],
+  [
+   "houndstooth",
+   "composition",
+   "keep"
+  ],
+  [
+   "hugging_own_legs",
+   "pose",
+   "caution"
+  ],
+  [
+   "icon",
+   "scene",
+   "exclude"
+  ],
+  [
+   "idle",
+   "pose",
+   "prefer"
+  ],
+  [
+   "image",
+   "context",
+   "keep"
+  ],
+  [
+   "img",
+   "context",
+   "keep"
+  ],
+  [
+   "implied_fellatio",
+   "scene",
+   "exclude"
+  ],
+  [
+   "implied_masturbation",
+   "scene",
+   "exclude"
+  ],
+  [
+   "impossible_shirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "index_finger_raised",
+   "pose",
+   "caution"
+  ],
+  [
+   "index_fingers_together",
+   "pose",
+   "caution"
+  ],
+  [
+   "indian_style",
+   "pose",
+   "caution"
+  ],
+  [
+   "indifferent",
+   "emotion",
+   "keep"
+  ],
+  [
+   "inset_border",
+   "composition",
+   "keep"
+  ],
+  [
+   "intercourse",
+   "scene",
+   "exclude"
+  ],
+  [
+   "invisible_chair",
+   "pose",
+   "caution"
+  ],
+  [
+   "isometric",
+   "composition",
+   "keep"
+  ],
+  [
+   "jacket",
+   "outfit",
+   "keep"
+  ],
+  [
+   "japanese_clothes",
+   "outfit",
+   "keep"
+  ],
+  [
+   "jealous",
+   "emotion",
+   "keep"
+  ],
+  [
+   "jeans",
+   "outfit",
+   "keep"
+  ],
+  [
+   "jersey_maid",
+   "outfit",
+   "keep"
+  ],
+  [
+   "jirai_kei",
+   "outfit",
+   "keep"
+  ],
+  [
+   "jojo_pose",
+   "pose",
+   "caution"
+  ],
+  [
+   "joyful",
+   "emotion",
+   "keep"
+  ],
+  [
+   "jumping",
+   "pose",
+   "caution"
+  ],
+  [
+   "kikkoumon",
+   "composition",
+   "keep"
+  ],
+  [
+   "kikumon",
+   "composition",
+   "keep"
+  ],
+  [
+   "kimono",
+   "outfit",
+   "keep",
+   "기모노"
+  ],
+  [
+   "kimono_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "kindergarten_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "knee_up",
+   "pose",
+   "caution"
+  ],
+  [
+   "kneeling",
+   "pose",
+   "caution",
+   "kneel"
+  ],
+  [
+   "knees",
+   "pose",
+   "caution"
+  ],
+  [
+   "knees_out_of_frame",
+   "composition",
+   "caution"
+  ],
+  [
+   "knees_together_feet_apart",
+   "pose",
+   "caution"
+  ],
+  [
+   "kogal",
+   "outfit",
+   "keep"
+  ],
+  [
+   "korean_clothes",
+   "outfit",
+   "keep"
+  ],
+  [
+   "kuji-in",
+   "pose",
+   "caution"
+  ],
+  [
+   "lace-trimmed_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "lace-trimmed_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "lace_panties",
+   "outfit",
+   "keep"
+  ],
+  [
+   "large_insertion",
+   "scene",
+   "exclude"
+  ],
+  [
+   "latex",
+   "outfit",
+   "keep"
+  ],
+  [
+   "laughing",
+   "emotion",
+   "keep",
+   "laugh",
+   "laughter",
+   "웃음"
+  ],
+  [
+   "layered_clothes",
+   "outfit",
+   "keep"
+  ],
+  [
+   "layered_kimono",
+   "outfit",
+   "keep"
+  ],
+  [
+   "leash",
+   "scene",
+   "exclude"
+  ],
+  [
+   "leather",
+   "outfit",
+   "keep"
+  ],
+  [
+   "leg_lift",
+   "pose",
+   "caution"
+  ],
+  [
+   "leg_lock",
+   "pose",
+   "caution"
+  ],
+  [
+   "legs",
+   "pose",
+   "caution"
+  ],
+  [
+   "legs_folded",
+   "pose",
+   "caution"
+  ],
+  [
+   "legs_over_head",
+   "pose",
+   "caution"
+  ],
+  [
+   "legs_together",
+   "pose",
+   "caution"
+  ],
+  [
+   "legs_up",
+   "pose",
+   "caution"
+  ],
+  [
+   "lens_flare",
+   "composition",
+   "keep"
+  ],
+  [
+   "letterboxed",
+   "composition",
+   "keep"
+  ],
+  [
+   "lewd",
+   "context",
+   "caution"
+  ],
+  [
+   "licking",
+   "emotion",
+   "keep"
+  ],
+  [
+   "licking_foot",
+   "scene",
+   "exclude"
+  ],
+  [
+   "licking_testicle",
+   "scene",
+   "exclude"
+  ],
+  [
+   "lifting_another's_clothes",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "lifting_own_clothes",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "light_blush",
+   "emotion",
+   "keep"
+  ],
+  [
+   "light_frown",
+   "emotion",
+   "keep"
+  ],
+  [
+   "light_smile",
+   "emotion",
+   "keep"
+  ],
+  [
+   "lineart",
+   "scene",
+   "exclude"
+  ],
+  [
+   "lineup",
+   "composition",
+   "keep"
+  ],
+  [
+   "load_bearing_vest",
+   "outfit",
+   "keep"
+  ],
+  [
+   "logo",
+   "scene",
+   "exclude"
+  ],
+  [
+   "lolita",
+   "outfit",
+   "keep"
+  ],
+  [
+   "lolita_fashion",
+   "outfit",
+   "keep"
+  ],
+  [
+   "lonely",
+   "emotion",
+   "keep"
+  ],
+  [
+   "long_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "long_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "looking_back",
+   "pose",
+   "caution"
+  ],
+  [
+   "looking_through_own_legs",
+   "pose",
+   "caution"
+  ],
+  [
+   "lovestruck",
+   "emotion",
+   "keep"
+  ],
+  [
+   "lower_body",
+   "composition",
+   "caution"
+  ],
+  [
+   "lowered_eyelids",
+   "emotion",
+   "keep"
+  ],
+  [
+   "lowleg_pants",
+   "outfit",
+   "keep"
+  ],
+  [
+   "lowleg_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "lying",
+   "pose",
+   "caution"
+  ],
+  [
+   "maid",
+   "outfit",
+   "keep",
+   "메이드",
+   "メイド"
+  ],
+  [
+   "maid_apron",
+   "outfit",
+   "keep"
+  ],
+  [
+   "male_maid",
+   "outfit",
+   "keep"
+  ],
+  [
+   "male_masturbation",
+   "scene",
+   "exclude"
+  ],
+  [
+   "map",
+   "scene",
+   "exclude"
+  ],
+  [
+   "masturbating",
+   "scene",
+   "exclude"
+  ],
+  [
+   "masturbation",
+   "scene",
+   "exclude"
+  ],
+  [
+   "masturbation_through_clothes",
+   "scene",
+   "exclude"
+  ],
+  [
+   "masturbation_under_clothes",
+   "scene",
+   "exclude"
+  ],
+  [
+   "mating_press",
+   "scene",
+   "exclude"
+  ],
+  [
+   "medium_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "meiji_schoolgirl_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "micro_bikini",
+   "outfit",
+   "keep"
+  ],
+  [
+   "micro_bra",
+   "outfit",
+   "keep"
+  ],
+  [
+   "micro_panties",
+   "outfit",
+   "keep"
+  ],
+  [
+   "micro_shorts",
+   "outfit",
+   "keep"
+  ],
+  [
+   "microdress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "middle_finger",
+   "pose",
+   "caution"
+  ],
+  [
+   "military",
+   "outfit",
+   "keep"
+  ],
+  [
+   "military_dress_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "military_jacket",
+   "outfit",
+   "keep"
+  ],
+  [
+   "military_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "mismatched_bikini",
+   "outfit",
+   "keep"
+  ],
+  [
+   "mismatched_eyebrows",
+   "emotion",
+   "keep"
+  ],
+  [
+   "missionary",
+   "scene",
+   "exclude",
+   "정상위"
+  ],
+  [
+   "mob_face",
+   "emotion",
+   "keep"
+  ],
+  [
+   "monochrome",
+   "composition",
+   "keep"
+  ],
+  [
+   "mosaic",
+   "context",
+   "caution"
+  ],
+  [
+   "mouth_insertion",
+   "scene",
+   "exclude"
+  ],
+  [
+   "multiple_boys",
+   "scene",
+   "exclude"
+  ],
+  [
+   "multiple_expressions",
+   "emotion",
+   "keep"
+  ],
+  [
+   "multiple_girls",
+   "scene",
+   "exclude"
+  ],
+  [
+   "multiple_monochrome",
+   "composition",
+   "keep"
+  ],
+  [
+   "mutual_masturbation",
+   "scene",
+   "exclude"
+  ],
+  [
+   "naked",
+   "clothing-state",
+   "exclude"
+  ],
+  [
+   "naked_dogeza",
+   "clothing-state",
+   "exclude"
+  ],
+  [
+   "nature",
+   "composition",
+   "keep"
+  ],
+  [
+   "naughty_face",
+   "emotion",
+   "keep"
+  ],
+  [
+   "naval_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "negative_space",
+   "composition",
+   "keep"
+  ],
+  [
+   "nervous",
+   "emotion",
+   "keep"
+  ],
+  [
+   "nervous_smile",
+   "emotion",
+   "keep"
+  ],
+  [
+   "nervous_sweating",
+   "emotion",
+   "keep"
+  ],
+  [
+   "neutral",
+   "emotion",
+   "keep"
+  ],
+  [
+   "nightgown",
+   "outfit",
+   "keep"
+  ],
+  [
+   "nipple_tweak",
+   "scene",
+   "exclude"
+  ],
+  [
+   "no_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "no_lineart",
+   "composition",
+   "keep"
+  ],
+  [
+   "no_mouth",
+   "emotion",
+   "keep"
+  ],
+  [
+   "normal",
+   "marker",
+   "keep"
+  ],
+  [
+   "nose_blush",
+   "emotion",
+   "keep"
+  ],
+  [
+   "nose_bubble",
+   "emotion",
+   "keep"
+  ],
+  [
+   "noses_touching",
+   "pose",
+   "caution"
+  ],
+  [
+   "nsfw",
+   "context",
+   "caution"
+  ],
+  [
+   "nude",
+   "clothing-state",
+   "exclude"
+  ],
+  [
+   "nun",
+   "outfit",
+   "keep"
+  ],
+  [
+   "nurse",
+   "outfit",
+   "keep"
+  ],
+  [
+   "nursing_handjob",
+   "scene",
+   "exclude"
+  ],
+  [
+   "o3o",
+   "emotion",
+   "keep"
+  ],
+  [
+   "object_focus",
+   "composition",
+   "caution"
+  ],
+  [
+   "object_insertion",
+   "scene",
+   "exclude"
+  ],
+  [
+   "off-shoulder_sweater",
+   "outfit",
+   "keep"
+  ],
+  [
+   "office",
+   "outfit",
+   "keep"
+  ],
+  [
+   "ojou-sama_pose",
+   "pose",
+   "caution"
+  ],
+  [
+   "ok_sign",
+   "pose",
+   "caution"
+  ],
+  [
+   "on_back",
+   "pose",
+   "caution"
+  ],
+  [
+   "on_one_knee",
+   "pose",
+   "caution"
+  ],
+  [
+   "on_side",
+   "pose",
+   "caution"
+  ],
+  [
+   "on_stomach",
+   "pose",
+   "caution"
+  ],
+  [
+   "one_eye_closed",
+   "emotion",
+   "keep"
+  ],
+  [
+   "open_clothes",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "open_hand",
+   "pose",
+   "caution"
+  ],
+  [
+   "open_hands",
+   "pose",
+   "caution"
+  ],
+  [
+   "open_mouth",
+   "emotion",
+   "keep"
+  ],
+  [
+   "open_pants",
+   "outfit",
+   "keep"
+  ],
+  [
+   "open_shirt",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "open_shorts",
+   "outfit",
+   "keep"
+  ],
+  [
+   "oral",
+   "context",
+   "caution"
+  ],
+  [
+   "orange_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "orange_eyes",
+   "context",
+   "keep"
+  ],
+  [
+   "orange_hair",
+   "context",
+   "keep"
+  ],
+  [
+   "orange_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "orgy",
+   "scene",
+   "exclude"
+  ],
+  [
+   "ornate_border",
+   "composition",
+   "keep"
+  ],
+  [
+   "other_focus",
+   "composition",
+   "keep"
+  ],
+  [
+   "ouji_fashion",
+   "outfit",
+   "keep"
+  ],
+  [
+   "out-of-frame_censoring",
+   "composition",
+   "keep"
+  ],
+  [
+   "out_of_frame",
+   "composition",
+   "caution"
+  ],
+  [
+   "outfit",
+   "outfit",
+   "keep"
+  ],
+  [
+   "outside_border",
+   "composition",
+   "keep"
+  ],
+  [
+   "overalls",
+   "outfit",
+   "keep"
+  ],
+  [
+   "oversized_shirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "paizuri",
+   "scene",
+   "exclude"
+  ],
+  [
+   "paizuri_under_clothes",
+   "scene",
+   "exclude"
+  ],
+  [
+   "pajamas",
+   "outfit",
+   "keep",
+   "pyjamas",
+   "잠옷"
+  ],
+  [
+   "palms_together",
+   "pose",
+   "caution"
+  ],
+  [
+   "panic",
+   "emotion",
+   "keep"
+  ],
+  [
+   "panicking",
+   "emotion",
+   "keep"
+  ],
+  [
+   "pant_suit",
+   "outfit",
+   "keep"
+  ],
+  [
+   "pants",
+   "outfit",
+   "keep",
+   "바지"
+  ],
+  [
+   "pantyshot",
+   "composition",
+   "caution"
+  ],
+  [
+   "paper_texture",
+   "composition",
+   "keep"
+  ],
+  [
+   "parted_lips",
+   "emotion",
+   "keep"
+  ],
+  [
+   "partially_removed_clothes",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "partially_underwater_shot",
+   "composition",
+   "keep"
+  ],
+  [
+   "paw_pose",
+   "pose",
+   "caution"
+  ],
+  [
+   "peeing",
+   "context",
+   "caution"
+  ],
+  [
+   "penetration",
+   "scene",
+   "exclude"
+  ],
+  [
+   "perspective",
+   "composition",
+   "keep"
+  ],
+  [
+   "pet_play",
+   "context",
+   "caution"
+  ],
+  [
+   "pigeon-toed",
+   "pose",
+   "caution"
+  ],
+  [
+   "piledriver_(sex)",
+   "scene",
+   "exclude"
+  ],
+  [
+   "piledriver_sex",
+   "scene",
+   "exclude"
+  ],
+  [
+   "pillarboxed",
+   "composition",
+   "keep"
+  ],
+  [
+   "pinafore_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "pink_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "pink_eyes",
+   "context",
+   "keep"
+  ],
+  [
+   "pink_hair",
+   "context",
+   "keep"
+  ],
+  [
+   "pink_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "pinky_out",
+   "pose",
+   "caution"
+  ],
+  [
+   "pinstripe_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "pinstripe_vest",
+   "outfit",
+   "keep"
+  ],
+  [
+   "pixelated",
+   "composition",
+   "keep"
+  ],
+  [
+   "plaid_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "pleading_eyes",
+   "emotion",
+   "keep"
+  ],
+  [
+   "pleated_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "pleated_shorts",
+   "outfit",
+   "keep"
+  ],
+  [
+   "pleated_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "pointing",
+   "pose",
+   "caution"
+  ],
+  [
+   "pointing_forward",
+   "pose",
+   "caution"
+  ],
+  [
+   "police",
+   "outfit",
+   "keep"
+  ],
+  [
+   "police_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "pornography",
+   "scene",
+   "exclude"
+  ],
+  [
+   "portrait",
+   "composition",
+   "caution"
+  ],
+  [
+   "posing",
+   "pose",
+   "caution"
+  ],
+  [
+   "pout",
+   "emotion",
+   "keep",
+   "pouting"
+  ],
+  [
+   "pov",
+   "composition",
+   "caution"
+  ],
+  [
+   "pov_hands",
+   "composition",
+   "caution"
+  ],
+  [
+   "profile",
+   "composition",
+   "caution"
+  ],
+  [
+   "projected_inset",
+   "composition",
+   "keep"
+  ],
+  [
+   "prone_bone",
+   "scene",
+   "exclude"
+  ],
+  [
+   "prostration",
+   "pose",
+   "caution"
+  ],
+  [
+   "proud",
+   "emotion",
+   "keep"
+  ],
+  [
+   "puffy_pants",
+   "outfit",
+   "keep"
+  ],
+  [
+   "punk",
+   "outfit",
+   "keep"
+  ],
+  [
+   "purple_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "purple_eyes",
+   "context",
+   "keep"
+  ],
+  [
+   "purple_hair",
+   "context",
+   "keep"
+  ],
+  [
+   "purple_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "pursed_lips",
+   "emotion",
+   "keep"
+  ],
+  [
+   "pussyjob",
+   "scene",
+   "exclude"
+  ],
+  [
+   "r18",
+   "context",
+   "caution"
+  ],
+  [
+   "r18g",
+   "context",
+   "caution"
+  ],
+  [
+   "raised_eyebrow",
+   "emotion",
+   "keep"
+  ],
+  [
+   "raised_eyebrows",
+   "emotion",
+   "keep"
+  ],
+  [
+   "raised_inner_eyebrows",
+   "emotion",
+   "keep"
+  ],
+  [
+   "rape",
+   "scene",
+   "exclude"
+  ],
+  [
+   "reach-around",
+   "scene",
+   "exclude"
+  ],
+  [
+   "reclining",
+   "pose",
+   "caution"
+  ],
+  [
+   "red_border",
+   "composition",
+   "keep"
+  ],
+  [
+   "red_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "red_eyes",
+   "context",
+   "keep"
+  ],
+  [
+   "red_hair",
+   "context",
+   "keep"
+  ],
+  [
+   "red_hanfu",
+   "outfit",
+   "keep"
+  ],
+  [
+   "red_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "reference_sheet",
+   "composition",
+   "keep"
+  ],
+  [
+   "relaxed",
+   "emotion",
+   "keep"
+  ],
+  [
+   "relaxing",
+   "emotion",
+   "keep"
+  ],
+  [
+   "relieved",
+   "emotion",
+   "keep"
+  ],
+  [
+   "retro_artstyle",
+   "composition",
+   "keep"
+  ],
+  [
+   "reverse_cowgirl",
+   "scene",
+   "exclude"
+  ],
+  [
+   "reverse_cowgirl_position",
+   "scene",
+   "exclude",
+   "역기승위",
+   "背面騎乗位"
+  ],
+  [
+   "reverse_suspended_congress",
+   "scene",
+   "exclude"
+  ],
+  [
+   "reverse_upright_straddle",
+   "pose",
+   "caution"
+  ],
+  [
+   "ribbed_sweater",
+   "outfit",
+   "keep"
+  ],
+  [
+   "riding_crop",
+   "scene",
+   "exclude"
+  ],
+  [
+   "robe",
+   "outfit",
+   "keep"
+  ],
+  [
+   "romper",
+   "outfit",
+   "keep"
+  ],
+  [
+   "rope",
+   "scene",
+   "exclude"
+  ],
+  [
+   "rotational_symmetry",
+   "composition",
+   "keep"
+  ],
+  [
+   "round_border",
+   "composition",
+   "keep"
+  ],
+  [
+   "rounded_corners",
+   "composition",
+   "keep"
+  ],
+  [
+   "running",
+   "pose",
+   "caution"
+  ],
+  [
+   "sad",
+   "emotion",
+   "keep",
+   "sadness",
+   "슬픔",
+   "悲しい"
+  ],
+  [
+   "sad_smile",
+   "emotion",
+   "keep"
+  ],
+  [
+   "sakuramon",
+   "composition",
+   "keep"
+  ],
+  [
+   "salute",
+   "pose",
+   "caution"
+  ],
+  [
+   "santa",
+   "outfit",
+   "keep"
+  ],
+  [
+   "santa_costume",
+   "outfit",
+   "keep"
+  ],
+  [
+   "satisfied",
+   "emotion",
+   "keep"
+  ],
+  [
+   "sayagata",
+   "composition",
+   "keep"
+  ],
+  [
+   "scanlines",
+   "composition",
+   "keep"
+  ],
+  [
+   "scared",
+   "emotion",
+   "keep",
+   "afraid",
+   "fearful",
+   "두려움"
+  ],
+  [
+   "scenery",
+   "composition",
+   "keep"
+  ],
+  [
+   "school",
+   "outfit",
+   "keep"
+  ],
+  [
+   "school_uniform",
+   "outfit",
+   "keep",
+   "교복"
+  ],
+  [
+   "schoolwear",
+   "outfit",
+   "keep"
+  ],
+  [
+   "scowl",
+   "emotion",
+   "keep"
+  ],
+  [
+   "screaming",
+   "emotion",
+   "keep"
+  ],
+  [
+   "screenshot_inset",
+   "composition",
+   "keep"
+  ],
+  [
+   "seductive",
+   "emotion",
+   "keep"
+  ],
+  [
+   "seductive_smile",
+   "emotion",
+   "keep"
+  ],
+  [
+   "seigaiha",
+   "composition",
+   "keep"
+  ],
+  [
+   "seiza",
+   "pose",
+   "caution"
+  ],
+  [
+   "serafuku",
+   "outfit",
+   "keep"
+  ],
+  [
+   "serious",
+   "emotion",
+   "keep"
+  ],
+  [
+   "sex",
+   "scene",
+   "exclude"
+  ],
+  [
+   "sex_from_behind",
+   "scene",
+   "exclude"
+  ],
+  [
+   "sex_toy",
+   "scene",
+   "exclude"
+  ],
+  [
+   "sexually_suggestive",
+   "scene",
+   "exclude"
+  ],
+  [
+   "shaded_face",
+   "emotion",
+   "keep"
+  ],
+  [
+   "shared_clothes",
+   "outfit",
+   "keep"
+  ],
+  [
+   "shell_bikini",
+   "outfit",
+   "keep"
+  ],
+  [
+   "shippou_(pattern)",
+   "composition",
+   "keep"
+  ],
+  [
+   "shirt",
+   "outfit",
+   "keep",
+   "셔츠"
+  ],
+  [
+   "shirt_lift",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "shirt_pull",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "shirt_under_shirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "short-sleeved_jacket",
+   "outfit",
+   "keep"
+  ],
+  [
+   "short-sleeved_sweater",
+   "outfit",
+   "keep"
+  ],
+  [
+   "short_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "short_kimono",
+   "outfit",
+   "keep"
+  ],
+  [
+   "short_shorts",
+   "outfit",
+   "keep"
+  ],
+  [
+   "shorts",
+   "outfit",
+   "keep"
+  ],
+  [
+   "shorts_under_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "shushing",
+   "pose",
+   "caution"
+  ],
+  [
+   "shy",
+   "emotion",
+   "keep"
+  ],
+  [
+   "side_cape",
+   "outfit",
+   "keep"
+  ],
+  [
+   "side_view",
+   "pose",
+   "caution"
+  ],
+  [
+   "sideless_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "sidelighting",
+   "composition",
+   "keep"
+  ],
+  [
+   "sideways",
+   "composition",
+   "keep"
+  ],
+  [
+   "sigh",
+   "emotion",
+   "keep"
+  ],
+  [
+   "silhouette",
+   "scene",
+   "exclude"
+  ],
+  [
+   "silver_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "simple_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "simulated_fellatio",
+   "scene",
+   "exclude"
+  ],
+  [
+   "single_tear",
+   "emotion",
+   "keep"
+  ],
+  [
+   "sitting",
+   "pose",
+   "caution",
+   "sit",
+   "앉기"
+  ],
+  [
+   "sketch",
+   "scene",
+   "exclude"
+  ],
+  [
+   "skirt",
+   "outfit",
+   "keep",
+   "치마"
+  ],
+  [
+   "skirt_lift",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "skirt_pull",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "skirt_suit",
+   "outfit",
+   "keep"
+  ],
+  [
+   "sleeping",
+   "pose",
+   "caution"
+  ],
+  [
+   "sleepwear",
+   "outfit",
+   "keep"
+  ],
+  [
+   "sleepy",
+   "emotion",
+   "keep"
+  ],
+  [
+   "sleeveless_hoodie",
+   "outfit",
+   "keep"
+  ],
+  [
+   "sleeveless_shirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "smile",
+   "emotion",
+   "keep",
+   "smiling",
+   "미소",
+   "스마일"
+  ],
+  [
+   "smirk",
+   "emotion",
+   "keep"
+  ],
+  [
+   "smug",
+   "emotion",
+   "keep"
+  ],
+  [
+   "sobbing",
+   "emotion",
+   "keep"
+  ],
+  [
+   "spitroast",
+   "scene",
+   "exclude"
+  ],
+  [
+   "split",
+   "pose",
+   "caution"
+  ],
+  [
+   "spooning",
+   "pose",
+   "caution"
+  ],
+  [
+   "sports_bikini",
+   "outfit",
+   "keep"
+  ],
+  [
+   "sportswear",
+   "outfit",
+   "keep"
+  ],
+  [
+   "spread_anus",
+   "scene",
+   "exclude"
+  ],
+  [
+   "spread_legs",
+   "pose",
+   "caution"
+  ],
+  [
+   "spread_pussy",
+   "scene",
+   "exclude"
+  ],
+  [
+   "spreader_bar",
+   "scene",
+   "exclude"
+  ],
+  [
+   "sprite",
+   "context",
+   "keep"
+  ],
+  [
+   "square_4koma",
+   "composition",
+   "keep"
+  ],
+  [
+   "squatting",
+   "pose",
+   "caution"
+  ],
+  [
+   "squatting_cowgirl_position",
+   "scene",
+   "exclude"
+  ],
+  [
+   "squinting",
+   "emotion",
+   "keep"
+  ],
+  [
+   "standing",
+   "pose",
+   "prefer",
+   "stand",
+   "서기"
+  ],
+  [
+   "standing_sex",
+   "scene",
+   "exclude"
+  ],
+  [
+   "standing_split",
+   "pose",
+   "caution"
+  ],
+  [
+   "static",
+   "composition",
+   "keep"
+  ],
+  [
+   "stats",
+   "composition",
+   "keep"
+  ],
+  [
+   "stealth_sex",
+   "scene",
+   "exclude"
+  ],
+  [
+   "steampunk",
+   "outfit",
+   "keep"
+  ],
+  [
+   "stifled_laugh",
+   "emotion",
+   "keep"
+  ],
+  [
+   "still_life",
+   "composition",
+   "keep"
+  ],
+  [
+   "straddling",
+   "pose",
+   "caution"
+  ],
+  [
+   "straddling_paizuri",
+   "pose",
+   "caution"
+  ],
+  [
+   "straight-on",
+   "composition",
+   "prefer",
+   "front",
+   "frontal",
+   "front_view",
+   "정면"
+  ],
+  [
+   "strap-on",
+   "scene",
+   "exclude"
+  ],
+  [
+   "strapless_bikini",
+   "outfit",
+   "keep"
+  ],
+  [
+   "strapless_bra",
+   "outfit",
+   "keep"
+  ],
+  [
+   "strapless_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "strapless_shirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "streetwear",
+   "outfit",
+   "keep"
+  ],
+  [
+   "string_bikini",
+   "outfit",
+   "keep"
+  ],
+  [
+   "striped_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "striped_hoodie",
+   "outfit",
+   "keep"
+  ],
+  [
+   "striped_pants",
+   "outfit",
+   "keep"
+  ],
+  [
+   "striped_shirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "suit",
+   "outfit",
+   "keep"
+  ],
+  [
+   "suit_jacket",
+   "outfit",
+   "keep"
+  ],
+  [
+   "sulking",
+   "emotion",
+   "keep"
+  ],
+  [
+   "summer_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "sunburst_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "surprised",
+   "emotion",
+   "keep",
+   "surprise",
+   "놀람"
+  ],
+  [
+   "surreal",
+   "composition",
+   "keep"
+  ],
+  [
+   "suspended_congress",
+   "scene",
+   "exclude"
+  ],
+  [
+   "suspension",
+   "scene",
+   "exclude"
+  ],
+  [
+   "sway_back",
+   "pose",
+   "caution"
+  ],
+  [
+   "sweat",
+   "emotion",
+   "keep"
+  ],
+  [
+   "sweatdrop",
+   "emotion",
+   "keep"
+  ],
+  [
+   "sweater",
+   "outfit",
+   "keep"
+  ],
+  [
+   "sweater_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "sweater_lift",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "sweater_vest",
+   "outfit",
+   "keep"
+  ],
+  [
+   "sweet_lolita",
+   "outfit",
+   "keep"
+  ],
+  [
+   "swimsuit",
+   "outfit",
+   "keep",
+   "수영복"
+  ],
+  [
+   "symmetry",
+   "composition",
+   "keep"
+  ],
+  [
+   "t-shirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "table_humping",
+   "scene",
+   "exclude"
+  ],
+  [
+   "tachi-e",
+   "composition",
+   "keep"
+  ],
+  [
+   "tactical_clothes",
+   "outfit",
+   "keep"
+  ],
+  [
+   "taut_clothes",
+   "outfit",
+   "keep"
+  ],
+  [
+   "taut_shirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "tearing_up",
+   "emotion",
+   "keep"
+  ],
+  [
+   "tears",
+   "emotion",
+   "keep"
+  ],
+  [
+   "tears_from_one_eye",
+   "emotion",
+   "keep"
+  ],
+  [
+   "tenshi_kaiwai",
+   "outfit",
+   "keep"
+  ],
+  [
+   "testicle_sucking",
+   "scene",
+   "exclude"
+  ],
+  [
+   "thick_lips",
+   "emotion",
+   "keep"
+  ],
+  [
+   "thigh_sex",
+   "scene",
+   "exclude"
+  ],
+  [
+   "thinking",
+   "emotion",
+   "keep"
+  ],
+  [
+   "thoughtful",
+   "emotion",
+   "keep"
+  ],
+  [
+   "threesome",
+   "scene",
+   "exclude"
+  ],
+  [
+   "thumbs_down",
+   "pose",
+   "caution"
+  ],
+  [
+   "thumbs_up",
+   "pose",
+   "caution"
+  ],
+  [
+   "tired",
+   "emotion",
+   "keep"
+  ],
+  [
+   "top-down_bottom-up",
+   "pose",
+   "caution"
+  ],
+  [
+   "topless",
+   "clothing-state",
+   "exclude"
+  ],
+  [
+   "torn_clothes",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "torn_dress",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "torn_shirt",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "torogao",
+   "emotion",
+   "keep"
+  ],
+  [
+   "track_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "transparency",
+   "composition",
+   "keep"
+  ],
+  [
+   "transparent",
+   "composition",
+   "keep"
+  ],
+  [
+   "transparent_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "trench_coat",
+   "outfit",
+   "keep"
+  ],
+  [
+   "triangle_mouth",
+   "emotion",
+   "keep"
+  ],
+  [
+   "tribadism",
+   "scene",
+   "exclude"
+  ],
+  [
+   "troll_face",
+   "emotion",
+   "keep"
+  ],
+  [
+   "turn_pale",
+   "emotion",
+   "keep"
+  ],
+  [
+   "turning_head",
+   "pose",
+   "caution"
+  ],
+  [
+   "turtleneck_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "twisted_torso",
+   "pose",
+   "caution"
+  ],
+  [
+   "two-finger_salute",
+   "pose",
+   "caution"
+  ],
+  [
+   "two-footed_footjob",
+   "scene",
+   "exclude"
+  ],
+  [
+   "two-handed_handjob",
+   "scene",
+   "exclude"
+  ],
+  [
+   "two-tone_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "u_u",
+   "emotion",
+   "keep"
+  ],
+  [
+   "unamused",
+   "emotion",
+   "keep"
+  ],
+  [
+   "unaware",
+   "emotion",
+   "keep"
+  ],
+  [
+   "unbuttoned_shirt",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "underlighting",
+   "composition",
+   "keep"
+  ],
+  [
+   "undressing",
+   "clothing-state",
+   "caution"
+  ],
+  [
+   "uneasy",
+   "emotion",
+   "keep"
+  ],
+  [
+   "unhappy",
+   "emotion",
+   "keep"
+  ],
+  [
+   "uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "unmoving_pattern",
+   "composition",
+   "keep"
+  ],
+  [
+   "unsatisfied",
+   "emotion",
+   "keep"
+  ],
+  [
+   "untied_panties",
+   "outfit",
+   "keep"
+  ],
+  [
+   "upper_body",
+   "composition",
+   "caution",
+   "upperbody",
+   "상반신"
+  ],
+  [
+   "upright_straddle",
+   "pose",
+   "caution"
+  ],
+  [
+   "upside-down",
+   "composition",
+   "caution"
+  ],
+  [
+   "upturned_eyes",
+   "emotion",
+   "keep"
+  ],
+  [
+   "v-shaped_eyebrows",
+   "emotion",
+   "keep"
+  ],
+  [
+   "vaginal",
+   "context",
+   "caution"
+  ],
+  [
+   "vaginal_object_insertion",
+   "scene",
+   "exclude"
+  ],
+  [
+   "vanishing_point",
+   "composition",
+   "keep"
+  ],
+  [
+   "vertical-striped_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "very_wide_shot",
+   "composition",
+   "caution"
+  ],
+  [
+   "vest",
+   "outfit",
+   "keep"
+  ],
+  [
+   "vibrator",
+   "scene",
+   "exclude"
+  ],
+  [
+   "victorian",
+   "outfit",
+   "keep"
+  ],
+  [
+   "viewfinder",
+   "composition",
+   "keep"
+  ],
+  [
+   "vignetting",
+   "composition",
+   "keep"
+  ],
+  [
+   "void_face",
+   "emotion",
+   "keep"
+  ],
+  [
+   "volleyball_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "wa_lolita",
+   "outfit",
+   "keep"
+  ],
+  [
+   "wa_maid",
+   "outfit",
+   "keep"
+  ],
+  [
+   "walking",
+   "pose",
+   "caution"
+  ],
+  [
+   "wariza",
+   "pose",
+   "caution"
+  ],
+  [
+   "watson_cross",
+   "pose",
+   "caution"
+  ],
+  [
+   "waving",
+   "pose",
+   "caution"
+  ],
+  [
+   "wavy_mouth",
+   "emotion",
+   "keep"
+  ],
+  [
+   "wedding",
+   "outfit",
+   "keep"
+  ],
+  [
+   "wedding_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "whip",
+   "scene",
+   "exclude"
+  ],
+  [
+   "whispering",
+   "pose",
+   "caution"
+  ],
+  [
+   "white_background",
+   "composition",
+   "keep"
+  ],
+  [
+   "white_border",
+   "composition",
+   "keep"
+  ],
+  [
+   "white_bra",
+   "outfit",
+   "keep"
+  ],
+  [
+   "white_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "white_eyes",
+   "context",
+   "keep"
+  ],
+  [
+   "white_hair",
+   "context",
+   "keep"
+  ],
+  [
+   "white_hanfu",
+   "outfit",
+   "keep"
+  ],
+  [
+   "white_romper",
+   "outfit",
+   "keep"
+  ],
+  [
+   "white_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "wide_eyed",
+   "emotion",
+   "keep"
+  ],
+  [
+   "wide_shot",
+   "composition",
+   "keep"
+  ],
+  [
+   "wide_spread_legs",
+   "pose",
+   "caution"
+  ],
+  [
+   "wince",
+   "emotion",
+   "keep"
+  ],
+  [
+   "wink",
+   "emotion",
+   "keep",
+   "winking",
+   "윙크"
+  ],
+  [
+   "winter_uniform",
+   "outfit",
+   "keep"
+  ],
+  [
+   "wip",
+   "scene",
+   "exclude"
+  ],
+  [
+   "witch",
+   "outfit",
+   "keep"
+  ],
+  [
+   "workwear",
+   "outfit",
+   "keep"
+  ],
+  [
+   "worried",
+   "emotion",
+   "keep"
+  ],
+  [
+   "xiangyun",
+   "composition",
+   "keep"
+  ],
+  [
+   "y2k_fashion",
+   "outfit",
+   "keep"
+  ],
+  [
+   "yagasuri",
+   "composition",
+   "keep"
+  ],
+  [
+   "yami_kawaii",
+   "outfit",
+   "keep"
+  ],
+  [
+   "yaoi",
+   "context",
+   "caution"
+  ],
+  [
+   "yawning",
+   "emotion",
+   "keep"
+  ],
+  [
+   "yellow_dress",
+   "outfit",
+   "keep"
+  ],
+  [
+   "yellow_eyes",
+   "context",
+   "keep"
+  ],
+  [
+   "yellow_skirt",
+   "outfit",
+   "keep"
+  ],
+  [
+   "yokozuwari",
+   "pose",
+   "caution"
+  ],
+  [
+   "yukata",
+   "outfit",
+   "keep"
+  ],
+  [
+   "yume_kawaii",
+   "outfit",
+   "keep"
+  ],
+  [
+   "yuri",
+   "context",
+   "caution"
+  ],
+  [
+   "zombie_pose",
+   "pose",
+   "caution"
+  ],
+  [
+   "zoom_layer",
+   "composition",
+   "keep"
+  ],
+  [
+   "기본",
+   "marker",
+   "keep"
+  ]
+ ],
+ "rows": [
+  {
+   "tag": "2boys",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "2girls",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "3boys",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "3d",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "3girls",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "4boys",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "4girls",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "69",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "a-pose",
+   "role": "pose",
+   "effect": "prefer",
+   "aliases": []
+  },
+  {
+   "tag": "abstract",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "abstract_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "affectionate",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "afterimage",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "ahegao",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "아헤가오"
+   ]
+  },
+  {
+   "tag": "akanbe",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "all_fours",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "amazon_position",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "american_flag_bikini",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "amesuku_gyaru",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "amused",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "anal",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "anal_beads",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "anal_fingering",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "anal_object_insertion",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "anal_tail",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "angry",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "anger",
+    "분노",
+    "화남",
+    "怒り",
+    "愤怒"
+   ]
+  },
+  {
+   "tag": "anilingus",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "animal_focus",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "annoyed",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "aqua_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "aqua_eyes",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "aqua_hair",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "aqua_pants",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "aqua_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "arabian_clothes",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "aran_sweater",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "arched_back",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "argyle_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "aristocratic_clothes",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "arm_behind_back",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "arm_behind_head",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "arm_between_breasts",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "arm_support",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "armor",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "armour",
+    "갑옷"
+   ]
+  },
+  {
+   "tag": "armored_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "armpit_focus",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "armpit_sex",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "arms_behind_back",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "arms_under_breasts",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "aroused",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "artificial_vagina",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "asa_no_ha_(pattern)",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "ass_focus",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "asset",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "astonished",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "asymmetrical_pants",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "awestruck",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "awkward",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "back_focus",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "back_view",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "background",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "backgroundless",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "backless_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "backless_leotard",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "backless_outfit",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "backless_swimsuit",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "backlighting",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "bad_anatomy",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "ball_gag",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "banner",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "base",
+   "role": "marker",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "baseball_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "bashful",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "basic",
+   "role": "marker",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "basketball_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "bdsm",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "bent_over",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "bestiality",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "between_legs",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "bike_shorts",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "bikini",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "비키니"
+   ]
+  },
+  {
+   "tag": "bikini_armor",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "biting_own_lip",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "black_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "black_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "black_eyes",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "black_hair",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "black_hanfu",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "black_serafuku",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "black_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "black_tears",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "blackout",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "blank_stare",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "blonde_hair",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "blouse",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "blue_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "blue_eyes",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "blue_hair",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "blue_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "blush",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "blushing",
+    "홍조"
+   ]
+  },
+  {
+   "tag": "blush_stickers",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "body_blush",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "bokeh",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "bondage",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "border",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "borderless_panels",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "bored",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "bottomless",
+   "role": "clothing-state",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "bound_ankles",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "bound_arms",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "bound_legs",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "bound_thighs",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "bound_together",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "bound_torso",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "bound_wrists",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "bowlegged_pose",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "bra",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "breast_sucking",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "bridal",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "brown_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "brown_eyes",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "brown_hair",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "brown_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "bubble_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "bukkake",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "business",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "butt_plug",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "butterfly_sitting",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "buttjob",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "calm",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "cape",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "capri_pants",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "cardigan",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "caressing_testicles",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "casual",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "캐주얼"
+   ]
+  },
+  {
+   "tag": "casualwear",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "caustics",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "censored",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "char",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "character",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "chart",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "checkered_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "child_carry",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "chinese_clothes",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "circle_formation",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "classic_lolita",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "claw_pose",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "clenched_hand",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "clenched_hands",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "clenched_teeth",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "clitoral_stimulation",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "close-up",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": [
+    "closeup"
+   ]
+  },
+  {
+   "tag": "closed_eyes",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "closed_mouth",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "clothed_sex",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "clothes",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "clothes_lift",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "clothing",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "clothing_aside",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "clueless",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "coat",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "cocked_eyebrow",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "cocktail_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "collage",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "collared_jacket",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "column_lineup",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "comic",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "completely_nude",
+   "role": "clothing-state",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "compression_shirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "concentrating",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "confident",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "confused",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "content",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "contented",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "contrapposto",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "copy",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "corset",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "costume",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "covering_face",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "covering_own_mouth",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "cowboy_shot",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "cowgirl",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "cowgirl_position",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": [
+    "기승위",
+    "騎乗位",
+    "骑乘位"
+   ]
+  },
+  {
+   "tag": "crazy_grin",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "crazy_smile",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "creampie",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "cropped_arms",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "cropped_head",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "cropped_jacket",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "cropped_legs",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "cropped_shoulders",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "cropped_torso",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "cross-laced_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "cross-laced_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "crossed_ankles",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "crossed_arms",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "crossed_legs",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "crotch_rope",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "crotch_rub",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "crouching",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "crying",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "cry",
+    "울음",
+    "우는",
+    "泣く",
+    "哭泣"
+   ]
+  },
+  {
+   "tag": "crying_with_eyes_open",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "cum_in_pussy",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "cumshot",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "cunnilingus",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": [
+    "커닐링구스"
+   ]
+  },
+  {
+   "tag": "curious",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "curled_fingers",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "curled_up",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "curtsey",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "cyber_fashion",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "dailywear",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "dancing",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "dazed",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "decora",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "deepthroat",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "default",
+   "role": "marker",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "denim_shorts",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "depressed",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "depth_of_field",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "despair",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "determined",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "diagonal-striped_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "different_reflection",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "diffraction_spikes",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "dildo",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "disappointed",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "disdain",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "disgust",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "disgusted",
+    "혐오"
+   ]
+  },
+  {
+   "tag": "dogeza",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": [
+    "도게자",
+    "土下座"
+   ]
+  },
+  {
+   "tag": "doggystyle",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": [
+    "doggy_style",
+    "후배위",
+    "後背位"
+   ]
+  },
+  {
+   "tag": "dolphin_shorts",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "double_fox_shadow_puppet",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "double_handjob",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "double_v",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "doyagao",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "드레스"
+   ]
+  },
+  {
+   "tag": "dress_lift",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "dress_pull",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "dress_shirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "drooling",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "drop_shadow",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "dutch_angle",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "ear_blush",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "edit",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "edited",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "egasumi",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "elated",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "embarrassed",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "부끄러움",
+    "당황"
+   ]
+  },
+  {
+   "tag": "embarrassment",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "emo_fashion",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "emoticon",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "emotion",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "ero",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "evening_gown",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "everyday",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "everyone",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "evil_grin",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "evil_smile",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "excited",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "exhausted",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "expression",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "expressionless",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "무표정"
+   ]
+  },
+  {
+   "tag": "eyelid_pull",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "eyes_out_of_frame",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "face-to-face",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "facing_down",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "facing_up",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "fake_magazine_cover",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "fake_screenshot",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "false_smile",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "fanning_self",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "fashion",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "faux_figurine",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "faux_traditional_media",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "feet_out_of_frame",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "fellatio",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": [
+    "blowjob",
+    "펠라치오"
+   ]
+  },
+  {
+   "tag": "fellatio_gesture",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "femdom",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "fetal_position",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "fighting_stance",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "figure_four_sitting",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "final",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "finger_counting",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "finger_heart",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "finger_to_mouth",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "finger_to_own_chin",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "fingering",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "fingering_through_clothes",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "fingering_through_panties",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "fisheye",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "flak_jacket",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "flat_color",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "flexible",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "flustered",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "folded",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "foot_out_of_frame",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "footjob",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "footjob_with_legwear",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "forced_smile",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "forehead-to-forehead",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "foreshortening",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "formal",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "formal_clothes",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "foursome",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "fox_shadow_puppet",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "frogtie",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "from_above",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "from_behind",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "from_below",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "frottage",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "frown",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "frowning"
+   ]
+  },
+  {
+   "tag": "frustrated",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "fucked_silly",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "full-face_blush",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "full_body",
+   "role": "composition",
+   "effect": "prefer",
+   "aliases": [
+    "fullbody",
+    "전신"
+   ]
+  },
+  {
+   "tag": "full_nelson",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "furious",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "furrowed_brow",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gag",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "gag_harness",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "gakuran",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "game_screenshot_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "game_screenshot_inset",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gangbang",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "ganguro",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gesugao",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "ghost_pose",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "giggling",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gingham_clothes",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "girl_on_top",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "glaring",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gloom_(expression)",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "goth_fashion",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gothic",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gothic_lolita",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gothic_punk",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gown",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "grabbing_another's_breast",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "grabbing_own_breast",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "gradient_kimono",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "green_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "green_eyes",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "green_hair",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "green_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "grey_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "grey_eyes",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "grey_hair",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "grey_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "grid_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "grimace",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "grin",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "grinning"
+   ]
+  },
+  {
+   "tag": "groping",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "group_picture",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "group_sex",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "grumpy",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "guided_breast_grab",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "guilty",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gyaru",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gyaruo",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gym",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gym_shorts",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "gym_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "hairjob",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "halftone",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "halter_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "hanbok",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "한복"
+   ]
+  },
+  {
+   "tag": "hand_behind_head",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hand_in_pocket",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hand_on_another's_chest",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hand_on_another's_shoulder",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hand_on_own_ass",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hand_on_own_chest",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hand_on_own_hip",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hand_on_own_neck",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hand_on_own_stomach",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hand_on_own_thigh",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hand_to_own_mouth",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "handjob",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "hands_in_pocket",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hands_in_pockets",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hands_on_another's_shoulders",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hands_on_lap",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hands_on_own_hips",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hands_on_own_legs",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hands_on_own_thighs",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hands_up",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "handsfree_paizuri",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "handstand",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "happy",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "happiness",
+    "기쁨",
+    "행복",
+    "快乐"
+   ]
+  },
+  {
+   "tag": "happy_sex",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "happy_tears",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "harem_outfit",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "head_back",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "head_down",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "head_on_head",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "head_only",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "head_out_of_frame",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "heads_together",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "heart-shaped_boob_challenge",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "heart_hands",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "heart_hands_failure",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "heart_tail",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "heisei_retro",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "hentai",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hiding",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "high_contrast",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "hogtie",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "holding_another's_leg",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "holding_another's_legs",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "holding_own_leg",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "holding_own_legs_back",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "hooded_cloak",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "hooded_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "hooded_jacket",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "hooded_sweater",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "hooded_track_jacket",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "hoodie",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "hopeful",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "horizon",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "horrified",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "houndstooth",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "hugging_own_legs",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "icon",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "idle",
+   "role": "pose",
+   "effect": "prefer",
+   "aliases": []
+  },
+  {
+   "tag": "image",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "img",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "implied_fellatio",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "implied_masturbation",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "impossible_shirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "index_finger_raised",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "index_fingers_together",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "indian_style",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "indifferent",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "inset_border",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "intercourse",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "invisible_chair",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "isometric",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "jacket",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "japanese_clothes",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "jealous",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "jeans",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "jersey_maid",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "jirai_kei",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "jojo_pose",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "joyful",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "jumping",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "kikkoumon",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "kikumon",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "kimono",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "기모노"
+   ]
+  },
+  {
+   "tag": "kimono_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "kindergarten_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "knee_up",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "kneeling",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": [
+    "kneel"
+   ]
+  },
+  {
+   "tag": "knees",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "knees_out_of_frame",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "knees_together_feet_apart",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "kogal",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "korean_clothes",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "kuji-in",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "lace-trimmed_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "lace-trimmed_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "lace_panties",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "large_insertion",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "latex",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "laughing",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "laugh",
+    "laughter",
+    "웃음"
+   ]
+  },
+  {
+   "tag": "layered_clothes",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "layered_kimono",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "leash",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "leather",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "leg_lift",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "leg_lock",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "legs",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "legs_folded",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "legs_over_head",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "legs_together",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "legs_up",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "lens_flare",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "letterboxed",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "lewd",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "licking",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "licking_foot",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "licking_testicle",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "lifting_another's_clothes",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "lifting_own_clothes",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "light_blush",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "light_frown",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "light_smile",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "lineart",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "lineup",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "load_bearing_vest",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "logo",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "lolita",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "lolita_fashion",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "lonely",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "long_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "long_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "looking_back",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "looking_through_own_legs",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "lovestruck",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "lower_body",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "lowered_eyelids",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "lowleg_pants",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "lowleg_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "lying",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "maid",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "메이드",
+    "メイド"
+   ]
+  },
+  {
+   "tag": "maid_apron",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "male_maid",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "male_masturbation",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "map",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "masturbating",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "masturbation",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "masturbation_through_clothes",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "masturbation_under_clothes",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "mating_press",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "medium_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "meiji_schoolgirl_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "micro_bikini",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "micro_bra",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "micro_panties",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "micro_shorts",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "microdress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "middle_finger",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "military",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "military_dress_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "military_jacket",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "military_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "mismatched_bikini",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "mismatched_eyebrows",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "missionary",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": [
+    "정상위"
+   ]
+  },
+  {
+   "tag": "mob_face",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "monochrome",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "mosaic",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "mouth_insertion",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "multiple_boys",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "multiple_expressions",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "multiple_girls",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "multiple_monochrome",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "mutual_masturbation",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "naked",
+   "role": "clothing-state",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "naked_dogeza",
+   "role": "clothing-state",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "nature",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "naughty_face",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "naval_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "negative_space",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "nervous",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "nervous_smile",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "nervous_sweating",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "neutral",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "nightgown",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "nipple_tweak",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "no_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "no_lineart",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "no_mouth",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "normal",
+   "role": "marker",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "nose_blush",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "nose_bubble",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "noses_touching",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "nsfw",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "nude",
+   "role": "clothing-state",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "nun",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "nurse",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "nursing_handjob",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "o3o",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "object_focus",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "object_insertion",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "off-shoulder_sweater",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "office",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "ojou-sama_pose",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "ok_sign",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "on_back",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "on_one_knee",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "on_side",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "on_stomach",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "one_eye_closed",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "open_clothes",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "open_hand",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "open_hands",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "open_mouth",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "open_pants",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "open_shirt",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "open_shorts",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "oral",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "orange_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "orange_eyes",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "orange_hair",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "orange_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "orgy",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "ornate_border",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "other_focus",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "ouji_fashion",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "out-of-frame_censoring",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "out_of_frame",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "outfit",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "outside_border",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "overalls",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "oversized_shirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "paizuri",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "paizuri_under_clothes",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "pajamas",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "pyjamas",
+    "잠옷"
+   ]
+  },
+  {
+   "tag": "palms_together",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "panic",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "panicking",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pant_suit",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pants",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "바지"
+   ]
+  },
+  {
+   "tag": "pantyshot",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "paper_texture",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "parted_lips",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "partially_removed_clothes",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "partially_underwater_shot",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "paw_pose",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "peeing",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "penetration",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "perspective",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pet_play",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "pigeon-toed",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "piledriver_(sex)",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "piledriver_sex",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "pillarboxed",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pinafore_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pink_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pink_eyes",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pink_hair",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pink_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pinky_out",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "pinstripe_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pinstripe_vest",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pixelated",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "plaid_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pleading_eyes",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pleated_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pleated_shorts",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pleated_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pointing",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "pointing_forward",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "police",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "police_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pornography",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "portrait",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "posing",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "pout",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "pouting"
+   ]
+  },
+  {
+   "tag": "pov",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "pov_hands",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "profile",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "projected_inset",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "prone_bone",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "prostration",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "proud",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "puffy_pants",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "punk",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "purple_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "purple_eyes",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "purple_hair",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "purple_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pursed_lips",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "pussyjob",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "r18",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "r18g",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "raised_eyebrow",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "raised_eyebrows",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "raised_inner_eyebrows",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "rape",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "reach-around",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "reclining",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "red_border",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "red_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "red_eyes",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "red_hair",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "red_hanfu",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "red_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "reference_sheet",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "relaxed",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "relaxing",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "relieved",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "retro_artstyle",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "reverse_cowgirl",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "reverse_cowgirl_position",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": [
+    "역기승위",
+    "背面騎乗位"
+   ]
+  },
+  {
+   "tag": "reverse_suspended_congress",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "reverse_upright_straddle",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "ribbed_sweater",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "riding_crop",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "robe",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "romper",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "rope",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "rotational_symmetry",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "round_border",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "rounded_corners",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "running",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "sad",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "sadness",
+    "슬픔",
+    "悲しい"
+   ]
+  },
+  {
+   "tag": "sad_smile",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sakuramon",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "salute",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "santa",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "santa_costume",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "satisfied",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sayagata",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "scanlines",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "scared",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "afraid",
+    "fearful",
+    "두려움"
+   ]
+  },
+  {
+   "tag": "scenery",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "school",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "school_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "교복"
+   ]
+  },
+  {
+   "tag": "schoolwear",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "scowl",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "screaming",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "screenshot_inset",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "seductive",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "seductive_smile",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "seigaiha",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "seiza",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "serafuku",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "serious",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sex",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "sex_from_behind",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "sex_toy",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "sexually_suggestive",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "shaded_face",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "shared_clothes",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "shell_bikini",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "shippou_(pattern)",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "shirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "셔츠"
+   ]
+  },
+  {
+   "tag": "shirt_lift",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "shirt_pull",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "shirt_under_shirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "short-sleeved_jacket",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "short-sleeved_sweater",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "short_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "short_kimono",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "short_shorts",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "shorts",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "shorts_under_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "shushing",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "shy",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "side_cape",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "side_view",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "sideless_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sidelighting",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sideways",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sigh",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "silhouette",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "silver_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "simple_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "simulated_fellatio",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "single_tear",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sitting",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": [
+    "sit",
+    "앉기"
+   ]
+  },
+  {
+   "tag": "sketch",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "치마"
+   ]
+  },
+  {
+   "tag": "skirt_lift",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "skirt_pull",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "skirt_suit",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sleeping",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "sleepwear",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sleepy",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sleeveless_hoodie",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sleeveless_shirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "smile",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "smiling",
+    "미소",
+    "스마일"
+   ]
+  },
+  {
+   "tag": "smirk",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "smug",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sobbing",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "spitroast",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "split",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "spooning",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "sports_bikini",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sportswear",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "spread_anus",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "spread_legs",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "spread_pussy",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "spreader_bar",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "sprite",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "square_4koma",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "squatting",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "squatting_cowgirl_position",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "squinting",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "standing",
+   "role": "pose",
+   "effect": "prefer",
+   "aliases": [
+    "stand",
+    "서기"
+   ]
+  },
+  {
+   "tag": "standing_sex",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "standing_split",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "static",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "stats",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "stealth_sex",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "steampunk",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "stifled_laugh",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "still_life",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "straddling",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "straddling_paizuri",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "straight-on",
+   "role": "composition",
+   "effect": "prefer",
+   "aliases": [
+    "front",
+    "frontal",
+    "front_view",
+    "정면"
+   ]
+  },
+  {
+   "tag": "strap-on",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "strapless_bikini",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "strapless_bra",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "strapless_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "strapless_shirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "streetwear",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "string_bikini",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "striped_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "striped_hoodie",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "striped_pants",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "striped_shirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "suit",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "suit_jacket",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sulking",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "summer_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sunburst_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "surprised",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "surprise",
+    "놀람"
+   ]
+  },
+  {
+   "tag": "surreal",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "suspended_congress",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "suspension",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "sway_back",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "sweat",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sweatdrop",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sweater",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sweater_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sweater_lift",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "sweater_vest",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "sweet_lolita",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "swimsuit",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": [
+    "수영복"
+   ]
+  },
+  {
+   "tag": "symmetry",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "t-shirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "table_humping",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "tachi-e",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "tactical_clothes",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "taut_clothes",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "taut_shirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "tearing_up",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "tears",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "tears_from_one_eye",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "tenshi_kaiwai",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "testicle_sucking",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "thick_lips",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "thigh_sex",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "thinking",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "thoughtful",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "threesome",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "thumbs_down",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "thumbs_up",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "tired",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "top-down_bottom-up",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "topless",
+   "role": "clothing-state",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "torn_clothes",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "torn_dress",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "torn_shirt",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "torogao",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "track_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "transparency",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "transparent",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "transparent_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "trench_coat",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "triangle_mouth",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "tribadism",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "troll_face",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "turn_pale",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "turning_head",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "turtleneck_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "twisted_torso",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "two-finger_salute",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "two-footed_footjob",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "two-handed_handjob",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "two-tone_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "u_u",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "unamused",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "unaware",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "unbuttoned_shirt",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "underlighting",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "undressing",
+   "role": "clothing-state",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "uneasy",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "unhappy",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "unmoving_pattern",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "unsatisfied",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "untied_panties",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "upper_body",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": [
+    "upperbody",
+    "상반신"
+   ]
+  },
+  {
+   "tag": "upright_straddle",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "upside-down",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "upturned_eyes",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "v-shaped_eyebrows",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "vaginal",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "vaginal_object_insertion",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "vanishing_point",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "vertical-striped_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "very_wide_shot",
+   "role": "composition",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "vest",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "vibrator",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "victorian",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "viewfinder",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "vignetting",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "void_face",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "volleyball_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "wa_lolita",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "wa_maid",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "walking",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "wariza",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "watson_cross",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "waving",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "wavy_mouth",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "wedding",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "wedding_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "whip",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "whispering",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "white_background",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "white_border",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "white_bra",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "white_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "white_eyes",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "white_hair",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "white_hanfu",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "white_romper",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "white_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "wide_eyed",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "wide_shot",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "wide_spread_legs",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "wince",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "wink",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": [
+    "winking",
+    "윙크"
+   ]
+  },
+  {
+   "tag": "winter_uniform",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "wip",
+   "role": "scene",
+   "effect": "exclude",
+   "aliases": []
+  },
+  {
+   "tag": "witch",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "workwear",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "worried",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "xiangyun",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "y2k_fashion",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "yagasuri",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "yami_kawaii",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "yaoi",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "yawning",
+   "role": "emotion",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "yellow_dress",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "yellow_eyes",
+   "role": "context",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "yellow_skirt",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "yokozuwari",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "yukata",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "yume_kawaii",
+   "role": "outfit",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "yuri",
+   "role": "context",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "zombie_pose",
+   "role": "pose",
+   "effect": "caution",
+   "aliases": []
+  },
+  {
+   "tag": "zoom_layer",
+   "role": "composition",
+   "effect": "keep",
+   "aliases": []
+  },
+  {
+   "tag": "기본",
+   "role": "marker",
+   "effect": "keep",
+   "aliases": []
+  }
+ ],
+ "rankingVocab": {
+  "marker": [
+   [
+    "default",
+    "normal",
+    "basic",
+    "base",
+    "기본"
+   ]
+  ],
+  "emotion": {
+   "fallbackTier": 5,
+   "tiers": [
+    [
+     "expressionless"
+    ],
+    [
+     "neutral"
+    ],
+    [
+     "calm",
+     "relaxed",
+     "relaxing",
+     "content",
+     "contented",
+     "light_smile",
+     "light_frown"
+    ],
+    [
+     "smile",
+     "serious",
+     "indifferent",
+     "thoughtful",
+     "thinking",
+     "concentrating",
+     "confident",
+     "determined"
+    ],
+    [
+     "affectionate",
+     "amused",
+     "angry",
+     "annoyed",
+     "aroused",
+     "awkward",
+     "bashful",
+     "blank_stare",
+     "bored",
+     "clueless",
+     "confused",
+     "curious",
+     "dazed",
+     "depressed",
+     "disappointed",
+     "disdain",
+     "disgust",
+     "doyagao",
+     "embarrassed",
+     "embarrassment",
+     "evil_smile",
+     "false_smile",
+     "flustered",
+     "forced_smile",
+     "frown",
+     "frustrated",
+     "glaring",
+     "gloom_(expression)",
+     "grumpy",
+     "guilty",
+     "happy",
+     "hopeful",
+     "jealous",
+     "lonely",
+     "lovestruck",
+     "naughty_face",
+     "nervous",
+     "nervous_smile",
+     "pout",
+     "proud",
+     "relieved",
+     "sad",
+     "sad_smile",
+     "satisfied",
+     "scared",
+     "scowl",
+     "seductive",
+     "seductive_smile",
+     "shy",
+     "sigh",
+     "sleepy",
+     "smirk",
+     "smug",
+     "stifled_laugh",
+     "sulking",
+     "surprised",
+     "tired",
+     "unamused",
+     "unaware",
+     "uneasy",
+     "unhappy",
+     "unsatisfied",
+     "worried"
+    ],
+    [
+     "akanbe",
+     "astonished",
+     "awestruck",
+     "crying",
+     "crying_with_eyes_open",
+     "despair",
+     "elated",
+     "evil_grin",
+     "excited",
+     "exhausted",
+     "furious",
+     "giggling",
+     "grimace",
+     "grin",
+     "happy_tears",
+     "horrified",
+     "joyful",
+     "laughing",
+     "panic",
+     "panicking",
+     "screaming",
+     "sobbing",
+     "wince",
+     "yawning"
+    ],
+    [
+     "ahegao",
+     "crazy_smile",
+     "crazy_grin",
+     "fucked_silly",
+     "gesugao",
+     "torogao",
+     "troll_face"
+    ]
+   ],
+   "modifiers": [
+    "biting_own_lip",
+    "black_tears",
+    "blush",
+    "blush_stickers",
+    "body_blush",
+    "clenched_teeth",
+    "closed_eyes",
+    "closed_mouth",
+    "cocked_eyebrow",
+    "drooling",
+    "ear_blush",
+    "emoticon",
+    "eyelid_pull",
+    "full-face_blush",
+    "furrowed_brow",
+    "licking",
+    "light_blush",
+    "lowered_eyelids",
+    "mismatched_eyebrows",
+    "mob_face",
+    "multiple_expressions",
+    "nervous_sweating",
+    "no_mouth",
+    "nose_blush",
+    "nose_bubble",
+    "o3o",
+    "one_eye_closed",
+    "open_mouth",
+    "parted_lips",
+    "pleading_eyes",
+    "pursed_lips",
+    "raised_eyebrow",
+    "raised_eyebrows",
+    "raised_inner_eyebrows",
+    "shaded_face",
+    "single_tear",
+    "squinting",
+    "sweat",
+    "sweatdrop",
+    "tearing_up",
+    "tears",
+    "tears_from_one_eye",
+    "thick_lips",
+    "triangle_mouth",
+    "turn_pale",
+    "u_u",
+    "upturned_eyes",
+    "v-shaped_eyebrows",
+    "void_face",
+    "wavy_mouth",
+    "wide_eyed",
+    "wink"
+   ],
+   "limitedVisibility": [
+    "closed_eyes",
+    "one_eye_closed",
+    "wink",
+    "u_u",
+    "shaded_face",
+    "mob_face",
+    "no_mouth",
+    "void_face"
+   ]
+  }
+ }
+}

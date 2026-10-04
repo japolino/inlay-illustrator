@@ -1,0 +1,1 @@
+Identifiers are matching keys only. Do not copy them into the prompt unless the designated analysis evidence contains exactly the same visual information.

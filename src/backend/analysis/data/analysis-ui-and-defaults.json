@@ -1,0 +1,321 @@
+{
+  "evidenceModeOptions_I$": [
+    {
+      "value": "image",
+      "label": "이미지",
+      "title": "권장 · 이미지 우선 · 사용할 수 없으면 메타·본문"
+    },
+    {
+      "value": "metadata",
+      "label": "메타",
+      "title": "메타 우선 · 없으면 이미지·본문"
+    },
+    {
+      "value": "text",
+      "label": "본문",
+      "title": "로어북 본문만 사용"
+    }
+  ],
+  "originFilterOptions_ehe": [
+    {
+      "value": "all",
+      "label": "전체"
+    },
+    {
+      "value": "lorebook",
+      "label": "로어북"
+    },
+    {
+      "value": "module",
+      "label": "모듈"
+    },
+    {
+      "value": "custom",
+      "label": "커스텀"
+    },
+    {
+      "value": "ai-auto",
+      "label": "AI 생성"
+    }
+  ],
+  "assetAnalysisFilterGroups_bve": [
+    {
+      "id": "roster",
+      "label": "로스터",
+      "yes": "활성",
+      "no": "비활성"
+    },
+    {
+      "id": "origin",
+      "label": "출처",
+      "options": [
+        {
+          "value": "all",
+          "label": "전체"
+        },
+        {
+          "value": "lorebook",
+          "label": "로어북"
+        },
+        {
+          "value": "module",
+          "label": "모듈"
+        },
+        {
+          "value": "custom",
+          "label": "커스텀"
+        },
+        {
+          "value": "ai-auto",
+          "label": "AI 생성"
+        }
+      ]
+    },
+    {
+      "id": "assets",
+      "label": "에셋",
+      "yes": "선택됨",
+      "no": "미선택"
+    },
+    {
+      "id": "empty",
+      "label": "프롬프트",
+      "yes": "미입력 있음",
+      "no": "모두 입력됨"
+    },
+    {
+      "id": "checked",
+      "label": "분석 체크",
+      "yes": "체크됨",
+      "no": "미체크"
+    }
+  ],
+  "promptFilterGroups_vve": [
+    {
+      "id": "roster",
+      "label": "로스터",
+      "yes": "활성",
+      "no": "비활성"
+    },
+    {
+      "id": "origin",
+      "label": "출처",
+      "options": [
+        {
+          "value": "all",
+          "label": "전체"
+        },
+        {
+          "value": "lorebook",
+          "label": "로어북"
+        },
+        {
+          "value": "module",
+          "label": "모듈"
+        },
+        {
+          "value": "custom",
+          "label": "커스텀"
+        },
+        {
+          "value": "ai-auto",
+          "label": "AI 생성"
+        }
+      ]
+    },
+    {
+      "id": "empty",
+      "label": "프롬프트",
+      "yes": "미입력 있음",
+      "no": "모두 입력됨"
+    },
+    {
+      "id": "reference",
+      "label": "레퍼런스",
+      "yes": "있음",
+      "no": "없음"
+    }
+  ],
+  "personaAssetFilterGroups_yvt": [
+    {
+      "id": "assets",
+      "label": "에셋",
+      "yes": "선택됨",
+      "no": "미선택"
+    },
+    {
+      "id": "empty",
+      "label": "프롬프트",
+      "yes": "미입력 있음",
+      "no": "모두 입력됨"
+    },
+    {
+      "id": "checked",
+      "label": "분석 체크",
+      "yes": "체크됨",
+      "no": "미체크"
+    }
+  ],
+  "personaPromptFilterGroups_bvt": [
+    {
+      "id": "empty",
+      "label": "프롬프트",
+      "yes": "미입력 있음",
+      "no": "모두 입력됨"
+    },
+    {
+      "id": "reference",
+      "label": "레퍼런스",
+      "yes": "있음",
+      "no": "없음"
+    }
+  ],
+  "characterPromptAnalysisInitialState_V2": {
+    "revision": 0,
+    "status": "idle",
+    "evidenceMode": "image",
+    "effectiveEvidenceMode": "image",
+    "fallbackUsed": false,
+    "scope": "current-source",
+    "sourceId": "",
+    "label": "",
+    "completedMetadata": 0,
+    "totalMetadata": 0,
+    "completedImages": 0,
+    "totalImages": 0,
+    "completedPrompts": 0,
+    "totalPrompts": 0,
+    "completedAnalysisUnits": 0,
+    "totalAnalysisUnits": 0,
+    "mainPromptCount": 0,
+    "outfitCount": 0,
+    "artistCount": 0,
+    "progress": 0,
+    "error": ""
+  },
+  "rowNoticeIdle_Ove": {
+    "revision": 0,
+    "status": "idle",
+    "outfitCount": 0
+  },
+  "rowSuccessNoticeClearMs_qvt": 10000,
+  "reclassificationBatchLimits_Fme": {
+    "maxForms": 4,
+    "targetFragments": 200,
+    "targetRequestChars": 60000,
+    "maxRequestChars": 120000
+  },
+  "personaAnalysisInitialState_IH": {
+    "revision": 0,
+    "status": "idle",
+    "evidenceMode": "image",
+    "effectiveEvidenceMode": "image",
+    "fallbackUsed": false,
+    "label": "",
+    "completed": 0,
+    "total": 0,
+    "promptCount": 0,
+    "outfitCount": 0,
+    "completedPersonaKeys": [],
+    "progress": 0,
+    "error": ""
+  },
+  "referenceAnalysisInitialState_SH": {
+    "revision": 0,
+    "status": "idle",
+    "evidenceMode": "image",
+    "effectiveEvidenceMode": "image",
+    "fallbackUsed": false,
+    "scope": "current-source",
+    "sourceId": "",
+    "label": "",
+    "completedMetadata": 0,
+    "totalMetadata": 0,
+    "completedImages": 0,
+    "totalImages": 0,
+    "completedPrompts": 0,
+    "totalPrompts": 0,
+    "completedAnalysisUnits": 0,
+    "totalAnalysisUnits": 0,
+    "mainPromptCount": 0,
+    "outfitCount": 0,
+    "artistCount": 0,
+    "progress": 0,
+    "error": ""
+  },
+  "artistExtractionInitialState_wH": {
+    "revision": 0,
+    "status": "idle",
+    "sourceId": "",
+    "label": "",
+    "completedMetadata": 0,
+    "totalMetadata": 0,
+    "artistId": "",
+    "artistTitle": "",
+    "sourceAssetName": "",
+    "progress": 0,
+    "error": ""
+  },
+  "assetMatchingInitialState_Qve": {
+    "revision": 0,
+    "status": "idle",
+    "scope": "current-source",
+    "sourceId": "",
+    "label": "",
+    "completedAnalysisUnits": 0,
+    "totalAnalysisUnits": 0,
+    "completedBatches": 0,
+    "totalBatches": 0,
+    "sourceCount": 0,
+    "promptCount": 0,
+    "ruleCount": 0,
+    "progress": 0,
+    "error": ""
+  },
+  "charxDetectorInitialState_qve": {
+    "revision": 0,
+    "status": "idle",
+    "origin": "settings",
+    "scope": "current-source",
+    "sourceId": "",
+    "label": "",
+    "completed": 0,
+    "total": 0,
+    "done": 0,
+    "notApplicable": 0,
+    "errorCount": 0,
+    "progress": 0,
+    "error": ""
+  },
+  "novelaiAnalysisProfiles_MH": [
+    {
+      "value": "v5-hybrid",
+      "label": "에셋 메이드 V5",
+      "description": "자연어와 태그를 결합해 장면을 유연하게 구성합니다.",
+      "image": "https://i.postimg.cc/W4rDTB61/5.png",
+      "imageClassName": "-right-6 h-[118%] w-[62%]"
+    },
+    {
+      "value": "v4-5",
+      "label": "에셋 메이드 V4.5",
+      "description": "검증된 프리셋으로 예측 가능한 결과를 만듭니다.",
+      "image": "https://i.postimg.cc/dVZ3jbf6/4-5.png",
+      "imageClassName": "-right-3 h-[110%] w-[60%]"
+    }
+  ],
+  "evidenceModeShortLabels_zde": {
+    "metadata": "메타",
+    "image": "이미지",
+    "text": "텍스트"
+  },
+  "statusLabels_TQe": {
+    "running": "분석중",
+    "success": "분석완료",
+    "cancelled": "분석취소",
+    "error": "분석실패"
+  },
+  "analyzerTimeoutMs_ec": 180000,
+  "analyzerBatchImageLimit": 18,
+  "analyzerRetryMaxCount": 10,
+  "analyzerRetryDelayMs": 100
+}

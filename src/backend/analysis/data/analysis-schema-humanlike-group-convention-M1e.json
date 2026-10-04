@@ -1,0 +1,70 @@
+{
+  "hair.color": {
+    "meaning": "Return only persistent hair color and multicolor structure.",
+    "selection": "up_to_3_nonredundant_tags"
+  },
+  "hair.length": {
+    "meaning": "Return only one identifiable representative hair-length Danbooru tag.",
+    "selection": "single_nonredundant_tag",
+    "allowedValues": [
+      "bald",
+      "very short hair",
+      "short hair",
+      "medium hair",
+      "long hair",
+      "very long hair",
+      "absurdly long hair"
+    ]
+  },
+  "hair.style": {
+    "meaning": "Return only persistent hairstyles; exclude temporary states caused by wetness, wind, or hand movements.",
+    "selection": "up_to_4_nonredundant_tags"
+  },
+  "head.other": {
+    "meaning": "Return only fixed head traits other than hair and eyes. Include horns, animal ears, pointy ears, antennae, and facial markings; exclude hats, glasses, and hair ornaments.",
+    "selection": "up_to_4_nonredundant_tags"
+  },
+  "eyes.color": {
+    "meaning": "Return only eye color. Put heterochromia in eyes.structure.",
+    "selection": "up_to_2_nonredundant_tags"
+  },
+  "eyes.structure": {
+    "meaning": "Return only persistent iris, pupil, and eye-count traits; exclude expressive eye states.",
+    "selection": "up_to_2_nonredundant_tags"
+  },
+  "body.skin": {
+    "meaning": "Return only persistent skin color; exclude lighting, blushing, and stains.",
+    "selection": "up_to_2_nonredundant_tags"
+  },
+  "body.build": {
+    "meaning": "Return the corresponding Danbooru tag only when overall body build is clear.",
+    "selection": "up_to_2_nonredundant_tags"
+  },
+  "body.proportions": {
+    "meaning": "Return only Danbooru tags for clear, persistent body proportions.",
+    "selection": "up_to_3_nonredundant_tags"
+  },
+  "body.breast_size": {
+    "meaning": "Select only one when the breasts are visible and their size can be clearly determined.",
+    "selection": "single_nonredundant_tag",
+    "allowedValues": [
+      "small breasts",
+      "medium breasts",
+      "large breasts",
+      "huge breasts",
+      "gigantic breasts"
+    ]
+  },
+  "marks.distinctive": {
+    "meaning": "Return persistent moles, freckles, scars, tattoos, and birthmarks on body parts other than the head.",
+    "selection": "up_to_4_nonredundant_tags"
+  },
+  "nonhuman.features": {
+    "meaning": "Return only persistent nonhuman body structures outside the head, such as wings and tails.",
+    "selection": "up_to_4_nonredundant_tags"
+  },
+  "custom": {
+    "meaning": "Return only persistent distinctive humanlike appearance that belongs to no other specific group.",
+    "selection": "nonredundant_tags_only_when_no_specific_group_applies"
+  }
+}
