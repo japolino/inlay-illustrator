@@ -328,9 +328,11 @@ describe("swipes, events, recovery", () => {
     const { fx, pipeline } = setup();
     const { jobId } = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0 });
     await waitFor(() => finished(fx, jobId).length > 0);
+    expect(Object.keys((fx.json.get("chats/chat-1/pipeline.json") as { records: object }).records).length).toBeGreaterThan(0);
     await pipeline.handleHostEvent("MESSAGE_DELETED", { chatId: CHAT_ID, messageId: "m1" });
     const doc = fx.chatData.get(CHAT_ID)!;
     expect(doc.history.messagesByKey).toEqual({});
+    expect((fx.json.get("chats/chat-1/pipeline.json") as { records: object }).records).toEqual({});
     expect(doc.plans).toEqual({});
   });
 

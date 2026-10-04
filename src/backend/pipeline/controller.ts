@@ -1162,7 +1162,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
     };
     for (const job of [...messageJobs.values(), ...slotJobs.values()])
       if (job.target.chatId === chatId && job.target.messageId === messageId && (swipe === undefined || job.target.swipeIndex >= swipe)) job.controller.abort("message-removed");
-    await services.storage.updateChatData(chatId, (doc) => {
+    const written = await services.storage.updateChatData(chatId, (doc) => {
       const keys = Object.values(doc.history.messagesByKey).filter((m) => matches(m.messageId)).map((m) => m.messageKey);
       let tree = doc.history;
       if (keys.length) tree = mutateHistoryTree(tree, keys.map((messageKey) => ({ type: "delete-message" as const, messageKey })));
@@ -1175,6 +1175,8 @@ export function createChatPipelineController(services: BackendServices, engine: 
       const json = JSON.stringify(doc).replace(pattern, (m, n: string) => (Number(n) > swipe ? `${messageId}@${Number(n) - 1}` : m));
       return JSON.parse(json) as ChatDataDocument;
     });
+    // Generation records / zoom drafts of removed entries and slots go too (qa #10: they grew forever).
+    if (swipe === undefined) await updateSidecar(services.storage, chatId, () => undefined, written.history).catch(() => undefined);
     if (swipe !== undefined) {
       const pattern = new RegExp(`${messageId.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}@(\\d+)(?![0-9])`, "gu");
       await services.storage
@@ -1182,6 +1184,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
           current ? JSON.parse(JSON.stringify(current).replace(pattern, (m, n: string) => (Number(n) > swipe ? `${messageId}@${Number(n) - 1}` : m))) : current,
         )
         .catch(() => undefined);
+      await updateSidecar(services.storage, chatId, () => undefined, written.history).catch(() => undefined);
       // The shifted swipes still carry blocks baked with their old key / swipe id: re-bake them with the new identity.
       const doc = await services.storage.loadChatData(chatId);
       const shifted = Object.values(doc.history.messagesByKey)

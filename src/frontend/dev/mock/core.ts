@@ -165,6 +165,7 @@ export function coreMockHandlers(): MockHandlers {
   return {
     "session.hello": (_params, { db }) => ({ protocol: 1, status: db.status }),
     "session.getStatus": (_params, { db }) => db.status,
+    "session.closeHostDrawer": () => ({ ok: true }),
     "config.get": (_params, { db }) => ({ config: db.config, chatImageGeneration: db.chatImageGeneration, uiState: db.uiState }),
     "config.update": ({ patch }, ctx) => {
       ctx.db.config = normalizeConfig(mergePatch(ctx.db.config, patch));

@@ -76,6 +76,21 @@ describe("core handlers: session, config, connections", () => {
   });
 });
 
+describe("core handlers: host drawer", () => {
+  test("session.closeHostDrawer calls spindle.ui.closeDrawer for the user; a missing API is a no-op", async () => {
+    const { fake, call } = setup();
+    const host = fake.host as unknown as { ui?: Record<string, unknown> };
+    const calls: unknown[] = [];
+    const saved = host.ui;
+    host.ui = { ...(saved ?? {}), closeDrawer: async (options: unknown) => { calls.push(options); } };
+    expect(await call("session.closeHostDrawer", {})).toEqual({ ok: true });
+    expect(calls).toEqual([{ userId: fake.userId }]);
+    host.ui = {};
+    expect(await call("session.closeHostDrawer", {})).toEqual({ ok: true });
+    host.ui = saved;
+  });
+});
+
 describe("core handlers: charx settings, reset, artists, personas", () => {
   test("override goes to the document, defaults to the config, dirty fields tracked; clear restores", async () => {
     const { call, services } = setup();

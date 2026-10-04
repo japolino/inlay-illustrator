@@ -13,14 +13,16 @@ describe("FAB corner placement helpers", () => {
 
   test("button anchors to each configured corner with a fixed inset", () => {
     // Bottom corners clear the host composer; bottom-right sits left of the chat count toggle.
-    expect(fabButtonEdges("bottom-right")).toEqual({ right: "70px", bottom: "66px", left: "auto", top: "auto" });
-    expect(fabButtonEdges("bottom-left")).toEqual({ left: "20px", bottom: "66px", right: "auto", top: "auto" });
+    expect(fabButtonEdges("bottom-right")).toEqual({ right: "70px", bottom: "var(--ii-am-composer-inset, 66px)", left: "auto", top: "auto" });
+    expect(fabButtonEdges("bottom-left")).toEqual({ left: "20px", bottom: "var(--ii-am-composer-inset, 66px)", right: "auto", top: "auto" });
     expect(fabButtonEdges("top-right")).toEqual({ right: "20px", top: "20px", left: "auto", bottom: "auto" });
     expect(fabButtonEdges("top-left")).toEqual({ left: "20px", top: "20px", right: "auto", bottom: "auto" });
 
     const rect = fabButtonRect("bottom-right", viewport);
     expect(rect.left).toBe(1280 - 70 - 48);
     expect(rect.top).toBe(800 - 66 - 48);
+
+    expect(fabButtonRect("bottom-right", viewport, 120).top).toBe(800 - 120 - 48);
 
     const topLeft = fabButtonRect("top-left", { width: 600, height: 400 });
     expect(topLeft.left).toBe(20);

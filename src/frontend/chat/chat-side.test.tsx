@@ -247,6 +247,20 @@ describe("zoom viewer (DOM, dev mock)", () => {
     expect(mockChat(r.mock.db).actorState.revision).toBe(4);
   });
 
+  test("a slot removed elsewhere moves the viewer to another image (no polling of a dead slot)", async () => {
+    const r = rig();
+    await r.app.init();
+    await openZoom(r);
+    const chat = mockChat(r.mock.db);
+    chat.messages = chat.messages.filter((m) => m.messageId !== "msg-2");
+    r.mock.emit("chatData.changed", { chatId: chat.chatId, messageKeys: [] });
+    await until(() => calls(r, "zoom.getDetails").some((c) => !(c.params as { slotId: string }).slotId.includes("msg-2")));
+    const before = calls(r, "zoom.getDetails").filter((c) => (c.params as { slotId: string }).slotId.includes("msg-2")).length;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(calls(r, "zoom.getDetails").filter((c) => (c.params as { slotId: string }).slotId.includes("msg-2")).length).toBe(before);
+    expect(r.zoom.isOpen()).toBe(true);
+  });
+
   test("AI edit: $ mention list and insertion", async () => {
     const r = rig();
     await r.app.init();

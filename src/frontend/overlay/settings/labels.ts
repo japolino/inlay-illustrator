@@ -185,7 +185,7 @@ export const MODEL_LABELS = {
   connectionSection: "Analyzer connection",
   connection: "Connection profile", // (port) replaces 제공자 / 요청 URL / API 키
   connectionAria: "Main model connection profile", // 메인 모델 제공자
-  connectionHint: "Asset Maid analysis uses a Lumiverse connection profile. Provider, URL and API key are set in Lumiverse.",
+  connectionHint: "The analyzer uses a Lumiverse connection profile. Provider, URL and API key are set in Lumiverse.",
   noConnections: "No Lumiverse connection profiles found.",
   model: "Model", // 모델
   modelAria: "Select model", // 공식 모델 선택
@@ -278,7 +278,7 @@ export const IMAGE_LABELS = {
   characterReference: "Enable character reference", // 레퍼런스 활성화
   outfitReference: "Enable outfit reference",
   genericBox: "Provider parameters",
-  genericNote: "This provider uses the connection's own parameters. Asset Maid sends a flat prompt and no reference images."
+  genericNote: "This provider uses the connection's own parameters. Inlay Illustrator sends a flat prompt and no reference images."
 } as const;
 
 /* ---------------------------------------------------------------------------------------------- */

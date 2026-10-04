@@ -5,11 +5,11 @@
  */
 export const SHELL_LABELS = {
   appName: "Inlay Illustrator",
-  workspaceNav: "Asset Maid workspace", // Asset Maid 작업공간
+  workspaceNav: "Inlay Illustrator workspace", // Asset Maid 작업공간
   close: "Close", // 닫기
   openSettings: "Open settings screen", // 설정 화면 열기
-  settings: "Asset Maid settings", // Asset Maid 설정
-  backToWorkspace: "Back to Asset Maid", // 에셋메이드로 돌아가기
+  settings: "Inlay Illustrator settings", // Asset Maid 설정
+  backToWorkspace: "Back to the workspace", // 에셋메이드로 돌아가기
   sidebarToggle: (label: string) => `${label} open/close`, // ${c} 열기/닫기
   sidebarClose: (label: string) => `${label} close`, // ${c} 닫기
   rosterList: "Lorebook list", // 로어북 목록
@@ -52,7 +52,7 @@ export type SettingsSection = "analysis-profile" | "charx" | "all-charx" | "mode
 
 /** Settings navigation (`yxt`/`bxt`, AssetMaid.pretty.js 145733-145752). Default item: "charx". */
 export const SETTINGS_GROUPS: Array<{ label: string; items: Array<{ id: SettingsSection; label: string; developerOnly?: boolean }> }> = [
-  { label: "Asset Maid", items: [{ id: "analysis-profile", label: "Analysis settings" }] }, // 분석설정
+  { label: "Analysis", items: [{ id: "analysis-profile", label: "Analysis settings" }] }, // Asset Maid / 분석설정
   {
     label: "Character",
     items: [
@@ -115,5 +115,5 @@ export const LAUNCHER_LABELS = {
   autoGenerationHint: "Illustrate new assistant messages automatically.",
   fabCorner: "Floating button",
   inputBarLabel: "Inlay Illustrator",
-  inputBarSubtitle: "Open the Asset Maid workspace"
+  inputBarSubtitle: "Open the Inlay Illustrator workspace"
 } as const;
