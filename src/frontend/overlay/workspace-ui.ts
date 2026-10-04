@@ -32,8 +32,14 @@ export interface SourceUi {
   activePersonaOutfitByPersonaKey: Record<string, string>;
   /** Search query per scope (`assets`, `prompts`, `persona`, `roster`). */
   search: Record<string, string>;
-  /** Active display filter ids per scope. */
-  filters: Record<string, string[]>;
+  /** Display filter values per scope (group id -> option id). */
+  filters: Record<string, Record<string, string>>;
+  /** Roster info panel shown over the main pane (lorebook or custom person prompt key). */
+  infoPromptKey: string | null;
+  /** Custom character editor (replaces the main pane). */
+  editor: { mode: "create" } | { mode: "edit"; customId: string } | null;
+  /** Last registration view of the roster footer tab (AM default `lorebooks`). */
+  lastRegistrationView: "lorebooks" | "custom";
 }
 
 export interface WorkspaceUi {
@@ -55,7 +61,10 @@ export function defaultSourceUi(): SourceUi {
     activeOutfitByPromptKey: {},
     activePersonaOutfitByPersonaKey: {},
     search: {},
-    filters: {}
+    filters: {},
+    infoPromptKey: null,
+    editor: null,
+    lastRegistrationView: "lorebooks"
   };
 }
 
@@ -101,6 +110,14 @@ export class WorkspaceUiStore {
 
   closeSecondary(sourceId: string | null): void {
     this.updateSource(sourceId, { secondaryOpen: false, pickerTarget: null });
+  }
+
+  setSearch(sourceId: string | null, scope: string, query: string): void {
+    this.updateSource(sourceId, (s) => ({ search: { ...s.search, [scope]: query } }));
+  }
+
+  setFilter(sourceId: string | null, scope: string, values: Record<string, string>): void {
+    this.updateSource(sourceId, (s) => ({ filters: { ...s.filters, [scope]: values } }));
   }
 
   setActiveOutfit(sourceId: string | null, promptKey: string, outfitId: string): void {
