@@ -165,6 +165,7 @@ describe("history, regenerate, delete", () => {
     const doc = fx.chatData.get(CHAT_ID)!;
     const regen = Object.values(doc.history.entriesById).find((e) => e.generationOrigin === "regenerate")!;
     expect(regen.parentEntryId).toBe(firstEntry.entryId);
+    expect(regen.assetName.split(".__am__.")[0]).toBe(firstEntry.assetName.split(".__am__.")[0]);
     expect(fx.message("m1").content).toContain(`data-inlay-illustrator-image-id="${regen.savedPath!.split("/").pop()}"`);
     const state = (await pipeline.getMessageStates(CHAT_ID)).messages[0]!;
     expect(state.slots[0]!.entries.length).toBe(2);
@@ -304,7 +305,18 @@ describe("swipes, events, recovery", () => {
       const { jobId } = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex });
       await waitFor(() => finished(fx, jobId).length > 0);
     }
+    expect(fx.message("m1").swipes[2]).toContain('data-inlay-illustrator-message-key="illustration:m1@2"');
+    // The host removes swipe 1 first; the old swipe 2 becomes swipe 1.
+    const hostMessage = fx.fakeHost!.messages.get(CHAT_ID)!.find((m) => m.id === "m1")!;
+    hostMessage.swipes.splice(1, 1);
+    hostMessage.swipe_id = 1;
+    hostMessage.content = hostMessage.swipes[1]!;
     await pipeline.handleHostEvent("MESSAGE_SWIPED", { chatId: CHAT_ID, action: "deleted", swipeId: 1, message: { id: "m1", chat_id: CHAT_ID } });
+    // The moved swipe is re-baked with its new identity (qa #2: stale keys broke regenerate).
+    const moved = fx.message("m1").swipes[1]!;
+    expect(moved).toContain('data-inlay-illustrator-message-key="illustration:m1@1"');
+    expect(moved).toContain('data-inlay-illustrator-swipe-id="1"');
+    expect(moved).not.toContain("illustration:m1@2");
     const doc = fx.chatData.get(CHAT_ID)!;
     expect(Object.keys(doc.history.messagesByKey)).toEqual(["illustration:m1@1"]);
     expect(Object.keys(doc.plans)).toEqual(["illustration:m1@1"]);

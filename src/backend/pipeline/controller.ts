@@ -891,7 +891,9 @@ export function createChatPipelineController(services: BackendServices, engine: 
       const meta = rec(result.providerMetadata);
       const imageId = str(meta.imageId) || str(result.requestId);
       if (!imageId) throw new Error("The image provider returned no image id.");
-      const label = record.actors.find((a) => a.kind !== "persona")?.identityName || record.actors[0]?.identityName || "Character";
+      // Keep the label of the image being regenerated (same slot, same name as the first run), else the actor's name.
+      const sourceLabel = /^(.+?)\.__am__\./u.exec(source.assetName ?? "")?.[1] ?? "";
+      const label = sourceLabel || record.actors.find((a) => a.kind !== "persona")?.identityName || record.actors[0]?.identityName || "Character";
       const assetName = createGeneratedAssetName({ label, kind: "chat", ...(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(imageId) ? { id: imageId } : {}) });
       const width = Math.max(0, Math.round(Number(result.width) || 0));
       const height = Math.max(0, Math.round(Number(result.height) || 0));
@@ -1180,6 +1182,12 @@ export function createChatPipelineController(services: BackendServices, engine: 
           current ? JSON.parse(JSON.stringify(current).replace(pattern, (m, n: string) => (Number(n) > swipe ? `${messageId}@${Number(n) - 1}` : m))) : current,
         )
         .catch(() => undefined);
+      // The shifted swipes still carry blocks baked with their old key / swipe id: re-bake them with the new identity.
+      const doc = await services.storage.loadChatData(chatId);
+      const shifted = Object.values(doc.history.messagesByKey)
+        .map((m) => ({ key: m.messageKey, parsed: parseHistoryMessageId(m.messageId) }))
+        .filter((m) => m.parsed?.messageId === messageId && m.parsed.swipeIndex >= swipe);
+      for (const m of shifted) await publish(chatId, m.key).catch((e) => log("warn", "Re-bake after swipe deletion failed", toRpcError(e)));
     }
     emitChanged(chatId, []);
   };
