@@ -1,0 +1,218 @@
+/*
+ * Overlay stylesheet (Tailwind CSS v4 input).
+ *
+ * Compiled by `bun run css` (scripts/build-css.ts) into overlay.generated.css,
+ * then scoped by src/build/css-scope.ts:
+ * - every style rule is prefixed with `.ii-am-root` (the overlay root class),
+ * - `:root`/`:host` theme variables are moved onto `.ii-am-root`,
+ * - `@layer` wrappers are flattened (layered CSS would lose to the host's
+ *   unlayered CSS), `@keyframes` are renamed with an `ii-am-` prefix.
+ * Tailwind preflight is NOT imported; the scoped reset below replaces it.
+ *
+ * Theme: Asset Maid 0.9.88 token names (extract/ui/theme-tokens.json) so its
+ * className strings work unchanged, mapped onto Lumiverse theme tokens
+ * (--lumiverse-*) with Asset Maid's own values as fallbacks.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+@source "../../";
+
+/* Asset Maid is dark-only; `dark:` variants always apply inside the overlay. */
+@custom-variant dark (&:where(.ii-am-root, .ii-am-root *));
+/* Lumiverse mobile rule: <=600px or a coarse pointer. */
+@custom-variant mobile (@media (max-width: 600px), (pointer: coarse));
+
+@theme {
+  --font-sans: var(--lumiverse-font-family, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  --font-mono: var(--lumiverse-font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+
+  --text-3xs: calc(0.5625rem * var(--lumiverse-font-scale, 1));
+  --text-3xs--line-height: 0.75rem;
+  --text-2xs: calc(0.625rem * var(--lumiverse-font-scale, 1));
+  --text-2xs--line-height: 0.75rem;
+  --text-xs: calc(0.75rem * var(--lumiverse-font-scale, 1));
+  --text-sm: calc(0.875rem * var(--lumiverse-font-scale, 1));
+  --text-base: calc(1rem * var(--lumiverse-font-scale, 1));
+  --text-lg: calc(1.125rem * var(--lumiverse-font-scale, 1));
+  --text-xl: calc(1.25rem * var(--lumiverse-font-scale, 1));
+
+  --radius-sm: var(--lumiverse-radius-sm, 0.25rem);
+  --radius-md: var(--lumiverse-radius-md, 0.375rem);
+  --radius-lg: var(--lumiverse-radius-lg, 0.5rem);
+  --radius-xl: var(--lumiverse-radius-xl, 0.75rem);
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+
+  --aspect-lorebook-thumbnail: 5 / 6;
+  --animate-mobile-workspace-in: mobile-workspace-in 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@theme static {
+  --color-background: var(--lumiverse-bg, #0d0a0c);
+  --color-foreground: var(--lumiverse-text, #f1e5cf);
+  --color-card: var(--lumiverse-card-bg, #1a1619d1);
+  --color-card-foreground: var(--lumiverse-text, #f1e5cf);
+  --color-popover: var(--lumiverse-bg-elevated, #181517f5);
+  --color-popover-foreground: var(--lumiverse-text, #f1e5cf);
+  --color-primary: var(--lumiverse-primary, #d7b86f);
+  --color-primary-foreground: var(--lumiverse-primary-contrast, #231a0d);
+  --color-secondary: var(--lumiverse-fill, #1a1619d1);
+  --color-secondary-foreground: var(--lumiverse-text, #f1e5cf);
+  --color-muted: var(--lumiverse-bg-deep, #151014);
+  --color-muted-foreground: var(--lumiverse-text-muted, #bca98c);
+  --color-accent: var(--lumiverse-fill-hover, #ffffff0b);
+  --color-accent-foreground: var(--lumiverse-text, #f1e5cf);
+  --color-selected: var(--lumiverse-fill-medium, #282427f5);
+  --color-selected-foreground: var(--lumiverse-text, #fff2d5);
+  --color-destructive: var(--lumiverse-danger, #ef7f86);
+  --color-success: var(--lumiverse-success, #7fd391);
+  --color-warning: var(--lumiverse-warning, #e0b85d);
+  --color-border: var(--lumiverse-border, #ffffff0e);
+  --color-input: var(--lumiverse-input-bg, #1a1619d1);
+  --color-ring: var(--lumiverse-primary, #d7b86f);
+  --color-sidebar: var(--lumiverse-bg-panel, #120f11eb);
+  --color-workspace-pane: var(--lumiverse-bg, #0d0a0c);
+  --color-surface-workbench: var(--lumiverse-card-bg, #1a1619d1);
+  --color-surface-workbench-active: var(--lumiverse-fill-strong, #342e32fa);
+  --color-surface-control: var(--lumiverse-input-bg, #1a1619d1);
+  --color-surface-navigation-hover: var(--lumiverse-fill-hover, #ffffff0b);
+  --color-surface-navigation-selected: var(--lumiverse-fill-medium, #282427f5);
+  --color-surface-media-selected: var(--lumiverse-primary-015, #d7b86f29);
+  --color-surface-command: var(--lumiverse-surface-raised, #241f22fa);
+  --color-surface-command-action: var(--lumiverse-fill-strong, #3a3337fa);
+  --color-surface-command-secondary: var(--lumiverse-text-muted, #d9ceba);
+  --color-surface-page-action: var(--lumiverse-fill-medium, #2c262afa);
+  --color-surface-badge: var(--lumiverse-fill, #1a1619d1);
+  --color-surface-prompt-field: var(--lumiverse-bg-deep, #0907087a);
+  --color-surface-lorebook-selected: var(--lumiverse-primary-020, #533a14eb);
+
+  /* Semantic colours without a Lumiverse equivalent keep Asset Maid's values. */
+  --color-gender-female: #f48caf;
+  --color-gender-male: #78b8f5;
+  --color-analyzer-key: #7dcfff;
+  --color-analyzer-value: #ffb36b;
+  --color-analyzer-none: #d49aff;
+  --color-prompt-detected: #7de4ff;
+  --color-coordinate-1: #4ea8de;
+  --color-coordinate-2: #ef8354;
+  --color-coordinate-3: #70c1b3;
+  --color-coordinate-4: #b388eb;
+  --color-coordinate-5: #f2c14e;
+  --color-coordinate-6: #e76f9a;
+  --color-coordinate-7: #7cc576;
+  --color-coordinate-8: #e07a5f;
+  --color-toast-surface: var(--lumiverse-bg-elevated, #211d20db);
+  --color-toast-running-soft: #f1e5cf17;
+  --color-toast-running-fill: #f1e5cf1a;
+  --color-toast-running-lead: #f1e5cf29;
+  --color-toast-success-soft: #549e7024;
+  --color-toast-success-fill: #549e7029;
+  --color-toast-success-lead: #549e7038;
+  --color-toast-warning-soft: #c4944824;
+  --color-toast-warning-fill: #c4944829;
+  --color-toast-warning-lead: #c4944838;
+  --color-toast-danger-soft: #ba546629;
+  --color-toast-danger-fill: #ba54662e;
+  --color-toast-danger-lead: #ba54663d;
+  --color-toast-spinner: #fff3dd;
+
+  --filter-workbench-image: saturate(0.76) contrast(1.03);
+}
+
+@keyframes mobile-workspace-in {
+  0% { opacity: 0; transform: translate(1.5rem); }
+  to { opacity: 1; transform: translate(0); }
+}
+
+/*
+ * Scoped minimal reset (replaces Tailwind preflight inside the overlay only).
+ * Selectors already start with .ii-am-root, so the scoper leaves them alone.
+ */
+@layer base {
+  .ii-am-root {
+    color-scheme: dark;
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    tab-size: 4;
+    text-align: start;
+    letter-spacing: normal;
+  }
+  .ii-am-root,
+  .ii-am-root *,
+  .ii-am-root ::before,
+  .ii-am-root ::after,
+  .ii-am-root ::backdrop,
+  .ii-am-root ::file-selector-button {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+  }
+  .ii-am-root * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-primary) 48%, transparent) transparent;
+  }
+  .ii-am-root :where(h1, h2, h3, h4, h5, h6) { font-size: inherit; font-weight: inherit; }
+  .ii-am-root :where(a) { color: inherit; text-decoration: inherit; }
+  .ii-am-root :where(b, strong) { font-weight: bolder; }
+  .ii-am-root :where(code, kbd, samp, pre) { font-family: var(--font-mono); font-size: 1em; }
+  .ii-am-root :where(ol, ul, menu) { list-style: none; }
+  .ii-am-root :where(img, svg, video, canvas, audio, iframe, embed, object) { display: block; vertical-align: middle; }
+  .ii-am-root :where(img, video) { max-width: 100%; height: auto; }
+  .ii-am-root :where(button, input, select, optgroup, textarea),
+  .ii-am-root ::file-selector-button {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    opacity: 1;
+    background-color: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    text-transform: none;
+    min-height: 0;
+    min-width: 0;
+    width: auto;
+    outline: none;
+  }
+  .ii-am-root :where(button, [role="button"]) { cursor: pointer; }
+  .ii-am-root :where(button:disabled, [aria-disabled="true"]) { cursor: default; }
+  .ii-am-root :where(button, input:where([type="button"], [type="reset"], [type="submit"])) { appearance: button; }
+  .ii-am-root :where(input, textarea)::placeholder { opacity: 1; color: color-mix(in oklab, currentColor 50%, transparent); }
+  .ii-am-root :where(textarea) { resize: vertical; }
+  .ii-am-root :where(table) { text-indent: 0; border-color: inherit; border-collapse: collapse; }
+  .ii-am-root :where(hr) { height: 0; color: inherit; border-top-width: 1px; }
+  .ii-am-root :where([hidden]:not([hidden="until-found"])) { display: none !important; }
+  .ii-am-root :where(:focus-visible) { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+}
+
+/* Overlay frame: fills the host app viewport, honours safe-area and keyboard insets. */
+@layer components {
+  .ii-am-root.ii-am-overlay {
+    position: fixed;
+    inset: 0;
+    width: var(--app-scaled-viewport-width, 100vw);
+    height: var(--app-scaled-viewport-height, 100dvh);
+    z-index: 9990;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--color-background);
+    padding:
+      env(safe-area-inset-top, 0px)
+      env(safe-area-inset-right, 0px)
+      calc(env(safe-area-inset-bottom, 0px) + var(--ii-am-keyboard-inset, 0px))
+      env(safe-area-inset-left, 0px);
+    isolation: isolate;
+  }
+  .ii-am-root.ii-am-overlay[data-state="closed"] { display: none; }
+}

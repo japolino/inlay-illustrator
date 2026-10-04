@@ -9,6 +9,7 @@ import { installInlayLightbox } from "./frontend/lightbox.js";
 import { installInlayFab } from "./frontend/fab.js";
 import { createInlayGallery } from "./frontend/gallery.js";
 import { cleanupModalStyles } from "./frontend/modal.js";
+import { OVERLAY_CSS } from "./frontend/overlay/styles/index.js";
 
 export function setup(ctx: SpindleFrontendContext) {
   const previousCleanup = (globalThis as Record<string, unknown>)[CLEANUP_KEY];
@@ -20,6 +21,7 @@ export function setup(ctx: SpindleFrontendContext) {
   status.textContent = "Asset Maid port in progress.";
   tab.root.replaceChildren(status);
   const removeStyle = ctx.dom.addStyle(HOST_STYLES);
+  const removeOverlayStyle = ctx.dom.addStyle(OVERLAY_CSS);
   const removeLightbox = installInlayLightbox(ctx);
   const gallery = createInlayGallery(ctx);
 
@@ -82,6 +84,7 @@ export function setup(ctx: SpindleFrontendContext) {
     cleanupModalStyles();
     removeLightbox();
     removeStyle();
+    removeOverlayStyle();
     tab.destroy();
     if ((globalThis as Record<string, unknown>)[CLEANUP_KEY] === cleanup) {
       delete (globalThis as Record<string, unknown>)[CLEANUP_KEY];

@@ -5,3 +5,6 @@ node_modules/
 eval-results/raw/
 eval-results/image-study/raw/
 tmp-audit/
+
+# Build output of `bun run css` (imported as text by the frontend bundle)
+src/frontend/overlay/styles/overlay.generated.css
