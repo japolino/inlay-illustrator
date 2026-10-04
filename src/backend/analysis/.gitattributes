@@ -1,0 +1,4 @@
+# Byte-identical Asset Maid extracts and the generated slice: never convert line endings.
+data/** -text
+core/analysis-core.ts -text
+core/tooling/** -text
