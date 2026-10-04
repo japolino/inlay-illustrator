@@ -43,6 +43,8 @@ describe("core handlers: session, config, connections", () => {
     expect(config.image.provider).toBe("comfyui");
     expect(config.runtime.generationProvider).toBe("comfy-ui");
     expect(events().map((e) => e.event)).toEqual(["config.changed", "status.changed"]);
+    const reset = await call("config.update", { patch: { analysis: { temperature: null } } as never });
+    expect(reset.config.analysis.temperature).toBe(0.2);
     await expect(call("config.factoryReset", { confirm: false as unknown as true })).rejects.toMatchObject({ error: { code: "bad-request" } });
     await call("config.factoryReset", { confirm: true });
     expect((await call("config.get", {})).config.analysis.temperature).toBe(0.2);
@@ -62,6 +64,11 @@ describe("core handlers: session, config, connections", () => {
     expect((await call("connections.listLlmModels", { connectionId: "l1" })).models).toEqual([{ id: "m", label: "m" }, { id: "m2", label: "Model 2" }]);
     fake.scriptLlm({ content: "Hi" });
     expect(await call("analyzer.testMessage", {})).toMatchObject({ ok: true, reply: "Hi" });
+    fake.llmConnections.push({ id: "l2", name: "L2", provider: "anthropic", api_url: "", model: "c", preset_id: null, is_default: false, has_api_key: true, metadata: {}, reasoning_bindings: null, created_at: 0, updated_at: 0 });
+    fake.scriptLlm({ content: "Draft" });
+    expect(await call("analyzer.testMessage", { text: "yo", analysis: { connectionId: "l2", model: "c-draft", reasoning: { mode: "off" } } })).toMatchObject({ ok: true, reply: "Draft" });
+    expect(fake.generateCalls.at(-1)!.input).toMatchObject({ connection_id: "l2", model: "c-draft", reasoning: { source: "off" } });
+    expect((await call("config.get", {})).config.analysis.connectionId).toBe("");
     services.log.append("info", "x", "line");
     expect((await call("logs.list", {})).entries.map((e) => e.message)).toContain("line");
     await call("logs.clear", {});
@@ -87,6 +94,18 @@ describe("core handlers: charx settings, reset, artists, personas", () => {
     const cleared = await call("charxSettings.clearOverrides", { characterId: "c1" });
     expect(cleared.effective.nsfwAlwaysEnabled).toBe(before.effective.nsfwAlwaysEnabled);
     expect((await call("charxSettings.get", { characterId: "c1" })).dirtyFields).toEqual([]);
+  });
+
+  test("charxSettings.resetAll bumps the default revisions so overrides lose", async () => {
+    const { call, events } = setup();
+    const before = await call("charxSettings.get", { characterId: "c1" });
+    await call("charxSettings.setOverride", { characterId: "c1", patch: { stateAccumulationEnabled: !before.effective.stateAccumulationEnabled } });
+    const { all } = await call("charxSettings.resetAll", {});
+    expect(all.stateAccumulationEnabled).toBe(before.all.stateAccumulationEnabled);
+    const after = await call("charxSettings.get", { characterId: "c1" });
+    expect(after.effective.stateAccumulationEnabled).toBe(before.effective.stateAccumulationEnabled);
+    expect(after.dirtyFields).toEqual([]);
+    expect(events().at(-1)?.event).toBe("config.changed");
   });
 
   test("character.reset deletes the document and dirty bookkeeping", async () => {

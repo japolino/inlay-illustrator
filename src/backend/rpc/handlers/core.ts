@@ -10,6 +10,7 @@ import {
   CHARX_SETTING_FIELDS,
   charxScopeFor,
   clearCharxOverrides,
+  createDefaultConfig,
   DEFAULT_SELECTED_ARTIST_ID,
   DEFAULT_ARTIST_PRESETS,
   formCollectionRevision,
@@ -20,6 +21,7 @@ import {
   normalizePersonaSettings,
   prefixedId,
   recomputeCharxDirtyFields,
+  resetAllCharxOverrides,
   refreshCharxDirtyFields,
   resolveAllCharxSettings,
   resolveEffectiveCharxSettings,
@@ -27,6 +29,7 @@ import {
   RPC_PROTOCOL_VERSION,
   setCharxDefaults,
   setCharxOverride,
+  type AnalyzerSettings,
   type AnimaArtistEntry,
   type ArtistEntry,
   type BackendStatus,
@@ -38,7 +41,7 @@ import {
 } from "../../../shared/contract/index.js";
 import { fail } from "../errors.js";
 import type { HandlerGroup, RpcContext } from "../types.js";
-import { asRecord, deepMergePatch, str } from "../../services/util.js";
+import { asRecord, deepMergePatch, jsonClone, str } from "../../services/util.js";
 
 export const EXTENSION_VERSION = "0.10.0";
 /** Spindle permissions the backend features need (spindle.json). `app_manipulation` is the overlay mount (frontend). */
@@ -56,6 +59,19 @@ function requireId(value: unknown, name: string): string {
 
 function requireConfirm(params: { confirm?: unknown }): void {
   if (params.confirm !== true) fail("bad-request", "This action needs an explicit confirmation (confirm: true).");
+}
+
+/** Contract `config.update`: a `null` in the patch resets that field to its default (the normalizer alone would coerce it). */
+export function nullsToDefaults(value: unknown, defaults: unknown): unknown {
+  if (value === null) return defaults === undefined ? undefined : jsonClone(defaults);
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const d = asRecord(defaults);
+  const out: Record<string, unknown> = {};
+  for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+    const next = nullsToDefaults(v, d[key]);
+    if (next !== undefined) out[key] = next;
+  }
+  return out;
 }
 
 /** Write the global half of a charx scope back into the config. */
@@ -151,7 +167,7 @@ export const coreHandlers: HandlerGroup = {
     }
     const before = (await ctx.storage.loadConfig()).runtime.generationProvider;
     const config = await ctx.storage.updateConfig((current) => {
-      const merged = deepMergePatch(current, patch);
+      const merged = nullsToDefaults(deepMergePatch(current, patch), createDefaultConfig()) as InlayConfig;
       return providerHint !== null ? { ...merged, image: { ...merged.image, provider: providerHint } } : merged;
     });
     if (config.runtime.generationProvider !== before) ctx.events.emit("status.changed", await backendStatus(ctx));
@@ -175,7 +191,7 @@ export const coreHandlers: HandlerGroup = {
   "connections.listImage": async (_p, ctx) => ({ connections: await ctx.images.listConnections() }),
   "connections.listImageModels": async (params, ctx) => ({ models: await ctx.images.listModels(requireId(params.connectionId, "connectionId")) }),
   "connections.listLlmModels": async (params, ctx) => ({ models: await ctx.llm.listModels(requireId(params.connectionId, "connectionId")) }),
-  "analyzer.testMessage": (params, ctx) => ctx.llm.testMessage(params.text),
+  "analyzer.testMessage": (params, ctx) => ctx.llm.testMessage(params.text, params.analysis ? (asRecord(params.analysis) as Partial<AnalyzerSettings>) : undefined),
   "image.testConnection": (params, ctx) => ctx.images.testConnection(params.connectionId),
 
   /* characters */
@@ -201,6 +217,11 @@ export const coreHandlers: HandlerGroup = {
   },
   async "charxSettings.setDefaults"(params, ctx) {
     const config = await ctx.storage.updateConfig((c) => applyScopeToConfig(c, setCharxDefaults(charxScopeFor(c, null), asRecord(params.patch))));
+    return { all: resolveAllCharxSettings(charxScopeFor(config, null)) };
+  },
+  async "charxSettings.resetAll"(_params, ctx) {
+    // AM ENe 24861: bump every all-charx revision and clear the dirty lists, so every per-character override loses.
+    const config = await ctx.storage.updateConfig((c) => applyScopeToConfig(c, resetAllCharxOverrides(charxScopeFor(c, null))));
     return { all: resolveAllCharxSettings(charxScopeFor(config, null)) };
   },
   async "charxSettings.clearOverrides"(params, ctx) {

@@ -548,11 +548,11 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
       return out;
     },
 
-    async testMessage(text) {
+    async testMessage(text, settings) {
       const started = Date.now();
       try {
         const result = await run(
-          { purpose: "message-test", messages: [{ role: "user", content: str(text) || DEFAULT_TEST_MESSAGE }], responseMode: "text", retries: 0 },
+          { purpose: "message-test", messages: [{ role: "user", content: str(text) || DEFAULT_TEST_MESSAGE }], responseMode: "text", retries: 0, ...(settings ? { settings } : {}) },
           {},
           0,
         );

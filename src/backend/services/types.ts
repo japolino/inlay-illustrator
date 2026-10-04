@@ -151,8 +151,8 @@ export interface LlmService {
   supportsVision(settings?: Partial<AnalyzerSettings>): Promise<boolean>;
   listConnections(): Promise<LlmConnectionSummary[]>;
   listModels(connectionId: string): Promise<ModelOption[]>;
-  /** Settings "message test" (AM T0t). */
-  testMessage(text?: string): Promise<{ ok: boolean; latencyMs: number; reply?: string; error?: RpcError }>;
+  /** Settings "message test" (AM T0t). `settings` = unsaved draft merged over `config.analysis` for this call only. */
+  testMessage(text?: string, settings?: Partial<AnalyzerSettings>): Promise<{ ok: boolean; latencyMs: number; reply?: string; error?: RpcError }>;
 }
 
 /* ------------------------------------------------------------------------------------------------
