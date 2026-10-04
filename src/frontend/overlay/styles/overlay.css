@@ -225,6 +225,8 @@
       calc(env(safe-area-inset-bottom, 0px) + var(--ii-am-keyboard-inset, 0px))
       env(safe-area-inset-left, 0px);
     isolation: isolate;
+    /* Fixed-position descendants (drawers, dialogs) are laid out against the overlay frame. */
+    contain: layout;
   }
   .ii-am-root.ii-am-overlay[data-state="closed"] { display: none; }
 }

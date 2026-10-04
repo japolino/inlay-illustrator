@@ -75,11 +75,11 @@ const SHELL_SCENES: Record<string, PreviewScene> = {
     await clickWhenReady(doc, "[data-roster-expand]");
   },
   "mobile-drawer": async ({ doc }) => {
-    await workspaceReady(doc);
+    await waitFor(doc, '[data-ii-am-shell="mobile"] [data-workspace-content]');
     await clickWhenReady(doc, '[data-ii-am-shell="mobile"] header button');
   },
   "mobile-picker": async ({ doc }) => {
-    await workspaceReady(doc);
+    await waitFor(doc, '[data-ii-am-shell="mobile"] [data-workspace-content]');
     await clickWhenReady(doc, '[data-ii-am-shell="mobile"] header [data-source-transition-control]');
   }
 };
