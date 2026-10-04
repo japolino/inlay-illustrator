@@ -7,7 +7,7 @@
       "devDependencies": {
         "@modelcontextprotocol/sdk": "^1.30.0",
         "bun-types": "1.3.14",
-        "lumiverse-spindle-types": "0.6.2",
+        "lumiverse-spindle-types": "0.6.37",
         "typescript": "7.0.2",
         "zod": "^4.4.3",
       },
@@ -160,7 +160,7 @@
 
     "json-schema-typed": ["json-schema-typed@8.0.2", "", {}, "sha512-fQhoXdcvc3V28x7C7BMs4P5+kNlgUURe2jmUT1T//oBRMDrqy1QPelJimwZGo7Hg9VPV3EQV5Bnq4hbFy2vetA=="],
 
-    "lumiverse-spindle-types": ["lumiverse-spindle-types@0.6.2", "", {}, "sha512-AGTdD3IPhr+oKkAYsSgG2/BG9k6TFCaLpcuTirpo1witAQfq8U2EX+QTwHxQxMvOU0d60E074FoHGSd+VsiVnw=="],
+    "lumiverse-spindle-types": ["lumiverse-spindle-types@0.6.37", "", {}, "sha512-Qw6Q5JMeDgIpwFPDL+jj9lhx49weggj/gvz5Rp8LWnHGUshqzNBhtZ4Y3pzQM6/7H5iA14YizuMmFrqTLsGP4A=="],
 
     "math-intrinsics": ["math-intrinsics@1.1.0", "", {}, "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="],
 

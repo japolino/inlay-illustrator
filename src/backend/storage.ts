@@ -57,9 +57,8 @@ export async function writeJson(path: string, value: unknown, userId?: string): 
 /** Lists stored paths under a prefix, or [] when the host has no `list`. */
 export async function listPaths(prefix: string, userId?: string): Promise<string[]> {
   try {
-    const storage = spindle.userStorage as unknown as { list?: (prefix?: string, userId?: string) => Promise<string[]> };
-    if (typeof storage.list !== "function") return [];
-    const paths = await storage.list(prefix, userId);
+    if (typeof spindle.userStorage.list !== "function") return [];
+    const paths = await spindle.userStorage.list(prefix, userId);
     return Array.isArray(paths) ? paths.filter((path): path is string => typeof path === "string" && path.length > 0) : [];
   } catch {
     return [];
