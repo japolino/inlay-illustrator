@@ -33,6 +33,40 @@ export async function buildRuntimeSource(services: BackendServices, characterId:
   return (amFn("rI")(source, document.customCharacters, "all") ?? source) as AmSource;
 }
 
+/** userStorage-backed assets (uploads / reference crops) use keys `storage:<path>`. */
+export const STORAGE_ASSET_PREFIX = "storage:";
+
+/** Bytes of an asset: `storage:` keys from userStorage, everything else through the image-bytes bridge. */
+export async function readAssetBytes(services: BackendServices, asset: AssetRef): Promise<{ data: Uint8Array; mimeType: string }> {
+  if (asset.key?.startsWith(STORAGE_ASSET_PREFIX)) {
+    const data = await services.storage.readBinary(asset.key.slice(STORAGE_ASSET_PREFIX.length));
+    if (!data) throw new RpcFailure({ code: "not-found", message: `Image not found: ${asset.name || asset.key}`, messageKo: `이미지를 읽지 못했습니다: ${asset.name || asset.key}` });
+    const ext = (asset.extension || asset.key.split(".").pop() || "png").toLowerCase();
+    return { data, mimeType: ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : ext === "avif" ? "image/avif" : "image/png" };
+  }
+  const bytes = await services.imageBytes.getAsset(asset);
+  return { data: base64ToBytes(bytes.data), mimeType: bytes.mimeType };
+}
+
+/** AM persona catalog (`Trt` L86440) from Lumiverse personas: key = persona id (contract §2). */
+export async function buildPersonaCatalog(services: BackendServices, chatId?: string): Promise<Any> {
+  const [list, active] = await Promise.all([services.sources.listPersonas(), services.sources.getActivePersona(chatId).catch(() => null)]);
+  const records = list.map((p, index) => ({
+    key: p.personaId,
+    id: p.personaId,
+    name: p.name || `Persona ${index + 1}`,
+    personaPrompt: p.description ?? "",
+    icon: p.avatarImageId ?? "",
+    largePortrait: false,
+    index,
+    imageAsset: p.avatarImageId ? { name: `${p.name || p.personaId}.png`, key: p.avatarImageId, extension: "png", sourceType: "persona", moduleId: "", moduleName: "" } : null,
+    selected: active?.personaId === p.personaId,
+    bound: false,
+  }));
+  const activeRecord = records.find((r) => r.selected) ?? records[0] ?? null;
+  return { records, activePersona: activeRecord, selectedPersona: activeRecord, boundPersona: null, selectedPersonaIndex: activeRecord?.index ?? -1, boundPersonaId: "" };
+}
+
 export interface AnalyzerCallInfo {
   purpose: string;
   onRetry?: (info: { attempt: number; total: number; error: RpcError }) => void;
@@ -84,6 +118,7 @@ export interface AnalysisSession {
   priorityAssets: AmPriorityAssets;
   metadata: Any;
   images: Any;
+  referenceCrops: Any;
   /** Re-read the source (after host changes) and refresh the catalog snapshot. */
   reloadSource(): Promise<AmSource>;
   dispose(): void;
@@ -92,9 +127,15 @@ export interface AnalysisSession {
 export async function openAnalysisSession(services: BackendServices, characterId: string, options: { chatId?: string; reason?: string } = {}): Promise<AnalysisSession> {
   const store = await AmConfigStore.open(services, characterId, options.reason ?? "analysis");
   let source = await buildRuntimeSource(services, characterId, store, options);
-  const snapshot = () => ({ currentSourceId: characterId, currentMemberKey: source.members[0]?.key ?? "", sources: [source] });
+  let persona: Any = { records: [], activePersona: null, selectedPersona: null, boundPersona: null, selectedPersonaIndex: -1, boundPersonaId: "" };
+  const snapshot = () => ({ currentSourceId: characterId, currentMemberKey: source.members[0]?.key ?? "", sources: [source], persona });
+  const refreshPersonas = async () => {
+    persona = await buildPersonaCatalog(services, options.chatId);
+    return snapshot();
+  };
   const sourceCatalog = {
-    load: async () => snapshot(),
+    load: async (o: Any = {}) => (o?.refreshPersona ? refreshPersonas() : snapshot()),
+    refreshPersonas,
     loadAllSources: async () => snapshot(),
     getSnapshot: () => snapshot(),
     hasCharacterDirectory: () => true,
@@ -103,8 +144,15 @@ export async function openAnalysisSession(services: BackendServices, characterId
   };
   const priorityAssets = createAmPriorityAssets(store, (id) => (id === source.id || !id ? source : null));
   const readAsset = async (asset: Any): Promise<Blob> => {
-    const bytes = await services.imageBytes.getAsset(asset as AssetRef);
-    return new Blob([base64ToBytes(bytes.data) as unknown as BlobPart], { type: bytes.mimeType || "image/png" });
+    const bytes = await readAssetBytes(services, asset as AssetRef);
+    return new Blob([bytes.data as unknown as BlobPart], { type: bytes.mimeType || "image/png" });
+  };
+  // AM referenceCrops (`Wat` L95388-ish): crop PNGs live in userStorage (`storage:` keys).
+  const referenceCrops = {
+    async read(crop: Any): Promise<Uint8Array> {
+      const bytes = await readAssetBytes(services, { name: crop.assetName, key: crop.assetKey, extension: "png", sourceType: "upload", moduleId: "", moduleName: "" });
+      return bytes.data;
+    },
   };
   // AM Int L87689 with a binary cache that reads through the image-bytes bridge (no createImageBitmap in the worker:
   // stealth alpha metadata is skipped there, PNG/JPEG/WebP text chunks still work).
@@ -120,6 +168,7 @@ export async function openAnalysisSession(services: BackendServices, characterId
     priorityAssets,
     metadata,
     images,
+    referenceCrops,
     async reloadSource() {
       services.sources.invalidate(characterId);
       source = await buildRuntimeSource(services, characterId, store, options);

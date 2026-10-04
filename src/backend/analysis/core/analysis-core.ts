@@ -9137,6 +9137,20 @@ function cve({ config: e, items: t }) {
         topics: n.map(uh),
       });
   }
+// AM pvt @133863
+var pvt = 3;
+// AM hvt @133864
+function hvt(e) {
+    const t = e.lorebookNames.slice(0, pvt),
+      r = t.length ? `${t.join(", ")}${e.lorebookNames.length > t.length ? "…" : ""}` : "추가할 이미지 없음";
+    return e.addedImages
+      ? `${e.addedPeople}명에 이미지 ${e.addedImages}장 추가 · ${r}`
+      : e.unclassified
+        ? `추가할 대표 이미지 없음 · 의상 구분이 불명확한 후보 ${e.unclassified}장`
+        : e.withheld
+          ? `추가할 대표 이미지 없음 · 대표 선택에서 제외된 후보 ${e.withheld}장`
+          : r;
+  }
 // AM G2 @134288
 function G2(e) {
     return e == null ? "" : String(e).trim();
@@ -12843,6 +12857,8 @@ export {
   Jbt,
   sve,
   cve,
+  pvt,
+  hvt,
   G2,
   _ve,
   Pvt,

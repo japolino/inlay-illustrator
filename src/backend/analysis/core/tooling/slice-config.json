@@ -124,7 +124,9 @@
   "Z_",
   "eT",
   "Iot",
-  "vnt"
+  "vnt",
+  "hvt",
+  "pvt"
  ],
  "renames": {},
  "externals": {
