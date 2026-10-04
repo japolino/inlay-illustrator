@@ -25,6 +25,11 @@ export interface EnginePort {
   executionMode(config: InlayConfig): "single-stage" | "two-stage";
   /** Run one message (`Lht.run`). The port adds `generationProviderForImage` (run routing) to the input. */
   run(input: OrchestratorRunInputLike, context: EngineRunContext, config: InlayConfig): Promise<OrchestratorRunResult>;
+  /**
+   * One image request through the engine dispatcher (AM `ye.generate` with `runtime.generationAutoRetryCount` retries,
+   * used by single-slot regeneration `$bt` 122319). `request` is an engine `ImageRequest` without `providerRef`.
+   */
+  dispatch(request: Record<string, unknown> & { provider: ImageProviderId }, context: EngineRunContext, config: InlayConfig, options?: { signal?: AbortSignal }): Promise<Record<string, unknown>>;
   dispose(): void;
 }
 
@@ -68,6 +73,18 @@ export function createEnginePort(services: BackendServices, options: EnginePortO
       const ref = { providerId: context.engineProvider, queueScopeKey: registry.queueScopeKey(runId) };
       try {
         return await engine.run({ ...input, generationProviderForImage: () => ref });
+      } finally {
+        registry.release(runId);
+      }
+    },
+    async dispatch(request, context, config, opts = {}) {
+      snapshot = config;
+      const engine = engineFor(config);
+      const runId = registry.register(context);
+      const providerRef = { providerId: request.provider, queueScopeKey: registry.queueScopeKey(runId) };
+      const dispatcher = engine.parts.dispatcher as { generate(r: unknown, o?: unknown): Promise<Record<string, unknown>> };
+      try {
+        return await dispatcher.generate({ ...request, providerRef, ...(opts.signal ? { signal: opts.signal } : {}) }, { retryCount: config.runtime.generationAutoRetryCount });
       } finally {
         registry.release(runId);
       }
