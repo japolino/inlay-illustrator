@@ -9,3 +9,4 @@ export * from "./chat.js";
 export * from "./history.js";
 export * from "./storage.js";
 export * from "./rpc.js";
+export * from "./chat-dom.js";
