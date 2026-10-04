@@ -215,6 +215,7 @@ export const MODEL_LABELS = {
   cancelled: "Request cancelled.", // 요청을 취소했습니다.
   sendFailed: "Could not send the message. Check the connection and model settings.", // 메시지를 전송하지 못했습니다. …
   emptyMessage: "Enter a message to test.", // 테스트할 메시지를 입력하세요.
+  draftNote: "The test uses your unsaved changes.",
   savedOnlyNote: "The test uses the saved settings. Save your changes first.",
   copyAnswer: "Copy answer", // 답변 복사
   copiedAnswer: "Copied.", // 복사했습니다.

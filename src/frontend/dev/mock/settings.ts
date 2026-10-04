@@ -5,6 +5,7 @@
 import {
   charxScopeFor,
   clearCharxOverrides,
+  resetAllCharxOverrides,
   createDefaultChatImageGenerationSettings,
   createDefaultConfig,
   createDefaultUiState,
@@ -153,6 +154,11 @@ export function settingsMockHandlers(): MockHandlers {
     },
     "charxSettings.setDefaults": ({ patch }, ctx) => {
       storeScope(ctx.db, "", setCharxDefaults(scopeOf(ctx.db, ""), patch));
+      ctx.emit("config.changed", { config: ctx.db.config });
+      return { all: resolveAllCharxSettings(scopeOf(ctx.db, "")) };
+    },
+    "charxSettings.resetAll": (_params, ctx) => {
+      storeScope(ctx.db, "", resetAllCharxOverrides(scopeOf(ctx.db, "")));
       ctx.emit("config.changed", { config: ctx.db.config });
       return { all: resolveAllCharxSettings(scopeOf(ctx.db, "")) };
     },

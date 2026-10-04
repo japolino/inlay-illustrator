@@ -1,6 +1,6 @@
 /** Model settings page (Asset Maid `axt` panel "model" 143574, message test `K0t` 142288, JEV `B0t` 142469). */
 import { useEffect, useRef, useState } from "preact/hooks";
-import { THINKING_LEVELS, type ReasoningMode, type ThinkingLevel } from "../../../shared/contract/config.js";
+import { THINKING_LEVELS, type InlayConfig, type ReasoningMode, type ThinkingLevel } from "../../../shared/contract/config.js";
 import type { LlmConnectionSummary, RpcError } from "../../../shared/contract/rpc.js";
 import { useApp, useRpcQuery } from "../../state/app-state.js";
 import { toRpcError } from "../../rpc/client.js";
@@ -94,7 +94,7 @@ export function ModelSettingsPage() {
           </Column>
         </Columns>
       </Card>
-      <MessageTest dirty={form.dirty} />
+      <MessageTest dirty={form.dirty} analysis={form.dirty ? config.analysis : undefined} />
       <Card title={M.jev} end={<Badge>{C.later}</Badge>} className="opacity-60" aria-disabled="true" data-model-jev="">
         <p class="text-xs text-muted-foreground">{M.jevDescription}</p>
         <Field label={M.jevModel}>
@@ -121,8 +121,8 @@ export function testErrorMessage(error: RpcError | undefined): string {
   return error.message || M.sendFailed;
 }
 
-/** Message test card (`K0t`). Uses the saved analyzer settings. */
-function MessageTest({ dirty }: { dirty: boolean }) {
+/** Message test card (`K0t`). Tests the draft analyzer settings when the page has unsaved changes. */
+function MessageTest({ dirty, analysis }: { dirty: boolean; analysis?: InlayConfig["analysis"] }) {
   const app = useApp();
   const [message, setMessage] = useState<string>(M.testDefault);
   const [state, setState] = useState<TestState>({ status: "idle" });
@@ -139,7 +139,7 @@ function MessageTest({ dirty }: { dirty: boolean }) {
     setState({ status: "loading" });
     setCopy("idle");
     try {
-      const result = await app.call("analyzer.testMessage", { text: message }, { signal: controller.signal });
+      const result = await app.call("analyzer.testMessage", { text: message, ...(analysis ? { analysis } : {}) }, { signal: controller.signal });
       if (controller.signal.aborted) return;
       setState(result.ok ? { status: "success", answer: result.reply ?? "", latencyMs: result.latencyMs } : { status: "error", message: testErrorMessage(result.error) });
     } catch (caught) {
@@ -192,7 +192,7 @@ function MessageTest({ dirty }: { dirty: boolean }) {
               {statusText}
             </p>
             {state.status === "success" ? <p tabIndex={0} aria-label={M.modelAnswer} class="whitespace-pre-wrap break-words text-xs leading-5 select-text max-md:text-base">{state.answer}</p> : null}
-            {state.status === "idle" && dirty ? <p class="text-2xs leading-5 text-warning">{M.savedOnlyNote}</p> : null}
+            {state.status === "idle" && dirty ? <p class="text-2xs leading-5 text-muted-foreground">{M.draftNote}</p> : null}
           </div>
           {state.status === "success" ? (
             <div class="flex shrink-0 items-center justify-end gap-2">

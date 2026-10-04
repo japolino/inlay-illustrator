@@ -162,7 +162,13 @@ export function CharxSettingsPage({ scope }: { scope: CharxScope }) {
     setDrafts({});
     try {
       if (scope === "all") {
-        if (config) await app.updateConfig(resetAllPatch(config));
+        try {
+          await app.call("charxSettings.resetAll", {});
+        } catch (caught) {
+          // Older backends: fall back to bumping the default revisions through config.update.
+          if (toRpcError(caught).code !== "unsupported" && toRpcError(caught).code !== "unknown-method") throw caught;
+          if (config) await app.updateConfig(resetAllPatch(config));
+        }
       } else if (characterId) {
         const result = await app.call("charxSettings.clearOverrides", { characterId });
         update((previous) => ({ ...previous, effective: result.effective, dirtyFields: [] }));
