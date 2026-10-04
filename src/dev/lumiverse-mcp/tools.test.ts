@@ -1,18 +1,24 @@
 /**
  * Unit tests for the tool logic. No live network calls: the client is stubbed
- * (or, for marker detection, the production renderInlaidMessage helper builds
- * realistic Inlay markup). The last test spawns the real MCP server process
+ * (or, for marker detection, the production bake (pipeline/markup.ts bakeMessage +
+ * contract renderIllustrationBlock) builds realistic Inlay markup). The last test spawns the real MCP server process
  * and verifies stdout carries only JSON-RPC protocol data.
  */
 
 import { afterAll, describe, expect, test } from "bun:test";
-// The 0.9.x renderer (rendering.ts, not owned here) still takes the interim display config; only that fixture uses it.
-import { DEFAULT_CONFIG as LEGACY_RENDER_CONFIG } from "../../shared/config.js";
-import { DEFAULT_CONFIG, errorResponse, normalizeConfig, okResponse, RPC_MESSAGE_TYPE, type InlayConfig } from "../../shared/contract/index.js";
-import { renderInlaidMessage } from "../../backend/rendering.js";
+import {
+  DEFAULT_CONFIG,
+  errorResponse,
+  normalizeConfig,
+  okResponse,
+  renderIllustrationBlock,
+  RPC_MESSAGE_TYPE,
+  type InlayConfig
+} from "../../shared/contract/index.js";
+import { bakeMessage } from "../../backend/pipeline/markup.js";
 import type { LumiverseClient, MessageRecord, Paginated } from "./client.js";
 import { LumiverseError } from "./client.js";
-import { cleanNarrative, extractInlayBlocks, hasInlayMarkup } from "./inlay-markers.js";
+import { cleanNarrative, extractInlayBlocks, hasInlayMarkup, inferInlayStatus } from "./inlay-markers.js";
 import {
   inlayDescribeConfig,
   inlayGetCharacterTags,
@@ -122,38 +128,46 @@ function context(client: LumiverseClient, clock: ReturnType<typeof fakeClock>, s
 
 function inlayRenderedContent(): string {
   const original = "First paragraph of the reply.\n\nSecond paragraph of the reply.";
-  return renderInlaidMessage(original, {
-    chatId: "chat1",
-    messageId: "a1",
-    swipeId: 0,
-    imageIds: ["img1", ""],
-    imageUrls: ["/api/v1/image-gen/results/img1", ""],
-    prompts: ["prompt one", "prompt two"],
-    negativePrompts: ["neg one", "neg two"],
-    perspectiveModes: ["dynamic", "dynamic"],
-    perspectiveSources: ["adaptive", "adaptive"],
-    paragraphs: [1, 2],
-    slotStatuses: ["completed", "pending"]
-  }, LEGACY_RENDER_CONFIG);
+  const messageKey = "illustration:a1@0";
+  const block = (slotIndex: number, imageId: string, imageIndex: number) => ({
+    slotIndex,
+    html: renderIllustrationBlock({
+      chatId: "chat1",
+      messageId: "a1",
+      swipeId: 0,
+      messageKey,
+      revisionId: "rev1",
+      slotId: `${messageKey}:slot:${slotIndex}`,
+      slotIndex,
+      entryId: `entry-${imageId}`,
+      assetName: `scene.__am__.chat.${imageId}`,
+      imageId,
+      entryIndex: 1,
+      entryCount: 1,
+      canRegenerate: true,
+      imageIndex
+    })
+  });
+  return bakeMessage({ content: original, messageKey, blocks: [block(0, "img1", 0), block(1, "img2", 1)], suppressNative: false }).text;
 }
 
 // ---------------------------------------------------------------------------
 // Inlay marker detection (production markup)
 // ---------------------------------------------------------------------------
 
-describe("inlay marker detection against production renderer output", () => {
+describe("inlay marker detection against the production bake", () => {
   const content = inlayRenderedContent();
 
-  test("detects markup and extracts image blocks with ids and urls", () => {
+  test("detects markup and extracts image blocks with ids, urls and slots", () => {
     expect(hasInlayMarkup(content)).toBe(true);
     const blocks = extractInlayBlocks(content);
-    expect(blocks.length).toBe(2);
-    const images = blocks.filter((block) => block.kind === "image");
-    expect(images.map((block) => block.imageId)).toEqual(["img1"]);
-    expect(images.map((block) => block.imageUrl)).toEqual(["/api/v1/image-gen/results/img1"]);
-    const placeholders = blocks.filter((block) => block.kind === "placeholder");
-    expect(placeholders.length).toBe(1);
-    expect(placeholders[0].status).toBe("pending");
+    expect(blocks.map((block) => block.imageId)).toEqual(["img1", "img2"]);
+    expect(blocks.map((block) => block.imageUrl)).toEqual(["/api/v1/image-gen/results/img1", "/api/v1/image-gen/results/img2"]);
+    expect(blocks.map((block) => block.slotIndex)).toEqual([0, 1]);
+    expect(blocks[0]!.slotId).toBe("illustration:a1@0:slot:0");
+    expect(blocks[0]!.messageKey).toBe("illustration:a1@0");
+    expect(inferInlayStatus(content)).toBe("completed");
+    expect(inferInlayStatus("plain")).toBe("none");
   });
 
   test("cleanNarrative restores the original text without Inlay markup", () => {
@@ -261,19 +275,29 @@ describe("Inlay extension state and stored image details", () => {
     await expect(inlayDescribeConfig(context(client, fakeClock()))).rejects.toThrow("config.get failed: boom");
   });
 
-  test("returns the exact stored prompt shown by the image lightbox", async () => {
+  test("returns the stored prompt of a baked image through zoom.getDetails", async () => {
+    const seen: Array<Record<string, unknown>> = [];
     const client = stubClient({
-      extensionMessage: async (_id, payload) => ({
-        type: "inlay_image_details_result", requestId: payload.requestId, ok: true,
-        prompt: "1girl, black hair, red eyes", negativePrompt: "low quality",
-        perspectiveMode: "asset", perspectiveSource: "manual", creativeConcept: ""
+      getMessage: async (_chatId, messageId) => message({ id: messageId, content: inlayRenderedContent() }),
+      extensionMessage: rpcStub((method, params) => {
+        if (method !== "zoom.getDetails") return null;
+        seen.push(params);
+        return {
+          chatId: "chat1", messageKey: "illustration:a1@0", revisionId: "rev1", slotId: params.slotId, entryId: params.entryId,
+          kind: "generated", assetName: "scene", url: "", width: 832, height: 1216, sizeId: 0, seed: "42", seedFixed: false,
+          generationProvider: "novelai", promptCodec: "novelai-structured", positivePrompt: "1girl, black hair, red eyes",
+          negativePrompt: "low quality", sections: [], coordinateGrid: null, excludedCharacterIndexes: [], promptDraftActive: false,
+          coordinateDraftActive: false, analyzerText: "", canEdit: true, canDelete: true, canRegenerate: true, canDeleteSlot: true, history: []
+        };
       })
     });
     const state: DriverState = { characterId: "c1", chatId: "chat1" };
-    const result = await inlayGetImageDetails(context(client, fakeClock(), state), { image_id: "img1", message_id: "m1" });
+    const result = await inlayGetImageDetails(context(client, fakeClock(), state), { image_id: "img2", message_id: "a1" });
+    expect(seen).toEqual([{ chatId: "chat1", slotId: "illustration:a1@0:slot:1", entryId: "entry-img2" }]);
     expect(result.prompt).toBe("1girl, black hair, red eyes");
-    expect(result.perspective_mode).toBe("asset");
     expect(result.negative_prompt).toBe("low quality");
+    expect(result.image_index).toBe(1);
+    await expect(inlayGetImageDetails(context(client, fakeClock(), state), { image_id: "nope", message_id: "a1" })).rejects.toThrow("No baked Inlay image");
   });
 });
 
@@ -443,9 +467,9 @@ describe("inlay_send_test_turn", () => {
     expect(result.assistant_message_id).toBe("a1");
     expect(result.terminal_status).toBe("completed");
     expect(result.inlay_detected).toBe(true);
-    expect(result.inlay_status).toBe("pending");
-    expect(result.image_ids).toEqual(["img1"]);
-    expect(result.image_urls).toEqual(["/api/v1/image-gen/results/img1"]);
+    expect(result.inlay_status).toBe("completed");
+    expect(result.image_ids).toEqual(["img1", "img2"]);
+    expect(result.image_urls).toEqual(["/api/v1/image-gen/results/img1", "/api/v1/image-gen/results/img2"]);
     expect(result.assistant_text).toContain("First paragraph");
     expect(result.assistant_text).not.toContain("inlay-illustrator");
     expect(result.elapsed_generation_ms).toBeGreaterThan(0);
@@ -544,8 +568,8 @@ describe("inlay_get_result", () => {
     expect(result.message_id).toBe("a1");
     expect(result.inlay_markup).toBe(true);
     expect(result.inlay_status).toBe("pending");
-    expect(result.image_ids).toEqual(["img1"]);
-    expect(result.image_urls).toHaveLength(1);
+    expect(result.image_ids).toEqual(["img1", "img2"]);
+    expect(result.image_urls).toHaveLength(2);
     expect(result.inlay_blocks).toHaveLength(2);
     expect(result.inlay_metadata).toMatchObject({ inlayIllustratorImageIds: ["img1", "img2"] });
     expect(result.clean_narrative_truncated).toBe(true);

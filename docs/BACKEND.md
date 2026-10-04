@@ -7,8 +7,8 @@ Entry: `src/backend.ts` builds one runtime (`src/backend/runtime.ts`) and wires 
 - `GENERATION_ENDED` -> `pipeline.handleGenerationEnded` (automatic illustration of normal / swipe / regenerate replies when
   `autoGenerationEnabled`). `GENERATION_STARTED/STOPPED`, `MESSAGE_SWIPED/DELETED/EDITED`, `SWIPE_EDITED`, `CHAT_CHANGED/SWITCHED`,
   `CHARACTER_EDITED/DELETED` -> `pipeline.handleHostEvent` (+ sources cache invalidation).
-- `onFrontendMessage`: fetch-bridge answers (`services/image-bytes.ts`), then RPC envelopes (`rpc/router.ts`), then the legacy
-  0.9.x gallery / image-details messages (`legacy-records.ts`, read-only).
+- `onFrontendMessage`: fetch-bridge answers (`services/image-bytes.ts`), then RPC envelopes (`rpc/router.ts`). Other messages
+  (0.9.x gallery / image details) are ignored.
 
 ## Runtime (per user)
 
@@ -55,5 +55,5 @@ every `RPC_METHODS` entry has a handler.
 
 ## Legacy
 
-`legacy-records.ts` reads 0.9.x illustration records for the old gallery. `rendering.ts` (0.9.x renderer) remains only for
-`src/dev/lumiverse-mcp` tests; `runtime-lock.ts` is kept but unused.
+0.9.x (Lightboard) files in userStorage (`LEGACY_LIGHTBOARD_PATHS`) are not read. Old baked 0.9.x blocks in messages are still
+stripped by the interceptor (`inlay-content.ts`).

@@ -1,5 +1,5 @@
 /**
- * Backend -> frontend fetch bridge (generalised 0.9.x avatar bridge).
+ * Backend -> frontend fetch bridge.
  *
  * The backend cannot read bytes of stored Lumiverse images (spindle.images returns URLs only) or call REST endpoints that
  * have no Spindle API (character gallery). It asks the frontend, which fetches same-origin with the user's session.
@@ -13,7 +13,6 @@
  * - `as: "json"`: fetch the URL (GET, credentials same-origin, Accept: application/json), answer `{json}`.
  * - Errors: `{error: "<English message>", status?}`.
  * Only same-origin relative URLs starting with `/api/` are allowed (the frontend must refuse anything else).
- * The legacy `avatar_image_request` / `avatar_image_response` pair stays valid until the frontend switches.
  */
 export const FETCH_BRIDGE_REQUEST = "inlay-illustrator:fetch-request";
 export const FETCH_BRIDGE_RESPONSE = "inlay-illustrator:fetch-response";

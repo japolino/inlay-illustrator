@@ -1,6 +1,6 @@
 /**
  * Entry wiring test: imports src/backend.ts over the fake Spindle host and checks the registrations, the RPC channel,
- * the interceptor and the legacy gallery messages. Feature behaviour is tested in the module suites.
+ * and the interceptor. Feature behaviour is tested in the module suites.
  */
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import type { InterceptorResultDTO, LlmMessageDTO } from "lumiverse-spindle-types";
@@ -61,14 +61,6 @@ describe("backend wiring", () => {
     fake.sendFromFrontend({ type: "generate_latest", chatId: "chat-1" });
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(fake.sent.length).toBe(0);
-  });
-});
-
-describe("legacy gallery messages", () => {
-  test("lists an empty gallery", async () => {
-    fake.sendFromFrontend({ type: "list_inlay_gallery", requestId: "g1", page: 1 });
-    for (let i = 0; i < 100 && !fake.sentOfType("inlay_gallery_result").length; i += 1) await new Promise((r) => setTimeout(r, 5));
-    expect(fake.sentOfType("inlay_gallery_result")[0]).toMatchObject({ requestId: "g1", ok: true, totalChats: 0 });
   });
 });
 

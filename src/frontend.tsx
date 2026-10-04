@@ -1,6 +1,5 @@
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
 import { render } from "preact";
-import { respondToAvatarImageRequest } from "./frontend/avatar-image.js";
 import { CLEANUP_KEY, DRAWER_TAB_OPTIONS } from "./frontend/constants.js";
 import { installInlayFab, loadFabCorner, saveFabCorner, type FabCorner } from "./frontend/fab.js";
 import { INPUT_BAR_ACTION_ID, OVERLAY_ROOT_CLASS } from "./frontend/overlay/constants.js";
@@ -127,16 +126,9 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
     }
   });
 
-  // Non-RPC backend messages: fetch bridge and the legacy avatar bridge.
+  // Non-RPC backend messages: the fetch bridge (image bytes, gallery and model lists depend on it).
   const unsubForeign = client.onForeign((payload: unknown) => {
-    if (isFetchBridgeRequest(payload)) {
-      void answerFetchBridge(payload).then((response) => ctx.sendToBackend(response));
-      return;
-    }
-    const message = payload as { type?: unknown };
-    if (message?.type === "avatar_image_request") {
-      void respondToAvatarImageRequest(message as never, (response) => ctx.sendToBackend(response));
-    }
+    if (isFetchBridgeRequest(payload)) void answerFetchBridge(payload).then((response) => ctx.sendToBackend(response));
   });
   const unsubChatSwitched = ctx.events.on("CHAT_SWITCHED", (payload) => {
     const chatId = (payload as { chatId?: unknown } | null)?.chatId;

@@ -1,6 +1,5 @@
 /**
- * ImageBytesService: the backend -> frontend fetch bridge (src/shared/contract/bridge.ts), generalised from the 0.9.x avatar
- * bridge (`avatar_image_request` / `avatar_image_response`, still accepted). The backend cannot read bytes of stored Lumiverse
+ * ImageBytesService: the backend -> frontend fetch bridge (src/shared/contract/bridge.ts). The backend cannot read bytes of stored Lumiverse
  * images (spindle.images returns authenticated URLs only, spec/lumiverse-host.md §3) nor call REST endpoints without a Spindle
  * API (character gallery), so the frontend fetches same-origin `/api/` URLs and answers with base64 or JSON.
  *
@@ -177,7 +176,7 @@ export function createImageBytesService(deps: ImageBytesServiceDeps): ImageBytes
 
     acceptFrontendMessage(message: Record<string, unknown>): boolean {
       const type = message?.type;
-      if (type !== FETCH_BRIDGE_RESPONSE && type !== "avatar_image_response") return false;
+      if (type !== FETCH_BRIDGE_RESPONSE) return false;
       const entry = finish(str(message.requestId));
       if (!entry) return true; // late or duplicate answer (several open tabs): consumed, ignored
       const error = str(message.error);

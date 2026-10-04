@@ -6,12 +6,12 @@ extension reacts. It is deliberately **not** a general Lumiverse automation
 platform: it only knows how to authenticate, list/select characters, create a
 test chat, inspect character cards and Inlay settings, safely patch/reset
 settings, dry-run prompt assembly, send one full generation turn, and read the
-stored result—including the exact image prompt shown by the Inlay lightbox—back.
+stored result—including the exact image prompt shown by the Inlay zoom viewer—back.
 
 ```
 src/dev/lumiverse-mcp/
 ├── client.ts         # thin HTTP client for Lumiverse's existing API
-├── inlay-markers.ts  # detection of Inlay markup (reuses backend exports)
+├── inlay-markers.ts  # detection of baked illustration blocks (chat-dom contract)
 ├── tools.ts          # tool logic (plain functions, unit-testable)
 ├── server.ts         # stdio MCP server (MCP protocol on stdout only)
 ├── smoke.ts          # opt-in live smoke CLI (same client module)
@@ -90,8 +90,8 @@ allowlisted operations:
 - `inlay_reset_config`: reset selected fields, or all fields with explicit
   `all=true` and `confirm_all=true`.
 - `inlay_get_character_tags`: the chat's accumulated actor state (RPC `chatState.get`).
-- `inlay_get_image_details`: exact positive/negative prompt and perspective
-  shown when a generated image is clicked.
+- `inlay_get_image_details`: exact positive/negative prompt, prompt sections,
+  seed and provider of a baked image (RPC `zoom.getDetails` of its slot).
 
 The driver never exposes arbitrary extension messages or extension storage.
 
@@ -231,5 +231,5 @@ leakage, stale-session re-auth, character selection, chat creation, missing
 selected character/chat errors, dry-run request construction, message creation
 followed by generation, generation polling completion/timeout/stop/error,
 Inlay result polling after main generation, Inlay markup/image detection
-(against output from the production `renderInlaidMessage`), MCP stdout
+(against output from the production bake, `bakeMessage` + `renderIllustrationBlock`), MCP stdout
 isolation (spawns the real server), and bounded response sizes.

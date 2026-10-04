@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { STORAGE_PATHS } from "../../shared/contract/index.js";
+import { FETCH_BRIDGE_RESPONSE, STORAGE_PATHS } from "../../shared/contract/index.js";
 import { answerFetchBridge, createFakeHost, TINY_PNG_BASE64 } from "../testing/fake-host.js";
 import { bytesToBase64, createImageBytesService } from "./image-bytes.js";
 import { createStorageService } from "./storage.js";
@@ -43,17 +43,18 @@ describe("image bytes bridge", () => {
     await expect(bytes.getImage({ imageId: "missing" })).rejects.toMatchObject({ error: { code: "not-found" } });
   });
 
-  test("legacy avatar_image_response is accepted; duplicate answers are consumed", async () => {
+  test("duplicate answers are consumed; other message types are not", async () => {
     const { fake, bytes } = setup();
     fake.onSend = (payload) => {
       const id = (payload as { requestId: string }).requestId;
       queueMicrotask(() => {
-        fake.sendFromFrontend({ type: "avatar_image_response", requestId: id, data: TINY_PNG_BASE64, mimeType: "image/png" });
-        fake.sendFromFrontend({ type: "avatar_image_response", requestId: id, data: TINY_PNG_BASE64, mimeType: "image/png" });
+        fake.sendFromFrontend({ type: FETCH_BRIDGE_RESPONSE, requestId: id, data: TINY_PNG_BASE64, mimeType: "image/png" });
+        fake.sendFromFrontend({ type: FETCH_BRIDGE_RESPONSE, requestId: id, data: TINY_PNG_BASE64, mimeType: "image/png" });
       });
     };
     expect((await bytes.getImage({ url: "/api/x" })).mimeType).toBe("image/png");
     expect(bytes.acceptFrontendMessage({ type: "other" })).toBe(false);
+    expect(bytes.acceptFrontendMessage({ type: "avatar_image_response", requestId: "x" })).toBe(false);
   });
 
   test("assets: crops and uploads from userStorage, others by image id", async () => {

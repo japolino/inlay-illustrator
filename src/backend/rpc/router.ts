@@ -2,7 +2,7 @@
  * RPC router: validates request envelopes from the frontend, dispatches to the handler table and sends exactly one response
  * envelope per request (`okResponse` / `errorResponse`) with `host.sendToFrontend(envelope, userId)`.
  *
- * - Non-RPC messages (other `type`) return false so the caller can route them elsewhere (fetch bridge, legacy messages).
+ * - Non-RPC messages (other `type`) return false so the caller can route them elsewhere (fetch bridge).
  * - Wrong protocol -> `protocol-mismatch`; unknown method -> `unknown-method`; method without handler -> `unsupported`;
  *   non-object params -> `bad-request`. Thrown errors go through `toRpcError` (RpcFailure kept, aborts -> cancelled).
  * - Failures are written to the user's RunLog (scope "rpc").

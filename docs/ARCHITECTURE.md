@@ -1,6 +1,6 @@
 # Architecture (Asset Maid port, 0.10.x)
 
-Inlay Illustrator 0.10 is being rebuilt as a port of the RisuAI plugin **Asset Maid 0.9.88** to Lumiverse.
+Inlay Illustrator 0.10 is a port of the RisuAI plugin **Asset Maid 0.9.88** to Lumiverse.
 The Lightboard pipeline of 0.9.x is gone. This document describes the target layout, the toolchain,
 how the overlay UI is mounted and styled, file ownership during the port, and how to build and test.
 
@@ -10,12 +10,11 @@ how the overlay UI is mounted and styled, file ownership during the port, and ho
 |---|---|
 | `src/engine/**` | Pure, deterministic port of Asset Maid core (no host calls): V5 config/compiler/rule runtime/prompt projection/analyzer request and recovery; V4.5 catalog/analyzer/parsing; compose (rule-IR compile, provider prompt codecs, weights, NSFW prefix, coordinates); continuity; paragraph slots; count policy; lenient JSON parser. Parity-tested against the original bundle. |
 | `src/shared/contract/**` | Shared types, defaults and normalizers: config, character document, chat data / Image History, RPC protocol, storage layout. |
-| `src/shared/config.ts` | Interim host config (display geometry, FAB corner, LLM/image connection, debug logging). Replaced by the contract config when the backend is wired. |
-| `src/shared/inlay-frame.ts` | In-chat frame geometry shared by the backend renderer and the frontend restyler. |
 | `src/backend.ts` | Backend entry: per-user runtime (services + pipeline + analysis + RPC router), interceptor, host events, fetch bridge. See docs/BACKEND.md. |
 | `src/backend/**` | `services/` (storage, LLM, images, image bytes, sources, events, run log), `pipeline/` (chat illustration jobs over the engine), `analysis/` (asset analysis and character features), `rpc/` (router + handler groups), `testing/` (fake host / services). See docs/BACKEND.md. |
-| `src/frontend.tsx` | Frontend entry: injects styles, chat-side helpers (inlay restyler, lightbox, gallery, FAB), launchers, overlay controller. |
-| `src/frontend/overlay/**` | The Preact overlay app: `controller.tsx` (mount, open/close, Escape), `host.ts` (mount fallbacks), `App.tsx` (shell), `settings.tsx`, `launcher.tsx`, `labels.ts` (English labels per screen), `ui/` (component kit), `styles/` (Tailwind input + generated CSS). |
+| `src/frontend.tsx` | Frontend entry: injects styles, fetch bridge, chat side (footer, history edge controls, zoom), FAB, launchers, overlay controller. |
+| `src/frontend/overlay/**` | The Preact overlay app: `controller.tsx` (mount, open/close, Escape), `host.ts` (mount fallbacks), `App.tsx` (shell), `settings/`, `workspace/`, `roster/`, `launcher.tsx`, `labels.ts` (English labels per screen), `ui/` (component kit), `styles/` (Tailwind input + generated CSS). |
+| `src/frontend/{rpc,state,chat,zoom}/**` | RPC client, app state layer, chat-side controls, zoom workspace. |
 | `src/build/**` | Build-time tools: `build-css.ts` (Tailwind CLI + scoping), `css-scope.ts` (scoper and scope checker). Never bundled. |
 | `src/dev/lumiverse-mcp/**` | Optional stdio MCP driver for live testing against a running Lumiverse. |
 

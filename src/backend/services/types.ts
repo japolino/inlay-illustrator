@@ -263,7 +263,7 @@ export interface ImageBytesService {
   getAsset(asset: AssetRef, options?: { signal?: AbortSignal }): Promise<ImageBytes>;
   /** JSON of a same-origin REST endpoint through the frontend (e.g. `/api/v1/characters/<id>/gallery`). */
   getJson<T = unknown>(url: string, options?: { signal?: AbortSignal; timeoutMs?: number }): Promise<T>;
-  /** Feed frontend messages; true when consumed (fetch-bridge or legacy avatar response). */
+  /** Feed frontend messages; true when consumed (fetch-bridge response). */
   acceptFrontendMessage(message: Record<string, unknown>): boolean;
 }
 

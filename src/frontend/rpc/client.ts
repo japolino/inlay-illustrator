@@ -2,7 +2,7 @@
  * Frontend RPC client (spec: docs/CONTRACT.md §7, src/shared/contract/rpc.ts).
  * - Requests are paired with responses by `requestId`; each call has a timeout.
  * - Events are dispatched to per-event and catch-all listeners.
- * - Non-RPC backend messages (legacy `state`, avatar bridge, ...) go to `onForeign` listeners.
+ * - Non-RPC backend messages (fetch bridge requests, ...) go to `onForeign` listeners.
  */
 import {
   RPC_MESSAGE_TYPE,
@@ -18,10 +18,8 @@ import {
   type RpcMethods,
   type RpcResponseEnvelope
 } from "../../shared/contract/rpc.js";
-import type { PendingRpcMethods } from "../rpc-pending.js";
-
-/** Contract methods plus methods the UI uses before they land in the contract (src/frontend/rpc-pending.ts). */
-export type ClientMethods = RpcMethods & PendingRpcMethods;
+/** Methods the client can call (the contract, src/shared/contract/rpc.ts). */
+export type ClientMethods = RpcMethods;
 export type ClientMethod = keyof ClientMethods & string;
 export type ClientParams<M extends ClientMethod> = ClientMethods[M] extends { params: infer P } ? P : never;
 export type ClientResult<M extends ClientMethod> = ClientMethods[M] extends { result: infer R } ? R : never;
@@ -128,7 +126,7 @@ export class RpcClient {
     return () => this.anyHandlers.delete(handler);
   }
 
-  /** Messages on the channel that are not RPC envelopes (legacy backend messages). */
+  /** Messages on the channel that are not RPC envelopes (fetch bridge requests). */
   onForeign(handler: (message: unknown) => void): () => void {
     this.foreignHandlers.add(handler);
     return () => this.foreignHandlers.delete(handler);

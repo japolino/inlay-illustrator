@@ -117,7 +117,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     "inlay_get_image_details",
     {
       title: "Get Inlay image prompt tags",
-      description: "Returns the stored positive prompt/tags, negative prompt, and perspective details shown when an Inlay-generated image is clicked. Select the image by index, ID, or URL.",
+      description: "Returns the stored positive/negative prompt, prompt sections, seed and provider of a baked Inlay image (what the zoom viewer shows). Select the image by index, ID, or URL; without message_id the latest messages are searched.",
       inputSchema: {
         chat_id: z.string().optional(),
         message_id: z.string().optional(),

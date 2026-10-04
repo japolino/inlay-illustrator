@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { LlmMessageDTO } from "lumiverse-spindle-types";
-import { MARKER } from "./constants.js";
+import { INLAY_MARKER as MARKER } from "../shared/contract/index.js";
 import { encodeSuppressionCarrier, stripInlayContent, stripInlayFromMessages } from "./inlay-content.js";
 
 function currentBlock(prompt: string, withMarker = true): string {

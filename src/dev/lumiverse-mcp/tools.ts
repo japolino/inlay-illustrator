@@ -246,6 +246,10 @@ export async function inlayGetCharacterTags(
   return { chat_id: chatId, actor_state: actorState };
 }
 
+/**
+ * Stored prompt of a baked illustration (what the zoom viewer shows). Finds the baked block in the message content
+ * (by image_index / image_id / image_url), then asks the backend for `zoom.getDetails` of its slot and entry.
+ */
 export async function inlayGetImageDetails(
   ctx: ToolContext,
   input: { chat_id?: string; message_id?: string; swipe_id?: number; image_index?: number; image_id?: string; image_url?: string }
@@ -254,34 +258,37 @@ export async function inlayGetImageDetails(
   if (input.image_index === undefined && !input.image_id && !input.image_url) {
     throw new LumiverseError("Provide image_index, image_id, or image_url.", "/api/ws", 400);
   }
-  const extensionId = await ctx.client.resolveExtensionId(INLAY_EXTENSION_IDENTIFIER);
-  const requestId = crypto.randomUUID();
-  const response = await ctx.client.extensionMessage<Record<string, unknown>>(
-    extensionId,
-    {
-      type: "get_inlay_image_details",
-      requestId,
-      chatId,
-      ...(input.message_id ? { messageId: input.message_id } : {}),
-      ...(input.swipe_id !== undefined ? { swipeId: input.swipe_id } : {}),
-      ...(input.image_index !== undefined ? { imageIndex: input.image_index } : {}),
-      ...(input.image_id ? { imageId: input.image_id } : {}),
-      ...(input.image_url ? { imageUrl: input.image_url } : {})
-    },
-    { responseType: "inlay_image_details_result", requestId, timeoutMs: 20_000 }
-  );
-  if (response.ok !== true) throw new LumiverseError(String(response.error || "Inlay image details lookup failed."), "/api/ws", 404);
-  return {
-    chat_id: chatId,
-    message_id: input.message_id || null,
-    image_id: input.image_id || null,
-    image_index: input.image_index ?? null,
-    prompt: String(response.prompt || ""),
-    negative_prompt: String(response.negativePrompt || ""),
-    perspective_mode: response.perspectiveMode ?? null,
-    perspective_source: response.perspectiveSource ?? null,
-    creative_concept: String(response.creativeConcept || "")
-  };
+  const matches = (block: InlayBlock, index: number) =>
+    (input.image_id ? block.imageId === input.image_id : true) &&
+    (input.image_url ? block.imageUrl === input.image_url || (!!block.imageId && input.image_url.includes(block.imageId)) : true) &&
+    (input.image_index !== undefined ? index === input.image_index : true);
+  const candidates: MessageRecord[] = input.message_id
+    ? [await ctx.client.getMessage(chatId, input.message_id)]
+    : [...(await ctx.client.listMessages(chatId, { tail: true, limit: 50 })).data ?? []].reverse();
+  for (const message of candidates) {
+    const blocks = extractInlayBlocks(typeof message.content === "string" ? message.content : "");
+    const index = blocks.findIndex(matches);
+    const block = blocks[index];
+    if (!block?.slotId) continue;
+    const details = await inlayRpc(ctx, "zoom.getDetails", { chatId, slotId: block.slotId, ...(block.entryId ? { entryId: block.entryId } : {}) });
+    return {
+      chat_id: chatId,
+      message_id: message.id,
+      image_id: block.imageId ?? null,
+      image_index: index,
+      slot_id: details.slotId,
+      entry_id: details.entryId,
+      kind: details.kind,
+      provider: details.generationProvider,
+      prompt_codec: details.promptCodec,
+      seed: details.seed,
+      prompt: details.positivePrompt,
+      negative_prompt: details.negativePrompt,
+      sections: details.sections,
+      analyzer_text: truncate(details.analyzerText || "", MAX_NARRATIVE_CHARS).text
+    };
+  }
+  throw new LumiverseError("No baked Inlay image matches the selection.", "/api/ws", 404);
 }
 
 export type ListCharactersResult = {
