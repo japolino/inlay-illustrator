@@ -1,0 +1,2753 @@
+{
+ "default": {
+  "response": "default",
+  "directions": "default",
+  "mode": "complete-from-request",
+  "freeCharacterGenerationEnabled": false,
+  "recovered": {
+   "illustrations": [
+    {
+     "slotNumber": 0,
+     "status": "recovered",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v",
+       "formId": "form_default",
+       "sex": "female",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.1fmv888.fk4pvw",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "persona_reference",
+        "value": "persona::p1"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "id": "arm_hug",
+       "mode": "directed",
+       "sourceActorId": "actor_1",
+       "targetActorId": "actor_2",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": []
+      },
+      {
+       "interactionRef": "interaction:1",
+       "id": "sleeve_grab",
+       "mode": "directed",
+       "sourceActorId": "actor_1",
+       "targetActorId": "actor_2",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": [
+        {
+         "actorId": "actor_1",
+         "text": "fingers pinching the hoodie sleeve"
+        }
+       ]
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "outdoors"
+        ]
+       },
+       {
+        "id": "scene.time",
+        "options": [
+         "morning"
+        ]
+       }
+      ],
+      "freeTags": [
+       "school_gate",
+       "cherry_blossoms"
+      ],
+      "instruction": "Brick school gate with morning sunlight.",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 2,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.35,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": "left of the gate pillar"
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "center": {
+        "x": 0.68,
+        "y": 0.52
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "gaze.direction",
+         "options": [
+          "looking_at_another"
+         ]
+        },
+        {
+         "id": "expression.general",
+         "options": [
+          "light_smile"
+         ]
+        },
+        {
+         "id": "expression.mouth",
+         "options": [
+          "open_mouth"
+         ]
+        },
+        {
+         "id": "actor.pose.body",
+         "options": [
+          "standing"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "leaning forward slightly",
+       "actionInstruction": "waving one hand high",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "surprised"
+         ]
+        },
+        {
+         "id": "actor.pose.body",
+         "options": [
+          "standing"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "running toward the gate",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [
+       {
+        "id": "camera.view",
+        "options": [
+         "from_side"
+        ]
+       }
+      ],
+      "instruction": "Eye-level camera at the gate facing both actors."
+     },
+     "diagnostics": [
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[0]",
+       "message": "Canonicalized a free tag to 'school_gate'."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[1]",
+       "message": "Canonicalized a free tag to 'cherry_blossoms'."
+      }
+     ]
+    },
+    {
+     "slotNumber": 1,
+     "status": "degraded",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.m0ais.6ynrym",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "indoors"
+        ]
+       }
+      ],
+      "freeTags": [
+       "staff_room",
+       "window"
+      ],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 1,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.5,
+        "y": 0.45
+       },
+       "facing": {
+        "id": "facing_away"
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "gaze.direction",
+         "options": [
+          "looking_down"
+         ]
+        },
+        {
+         "id": "expression.general",
+         "options": [
+          "exhausted"
+         ]
+        }
+       ],
+       "freeTags": [
+        "scar on face"
+       ],
+       "penetratingInjuries": [],
+       "poseInstruction": "hands on the window sill",
+       "actionInstruction": "sighing",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [],
+      "instruction": "Camera behind the actor looking out the window."
+     },
+     "diagnostics": [
+      {
+       "code": "frame-scene-modifier-omitted",
+       "impact": "degraded",
+       "path": "$.illustrations[1].frame_placement.modifiers",
+       "message": "Omitted an Actor-facing modifier from the Frame Placement scene modifier list."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[1].frame_placement.freeTags[0]",
+       "message": "Canonicalized a free tag to 'staff_room'."
+      }
+     ]
+    }
+   ],
+   "diagnostics": []
+  }
+ },
+ "pov": {
+  "response": "pov",
+  "directions": "pov",
+  "mode": "complete-from-request",
+  "freeCharacterGenerationEnabled": false,
+  "recovered": {
+   "illustrations": [
+    {
+     "slotNumber": 0,
+     "status": "degraded",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v",
+       "formId": "form_default",
+       "sex": "female",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.1fmv888.fk4pvw",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "persona_reference",
+        "value": "persona::p1"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "outdoors"
+        ]
+       },
+       {
+        "id": "scene.time",
+        "options": [
+         "morning"
+        ]
+       }
+      ],
+      "freeTags": [
+       "school_gate"
+      ],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 1,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.5,
+        "y": 0.55
+       },
+       "source": "analyzer",
+       "instruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 2,
+       "center": {
+        "x": 0.67,
+        "y": 0.5
+       },
+       "source": "fallback",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "gaze.direction",
+         "options": [
+          "looking_at_viewer"
+         ]
+        },
+        {
+         "id": "expression.general",
+         "options": [
+          "light_smile"
+         ]
+        },
+        {
+         "id": "expression.blush",
+         "options": [
+          "light_blush"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "reaching toward the viewer",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 2,
+       "actions": [],
+       "modifiers": [],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [
+       {
+        "id": "camera.view",
+        "options": [
+         "pov"
+        ]
+       }
+      ],
+      "instruction": "First-person view from the persona at the gate."
+     },
+     "diagnostics": [
+      {
+       "code": "actor-id-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].actor_roster[required].actorId",
+       "message": "Canonicalized the roster Actor ID to 'actor_2'."
+      },
+      {
+       "code": "required-viewpoint-participant-recovered",
+       "impact": "recovered",
+       "path": "$.illustrations[0].actor_roster",
+       "message": "Added the request-required viewpoint participant from the active Persona candidate."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[0]",
+       "message": "Canonicalized a free tag to 'school_gate'."
+      },
+      {
+       "code": "placement-item-fallback",
+       "impact": "degraded",
+       "path": "$.illustrations[0].frame_placement.items",
+       "message": "Added deterministic fallback placement for 'actor_2'."
+      },
+      {
+       "code": "actor-occurrence-detail-defaulted-empty",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_detail",
+       "message": "Created an empty Actor Detail for placementIndex 2 without inventing pose, action, object, or dialogue meaning."
+      }
+     ]
+    }
+   ],
+   "diagnostics": []
+  }
+ },
+ "ensemble": {
+  "response": "ensemble",
+  "directions": "ensemble",
+  "mode": "complete-from-request",
+  "freeCharacterGenerationEnabled": false,
+  "recovered": {
+   "illustrations": [
+    {
+     "slotNumber": 1,
+     "status": "degraded",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v",
+       "formId": "form_default",
+       "sex": "female",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "outfit": {
+        "selectedId": "outfit_2"
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.1fmv888.fk4pvw",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "persona_reference",
+        "value": "persona::p1"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      },
+      {
+       "actorId": "actor_3",
+       "candidateKey": "actor.m0ais.6ynrym",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "id": "hug",
+       "mode": "directed",
+       "sourceActorId": "actor_1",
+       "targetActorId": "actor_2",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": []
+      },
+      {
+       "interactionRef": "interaction:1",
+       "id": "hug",
+       "mode": "directed",
+       "sourceActorId": "actor_3",
+       "targetActorId": "actor_2",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": []
+      },
+      {
+       "interactionRef": "interaction:2",
+       "id": "holding_hands",
+       "mode": "mutual",
+       "sourceActorId": "actor_1",
+       "targetActorId": "actor_3",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": [
+        {
+         "actorId": "actor_1",
+         "text": "swinging the joined hands"
+        },
+        {
+         "actorId": "actor_3",
+         "text": "awkward grip"
+        }
+       ]
+      },
+      {
+       "interactionRef": "interaction:3",
+       "id": "pointing_at_each_other",
+       "mode": "mutual",
+       "sourceActorId": "actor_2",
+       "targetActorId": "actor_3",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": []
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "indoors"
+        ]
+       },
+       {
+        "id": "scene.weather",
+        "options": [
+         "rain"
+        ]
+       }
+      ],
+      "freeTags": [
+       "classroom",
+       "window",
+       "desk",
+       "blackboard"
+      ],
+      "instruction": "Rain streaks on the classroom windows.",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 2,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.25,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "center": {
+        "x": 0.5,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": "between the two"
+      },
+      {
+       "actorId": "actor_3",
+       "placementIndex": 2,
+       "center": {
+        "x": 0.77,
+        "y": 0.45
+       },
+       "facing": {
+        "id": "facing_away"
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "seductive_smile"
+         ]
+        },
+        {
+         "id": "state.clothing.surface",
+         "options": [
+          "wet_clothes"
+         ]
+        },
+        {
+         "id": "state.hair.condition",
+         "options": [
+          "wet_hair"
+         ]
+        }
+       ],
+       "freeTags": [
+        "bruise on arm"
+       ],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "embarrassed"
+         ]
+        },
+        {
+         "id": "expression.blush",
+         "options": [
+          "blush"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "arms pinned to the sides",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_3",
+       "placementIndex": 2,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "gaze.direction",
+         "options": [
+          "looking_back"
+         ]
+        },
+        {
+         "id": "state.body.surface",
+         "options": [
+          "sweat"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [
+       {
+        "id": "camera.view",
+        "options": [
+         "from_above",
+         "dutch_angle"
+        ]
+       }
+      ],
+      "instruction": "High camera near the ceiling corner."
+     },
+     "diagnostics": [
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[4]",
+       "message": "Canonicalized a free tag to 'extra_tag'."
+      },
+      {
+       "code": "tag-limit-applied",
+       "impact": "degraded",
+       "path": "$.illustrations[0].frame_placement.freeTags",
+       "message": "Kept the first 4 safe unique tags for this channel."
+      }
+     ]
+    }
+   ],
+   "diagnostics": []
+  }
+ },
+ "comic": {
+  "response": "comic",
+  "directions": "comic",
+  "mode": "complete-from-request",
+  "freeCharacterGenerationEnabled": false,
+  "recovered": {
+   "illustrations": [
+    {
+     "slotNumber": 0,
+     "status": "recovered",
+     "presentationMode": "multi-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v",
+       "formId": "form_default",
+       "sex": "female",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.1fmv888.fk4pvw",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "persona_reference",
+        "value": "persona::p1"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "panelIds": [
+        "p_meet"
+       ],
+       "id": "arm_hug",
+       "mode": "directed",
+       "sourceActorId": "actor_1",
+       "targetActorId": "actor_2",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": [
+        {
+         "actorId": "actor_2",
+         "text": "stumbling half a step"
+        }
+       ]
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "outdoors"
+        ]
+       },
+       {
+        "id": "scene.time",
+        "options": [
+         "morning"
+        ]
+       }
+      ],
+      "freeTags": [
+       "school_gate"
+      ],
+      "instruction": "",
+      "comicPageInstruction": "A dominant top panel of Alice waving, a wide middle panel of the arm hug, and a small inset of the gate bell.",
+      "comicPageModifiers": [
+       {
+        "id": "comic.page.hierarchy",
+        "options": [
+         "dominant_panel"
+        ]
+       },
+       {
+        "id": "comic.page.flow",
+        "options": [
+         "linear"
+        ]
+       }
+      ],
+      "comicPanels": [
+       {
+        "panelId": "p_wave",
+        "id": "greeting_wave",
+        "visibleActorIds": [
+         "actor_1"
+        ],
+        "modifiers": [
+         {
+          "id": "comic.panel.camera_distance",
+          "options": [
+           "medium"
+          ]
+         }
+        ],
+        "instruction": "Alice waving high from the gate."
+       },
+       {
+        "panelId": "p_meet",
+        "id": "arm_hug_meeting",
+        "visibleActorIds": [
+         "actor_1",
+         "actor_2"
+        ],
+        "modifiers": [
+         {
+          "id": "comic.panel.shape",
+          "options": [
+           "wide"
+          ]
+         }
+        ],
+        "instruction": "Alice hooks her arm around Shouta's."
+       },
+       {
+        "panelId": "p_bell",
+        "id": "school_bell",
+        "visibleActorIds": [],
+        "modifiers": [
+         {
+          "id": "comic.panel.shape",
+          "options": [
+           "inset"
+          ]
+         }
+        ],
+        "instruction": "Close view of the ringing school bell."
+       }
+      ],
+      "comicCrossPanelActors": [
+       {
+        "actorId": "actor_1",
+        "panelIds": [
+         "p_wave",
+         "p_meet"
+        ],
+        "modifiers": [
+         {
+          "id": "comic.actor.panel_relation",
+          "options": [
+           "breaks_border"
+          ]
+         }
+        ],
+        "instruction": "Alice's raised hand breaks the border between the first two panels."
+       }
+      ]
+     },
+     "analyzerSizeId": 1,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "panelId": "p_wave",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.5,
+        "y": 0.25
+       },
+       "source": "analyzer",
+       "instruction": ""
+      },
+      {
+       "actorId": "actor_1",
+       "panelId": "p_meet",
+       "placementIndex": 1,
+       "center": {
+        "x": 0.35,
+        "y": 0.62
+       },
+       "source": "analyzer",
+       "instruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "panelId": "p_meet",
+       "placementIndex": 2,
+       "center": {
+        "x": 0.65,
+        "y": 0.62
+       },
+       "facing": {
+        "id": "facing_away"
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "light_smile"
+         ]
+        },
+        {
+         "id": "actor.framing.crop",
+         "options": [
+          "upper_body"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "waving",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": "speech bubble, text:You're late again!"
+      },
+      {
+       "actorId": "actor_1",
+       "placementIndex": 1,
+       "outfit": {
+        "selectedId": "outfit_1"
+       },
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.mouth",
+         "options": [
+          "open_mouth"
+         ]
+        },
+        {
+         "id": "actor.framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 2,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "surprised"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[0]",
+       "message": "Canonicalized a free tag to 'school_gate'."
+      }
+     ]
+    }
+   ],
+   "diagnostics": []
+  }
+ },
+ "routing": {
+  "response": "routing",
+  "directions": "default",
+  "mode": "complete-from-request",
+  "freeCharacterGenerationEnabled": false,
+  "recovered": {
+   "illustrations": [
+    {
+     "slotNumber": 1,
+     "status": "degraded",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v",
+       "formId": "form_default",
+       "sex": "female",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.m0ais.6ynrym",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "id": "missionary",
+       "mode": "directed",
+       "sourceActorId": "actor_2",
+       "targetActorId": "actor_1",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [
+        {
+         "id": "interaction.sexual.penetration.route",
+         "options": [
+          "vaginal"
+         ]
+        },
+        {
+         "id": "interaction.penetration.instrument",
+         "options": [
+          "penis"
+         ]
+        },
+        {
+         "id": "interaction.sexual.penetration.progress",
+         "options": [
+          "deep_penetration"
+         ]
+        }
+       ],
+       "participantDetails": []
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "nsfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "indoors"
+        ]
+       },
+       {
+        "id": "scene.time",
+        "options": [
+         "night"
+        ]
+       }
+      ],
+      "freeTags": [
+       "bedroom"
+      ],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 5,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.5,
+        "y": 0.6
+       },
+       "source": "analyzer",
+       "instruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "center": {
+        "x": 0.5,
+        "y": 0.35
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "actor.pose.body",
+         "options": [
+          "on_back"
+         ]
+        },
+        {
+         "id": "state.clothing.coverage.lower",
+         "options": [
+          "no_panties"
+         ]
+        },
+        {
+         "id": "state.fluid.saliva",
+         "options": [
+          "drooling"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "serious"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [
+       {
+        "id": "camera.view",
+        "options": [
+         "from_above"
+        ]
+       }
+      ],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "modifier-option-limit-applied",
+       "impact": "degraded",
+       "path": "$.illustrations[0].interaction.modifiers[2][0].options",
+       "message": "Applied the compiled maximum of 1 options for 'interaction.sexual.penetration.progress'."
+      },
+      {
+       "code": "scene-rating-upgraded",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.modifiers",
+       "message": "Normalized the scene rating to nsfw from a compiled closed Interaction declaration."
+      }
+     ]
+    }
+   ],
+   "diagnostics": []
+  }
+ },
+ "comic-preserve": {
+  "response": "comic",
+  "directions": "comic",
+  "mode": "preserve-response-membership",
+  "freeCharacterGenerationEnabled": false,
+  "recovered": {
+   "illustrations": [
+    {
+     "slotNumber": 0,
+     "status": "recovered",
+     "presentationMode": "multi-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v",
+       "formId": "form_default",
+       "sex": "female",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.1fmv888.fk4pvw",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "persona_reference",
+        "value": "persona::p1"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "panelIds": [
+        "p_meet"
+       ],
+       "id": "arm_hug",
+       "mode": "directed",
+       "sourceActorId": "actor_1",
+       "targetActorId": "actor_2",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": [
+        {
+         "actorId": "actor_2",
+         "text": "stumbling half a step"
+        }
+       ]
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "outdoors"
+        ]
+       },
+       {
+        "id": "scene.time",
+        "options": [
+         "morning"
+        ]
+       }
+      ],
+      "freeTags": [
+       "school_gate"
+      ],
+      "instruction": "",
+      "comicPageInstruction": "A dominant top panel of Alice waving, a wide middle panel of the arm hug, and a small inset of the gate bell.",
+      "comicPageModifiers": [
+       {
+        "id": "comic.page.hierarchy",
+        "options": [
+         "dominant_panel"
+        ]
+       },
+       {
+        "id": "comic.page.flow",
+        "options": [
+         "linear"
+        ]
+       }
+      ],
+      "comicPanels": [
+       {
+        "panelId": "p_wave",
+        "id": "greeting_wave",
+        "visibleActorIds": [
+         "actor_1"
+        ],
+        "modifiers": [
+         {
+          "id": "comic.panel.camera_distance",
+          "options": [
+           "medium"
+          ]
+         }
+        ],
+        "instruction": "Alice waving high from the gate."
+       },
+       {
+        "panelId": "p_meet",
+        "id": "arm_hug_meeting",
+        "visibleActorIds": [
+         "actor_1",
+         "actor_2"
+        ],
+        "modifiers": [
+         {
+          "id": "comic.panel.shape",
+          "options": [
+           "wide"
+          ]
+         }
+        ],
+        "instruction": "Alice hooks her arm around Shouta's."
+       },
+       {
+        "panelId": "p_bell",
+        "id": "school_bell",
+        "visibleActorIds": [],
+        "modifiers": [
+         {
+          "id": "comic.panel.shape",
+          "options": [
+           "inset"
+          ]
+         }
+        ],
+        "instruction": "Close view of the ringing school bell."
+       }
+      ],
+      "comicCrossPanelActors": [
+       {
+        "actorId": "actor_1",
+        "panelIds": [
+         "p_wave",
+         "p_meet"
+        ],
+        "modifiers": [
+         {
+          "id": "comic.actor.panel_relation",
+          "options": [
+           "breaks_border"
+          ]
+         }
+        ],
+        "instruction": "Alice's raised hand breaks the border between the first two panels."
+       }
+      ]
+     },
+     "analyzerSizeId": 1,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "panelId": "p_wave",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.5,
+        "y": 0.25
+       },
+       "source": "analyzer",
+       "instruction": ""
+      },
+      {
+       "actorId": "actor_1",
+       "panelId": "p_meet",
+       "placementIndex": 1,
+       "center": {
+        "x": 0.35,
+        "y": 0.62
+       },
+       "source": "analyzer",
+       "instruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "panelId": "p_meet",
+       "placementIndex": 2,
+       "center": {
+        "x": 0.65,
+        "y": 0.62
+       },
+       "facing": {
+        "id": "facing_away"
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "light_smile"
+         ]
+        },
+        {
+         "id": "actor.framing.crop",
+         "options": [
+          "upper_body"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "waving",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": "speech bubble, text:You're late again!"
+      },
+      {
+       "actorId": "actor_1",
+       "placementIndex": 1,
+       "outfit": {
+        "selectedId": "outfit_1"
+       },
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.mouth",
+         "options": [
+          "open_mouth"
+         ]
+        },
+        {
+         "id": "actor.framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 2,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "surprised"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[0]",
+       "message": "Canonicalized a free tag to 'school_gate'."
+      }
+     ]
+    }
+   ],
+   "diagnostics": []
+  }
+ },
+ "partial-preserve": {
+  "response": "broken.partial",
+  "directions": "default",
+  "mode": "preserve-response-membership",
+  "freeCharacterGenerationEnabled": false,
+  "recovered": {
+   "illustrations": [
+    {
+     "slotNumber": 0,
+     "status": "degraded",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v",
+       "formId": "form_default",
+       "sex": "female",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "id": "kiss",
+       "mode": "directed",
+       "sourceActorId": "actor_1",
+       "bindingStatus": "incomplete",
+       "unresolvedActorRefs": [
+        "targetActorId"
+       ],
+       "modifiers": [],
+       "participantDetails": []
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       }
+      ],
+      "freeTags": [],
+      "instruction": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.5,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "unknown-actor-candidate",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_roster[1].candidateKey",
+       "message": "Omitted an Actor whose identity could not be resolved from the local request evidence."
+      },
+      {
+       "code": "interaction-mode-recovered",
+       "impact": "recovered",
+       "path": "$.illustrations[0].interaction.items[0].mode",
+       "message": "Applied default mode 'directed' for Interaction 'kiss'."
+      },
+      {
+       "code": "interaction-binding-incomplete",
+       "impact": "degraded",
+       "path": "$.illustrations[0].interaction.items[0]",
+       "message": "Preserved the Interaction but suppressed Actor prompt projection because two distinct roster Actors were not resolved."
+      },
+      {
+       "code": "unsafe-tag-omitted",
+       "impact": "degraded",
+       "path": "$.illustrations[0].interaction.items[1].id",
+       "message": "Omitted an unsafe, reserved, or internal-identity tag."
+      },
+      {
+       "code": "unbound-interaction-modifier",
+       "impact": "degraded",
+       "path": "$.illustrations[0].interaction.modifiers[0]",
+       "message": "Omitted an Interaction modifier whose index did not resolve."
+      },
+      {
+       "code": "size-id-invalid-local-fallback",
+       "impact": "degraded",
+       "path": "$.illustrations[0].frame_placement.sizeId",
+       "message": "Omitted an unavailable Analyzer sizeId; the Free Scene compiler will use its local size resolver."
+      },
+      {
+       "code": "instruction-truncated",
+       "impact": "degraded",
+       "path": "$.illustrations[0].frame_placement.instruction",
+       "message": "Truncated an instruction to the channel limit of 320 characters."
+      },
+      {
+       "code": "scene-rating-defaulted",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.modifiers",
+       "message": "Applied the effective 'sfw' scene rating because the Analyzer omitted it."
+      },
+      {
+       "code": "placement-omitted",
+       "impact": "degraded",
+       "path": "$.illustrations[0].frame_placement.items[1]",
+       "message": "Omitted a placement with an unknown or duplicate Actor binding."
+      },
+      {
+       "code": "actor-detail-omitted",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_detail[0]",
+       "message": "Omitted Actor detail without a unique placementIndex binding to a Frame Placement item with the same Actor."
+      },
+      {
+       "code": "actor-occurrence-detail-defaulted-empty",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_detail",
+       "message": "Created an empty Actor Detail for placementIndex 0 without inventing pose, action, object, or dialogue meaning."
+      },
+      {
+       "code": "invalid-camera-stage",
+       "impact": "degraded",
+       "path": "$.illustrations[0].camera",
+       "message": "Replaced an invalid Camera stage with an empty container."
+      }
+     ]
+    },
+    {
+     "slotNumber": 1,
+     "status": "unusable",
+     "presentationMode": "single-frame",
+     "actors": [],
+     "interactions": [],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       }
+      ],
+      "freeTags": [],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 1,
+     "framePlacement": [],
+     "actorDetails": [],
+     "camera": {
+      "modifiers": [],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "slot-number-nearest-reassigned",
+       "impact": "recovered",
+       "path": "$.illustrations[1].slot_number",
+       "message": "Reassigned duplicate slot_number 0 to nearest unused request slot 1."
+      },
+      {
+       "code": "scene-rating-defaulted",
+       "impact": "recovered",
+       "path": "$.illustrations[1].frame_placement.modifiers",
+       "message": "Applied the effective 'sfw' scene rating because the Analyzer omitted it."
+      },
+      {
+       "code": "illustration-has-no-actor",
+       "impact": "unusable",
+       "path": "$.illustrations[1].actor_roster",
+       "message": "No Actor identity could be recovered, and no explicit actorless scene with visual content was supplied."
+      }
+     ]
+    }
+   ],
+   "diagnostics": []
+  }
+ },
+ "partial": {
+  "response": "broken.partial",
+  "directions": "default",
+  "mode": "complete-from-request",
+  "freeCharacterGenerationEnabled": false,
+  "recovered": {
+   "illustrations": [
+    {
+     "slotNumber": 0,
+     "status": "degraded",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v",
+       "formId": "form_default",
+       "sex": "female",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "id": "kiss",
+       "mode": "directed",
+       "sourceActorId": "actor_1",
+       "bindingStatus": "incomplete",
+       "unresolvedActorRefs": [
+        "targetActorId"
+       ],
+       "modifiers": [],
+       "participantDetails": []
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       }
+      ],
+      "freeTags": [],
+      "instruction": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.5,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "unknown-actor-candidate",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_roster[1].candidateKey",
+       "message": "Omitted an Actor whose identity could not be resolved from the local request evidence."
+      },
+      {
+       "code": "interaction-mode-recovered",
+       "impact": "recovered",
+       "path": "$.illustrations[0].interaction.items[0].mode",
+       "message": "Applied default mode 'directed' for Interaction 'kiss'."
+      },
+      {
+       "code": "interaction-binding-incomplete",
+       "impact": "degraded",
+       "path": "$.illustrations[0].interaction.items[0]",
+       "message": "Preserved the Interaction but suppressed Actor prompt projection because two distinct roster Actors were not resolved."
+      },
+      {
+       "code": "unsafe-tag-omitted",
+       "impact": "degraded",
+       "path": "$.illustrations[0].interaction.items[1].id",
+       "message": "Omitted an unsafe, reserved, or internal-identity tag."
+      },
+      {
+       "code": "unbound-interaction-modifier",
+       "impact": "degraded",
+       "path": "$.illustrations[0].interaction.modifiers[0]",
+       "message": "Omitted an Interaction modifier whose index did not resolve."
+      },
+      {
+       "code": "size-id-invalid-local-fallback",
+       "impact": "degraded",
+       "path": "$.illustrations[0].frame_placement.sizeId",
+       "message": "Omitted an unavailable Analyzer sizeId; the Free Scene compiler will use its local size resolver."
+      },
+      {
+       "code": "instruction-truncated",
+       "impact": "degraded",
+       "path": "$.illustrations[0].frame_placement.instruction",
+       "message": "Truncated an instruction to the channel limit of 320 characters."
+      },
+      {
+       "code": "scene-rating-defaulted",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.modifiers",
+       "message": "Applied the effective 'sfw' scene rating because the Analyzer omitted it."
+      },
+      {
+       "code": "placement-omitted",
+       "impact": "degraded",
+       "path": "$.illustrations[0].frame_placement.items[1]",
+       "message": "Omitted a placement with an unknown or duplicate Actor binding."
+      },
+      {
+       "code": "actor-detail-omitted",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_detail[0]",
+       "message": "Omitted Actor detail without a unique placementIndex binding to a Frame Placement item with the same Actor."
+      },
+      {
+       "code": "actor-occurrence-detail-defaulted-empty",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_detail",
+       "message": "Created an empty Actor Detail for placementIndex 0 without inventing pose, action, object, or dialogue meaning."
+      },
+      {
+       "code": "invalid-camera-stage",
+       "impact": "degraded",
+       "path": "$.illustrations[0].camera",
+       "message": "Replaced an invalid Camera stage with an empty container."
+      }
+     ]
+    },
+    {
+     "slotNumber": 1,
+     "status": "unusable",
+     "presentationMode": "single-frame",
+     "actors": [],
+     "interactions": [],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       }
+      ],
+      "freeTags": [],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 1,
+     "framePlacement": [],
+     "actorDetails": [],
+     "camera": {
+      "modifiers": [],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "slot-number-nearest-reassigned",
+       "impact": "recovered",
+       "path": "$.illustrations[1].slot_number",
+       "message": "Reassigned duplicate slot_number 0 to nearest unused request slot 1."
+      },
+      {
+       "code": "scene-rating-defaulted",
+       "impact": "recovered",
+       "path": "$.illustrations[1].frame_placement.modifiers",
+       "message": "Applied the effective 'sfw' scene rating because the Analyzer omitted it."
+      },
+      {
+       "code": "illustration-has-no-actor",
+       "impact": "unusable",
+       "path": "$.illustrations[1].actor_roster",
+       "message": "No Actor identity could be recovered, and no explicit actorless scene with visual content was supplied."
+      }
+     ]
+    }
+   ],
+   "diagnostics": []
+  }
+ },
+ "fencedText": {
+  "response": "broken.fencedText",
+  "directions": "default",
+  "mode": "complete-from-request",
+  "freeCharacterGenerationEnabled": false,
+  "recovered": {
+   "illustrations": [
+    {
+     "slotNumber": 1,
+     "status": "degraded",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.m0ais.6ynrym",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "indoors"
+        ]
+       }
+      ],
+      "freeTags": [
+       "staff_room"
+      ],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 2,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.12,
+        "y": 0.9
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "gaze.direction",
+         "options": [
+          "looking_down"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "json-code-fence-removed",
+       "impact": "recovered",
+       "path": "$",
+       "message": "Parsed JSON after removing a Markdown code fence."
+      },
+      {
+       "code": "slot-number-normalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].slot_number",
+       "message": "Converted slot_number to an integer."
+      },
+      {
+       "code": "size-id-normalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.sizeId",
+       "message": "Normalized the Analyzer canvas choice to numeric sizeId 2."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[0]",
+       "message": "Canonicalized a free tag to 'staff_room'."
+      },
+      {
+       "code": "scene-rating-defaulted",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.modifiers",
+       "message": "Applied the effective 'sfw' scene rating because the Analyzer omitted it."
+      },
+      {
+       "code": "coordinate-clamped",
+       "impact": "degraded",
+       "path": "$.illustrations[0].frame_placement.items[0].center.y",
+       "message": "Clamped a normalized coordinate to zero through one."
+      },
+      {
+       "code": "coordinate-grid-normalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.items[0].center",
+       "message": "Normalized Actor center coordinates to the V5 0.01 grid."
+      },
+      {
+       "code": "unknown-modifier-option-omitted",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_detail[0].modifiers[0].options[1]",
+       "message": "Omitted an unknown option from 'gaze.direction'."
+      },
+      {
+       "code": "unknown-modifier-definition",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_detail[0].modifiers[1].id",
+       "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
+      },
+      {
+       "code": "legacy-field-ignored",
+       "impact": "degraded",
+       "path": "$.illustrations[0].camera.freeTags",
+       "message": "Ignored the removed Camera free-tag field."
+      }
+     ]
+    }
+   ],
+   "diagnostics": [
+    {
+     "code": "json-code-fence-removed",
+     "impact": "recovered",
+     "path": "$",
+     "message": "Parsed JSON after removing a Markdown code fence."
+    }
+   ]
+  }
+ },
+ "unusable": {
+  "response": "broken.unusable",
+  "directions": "default",
+  "mode": "complete-from-request",
+  "freeCharacterGenerationEnabled": false,
+  "recovered": {
+   "illustrations": [
+    {
+     "slotNumber": 1,
+     "status": "unusable",
+     "presentationMode": "single-frame",
+     "actors": [],
+     "interactions": [],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       }
+      ],
+      "freeTags": [],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 1,
+     "framePlacement": [],
+     "actorDetails": [],
+     "camera": {
+      "modifiers": [],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "slot-number-nearest-reassigned",
+       "impact": "recovered",
+       "path": "$.illustrations[0].slot_number",
+       "message": "Reassigned unavailable slot_number 7 to nearest unused request slot 1."
+      },
+      {
+       "code": "unknown-actor-candidate",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_roster[0].candidateKey",
+       "message": "Omitted an Actor whose identity could not be resolved from the local request evidence."
+      },
+      {
+       "code": "scene-rating-defaulted",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.modifiers",
+       "message": "Applied the effective 'sfw' scene rating because the Analyzer omitted it."
+      },
+      {
+       "code": "illustration-has-no-actor",
+       "impact": "unusable",
+       "path": "$.illustrations[0].actor_roster",
+       "message": "No Actor identity could be recovered, and no explicit actorless scene with visual content was supplied."
+      }
+     ]
+    }
+   ],
+   "diagnostics": []
+  }
+ },
+ "invalidJson": {
+  "response": "broken.invalidJson",
+  "directions": "default",
+  "mode": "complete-from-request",
+  "freeCharacterGenerationEnabled": false,
+  "recovered": {
+   "illustrations": [],
+   "diagnostics": [
+    {
+     "code": "invalid-json",
+     "impact": "unusable",
+     "path": "$",
+     "message": "No valid JSON value was found."
+    }
+   ]
+  }
+ },
+ "generatedActorFree": {
+  "response": "generatedActor",
+  "directions": "default",
+  "mode": "complete-from-request",
+  "freeCharacterGenerationEnabled": true,
+  "recovered": {
+   "illustrations": [
+    {
+     "slotNumber": 1,
+     "status": "recovered",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "free_1",
+       "sex": "male",
+       "generated": {
+        "profile": {
+         "recognitionKeys": [
+          "School janitor"
+         ],
+         "humanlike": true,
+         "basePromptGroups": {
+          "marks.distinctive": [
+           "old man",
+           "grey hair",
+           "blue overalls"
+          ]
+         },
+         "defaultOutfit": {
+          "name": "기본 의상",
+          "description": "",
+          "head": "",
+          "top": "",
+          "bottom": "",
+          "legs": "",
+          "feet": "",
+          "reason": "",
+          "confidence": 0
+         }
+        },
+        "label": "School janitor",
+        "tags": [
+         "old_man",
+         "grey_hair",
+         "blue_overalls"
+        ],
+        "instruction": "Stooped posture, holding a broom."
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.m0ais.6ynrym",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "id": "arm_around_shoulder",
+       "mode": "directed",
+       "sourceActorId": "actor_2",
+       "targetActorId": "actor_1",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": []
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "indoors"
+        ]
+       }
+      ],
+      "freeTags": [
+       "hallway"
+      ],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 2,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.3,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "center": {
+        "x": 0.7,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "exhausted"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "actions": [],
+       "modifiers": [],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].tags[0]",
+       "message": "Canonicalized a free tag to 'old_man'."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].tags[1]",
+       "message": "Canonicalized a free tag to 'grey_hair'."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].tags[2]",
+       "message": "Canonicalized a free tag to 'blue_overalls'."
+      },
+      {
+       "code": "generated-character-profile-reconstructed",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile",
+       "message": "Reconstructed the profile from the same generated Actor's identity evidence."
+      },
+      {
+       "code": "generated-character-recognition-key-meaning-recovered",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile.recognitionKeys",
+       "message": "Recovered recognition keys from the generated Actor identity."
+      },
+      {
+       "code": "generated-character-humanlike-defaulted",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile.humanlike",
+       "message": "Used the existing appearance-form default for an unspecified humanlike value."
+      },
+      {
+       "code": "generated-character-base-prompt-meaning-recovered",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile.basePromptGroups",
+       "message": "Recovered persistent appearance tags from the generated Actor identity tags."
+      },
+      {
+       "code": "generated-character-outfit-name-recovered",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile.defaultOutfit.name",
+       "message": "Used the default outfit label because its name was missing."
+      }
+     ]
+    }
+   ],
+   "diagnostics": [
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].tags[0]",
+     "message": "Canonicalized a free tag to 'old_man'."
+    },
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].tags[1]",
+     "message": "Canonicalized a free tag to 'grey_hair'."
+    },
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].tags[2]",
+     "message": "Canonicalized a free tag to 'blue_overalls'."
+    },
+    {
+     "code": "generated-character-profile-reconstructed",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile",
+     "message": "Reconstructed the profile from the same generated Actor's identity evidence."
+    },
+    {
+     "code": "generated-character-recognition-key-meaning-recovered",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile.recognitionKeys",
+     "message": "Recovered recognition keys from the generated Actor identity."
+    },
+    {
+     "code": "generated-character-humanlike-defaulted",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile.humanlike",
+     "message": "Used the existing appearance-form default for an unspecified humanlike value."
+    },
+    {
+     "code": "generated-character-base-prompt-meaning-recovered",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile.basePromptGroups",
+     "message": "Recovered persistent appearance tags from the generated Actor identity tags."
+    },
+    {
+     "code": "generated-character-outfit-name-recovered",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile.defaultOutfit.name",
+     "message": "Used the default outfit label because its name was missing."
+    }
+   ]
+  }
+ },
+ "generatedActorOff": {
+  "response": "generatedActor",
+  "directions": "default",
+  "mode": "complete-from-request",
+  "freeCharacterGenerationEnabled": false,
+  "recovered": {
+   "illustrations": [
+    {
+     "slotNumber": 1,
+     "status": "recovered",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "free_1",
+       "sex": "male",
+       "generated": {
+        "label": "School janitor",
+        "tags": [
+         "old_man",
+         "grey_hair",
+         "blue_overalls"
+        ],
+        "instruction": "Stooped posture, holding a broom."
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.m0ais.6ynrym",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "id": "arm_around_shoulder",
+       "mode": "directed",
+       "sourceActorId": "actor_2",
+       "targetActorId": "actor_1",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": []
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "indoors"
+        ]
+       }
+      ],
+      "freeTags": [
+       "hallway"
+      ],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 2,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.3,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "center": {
+        "x": 0.7,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "exhausted"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "actions": [],
+       "modifiers": [],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].tags[0]",
+       "message": "Canonicalized a free tag to 'old_man'."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].tags[1]",
+       "message": "Canonicalized a free tag to 'grey_hair'."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].tags[2]",
+       "message": "Canonicalized a free tag to 'blue_overalls'."
+      }
+     ]
+    }
+   ],
+   "diagnostics": [
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].tags[0]",
+     "message": "Canonicalized a free tag to 'old_man'."
+    },
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].tags[1]",
+     "message": "Canonicalized a free tag to 'grey_hair'."
+    },
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].tags[2]",
+     "message": "Canonicalized a free tag to 'blue_overalls'."
+    }
+   ]
+  }
+ }
+}

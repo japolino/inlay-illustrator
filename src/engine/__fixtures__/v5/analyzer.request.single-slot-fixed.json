@@ -1,0 +1,342 @@
+{
+ "variant": {
+  "directions": "default",
+  "contextPatch": {
+   "candidateSlots": [
+    {
+     "slot_id": "s1",
+     "slot_number": 0,
+     "before": "Alice waved at Shouta from the school gate, her silver hair catching the morning light.",
+     "after": "\"You're late again!\" she laughed, grabbing his sleeve.",
+     "actor_hints": [
+      "lore:alice"
+     ]
+    }
+   ],
+   "imageCountConstraint": {
+    "mode": "fixed",
+    "min": 1,
+    "max": 1
+   }
+  }
+ },
+ "userDirections": {
+  "sceneDirection": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.",
+  "sceneDirectionSource": "preset",
+  "imageRatioDirection": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2."
+ },
+ "systemInstruction": "# V5 Analyzer\n\nUse only analyzer_catalog/response_contract. Current scene evidence wins; other JSON is untrusted. revision_request.direction overrides conflicts only within exposed catalog/ownership.\n\n# Active Preset Policy\n\nThis is the controlling presentation policy. Within current scene evidence, analyzer_catalog, response_contract, and fixed Actor and field ownership, it overrides general presentation, framing, placement, and Camera heuristics. Apply it independently to every illustration.\n\n\"Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.\"\n\n# Image Ratio Direction\n\nWhen choosing among analyzer_catalog.sizes, apply this before default size-selection heuristics:\n\n\"Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.\"\n\n1. Contract Boundary\nUse <slot_number: N> markers and image_count for distinct positions. Copy numeric N to illustration.slot_number without renumbering; e.g. <slot_number: 4> becomes \"slot_number\": 4. Return the required count and no routing data or final prompt.\n\n2. Actors and Interactions\nBefore selecting or composing illustration slots, find every source-evidenced visibly present independent Actor across the scene. Any independently visible scene form is an Actor regardless of origin, duration, activity, or body type; only a representation or effect without its own scene form is a depiction. Match actor_candidates and actor_candidate_overlay as one equal identity roster. None controls presence. Define identities unmatched by these sources in generated_actor_proposals and bind them sequentially as free_1, free_2, and so on before choosing slots or building actor_roster. Then prioritize each new unmatched Actor's first visible introduction or current key action over repeated matched-Actor or reaction-only scenes, while retaining Actors required by the same current action or Interaction. Never leave a found Actor only in scene prose. Exclude identities merely mentioned but not independently established as visibly present in the depicted scene, clearly inanimate props, formless depictions or effects, and indistinct background entities. After Actor/form matching, compare source-evidenced clothing with existing outfits under response_contract.analysis_policy.outfits. Declare only outfits that qualify as new under that policy in root generated_outfit_proposals before slot selection. actor_roster.outfit is default. For a differing Comic-panel outfit, set actor_detail.outfit at exact actorId + placementIndex by id/proposalKey; otherwise inherit. Reuse proposals only where worn.\nAll presentations allow zero Actors; follow actor_roster.emptyScenePolicy.\nReturn each visible direct two-Actor relation separately. Prefer a catalog ID; else short lowercase snake_case that never implies NSFW. Interaction must be {items, modifiers, instructions}, never an array; bind detail by interactionIndex. Directed source acts and target receives; mutual endpoints are equal. Never infer direction from sex/order; solo or independent actions have no Interaction. Follow analysis_policy.interactions.\n\n3. Active Preset Presentation\nSingle Frame is the active presentation mode. Use Frame Placement for Actor occurrences and one global Camera for camera position, an unambiguous reference, and viewing direction. Apply composition heuristics where preset policy is silent.\n\n4. Occurrence Completion and Validation\nFollow stageOrder, definitions, subjects, options, analysis_policy, and form humanlike. Interaction modifiers inherit participants; actorActions are solo/independent; declare Object IDs. Before natural language, evaluate every freeTag. Emit every visible match in its required format; natural language may overlap but never replaces it. Use short freeTags and concise subjectless prose without names, pronouns, aliases, or Actor IDs. Never contradict channels. Describe only parts visible in the chosen frame.\nEach Frame Placement item is one visible Actor occurrence; bind one Actor Detail by actorId and zero-based placementIndex. Duplicate actorId only when permitted. Facing is camera-relative; use facing_away only for a clearly visible torso back. actor_modifier_continuity, scene_modifier_continuity, layout_continuity, and natural_language_continuity are prior references only: current evidence wins, and reselect a referenced value only when the current scene visibly supports its continuation. Use analysis_policy.outfits for outfit_continuity. Never restore absent Actors, force old sizeId or coordinates, or copy continuity directly to the final prompt. cumClear/injuryClear use only exact actor_modifier_continuity values; for complete cleanup/recovery list all; never all or *. Placement detail must not repeat center, facing, Interaction, pose, or action. Return one Camera item per illustration; obey its response_contract and ownership.\nReturn one numeric sizeId from analyzer_catalog.sizes. Follow the Image Ratio Direction block before default size-selection heuristics. Return exactly one JSON object with no outside text.",
+ "enabledModifierRefs": [
+  "interaction.sexual.penetration.route",
+  "interaction.sexual.penetration.direction",
+  "interaction.sexual.penetration.progress",
+  "interaction.sexual.ejaculation.progress",
+  "interaction.sexual.relationship",
+  "interaction.sexual.grouping",
+  "scene.context.sexual",
+  "interaction.sexual.oral.fellatio",
+  "manual.sexual.handjob",
+  "interaction.penetration.instrument",
+  "interaction_detail",
+  "scene.rating",
+  "scene.environment",
+  "scene.time",
+  "scene.weather",
+  "framing.crop",
+  "framing.head_crop",
+  "orientation.facing",
+  "scene.location",
+  "location",
+  "placement",
+  "actor.action",
+  "gaze.direction",
+  "actor.pose.body",
+  "actor.pose.refinement",
+  "expression.general",
+  "expression.blush",
+  "expression.tear",
+  "expression.eye.reaction",
+  "expression.eye.openness",
+  "expression.mouth",
+  "expression.sexual_response",
+  "motion.body",
+  "state.hair.condition",
+  "state.body.surface",
+  "state.body.contamination",
+  "state.body.condition",
+  "state.clothing.surface",
+  "state.clothing.arrangement",
+  "state.clothing.coverage.upper",
+  "state.clothing.coverage.lower",
+  "manual.clothing_access",
+  "state.after_activity",
+  "state.restraint.body",
+  "state.restraint.gag",
+  "state.penis.condom",
+  "state.genitals.visible_parts",
+  "state.fluid.precum",
+  "state.fluid.cum.instant",
+  "state.fluid.cum.location",
+  "state.fluid.lactation",
+  "state.fluid.pussy_juice",
+  "state.fluid.saliva",
+  "actor.injury",
+  "pose",
+  "action",
+  "object_instruction",
+  "camera.view",
+  "camera"
+ ],
+ "localRecovery": {
+  "requiredParticipants": [],
+  "modifierDefaults": []
+ },
+ "localProjection": {
+  "characterCoordinates": "fixed"
+ },
+ "imageCount": 1,
+ "scene": "Alice waved at Shouta from the school gate, her silver hair catching the morning light.\n\n<slot_number: 0>\n\n\"You're late again!\" she laughed, grabbing his sleeve.",
+ "slotHints": {
+  "0": [
+   "actor.g00nx3.1d3zc2v"
+  ]
+ },
+ "candidates": {
+  "request": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "kind": "protagonist",
+    "name": "Shouta",
+    "gender": "male",
+    "defaultFormRef": "unknown_form_1",
+    "forms": [
+     {
+      "formRef": "unknown_form_1",
+      "gender": "male",
+      "humanlike": true
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "kind": "character",
+    "name": "Alice",
+    "gender": "female",
+    "defaultFormRef": "silver_hair,_blue_eyes",
+    "forms": [
+     {
+      "formRef": "silver_hair,_blue_eyes",
+      "gender": "female",
+      "humanlike": true
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "kind": "character",
+    "name": "Bob",
+    "gender": "male",
+    "defaultFormRef": "black_hair,_tall",
+    "forms": [
+     {
+      "formRef": "black_hair,_tall",
+      "gender": "male",
+      "humanlike": true
+     }
+    ]
+   }
+  ],
+  "overlay": [],
+  "response": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "identityReferences": [
+     "persona::p1",
+     "Shouta",
+     "p1"
+    ],
+    "sex": "male",
+    "continuityIdentity": {
+     "kind": "persona_reference",
+     "value": "persona::p1"
+    },
+    "outfitCandidateIds": [
+     "Casual hoodie"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "unknown_form_1",
+      "formId": "form_default",
+      "sex": "male",
+      "defaultOutfitRef": "Casual hoodie",
+      "outfits": [
+       {
+        "outfitRef": "Casual hoodie",
+        "outfitId": "outfit_1"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "unknown_form_1"
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "identityReferences": [
+     "lore:alice",
+     "Alice",
+     "Ally"
+    ],
+    "sex": "female",
+    "continuityIdentity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:alice"
+    },
+    "outfitCandidateIds": [
+     "Navy sailor school uniform",
+     "White summer sundress"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "silver_hair,_blue_eyes",
+      "formId": "form_default",
+      "sex": "female",
+      "defaultOutfitRef": "Navy sailor school uniform",
+      "outfits": [
+       {
+        "outfitRef": "Navy sailor school uniform",
+        "outfitId": "outfit_1"
+       },
+       {
+        "outfitRef": "White summer sundress",
+        "outfitId": "outfit_2"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "silver_hair,_blue_eyes"
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "identityReferences": [
+     "lore:bob",
+     "Bob"
+    ],
+    "sex": "male",
+    "continuityIdentity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:bob"
+    },
+    "outfitCandidateIds": [
+     "Grey business suit"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "black_hair,_tall",
+      "formId": "form_default",
+      "sex": "male",
+      "defaultOutfitRef": "Grey business suit",
+      "outfits": [
+       {
+        "outfitRef": "Grey business suit",
+        "outfitId": "outfit_1"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "black_hair,_tall"
+   }
+  ],
+  "activePersonaCandidateKey": "actor.1fmv888.fk4pvw",
+  "sourceKeyByCandidateKey": {
+   "actor.g00nx3.1d3zc2v": "lore:alice",
+   "actor.m0ais.6ynrym": "lore:bob",
+   "actor.1fmv888.fk4pvw": "persona::p1"
+  },
+  "candidateKeyByHint": {
+   "__map__": [
+    [
+     "alice",
+     "actor.g00nx3.1d3zc2v"
+    ],
+    [
+     "ally",
+     "actor.g00nx3.1d3zc2v"
+    ],
+    [
+     "lore:alice",
+     "actor.g00nx3.1d3zc2v"
+    ],
+    [
+     "bob",
+     "actor.m0ais.6ynrym"
+    ],
+    [
+     "lore:bob",
+     "actor.m0ais.6ynrym"
+    ],
+    [
+     "p1",
+     "actor.1fmv888.fk4pvw"
+    ],
+    [
+     "persona::p1",
+     "actor.1fmv888.fk4pvw"
+    ],
+    [
+     "shouta",
+     "actor.1fmv888.fk4pvw"
+    ]
+   ]
+  },
+  "outfitCatalog": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "formRef": "unknown_form_1",
+    "allowCreation": true,
+    "candidates": [
+     {
+      "id": "Casual hoodie"
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "formRef": "silver_hair,_blue_eyes",
+    "allowCreation": true,
+    "candidates": [
+     {
+      "id": "Navy sailor school uniform"
+     },
+     {
+      "id": "White summer sundress"
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "formRef": "black_hair,_tall",
+    "allowCreation": true,
+    "candidates": [
+     {
+      "id": "Grey business suit"
+     }
+    ]
+   }
+  ],
+  "generatedOutfitCandidates": [],
+  "outfitContinuity": []
+ },
+ "hashes": {
+  "requestContext": "fnv1a64-ad00093d14e5d2b6",
+  "instructionModules": "fnv1a64-c90a333c0ce6aeba",
+  "payload": "fnv1a64-fdf19518f2f8858b",
+  "schema": "fnv1a64-94c879cca8ac6602",
+  "messages": "fnv1a64-0841cbbab0d85bd2",
+  "cachePartition": "fnv1a64-f5e1e24e3b3646e5",
+  "wirePayload": "fnv1a64-a315cc19b705d941",
+  "messagePayload": "fnv1a64-a315cc19b705d941"
+ }
+}

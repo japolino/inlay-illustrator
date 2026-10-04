@@ -1,0 +1,340 @@
+{
+ "defaultDirectionSettings": {
+  "scene": {
+   "mode": "preset",
+   "selectedPresetId": "scene-default",
+   "presets": [
+    {
+     "id": "scene-default",
+     "name": "삽화",
+     "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+    },
+    {
+     "id": "scene-pov",
+     "name": "pov 연출",
+     "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when only the persona's hands or arms are visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Use the persona's hands and arms as POV hands to express action, contact, object manipulation, and spatial distance while keeping the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+     "scenePresetId": "pov"
+    },
+    {
+     "id": "scene-ensemble",
+     "name": "다인 연출",
+     "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent, duplicate, split, or restore absent Actors. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+     "scenePresetId": "ensemble"
+    },
+    {
+     "id": "scene-comic",
+     "name": "카툰 연출",
+     "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+     "scenePresetId": "comic"
+    }
+   ],
+   "customText": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+  },
+  "imageRatio": {
+   "mode": "preset",
+   "selectedPresetId": "image-ratio-default",
+   "presets": [
+    {
+     "id": "image-ratio-default",
+     "name": "기본",
+     "instruction": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+     "allowedSizeIds": [
+      1,
+      2,
+      5
+     ]
+    },
+    {
+     "id": "image-ratio-unspecified",
+     "name": "미지정",
+     "instruction": "Choose the sizeId that best fits the current illustration from the allowed candidates. Apply no additional aspect-ratio preference.",
+     "allowedSizeIds": [
+      1,
+      2,
+      5
+     ]
+    }
+   ],
+   "customText": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2."
+  }
+ },
+ "analysisPresets": {
+  "scene": {
+   "default": {
+    "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.",
+    "presentation": {
+     "label": "삽화",
+     "description": "장면의 흐름에 맞춰 AI가 자유롭고 다양한 연출을 적용합니다.",
+     "experimental": false
+    }
+   },
+   "options": [
+    {
+     "id": "pov",
+     "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when only the persona's hands or arms are visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Use the persona's hands and arms as POV hands to express action, contact, object manipulation, and spatial distance while keeping the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+     "variables": {
+      "preset.camera.viewpoint": "persona_first_person",
+      "preset.persona.visibility": "partial",
+      "preset.actor.coverage": "all_present"
+     },
+     "presentation": {
+      "label": "pov 연출",
+      "description": "페르소나의 시야를 기준으로 장면을 1인칭 구도로 연출합니다. 다른 인물이 등장해도 시점은 페르소나에게 유지됩니다.",
+      "experimental": false
+     }
+    },
+    {
+     "id": "ensemble",
+     "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent, duplicate, split, or restore absent Actors. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+     "variables": {
+      "preset.actor.coverage": "all_present"
+     },
+     "presentation": {
+      "label": "다인 연출",
+      "description": "현재 장면에 실제로 참여하는 인물들을 가능한 한 하나의 이미지에 함께 배치하고, 인물 간 관계와 상호작용을 중심으로 연출합니다.",
+      "experimental": false
+     }
+    },
+    {
+     "id": "comic",
+     "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+     "variables": {
+      "preset.presentation.mode": "comic_page",
+      "preset.presentation.orientation": "portrait"
+     },
+     "controls": [
+      {
+       "id": "speech-bubble",
+       "label": "말풍선",
+       "defaultEnabled": true,
+       "variables": {
+        "preset.dialogue.mode": "source_speech_bubble"
+       }
+      },
+      {
+       "id": "landscape",
+       "label": "가로형",
+       "defaultEnabled": false,
+       "variables": {
+        "preset.presentation.orientation": "landscape"
+       },
+       "instructionSuffix": "The output image resolution is 1216 × 832 pixels in landscape orientation."
+      },
+      {
+       "id": "minimum-panels",
+       "label": "최소 컷",
+       "defaultEnabled": false,
+       "variables": {},
+       "defaultValue": 2,
+       "valueOptions": [
+        {
+         "value": 2,
+         "variables": {
+          "preset.comic.panel_count": "minimum_2"
+         },
+         "instructionSuffix": "Create at least 2 meaningful comic panels."
+        },
+        {
+         "value": 3,
+         "variables": {
+          "preset.comic.panel_count": "minimum_3"
+         },
+         "instructionSuffix": "Create at least 3 meaningful comic panels."
+        },
+        {
+         "value": 4,
+         "variables": {
+          "preset.comic.panel_count": "minimum_4"
+         },
+         "instructionSuffix": "Create at least 4 meaningful comic panels."
+        }
+       ]
+      }
+     ],
+     "presentation": {
+      "label": "카툰 연출",
+      "description": "하나의 장면을 여러 만화 컷으로 구성하고, 인물의 행동과 감정을 컷의 흐름에 따라 생동감 있게 연출합니다.",
+      "experimental": false
+     }
+    }
+   ]
+  },
+  "imageRatio": {
+   "default": {
+    "instruction": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+    "presentation": {
+     "label": "기본",
+     "description": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+     "experimental": false
+    }
+   },
+   "unspecified": {
+    "instruction": "Choose the sizeId that best fits the current illustration from the allowed candidates. Apply no additional aspect-ratio preference.",
+    "allowedSizeIds": [
+     1,
+     2,
+     5
+    ],
+    "presentation": {
+     "label": "미지정",
+     "description": "별도 비율 선호 없이 선택한 sizeId 후보 안에서 장면에 가장 적합한 크기를 결정합니다.",
+     "experimental": false
+    }
+   }
+  }
+ },
+ "td": {
+  "mode": "preset",
+  "selectedPresetId": "scene-comic",
+  "presets": [
+   {
+    "id": "scene-default",
+    "name": "삽화",
+    "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+   },
+   {
+    "id": "scene-pov",
+    "name": "pov 연출",
+    "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when only the persona's hands or arms are visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Use the persona's hands and arms as POV hands to express action, contact, object manipulation, and spatial distance while keeping the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+    "scenePresetId": "pov"
+   },
+   {
+    "id": "scene-ensemble",
+    "name": "다인 연출",
+    "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent, duplicate, split, or restore absent Actors. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+    "scenePresetId": "ensemble"
+   },
+   {
+    "id": "scene-comic",
+    "name": "카툰 연출",
+    "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+    "scenePresetId": "comic"
+   }
+  ],
+  "presetId": "comic",
+  "customText": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment."
+ },
+ "continuitySnapshot": {
+  "scene": {
+   "backgroundTags": [
+    "staff_room",
+    "window"
+   ],
+   "locationTags": [
+    "staff_room"
+   ]
+  },
+  "characters": {
+   "lore:alice": {
+    "naturalLanguage": {
+     "pose": "leaning forward slightly",
+     "action": "waving one hand high"
+    },
+    "_continuity_turn": 1
+   },
+   "persona:persona::p1": {
+    "naturalLanguage": {
+     "action": "running toward the gate"
+    },
+    "_continuity_turn": 1
+   },
+   "lore:bob": {
+    "naturalLanguage": {
+     "pose": "hands on the window sill",
+     "action": "sighing"
+    },
+    "_continuity_turn": 1
+   }
+  },
+  "modifierRefs": {
+   "global": {
+    "scene.environment": [
+     "indoors"
+    ],
+    "scene.time": [
+     "morning"
+    ]
+   }
+  },
+  "outfitRefs": {
+   "actors": {
+    "lore:alice": {
+     "formId": "form_default",
+     "outfitId": "outfit_1",
+     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+    },
+    "persona::p1": {
+     "formId": "form_default",
+     "outfitId": "outfit_1",
+     "description": "black hoodie, jeans, sneakers"
+    },
+    "lore:bob": {
+     "formId": "form_default",
+     "outfitId": "outfit_1",
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+    }
+   }
+  },
+  "participants": {
+   "sceneLayouts": [
+    {
+     "sizeId": 1,
+     "actors": [
+      {
+       "identity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "center": {
+        "x": 0.5,
+        "y": 0.45
+       },
+       "facing": {
+        "id": "facing_away"
+       }
+      }
+     ]
+    },
+    {
+     "sizeId": 2,
+     "actors": [
+      {
+       "identity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "center": {
+        "x": 0.35,
+        "y": 0.5
+       }
+      },
+      {
+       "identity": {
+        "kind": "persona_reference",
+        "value": "persona::p1"
+       },
+       "center": {
+        "x": 0.7,
+        "y": 0.5
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "index": {
+  "default": "analyzer.request.default.json",
+  "pov": "analyzer.request.pov.json",
+  "ensemble": "analyzer.request.ensemble.json",
+  "comic": "analyzer.request.comic.json",
+  "comic-nobubble-landscape-min3": "analyzer.request.comic-nobubble-landscape-min3.json",
+  "ratio-unspecified-custom": "analyzer.request.ratio-unspecified-custom.json",
+  "ratio-custom-preset": "analyzer.request.ratio-custom-preset.json",
+  "slotmap": "analyzer.request.slotmap.json",
+  "freechar": "analyzer.request.freechar.json",
+  "revision": "analyzer.request.revision.json",
+  "continuity": "analyzer.request.continuity.json",
+  "single-slot-fixed": "analyzer.request.single-slot-fixed.json"
+ }
+}

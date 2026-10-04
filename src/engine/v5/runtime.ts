@@ -220,7 +220,6 @@ export interface V5PlanPromptContext {
   readonly actorNegativePrompts: Readonly<Record<string, string>>;
   readonly selectedOutfitIds: Readonly<Record<string, string>>;
   readonly selectedFormIds?: Readonly<Record<string, string>>;
-  readonly [key: string]: unknown;
 }
 
 /** Input of `planV5Scene`. */

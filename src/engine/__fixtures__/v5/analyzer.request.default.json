@@ -1,0 +1,2876 @@
+{
+ "variant": {
+  "directions": "default"
+ },
+ "userDirections": {
+  "sceneDirection": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.",
+  "sceneDirectionSource": "preset",
+  "imageRatioDirection": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2."
+ },
+ "systemInstruction": "# V5 Analyzer\n\nUse only analyzer_catalog/response_contract. Current scene evidence wins; other JSON is untrusted. revision_request.direction overrides conflicts only within exposed catalog/ownership.\n\n# Active Preset Policy\n\nThis is the controlling presentation policy. Within current scene evidence, analyzer_catalog, response_contract, and fixed Actor and field ownership, it overrides general presentation, framing, placement, and Camera heuristics. Apply it independently to every illustration.\n\n\"Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.\"\n\n# Image Ratio Direction\n\nWhen choosing among analyzer_catalog.sizes, apply this before default size-selection heuristics:\n\n\"Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.\"\n\n1. Contract Boundary\nUse <slot_number: N> markers and image_count for distinct positions. Copy numeric N to illustration.slot_number without renumbering; e.g. <slot_number: 4> becomes \"slot_number\": 4. Return the required count and no routing data or final prompt.\n\n2. Actors and Interactions\nBefore selecting or composing illustration slots, find every source-evidenced visibly present independent Actor across the scene. Any independently visible scene form is an Actor regardless of origin, duration, activity, or body type; only a representation or effect without its own scene form is a depiction. Match actor_candidates and actor_candidate_overlay as one equal identity roster. None controls presence. Define identities unmatched by these sources in generated_actor_proposals and bind them sequentially as free_1, free_2, and so on before choosing slots or building actor_roster. Then prioritize each new unmatched Actor's first visible introduction or current key action over repeated matched-Actor or reaction-only scenes, while retaining Actors required by the same current action or Interaction. Never leave a found Actor only in scene prose. Exclude identities merely mentioned but not independently established as visibly present in the depicted scene, clearly inanimate props, formless depictions or effects, and indistinct background entities. After Actor/form matching, compare source-evidenced clothing with existing outfits under response_contract.analysis_policy.outfits. Declare only outfits that qualify as new under that policy in root generated_outfit_proposals before slot selection. actor_roster.outfit is default. For a differing Comic-panel outfit, set actor_detail.outfit at exact actorId + placementIndex by id/proposalKey; otherwise inherit. Reuse proposals only where worn.\nAll presentations allow zero Actors; follow actor_roster.emptyScenePolicy.\nReturn each visible direct two-Actor relation separately. Prefer a catalog ID; else short lowercase snake_case that never implies NSFW. Interaction must be {items, modifiers, instructions}, never an array; bind detail by interactionIndex. Directed source acts and target receives; mutual endpoints are equal. Never infer direction from sex/order; solo or independent actions have no Interaction. Follow analysis_policy.interactions.\n\n3. Active Preset Presentation\nSingle Frame is the active presentation mode. Use Frame Placement for Actor occurrences and one global Camera for camera position, an unambiguous reference, and viewing direction. Apply composition heuristics where preset policy is silent.\n\n4. Occurrence Completion and Validation\nFollow stageOrder, definitions, subjects, options, analysis_policy, and form humanlike. Interaction modifiers inherit participants; actorActions are solo/independent; declare Object IDs. Before natural language, evaluate every freeTag. Emit every visible match in its required format; natural language may overlap but never replaces it. Use short freeTags and concise subjectless prose without names, pronouns, aliases, or Actor IDs. Never contradict channels. Describe only parts visible in the chosen frame.\nEach Frame Placement item is one visible Actor occurrence; bind one Actor Detail by actorId and zero-based placementIndex. Duplicate actorId only when permitted. Facing is camera-relative; use facing_away only for a clearly visible torso back. actor_modifier_continuity, scene_modifier_continuity, layout_continuity, and natural_language_continuity are prior references only: current evidence wins, and reselect a referenced value only when the current scene visibly supports its continuation. Use analysis_policy.outfits for outfit_continuity. Never restore absent Actors, force old sizeId or coordinates, or copy continuity directly to the final prompt. cumClear/injuryClear use only exact actor_modifier_continuity values; for complete cleanup/recovery list all; never all or *. Placement detail must not repeat center, facing, Interaction, pose, or action. Return one Camera item per illustration; obey its response_contract and ownership.\nReturn one numeric sizeId from analyzer_catalog.sizes. Follow the Image Ratio Direction block before default size-selection heuristics. Return exactly one JSON object with no outside text.",
+ "enabledModifierRefs": [
+  "interaction.sexual.penetration.route",
+  "interaction.sexual.penetration.direction",
+  "interaction.sexual.penetration.progress",
+  "interaction.sexual.ejaculation.progress",
+  "interaction.sexual.relationship",
+  "interaction.sexual.grouping",
+  "scene.context.sexual",
+  "interaction.sexual.oral.fellatio",
+  "manual.sexual.handjob",
+  "interaction.penetration.instrument",
+  "interaction_detail",
+  "scene.rating",
+  "scene.environment",
+  "scene.time",
+  "scene.weather",
+  "framing.crop",
+  "framing.head_crop",
+  "orientation.facing",
+  "scene.location",
+  "location",
+  "placement",
+  "actor.action",
+  "gaze.direction",
+  "actor.pose.body",
+  "actor.pose.refinement",
+  "expression.general",
+  "expression.blush",
+  "expression.tear",
+  "expression.eye.reaction",
+  "expression.eye.openness",
+  "expression.mouth",
+  "expression.sexual_response",
+  "motion.body",
+  "state.hair.condition",
+  "state.body.surface",
+  "state.body.contamination",
+  "state.body.condition",
+  "state.clothing.surface",
+  "state.clothing.arrangement",
+  "state.clothing.coverage.upper",
+  "state.clothing.coverage.lower",
+  "manual.clothing_access",
+  "state.after_activity",
+  "state.restraint.body",
+  "state.restraint.gag",
+  "state.penis.condom",
+  "state.genitals.visible_parts",
+  "state.fluid.precum",
+  "state.fluid.cum.instant",
+  "state.fluid.cum.location",
+  "state.fluid.lactation",
+  "state.fluid.pussy_juice",
+  "state.fluid.saliva",
+  "actor.injury",
+  "pose",
+  "action",
+  "object_instruction",
+  "camera.view",
+  "camera"
+ ],
+ "localRecovery": {
+  "requiredParticipants": [],
+  "modifierDefaults": []
+ },
+ "localProjection": {
+  "characterCoordinates": "fixed"
+ },
+ "imageCount": {
+  "min": 1,
+  "max": 2
+ },
+ "scene": "Alice waved at Shouta from the school gate, her silver hair catching the morning light.\n\n<slot_number: 0>\n\n\"You're late again!\" she laughed, grabbing his sleeve.\n\n<slot_number: 1>\n\nMr. Bob watched them from the window of the staff room, sighing.",
+ "slotHints": {
+  "0": [
+   "actor.g00nx3.1d3zc2v"
+  ]
+ },
+ "candidates": {
+  "request": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "kind": "protagonist",
+    "name": "Shouta",
+    "gender": "male",
+    "defaultFormRef": "unknown_form_1",
+    "forms": [
+     {
+      "formRef": "unknown_form_1",
+      "gender": "male",
+      "humanlike": true
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "kind": "character",
+    "name": "Alice",
+    "gender": "female",
+    "defaultFormRef": "silver_hair,_blue_eyes",
+    "forms": [
+     {
+      "formRef": "silver_hair,_blue_eyes",
+      "gender": "female",
+      "humanlike": true
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "kind": "character",
+    "name": "Bob",
+    "gender": "male",
+    "defaultFormRef": "black_hair,_tall",
+    "forms": [
+     {
+      "formRef": "black_hair,_tall",
+      "gender": "male",
+      "humanlike": true
+     }
+    ]
+   }
+  ],
+  "overlay": [],
+  "response": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "identityReferences": [
+     "persona::p1",
+     "Shouta",
+     "p1"
+    ],
+    "sex": "male",
+    "continuityIdentity": {
+     "kind": "persona_reference",
+     "value": "persona::p1"
+    },
+    "outfitCandidateIds": [
+     "Casual hoodie"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "unknown_form_1",
+      "formId": "form_default",
+      "sex": "male",
+      "defaultOutfitRef": "Casual hoodie",
+      "outfits": [
+       {
+        "outfitRef": "Casual hoodie",
+        "outfitId": "outfit_1"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "unknown_form_1"
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "identityReferences": [
+     "lore:alice",
+     "Alice",
+     "Ally"
+    ],
+    "sex": "female",
+    "continuityIdentity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:alice"
+    },
+    "outfitCandidateIds": [
+     "Navy sailor school uniform",
+     "White summer sundress"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "silver_hair,_blue_eyes",
+      "formId": "form_default",
+      "sex": "female",
+      "defaultOutfitRef": "Navy sailor school uniform",
+      "outfits": [
+       {
+        "outfitRef": "Navy sailor school uniform",
+        "outfitId": "outfit_1"
+       },
+       {
+        "outfitRef": "White summer sundress",
+        "outfitId": "outfit_2"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "silver_hair,_blue_eyes"
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "identityReferences": [
+     "lore:bob",
+     "Bob"
+    ],
+    "sex": "male",
+    "continuityIdentity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:bob"
+    },
+    "outfitCandidateIds": [
+     "Grey business suit"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "black_hair,_tall",
+      "formId": "form_default",
+      "sex": "male",
+      "defaultOutfitRef": "Grey business suit",
+      "outfits": [
+       {
+        "outfitRef": "Grey business suit",
+        "outfitId": "outfit_1"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "black_hair,_tall"
+   }
+  ],
+  "activePersonaCandidateKey": "actor.1fmv888.fk4pvw",
+  "sourceKeyByCandidateKey": {
+   "actor.g00nx3.1d3zc2v": "lore:alice",
+   "actor.m0ais.6ynrym": "lore:bob",
+   "actor.1fmv888.fk4pvw": "persona::p1"
+  },
+  "candidateKeyByHint": {
+   "__map__": [
+    [
+     "alice",
+     "actor.g00nx3.1d3zc2v"
+    ],
+    [
+     "ally",
+     "actor.g00nx3.1d3zc2v"
+    ],
+    [
+     "lore:alice",
+     "actor.g00nx3.1d3zc2v"
+    ],
+    [
+     "bob",
+     "actor.m0ais.6ynrym"
+    ],
+    [
+     "lore:bob",
+     "actor.m0ais.6ynrym"
+    ],
+    [
+     "p1",
+     "actor.1fmv888.fk4pvw"
+    ],
+    [
+     "persona::p1",
+     "actor.1fmv888.fk4pvw"
+    ],
+    [
+     "shouta",
+     "actor.1fmv888.fk4pvw"
+    ]
+   ]
+  },
+  "outfitCatalog": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "formRef": "unknown_form_1",
+    "allowCreation": true,
+    "candidates": [
+     {
+      "id": "Casual hoodie"
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "formRef": "silver_hair,_blue_eyes",
+    "allowCreation": true,
+    "candidates": [
+     {
+      "id": "Navy sailor school uniform"
+     },
+     {
+      "id": "White summer sundress"
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "formRef": "black_hair,_tall",
+    "allowCreation": true,
+    "candidates": [
+     {
+      "id": "Grey business suit"
+     }
+    ]
+   }
+  ],
+  "generatedOutfitCandidates": [],
+  "outfitContinuity": []
+ },
+ "hashes": {
+  "requestContext": "fnv1a64-5a3cdb4f8dd5cf56",
+  "instructionModules": "fnv1a64-c90a333c0ce6aeba",
+  "payload": "fnv1a64-ea7e076e4260ae4b",
+  "schema": "fnv1a64-50e7f0bcd7eeb864",
+  "messages": "fnv1a64-52c9ce873ac0dce2",
+  "cachePartition": "fnv1a64-899c5b8e15ac4d75",
+  "wirePayload": "fnv1a64-36dd2d379eda46e1",
+  "messagePayload": "fnv1a64-36dd2d379eda46e1"
+ },
+ "requestContext": {
+  "freeCharacterGenerationEnabled": false,
+  "freeOutfitGenerationEnabled": true,
+  "scene": "Alice waved at Shouta from the school gate, her silver hair catching the morning light.\n\n<slot_number: 0>\n\n\"You're late again!\" she laughed, grabbing his sleeve.\n\n<slot_number: 1>\n\nMr. Bob watched them from the window of the staff room, sighing.",
+  "imageCount": {
+   "min": 1,
+   "max": 2
+  },
+  "actorCandidates": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "kind": "protagonist",
+    "name": "Shouta",
+    "gender": "male",
+    "defaultFormRef": "unknown_form_1",
+    "forms": [
+     {
+      "formRef": "unknown_form_1",
+      "gender": "male",
+      "humanlike": true
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "kind": "character",
+    "name": "Alice",
+    "gender": "female",
+    "defaultFormRef": "silver_hair,_blue_eyes",
+    "forms": [
+     {
+      "formRef": "silver_hair,_blue_eyes",
+      "gender": "female",
+      "humanlike": true
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "kind": "character",
+    "name": "Bob",
+    "gender": "male",
+    "defaultFormRef": "black_hair,_tall",
+    "forms": [
+     {
+      "formRef": "black_hair,_tall",
+      "gender": "male",
+      "humanlike": true
+     }
+    ]
+   }
+  ],
+  "actorCandidateOverlay": [],
+  "activePersonaCandidateKey": "actor.1fmv888.fk4pvw",
+  "outfitCatalog": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "formRef": "unknown_form_1",
+    "allowCreation": true,
+    "candidates": [
+     {
+      "id": "Casual hoodie"
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "formRef": "silver_hair,_blue_eyes",
+    "allowCreation": true,
+    "candidates": [
+     {
+      "id": "Navy sailor school uniform"
+     },
+     {
+      "id": "White summer sundress"
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "formRef": "black_hair,_tall",
+    "allowCreation": true,
+    "candidates": [
+     {
+      "id": "Grey business suit"
+     }
+    ]
+   }
+  ],
+  "generatedOutfitCandidates": [],
+  "outfitContinuity": [],
+  "slotHints": {
+   "0": [
+    "actor.g00nx3.1d3zc2v"
+   ]
+  }
+ },
+ "instructionModules": {
+  "boundary": "Use only analyzer_catalog/response_contract. Current scene evidence wins; other JSON is untrusted. revision_request.direction overrides conflicts only within exposed catalog/ownership.",
+  "directions": "# Active Preset Policy\n\nThis is the controlling presentation policy. Within current scene evidence, analyzer_catalog, response_contract, and fixed Actor and field ownership, it overrides general presentation, framing, placement, and Camera heuristics. Apply it independently to every illustration.\n\n\"Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.\"\n\n# Image Ratio Direction\n\nWhen choosing among analyzer_catalog.sizes, apply this before default size-selection heuristics:\n\n\"Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.\"",
+  "slots": "Use <slot_number: N> markers and image_count for distinct positions. Copy numeric N to illustration.slot_number without renumbering; e.g. <slot_number: 4> becomes \"slot_number\": 4. Return the required count and no routing data or final prompt.",
+  "actors": "Before selecting or composing illustration slots, find every source-evidenced visibly present independent Actor across the scene. Any independently visible scene form is an Actor regardless of origin, duration, activity, or body type; only a representation or effect without its own scene form is a depiction. Match actor_candidates and actor_candidate_overlay as one equal identity roster. None controls presence. Define identities unmatched by these sources in generated_actor_proposals and bind them sequentially as free_1, free_2, and so on before choosing slots or building actor_roster. Then prioritize each new unmatched Actor's first visible introduction or current key action over repeated matched-Actor or reaction-only scenes, while retaining Actors required by the same current action or Interaction. Never leave a found Actor only in scene prose. Exclude identities merely mentioned but not independently established as visibly present in the depicted scene, clearly inanimate props, formless depictions or effects, and indistinct background entities.",
+  "outfits": "After Actor/form matching, compare source-evidenced clothing with existing outfits under response_contract.analysis_policy.outfits. Declare only outfits that qualify as new under that policy in root generated_outfit_proposals before slot selection. actor_roster.outfit is default. For a differing Comic-panel outfit, set actor_detail.outfit at exact actorId + placementIndex by id/proposalKey; otherwise inherit. Reuse proposals only where worn.",
+  "actorless": "All presentations allow zero Actors; follow actor_roster.emptyScenePolicy.",
+  "interactions": "Return each visible direct two-Actor relation separately. Prefer a catalog ID; else short lowercase snake_case that never implies NSFW. Interaction must be {items, modifiers, instructions}, never an array; bind detail by interactionIndex. Directed source acts and target receives; mutual endpoints are equal. Never infer direction from sex/order; solo or independent actions have no Interaction. Follow analysis_policy.interactions.",
+  "presentation": "Single Frame is the active presentation mode. Use Frame Placement for Actor occurrences and one global Camera for camera position, an unambiguous reference, and viewing direction. Apply composition heuristics where preset policy is silent.",
+  "completion": "Follow stageOrder, definitions, subjects, options, analysis_policy, and form humanlike. Interaction modifiers inherit participants; actorActions are solo/independent; declare Object IDs. Before natural language, evaluate every freeTag. Emit every visible match in its required format; natural language may overlap but never replaces it. Use short freeTags and concise subjectless prose without names, pronouns, aliases, or Actor IDs. Never contradict channels. Describe only parts visible in the chosen frame.",
+  "occurrences": "Each Frame Placement item is one visible Actor occurrence; bind one Actor Detail by actorId and zero-based placementIndex. Duplicate actorId only when permitted. Facing is camera-relative; use facing_away only for a clearly visible torso back.",
+  "continuity": "actor_modifier_continuity, scene_modifier_continuity, layout_continuity, and natural_language_continuity are prior references only: current evidence wins, and reselect a referenced value only when the current scene visibly supports its continuation. Use analysis_policy.outfits for outfit_continuity. Never restore absent Actors, force old sizeId or coordinates, or copy continuity directly to the final prompt. cumClear/injuryClear use only exact actor_modifier_continuity values; for complete cleanup/recovery list all; never all or *.",
+  "placement": "Placement detail must not repeat center, facing, Interaction, pose, or action.",
+  "camera": "Return one Camera item per illustration; obey its response_contract and ownership.",
+  "size": "Return one numeric sizeId from analyzer_catalog.sizes. Follow the Image Ratio Direction block before default size-selection heuristics.",
+  "output": "Return exactly one JSON object with no outside text."
+ },
+ "payload": {
+  "scene": "Alice waved at Shouta from the school gate, her silver hair catching the morning light.\n\n<slot_number: 0>\n\n\"You're late again!\" she laughed, grabbing his sleeve.\n\n<slot_number: 1>\n\nMr. Bob watched them from the window of the staff room, sighing.",
+  "image_count": {
+   "min": 1,
+   "max": 2
+  },
+  "active_persona_candidate_key": "actor.1fmv888.fk4pvw",
+  "actor_candidates": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "kind": "protagonist",
+    "name": "Shouta",
+    "gender": "male",
+    "defaultFormRef": "unknown_form_1",
+    "forms": [
+     {
+      "formRef": "unknown_form_1",
+      "humanlike": true
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "kind": "character",
+    "name": "Alice",
+    "gender": "female",
+    "defaultFormRef": "silver_hair,_blue_eyes",
+    "forms": [
+     {
+      "formRef": "silver_hair,_blue_eyes",
+      "humanlike": true
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "kind": "character",
+    "name": "Bob",
+    "gender": "male",
+    "defaultFormRef": "black_hair,_tall",
+    "forms": [
+     {
+      "formRef": "black_hair,_tall",
+      "humanlike": true
+     }
+    ]
+   }
+  ],
+  "appearance_catalog": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "allowCreation": true,
+    "forms": [
+     {
+      "formRef": "unknown_form_1",
+      "outfits": [
+       {
+        "id": "Casual hoodie"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "allowCreation": true,
+    "forms": [
+     {
+      "formRef": "silver_hair,_blue_eyes",
+      "outfits": [
+       {
+        "id": "Navy sailor school uniform"
+       },
+       {
+        "id": "White summer sundress"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "allowCreation": true,
+    "forms": [
+     {
+      "formRef": "black_hair,_tall",
+      "outfits": [
+       {
+        "id": "Grey business suit"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "slot_hints": {
+   "0": [
+    "actor.g00nx3.1d3zc2v"
+   ]
+  },
+  "analyzer_catalog": {
+   "defaults": {
+    "interaction": {
+     "binding": "source_target_actor_ids",
+     "allowedModes": [
+      "directed"
+     ],
+     "defaultMode": "directed"
+    },
+    "modifier": {
+     "min": 0,
+     "max": 1,
+     "subjectsByStage": {
+      "interaction": [
+       "interaction"
+      ],
+      "frame_placement": [
+       "global"
+      ],
+      "actor_detail": [
+       "actor"
+      ],
+      "camera": [
+       "global"
+      ]
+     }
+    }
+   },
+   "sizes": [
+    {
+     "id": 1,
+     "width": 832,
+     "height": 1216,
+     "use": [
+      "Vertical posture, height differences, vertical motion, or layered surroundings."
+     ]
+    },
+    {
+     "id": 2,
+     "width": 1216,
+     "height": 832,
+     "use": [
+      "Broad environments, lateral action or gaze, or horizontal negative space."
+     ]
+    },
+    {
+     "id": 5,
+     "width": 1024,
+     "height": 1024,
+     "use": [
+      "Centered, frontal, symmetric, or compact framing; neutral when neither axis dominates."
+     ]
+    }
+   ],
+   "interactions": [
+    "amazon_position",
+    "anal_fingering",
+    "anilingus",
+    "arm_around_shoulder",
+    {
+     "id": "arm_hug",
+     "allowedModes": [
+      "directed",
+      "mutual"
+     ],
+     "defaultMode": "directed"
+    },
+    {
+     "id": "back_to_back",
+     "allowedModes": [
+      "mutual"
+     ],
+     "defaultMode": "mutual"
+    },
+    "breast_biting",
+    "breast_smother",
+    "breast_sucking",
+    "buttjob",
+    "clitoral_stimulation",
+    "cooperative_breast_smother",
+    "cooperative_fellatio",
+    "cooperative_footjob",
+    "cooperative_grinding",
+    "cooperative_handjob",
+    "cooperative_paizuri",
+    "cooperative_pussyjob",
+    "cowgirl_position",
+    "cunnilingus",
+    "deepthroat",
+    "doggystyle",
+    "double_breast_sucking",
+    "dry_humping",
+    "fellatio",
+    "fingering",
+    "footjob",
+    {
+     "id": "french_kiss",
+     "allowedModes": [
+      "mutual"
+     ],
+     "defaultMode": "mutual"
+    },
+    "g_spot_stimulation",
+    "grabbing_anothers_ass",
+    "grabbing_anothers_breast",
+    "grinding",
+    "handjob",
+    {
+     "id": "heads_together",
+     "allowedModes": [
+      "mutual"
+     ],
+     "defaultMode": "mutual"
+    },
+    {
+     "id": "holding_hands",
+     "allowedModes": [
+      "mutual"
+     ],
+     "defaultMode": "mutual"
+    },
+    {
+     "id": "hug",
+     "allowedModes": [
+      "directed",
+      "mutual"
+     ],
+     "defaultMode": "mutual"
+    },
+    "hug_from_behind",
+    {
+     "id": "interlocking_fingers",
+     "allowedModes": [
+      "mutual"
+     ],
+     "defaultMode": "mutual"
+    },
+    {
+     "id": "kiss",
+     "allowedModes": [
+      "directed",
+      "mutual"
+     ],
+     "defaultMode": "directed"
+    },
+    "kissing_cheek",
+    "kissing_forehead",
+    "kissing_hand",
+    "kissing_head",
+    "kissing_neck",
+    "kissing_penis",
+    "leaning_on_person",
+    "licking_armpit",
+    "licking_breast",
+    "licking_nipple",
+    "licking_penis",
+    "licking_testicle",
+    "mating_press",
+    "missionary",
+    {
+     "id": "mutual_masturbation",
+     "allowedModes": [
+      "mutual"
+     ],
+     "defaultMode": "mutual"
+    },
+    "nipple_biting",
+    {
+     "id": "nipple_to_nipple",
+     "allowedModes": [
+      "mutual"
+     ],
+     "defaultMode": "mutual"
+    },
+    "nipple_tweak",
+    "paizuri",
+    "piledriver_sex",
+    "prone_bone",
+    "prostate_milking",
+    "pussyjob",
+    "reverse_cowgirl_position",
+    "reverse_suspended_congress",
+    "reverse_upright_straddle",
+    "rusty_trombone",
+    {
+     "id": "shared_object_insertion",
+     "allowedModes": [
+      "mutual"
+     ],
+     "defaultMode": "mutual"
+    },
+    "sitting_on_face",
+    "spooning",
+    "standing_missionary",
+    "standing_sex_from_behind",
+    "suspended_congress",
+    "testicle_sucking",
+    "thigh_sex",
+    "tonguejob",
+    {
+     "id": "tribadism",
+     "allowedModes": [
+      "mutual"
+     ],
+     "defaultMode": "mutual"
+    },
+    "upright_straddle"
+   ],
+   "unknownInteractionIdPolicy": "use_safe_interaction_id_without_sentinel",
+   "actorActions": [
+    "anal_object_insertion",
+    "dildo_riding",
+    "female_masturbation",
+    "holding_sex_toy",
+    "large_insertion",
+    "male_masturbation",
+    "object_insertion",
+    "presenting_anus",
+    "presenting_armpit",
+    "presenting_ass",
+    "presenting_breasts",
+    "presenting_pussy",
+    "presenting_removed_panties",
+    "spreading_own_anus",
+    "spreading_own_pussy",
+    "vaginal_object_insertion"
+   ],
+   "modifiers": {
+    "interaction": [
+     {
+      "id": "interaction.penetration.instrument",
+      "options": [
+       "disembodied_penis",
+       "penis",
+       "sex_toy",
+       "strap_on"
+      ]
+     },
+     {
+      "id": "interaction.sexual.ejaculation.progress",
+      "subjects": [
+       "female"
+      ],
+      "options": [
+       "after_external_ejaculation_pullout",
+       "after_internal_ejaculation",
+       "after_sex_pullout_cum_string",
+       "external_ejaculation_pullout",
+       "internal_ejaculation"
+      ]
+     },
+     {
+      "id": "interaction.sexual.grouping",
+      "subjects": [
+       "global"
+      ],
+      "max": 2,
+      "options": [
+       "fff_threesome",
+       "ffm_threesome",
+       "fivesome",
+       "foursome",
+       "group_sex",
+       "mmf_threesome",
+       "orgy"
+      ]
+     },
+     {
+      "id": "interaction.sexual.oral.fellatio",
+      "max": 2,
+      "options": [
+       "poking_face_or_mouth_with_penis",
+       "reverse_fellatio"
+      ]
+     },
+     {
+      "id": "interaction.sexual.penetration.direction",
+      "options": [
+       "from_behind"
+      ]
+     },
+     {
+      "id": "interaction.sexual.penetration.progress",
+      "options": [
+       "deep_penetration",
+       "ongoing_penetration",
+       "shallow_penetration_just_the_tip"
+      ]
+     },
+     {
+      "id": "interaction.sexual.penetration.route",
+      "options": [
+       "anal",
+       "vaginal"
+      ]
+     },
+     {
+      "id": "interaction.sexual.relationship",
+      "subjects": [
+       "global"
+      ],
+      "options": [
+       "bisexual_female",
+       "yaoi",
+       "yuri"
+      ]
+     },
+     {
+      "id": "manual.sexual.handjob",
+      "options": [
+       "caressing_testicles",
+       "penis_grab",
+       "testicle_grab"
+      ]
+     },
+     {
+      "id": "scene.context.sexual",
+      "subjects": [
+       "global"
+      ],
+      "max": 2,
+      "options": [
+       "exhibitionism",
+       "public_indecency",
+       "underwater"
+      ]
+     }
+    ],
+    "frame_placement": [
+     {
+      "id": "framing.crop",
+      "options": [
+       "cowboy_shot",
+       "feet_out_of_frame",
+       "full_body",
+       "portrait",
+       "upper_body"
+      ]
+     },
+     {
+      "id": "framing.head_crop",
+      "options": [
+       "eyes_out_of_frame",
+       "head_out_of_frame",
+       "lower_body"
+      ]
+     },
+     {
+      "id": "orientation.facing",
+      "subjects": [
+       "actor"
+      ],
+      "options": [
+       "facing_away"
+      ]
+     },
+     {
+      "id": "scene.environment",
+      "options": [
+       "indoors",
+       "outdoors"
+      ]
+     },
+     {
+      "id": "scene.rating",
+      "min": 1,
+      "options": [
+       "nsfw",
+       "sfw"
+      ]
+     },
+     {
+      "id": "scene.time",
+      "options": [
+       "day",
+       "morning",
+       "night",
+       "sunset"
+      ]
+     },
+     {
+      "id": "scene.weather",
+      "options": [
+       "cloudy_sky",
+       "fog",
+       "rain",
+       "snow"
+      ]
+     }
+    ],
+    "actor_detail": [
+     {
+      "id": "actor.pose.body",
+      "humanlike": true,
+      "options": [
+       "all_fours",
+       "arched_back",
+       "kneeling",
+       "on_back",
+       "on_side",
+       "on_stomach",
+       "reclining",
+       "sitting",
+       "squatting",
+       "standing",
+       "wariza"
+      ]
+     },
+     {
+      "id": "actor.pose.refinement",
+      "humanlike": true,
+      "max": null,
+      "options": [
+       "arm_behind_back",
+       "arm_behind_head",
+       "arm_up",
+       "arms_behind_back",
+       "hands_up",
+       "knee_up",
+       "knees_to_chest",
+       "knees_up",
+       "leg_lift",
+       "leg_up",
+       "legs_apart",
+       "legs_over_head",
+       "legs_up"
+      ]
+     },
+     {
+      "id": "expression.blush",
+      "options": [
+       "blush",
+       "full-face_blush",
+       "light_blush"
+      ]
+     },
+     {
+      "id": "expression.eye.openness",
+      "options": [
+       "closed_eyes",
+       "half_closed_eye",
+       "half_closed_eyes",
+       "one_eye_closed",
+       "uneven_eyes",
+       "wide_eyed"
+      ]
+     },
+     {
+      "id": "expression.eye.reaction",
+      "options": [
+       "constricted_pupils",
+       "empty_eyes",
+       "rolling_eyes"
+      ]
+     },
+     {
+      "id": "expression.general",
+      "options": [
+       "angry",
+       "disdain",
+       "embarrassed",
+       "exhausted",
+       "expressionless",
+       "grimace",
+       "light_smile",
+       "nervous_smile",
+       "scared",
+       "seductive_smile",
+       "serious",
+       "surprised",
+       "wince"
+      ]
+     },
+     {
+      "id": "expression.mouth",
+      "options": [
+       "clenched_teeth",
+       "closed_mouth",
+       "heavy_breathing",
+       "open_mouth",
+       "parted_lips",
+       "tongue_out",
+       "wavy_mouth"
+      ]
+     },
+     {
+      "id": "expression.sexual_response",
+      "options": [
+       "ahegao",
+       "aroused",
+       "fucked_silly",
+       "orgasm"
+      ]
+     },
+     {
+      "id": "expression.tear",
+      "options": [
+       "crying",
+       "tearing_up",
+       "tears"
+      ]
+     },
+     {
+      "id": "gaze.direction",
+      "options": [
+       "looking_afar",
+       "looking_ahead",
+       "looking_at_another",
+       "looking_at_viewer",
+       "looking_back",
+       "looking_down",
+       "looking_to_the_side",
+       "looking_up",
+       "sideways_glance"
+      ]
+     },
+     {
+      "id": "manual.clothing_access",
+      "humanlike": true,
+      "max": null,
+      "options": [
+       "clothes_lift",
+       "clothes_pull",
+       "hand_under_clothes"
+      ]
+     },
+     {
+      "id": "motion.body",
+      "options": [
+       "motion_lines",
+       "trembling"
+      ]
+     },
+     {
+      "id": "state.after_activity",
+      "options": [
+       "after_anal",
+       "after_cunnilingus",
+       "after_fellatio",
+       "after_fingering",
+       "after_handjob",
+       "after_masturbation",
+       "after_paizuri",
+       "after_sex",
+       "after_vaginal",
+       "afterglow"
+      ]
+     },
+     {
+      "id": "state.body.condition",
+      "max": null,
+      "options": [
+       "bandages",
+       "bruise",
+       "dirty",
+       "runny_makeup",
+       "scratches"
+      ]
+     },
+     {
+      "id": "state.body.contamination",
+      "max": null,
+      "options": [
+       "blood_on_face",
+       "blood_on_hand"
+      ]
+     },
+     {
+      "id": "state.body.surface",
+      "max": null,
+      "options": [
+       "oiled",
+       "shiny_skin",
+       "steaming_body",
+       "sweat",
+       "very_sweaty",
+       "wet"
+      ]
+     },
+     {
+      "id": "state.clothing.arrangement",
+      "humanlike": true,
+      "max": null,
+      "options": [
+       "open_clothes",
+       "partially_unbuttoned",
+       "partially_undressed",
+       "partially_unzipped",
+       "unbuttoned",
+       "unzipped"
+      ]
+     },
+     {
+      "id": "state.clothing.coverage.lower",
+      "humanlike": true,
+      "max": null,
+      "options": [
+       "bottomless",
+       "clothes_down",
+       "clothing_aside",
+       "no_panties",
+       "open_fly",
+       "panties_around_ankles",
+       "panties_around_one_leg",
+       "panties_around_thighs",
+       "panty_pull",
+       "skirt_around_ankles",
+       "skirt_around_one_leg",
+       "skirt_pull"
+      ]
+     },
+     {
+      "id": "state.clothing.coverage.upper",
+      "humanlike": true,
+      "max": null,
+      "options": [
+       "breasts_out",
+       "covered_nipples",
+       "nipple_slip",
+       "no_bra",
+       "one_breast_out",
+       "open_bra",
+       "strap_slip",
+       "topless"
+      ]
+     },
+     {
+      "id": "state.clothing.surface",
+      "max": null,
+      "options": [
+       "blood_on_clothes",
+       "dirty_clothes",
+       "see_through_clothes",
+       "stained_clothes",
+       "torn_clothes",
+       "wet_clothes"
+      ]
+     },
+     {
+      "id": "state.fluid.cum.instant",
+      "max": null,
+      "options": [
+       "projectile_cum"
+      ]
+     },
+     {
+      "id": "state.fluid.cum.location",
+      "max": null,
+      "options": [
+       "cum_in_ass",
+       "cum_in_mouth",
+       "cum_on_ass",
+       "cum_on_back",
+       "cum_on_breast",
+       "cum_on_crotch",
+       "cum_on_face",
+       "cum_on_hair",
+       "cum_on_legs",
+       "cum_on_pussy",
+       "cum_on_stomach"
+      ]
+     },
+     {
+      "id": "state.fluid.lactation",
+      "max": null,
+      "options": [
+       "lactation",
+       "lactation_through_clothes",
+       "projectile_lactation"
+      ]
+     },
+     {
+      "id": "state.fluid.precum",
+      "max": null,
+      "options": [
+       "precum",
+       "precum_drip",
+       "precum_string",
+       "precum_through_clothes"
+      ]
+     },
+     {
+      "id": "state.fluid.pussy_juice",
+      "max": null,
+      "options": [
+       "female_ejaculation",
+       "pussy_juice",
+       "pussy_juice_drip_through_clothes",
+       "pussy_juice_puddle",
+       "pussy_juice_stain",
+       "pussy_juice_trail"
+      ]
+     },
+     {
+      "id": "state.fluid.saliva",
+      "max": null,
+      "options": [
+       "drooling",
+       "saliva",
+       "saliva_drip",
+       "saliva_on_penis"
+      ]
+     },
+     {
+      "id": "state.genitals.visible_parts",
+      "max": null,
+      "options": [
+       "penis",
+       "testicles"
+      ]
+     },
+     {
+      "id": "state.hair.condition",
+      "max": null,
+      "options": [
+       "messy_hair",
+       "wet_hair"
+      ]
+     },
+     {
+      "id": "state.penis.condom",
+      "options": [
+       "colored_condom",
+       "condom_on_penis",
+       "used_condom_on_penis"
+      ]
+     },
+     {
+      "id": "state.restraint.body",
+      "max": null,
+      "options": [
+       "bound",
+       "bound_ankles",
+       "bound_arms",
+       "bound_wrists",
+       "chained",
+       "cuffs",
+       "restrained",
+       "shibari"
+      ]
+     },
+     {
+      "id": "state.restraint.gag",
+      "options": [
+       "ball_gag",
+       "cloth_gag",
+       "gagged",
+       "panties_in_mouth",
+       "ring_gag",
+       "tape_gag"
+      ]
+     }
+    ],
+    "camera": [
+     {
+      "id": "camera.view",
+      "max": 2,
+      "options": [
+       "dutch_angle",
+       "from_above",
+       "from_behind",
+       "from_below",
+       "from_side",
+       "pov",
+       "pov_hands"
+      ]
+     }
+    ]
+   },
+   "objects": {
+    "types": [
+     "anal_beads",
+     "artificial_vagina",
+     "butt_plug",
+     "dildo",
+     "dildo_harness",
+     "double_dildo",
+     "egg_vibrator",
+     "hitachi_magic_wand",
+     "huge_dildo",
+     "jewel_butt_plug",
+     "rabbit_vibrator",
+     "remote_control_vibrator",
+     "sex_toy",
+     "strap_on",
+     "suction_cup_dildo",
+     "vibrator"
+    ],
+    "placements": [
+     "dildo_gag",
+     "dildo_reveal",
+     "dildo_under_clothes",
+     "dildo_under_panties",
+     "vibrator_cord",
+     "vibrator_in_anus",
+     "vibrator_in_thigh_strap",
+     "vibrator_in_thighhighs",
+     "vibrator_on_nipple",
+     "vibrator_under_clothes",
+     "vibrator_under_panties",
+     "wireless_sex_toy_controller"
+    ],
+    "props": [
+     "condom_box",
+     "condom_wrapper",
+     "lube",
+     "used_condom"
+    ],
+    "surfaces": [
+     "against_glass",
+     "against_railing",
+     "against_tree",
+     "against_wall",
+     "breasts_on_glass"
+    ]
+   }
+  },
+  "response_contract": {
+   "output": "json_only",
+   "inputDefaults": {
+    "actorKind": "character",
+    "formHumanlike": true,
+    "scope": "Only omitted values inherit defaults; explicit false is authoritative.",
+    "singleForm": "One forms item without formRef denotes the sole form; appearance is its visual evidence. Omit all formRef/currentFormRef in requests and responses for that Actor; local request-time binding restores the form. With multiple forms, copy the exact formRef before selecting or proposing an outfit.",
+    "outfits": "Each outfits array string is the exact outfit ID."
+   },
+   "contractRules": {
+    "structure": "obey_provider_json_schema_and_declared_item_fields",
+    "presence": "return_required_fields_omit_optional_empty_fields_unless_schema_requires_null",
+    "references": "use_only_declared_actor_ids_candidate_keys_slot_numbers_and_zero_based_indices",
+    "binding": "bind_each_detail_only_through_its_declared_actor_id_or_index_fields",
+    "cardinality": "obey_each_collection_cardinality_and_uniqueness_rule",
+    "invalidPolicy": "omit_only_the_invalid_optional_value_never_invent_a_replacement_id"
+   },
+   "root": {
+    "itemFields": [
+     "generated_actor_proposals",
+     "generated_outfit_proposals",
+     "illustrations"
+    ],
+    "generated_actor_proposals": {
+     "cardinality": "zero_or_more_response_scoped_but_one_per_visible_unregistered_entity",
+     "requiredWhen": "one_or_more_source_evidenced_visibly_present_actors_in_the_scene_match_neither_actor_candidates_nor_actor_candidate_overlay",
+     "itemFields": [
+      "candidateKey",
+      "label",
+      "tags",
+      "instruction",
+      "sex"
+     ],
+     "candidateKey": "free_1_then_free_2_in_proposal_order",
+     "identityReuse": "reuse_one_candidate_key_and_proposal_for_the_same_identity_across_all_illustrations_and_panels_new_key_only_for_a_distinct_identity",
+     "declarationOrder": "define_each_proposal_before_illustration_slot_selection_and_any_actor_roster_reference",
+     "rosterBinding": "every_proposal_is_referenced_by_actor_roster_and_every_free_N_reference_has_exactly_one_proposal",
+     "label": {
+      "required": true,
+      "maxLength": 96
+     },
+     "tags": {
+      "required": true,
+      "min": 1,
+      "max": 24
+     },
+     "instruction": {
+      "optional": true,
+      "maxLength": 320
+     },
+     "sex": {
+      "required": true,
+      "values": [
+       "female",
+       "male",
+       "unknown"
+      ],
+      "unknownWhen": "non_human_or_not_visually_clear"
+     },
+     "lifetime": "response"
+    },
+    "generated_outfit_proposals": {
+     "cardinality": "zero_or_more_but_at_most_one_per_registered_candidateKey_and_formRef",
+     "requiredWhen": "a_source_evidenced_visible_complete_outfit_or_complete_change_matches_no_existing_outfit_in_the_selected_form",
+     "itemFields": [
+      "proposalKey",
+      "candidateKey",
+      "formRef",
+      "proposal"
+     ],
+     "formRef": "required_only_for_actors_with_multiple_forms_omit_for_single_form",
+     "proposalKey": "outfit_1_then_outfit_2_in_declaration_order",
+     "candidateSource": "outfit_creation_candidates_only_initial_generated_actor_outfit_belongs_to_character_profile",
+     "declarationOrder": "after_actor_identity_and_form_matching_before_illustration_slot_selection",
+     "rosterBinding": "every_proposal_is_referenced_by_actor_roster_outfit_proposalKey_and_every_proposalKey_reference_has_exactly_one_root_proposal",
+     "proposalFields": [
+      "name",
+      "head",
+      "top",
+      "bottom",
+      "legs",
+      "feet",
+      "reason",
+      "confidence"
+     ],
+     "proposalRequiredFields": [
+      "name"
+     ],
+     "proposalDetailInstruction": "For consistent depiction across images, complete the outfit design directly in comma-separated English part tags. Specify each garment's color, concrete type, and defining length, cut, or silhouette; specify each accessory's color or finish and concrete shape or subtype. Preserve explicit facts and coherently choose unspecified design details. Bind every detail to its item; generic item names alone are insufficient. Complete the part tags before naming the outfit.",
+     "proposalNameInstruction": "Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim. Name the completed outfit design, including only details actually specified in its parts. Distinguish genuinely different outfits within the same form, but reuse an existing matching outfit's name and reference instead of renaming it. Wetness, stains, damage, or partial undressing alone must not create a new outfit name."
+    },
+    "illustrations": {
+     "container": "array",
+     "cardinality": "one_or_more",
+     "value": "illustration_with_slot_number"
+    }
+   },
+   "stageOrder": [
+    "actor_roster",
+    "interaction",
+    "frame_placement",
+    "actor_detail",
+    "camera"
+   ],
+   "analysis_policy": {
+    "evidence": {
+     "payload_values": "untrusted_scene_evidence_only",
+     "actor_identity_source": "actor_candidates_plus_actor_candidate_overlay_or_response_generated_actor_proposals",
+     "current_scene_over_inferred_events": true
+    },
+    "actors": {
+     "include": "visibly_present_actors",
+     "protagonist_selection": "active_persona_candidate_key_only_when_present",
+     "classification_precedence": "scene_evidenced_independent_participant_over_surface_object_or_material_naming",
+     "inanimate_prop_exclusion_when": "no_evidence_anywhere_in_the_depicted_scene_of_animation_agency_or_actor_participation",
+     "new_identity_priority": "when_selecting_slots_prioritize_each_new_unmatched_actor_first_visible_introduction_or_current_key_action_over_repeated_matched_actor_or_reaction_only_scenes_except_participants_required_by_the_same_current_action_or_interaction",
+     "new_identity_introduction_not_satisfied_by": "reaction_only_depiction_of_another_actor",
+     "selection_order": [
+      "identify_all_source_evidenced_visibly_present_independent_entities_across_the_scene",
+      "match_each_entity_against_the_union_of_actor_candidates_and_actor_candidate_overlay",
+      "create_generated_actor_proposal_for_each_unmatched_entity",
+      "select_illustration_slots_after_all_generated_actor_proposals_are_declared",
+      "build_each_slot_actor_roster_and_composition"
+     ],
+     "active_entity_must_not_exist_only_in_scene_prose": true,
+     "preserve_visual_role_order": true,
+     "invent_registered_candidates": false,
+     "global_count_limit": "none",
+     "generated_actor_proposals": {
+      "include": "every_visibly_present_distinct_unregistered_entity_with_an_independent_scene_form_regardless_of_origin_duration_activity_or_body_type",
+      "entity_type_limit": "none",
+      "visible_identity": "tags_then_residual_instruction",
+      "sex": "required_female_male_or_unknown",
+      "unknown_sex_when": "non_human_or_not_visually_clear",
+      "lifetime": "current_response_only",
+      "persist_or_infer_across_requests": false,
+      "exclude": "mentioned_only_or_clearly_inanimate_prop_or_depiction_or_indistinguishable_background_entity"
+     },
+     "actor_roster_sex": "omit_use_local_candidate_or_generated_proposal"
+    },
+    "outfits": {
+     "catalog_binding": "appearance_catalog.candidateKey_then_forms.formRef",
+     "context_scan_order": "after_actor_identity_matching_before_illustration_slot_selection",
+     "context_scan_scope": "whole_source_scene_per_found_actor_for_explicit_complete_outfit_or_complete_outfit_change_and_applicable_form",
+     "proposal_declaration": "declare_each_new_complete_outfit_at_response_root_before_illustration_slot_selection",
+     "new_outfit_priority": "prioritize_first_clear_appearance_or_current_key_action_of_each_declared_new_outfit_over_repeated_existing_outfit_or_reaction_only_scenes",
+     "new_outfit_priority_after": "new_unmatched_actor",
+     "new_outfit_not_satisfied_by": "reaction_only_or_outfit_not_visibly_established",
+     "final_binding": "after_slot_selection_bind_root_proposalKey_to_selected_actor_occurrence_and_exact_formRef",
+     "form_selection_order": [
+      "scene_evidence",
+      "continuity",
+      "default"
+     ],
+     "form_reference": "Each formRef is a compact appearance name or tag identifier. Copy the exact supplied ID; unknown_form means appearance evidence is unavailable. Never invent a formRef or infer traits from uniqueness suffixes.",
+     "cross_form_outfit_selection": "forbidden",
+     "decision_scope": "each_visible_actor_independently",
+     "do_not_share_decision_across_actors": true,
+     "selection_order": [
+      "current_scene_evidence",
+      "matching_existing_candidate",
+      "continuity_reference_when_compatible",
+      "new_outfit_proposal"
+     ],
+     "existing_match_instruction": "Compare only source-evidenced clothing with registered outfits for the same Actor and form. Missing or unmentioned details are unknown, not mismatches. Wording differences and incidental variations alone do not establish a different outfit; explicit differences in the main garments, their combination, or contextually distinguishing features do.",
+     "current_outfit_when": "Prefer the existing outfit best supported by current clothing evidence. When the evidence does not distinguish compatible candidates, retain the current outfit if available. Omission alone does not break outfit continuity; explicit incompatible clothing evidence overrides it.",
+     "preserve_for_state_change_only": true,
+     "state_change_owner": "actor_detail_clothing_modifiers",
+     "proposal_when": "For an eligible Actor, propose a new outfit only when the source establishes a worn outfit and no registered outfit in the selected form reasonably matches it. Do not infer a clothing change solely from a change of time, place, or activity.",
+     "proposal_completion_order": "Decide whether an outfit is new before completing unspecified design details. Never use details invented during completion as evidence that an existing outfit does not match.",
+     "distinct_contextual_outfits": "one_proposal_per_distinct_unmatched_complete_outfit_per_actor_and_form",
+     "proposal_name": "Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim. Name the completed outfit design, including only details actually specified in its parts. Distinguish genuinely different outfits within the same form, but reuse an existing matching outfit's name and reference instead of renaming it. Wetness, stains, damage, or partial undressing alone must not create a new outfit name.",
+     "existing_and_proposal_are_mutually_exclusive": true,
+     "proposal_parts": "Return only actually worn wearable items; never encode uncovered anatomy or clothing absence such as bare legs or bare feet.",
+     "complete_nudity": {
+      "top": "completely nude"
+     },
+     "complete_nudity_when": "Only when the current scene explicitly establishes a fully unclothed humanlike body; never infer it from empty wearable fields or a nonhuman or material body."
+    },
+    "continuity": {
+     "modifier_reference": {
+      "inputs": [
+       "actor_modifier_continuity",
+       "scene_modifier_continuity"
+      ],
+      "missing_current_evidence": "do_not_emit_prior_value_solely_because_it_is_listed",
+      "direct_prompt_exceptions": [
+       "state.fluid.cum.location",
+       "actor.injury"
+      ]
+     },
+     "natural_language": {
+      "input": "natural_language_continuity",
+      "channels": [
+       "location",
+       "pose",
+       "action",
+       "object"
+      ],
+      "absent_or_ended": "omit_current_channel_value"
+     },
+     "cum_clear": {
+      "input": "actor_modifier_continuity",
+      "field": "actor_detail.cumClear",
+      "when": "explicit_washing_or_wiping_removed_previous_cum_locations",
+      "values": "exact_prior_state.fluid.cum.location_option_ids_only",
+      "complete_cleanup": "return_every_listed_prior_location_explicitly",
+      "must_exist_in_prior_state": true,
+      "never_infer_cleanup_from": [
+       "elapsed_time",
+       "scene_or_location_change",
+       "bathing_context_alone",
+       "changed_clothing",
+       "off_screen_cleanup",
+       "partial_wiping"
+      ],
+      "sentinels": "forbidden"
+     },
+     "injury_clear": {
+      "input": "actor_modifier_continuity",
+      "field": "actor_detail.injuryClear",
+      "when": "explicit_recovery_or_injury_transition_removed_previous_injury",
+      "values": "exact_prior_actor.injury_strings_only",
+      "complete_recovery": "return_every_listed_prior_injury_explicitly",
+      "must_exist_in_prior_state": true,
+      "clear_before_current_free_tags": true,
+      "never_infer_cleanup_from": [
+       "missing_current_free_tag",
+       "covered_injury",
+       "camera_crop",
+       "off_screen_actor",
+       "scene_or_location_change",
+       "elapsed_time_without_explicit_recovery"
+      ],
+      "sentinels": "forbidden"
+     }
+    },
+    "interactions": {
+     "cardinality": "zero_or_more_visible_direct_relations",
+     "actor_may_participate_in_multiple_items": true,
+     "graph_model": "ordered_multigraph_occurrences",
+     "same_actor_pair_may_have_multiple_ids": true,
+     "same_id_same_actor_pair_occurrences_are_preserved": true,
+     "hash_or_fingerprint_occurrence_id": "forbidden",
+     "prompt_mode": {
+      "mutual_is_not_interaction_id_or_modifier": true
+     },
+     "free_interaction_uses_same_item_shape": true,
+     "free_interaction_allows_residual_channels": true,
+     "detail_binding": {
+      "mutual_does_not_broadcast_natural_language": true,
+      "sex_does_not_define_direction": true
+     },
+     "directed_interaction_binding": {
+      "enabled_by_interaction_binding": "source_target_actor_ids"
+     },
+     "ejaculation_progress": {
+      "definition": "interaction.sexual.ejaculation.progress",
+      "select_when": "ejaculation_is_occurring_or_has_just_completed_in_current_scene",
+      "after_options_mean": "newly_completed_event_in_current_scene",
+      "lingering_aftermath_owner": "state.after_activity_or_visible_cum_location",
+      "pre_existing_residue_is_not_new_event": true,
+      "return_accumulated_count": false
+     },
+     "scene_wide_sexual_modifiers": {
+      "anchor": "lowest_interaction_index_in_matching_sexual_group",
+      "participants": "union_of_actual_sexual_interaction_participants",
+      "exclude": [
+       "observer",
+       "independent_actor_action"
+      ],
+      "relationship": {
+       "definition": "interaction.sexual.relationship",
+       "maximum": 1,
+       "options": [
+        "yuri",
+        "yaoi",
+        "bisexual_female"
+       ],
+       "yuri_when": "female_female_only",
+       "yaoi_when": "male_male_only",
+       "bisexual_female_when": "female_female_and_female_male_relations_coexist",
+       "bisexual_female_excludes": [
+        "yuri"
+       ]
+      },
+      "grouping": {
+       "definition": "interaction.sexual.grouping",
+       "maximum": 2,
+       "count_options": [
+        "ffm_threesome",
+        "mmf_threesome",
+        "fff_threesome",
+        "foursome",
+        "fivesome",
+        "group_sex"
+       ],
+       "one_count_option_only": true,
+       "group_sex_minimum_participants": 6,
+       "structure_options": [
+        "orgy"
+       ],
+       "orgy_when": "multiple_couples_or_distinct_sexual_groups_act_simultaneously"
+      }
+     }
+    },
+    "actor_actions": "solo_or_independent_action_only",
+    "freeform": {
+     "planning_scope": "all_declared_free_tag_and_natural_language_channels_together",
+     "plan_after": [
+      "actors",
+      "interactions",
+      "closed_modifiers",
+      "frame_placement",
+      "actor_details",
+      "camera"
+     ],
+     "natural_language_writing": "concise_visible_details_actions_relations_and_presentation",
+     "language": "concise_visible_english",
+     "repeat_closed_options": false,
+     "contradict_closed_options": false,
+     "camera_semantics": [
+      "camera_position",
+      "validated_scene_or_body_reference",
+      "viewing_direction"
+     ],
+     "camera_ambiguous_actor_reference": "omit_actor_reference_and_use_scene_reference",
+     "empty_when_no_residual_meaning": true
+    },
+    "frame_placement": {
+     "coordinates": "response_contract.illustration.frame_placement.coordinates",
+     "precision": "rough_position_hint",
+     "scene_closed_modifiers": [
+      "scene.environment",
+      "scene.time",
+      "scene.weather"
+     ],
+     "scene_location_channels": [
+      "scene.location",
+      "location"
+     ],
+     "actor_instruction_channel": "placement",
+     "actor_item_scope": "one_item_per_visible_actor_occurrence",
+     "duplicate_actor_ids": "forbidden_unless_response_contract_enables_multi_frame_occurrences",
+     "item_order": "actor_roster_order_unless_response_contract_overrides",
+     "facing": {
+      "omit_when": [
+       "side",
+       "oblique",
+       "toward_another_actor",
+       "not_visually_evidenced"
+      ],
+      "actor_relation_owner": "interaction_or_residual_placement_instruction"
+     },
+     "absolute_horizontal_tag": "not_requested_or_derived",
+     "layout_continuity": {
+      "owner": "frame_placement_after_actor_roster_selection",
+      "keyframes_order": "newest_first",
+      "selection_order": [
+       "exact_roster_latest",
+       "smallest_recent_superset",
+       "highest_actor_overlap_ratio_latest"
+      ],
+      "current_explicit_layout_wins": true,
+      "never_restore_absent_actor": true,
+      "hint_only": true
+     },
+     "size_selection": {
+      "owner": "free_scene_canvas_intent",
+      "actor_count_is_not_a_decision_rule": true,
+      "evidence": [
+       "dominant_visual_flow",
+       "actor_placement",
+       "action_direction",
+       "gaze_direction",
+       "environmental_importance",
+       "framing_and_crop",
+       "intentional_negative_space"
+      ]
+     }
+    },
+    "output": {
+     "camera_count_per_illustration": 1,
+     "uncertain_values": "omit_optional_or_use_declared_empty_value"
+    }
+   },
+   "illustration": {
+    "slot_number": {
+     "required": true,
+     "type": "integer",
+     "source": "numeric_N_from_selected_scene_slot_number_marker",
+     "uniqueAcrossIllustrations": true
+    },
+    "actor_roster": {
+     "cardinality": "zero_or_more_no_global_max",
+     "emptyScenePolicy": "for_any_presentation_with_no_visible_actors_return_explicit_empty_actor_roster_frame_placement_items_and_actor_detail; no_interactions_or_cross_panel_actor_bindings; describe_visible_content_in_frame_placement_instruction_or_freeTags_or_comicPanels_instructions",
+     "itemFields": [
+      "actorId",
+      "candidateKey",
+      "formRef",
+      "outfit"
+     ],
+     "candidateSource": "actor_candidates_or_actor_candidate_overlay_or_generated_actor_proposals",
+     "actorId": "actor_1_actor_2_in_roster_order",
+     "formRef": {
+      "requiredWhen": "candidate_is_registered_and_has_multiple_forms",
+      "source": "selected_actor_candidate_forms",
+      "selectBefore": "outfit"
+     },
+     "outfit": {
+      "optional": true,
+      "decisionScope": "each_actor_item_independently",
+      "requiredWhen": "selected_form_appearance_catalog_requires_an_id_or_proposal_decision",
+      "fields": [
+       "id",
+       "proposalKey"
+      ],
+      "existingIdSource": "selected_form_outfit_ids_from_static_or_generated_appearance_catalog",
+      "proposalKeySource": "root_generated_outfit_proposals_for_the_same_candidateKey_and_formRef",
+      "exclusiveSelection": "use_id_or_proposalKey_not_both"
+     },
+     "outfitScope": "illustration_default_overridden_by_actor_detail_occurrence"
+    },
+    "interaction": {
+     "stageFields": [
+      "items",
+      "modifiers",
+      "instructions"
+     ],
+     "items": {
+      "cardinality": "zero_or_more",
+      "itemFields": [
+       "id",
+       "mode",
+       "sourceActorId",
+       "targetActorId"
+      ],
+      "id": {
+       "required": true,
+       "selectionPolicy": "use_exact_catalog_match_when_semantically_accurate_otherwise_generate_safe_free_id",
+       "freeFormat": "lowercase_snake_case",
+       "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$",
+       "maxLength": 64
+      },
+      "mode": {
+       "required": true,
+       "values": [
+        "directed",
+        "mutual"
+       ],
+       "allowedValuesSource": "matching_interaction_definition.allowedModes_or_directed_mutual_for_free_interaction"
+      },
+      "occurrenceBinding": "array_index_only_no_instance_id_or_deduplication",
+      "sourceTarget": "required_distinct_actor_ids_from_actor_roster"
+     },
+     "modifiers": {
+      "itemFields": [
+       "interactionIndex",
+       "id",
+       "options"
+      ],
+      "direction": "inherit_source_target_from_bound_interaction_item"
+     },
+     "instructions": {
+      "id": "interaction_detail",
+      "maxLength": 180,
+      "bindingFields": [
+       "interactionIndex",
+       "participantDetails"
+      ],
+      "subjects": [
+       "interaction"
+      ],
+      "instruction": "Return separate residual detail for each bound participant; never copy between participants.",
+      "itemFields": [
+       "interactionIndex",
+       "participantDetails"
+      ],
+      "participantDetailFields": [
+       "actorId",
+       "text"
+      ],
+      "participantPolicy": "one_optional_detail_per_bound_interaction_actor_no_broadcast"
+     }
+    },
+    "frame_placement": {
+     "stageFields": [
+      "sizeId",
+      "modifiers",
+      "freeTags",
+      "instruction",
+      "items"
+     ],
+     "sizeId": {
+      "required": true,
+      "type": "integer",
+      "allowedValues": [
+       1,
+       2,
+       5
+      ],
+      "catalogSource": "analyzer_catalog.sizes"
+     },
+     "modifiers": {
+      "itemFields": [
+       "id",
+       "options"
+      ],
+      "scope": "declared_scene_global_closed_modifiers_only"
+     },
+     "freeTags": {
+      "id": "scene.location",
+      "scope": "scene",
+      "maxTags": 4,
+      "type": "array_of_strings",
+      "nestedObject": false,
+      "subjects": [
+       "global"
+      ],
+      "instruction": "Return environment tags."
+     },
+     "instruction": {
+      "id": "location",
+      "maxLength": 320,
+      "bindingFields": [],
+      "subjects": [
+       "global"
+      ],
+      "instruction": "Return residual location details."
+     },
+     "items": {
+      "cardinality": "exactly_one_per_actor_roster_item",
+      "order": "actor_roster_order",
+      "itemFields": [
+       "actorId",
+       "center",
+       "facing",
+       "instruction"
+      ],
+      "facing": {
+       "catalogDefinition": "orientation.facing",
+       "itemFields": [
+        "id"
+       ],
+       "values": [
+        "facing_away"
+       ],
+       "reference": "camera_only",
+       "omitFor": [
+        "side",
+        "oblique",
+        "toward_another_actor"
+       ]
+      },
+      "instruction": {
+       "id": "placement",
+       "maxLength": 260,
+       "bindingFields": [
+        "actorId"
+       ],
+       "subjects": [
+        "actor"
+       ],
+       "instruction": "Return residual spatial placement for this Actor occurrence; empty when the comic-page structure channel is available."
+      }
+     },
+     "coordinates": {
+      "origin": "top_left",
+      "range": [
+       0,
+       1
+      ],
+      "center": {
+       "grid": "novelai_v5_normalized_81x81_centers",
+       "min": 0.1,
+       "max": 0.9,
+       "step": 0.01
+      }
+     }
+    },
+    "actor_detail": {
+     "itemFields": [
+      "actorId",
+      "placementIndex",
+      "outfit",
+      "actions",
+      "modifiers",
+      "freeTags",
+      "cumClear",
+      "injuryClear",
+      "poseInstruction",
+      "actionInstruction",
+      "objects",
+      "objectInstruction"
+     ],
+     "placementIndex": {
+      "required": true,
+      "type": "zero_based_frame_placement_items_index",
+      "actorIdMustMatchReferencedPlacement": true
+     },
+     "outfit": {
+      "optional": true,
+      "decisionScope": "exact_actor_id_plus_placement_index_occurrence",
+      "fallback": "actor_roster_outfit_then_selected_form_default",
+      "fields": [
+       "id",
+       "proposalKey"
+      ],
+      "existingIdSource": "selected_form_outfit_ids_from_static_or_generated_appearance_catalog",
+      "proposalKeySource": "root_generated_outfit_proposals_for_the_same_candidateKey_and_formRef",
+      "exclusiveSelection": "use_id_or_proposalKey_not_both"
+     },
+     "freeTags": {
+      "id": "actor.injury",
+      "scope": "actor",
+      "maxTags": null,
+      "type": "array_of_strings",
+      "nestedObject": false,
+      "subjects": [
+       "actor"
+      ],
+      "instruction": "Return every current injury, including injuries being visibly inflicted now. Use the closest representative body-part value. Return each value in the form <cut|scar|bruise|bleeding|deep wound> <on> <head|face|neck|shoulder|chest|breasts|back|stomach|waist|hips|crotch|buttocks|arm|hand|thigh|leg|foot>."
+     },
+     "cumClear": {
+      "optional": true,
+      "type": "array_of_exact_prior_option_ids",
+      "valuesSource": "actor_modifier_continuity[candidateKey].modifiers[state.fluid.cum.location].options",
+      "when": "explicit_washing_or_wiping_removed_these_previous_locations",
+      "completeCleanup": "return_every_listed_prior_location_explicitly",
+      "sentinels": "forbidden",
+      "emptyWhenNone": true
+     },
+     "injuryClear": {
+      "optional": true,
+      "type": "array_of_exact_prior_free_tag_values",
+      "valuesSource": "actor_modifier_continuity[candidateKey].freeTags[actor.injury].values",
+      "when": "explicit_recovery_or_injury_transition_removed_these_previous_injuries",
+      "completeRecovery": "return_every_listed_prior_injury_explicitly",
+      "absenceIsNotClear": true,
+      "sentinels": "forbidden",
+      "emptyWhenNone": true
+     },
+     "instructions": [
+      {
+       "id": "pose",
+       "maxLength": 180,
+       "bindingFields": [
+        "actorId"
+       ],
+       "subjects": [
+        "actor"
+       ],
+       "instruction": "Return residual pose detail for this Actor occurrence."
+      },
+      {
+       "id": "action",
+       "maxLength": 220,
+       "bindingFields": [
+        "actorId"
+       ],
+       "subjects": [
+        "actor"
+       ],
+       "instruction": "Return residual action detail for this Actor occurrence."
+      },
+      {
+       "id": "object_instruction",
+       "maxLength": 180,
+       "bindingFields": [
+        "actorId"
+       ],
+       "subjects": [
+        "object"
+       ],
+       "instruction": "Return residual object handling for the bound Actor."
+      }
+     ],
+     "objectFields": [
+      "objectId",
+      "typeId",
+      "actorIds",
+      "interactionIndex",
+      "placementId",
+      "surfaceId"
+     ]
+    },
+    "camera": {
+     "itemFields": [
+      "modifiers",
+      "instruction"
+     ],
+     "instruction": {
+      "id": "camera",
+      "maxLength": 320,
+      "bindingFields": [],
+      "subjects": [
+       "global"
+      ],
+      "instruction": "Return camera position, an unambiguous validated scene or body reference, and viewing direction."
+     }
+    }
+   },
+   "forbiddenFields": [
+    "composition",
+    "depth",
+    "instanceId",
+    "other",
+    "custom",
+    "general_free",
+    "preset_id",
+    "prompt_directives",
+    "variant",
+    "frame",
+    "size",
+    "interaction.contact",
+    "applyTo",
+    "bounds",
+    "frame_placement.items.modifiers",
+    "frame_placement.items.freeTags",
+    "poseFreeTags",
+    "actionFreeTags",
+    "camera.freeTags",
+    "camera.detail",
+    "frame_placement.comicPanels",
+    "frame_placement.comicPageModifiers",
+    "frame_placement.comicCrossPanelActors",
+    "frame_placement.items.panelId",
+    "actor_roster.outfit.proposal"
+   ]
+  }
+ },
+ "schema": {
+  "type": "object",
+  "description": "NovelAI V5 interaction-led Analyzer response.",
+  "properties": {
+   "generated_actor_proposals": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "description": "Response-scoped visible actor absent from actor_candidates and actor_candidate_overlay.",
+     "properties": {
+      "candidateKey": {
+       "type": "string",
+       "description": "Sequential response-scoped key: free_1, free_2, and so on in proposal order.",
+       "minLength": 1
+      },
+      "label": {
+       "type": "string",
+       "description": "Short visible label.",
+       "minLength": 1,
+       "maxLength": 96
+      },
+      "tags": {
+       "type": "array",
+       "items": {
+        "type": "string",
+        "description": "Concise visible identifying tag.",
+        "minLength": 1
+       },
+       "description": "Only Actor-local visible identity features, colors, and materials; never global composition or cast-count tags.",
+       "minItems": 1,
+       "maxItems": 24,
+       "uniqueItems": true
+      },
+      "instruction": {
+       "type": "string",
+       "description": "Residual visible identity description.",
+       "maxLength": 320
+      },
+      "sex": {
+       "type": "string",
+       "description": "Visible sex; use unknown for nonhuman or unclear entities.",
+       "enum": [
+        "female",
+        "male",
+        "unknown"
+       ]
+      }
+     },
+     "required": [
+      "candidateKey",
+      "label",
+      "tags",
+      "sex"
+     ],
+     "additionalProperties": false
+    },
+    "description": "Optional response-scoped actors, discovered and defined before illustration slot selection or roster references."
+   },
+   "generated_outfit_proposals": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "description": "Complete new outfit declared before illustration slot selection; the selected Actor occurrence references proposalKey.",
+     "properties": {
+      "proposalKey": {
+       "type": "string",
+       "description": "Sequential declaration key: outfit_1, outfit_2, and so on.",
+       "pattern": "^outfit_[1-9][0-9]*$"
+      },
+      "candidateKey": {
+       "type": "string",
+       "description": "Exact eligible registered Actor candidateKey.",
+       "enum": [
+        "actor.1fmv888.fk4pvw",
+        "actor.g00nx3.1d3zc2v",
+        "actor.m0ais.6ynrym"
+       ]
+      },
+      "proposal": {
+       "type": "object",
+       "description": "Complete new outfit for consistent depiction. For consistent depiction across images, complete the outfit design directly in comma-separated English part tags. Specify each garment's color, concrete type, and defining length, cut, or silhouette; specify each accessory's color or finish and concrete shape or subtype. Preserve explicit facts and coherently choose unspecified design details. Bind every detail to its item; generic item names alone are insufficient. Complete the part tags before naming the outfit.",
+       "properties": {
+        "name": {
+         "type": "string",
+         "description": "Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim. Name the completed outfit design, including only details actually specified in its parts. Distinguish genuinely different outfits within the same form, but reuse an existing matching outfit's name and reference instead of renaming it. Wetness, stains, damage, or partial undressing alone must not create a new outfit name.",
+         "minLength": 1
+        },
+        "head": {
+         "type": "string",
+         "description": "Visible headwear only."
+        },
+        "top": {
+         "type": "string",
+         "description": "Visible upper-body clothing only."
+        },
+        "bottom": {
+         "type": "string",
+         "description": "Visible lower-body clothing only."
+        },
+        "legs": {
+         "type": "string",
+         "description": "Visible legwear only."
+        },
+        "feet": {
+         "type": "string",
+         "description": "Visible footwear only."
+        },
+        "reason": {
+         "type": "string",
+         "description": "Short visual reason for proposing this outfit."
+        },
+        "confidence": {
+         "type": "number",
+         "description": "Visual confidence from 0 through 1.",
+         "minimum": 0,
+         "maximum": 1
+        }
+       },
+       "required": [
+        "name"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "required": [
+      "proposalKey",
+      "candidateKey",
+      "proposal"
+     ],
+     "additionalProperties": false
+    },
+    "description": "New complete outfits discovered and declared after Actor/form matching and before illustration slot selection."
+   },
+   "illustrations": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "description": "One independently analyzed illustration.",
+     "properties": {
+      "slot_number": {
+       "type": "integer",
+       "description": "Exact numeric N from one selected <slot_number: N> marker; unique across illustrations.",
+       "enum": [
+        0,
+        1
+       ]
+      },
+      "actor_roster": {
+       "type": "array",
+       "items": {
+        "type": "object",
+        "description": "One visible actor identity used by every later stage. Registered actors select formRef before outfit.",
+        "properties": {
+         "actorId": {
+          "type": "string",
+          "description": "Sequential response-local actor ID such as actor_1.",
+          "minLength": 1
+         },
+         "candidateKey": {
+          "type": "string",
+          "description": "Exact key from actor_candidates, actor_candidate_overlay, or generated_actor_proposals.",
+          "minLength": 1
+         },
+         "outfit": {
+          "type": "object",
+          "description": "Choose one request-local existing outfit ID or one root outfit proposalKey, never both.",
+          "properties": {
+           "id": {
+            "type": "string",
+            "description": "Exact existing outfit ID from this request.",
+            "enum": [
+             "Casual hoodie",
+             "Navy sailor school uniform",
+             "White summer sundress",
+             "Grey business suit"
+            ]
+           },
+           "proposalKey": {
+            "type": "string",
+            "description": "Exact proposalKey from root generated_outfit_proposals for this Actor and form.",
+            "pattern": "^outfit_[1-9][0-9]*$"
+           }
+          },
+          "additionalProperties": false
+         }
+        },
+        "required": [
+         "actorId",
+         "candidateKey"
+        ],
+        "additionalProperties": false
+       },
+       "description": "All visible actors in stable roster order; return an explicit empty array for a scene with no visible Actors."
+      },
+      "interaction": {
+       "type": "object",
+       "description": "Interaction stage. Use sibling arrays and bind both detail channels by interactionIndex.",
+       "properties": {
+        "items": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "description": "One visible relation; its array index is the only interaction binding key.",
+          "properties": {
+           "id": {
+            "type": "string",
+            "description": "Exact interaction ID, or a concise safe lowercase snake_case relationship.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+           },
+           "mode": {
+            "type": "string",
+            "description": "Direction mode allowed by the matching interaction definition.",
+            "enum": [
+             "directed",
+             "mutual"
+            ]
+           },
+           "sourceActorId": {
+            "type": "string",
+            "description": "Actor roster ID of the source endpoint.",
+            "minLength": 1
+           },
+           "targetActorId": {
+            "type": "string",
+            "description": "Distinct actor roster ID of the target endpoint.",
+            "minLength": 1
+           }
+          },
+          "required": [
+           "id",
+           "mode",
+           "sourceActorId",
+           "targetActorId"
+          ],
+          "additionalProperties": false
+         },
+         "description": "All directly visible relations."
+        },
+        "modifiers": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "description": "Request-local Interaction modifier selection bound to exactly one occurrence.",
+          "properties": {
+           "interactionIndex": {
+            "type": "integer",
+            "description": "Zero-based index into interaction.items.",
+            "minimum": 0
+           },
+           "id": {
+            "type": "string",
+            "description": "Exact request-local Interaction modifier definition ID.",
+            "minLength": 1
+           },
+           "options": {
+            "type": "array",
+            "items": {
+             "type": "string",
+             "description": "Exact option ID allowed by the selected Interaction modifier.",
+             "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+           }
+          },
+          "required": [
+           "interactionIndex",
+           "id",
+           "options"
+          ],
+          "additionalProperties": false
+         },
+         "description": "Closed selections bound by interactionIndex."
+        },
+        "instructions": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "description": "Natural-language detail bound to one interaction occurrence.",
+          "properties": {
+           "interactionIndex": {
+            "type": "integer",
+            "description": "Zero-based index into interaction.items.",
+            "minimum": 0
+           },
+           "participantDetails": {
+            "type": "array",
+            "items": {
+             "type": "object",
+             "description": "Actor-specific interaction detail; never broadcast to other participants.",
+             "properties": {
+              "actorId": {
+               "type": "string",
+               "description": "Participant actor ID from the bound interaction only.",
+               "minLength": 1
+              },
+              "text": {
+               "type": "string",
+               "description": "Subject-free visible detail for this participant only.",
+               "maxLength": 180
+              }
+             },
+             "required": [
+              "actorId",
+              "text"
+             ],
+             "additionalProperties": false
+            },
+            "description": "At most one detail for each actor participating in the bound interaction."
+           }
+          },
+          "required": [
+           "interactionIndex",
+           "participantDetails"
+          ],
+          "additionalProperties": false
+         },
+         "description": "Participant-specific details bound by interactionIndex."
+        }
+       },
+       "additionalProperties": false
+      },
+      "frame_placement": {
+       "type": "object",
+       "description": "Global scene placement plus ordered visible actor occurrences.",
+       "properties": {
+        "sizeId": {
+         "type": "integer",
+         "description": "Exact size ID allowed by response_contract and analyzer_catalog.sizes.",
+         "enum": [
+          1,
+          2,
+          5
+         ]
+        },
+        "modifiers": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "description": "Scene-global request-local frame modifier selection.",
+          "properties": {
+           "id": {
+            "type": "string",
+            "description": "Exact request-local modifier definition ID.",
+            "minLength": 1
+           },
+           "options": {
+            "type": "array",
+            "items": {
+             "type": "string",
+             "description": "Exact option ID allowed by the selected modifier.",
+             "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+           }
+          },
+          "required": [
+           "id",
+           "options"
+          ],
+          "additionalProperties": false
+         }
+        },
+        "freeTags": {
+         "type": "array",
+         "items": {
+          "type": "string",
+          "description": "Concise visible scene location tag.",
+          "minLength": 1
+         },
+         "description": "Direct scene.location string array.",
+         "maxItems": 4,
+         "uniqueItems": true
+        },
+        "instruction": {
+         "type": "string",
+         "description": "Subject-free visible location detail.",
+         "maxLength": 320
+        },
+        "items": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "description": "One visible actor occurrence; array order becomes placementIndex.",
+          "properties": {
+           "actorId": {
+            "type": "string",
+            "description": "Actor roster ID visible at this occurrence.",
+            "minLength": 1
+           },
+           "center": {
+            "type": "object",
+            "description": "Approximate actor-occurrence center on the canonical 0.01 grid.",
+            "properties": {
+             "x": {
+              "type": "number",
+              "description": "Horizontal center from the top-left origin.",
+              "minimum": 0.1,
+              "maximum": 0.9
+             },
+             "y": {
+              "type": "number",
+              "description": "Vertical center from the top-left origin.",
+              "minimum": 0.1,
+              "maximum": 0.9
+             }
+            },
+            "required": [
+             "x",
+             "y"
+            ],
+            "additionalProperties": false
+           },
+           "facing": {
+            "type": "object",
+            "description": "Optional camera-relative torso orientation.",
+            "properties": {
+             "id": {
+              "type": "string",
+              "description": "Use only when the torso clearly faces away from the camera.",
+              "enum": [
+               "facing_away"
+              ]
+             }
+            },
+            "required": [
+             "id"
+            ],
+            "additionalProperties": false
+           },
+           "instruction": {
+            "type": "string",
+            "description": "Residual spatial relation for this occurrence only.",
+            "maxLength": 260
+           }
+          },
+          "required": [
+           "actorId",
+           "center"
+          ],
+          "additionalProperties": false
+         },
+         "description": "Exactly one visible occurrence for every actor_roster item in roster order."
+        }
+       },
+       "required": [
+        "sizeId",
+        "items"
+       ],
+       "additionalProperties": false
+      },
+      "actor_detail": {
+       "type": "array",
+       "items": {
+        "type": "object",
+        "description": "Actor detail bound 1:1 by actorId plus placementIndex; outfit optionally overrides the Actor roster default for this occurrence only.",
+        "properties": {
+         "actorId": {
+          "type": "string",
+          "description": "Actor roster ID matching the referenced frame placement.",
+          "minLength": 1
+         },
+         "placementIndex": {
+          "type": "integer",
+          "description": "Zero-based index into frame_placement.items.",
+          "minimum": 0
+         },
+         "outfit": {
+          "type": "object",
+          "description": "Choose one request-local existing outfit ID or one root outfit proposalKey, never both.",
+          "properties": {
+           "id": {
+            "type": "string",
+            "description": "Exact existing outfit ID from this request.",
+            "enum": [
+             "Casual hoodie",
+             "Navy sailor school uniform",
+             "White summer sundress",
+             "Grey business suit"
+            ]
+           },
+           "proposalKey": {
+            "type": "string",
+            "description": "Exact proposalKey from root generated_outfit_proposals for this Actor and form.",
+            "pattern": "^outfit_[1-9][0-9]*$"
+           }
+          },
+          "additionalProperties": false
+         },
+         "actions": {
+          "type": "array",
+          "items": {
+           "type": "string",
+           "description": "Exact visible action ID from analyzer_catalog.actorActions.",
+           "enum": [
+            "anal_object_insertion",
+            "dildo_riding",
+            "female_masturbation",
+            "holding_sex_toy",
+            "large_insertion",
+            "male_masturbation",
+            "object_insertion",
+            "presenting_anus",
+            "presenting_armpit",
+            "presenting_ass",
+            "presenting_breasts",
+            "presenting_pussy",
+            "presenting_removed_panties",
+            "spreading_own_anus",
+            "spreading_own_pussy",
+            "vaginal_object_insertion"
+           ]
+          },
+          "description": "Exact visible action IDs.",
+          "uniqueItems": true
+         },
+         "modifiers": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "description": "Actor-scoped request-local closed selection.",
+           "properties": {
+            "id": {
+             "type": "string",
+             "description": "Exact request-local modifier definition ID.",
+             "minLength": 1
+            },
+            "options": {
+             "type": "array",
+             "items": {
+              "type": "string",
+              "description": "Exact option ID allowed by the selected modifier.",
+              "minLength": 1
+             },
+             "minItems": 1,
+             "uniqueItems": true
+            }
+           },
+           "required": [
+            "id",
+            "options"
+           ],
+           "additionalProperties": false
+          }
+         },
+         "freeTags": {
+          "type": "array",
+          "items": {
+           "type": "string",
+           "description": "Visible injury in the response-contract format.",
+           "minLength": 1
+          },
+          "description": "Current visible actor.injury values; bind only to this occurrence.",
+          "uniqueItems": true
+         },
+         "cumClear": {
+          "type": "array",
+          "items": {
+           "type": "string",
+           "description": "Exact cleared prior fluid location ID.",
+           "enum": [
+            "cum_in_ass",
+            "cum_in_mouth",
+            "cum_on_ass",
+            "cum_on_back",
+            "cum_on_breast",
+            "cum_on_crotch",
+            "cum_on_face",
+            "cum_on_hair",
+            "cum_on_legs",
+            "cum_on_pussy",
+            "cum_on_stomach"
+           ]
+          },
+          "description": "Exact prior fluid-location IDs from actor_modifier_continuity only.",
+          "uniqueItems": true
+         },
+         "injuryClear": {
+          "type": "array",
+          "items": {
+           "type": "string",
+           "description": "Exact resolved prior injury value.",
+           "minLength": 1
+          },
+          "description": "Exact prior actor.injury strings from actor_modifier_continuity only.",
+          "uniqueItems": true
+         },
+         "poseInstruction": {
+          "type": "string",
+          "description": "Subject-free visible pose detail.",
+          "maxLength": 180
+         },
+         "actionInstruction": {
+          "type": "string",
+          "description": "Subject-free visible action detail.",
+          "maxLength": 220
+         },
+         "objects": {
+          "type": "array",
+          "items": {
+           "type": "object",
+           "description": "Visible object binding owned by this actor detail.",
+           "properties": {
+            "objectId": {
+             "type": "string",
+             "description": "Response-local object occurrence ID."
+            },
+            "typeId": {
+             "type": "string",
+             "description": "Exact ID from the supplied catalog or response-scoped roster.",
+             "minLength": 1
+            },
+            "actorIds": {
+             "type": "array",
+             "items": {
+              "type": "string",
+              "description": "Exact ID from the supplied catalog or response-scoped roster.",
+              "minLength": 1
+             },
+             "description": "Actor roster IDs visibly bound to this object.",
+             "uniqueItems": true
+            },
+            "interactionIndex": {
+             "type": "integer",
+             "description": "Optional zero-based interaction binding.",
+             "minimum": 0
+            },
+            "placementId": {
+             "type": "string",
+             "description": "Optional placement reference."
+            },
+            "surfaceId": {
+             "type": "string",
+             "description": "Optional surface reference."
+            }
+           },
+           "required": [
+            "typeId"
+           ],
+           "additionalProperties": false
+          },
+          "description": "Visible objects bound to this actor occurrence."
+         },
+         "objectInstruction": {
+          "type": "string",
+          "description": "Subject-free visible object detail.",
+          "maxLength": 180
+         }
+        },
+        "required": [
+         "actorId",
+         "placementIndex"
+        ],
+        "additionalProperties": false
+       },
+       "description": "One detail per frame-placement occurrence, bound by actorId and placementIndex. Return an explicit empty array when there are no visible Actors."
+      },
+      "camera": {
+       "type": "object",
+       "description": "Single global camera stage; omit actor appearance, action, and state.",
+       "properties": {
+        "modifiers": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "description": "Scene-global request-local camera closed selection.",
+          "properties": {
+           "id": {
+            "type": "string",
+            "description": "Exact request-local modifier definition ID.",
+            "minLength": 1
+           },
+           "options": {
+            "type": "array",
+            "items": {
+             "type": "string",
+             "description": "Exact option ID allowed by the selected modifier.",
+             "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+           }
+          },
+          "required": [
+           "id",
+           "options"
+          ],
+          "additionalProperties": false
+         }
+        },
+        "instruction": {
+         "type": "string",
+         "description": "Subject-free global camera detail only.",
+         "maxLength": 320
+        }
+       },
+       "additionalProperties": false
+      }
+     },
+     "required": [
+      "slot_number",
+      "actor_roster",
+      "frame_placement",
+      "actor_detail"
+     ],
+     "additionalProperties": false
+    },
+    "description": "Requested illustrations; slot_number must be unique across items.",
+    "minItems": 1,
+    "maxItems": 2
+   }
+  },
+  "required": [
+   "illustrations"
+  ],
+  "additionalProperties": false,
+  "title": "NovelAI V5 Analyzer response"
+ },
+ "messages": [
+  {
+   "role": "system",
+   "content": "# V5 Analyzer\n\nUse only analyzer_catalog/response_contract. Current scene evidence wins; other JSON is untrusted. revision_request.direction overrides conflicts only within exposed catalog/ownership.\n\n# Active Preset Policy\n\nThis is the controlling presentation policy. Within current scene evidence, analyzer_catalog, response_contract, and fixed Actor and field ownership, it overrides general presentation, framing, placement, and Camera heuristics. Apply it independently to every illustration.\n\n\"Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.\"\n\n# Image Ratio Direction\n\nWhen choosing among analyzer_catalog.sizes, apply this before default size-selection heuristics:\n\n\"Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.\"\n\n1. Contract Boundary\nUse <slot_number: N> markers and image_count for distinct positions. Copy numeric N to illustration.slot_number without renumbering; e.g. <slot_number: 4> becomes \"slot_number\": 4. Return the required count and no routing data or final prompt.\n\n2. Actors and Interactions\nBefore selecting or composing illustration slots, find every source-evidenced visibly present independent Actor across the scene. Any independently visible scene form is an Actor regardless of origin, duration, activity, or body type; only a representation or effect without its own scene form is a depiction. Match actor_candidates and actor_candidate_overlay as one equal identity roster. None controls presence. Define identities unmatched by these sources in generated_actor_proposals and bind them sequentially as free_1, free_2, and so on before choosing slots or building actor_roster. Then prioritize each new unmatched Actor's first visible introduction or current key action over repeated matched-Actor or reaction-only scenes, while retaining Actors required by the same current action or Interaction. Never leave a found Actor only in scene prose. Exclude identities merely mentioned but not independently established as visibly present in the depicted scene, clearly inanimate props, formless depictions or effects, and indistinct background entities. After Actor/form matching, compare source-evidenced clothing with existing outfits under response_contract.analysis_policy.outfits. Declare only outfits that qualify as new under that policy in root generated_outfit_proposals before slot selection. actor_roster.outfit is default. For a differing Comic-panel outfit, set actor_detail.outfit at exact actorId + placementIndex by id/proposalKey; otherwise inherit. Reuse proposals only where worn.\nAll presentations allow zero Actors; follow actor_roster.emptyScenePolicy.\nReturn each visible direct two-Actor relation separately. Prefer a catalog ID; else short lowercase snake_case that never implies NSFW. Interaction must be {items, modifiers, instructions}, never an array; bind detail by interactionIndex. Directed source acts and target receives; mutual endpoints are equal. Never infer direction from sex/order; solo or independent actions have no Interaction. Follow analysis_policy.interactions.\n\n3. Active Preset Presentation\nSingle Frame is the active presentation mode. Use Frame Placement for Actor occurrences and one global Camera for camera position, an unambiguous reference, and viewing direction. Apply composition heuristics where preset policy is silent.\n\n4. Occurrence Completion and Validation\nFollow stageOrder, definitions, subjects, options, analysis_policy, and form humanlike. Interaction modifiers inherit participants; actorActions are solo/independent; declare Object IDs. Before natural language, evaluate every freeTag. Emit every visible match in its required format; natural language may overlap but never replaces it. Use short freeTags and concise subjectless prose without names, pronouns, aliases, or Actor IDs. Never contradict channels. Describe only parts visible in the chosen frame.\nEach Frame Placement item is one visible Actor occurrence; bind one Actor Detail by actorId and zero-based placementIndex. Duplicate actorId only when permitted. Facing is camera-relative; use facing_away only for a clearly visible torso back. actor_modifier_continuity, scene_modifier_continuity, layout_continuity, and natural_language_continuity are prior references only: current evidence wins, and reselect a referenced value only when the current scene visibly supports its continuation. Use analysis_policy.outfits for outfit_continuity. Never restore absent Actors, force old sizeId or coordinates, or copy continuity directly to the final prompt. cumClear/injuryClear use only exact actor_modifier_continuity values; for complete cleanup/recovery list all; never all or *. Placement detail must not repeat center, facing, Interaction, pose, or action. Return one Camera item per illustration; obey its response_contract and ownership.\nReturn one numeric sizeId from analyzer_catalog.sizes. Follow the Image Ratio Direction block before default size-selection heuristics. Return exactly one JSON object with no outside text."
+  },
+  {
+   "role": "user",
+   "content": "{\"scene\":\"Alice waved at Shouta from the school gate, her silver hair catching the morning light.\\n\\n<slot_number: 0>\\n\\n\\\"You're late again!\\\" she laughed, grabbing his sleeve.\\n\\n<slot_number: 1>\\n\\nMr. Bob watched them from the window of the staff room, sighing.\",\"image_count\":{\"min\":1,\"max\":2},\"active_persona_candidate_key\":\"actor.1fmv888.fk4pvw\",\"slot_hints\":{\"0\":[\"actor.g00nx3.1d3zc2v\"]},\"analyzer_catalog\":{\"defaults\":{\"interaction\":{\"binding\":\"source_target_actor_ids\",\"allowedModes\":[\"directed\"],\"defaultMode\":\"directed\"},\"modifier\":{\"min\":0,\"max\":1,\"subjectsByStage\":{\"interaction\":[\"interaction\"],\"frame_placement\":[\"global\"],\"actor_detail\":[\"actor\"],\"camera\":[\"global\"]}}},\"sizes\":[{\"id\":1,\"width\":832,\"height\":1216,\"use\":[\"Vertical posture, height differences, vertical motion, or layered surroundings.\"]},{\"id\":2,\"width\":1216,\"height\":832,\"use\":[\"Broad environments, lateral action or gaze, or horizontal negative space.\"]},{\"id\":5,\"width\":1024,\"height\":1024,\"use\":[\"Centered, frontal, symmetric, or compact framing; neutral when neither axis dominates.\"]}],\"interactions\":[\"amazon_position\",\"anal_fingering\",\"anilingus\",\"arm_around_shoulder\",{\"id\":\"arm_hug\",\"allowedModes\":[\"directed\",\"mutual\"],\"defaultMode\":\"directed\"},{\"id\":\"back_to_back\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},\"breast_biting\",\"breast_smother\",\"breast_sucking\",\"buttjob\",\"clitoral_stimulation\",\"cooperative_breast_smother\",\"cooperative_fellatio\",\"cooperative_footjob\",\"cooperative_grinding\",\"cooperative_handjob\",\"cooperative_paizuri\",\"cooperative_pussyjob\",\"cowgirl_position\",\"cunnilingus\",\"deepthroat\",\"doggystyle\",\"double_breast_sucking\",\"dry_humping\",\"fellatio\",\"fingering\",\"footjob\",{\"id\":\"french_kiss\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},\"g_spot_stimulation\",\"grabbing_anothers_ass\",\"grabbing_anothers_breast\",\"grinding\",\"handjob\",{\"id\":\"heads_together\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},{\"id\":\"holding_hands\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},{\"id\":\"hug\",\"allowedModes\":[\"directed\",\"mutual\"],\"defaultMode\":\"mutual\"},\"hug_from_behind\",{\"id\":\"interlocking_fingers\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},{\"id\":\"kiss\",\"allowedModes\":[\"directed\",\"mutual\"],\"defaultMode\":\"directed\"},\"kissing_cheek\",\"kissing_forehead\",\"kissing_hand\",\"kissing_head\",\"kissing_neck\",\"kissing_penis\",\"leaning_on_person\",\"licking_armpit\",\"licking_breast\",\"licking_nipple\",\"licking_penis\",\"licking_testicle\",\"mating_press\",\"missionary\",{\"id\":\"mutual_masturbation\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},\"nipple_biting\",{\"id\":\"nipple_to_nipple\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},\"nipple_tweak\",\"paizuri\",\"piledriver_sex\",\"prone_bone\",\"prostate_milking\",\"pussyjob\",\"reverse_cowgirl_position\",\"reverse_suspended_congress\",\"reverse_upright_straddle\",\"rusty_trombone\",{\"id\":\"shared_object_insertion\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},\"sitting_on_face\",\"spooning\",\"standing_missionary\",\"standing_sex_from_behind\",\"suspended_congress\",\"testicle_sucking\",\"thigh_sex\",\"tonguejob\",{\"id\":\"tribadism\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},\"upright_straddle\"],\"unknownInteractionIdPolicy\":\"use_safe_interaction_id_without_sentinel\",\"actorActions\":[\"anal_object_insertion\",\"dildo_riding\",\"female_masturbation\",\"holding_sex_toy\",\"large_insertion\",\"male_masturbation\",\"object_insertion\",\"presenting_anus\",\"presenting_armpit\",\"presenting_ass\",\"presenting_breasts\",\"presenting_pussy\",\"presenting_removed_panties\",\"spreading_own_anus\",\"spreading_own_pussy\",\"vaginal_object_insertion\"],\"modifiers\":{\"interaction\":[{\"id\":\"interaction.penetration.instrument\",\"options\":[\"disembodied_penis\",\"penis\",\"sex_toy\",\"strap_on\"]},{\"id\":\"interaction.sexual.ejaculation.progress\",\"subjects\":[\"female\"],\"options\":[\"after_external_ejaculation_pullout\",\"after_internal_ejaculation\",\"after_sex_pullout_cum_string\",\"external_ejaculation_pullout\",\"internal_ejaculation\"]},{\"id\":\"interaction.sexual.grouping\",\"subjects\":[\"global\"],\"max\":2,\"options\":[\"fff_threesome\",\"ffm_threesome\",\"fivesome\",\"foursome\",\"group_sex\",\"mmf_threesome\",\"orgy\"]},{\"id\":\"interaction.sexual.oral.fellatio\",\"max\":2,\"options\":[\"poking_face_or_mouth_with_penis\",\"reverse_fellatio\"]},{\"id\":\"interaction.sexual.penetration.direction\",\"options\":[\"from_behind\"]},{\"id\":\"interaction.sexual.penetration.progress\",\"options\":[\"deep_penetration\",\"ongoing_penetration\",\"shallow_penetration_just_the_tip\"]},{\"id\":\"interaction.sexual.penetration.route\",\"options\":[\"anal\",\"vaginal\"]},{\"id\":\"interaction.sexual.relationship\",\"subjects\":[\"global\"],\"options\":[\"bisexual_female\",\"yaoi\",\"yuri\"]},{\"id\":\"manual.sexual.handjob\",\"options\":[\"caressing_testicles\",\"penis_grab\",\"testicle_grab\"]},{\"id\":\"scene.context.sexual\",\"subjects\":[\"global\"],\"max\":2,\"options\":[\"exhibitionism\",\"public_indecency\",\"underwater\"]}],\"frame_placement\":[{\"id\":\"framing.crop\",\"options\":[\"cowboy_shot\",\"feet_out_of_frame\",\"full_body\",\"portrait\",\"upper_body\"]},{\"id\":\"framing.head_crop\",\"options\":[\"eyes_out_of_frame\",\"head_out_of_frame\",\"lower_body\"]},{\"id\":\"orientation.facing\",\"subjects\":[\"actor\"],\"options\":[\"facing_away\"]},{\"id\":\"scene.environment\",\"options\":[\"indoors\",\"outdoors\"]},{\"id\":\"scene.rating\",\"min\":1,\"options\":[\"nsfw\",\"sfw\"]},{\"id\":\"scene.time\",\"options\":[\"day\",\"morning\",\"night\",\"sunset\"]},{\"id\":\"scene.weather\",\"options\":[\"cloudy_sky\",\"fog\",\"rain\",\"snow\"]}],\"actor_detail\":[{\"id\":\"actor.pose.body\",\"humanlike\":true,\"options\":[\"all_fours\",\"arched_back\",\"kneeling\",\"on_back\",\"on_side\",\"on_stomach\",\"reclining\",\"sitting\",\"squatting\",\"standing\",\"wariza\"]},{\"id\":\"actor.pose.refinement\",\"humanlike\":true,\"max\":null,\"options\":[\"arm_behind_back\",\"arm_behind_head\",\"arm_up\",\"arms_behind_back\",\"hands_up\",\"knee_up\",\"knees_to_chest\",\"knees_up\",\"leg_lift\",\"leg_up\",\"legs_apart\",\"legs_over_head\",\"legs_up\"]},{\"id\":\"expression.blush\",\"options\":[\"blush\",\"full-face_blush\",\"light_blush\"]},{\"id\":\"expression.eye.openness\",\"options\":[\"closed_eyes\",\"half_closed_eye\",\"half_closed_eyes\",\"one_eye_closed\",\"uneven_eyes\",\"wide_eyed\"]},{\"id\":\"expression.eye.reaction\",\"options\":[\"constricted_pupils\",\"empty_eyes\",\"rolling_eyes\"]},{\"id\":\"expression.general\",\"options\":[\"angry\",\"disdain\",\"embarrassed\",\"exhausted\",\"expressionless\",\"grimace\",\"light_smile\",\"nervous_smile\",\"scared\",\"seductive_smile\",\"serious\",\"surprised\",\"wince\"]},{\"id\":\"expression.mouth\",\"options\":[\"clenched_teeth\",\"closed_mouth\",\"heavy_breathing\",\"open_mouth\",\"parted_lips\",\"tongue_out\",\"wavy_mouth\"]},{\"id\":\"expression.sexual_response\",\"options\":[\"ahegao\",\"aroused\",\"fucked_silly\",\"orgasm\"]},{\"id\":\"expression.tear\",\"options\":[\"crying\",\"tearing_up\",\"tears\"]},{\"id\":\"gaze.direction\",\"options\":[\"looking_afar\",\"looking_ahead\",\"looking_at_another\",\"looking_at_viewer\",\"looking_back\",\"looking_down\",\"looking_to_the_side\",\"looking_up\",\"sideways_glance\"]},{\"id\":\"manual.clothing_access\",\"humanlike\":true,\"max\":null,\"options\":[\"clothes_lift\",\"clothes_pull\",\"hand_under_clothes\"]},{\"id\":\"motion.body\",\"options\":[\"motion_lines\",\"trembling\"]},{\"id\":\"state.after_activity\",\"options\":[\"after_anal\",\"after_cunnilingus\",\"after_fellatio\",\"after_fingering\",\"after_handjob\",\"after_masturbation\",\"after_paizuri\",\"after_sex\",\"after_vaginal\",\"afterglow\"]},{\"id\":\"state.body.condition\",\"max\":null,\"options\":[\"bandages\",\"bruise\",\"dirty\",\"runny_makeup\",\"scratches\"]},{\"id\":\"state.body.contamination\",\"max\":null,\"options\":[\"blood_on_face\",\"blood_on_hand\"]},{\"id\":\"state.body.surface\",\"max\":null,\"options\":[\"oiled\",\"shiny_skin\",\"steaming_body\",\"sweat\",\"very_sweaty\",\"wet\"]},{\"id\":\"state.clothing.arrangement\",\"humanlike\":true,\"max\":null,\"options\":[\"open_clothes\",\"partially_unbuttoned\",\"partially_undressed\",\"partially_unzipped\",\"unbuttoned\",\"unzipped\"]},{\"id\":\"state.clothing.coverage.lower\",\"humanlike\":true,\"max\":null,\"options\":[\"bottomless\",\"clothes_down\",\"clothing_aside\",\"no_panties\",\"open_fly\",\"panties_around_ankles\",\"panties_around_one_leg\",\"panties_around_thighs\",\"panty_pull\",\"skirt_around_ankles\",\"skirt_around_one_leg\",\"skirt_pull\"]},{\"id\":\"state.clothing.coverage.upper\",\"humanlike\":true,\"max\":null,\"options\":[\"breasts_out\",\"covered_nipples\",\"nipple_slip\",\"no_bra\",\"one_breast_out\",\"open_bra\",\"strap_slip\",\"topless\"]},{\"id\":\"state.clothing.surface\",\"max\":null,\"options\":[\"blood_on_clothes\",\"dirty_clothes\",\"see_through_clothes\",\"stained_clothes\",\"torn_clothes\",\"wet_clothes\"]},{\"id\":\"state.fluid.cum.instant\",\"max\":null,\"options\":[\"projectile_cum\"]},{\"id\":\"state.fluid.cum.location\",\"max\":null,\"options\":[\"cum_in_ass\",\"cum_in_mouth\",\"cum_on_ass\",\"cum_on_back\",\"cum_on_breast\",\"cum_on_crotch\",\"cum_on_face\",\"cum_on_hair\",\"cum_on_legs\",\"cum_on_pussy\",\"cum_on_stomach\"]},{\"id\":\"state.fluid.lactation\",\"max\":null,\"options\":[\"lactation\",\"lactation_through_clothes\",\"projectile_lactation\"]},{\"id\":\"state.fluid.precum\",\"max\":null,\"options\":[\"precum\",\"precum_drip\",\"precum_string\",\"precum_through_clothes\"]},{\"id\":\"state.fluid.pussy_juice\",\"max\":null,\"options\":[\"female_ejaculation\",\"pussy_juice\",\"pussy_juice_drip_through_clothes\",\"pussy_juice_puddle\",\"pussy_juice_stain\",\"pussy_juice_trail\"]},{\"id\":\"state.fluid.saliva\",\"max\":null,\"options\":[\"drooling\",\"saliva\",\"saliva_drip\",\"saliva_on_penis\"]},{\"id\":\"state.genitals.visible_parts\",\"max\":null,\"options\":[\"penis\",\"testicles\"]},{\"id\":\"state.hair.condition\",\"max\":null,\"options\":[\"messy_hair\",\"wet_hair\"]},{\"id\":\"state.penis.condom\",\"options\":[\"colored_condom\",\"condom_on_penis\",\"used_condom_on_penis\"]},{\"id\":\"state.restraint.body\",\"max\":null,\"options\":[\"bound\",\"bound_ankles\",\"bound_arms\",\"bound_wrists\",\"chained\",\"cuffs\",\"restrained\",\"shibari\"]},{\"id\":\"state.restraint.gag\",\"options\":[\"ball_gag\",\"cloth_gag\",\"gagged\",\"panties_in_mouth\",\"ring_gag\",\"tape_gag\"]}],\"camera\":[{\"id\":\"camera.view\",\"max\":2,\"options\":[\"dutch_angle\",\"from_above\",\"from_behind\",\"from_below\",\"from_side\",\"pov\",\"pov_hands\"]}]},\"objects\":{\"types\":[\"anal_beads\",\"artificial_vagina\",\"butt_plug\",\"dildo\",\"dildo_harness\",\"double_dildo\",\"egg_vibrator\",\"hitachi_magic_wand\",\"huge_dildo\",\"jewel_butt_plug\",\"rabbit_vibrator\",\"remote_control_vibrator\",\"sex_toy\",\"strap_on\",\"suction_cup_dildo\",\"vibrator\"],\"placements\":[\"dildo_gag\",\"dildo_reveal\",\"dildo_under_clothes\",\"dildo_under_panties\",\"vibrator_cord\",\"vibrator_in_anus\",\"vibrator_in_thigh_strap\",\"vibrator_in_thighhighs\",\"vibrator_on_nipple\",\"vibrator_under_clothes\",\"vibrator_under_panties\",\"wireless_sex_toy_controller\"],\"props\":[\"condom_box\",\"condom_wrapper\",\"lube\",\"used_condom\"],\"surfaces\":[\"against_glass\",\"against_railing\",\"against_tree\",\"against_wall\",\"breasts_on_glass\"]}},\"response_contract\":{\"output\":\"json_only\",\"inputDefaults\":{\"actorKind\":\"character\",\"formHumanlike\":true,\"scope\":\"Only omitted values inherit defaults; explicit false is authoritative.\",\"singleForm\":\"One forms item without formRef denotes the sole form; appearance is its visual evidence. Omit all formRef/currentFormRef in requests and responses for that Actor; local request-time binding restores the form. With multiple forms, copy the exact formRef before selecting or proposing an outfit.\",\"outfits\":\"Each outfits array string is the exact outfit ID.\"},\"contractRules\":{\"structure\":\"obey_provider_json_schema_and_declared_item_fields\",\"presence\":\"return_required_fields_omit_optional_empty_fields_unless_schema_requires_null\",\"references\":\"use_only_declared_actor_ids_candidate_keys_slot_numbers_and_zero_based_indices\",\"binding\":\"bind_each_detail_only_through_its_declared_actor_id_or_index_fields\",\"cardinality\":\"obey_each_collection_cardinality_and_uniqueness_rule\",\"invalidPolicy\":\"omit_only_the_invalid_optional_value_never_invent_a_replacement_id\"},\"root\":{\"itemFields\":[\"generated_actor_proposals\",\"generated_outfit_proposals\",\"illustrations\"],\"generated_actor_proposals\":{\"cardinality\":\"zero_or_more_response_scoped_but_one_per_visible_unregistered_entity\",\"requiredWhen\":\"one_or_more_source_evidenced_visibly_present_actors_in_the_scene_match_neither_actor_candidates_nor_actor_candidate_overlay\",\"itemFields\":[\"candidateKey\",\"label\",\"tags\",\"instruction\",\"sex\"],\"candidateKey\":\"free_1_then_free_2_in_proposal_order\",\"identityReuse\":\"reuse_one_candidate_key_and_proposal_for_the_same_identity_across_all_illustrations_and_panels_new_key_only_for_a_distinct_identity\",\"declarationOrder\":\"define_each_proposal_before_illustration_slot_selection_and_any_actor_roster_reference\",\"rosterBinding\":\"every_proposal_is_referenced_by_actor_roster_and_every_free_N_reference_has_exactly_one_proposal\",\"label\":{\"required\":true,\"maxLength\":96},\"tags\":{\"required\":true,\"min\":1,\"max\":24},\"instruction\":{\"optional\":true,\"maxLength\":320},\"sex\":{\"required\":true,\"values\":[\"female\",\"male\",\"unknown\"],\"unknownWhen\":\"non_human_or_not_visually_clear\"},\"lifetime\":\"response\"},\"generated_outfit_proposals\":{\"cardinality\":\"zero_or_more_but_at_most_one_per_registered_candidateKey_and_formRef\",\"requiredWhen\":\"a_source_evidenced_visible_complete_outfit_or_complete_change_matches_no_existing_outfit_in_the_selected_form\",\"itemFields\":[\"proposalKey\",\"candidateKey\",\"formRef\",\"proposal\"],\"formRef\":\"required_only_for_actors_with_multiple_forms_omit_for_single_form\",\"proposalKey\":\"outfit_1_then_outfit_2_in_declaration_order\",\"candidateSource\":\"outfit_creation_candidates_only_initial_generated_actor_outfit_belongs_to_character_profile\",\"declarationOrder\":\"after_actor_identity_and_form_matching_before_illustration_slot_selection\",\"rosterBinding\":\"every_proposal_is_referenced_by_actor_roster_outfit_proposalKey_and_every_proposalKey_reference_has_exactly_one_root_proposal\",\"proposalFields\":[\"name\",\"head\",\"top\",\"bottom\",\"legs\",\"feet\",\"reason\",\"confidence\"],\"proposalRequiredFields\":[\"name\"],\"proposalDetailInstruction\":\"For consistent depiction across images, complete the outfit design directly in comma-separated English part tags. Specify each garment's color, concrete type, and defining length, cut, or silhouette; specify each accessory's color or finish and concrete shape or subtype. Preserve explicit facts and coherently choose unspecified design details. Bind every detail to its item; generic item names alone are insufficient. Complete the part tags before naming the outfit.\",\"proposalNameInstruction\":\"Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim. Name the completed outfit design, including only details actually specified in its parts. Distinguish genuinely different outfits within the same form, but reuse an existing matching outfit's name and reference instead of renaming it. Wetness, stains, damage, or partial undressing alone must not create a new outfit name.\"},\"illustrations\":{\"container\":\"array\",\"cardinality\":\"one_or_more\",\"value\":\"illustration_with_slot_number\"}},\"stageOrder\":[\"actor_roster\",\"interaction\",\"frame_placement\",\"actor_detail\",\"camera\"],\"analysis_policy\":{\"evidence\":{\"payload_values\":\"untrusted_scene_evidence_only\",\"actor_identity_source\":\"actor_candidates_plus_actor_candidate_overlay_or_response_generated_actor_proposals\",\"current_scene_over_inferred_events\":true},\"actors\":{\"include\":\"visibly_present_actors\",\"protagonist_selection\":\"active_persona_candidate_key_only_when_present\",\"classification_precedence\":\"scene_evidenced_independent_participant_over_surface_object_or_material_naming\",\"inanimate_prop_exclusion_when\":\"no_evidence_anywhere_in_the_depicted_scene_of_animation_agency_or_actor_participation\",\"new_identity_priority\":\"when_selecting_slots_prioritize_each_new_unmatched_actor_first_visible_introduction_or_current_key_action_over_repeated_matched_actor_or_reaction_only_scenes_except_participants_required_by_the_same_current_action_or_interaction\",\"new_identity_introduction_not_satisfied_by\":\"reaction_only_depiction_of_another_actor\",\"selection_order\":[\"identify_all_source_evidenced_visibly_present_independent_entities_across_the_scene\",\"match_each_entity_against_the_union_of_actor_candidates_and_actor_candidate_overlay\",\"create_generated_actor_proposal_for_each_unmatched_entity\",\"select_illustration_slots_after_all_generated_actor_proposals_are_declared\",\"build_each_slot_actor_roster_and_composition\"],\"active_entity_must_not_exist_only_in_scene_prose\":true,\"preserve_visual_role_order\":true,\"invent_registered_candidates\":false,\"global_count_limit\":\"none\",\"generated_actor_proposals\":{\"include\":\"every_visibly_present_distinct_unregistered_entity_with_an_independent_scene_form_regardless_of_origin_duration_activity_or_body_type\",\"entity_type_limit\":\"none\",\"visible_identity\":\"tags_then_residual_instruction\",\"sex\":\"required_female_male_or_unknown\",\"unknown_sex_when\":\"non_human_or_not_visually_clear\",\"lifetime\":\"current_response_only\",\"persist_or_infer_across_requests\":false,\"exclude\":\"mentioned_only_or_clearly_inanimate_prop_or_depiction_or_indistinguishable_background_entity\"},\"actor_roster_sex\":\"omit_use_local_candidate_or_generated_proposal\"},\"outfits\":{\"catalog_binding\":\"appearance_catalog.candidateKey_then_forms.formRef\",\"context_scan_order\":\"after_actor_identity_matching_before_illustration_slot_selection\",\"context_scan_scope\":\"whole_source_scene_per_found_actor_for_explicit_complete_outfit_or_complete_outfit_change_and_applicable_form\",\"proposal_declaration\":\"declare_each_new_complete_outfit_at_response_root_before_illustration_slot_selection\",\"new_outfit_priority\":\"prioritize_first_clear_appearance_or_current_key_action_of_each_declared_new_outfit_over_repeated_existing_outfit_or_reaction_only_scenes\",\"new_outfit_priority_after\":\"new_unmatched_actor\",\"new_outfit_not_satisfied_by\":\"reaction_only_or_outfit_not_visibly_established\",\"final_binding\":\"after_slot_selection_bind_root_proposalKey_to_selected_actor_occurrence_and_exact_formRef\",\"form_selection_order\":[\"scene_evidence\",\"continuity\",\"default\"],\"form_reference\":\"Each formRef is a compact appearance name or tag identifier. Copy the exact supplied ID; unknown_form means appearance evidence is unavailable. Never invent a formRef or infer traits from uniqueness suffixes.\",\"cross_form_outfit_selection\":\"forbidden\",\"decision_scope\":\"each_visible_actor_independently\",\"do_not_share_decision_across_actors\":true,\"selection_order\":[\"current_scene_evidence\",\"matching_existing_candidate\",\"continuity_reference_when_compatible\",\"new_outfit_proposal\"],\"existing_match_instruction\":\"Compare only source-evidenced clothing with registered outfits for the same Actor and form. Missing or unmentioned details are unknown, not mismatches. Wording differences and incidental variations alone do not establish a different outfit; explicit differences in the main garments, their combination, or contextually distinguishing features do.\",\"current_outfit_when\":\"Prefer the existing outfit best supported by current clothing evidence. When the evidence does not distinguish compatible candidates, retain the current outfit if available. Omission alone does not break outfit continuity; explicit incompatible clothing evidence overrides it.\",\"preserve_for_state_change_only\":true,\"state_change_owner\":\"actor_detail_clothing_modifiers\",\"proposal_when\":\"For an eligible Actor, propose a new outfit only when the source establishes a worn outfit and no registered outfit in the selected form reasonably matches it. Do not infer a clothing change solely from a change of time, place, or activity.\",\"proposal_completion_order\":\"Decide whether an outfit is new before completing unspecified design details. Never use details invented during completion as evidence that an existing outfit does not match.\",\"distinct_contextual_outfits\":\"one_proposal_per_distinct_unmatched_complete_outfit_per_actor_and_form\",\"proposal_name\":\"@instruction:response_contract.root.generated_outfit_proposals.proposalNameInstruction\",\"existing_and_proposal_are_mutually_exclusive\":true,\"proposal_parts\":\"Return only actually worn wearable items; never encode uncovered anatomy or clothing absence such as bare legs or bare feet.\",\"complete_nudity\":{\"top\":\"completely nude\"},\"complete_nudity_when\":\"Only when the current scene explicitly establishes a fully unclothed humanlike body; never infer it from empty wearable fields or a nonhuman or material body.\"},\"continuity\":{\"modifier_reference\":{\"inputs\":[\"actor_modifier_continuity\",\"scene_modifier_continuity\"],\"missing_current_evidence\":\"do_not_emit_prior_value_solely_because_it_is_listed\",\"direct_prompt_exceptions\":[\"state.fluid.cum.location\",\"actor.injury\"]},\"natural_language\":{\"input\":\"natural_language_continuity\",\"channels\":[\"location\",\"pose\",\"action\",\"object\"],\"absent_or_ended\":\"omit_current_channel_value\"},\"cum_clear\":{\"input\":\"actor_modifier_continuity\",\"field\":\"actor_detail.cumClear\",\"when\":\"explicit_washing_or_wiping_removed_previous_cum_locations\",\"values\":\"exact_prior_state.fluid.cum.location_option_ids_only\",\"complete_cleanup\":\"return_every_listed_prior_location_explicitly\",\"must_exist_in_prior_state\":true,\"never_infer_cleanup_from\":[\"elapsed_time\",\"scene_or_location_change\",\"bathing_context_alone\",\"changed_clothing\",\"off_screen_cleanup\",\"partial_wiping\"],\"sentinels\":\"forbidden\"},\"injury_clear\":{\"input\":\"actor_modifier_continuity\",\"field\":\"actor_detail.injuryClear\",\"when\":\"explicit_recovery_or_injury_transition_removed_previous_injury\",\"values\":\"exact_prior_actor.injury_strings_only\",\"complete_recovery\":\"return_every_listed_prior_injury_explicitly\",\"must_exist_in_prior_state\":true,\"clear_before_current_free_tags\":true,\"never_infer_cleanup_from\":[\"missing_current_free_tag\",\"covered_injury\",\"camera_crop\",\"off_screen_actor\",\"scene_or_location_change\",\"elapsed_time_without_explicit_recovery\"],\"sentinels\":\"forbidden\"}},\"interactions\":{\"cardinality\":\"zero_or_more_visible_direct_relations\",\"actor_may_participate_in_multiple_items\":true,\"graph_model\":\"ordered_multigraph_occurrences\",\"same_actor_pair_may_have_multiple_ids\":true,\"same_id_same_actor_pair_occurrences_are_preserved\":true,\"hash_or_fingerprint_occurrence_id\":\"forbidden\",\"prompt_mode\":{\"mutual_is_not_interaction_id_or_modifier\":true},\"free_interaction_uses_same_item_shape\":true,\"free_interaction_allows_residual_channels\":true,\"detail_binding\":{\"mutual_does_not_broadcast_natural_language\":true,\"sex_does_not_define_direction\":true},\"directed_interaction_binding\":{\"enabled_by_interaction_binding\":\"source_target_actor_ids\"},\"ejaculation_progress\":{\"definition\":\"interaction.sexual.ejaculation.progress\",\"select_when\":\"ejaculation_is_occurring_or_has_just_completed_in_current_scene\",\"after_options_mean\":\"newly_completed_event_in_current_scene\",\"lingering_aftermath_owner\":\"state.after_activity_or_visible_cum_location\",\"pre_existing_residue_is_not_new_event\":true,\"return_accumulated_count\":false},\"scene_wide_sexual_modifiers\":{\"anchor\":\"lowest_interaction_index_in_matching_sexual_group\",\"participants\":\"union_of_actual_sexual_interaction_participants\",\"exclude\":[\"observer\",\"independent_actor_action\"],\"relationship\":{\"definition\":\"interaction.sexual.relationship\",\"maximum\":1,\"options\":[\"yuri\",\"yaoi\",\"bisexual_female\"],\"yuri_when\":\"female_female_only\",\"yaoi_when\":\"male_male_only\",\"bisexual_female_when\":\"female_female_and_female_male_relations_coexist\",\"bisexual_female_excludes\":[\"yuri\"]},\"grouping\":{\"definition\":\"interaction.sexual.grouping\",\"maximum\":2,\"count_options\":[\"ffm_threesome\",\"mmf_threesome\",\"fff_threesome\",\"foursome\",\"fivesome\",\"group_sex\"],\"one_count_option_only\":true,\"group_sex_minimum_participants\":6,\"structure_options\":[\"orgy\"],\"orgy_when\":\"multiple_couples_or_distinct_sexual_groups_act_simultaneously\"}}},\"actor_actions\":\"solo_or_independent_action_only\",\"freeform\":{\"planning_scope\":\"all_declared_free_tag_and_natural_language_channels_together\",\"plan_after\":[\"actors\",\"interactions\",\"closed_modifiers\",\"frame_placement\",\"actor_details\",\"camera\"],\"natural_language_writing\":\"concise_visible_details_actions_relations_and_presentation\",\"language\":\"concise_visible_english\",\"repeat_closed_options\":false,\"contradict_closed_options\":false,\"camera_semantics\":[\"camera_position\",\"validated_scene_or_body_reference\",\"viewing_direction\"],\"camera_ambiguous_actor_reference\":\"omit_actor_reference_and_use_scene_reference\",\"empty_when_no_residual_meaning\":true},\"frame_placement\":{\"coordinates\":\"response_contract.illustration.frame_placement.coordinates\",\"precision\":\"rough_position_hint\",\"scene_closed_modifiers\":[\"scene.environment\",\"scene.time\",\"scene.weather\"],\"scene_location_channels\":[\"scene.location\",\"location\"],\"actor_instruction_channel\":\"placement\",\"actor_item_scope\":\"one_item_per_visible_actor_occurrence\",\"duplicate_actor_ids\":\"forbidden_unless_response_contract_enables_multi_frame_occurrences\",\"item_order\":\"actor_roster_order_unless_response_contract_overrides\",\"facing\":{\"omit_when\":[\"side\",\"oblique\",\"toward_another_actor\",\"not_visually_evidenced\"],\"actor_relation_owner\":\"interaction_or_residual_placement_instruction\"},\"absolute_horizontal_tag\":\"not_requested_or_derived\",\"layout_continuity\":{\"owner\":\"frame_placement_after_actor_roster_selection\",\"keyframes_order\":\"newest_first\",\"selection_order\":[\"exact_roster_latest\",\"smallest_recent_superset\",\"highest_actor_overlap_ratio_latest\"],\"current_explicit_layout_wins\":true,\"never_restore_absent_actor\":true,\"hint_only\":true},\"size_selection\":{\"owner\":\"free_scene_canvas_intent\",\"actor_count_is_not_a_decision_rule\":true,\"evidence\":[\"dominant_visual_flow\",\"actor_placement\",\"action_direction\",\"gaze_direction\",\"environmental_importance\",\"framing_and_crop\",\"intentional_negative_space\"]}},\"output\":{\"camera_count_per_illustration\":1,\"uncertain_values\":\"omit_optional_or_use_declared_empty_value\"}},\"illustration\":{\"slot_number\":{\"required\":true,\"type\":\"integer\",\"source\":\"numeric_N_from_selected_scene_slot_number_marker\",\"uniqueAcrossIllustrations\":true},\"actor_roster\":{\"cardinality\":\"zero_or_more_no_global_max\",\"emptyScenePolicy\":\"for_any_presentation_with_no_visible_actors_return_explicit_empty_actor_roster_frame_placement_items_and_actor_detail; no_interactions_or_cross_panel_actor_bindings; describe_visible_content_in_frame_placement_instruction_or_freeTags_or_comicPanels_instructions\",\"itemFields\":[\"actorId\",\"candidateKey\",\"formRef\",\"outfit\"],\"candidateSource\":\"actor_candidates_or_actor_candidate_overlay_or_generated_actor_proposals\",\"actorId\":\"actor_1_actor_2_in_roster_order\",\"formRef\":{\"requiredWhen\":\"candidate_is_registered_and_has_multiple_forms\",\"source\":\"selected_actor_candidate_forms\",\"selectBefore\":\"outfit\"},\"outfit\":{\"optional\":true,\"decisionScope\":\"each_actor_item_independently\",\"requiredWhen\":\"selected_form_appearance_catalog_requires_an_id_or_proposal_decision\",\"fields\":[\"id\",\"proposalKey\"],\"existingIdSource\":\"selected_form_outfit_ids_from_static_or_generated_appearance_catalog\",\"proposalKeySource\":\"root_generated_outfit_proposals_for_the_same_candidateKey_and_formRef\",\"exclusiveSelection\":\"use_id_or_proposalKey_not_both\"},\"outfitScope\":\"illustration_default_overridden_by_actor_detail_occurrence\"},\"interaction\":{\"stageFields\":[\"items\",\"modifiers\",\"instructions\"],\"items\":{\"cardinality\":\"zero_or_more\",\"itemFields\":[\"id\",\"mode\",\"sourceActorId\",\"targetActorId\"],\"id\":{\"required\":true,\"selectionPolicy\":\"use_exact_catalog_match_when_semantically_accurate_otherwise_generate_safe_free_id\",\"freeFormat\":\"lowercase_snake_case\",\"pattern\":\"^[a-z0-9]+(?:_[a-z0-9]+)*$\",\"maxLength\":64},\"mode\":{\"required\":true,\"values\":[\"directed\",\"mutual\"],\"allowedValuesSource\":\"matching_interaction_definition.allowedModes_or_directed_mutual_for_free_interaction\"},\"occurrenceBinding\":\"array_index_only_no_instance_id_or_deduplication\",\"sourceTarget\":\"required_distinct_actor_ids_from_actor_roster\"},\"modifiers\":{\"itemFields\":[\"interactionIndex\",\"id\",\"options\"],\"direction\":\"inherit_source_target_from_bound_interaction_item\"},\"instructions\":{\"id\":\"interaction_detail\",\"maxLength\":180,\"bindingFields\":[\"interactionIndex\",\"participantDetails\"],\"subjects\":[\"interaction\"],\"instruction\":\"Return separate residual detail for each bound participant; never copy between participants.\",\"itemFields\":[\"interactionIndex\",\"participantDetails\"],\"participantDetailFields\":[\"actorId\",\"text\"],\"participantPolicy\":\"one_optional_detail_per_bound_interaction_actor_no_broadcast\"}},\"frame_placement\":{\"stageFields\":[\"sizeId\",\"modifiers\",\"freeTags\",\"instruction\",\"items\"],\"sizeId\":{\"required\":true,\"type\":\"integer\",\"allowedValues\":[1,2,5],\"catalogSource\":\"analyzer_catalog.sizes\"},\"modifiers\":{\"itemFields\":[\"id\",\"options\"],\"scope\":\"declared_scene_global_closed_modifiers_only\"},\"freeTags\":{\"id\":\"scene.location\",\"scope\":\"scene\",\"maxTags\":4,\"type\":\"array_of_strings\",\"nestedObject\":false,\"subjects\":[\"global\"],\"instruction\":\"Return environment tags.\"},\"instruction\":{\"id\":\"location\",\"maxLength\":320,\"bindingFields\":[],\"subjects\":[\"global\"],\"instruction\":\"Return residual location details.\"},\"items\":{\"cardinality\":\"exactly_one_per_actor_roster_item\",\"order\":\"actor_roster_order\",\"itemFields\":[\"actorId\",\"center\",\"facing\",\"instruction\"],\"facing\":{\"catalogDefinition\":\"orientation.facing\",\"itemFields\":[\"id\"],\"values\":[\"facing_away\"],\"reference\":\"camera_only\",\"omitFor\":[\"side\",\"oblique\",\"toward_another_actor\"]},\"instruction\":{\"id\":\"placement\",\"maxLength\":260,\"bindingFields\":[\"actorId\"],\"subjects\":[\"actor\"],\"instruction\":\"Return residual spatial placement for this Actor occurrence; empty when the comic-page structure channel is available.\"}},\"coordinates\":{\"origin\":\"top_left\",\"range\":[0,1],\"center\":{\"grid\":\"novelai_v5_normalized_81x81_centers\",\"min\":0.1,\"max\":0.9,\"step\":0.01}}},\"actor_detail\":{\"itemFields\":[\"actorId\",\"placementIndex\",\"outfit\",\"actions\",\"modifiers\",\"freeTags\",\"cumClear\",\"injuryClear\",\"poseInstruction\",\"actionInstruction\",\"objects\",\"objectInstruction\"],\"placementIndex\":{\"required\":true,\"type\":\"zero_based_frame_placement_items_index\",\"actorIdMustMatchReferencedPlacement\":true},\"outfit\":{\"optional\":true,\"decisionScope\":\"exact_actor_id_plus_placement_index_occurrence\",\"fallback\":\"actor_roster_outfit_then_selected_form_default\",\"fields\":[\"id\",\"proposalKey\"],\"existingIdSource\":\"selected_form_outfit_ids_from_static_or_generated_appearance_catalog\",\"proposalKeySource\":\"root_generated_outfit_proposals_for_the_same_candidateKey_and_formRef\",\"exclusiveSelection\":\"use_id_or_proposalKey_not_both\"},\"freeTags\":{\"id\":\"actor.injury\",\"scope\":\"actor\",\"maxTags\":null,\"type\":\"array_of_strings\",\"nestedObject\":false,\"subjects\":[\"actor\"],\"instruction\":\"Return every current injury, including injuries being visibly inflicted now. Use the closest representative body-part value. Return each value in the form <cut|scar|bruise|bleeding|deep wound> <on> <head|face|neck|shoulder|chest|breasts|back|stomach|waist|hips|crotch|buttocks|arm|hand|thigh|leg|foot>.\"},\"cumClear\":{\"optional\":true,\"type\":\"array_of_exact_prior_option_ids\",\"valuesSource\":\"actor_modifier_continuity[candidateKey].modifiers[state.fluid.cum.location].options\",\"when\":\"explicit_washing_or_wiping_removed_these_previous_locations\",\"completeCleanup\":\"return_every_listed_prior_location_explicitly\",\"sentinels\":\"forbidden\",\"emptyWhenNone\":true},\"injuryClear\":{\"optional\":true,\"type\":\"array_of_exact_prior_free_tag_values\",\"valuesSource\":\"actor_modifier_continuity[candidateKey].freeTags[actor.injury].values\",\"when\":\"explicit_recovery_or_injury_transition_removed_these_previous_injuries\",\"completeRecovery\":\"return_every_listed_prior_injury_explicitly\",\"absenceIsNotClear\":true,\"sentinels\":\"forbidden\",\"emptyWhenNone\":true},\"instructions\":[{\"id\":\"pose\",\"maxLength\":180,\"bindingFields\":[\"actorId\"],\"subjects\":[\"actor\"],\"instruction\":\"Return residual pose detail for this Actor occurrence.\"},{\"id\":\"action\",\"maxLength\":220,\"bindingFields\":[\"actorId\"],\"subjects\":[\"actor\"],\"instruction\":\"Return residual action detail for this Actor occurrence.\"},{\"id\":\"object_instruction\",\"maxLength\":180,\"bindingFields\":[\"actorId\"],\"subjects\":[\"object\"],\"instruction\":\"Return residual object handling for the bound Actor.\"}],\"objectFields\":[\"objectId\",\"typeId\",\"actorIds\",\"interactionIndex\",\"placementId\",\"surfaceId\"]},\"camera\":{\"itemFields\":[\"modifiers\",\"instruction\"],\"instruction\":{\"id\":\"camera\",\"maxLength\":320,\"bindingFields\":[],\"subjects\":[\"global\"],\"instruction\":\"Return camera position, an unambiguous validated scene or body reference, and viewing direction.\"}}},\"forbiddenFields\":[\"composition\",\"depth\",\"instanceId\",\"other\",\"custom\",\"general_free\",\"preset_id\",\"prompt_directives\",\"variant\",\"frame\",\"size\",\"interaction.contact\",\"applyTo\",\"bounds\",\"frame_placement.items.modifiers\",\"frame_placement.items.freeTags\",\"poseFreeTags\",\"actionFreeTags\",\"camera.freeTags\",\"camera.detail\",\"frame_placement.comicPanels\",\"frame_placement.comicPageModifiers\",\"frame_placement.comicCrossPanelActors\",\"frame_placement.items.panelId\",\"actor_roster.outfit.proposal\"],\"instructionReferences\":\"@instruction:path applies the exact instruction at that request JSON path verbatim at this location.\"},\"outfit_creation_candidates\":[\"actor.1fmv888.fk4pvw\",\"actor.g00nx3.1d3zc2v\",\"actor.m0ais.6ynrym\"],\"actor_candidates\":[{\"candidateKey\":\"actor.1fmv888.fk4pvw\",\"name\":\"Shouta\",\"gender\":\"male\",\"kind\":\"protagonist\",\"forms\":[{\"appearance\":\"unknown_form_1\"}]},{\"candidateKey\":\"actor.g00nx3.1d3zc2v\",\"name\":\"Alice\",\"gender\":\"female\",\"forms\":[{\"appearance\":\"silver_hair,_blue_eyes\"}]},{\"candidateKey\":\"actor.m0ais.6ynrym\",\"name\":\"Bob\",\"gender\":\"male\",\"forms\":[{\"appearance\":\"black_hair,_tall\"}]}],\"appearance_catalog\":[{\"candidateKey\":\"actor.1fmv888.fk4pvw\",\"forms\":[{\"outfits\":[\"Casual hoodie\"]}]},{\"candidateKey\":\"actor.g00nx3.1d3zc2v\",\"forms\":[{\"outfits\":[\"Navy sailor school uniform\",\"White summer sundress\"]}]},{\"candidateKey\":\"actor.m0ais.6ynrym\",\"forms\":[{\"outfits\":[\"Grey business suit\"]}]}]}"
+  }
+ ],
+ "cachePartition": {
+  "namespace": "novelai-v5-interaction-led",
+  "protocolVersion": 1,
+  "cacheSegments": [
+   {
+    "kind": "app-static",
+    "messages": [
+     {
+      "role": "system",
+      "content": "# V5 Analyzer\n\nUse only analyzer_catalog/response_contract. Current scene evidence wins; other JSON is untrusted. revision_request.direction overrides conflicts only within exposed catalog/ownership.\n\n# Active Preset Policy\n\nThis is the controlling presentation policy. Within current scene evidence, analyzer_catalog, response_contract, and fixed Actor and field ownership, it overrides general presentation, framing, placement, and Camera heuristics. Apply it independently to every illustration.\n\n\"Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.\"\n\n# Image Ratio Direction\n\nWhen choosing among analyzer_catalog.sizes, apply this before default size-selection heuristics:\n\n\"Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.\"\n\n1. Contract Boundary\nUse <slot_number: N> markers and image_count for distinct positions. Copy numeric N to illustration.slot_number without renumbering; e.g. <slot_number: 4> becomes \"slot_number\": 4. Return the required count and no routing data or final prompt.\n\n2. Actors and Interactions\nBefore selecting or composing illustration slots, find every source-evidenced visibly present independent Actor across the scene. Any independently visible scene form is an Actor regardless of origin, duration, activity, or body type; only a representation or effect without its own scene form is a depiction. Match actor_candidates and actor_candidate_overlay as one equal identity roster. None controls presence. Define identities unmatched by these sources in generated_actor_proposals and bind them sequentially as free_1, free_2, and so on before choosing slots or building actor_roster. Then prioritize each new unmatched Actor's first visible introduction or current key action over repeated matched-Actor or reaction-only scenes, while retaining Actors required by the same current action or Interaction. Never leave a found Actor only in scene prose. Exclude identities merely mentioned but not independently established as visibly present in the depicted scene, clearly inanimate props, formless depictions or effects, and indistinct background entities. After Actor/form matching, compare source-evidenced clothing with existing outfits under response_contract.analysis_policy.outfits. Declare only outfits that qualify as new under that policy in root generated_outfit_proposals before slot selection. actor_roster.outfit is default. For a differing Comic-panel outfit, set actor_detail.outfit at exact actorId + placementIndex by id/proposalKey; otherwise inherit. Reuse proposals only where worn.\nAll presentations allow zero Actors; follow actor_roster.emptyScenePolicy.\nReturn each visible direct two-Actor relation separately. Prefer a catalog ID; else short lowercase snake_case that never implies NSFW. Interaction must be {items, modifiers, instructions}, never an array; bind detail by interactionIndex. Directed source acts and target receives; mutual endpoints are equal. Never infer direction from sex/order; solo or independent actions have no Interaction. Follow analysis_policy.interactions.\n\n3. Active Preset Presentation\nSingle Frame is the active presentation mode. Use Frame Placement for Actor occurrences and one global Camera for camera position, an unambiguous reference, and viewing direction. Apply composition heuristics where preset policy is silent.\n\n4. Occurrence Completion and Validation\nFollow stageOrder, definitions, subjects, options, analysis_policy, and form humanlike. Interaction modifiers inherit participants; actorActions are solo/independent; declare Object IDs. Before natural language, evaluate every freeTag. Emit every visible match in its required format; natural language may overlap but never replaces it. Use short freeTags and concise subjectless prose without names, pronouns, aliases, or Actor IDs. Never contradict channels. Describe only parts visible in the chosen frame.\nEach Frame Placement item is one visible Actor occurrence; bind one Actor Detail by actorId and zero-based placementIndex. Duplicate actorId only when permitted. Facing is camera-relative; use facing_away only for a clearly visible torso back. actor_modifier_continuity, scene_modifier_continuity, layout_continuity, and natural_language_continuity are prior references only: current evidence wins, and reselect a referenced value only when the current scene visibly supports its continuation. Use analysis_policy.outfits for outfit_continuity. Never restore absent Actors, force old sizeId or coordinates, or copy continuity directly to the final prompt. cumClear/injuryClear use only exact actor_modifier_continuity values; for complete cleanup/recovery list all; never all or *. Placement detail must not repeat center, facing, Interaction, pose, or action. Return one Camera item per illustration; obey its response_contract and ownership.\nReturn one numeric sizeId from analyzer_catalog.sizes. Follow the Image Ratio Direction block before default size-selection heuristics. Return exactly one JSON object with no outside text."
+     }
+    ]
+   },
+   {
+    "kind": "config-static",
+    "messages": [
+     {
+      "role": "user",
+      "content": "STATIC V5 ANALYZER CONFIG\n{\"analyzer_catalog\":{\"defaults\":{\"interaction\":{\"binding\":\"source_target_actor_ids\",\"allowedModes\":[\"directed\"],\"defaultMode\":\"directed\"},\"modifier\":{\"min\":0,\"max\":1,\"subjectsByStage\":{\"interaction\":[\"interaction\"],\"frame_placement\":[\"global\"],\"actor_detail\":[\"actor\"],\"camera\":[\"global\"]}}},\"sizes\":[{\"id\":1,\"width\":832,\"height\":1216,\"use\":[\"Vertical posture, height differences, vertical motion, or layered surroundings.\"]},{\"id\":2,\"width\":1216,\"height\":832,\"use\":[\"Broad environments, lateral action or gaze, or horizontal negative space.\"]},{\"id\":5,\"width\":1024,\"height\":1024,\"use\":[\"Centered, frontal, symmetric, or compact framing; neutral when neither axis dominates.\"]}],\"interactions\":[\"amazon_position\",\"anal_fingering\",\"anilingus\",\"arm_around_shoulder\",{\"id\":\"arm_hug\",\"allowedModes\":[\"directed\",\"mutual\"],\"defaultMode\":\"directed\"},{\"id\":\"back_to_back\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},\"breast_biting\",\"breast_smother\",\"breast_sucking\",\"buttjob\",\"clitoral_stimulation\",\"cooperative_breast_smother\",\"cooperative_fellatio\",\"cooperative_footjob\",\"cooperative_grinding\",\"cooperative_handjob\",\"cooperative_paizuri\",\"cooperative_pussyjob\",\"cowgirl_position\",\"cunnilingus\",\"deepthroat\",\"doggystyle\",\"double_breast_sucking\",\"dry_humping\",\"fellatio\",\"fingering\",\"footjob\",{\"id\":\"french_kiss\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},\"g_spot_stimulation\",\"grabbing_anothers_ass\",\"grabbing_anothers_breast\",\"grinding\",\"handjob\",{\"id\":\"heads_together\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},{\"id\":\"holding_hands\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},{\"id\":\"hug\",\"allowedModes\":[\"directed\",\"mutual\"],\"defaultMode\":\"mutual\"},\"hug_from_behind\",{\"id\":\"interlocking_fingers\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},{\"id\":\"kiss\",\"allowedModes\":[\"directed\",\"mutual\"],\"defaultMode\":\"directed\"},\"kissing_cheek\",\"kissing_forehead\",\"kissing_hand\",\"kissing_head\",\"kissing_neck\",\"kissing_penis\",\"leaning_on_person\",\"licking_armpit\",\"licking_breast\",\"licking_nipple\",\"licking_penis\",\"licking_testicle\",\"mating_press\",\"missionary\",{\"id\":\"mutual_masturbation\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},\"nipple_biting\",{\"id\":\"nipple_to_nipple\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},\"nipple_tweak\",\"paizuri\",\"piledriver_sex\",\"prone_bone\",\"prostate_milking\",\"pussyjob\",\"reverse_cowgirl_position\",\"reverse_suspended_congress\",\"reverse_upright_straddle\",\"rusty_trombone\",{\"id\":\"shared_object_insertion\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},\"sitting_on_face\",\"spooning\",\"standing_missionary\",\"standing_sex_from_behind\",\"suspended_congress\",\"testicle_sucking\",\"thigh_sex\",\"tonguejob\",{\"id\":\"tribadism\",\"allowedModes\":[\"mutual\"],\"defaultMode\":\"mutual\"},\"upright_straddle\"],\"unknownInteractionIdPolicy\":\"use_safe_interaction_id_without_sentinel\",\"actorActions\":[\"anal_object_insertion\",\"dildo_riding\",\"female_masturbation\",\"holding_sex_toy\",\"large_insertion\",\"male_masturbation\",\"object_insertion\",\"presenting_anus\",\"presenting_armpit\",\"presenting_ass\",\"presenting_breasts\",\"presenting_pussy\",\"presenting_removed_panties\",\"spreading_own_anus\",\"spreading_own_pussy\",\"vaginal_object_insertion\"],\"modifiers\":{\"interaction\":[{\"id\":\"interaction.penetration.instrument\",\"options\":[\"disembodied_penis\",\"penis\",\"sex_toy\",\"strap_on\"]},{\"id\":\"interaction.sexual.ejaculation.progress\",\"subjects\":[\"female\"],\"options\":[\"after_external_ejaculation_pullout\",\"after_internal_ejaculation\",\"after_sex_pullout_cum_string\",\"external_ejaculation_pullout\",\"internal_ejaculation\"]},{\"id\":\"interaction.sexual.grouping\",\"subjects\":[\"global\"],\"max\":2,\"options\":[\"fff_threesome\",\"ffm_threesome\",\"fivesome\",\"foursome\",\"group_sex\",\"mmf_threesome\",\"orgy\"]},{\"id\":\"interaction.sexual.oral.fellatio\",\"max\":2,\"options\":[\"poking_face_or_mouth_with_penis\",\"reverse_fellatio\"]},{\"id\":\"interaction.sexual.penetration.direction\",\"options\":[\"from_behind\"]},{\"id\":\"interaction.sexual.penetration.progress\",\"options\":[\"deep_penetration\",\"ongoing_penetration\",\"shallow_penetration_just_the_tip\"]},{\"id\":\"interaction.sexual.penetration.route\",\"options\":[\"anal\",\"vaginal\"]},{\"id\":\"interaction.sexual.relationship\",\"subjects\":[\"global\"],\"options\":[\"bisexual_female\",\"yaoi\",\"yuri\"]},{\"id\":\"manual.sexual.handjob\",\"options\":[\"caressing_testicles\",\"penis_grab\",\"testicle_grab\"]},{\"id\":\"scene.context.sexual\",\"subjects\":[\"global\"],\"max\":2,\"options\":[\"exhibitionism\",\"public_indecency\",\"underwater\"]}],\"frame_placement\":[{\"id\":\"framing.crop\",\"options\":[\"cowboy_shot\",\"feet_out_of_frame\",\"full_body\",\"portrait\",\"upper_body\"]},{\"id\":\"framing.head_crop\",\"options\":[\"eyes_out_of_frame\",\"head_out_of_frame\",\"lower_body\"]},{\"id\":\"orientation.facing\",\"subjects\":[\"actor\"],\"options\":[\"facing_away\"]},{\"id\":\"scene.environment\",\"options\":[\"indoors\",\"outdoors\"]},{\"id\":\"scene.rating\",\"min\":1,\"options\":[\"nsfw\",\"sfw\"]},{\"id\":\"scene.time\",\"options\":[\"day\",\"morning\",\"night\",\"sunset\"]},{\"id\":\"scene.weather\",\"options\":[\"cloudy_sky\",\"fog\",\"rain\",\"snow\"]}],\"actor_detail\":[{\"id\":\"actor.pose.body\",\"humanlike\":true,\"options\":[\"all_fours\",\"arched_back\",\"kneeling\",\"on_back\",\"on_side\",\"on_stomach\",\"reclining\",\"sitting\",\"squatting\",\"standing\",\"wariza\"]},{\"id\":\"actor.pose.refinement\",\"humanlike\":true,\"max\":null,\"options\":[\"arm_behind_back\",\"arm_behind_head\",\"arm_up\",\"arms_behind_back\",\"hands_up\",\"knee_up\",\"knees_to_chest\",\"knees_up\",\"leg_lift\",\"leg_up\",\"legs_apart\",\"legs_over_head\",\"legs_up\"]},{\"id\":\"expression.blush\",\"options\":[\"blush\",\"full-face_blush\",\"light_blush\"]},{\"id\":\"expression.eye.openness\",\"options\":[\"closed_eyes\",\"half_closed_eye\",\"half_closed_eyes\",\"one_eye_closed\",\"uneven_eyes\",\"wide_eyed\"]},{\"id\":\"expression.eye.reaction\",\"options\":[\"constricted_pupils\",\"empty_eyes\",\"rolling_eyes\"]},{\"id\":\"expression.general\",\"options\":[\"angry\",\"disdain\",\"embarrassed\",\"exhausted\",\"expressionless\",\"grimace\",\"light_smile\",\"nervous_smile\",\"scared\",\"seductive_smile\",\"serious\",\"surprised\",\"wince\"]},{\"id\":\"expression.mouth\",\"options\":[\"clenched_teeth\",\"closed_mouth\",\"heavy_breathing\",\"open_mouth\",\"parted_lips\",\"tongue_out\",\"wavy_mouth\"]},{\"id\":\"expression.sexual_response\",\"options\":[\"ahegao\",\"aroused\",\"fucked_silly\",\"orgasm\"]},{\"id\":\"expression.tear\",\"options\":[\"crying\",\"tearing_up\",\"tears\"]},{\"id\":\"gaze.direction\",\"options\":[\"looking_afar\",\"looking_ahead\",\"looking_at_another\",\"looking_at_viewer\",\"looking_back\",\"looking_down\",\"looking_to_the_side\",\"looking_up\",\"sideways_glance\"]},{\"id\":\"manual.clothing_access\",\"humanlike\":true,\"max\":null,\"options\":[\"clothes_lift\",\"clothes_pull\",\"hand_under_clothes\"]},{\"id\":\"motion.body\",\"options\":[\"motion_lines\",\"trembling\"]},{\"id\":\"state.after_activity\",\"options\":[\"after_anal\",\"after_cunnilingus\",\"after_fellatio\",\"after_fingering\",\"after_handjob\",\"after_masturbation\",\"after_paizuri\",\"after_sex\",\"after_vaginal\",\"afterglow\"]},{\"id\":\"state.body.condition\",\"max\":null,\"options\":[\"bandages\",\"bruise\",\"dirty\",\"runny_makeup\",\"scratches\"]},{\"id\":\"state.body.contamination\",\"max\":null,\"options\":[\"blood_on_face\",\"blood_on_hand\"]},{\"id\":\"state.body.surface\",\"max\":null,\"options\":[\"oiled\",\"shiny_skin\",\"steaming_body\",\"sweat\",\"very_sweaty\",\"wet\"]},{\"id\":\"state.clothing.arrangement\",\"humanlike\":true,\"max\":null,\"options\":[\"open_clothes\",\"partially_unbuttoned\",\"partially_undressed\",\"partially_unzipped\",\"unbuttoned\",\"unzipped\"]},{\"id\":\"state.clothing.coverage.lower\",\"humanlike\":true,\"max\":null,\"options\":[\"bottomless\",\"clothes_down\",\"clothing_aside\",\"no_panties\",\"open_fly\",\"panties_around_ankles\",\"panties_around_one_leg\",\"panties_around_thighs\",\"panty_pull\",\"skirt_around_ankles\",\"skirt_around_one_leg\",\"skirt_pull\"]},{\"id\":\"state.clothing.coverage.upper\",\"humanlike\":true,\"max\":null,\"options\":[\"breasts_out\",\"covered_nipples\",\"nipple_slip\",\"no_bra\",\"one_breast_out\",\"open_bra\",\"strap_slip\",\"topless\"]},{\"id\":\"state.clothing.surface\",\"max\":null,\"options\":[\"blood_on_clothes\",\"dirty_clothes\",\"see_through_clothes\",\"stained_clothes\",\"torn_clothes\",\"wet_clothes\"]},{\"id\":\"state.fluid.cum.instant\",\"max\":null,\"options\":[\"projectile_cum\"]},{\"id\":\"state.fluid.cum.location\",\"max\":null,\"options\":[\"cum_in_ass\",\"cum_in_mouth\",\"cum_on_ass\",\"cum_on_back\",\"cum_on_breast\",\"cum_on_crotch\",\"cum_on_face\",\"cum_on_hair\",\"cum_on_legs\",\"cum_on_pussy\",\"cum_on_stomach\"]},{\"id\":\"state.fluid.lactation\",\"max\":null,\"options\":[\"lactation\",\"lactation_through_clothes\",\"projectile_lactation\"]},{\"id\":\"state.fluid.precum\",\"max\":null,\"options\":[\"precum\",\"precum_drip\",\"precum_string\",\"precum_through_clothes\"]},{\"id\":\"state.fluid.pussy_juice\",\"max\":null,\"options\":[\"female_ejaculation\",\"pussy_juice\",\"pussy_juice_drip_through_clothes\",\"pussy_juice_puddle\",\"pussy_juice_stain\",\"pussy_juice_trail\"]},{\"id\":\"state.fluid.saliva\",\"max\":null,\"options\":[\"drooling\",\"saliva\",\"saliva_drip\",\"saliva_on_penis\"]},{\"id\":\"state.genitals.visible_parts\",\"max\":null,\"options\":[\"penis\",\"testicles\"]},{\"id\":\"state.hair.condition\",\"max\":null,\"options\":[\"messy_hair\",\"wet_hair\"]},{\"id\":\"state.penis.condom\",\"options\":[\"colored_condom\",\"condom_on_penis\",\"used_condom_on_penis\"]},{\"id\":\"state.restraint.body\",\"max\":null,\"options\":[\"bound\",\"bound_ankles\",\"bound_arms\",\"bound_wrists\",\"chained\",\"cuffs\",\"restrained\",\"shibari\"]},{\"id\":\"state.restraint.gag\",\"options\":[\"ball_gag\",\"cloth_gag\",\"gagged\",\"panties_in_mouth\",\"ring_gag\",\"tape_gag\"]}],\"camera\":[{\"id\":\"camera.view\",\"max\":2,\"options\":[\"dutch_angle\",\"from_above\",\"from_behind\",\"from_below\",\"from_side\",\"pov\",\"pov_hands\"]}]},\"objects\":{\"types\":[\"anal_beads\",\"artificial_vagina\",\"butt_plug\",\"dildo\",\"dildo_harness\",\"double_dildo\",\"egg_vibrator\",\"hitachi_magic_wand\",\"huge_dildo\",\"jewel_butt_plug\",\"rabbit_vibrator\",\"remote_control_vibrator\",\"sex_toy\",\"strap_on\",\"suction_cup_dildo\",\"vibrator\"],\"placements\":[\"dildo_gag\",\"dildo_reveal\",\"dildo_under_clothes\",\"dildo_under_panties\",\"vibrator_cord\",\"vibrator_in_anus\",\"vibrator_in_thigh_strap\",\"vibrator_in_thighhighs\",\"vibrator_on_nipple\",\"vibrator_under_clothes\",\"vibrator_under_panties\",\"wireless_sex_toy_controller\"],\"props\":[\"condom_box\",\"condom_wrapper\",\"lube\",\"used_condom\"],\"surfaces\":[\"against_glass\",\"against_railing\",\"against_tree\",\"against_wall\",\"breasts_on_glass\"]}},\"response_contract\":{\"output\":\"json_only\",\"inputDefaults\":{\"actorKind\":\"character\",\"formHumanlike\":true,\"scope\":\"Only omitted values inherit defaults; explicit false is authoritative.\",\"singleForm\":\"One forms item without formRef denotes the sole form; appearance is its visual evidence. Omit all formRef/currentFormRef in requests and responses for that Actor; local request-time binding restores the form. With multiple forms, copy the exact formRef before selecting or proposing an outfit.\",\"outfits\":\"Each outfits array string is the exact outfit ID.\"},\"contractRules\":{\"structure\":\"obey_provider_json_schema_and_declared_item_fields\",\"presence\":\"return_required_fields_omit_optional_empty_fields_unless_schema_requires_null\",\"references\":\"use_only_declared_actor_ids_candidate_keys_slot_numbers_and_zero_based_indices\",\"binding\":\"bind_each_detail_only_through_its_declared_actor_id_or_index_fields\",\"cardinality\":\"obey_each_collection_cardinality_and_uniqueness_rule\",\"invalidPolicy\":\"omit_only_the_invalid_optional_value_never_invent_a_replacement_id\"},\"root\":{\"itemFields\":[\"generated_actor_proposals\",\"generated_outfit_proposals\",\"illustrations\"],\"generated_actor_proposals\":{\"cardinality\":\"zero_or_more_response_scoped_but_one_per_visible_unregistered_entity\",\"requiredWhen\":\"one_or_more_source_evidenced_visibly_present_actors_in_the_scene_match_neither_actor_candidates_nor_actor_candidate_overlay\",\"itemFields\":[\"candidateKey\",\"label\",\"tags\",\"instruction\",\"sex\"],\"candidateKey\":\"free_1_then_free_2_in_proposal_order\",\"identityReuse\":\"reuse_one_candidate_key_and_proposal_for_the_same_identity_across_all_illustrations_and_panels_new_key_only_for_a_distinct_identity\",\"declarationOrder\":\"define_each_proposal_before_illustration_slot_selection_and_any_actor_roster_reference\",\"rosterBinding\":\"every_proposal_is_referenced_by_actor_roster_and_every_free_N_reference_has_exactly_one_proposal\",\"label\":{\"required\":true,\"maxLength\":96},\"tags\":{\"required\":true,\"min\":1,\"max\":24},\"instruction\":{\"optional\":true,\"maxLength\":320},\"sex\":{\"required\":true,\"values\":[\"female\",\"male\",\"unknown\"],\"unknownWhen\":\"non_human_or_not_visually_clear\"},\"lifetime\":\"response\"},\"generated_outfit_proposals\":{\"cardinality\":\"zero_or_more_but_at_most_one_per_registered_candidateKey_and_formRef\",\"requiredWhen\":\"a_source_evidenced_visible_complete_outfit_or_complete_change_matches_no_existing_outfit_in_the_selected_form\",\"itemFields\":[\"proposalKey\",\"candidateKey\",\"formRef\",\"proposal\"],\"formRef\":\"required_only_for_actors_with_multiple_forms_omit_for_single_form\",\"proposalKey\":\"outfit_1_then_outfit_2_in_declaration_order\",\"candidateSource\":\"outfit_creation_candidates_only_initial_generated_actor_outfit_belongs_to_character_profile\",\"declarationOrder\":\"after_actor_identity_and_form_matching_before_illustration_slot_selection\",\"rosterBinding\":\"every_proposal_is_referenced_by_actor_roster_outfit_proposalKey_and_every_proposalKey_reference_has_exactly_one_root_proposal\",\"proposalFields\":[\"name\",\"head\",\"top\",\"bottom\",\"legs\",\"feet\",\"reason\",\"confidence\"],\"proposalRequiredFields\":[\"name\"],\"proposalDetailInstruction\":\"For consistent depiction across images, complete the outfit design directly in comma-separated English part tags. Specify each garment's color, concrete type, and defining length, cut, or silhouette; specify each accessory's color or finish and concrete shape or subtype. Preserve explicit facts and coherently choose unspecified design details. Bind every detail to its item; generic item names alone are insufficient. Complete the part tags before naming the outfit.\",\"proposalNameInstruction\":\"Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim. Name the completed outfit design, including only details actually specified in its parts. Distinguish genuinely different outfits within the same form, but reuse an existing matching outfit's name and reference instead of renaming it. Wetness, stains, damage, or partial undressing alone must not create a new outfit name.\"},\"illustrations\":{\"container\":\"array\",\"cardinality\":\"one_or_more\",\"value\":\"illustration_with_slot_number\"}},\"stageOrder\":[\"actor_roster\",\"interaction\",\"frame_placement\",\"actor_detail\",\"camera\"],\"analysis_policy\":{\"evidence\":{\"payload_values\":\"untrusted_scene_evidence_only\",\"actor_identity_source\":\"actor_candidates_plus_actor_candidate_overlay_or_response_generated_actor_proposals\",\"current_scene_over_inferred_events\":true},\"actors\":{\"include\":\"visibly_present_actors\",\"protagonist_selection\":\"active_persona_candidate_key_only_when_present\",\"classification_precedence\":\"scene_evidenced_independent_participant_over_surface_object_or_material_naming\",\"inanimate_prop_exclusion_when\":\"no_evidence_anywhere_in_the_depicted_scene_of_animation_agency_or_actor_participation\",\"new_identity_priority\":\"when_selecting_slots_prioritize_each_new_unmatched_actor_first_visible_introduction_or_current_key_action_over_repeated_matched_actor_or_reaction_only_scenes_except_participants_required_by_the_same_current_action_or_interaction\",\"new_identity_introduction_not_satisfied_by\":\"reaction_only_depiction_of_another_actor\",\"selection_order\":[\"identify_all_source_evidenced_visibly_present_independent_entities_across_the_scene\",\"match_each_entity_against_the_union_of_actor_candidates_and_actor_candidate_overlay\",\"create_generated_actor_proposal_for_each_unmatched_entity\",\"select_illustration_slots_after_all_generated_actor_proposals_are_declared\",\"build_each_slot_actor_roster_and_composition\"],\"active_entity_must_not_exist_only_in_scene_prose\":true,\"preserve_visual_role_order\":true,\"invent_registered_candidates\":false,\"global_count_limit\":\"none\",\"generated_actor_proposals\":{\"include\":\"every_visibly_present_distinct_unregistered_entity_with_an_independent_scene_form_regardless_of_origin_duration_activity_or_body_type\",\"entity_type_limit\":\"none\",\"visible_identity\":\"tags_then_residual_instruction\",\"sex\":\"required_female_male_or_unknown\",\"unknown_sex_when\":\"non_human_or_not_visually_clear\",\"lifetime\":\"current_response_only\",\"persist_or_infer_across_requests\":false,\"exclude\":\"mentioned_only_or_clearly_inanimate_prop_or_depiction_or_indistinguishable_background_entity\"},\"actor_roster_sex\":\"omit_use_local_candidate_or_generated_proposal\"},\"outfits\":{\"catalog_binding\":\"appearance_catalog.candidateKey_then_forms.formRef\",\"context_scan_order\":\"after_actor_identity_matching_before_illustration_slot_selection\",\"context_scan_scope\":\"whole_source_scene_per_found_actor_for_explicit_complete_outfit_or_complete_outfit_change_and_applicable_form\",\"proposal_declaration\":\"declare_each_new_complete_outfit_at_response_root_before_illustration_slot_selection\",\"new_outfit_priority\":\"prioritize_first_clear_appearance_or_current_key_action_of_each_declared_new_outfit_over_repeated_existing_outfit_or_reaction_only_scenes\",\"new_outfit_priority_after\":\"new_unmatched_actor\",\"new_outfit_not_satisfied_by\":\"reaction_only_or_outfit_not_visibly_established\",\"final_binding\":\"after_slot_selection_bind_root_proposalKey_to_selected_actor_occurrence_and_exact_formRef\",\"form_selection_order\":[\"scene_evidence\",\"continuity\",\"default\"],\"form_reference\":\"Each formRef is a compact appearance name or tag identifier. Copy the exact supplied ID; unknown_form means appearance evidence is unavailable. Never invent a formRef or infer traits from uniqueness suffixes.\",\"cross_form_outfit_selection\":\"forbidden\",\"decision_scope\":\"each_visible_actor_independently\",\"do_not_share_decision_across_actors\":true,\"selection_order\":[\"current_scene_evidence\",\"matching_existing_candidate\",\"continuity_reference_when_compatible\",\"new_outfit_proposal\"],\"existing_match_instruction\":\"Compare only source-evidenced clothing with registered outfits for the same Actor and form. Missing or unmentioned details are unknown, not mismatches. Wording differences and incidental variations alone do not establish a different outfit; explicit differences in the main garments, their combination, or contextually distinguishing features do.\",\"current_outfit_when\":\"Prefer the existing outfit best supported by current clothing evidence. When the evidence does not distinguish compatible candidates, retain the current outfit if available. Omission alone does not break outfit continuity; explicit incompatible clothing evidence overrides it.\",\"preserve_for_state_change_only\":true,\"state_change_owner\":\"actor_detail_clothing_modifiers\",\"proposal_when\":\"For an eligible Actor, propose a new outfit only when the source establishes a worn outfit and no registered outfit in the selected form reasonably matches it. Do not infer a clothing change solely from a change of time, place, or activity.\",\"proposal_completion_order\":\"Decide whether an outfit is new before completing unspecified design details. Never use details invented during completion as evidence that an existing outfit does not match.\",\"distinct_contextual_outfits\":\"one_proposal_per_distinct_unmatched_complete_outfit_per_actor_and_form\",\"proposal_name\":\"@instruction:response_contract.root.generated_outfit_proposals.proposalNameInstruction\",\"existing_and_proposal_are_mutually_exclusive\":true,\"proposal_parts\":\"Return only actually worn wearable items; never encode uncovered anatomy or clothing absence such as bare legs or bare feet.\",\"complete_nudity\":{\"top\":\"completely nude\"},\"complete_nudity_when\":\"Only when the current scene explicitly establishes a fully unclothed humanlike body; never infer it from empty wearable fields or a nonhuman or material body.\"},\"continuity\":{\"modifier_reference\":{\"inputs\":[\"actor_modifier_continuity\",\"scene_modifier_continuity\"],\"missing_current_evidence\":\"do_not_emit_prior_value_solely_because_it_is_listed\",\"direct_prompt_exceptions\":[\"state.fluid.cum.location\",\"actor.injury\"]},\"natural_language\":{\"input\":\"natural_language_continuity\",\"channels\":[\"location\",\"pose\",\"action\",\"object\"],\"absent_or_ended\":\"omit_current_channel_value\"},\"cum_clear\":{\"input\":\"actor_modifier_continuity\",\"field\":\"actor_detail.cumClear\",\"when\":\"explicit_washing_or_wiping_removed_previous_cum_locations\",\"values\":\"exact_prior_state.fluid.cum.location_option_ids_only\",\"complete_cleanup\":\"return_every_listed_prior_location_explicitly\",\"must_exist_in_prior_state\":true,\"never_infer_cleanup_from\":[\"elapsed_time\",\"scene_or_location_change\",\"bathing_context_alone\",\"changed_clothing\",\"off_screen_cleanup\",\"partial_wiping\"],\"sentinels\":\"forbidden\"},\"injury_clear\":{\"input\":\"actor_modifier_continuity\",\"field\":\"actor_detail.injuryClear\",\"when\":\"explicit_recovery_or_injury_transition_removed_previous_injury\",\"values\":\"exact_prior_actor.injury_strings_only\",\"complete_recovery\":\"return_every_listed_prior_injury_explicitly\",\"must_exist_in_prior_state\":true,\"clear_before_current_free_tags\":true,\"never_infer_cleanup_from\":[\"missing_current_free_tag\",\"covered_injury\",\"camera_crop\",\"off_screen_actor\",\"scene_or_location_change\",\"elapsed_time_without_explicit_recovery\"],\"sentinels\":\"forbidden\"}},\"interactions\":{\"cardinality\":\"zero_or_more_visible_direct_relations\",\"actor_may_participate_in_multiple_items\":true,\"graph_model\":\"ordered_multigraph_occurrences\",\"same_actor_pair_may_have_multiple_ids\":true,\"same_id_same_actor_pair_occurrences_are_preserved\":true,\"hash_or_fingerprint_occurrence_id\":\"forbidden\",\"prompt_mode\":{\"mutual_is_not_interaction_id_or_modifier\":true},\"free_interaction_uses_same_item_shape\":true,\"free_interaction_allows_residual_channels\":true,\"detail_binding\":{\"mutual_does_not_broadcast_natural_language\":true,\"sex_does_not_define_direction\":true},\"directed_interaction_binding\":{\"enabled_by_interaction_binding\":\"source_target_actor_ids\"},\"ejaculation_progress\":{\"definition\":\"interaction.sexual.ejaculation.progress\",\"select_when\":\"ejaculation_is_occurring_or_has_just_completed_in_current_scene\",\"after_options_mean\":\"newly_completed_event_in_current_scene\",\"lingering_aftermath_owner\":\"state.after_activity_or_visible_cum_location\",\"pre_existing_residue_is_not_new_event\":true,\"return_accumulated_count\":false},\"scene_wide_sexual_modifiers\":{\"anchor\":\"lowest_interaction_index_in_matching_sexual_group\",\"participants\":\"union_of_actual_sexual_interaction_participants\",\"exclude\":[\"observer\",\"independent_actor_action\"],\"relationship\":{\"definition\":\"interaction.sexual.relationship\",\"maximum\":1,\"options\":[\"yuri\",\"yaoi\",\"bisexual_female\"],\"yuri_when\":\"female_female_only\",\"yaoi_when\":\"male_male_only\",\"bisexual_female_when\":\"female_female_and_female_male_relations_coexist\",\"bisexual_female_excludes\":[\"yuri\"]},\"grouping\":{\"definition\":\"interaction.sexual.grouping\",\"maximum\":2,\"count_options\":[\"ffm_threesome\",\"mmf_threesome\",\"fff_threesome\",\"foursome\",\"fivesome\",\"group_sex\"],\"one_count_option_only\":true,\"group_sex_minimum_participants\":6,\"structure_options\":[\"orgy\"],\"orgy_when\":\"multiple_couples_or_distinct_sexual_groups_act_simultaneously\"}}},\"actor_actions\":\"solo_or_independent_action_only\",\"freeform\":{\"planning_scope\":\"all_declared_free_tag_and_natural_language_channels_together\",\"plan_after\":[\"actors\",\"interactions\",\"closed_modifiers\",\"frame_placement\",\"actor_details\",\"camera\"],\"natural_language_writing\":\"concise_visible_details_actions_relations_and_presentation\",\"language\":\"concise_visible_english\",\"repeat_closed_options\":false,\"contradict_closed_options\":false,\"camera_semantics\":[\"camera_position\",\"validated_scene_or_body_reference\",\"viewing_direction\"],\"camera_ambiguous_actor_reference\":\"omit_actor_reference_and_use_scene_reference\",\"empty_when_no_residual_meaning\":true},\"frame_placement\":{\"coordinates\":\"response_contract.illustration.frame_placement.coordinates\",\"precision\":\"rough_position_hint\",\"scene_closed_modifiers\":[\"scene.environment\",\"scene.time\",\"scene.weather\"],\"scene_location_channels\":[\"scene.location\",\"location\"],\"actor_instruction_channel\":\"placement\",\"actor_item_scope\":\"one_item_per_visible_actor_occurrence\",\"duplicate_actor_ids\":\"forbidden_unless_response_contract_enables_multi_frame_occurrences\",\"item_order\":\"actor_roster_order_unless_response_contract_overrides\",\"facing\":{\"omit_when\":[\"side\",\"oblique\",\"toward_another_actor\",\"not_visually_evidenced\"],\"actor_relation_owner\":\"interaction_or_residual_placement_instruction\"},\"absolute_horizontal_tag\":\"not_requested_or_derived\",\"layout_continuity\":{\"owner\":\"frame_placement_after_actor_roster_selection\",\"keyframes_order\":\"newest_first\",\"selection_order\":[\"exact_roster_latest\",\"smallest_recent_superset\",\"highest_actor_overlap_ratio_latest\"],\"current_explicit_layout_wins\":true,\"never_restore_absent_actor\":true,\"hint_only\":true},\"size_selection\":{\"owner\":\"free_scene_canvas_intent\",\"actor_count_is_not_a_decision_rule\":true,\"evidence\":[\"dominant_visual_flow\",\"actor_placement\",\"action_direction\",\"gaze_direction\",\"environmental_importance\",\"framing_and_crop\",\"intentional_negative_space\"]}},\"output\":{\"camera_count_per_illustration\":1,\"uncertain_values\":\"omit_optional_or_use_declared_empty_value\"}},\"illustration\":{\"slot_number\":{\"required\":true,\"type\":\"integer\",\"source\":\"numeric_N_from_selected_scene_slot_number_marker\",\"uniqueAcrossIllustrations\":true},\"actor_roster\":{\"cardinality\":\"zero_or_more_no_global_max\",\"emptyScenePolicy\":\"for_any_presentation_with_no_visible_actors_return_explicit_empty_actor_roster_frame_placement_items_and_actor_detail; no_interactions_or_cross_panel_actor_bindings; describe_visible_content_in_frame_placement_instruction_or_freeTags_or_comicPanels_instructions\",\"itemFields\":[\"actorId\",\"candidateKey\",\"formRef\",\"outfit\"],\"candidateSource\":\"actor_candidates_or_actor_candidate_overlay_or_generated_actor_proposals\",\"actorId\":\"actor_1_actor_2_in_roster_order\",\"formRef\":{\"requiredWhen\":\"candidate_is_registered_and_has_multiple_forms\",\"source\":\"selected_actor_candidate_forms\",\"selectBefore\":\"outfit\"},\"outfit\":{\"optional\":true,\"decisionScope\":\"each_actor_item_independently\",\"requiredWhen\":\"selected_form_appearance_catalog_requires_an_id_or_proposal_decision\",\"fields\":[\"id\",\"proposalKey\"],\"existingIdSource\":\"selected_form_outfit_ids_from_static_or_generated_appearance_catalog\",\"proposalKeySource\":\"root_generated_outfit_proposals_for_the_same_candidateKey_and_formRef\",\"exclusiveSelection\":\"use_id_or_proposalKey_not_both\"},\"outfitScope\":\"illustration_default_overridden_by_actor_detail_occurrence\"},\"interaction\":{\"stageFields\":[\"items\",\"modifiers\",\"instructions\"],\"items\":{\"cardinality\":\"zero_or_more\",\"itemFields\":[\"id\",\"mode\",\"sourceActorId\",\"targetActorId\"],\"id\":{\"required\":true,\"selectionPolicy\":\"use_exact_catalog_match_when_semantically_accurate_otherwise_generate_safe_free_id\",\"freeFormat\":\"lowercase_snake_case\",\"pattern\":\"^[a-z0-9]+(?:_[a-z0-9]+)*$\",\"maxLength\":64},\"mode\":{\"required\":true,\"values\":[\"directed\",\"mutual\"],\"allowedValuesSource\":\"matching_interaction_definition.allowedModes_or_directed_mutual_for_free_interaction\"},\"occurrenceBinding\":\"array_index_only_no_instance_id_or_deduplication\",\"sourceTarget\":\"required_distinct_actor_ids_from_actor_roster\"},\"modifiers\":{\"itemFields\":[\"interactionIndex\",\"id\",\"options\"],\"direction\":\"inherit_source_target_from_bound_interaction_item\"},\"instructions\":{\"id\":\"interaction_detail\",\"maxLength\":180,\"bindingFields\":[\"interactionIndex\",\"participantDetails\"],\"subjects\":[\"interaction\"],\"instruction\":\"Return separate residual detail for each bound participant; never copy between participants.\",\"itemFields\":[\"interactionIndex\",\"participantDetails\"],\"participantDetailFields\":[\"actorId\",\"text\"],\"participantPolicy\":\"one_optional_detail_per_bound_interaction_actor_no_broadcast\"}},\"frame_placement\":{\"stageFields\":[\"sizeId\",\"modifiers\",\"freeTags\",\"instruction\",\"items\"],\"sizeId\":{\"required\":true,\"type\":\"integer\",\"allowedValues\":[1,2,5],\"catalogSource\":\"analyzer_catalog.sizes\"},\"modifiers\":{\"itemFields\":[\"id\",\"options\"],\"scope\":\"declared_scene_global_closed_modifiers_only\"},\"freeTags\":{\"id\":\"scene.location\",\"scope\":\"scene\",\"maxTags\":4,\"type\":\"array_of_strings\",\"nestedObject\":false,\"subjects\":[\"global\"],\"instruction\":\"Return environment tags.\"},\"instruction\":{\"id\":\"location\",\"maxLength\":320,\"bindingFields\":[],\"subjects\":[\"global\"],\"instruction\":\"Return residual location details.\"},\"items\":{\"cardinality\":\"exactly_one_per_actor_roster_item\",\"order\":\"actor_roster_order\",\"itemFields\":[\"actorId\",\"center\",\"facing\",\"instruction\"],\"facing\":{\"catalogDefinition\":\"orientation.facing\",\"itemFields\":[\"id\"],\"values\":[\"facing_away\"],\"reference\":\"camera_only\",\"omitFor\":[\"side\",\"oblique\",\"toward_another_actor\"]},\"instruction\":{\"id\":\"placement\",\"maxLength\":260,\"bindingFields\":[\"actorId\"],\"subjects\":[\"actor\"],\"instruction\":\"Return residual spatial placement for this Actor occurrence; empty when the comic-page structure channel is available.\"}},\"coordinates\":{\"origin\":\"top_left\",\"range\":[0,1],\"center\":{\"grid\":\"novelai_v5_normalized_81x81_centers\",\"min\":0.1,\"max\":0.9,\"step\":0.01}}},\"actor_detail\":{\"itemFields\":[\"actorId\",\"placementIndex\",\"outfit\",\"actions\",\"modifiers\",\"freeTags\",\"cumClear\",\"injuryClear\",\"poseInstruction\",\"actionInstruction\",\"objects\",\"objectInstruction\"],\"placementIndex\":{\"required\":true,\"type\":\"zero_based_frame_placement_items_index\",\"actorIdMustMatchReferencedPlacement\":true},\"outfit\":{\"optional\":true,\"decisionScope\":\"exact_actor_id_plus_placement_index_occurrence\",\"fallback\":\"actor_roster_outfit_then_selected_form_default\",\"fields\":[\"id\",\"proposalKey\"],\"existingIdSource\":\"selected_form_outfit_ids_from_static_or_generated_appearance_catalog\",\"proposalKeySource\":\"root_generated_outfit_proposals_for_the_same_candidateKey_and_formRef\",\"exclusiveSelection\":\"use_id_or_proposalKey_not_both\"},\"freeTags\":{\"id\":\"actor.injury\",\"scope\":\"actor\",\"maxTags\":null,\"type\":\"array_of_strings\",\"nestedObject\":false,\"subjects\":[\"actor\"],\"instruction\":\"Return every current injury, including injuries being visibly inflicted now. Use the closest representative body-part value. Return each value in the form <cut|scar|bruise|bleeding|deep wound> <on> <head|face|neck|shoulder|chest|breasts|back|stomach|waist|hips|crotch|buttocks|arm|hand|thigh|leg|foot>.\"},\"cumClear\":{\"optional\":true,\"type\":\"array_of_exact_prior_option_ids\",\"valuesSource\":\"actor_modifier_continuity[candidateKey].modifiers[state.fluid.cum.location].options\",\"when\":\"explicit_washing_or_wiping_removed_these_previous_locations\",\"completeCleanup\":\"return_every_listed_prior_location_explicitly\",\"sentinels\":\"forbidden\",\"emptyWhenNone\":true},\"injuryClear\":{\"optional\":true,\"type\":\"array_of_exact_prior_free_tag_values\",\"valuesSource\":\"actor_modifier_continuity[candidateKey].freeTags[actor.injury].values\",\"when\":\"explicit_recovery_or_injury_transition_removed_these_previous_injuries\",\"completeRecovery\":\"return_every_listed_prior_injury_explicitly\",\"absenceIsNotClear\":true,\"sentinels\":\"forbidden\",\"emptyWhenNone\":true},\"instructions\":[{\"id\":\"pose\",\"maxLength\":180,\"bindingFields\":[\"actorId\"],\"subjects\":[\"actor\"],\"instruction\":\"Return residual pose detail for this Actor occurrence.\"},{\"id\":\"action\",\"maxLength\":220,\"bindingFields\":[\"actorId\"],\"subjects\":[\"actor\"],\"instruction\":\"Return residual action detail for this Actor occurrence.\"},{\"id\":\"object_instruction\",\"maxLength\":180,\"bindingFields\":[\"actorId\"],\"subjects\":[\"object\"],\"instruction\":\"Return residual object handling for the bound Actor.\"}],\"objectFields\":[\"objectId\",\"typeId\",\"actorIds\",\"interactionIndex\",\"placementId\",\"surfaceId\"]},\"camera\":{\"itemFields\":[\"modifiers\",\"instruction\"],\"instruction\":{\"id\":\"camera\",\"maxLength\":320,\"bindingFields\":[],\"subjects\":[\"global\"],\"instruction\":\"Return camera position, an unambiguous validated scene or body reference, and viewing direction.\"}}},\"forbiddenFields\":[\"composition\",\"depth\",\"instanceId\",\"other\",\"custom\",\"general_free\",\"preset_id\",\"prompt_directives\",\"variant\",\"frame\",\"size\",\"interaction.contact\",\"applyTo\",\"bounds\",\"frame_placement.items.modifiers\",\"frame_placement.items.freeTags\",\"poseFreeTags\",\"actionFreeTags\",\"camera.freeTags\",\"camera.detail\",\"frame_placement.comicPanels\",\"frame_placement.comicPageModifiers\",\"frame_placement.comicCrossPanelActors\",\"frame_placement.items.panelId\",\"actor_roster.outfit.proposal\"],\"instructionReferences\":\"@instruction:path applies the exact instruction at that request JSON path verbatim at this location.\"}}"
+     }
+    ]
+   },
+   {
+    "kind": "character-static",
+    "messages": [
+     {
+      "role": "user",
+      "content": "STATIC V5 ACTOR ROSTER\n{\"actor_candidates\":[{\"candidateKey\":\"actor.1fmv888.fk4pvw\",\"name\":\"Shouta\",\"gender\":\"male\",\"kind\":\"protagonist\",\"forms\":[{\"appearance\":\"unknown_form_1\"}]},{\"candidateKey\":\"actor.g00nx3.1d3zc2v\",\"name\":\"Alice\",\"gender\":\"female\",\"forms\":[{\"appearance\":\"silver_hair,_blue_eyes\"}]},{\"candidateKey\":\"actor.m0ais.6ynrym\",\"name\":\"Bob\",\"gender\":\"male\",\"forms\":[{\"appearance\":\"black_hair,_tall\"}]}]}"
+     }
+    ]
+   },
+   {
+    "kind": "outfit-static",
+    "messages": [
+     {
+      "role": "user",
+      "content": "STATIC V5 APPEARANCE CATALOG\n{\"appearance_catalog\":[{\"candidateKey\":\"actor.1fmv888.fk4pvw\",\"forms\":[{\"outfits\":[\"Casual hoodie\"]}]},{\"candidateKey\":\"actor.g00nx3.1d3zc2v\",\"forms\":[{\"outfits\":[\"Navy sailor school uniform\",\"White summer sundress\"]}]},{\"candidateKey\":\"actor.m0ais.6ynrym\",\"forms\":[{\"outfits\":[\"Grey business suit\"]}]}]}"
+     }
+    ]
+   }
+  ],
+  "liveMessages": [
+   {
+    "role": "user",
+    "content": "CURRENT V5 ANALYSIS INPUT\n{\"outfit_creation_candidates\":[\"actor.1fmv888.fk4pvw\",\"actor.g00nx3.1d3zc2v\",\"actor.m0ais.6ynrym\"],\"scene\":\"Alice waved at Shouta from the school gate, her silver hair catching the morning light.\\n\\n<slot_number: 0>\\n\\n\\\"You're late again!\\\" she laughed, grabbing his sleeve.\\n\\n<slot_number: 1>\\n\\nMr. Bob watched them from the window of the staff room, sighing.\",\"image_count\":{\"min\":1,\"max\":2},\"active_persona_candidate_key\":\"actor.1fmv888.fk4pvw\",\"slot_hints\":{\"0\":[\"actor.g00nx3.1d3zc2v\"]}}"
+   }
+  ],
+  "layout": {
+   "prefixRoutingSegmentCount": 2,
+   "resourceCachedSegmentCount": 4
+  },
+  "providerRoutingKey": "omit",
+  "diagnostic": {
+   "profile": "v5-hybrid"
+  }
+ }
+}
