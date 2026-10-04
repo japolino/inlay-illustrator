@@ -24,7 +24,7 @@ import type {
   StoredAssetRef,
 } from "./character.js";
 import type { CountPolicy, CurrentActorState, IllustrationPlan } from "./chat.js";
-import type { ChatImageGenerationSettings, CharxSettingsPatch, EffectiveCharxSettings, GenerationProvider, InlayConfig, PromptCodecId, UiState } from "./config.js";
+import type { AnalyzerSettings, ChatImageGenerationSettings, CharxSettingsPatch, EffectiveCharxSettings, GenerationProvider, InlayConfig, PromptCodecId, UiState } from "./config.js";
 import type { CharxSettingField } from "./character.js";
 import type { GenerationOrigin, HistoryTree } from "./history.js";
 import type { ChatMessageUiState } from "./chat-dom.js";
@@ -129,14 +129,23 @@ export type AnalysisKind =
   | "artist-extraction" // AM Mvt.extractArtistPrompt
   | "reclassification" // AM prompt partitions (ope session)
   | "unique-tag-search" // AM Oct session (Danbooru character tag)
-  | "representative-pick"; // AM sve (no LLM)
+  | "representative-pick" // AM sve (no LLM)
+  | "charx-regex"; // AM charxRegexAnalysis (detect asset tokens in the character's regex scripts)
+/** One charx asset regex detector (AM `charxAssetRegexAnalysis[id].detectors[]`, `sH` 120727: `new RegExp(in, flags)`). */
+export interface CharxRegexDetector { /** Pattern source (AM `in`). */ in: string; flags?: string; scriptName?: string; scriptIndex?: number; source?: "manual" | "script"; [key: string]: unknown }
+/** AM `charxAssetRegexAnalysis[characterId]` (status done/manual enables the detectors). */
+export interface CharxRegexAnalysis { status: string; detectors: CharxRegexDetector[]; [key: string]: unknown }
+
 export type JobStatus = "queued" | "running" | "success" | "partial" | "no-evidence" | "error" | "cancelled";
 
 export interface AnalysisStartParams {
   kind: AnalysisKind;
   characterId: string;
   evidenceMode?: EvidenceMode;
-  /** Explicit targets in UI order (AM `promptKeys`/`promptOrder`). */
+  /**
+   * character-prompts: UI order of the Assets tab rows (AM `promptOrder`; targets come from the analyze-enabled selection).
+   * references / asset-matching / reclassification: explicit targets (AM `promptKeys`).
+   */
   promptKeys?: string[];
   personaIds?: string[];
   /** asset-matching: re-run even when signatures are unchanged. */
@@ -294,7 +303,11 @@ export interface RpcMethods {
 
   /* settings (analysis-profile, model, image-model, system pages) */
   "config.get": { params: Empty; result: { config: InlayConfig; chatImageGeneration: ChatImageGenerationSettings; uiState: UiState } };
-  /** Deep-merge patch then normalize (AM `config.update`). */
+  /**
+   * Deep-merge patch then normalize (AM `config.update`). Plain objects merge; arrays/primitives replace; `undefined` is
+   * skipped; `null` replaces the value and the normalizer then falls back to the field default (= reset to default).
+   * Map keys cannot be deleted by a patch: use the dedicated methods (charxSettings.*, artists.*, ...).
+   */
   "config.update": { params: { patch: DeepPartial<InlayConfig> }; result: { config: InlayConfig } };
   "config.factoryReset": { params: { confirm: true }; result: Ok };
   "chatImageGeneration.set": { params: { settings: ChatImageGenerationSettings }; result: { settings: ChatImageGenerationSettings; notice: string } };
@@ -306,7 +319,7 @@ export interface RpcMethods {
   "connections.listImageModels": { params: { connectionId: string }; result: { models: ModelOption[] } };
   "connections.listLlmModels": { params: { connectionId: string }; result: { models: ModelOption[] } };
   /** Settings "message test" (AM `T0t`). */
-  "analyzer.testMessage": { params: { text?: string }; result: { ok: boolean; latencyMs: number; reply?: string; error?: RpcError } };
+  "analyzer.testMessage": { params: { text?: string; /** Unsaved draft settings merged over `config.analysis` for this test only. */ analysis?: DeepPartial<AnalyzerSettings> }; result: { ok: boolean; latencyMs: number; reply?: string; error?: RpcError } };
   "image.testConnection": { params: { connectionId?: string }; result: { ok: boolean; latencyMs: number; error?: RpcError } };
 
   /* charx rail / workspace / roster */
@@ -319,9 +332,9 @@ export interface RpcMethods {
   "recognitionKeys.set": { params: { characterId: string; promptKey: string; keys: string[] }; result: WorkspaceSnapshot };
 
   /* custom characters */
-  "customCharacters.create": { params: { characterId: string; input: CustomCharacterInput }; result: { character: CustomCharacter; snapshot: WorkspaceSnapshot } };
-  "customCharacters.update": { params: { characterId: string; customId: string; input: CustomCharacterInput }; result: { character: CustomCharacter; snapshot: WorkspaceSnapshot } };
-  "customCharacters.remove": { params: { characterId: string; customId: string }; result: WorkspaceSnapshot };
+  "customCharacters.create": { params: { characterId: string; input: CustomCharacterInput; /** Document revision guard (`CharacterDocument.updatedAt` the UI edited). */ baseUpdatedAt?: string }; result: { character: CustomCharacter; snapshot: WorkspaceSnapshot } };
+  "customCharacters.update": { params: { characterId: string; customId: string; input: CustomCharacterInput; baseUpdatedAt?: string }; result: { character: CustomCharacter; snapshot: WorkspaceSnapshot } };
+  "customCharacters.remove": { params: { characterId: string; customId: string; baseUpdatedAt?: string }; result: WorkspaceSnapshot };
   "customCharacters.setRosterRegistered": { params: { characterId: string; customIds: string[] | "all"; registered: boolean }; result: WorkspaceSnapshot };
   "customCharacters.setWorkspaceEnabled": { params: { characterId: string; customIds: string[] | "all"; enabled: boolean }; result: WorkspaceSnapshot };
   "customCharacters.promote": { params: { characterId: string; customIds: string[] | "all" }; result: WorkspaceSnapshot };
@@ -339,7 +352,7 @@ export interface RpcMethods {
   "assets.setSelection": { params: { characterId: string; promptKey: string; assets: StoredAssetRef[] }; result: Ok };
   "assets.clearSelections": { params: { characterId: string; promptKeys?: string[] }; result: Ok };
   /** Set a form / outfit / persona reference from the picker. */
-  "assets.setReference": { params: { target: { kind: "character-form"; characterId: string; promptKey: string; formId: string } | { kind: "character-outfit"; characterId: string; promptKey: string; formId: string; outfitId: string } | { kind: "persona"; personaId: string; formId?: string; outfitId?: string } | { kind: "artist-extraction"; characterId: string }; asset: StoredAssetRef | null }; result: Ok };
+  "assets.setReference": { params: { target: { kind: "character-form"; characterId: string; promptKey: string; formId: string } | { kind: "character-outfit"; characterId: string; promptKey: string; formId: string; outfitId: string } | { kind: "persona"; personaId: string; formId?: string; outfitId?: string; /** Source scope (AM personaSettings.sourceScopes[characterId]); default = active chat character. */ characterId?: string } | { kind: "artist-extraction"; characterId: string }; asset: StoredAssetRef | null }; result: Ok };
   "assets.inspectMetadata": { params: { characterId: string; asset: AssetRef }; result: { hasMetadata: boolean; summary: MetadataSummary | null; raw?: unknown } };
   "assets.clearMetadataRecords": { params: { characterId: string; assetNames?: string[] }; result: Ok };
   /** Upload an image (base64 without data: prefix) as a reference asset. */
@@ -380,6 +393,10 @@ export interface RpcMethods {
   "charxSettings.setOverride": { params: { characterId: string; patch: CharxSettingsPatch }; result: { effective: EffectiveCharxSettings; dirtyFields: CharxSettingField[] } };
   "charxSettings.setDefaults": { params: { patch: CharxSettingsPatch }; result: { all: EffectiveCharxSettings } };
   "charxSettings.clearOverrides": { params: { characterId: string }; result: { effective: EffectiveCharxSettings } };
+  /** "Reset all per-charx settings" (AM `ENe` 24861: bump every default revision so all overrides lose). */
+  "charxSettings.resetAll": { params: Empty; result: { all: EffectiveCharxSettings } };
+  /** Charx asset regex detectors (AM `characterPrompt.charxAssetRegexAnalysis[characterId]`, manual edit). */
+  "charxRegex.setDetectors": { params: { characterId: string; detectors: CharxRegexDetector[] }; result: { analysis: CharxRegexAnalysis } };
   /** Reset this character's Asset Maid data (chats and generated images stay). */
   "character.reset": { params: { characterId: string; confirm: true }; result: Ok };
 
@@ -497,7 +514,7 @@ export const RPC_METHODS = [
   "artists.list", "artists.upsertNovelAI", "artists.deleteNovelAI", "artists.upsertAnima", "artists.deleteAnima", "artists.select",
   "personas.list", "personas.saveForms", "personas.setSettings",
   "outfitImage.generate", "outfitImage.history", "outfitImage.save",
-  "charxSettings.get", "charxSettings.setOverride", "charxSettings.setDefaults", "charxSettings.clearOverrides", "character.reset",
+  "charxSettings.get", "charxSettings.setOverride", "charxSettings.setDefaults", "charxSettings.clearOverrides", "charxSettings.resetAll", "charxRegex.setDetectors", "character.reset",
   "logs.list", "logs.clear",
   "generation.start", "generation.cancel", "generation.retry", "generation.restart", "generation.dismiss", "generation.listActive", "generation.regenerateSlot",
   "history.get", "history.selectEntry", "history.selectRevision", "history.deleteEntry", "history.prepareSlotDeletion", "history.deleteSlot", "history.retryCleanup",
