@@ -410,222 +410,6 @@ var appearance_catalog_default = {
     }
   ]
 };
-// src/shared/contract/data/appearance-ui.json
-var appearance_ui_default = {
-  APPEARANCE_FIELD_GROUPS_UI: [
-    {
-      id: "final",
-      label: "종합",
-      fields: []
-    },
-    {
-      id: "identity",
-      label: "고유",
-      fields: [
-        {
-          id: "identity.character_tag",
-          label: "캐릭터 태그",
-          placeholder: "예: hatsune miku"
-        }
-      ]
-    },
-    {
-      id: "hair",
-      label: "머리",
-      fields: [
-        {
-          id: "hair.color",
-          label: "색",
-          placeholder: "예: black hair"
-        },
-        {
-          id: "hair.length",
-          label: "길이",
-          placeholder: "머리 길이 선택"
-        },
-        {
-          id: "hair.style",
-          label: "스타일",
-          placeholder: "예: ponytail"
-        },
-        {
-          id: "head.other",
-          label: "기타",
-          placeholder: "예: horns, animal ears"
-        }
-      ]
-    },
-    {
-      id: "eyes",
-      label: "눈",
-      fields: [
-        {
-          id: "eyes.color",
-          label: "색",
-          placeholder: "예: blue eyes"
-        },
-        {
-          id: "eyes.structure",
-          label: "형태",
-          placeholder: "예: slit pupils"
-        }
-      ]
-    },
-    {
-      id: "breast",
-      label: "가슴",
-      fields: [
-        {
-          id: "body.breast_size",
-          label: "크기",
-          placeholder: "가슴 크기 선택"
-        }
-      ]
-    },
-    {
-      id: "other",
-      label: "기타",
-      fields: [
-        {
-          id: "body.skin",
-          label: "피부",
-          placeholder: "예: dark skin"
-        },
-        {
-          id: "body.build",
-          label: "체형",
-          placeholder: "예: muscular female"
-        },
-        {
-          id: "body.proportions",
-          label: "비율",
-          placeholder: "예: wide hips"
-        },
-        {
-          id: "marks.distinctive",
-          label: "신체 표식",
-          placeholder: "예: body tattoo"
-        },
-        {
-          id: "nonhuman.features",
-          label: "기타 신체",
-          placeholder: "예: wings, tail"
-        },
-        {
-          id: "custom",
-          label: "기타 프롬프트",
-          placeholder: "태그 또는 프롬프트 조각"
-        }
-      ],
-      fallbackFieldId: "custom",
-      placeholder: "피부, 체형, 비율, 표식, 날개·꼬리, 기타 프롬프트"
-    }
-  ],
-  APPEARANCE_EMPTY_OPTION_SENTINEL: "__asset_maid_empty_base_prompt_option__",
-  FIELD_LABELS_KO: {
-    "identity.character_tag": "고유 / 캐릭터 태그",
-    "hair.color": "머리 / 색",
-    "hair.length": "머리 / 길이",
-    "hair.style": "머리 / 스타일",
-    "head.other": "머리 / 기타",
-    "eyes.color": "눈 / 색",
-    "eyes.structure": "눈 / 형태",
-    "body.skin": "기타 / 피부",
-    "body.build": "기타 / 체형",
-    "body.proportions": "기타 / 비율",
-    "body.breast_size": "가슴 / 크기",
-    "marks.distinctive": "기타 / 신체 표식",
-    "nonhuman.features": "기타 / 신체",
-    custom: "기타 프롬프트",
-    head: "머리",
-    top: "상의",
-    bottom: "하의",
-    legs: "다리",
-    feet: "발"
-  },
-  BASE_PROMPT_GROUP_ORDER: [
-    "identity.character_tag",
-    "hair.color",
-    "hair.length",
-    "hair.style",
-    "head.other",
-    "eyes.color",
-    "eyes.structure",
-    "body.skin",
-    "body.build",
-    "body.proportions",
-    "body.breast_size",
-    "marks.distinctive",
-    "nonhuman.features"
-  ],
-  GROUP_TO_OUTFIT_PART_RELEVANCE: {
-    "identity.character_tag": [
-      "head",
-      "top",
-      "bottom"
-    ],
-    "hair.color": [
-      "head"
-    ],
-    "hair.length": [
-      "head"
-    ],
-    "hair.style": [
-      "head"
-    ],
-    "head.other": [
-      "head"
-    ],
-    "eyes.color": [
-      "head"
-    ],
-    "eyes.structure": [
-      "head"
-    ],
-    "body.skin": [
-      "top",
-      "bottom"
-    ],
-    "body.build": [
-      "top",
-      "bottom"
-    ],
-    "body.proportions": [
-      "top",
-      "bottom",
-      "legs"
-    ],
-    "body.breast_size": [
-      "top"
-    ],
-    "marks.distinctive": [
-      "head",
-      "top",
-      "bottom"
-    ],
-    "nonhuman.features": [
-      "head",
-      "top",
-      "bottom"
-    ],
-    custom: []
-  },
-  OUTFIT_PARTS: [
-    "head",
-    "top",
-    "bottom",
-    "legs",
-    "feet"
-  ],
-  DEFAULT_FORM: {
-    id: "form_default",
-    label: "기본"
-  },
-  DEFAULT_OUTFIT: {
-    id: "outfit_default",
-    label: "기본 의상"
-  }
-};
 // src/shared/contract/data/default-presets.json
 var default_presets_default = {
   DEFAULT_ARTIST_PRESETS: [
@@ -720,12 +504,8 @@ var filename_tag_table_default = {
 // src/shared/contract/character.ts
 var CHARACTER_DESCRIPTION_LORE_ID = "asset-maid:charx-description:v1";
 var CUSTOM_CHARACTER_ID_PREFIX = "character_";
-var PERSONA_PROMPT_KEY_PREFIX = "persona::";
 function loreSelectionId(worldBookId, entryId) {
   return `${trimString(worldBookId)}:${trimString(entryId)}`;
-}
-function personaPromptKey(personaId) {
-  return `${PERSONA_PROMPT_KEY_PREFIX}${trimString(personaId)}`;
 }
 function extensionOf(name, key, ext) {
   const explicit = trimString(ext).replace(/^\./, "").toLowerCase();
@@ -782,7 +562,6 @@ function assetKindOfName(name) {
   return m ? m[2] : "original";
 }
 var APPEARANCE_CATALOG = appearance_catalog_default;
-var APPEARANCE_UI = appearance_ui_default;
 var BASE_PROMPT_GROUP_IDS = [
   "identity.character_tag",
   "hair.color",
@@ -1053,48 +832,6 @@ function resolveFormCollection(characterForms, promptKey, fallback) {
 function formCollectionRevision(value) {
   return fnv1a32Base36(JSON.stringify(normalizeFormCollection(value)));
 }
-function addForm(collection, input) {
-  const c = normalizeFormCollection(collection);
-  const label = trimString(input.label);
-  if (!label)
-    return { collection: c, formId: "" };
-  const id = formIdFor(label, new Set(c.forms.map((f) => f.id)), input.id);
-  const source = c.forms.find((f) => f.id === trimString(input.sourceFormId));
-  const outfits = [createDefaultOutfit(defaultOutfitIdFor(id, new Set(c.forms.flatMap((f) => f.outfits.map((o) => o.id)))))];
-  const form = source ? { id, label, description: trimString(input.description ?? source.description), humanlike: source.humanlike, gender: source.gender, basePromptGroups: deepCopy(source.basePromptGroups), negativePrompt: source.negativePrompt, reference: null, defaultOutfitId: outfits[0].id, outfits } : { id, label, description: trimString(input.description), humanlike: input.humanlike !== false, gender: input.gender ?? "unknown", basePromptGroups: {}, negativePrompt: "", reference: null, defaultOutfitId: outfits[0].id, outfits };
-  return { collection: normalizeFormCollection({ ...c, forms: [...c.forms, form] }), formId: id };
-}
-function patchForm(collection, formId, patch) {
-  const index = collection.forms.findIndex((f) => f.id === formId);
-  if (index < 0)
-    return collection;
-  const form = collection.forms[index];
-  const label = hasOwn(patch, "label") ? trimString(patch.label) : form.label;
-  if (!label)
-    return collection;
-  const next = {
-    ...form,
-    label,
-    description: hasOwn(patch, "description") ? trimString(patch.description) : form.description,
-    humanlike: hasOwn(patch, "humanlike") ? patch.humanlike !== false : form.humanlike,
-    gender: hasOwn(patch, "gender") ? normalizeGender(patch.gender, form.gender) : form.gender,
-    basePromptGroups: hasOwn(patch, "basePromptGroups") ? normalizeBasePromptGroups(patch.basePromptGroups, { allowPromptFragments: true }) : form.basePromptGroups,
-    negativePrompt: hasOwn(patch, "negativePrompt") ? String(patch.negativePrompt ?? "") : form.negativePrompt,
-    reference: hasOwn(patch, "reference") ? patch.reference == null || typeof patch.reference !== "object" || Array.isArray(patch.reference) ? null : deepCopy(patch.reference) : form.reference
-  };
-  return { ...collection, forms: collection.forms.map((f, i) => i === index ? next : f) };
-}
-function deleteForm(collection, formId) {
-  return formId === collection.defaultFormId || !collection.forms.some((f) => f.id === formId) ? collection : { defaultFormId: collection.defaultFormId, forms: collection.forms.filter((f) => f.id !== formId) };
-}
-function setDefaultForm(collection, formId) {
-  const c = normalizeFormCollection(collection);
-  const id = trimString(formId);
-  return !id || id === c.defaultFormId || !c.forms.some((f) => f.id === id) ? c : { ...c, defaultFormId: id };
-}
-function findOutfit(collection, formId, outfitId) {
-  return normalizeFormCollection(collection).forms.find((f) => f.id === trimString(formId))?.outfits.find((o) => o.id === trimString(outfitId)) ?? null;
-}
 function patchOutfit(collection, formId, outfitId, patch) {
   const c = normalizeFormCollection(collection);
   const fi = c.forms.findIndex((f) => f.id === trimString(formId));
@@ -1121,37 +858,6 @@ function addOutfit(collection, formId, options = {}) {
   const id = outfitIdFor(fid, label, taken, options.id);
   const outfit = { ...createDefaultOutfit(id), ...deepCopy(options.patch ?? {}), id, label };
   return { collection: normalizeFormCollection({ ...c, forms: c.forms.map((f, i) => i === fi ? { ...f, outfits: [...f.outfits, outfit] } : f) }), outfitId: id };
-}
-function deleteOutfit(collection, formId, outfitId) {
-  const c = normalizeFormCollection(collection);
-  const fid = trimString(formId);
-  const oid = trimString(outfitId);
-  const form = c.forms.find((f) => f.id === fid);
-  return !form || form.defaultOutfitId === oid || !form.outfits.some((o) => o.id === oid) ? c : normalizeFormCollection({ ...c, forms: c.forms.map((f) => f.id === fid ? { ...f, outfits: f.outfits.filter((o) => o.id !== oid) } : f) });
-}
-function promoteOutfitToDefault(collection, formId, outfitId) {
-  const c = normalizeFormCollection(collection);
-  const fid = trimString(formId);
-  const oid = trimString(outfitId);
-  const form = c.forms.find((f) => f.id === fid);
-  return !form || form.defaultOutfitId === oid || !form.outfits.some((o) => o.id === oid) ? c : normalizeFormCollection({ ...c, forms: c.forms.map((f) => f.id === fid ? { ...f, defaultOutfitId: oid } : f) });
-}
-function moveOutfit(collection, fromFormId, toFormId, outfitId) {
-  const c = normalizeFormCollection(collection);
-  const a = trimString(fromFormId);
-  const b = trimString(toFormId);
-  const oid = trimString(outfitId);
-  if (!a || a === b)
-    return c;
-  const from = c.forms.find((f) => f.id === a);
-  const to = c.forms.find((f) => f.id === b);
-  const outfit = from?.outfits.find((o) => o.id === oid);
-  if (!from || !to || !outfit || from.defaultOutfitId === oid || to.outfits.some((o) => o.id === oid))
-    return c;
-  return normalizeFormCollection({
-    ...c,
-    forms: c.forms.map((f) => f.id === a ? { ...f, outfits: f.outfits.filter((o) => o.id !== oid) } : f.id === b ? { ...f, outfits: [...f.outfits, outfit] } : f)
-  });
 }
 var TRANSIENT_OUTFIT_KEYS = new Set(["decisionReason", "decisionConfidence", "createdAt", "updatedAt"]);
 var TEXT_OUTFIT_KEYS = new Set(["description", "head", "top", "bottom", "legs", "feet"]);
@@ -1208,10 +914,6 @@ function updateCustomCharacter(current, input) {
     ...current.workspaceEnabled === false ? { workspaceEnabled: false } : {},
     ...current.origin === AI_AUTO_ORIGIN ? { origin: "ai-auto" } : {}
   };
-}
-function findDuplicateRecognitionKeys(characters, keys, exceptId = "") {
-  const used = new Set(characters.flatMap((c) => c.id === exceptId ? [] : c.recognitionKeys));
-  return splitRecognitionKeys(keys).filter((k) => used.has(k));
 }
 function customCharacterRosterState(c) {
   const registered = c.rosterRegistered !== false;
@@ -3061,10 +2763,6 @@ function normalizeCountPolicy(value, fallback = 1, limit = COUNT_MAX2) {
   };
   return mode === "fixed" ? { mode, min: fixed, max: fixed, values } : { mode, min: values.min, max: values.max, values };
 }
-function countPolicyValues(value, limit = COUNT_MAX2) {
-  const p = normalizeCountPolicy(value, 1, limit);
-  return p.values ?? { fixed: p.max, min: p.min, max: p.max };
-}
 function normalizeRequestedCount(value, fallback = 1) {
   const n = Number(value);
   return Number.isFinite(n) ? Math.min(COUNT_MAX2, Math.max(1, Math.round(n))) : Math.min(COUNT_MAX2, Math.max(1, Math.round(fallback)));
@@ -3826,16 +3524,6 @@ function generationProviderFromLumiverse(providerId) {
 function promptCodecForProvider(provider) {
   return PROVIDER_CAPABILITIES[provider].promptCodecId;
 }
-function usesAnimaArtists(provider) {
-  return promptCodecForProvider(provider) === "anima-flat";
-}
-function isReferenceEnabledForProvider(provider, novelaiCharacterReferenceEnabled, comfyuiCharacterReferenceEnabled) {
-  if (provider === "novelai")
-    return novelaiCharacterReferenceEnabled !== false;
-  if (provider === "comfy-ui")
-    return comfyuiCharacterReferenceEnabled !== false;
-  return false;
-}
 var v5Directions = v5_directions_default;
 var V5_SCENE_PRESETS = v5Directions.scenePresets;
 var V5_IMAGE_RATIO_PRESETS = v5Directions.imageRatioPresets;
@@ -4528,7 +4216,6 @@ function buildRuntimeConfig(global, document2, options = {}) {
   };
   return runtime;
 }
-var SPLIT_ANALYSIS_MAX_TOTAL = 20;
 function createDefaultChatImageGenerationSettings() {
   return { autoGenerationEnabled: true, countPolicy: fixedCountPolicy(1), analysisMode: "single", splitAnalysis: { totalCount: null, batchSize: 3 } };
 }
@@ -4830,26 +4517,10 @@ var EVENT_SET = new Set(RPC_EVENTS);
 function isRpcMethod(value) {
   return typeof value === "string" && METHOD_SET.has(value);
 }
-function isRpcEventName(value) {
-  return typeof value === "string" && EVENT_SET.has(value);
-}
-function envelopeBase(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    return null;
-  const v = value;
-  return v.type === RPC_MESSAGE_TYPE ? v : null;
-}
-function isRpcEvent(value) {
-  const v = envelopeBase(value);
-  return !!v && v.kind === "event" && isRpcEventName(v.event) && typeof v.seq === "number";
-}
 var requestCounter = 0;
 function createRequestId(clientId = "ui") {
   requestCounter = (requestCounter + 1) % Number.MAX_SAFE_INTEGER;
   return `${clientId}:${Date.now().toString(36)}:${requestCounter.toString(36)}`;
-}
-function createRequest(method, params, requestId = createRequestId()) {
-  return { type: RPC_MESSAGE_TYPE, kind: "request", protocol: RPC_PROTOCOL_VERSION, requestId, method, params };
 }
 function okResponse(request, result) {
   return { type: RPC_MESSAGE_TYPE, kind: "response", protocol: RPC_PROTOCOL_VERSION, requestId: request.requestId, method: request.method, ok: true, result };
@@ -4921,7 +4592,7 @@ function illustrationBlockStyles(width, height, widthPercent) {
   return {
     wrapper: "display:flex;flex-direction:column;align-items:center;margin:10px 0;width:100%;",
     frame: `position:relative;display:block;width:var(${CHAT_IMAGE_WIDTH_VAR},${pct}%);max-width:100%;max-height:min(994px,85vh);aspect-ratio:${ratio};overflow:hidden;border-radius:8px;`,
-    image: `display:block;width:100%;height:100%;aspect-ratio:${ratio};object-fit:contain;border-radius:8px;cursor:zoom-in;`
+    image: `display:block;width:100%;height:100%;max-width:100%;max-height:none;aspect-ratio:${ratio};object-fit:contain;border-radius:8px;cursor:zoom-in;`
   };
 }
 function renderIllustrationBlock(input) {
@@ -4935,43 +4606,9 @@ function renderIllustrationBlock(input) {
   return `${INLAY_MARKER}
 <div class="${ILLUSTRATION_BLOCK_CLASS}"${attr(a.block, "true")} data-no-island${attr(a.placement, "paragraph")}` + attr(a.chatId, input.chatId) + attr(a.messageId, input.messageId) + attr(a.swipeId, Math.max(0, Math.trunc(input.swipeId) || 0)) + attr(a.messageKey, input.messageKey) + attr(a.revisionId, input.revisionId) + attr(a.slotId, input.slotId) + attr(a.slotIndex, input.slotIndex) + attr(a.entryId, input.entryId) + attr(a.asset, input.assetName) + attr(a.imageId, input.imageId) + attr(a.entryIndex, input.entryIndex) + attr(a.entryCount, input.entryCount) + attr(a.canRegenerate, input.canRegenerate ? "true" : "false") + attr(a.imageIndex, input.imageIndex) + ` style="${styles.wrapper}">` + `<span class="${ILLUSTRATION_FRAME_CLASS}"${attr(a.slotId, input.slotId)} style="${styles.frame}">` + `<img class="${ILLUSTRATION_IMG_CLASS}" src="${escapeHtmlAttribute(url)}" width="${width}" height="${height}" alt="${escapeHtmlAttribute(alt)}" loading="lazy" decoding="async"` + attr(a.imageId, input.imageId) + attr(a.asset, input.assetName) + ` style="${styles.image}"/></span></div>`;
 }
-function readIllustrationAttributes(get) {
-  const a = ILLUSTRATION_ATTR;
-  if (get(a.block) !== "true")
-    return null;
-  const s = (name) => String(get(name) ?? "");
-  const n = (name, fallback) => {
-    const raw = get(name);
-    const v = raw === null || raw === undefined || raw === "" ? NaN : Number(raw);
-    return Number.isFinite(v) ? Math.trunc(v) : fallback;
-  };
-  const slotId = s(a.slotId);
-  const messageKey = s(a.messageKey);
-  if (!slotId || !messageKey)
-    return null;
-  return {
-    chatId: s(a.chatId),
-    messageId: s(a.messageId),
-    swipeId: n(a.swipeId, 0),
-    messageKey,
-    revisionId: s(a.revisionId),
-    slotId,
-    slotIndex: n(a.slotIndex, -1),
-    entryId: s(a.entryId),
-    assetName: s(a.asset),
-    imageId: s(a.imageId),
-    entryIndex: n(a.entryIndex, 0),
-    entryCount: n(a.entryCount, 0),
-    canRegenerate: get(a.canRegenerate) === "true",
-    imageIndex: n(a.imageIndex, -1)
-  };
-}
 var SUPPRESSION_CLASS = "am-native-asset-suppression";
 var SUPPRESSION_ID_ATTR = "data-inlay-illustrator-suppressed";
 var SUPPRESSION_PAYLOAD_ATTR = "data-inlay-illustrator-suppressed-payload";
-var CHAT_ACTION_ATTR = "data-ii-action";
-var CHAT_FOOTER_CLASS = "ii-am-illustration-footer";
-var CHAT_EDGE_CONTROLS_CLASS = "ii-am-chat-history-edge-controls";
 var CHAT_ACTION_RPC = Object.freeze({
   generate: ["generation.start"],
   cancel: ["generation.cancel"],
@@ -4983,12 +4620,6 @@ var CHAT_ACTION_RPC = Object.freeze({
   zoom: ["zoom.getDetails"],
   "delete-slot": ["history.prepareSlotDeletion", "history.deleteSlot"]
 });
-function pagerStep(index, count, direction) {
-  if (count <= 0)
-    return -1;
-  const i = Math.min(Math.max(0, Math.trunc(index) || 0), count - 1);
-  return direction === "next" ? (i + 1) % count : (i - 1 + count) % count;
-}
 var CHAT_FOOTER_LABELS = Object.freeze({
   initial: { en: "Analyze and generate images for this message", ko: "이 메시지의 이미지 분석 및 생성" },
   reroll: { en: "Re-analyze this message and regenerate everything", ko: "이 메시지를 새로 분석하여 모두 다시 생성" },
@@ -5011,10 +4642,6 @@ var CHAT_FOOTER_LABELS = Object.freeze({
 var FETCH_BRIDGE_REQUEST = "inlay-illustrator:fetch-request";
 var FETCH_BRIDGE_RESPONSE = "inlay-illustrator:fetch-response";
 var FETCH_BRIDGE_MAX_BASE64 = 28000000;
-function isFetchBridgeRequest(value) {
-  const v = value;
-  return !!v && typeof v === "object" && v.type === FETCH_BRIDGE_REQUEST && typeof v.requestId === "string" && typeof v.url === "string" && (v.as === "base64" || v.as === "json");
-}
 function isAllowedBridgeUrl(url) {
   return typeof url === "string" && url.startsWith("/api/") && !url.startsWith("//") && !/\.\.(?:\/|$)/u.test(url) && !/[\s\\]/u.test(url);
 }
@@ -58663,6 +58290,16 @@ function providerPromptFor(config, plan) {
   }), plan.charx.nsfwAlwaysEnabled === true);
   return { positivePrompt: String(prompt.positivePrompt ?? ""), negativePrompt: String(prompt.negativePrompt ?? "") };
 }
+function draftGender(draft) {
+  return draft.gender === "female" || draft.gender === "male" || draft.gender === "unknown" ? draft.gender : undefined;
+}
+function draftReferenceSettings(draft) {
+  const num = (v) => typeof v === "number" && Number.isFinite(v) ? v : undefined;
+  const type = draft.referenceType === "character" || draft.referenceType === "style" || draft.referenceType === "character&style" ? draft.referenceType : undefined;
+  const strength = num(draft.referenceStrength);
+  const fidelity = num(draft.referenceFidelity);
+  return { ...type ? { type } : {}, ...strength !== undefined ? { strength } : {}, ...fidelity !== undefined ? { fidelity } : {} };
+}
 async function resolveTargetContext(services, config, target, formId, draft) {
   if (target.kind === "character") {
     const cp = config.characterPrompt;
@@ -58684,9 +58321,9 @@ async function resolveTargetContext(services, config, target, formId, draft) {
       characterName,
       collection,
       formId: form.id,
-      gender: form.gender,
+      gender: draftGender(draft) ?? form.gender,
       humanlike: form.humanlike !== false,
-      mainPrompt: compileMainPrompt(form.basePromptGroups, form.gender),
+      mainPrompt: compileMainPrompt(form.basePromptGroups, draftGender(draft) ?? form.gender),
       formNegativePrompt: form.negativePrompt,
       reference: draft.useCharacterReference && form.reference?.defaultAsset ? AM.pn(form.reference.defaultAsset) : null,
       persona: false
@@ -58706,9 +58343,9 @@ async function resolveTargetContext(services, config, target, formId, draft) {
     characterName: persona?.name ?? target.personaId,
     collection,
     formId: form.id,
-    gender: form.gender,
+    gender: draftGender(draft) ?? form.gender,
     humanlike: form.humanlike !== false,
-    mainPrompt: compileMainPrompt(form.basePromptGroups, form.gender),
+    mainPrompt: compileMainPrompt(form.basePromptGroups, draftGender(draft) ?? form.gender),
     formNegativePrompt: form.negativePrompt,
     reference: draft.useCharacterReference ? form.reference?.defaultAsset ? AM.pn(form.reference.defaultAsset) : fallbackReference : null,
     persona: true
@@ -58796,7 +58433,7 @@ async function buildOutfitImageRequest(services, target, formId, draft) {
   const characterId = target.kind === "character" ? target.characterId : target.characterId || (await services.sources.getActiveChat().catch(() => null))?.characterId || "";
   const prepared = await prepareConfig(services, characterId);
   const context = await resolveTargetContext(services, prepared.config, target, formId, draft);
-  const { request, plan } = await requestFromContext(services, characterId, prepared, context, draft);
+  const { request, plan } = await requestFromContext(services, characterId, prepared, context, draft, draftReferenceSettings(draft));
   return { request, plan, context };
 }
 function createAmOutfitGenerator(services, characterId) {
@@ -59592,6 +59229,18 @@ function summarizeMetadataAvailability(raw) {
   }
   return out;
 }
+function summarizeAssetMetadata(raw) {
+  const out = {};
+  for (const value of Object.values(raw)) {
+    const assets = Array.isArray(value?.assets) ? value.assets : [];
+    for (const a of assets) {
+      const name = typeof a?.name === "string" ? a.name : "";
+      if (name)
+        out[name] = out[name] === true || a.hasMetadata === true;
+    }
+  }
+  return out;
+}
 async function loadWorkspaceSnapshot(services, characterId, options = {}) {
   if (options.reload)
     services.sources.invalidate(characterId);
@@ -59629,7 +59278,8 @@ async function loadWorkspaceSnapshot(services, characterId, options = {}) {
     roster,
     sources,
     charxSettings: resolveEffectiveConfig(parts.global, { characterId, document: document2 }),
-    metadataAvailability: summarizeMetadataAvailability(parts.metadata)
+    metadataAvailability: summarizeMetadataAvailability(parts.metadata),
+    assetMetadata: summarizeAssetMetadata(parts.metadata)
   };
 }
 function customIdOf(item) {
@@ -59881,218 +59531,6 @@ function createAnalysisModule(services, _getModules) {
   };
   return { analysis };
 }
-
-// src/backend/legacy-records.ts
-function asRecord3(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-}
-function cleanArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-async function readJson(path, fallback, userId) {
-  try {
-    const value = JSON.parse(await spindle.userStorage.read(path, userId));
-    if (value && typeof value === "object" && !Array.isArray(value) && fallback && typeof fallback === "object" && !Array.isArray(fallback))
-      return { ...fallback, ...value };
-    return value ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-async function listPaths(prefix, userId) {
-  try {
-    const paths = await spindle.userStorage.list(prefix, userId);
-    return Array.isArray(paths) ? paths.filter((path) => typeof path === "string" && path.length > 0) : [];
-  } catch {
-    return [];
-  }
-}
-var STATE_FALLBACK = { generated: {} };
-function str2(value) {
-  return typeof value === "string" ? value : "";
-}
-function integer(value, fallback) {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) ? parsed : fallback;
-}
-function conceptText(value) {
-  const concept = asRecord3(value);
-  const anchor = str2(concept.anchor);
-  const text = str2(concept.concept);
-  return anchor && text ? `${anchor}: ${text}` : text || anchor;
-}
-function legacySlotsOf(value) {
-  const record = asRecord3(value);
-  if (Array.isArray(record.slots)) {
-    return record.slots.map((entry, index) => {
-      const slot = asRecord3(entry);
-      return {
-        imageId: str2(slot.imageId),
-        imageUrl: str2(slot.imageUrl),
-        paragraph: integer(slot.paragraph, index + 1),
-        prompt: str2(slot.prompt),
-        negativePrompt: str2(slot.negativePrompt),
-        perspectiveMode: str2(slot.perspectiveMode) || null,
-        perspectiveSource: str2(slot.perspectiveSource) || null,
-        creativeConcept: conceptText(slot.creativeConcept)
-      };
-    });
-  }
-  const urls = cleanArray(record.imageUrls);
-  const ids = cleanArray(record.imageIds);
-  const count = Math.max(urls.length, ids.length);
-  return Array.from({ length: count }, (_value, index) => ({
-    imageId: str2(ids[index]),
-    imageUrl: str2(urls[index]),
-    paragraph: integer(cleanArray(record.paragraphs)[index], index + 1),
-    prompt: str2(cleanArray(record.prompts)[index]),
-    negativePrompt: str2(cleanArray(record.negativePrompts)[index]),
-    perspectiveMode: str2(cleanArray(record.perspectiveModes)[index]) || null,
-    perspectiveSource: str2(cleanArray(record.perspectiveSources)[index]) || null,
-    creativeConcept: conceptText(cleanArray(record.creativeConcepts)[index])
-  }));
-}
-async function loadRecord(key, value, chatId, userId) {
-  let stored = asRecord3(value);
-  const recordPath = str2(stored.recordPath);
-  if (recordPath) {
-    const full = asRecord3(await readJson(recordPath, null, userId));
-    if (Object.keys(full).length > 0)
-      stored = { ...stored, ...full };
-  }
-  const slots = legacySlotsOf(stored);
-  if (slots.length === 0)
-    return null;
-  let messageId = str2(stored.messageId);
-  let swipeId = integer(stored.swipeId, 0);
-  if (!messageId) {
-    const parts = key.split(":");
-    if (parts.length >= 3) {
-      messageId = parts[1] || "";
-      swipeId = integer(parts[2], 0);
-    }
-  }
-  return {
-    key,
-    chatId: str2(stored.chatId) || chatId,
-    messageId,
-    swipeId,
-    createdAt: str2(stored.createdAt),
-    slots
-  };
-}
-async function loadLegacyRecords(chatId, userId) {
-  const state = await readJson(`states/${chatId}.json`, STATE_FALLBACK, userId);
-  const generated = asRecord3(state.generated);
-  const records = [];
-  const seenPaths = new Set;
-  for (const [key, value] of Object.entries(generated)) {
-    const path = str2(asRecord3(value).recordPath);
-    if (path) {
-      if (seenPaths.has(path))
-        continue;
-      seenPaths.add(path);
-    }
-    try {
-      const record = await loadRecord(key, value, chatId, userId);
-      if (record)
-        records.push(record);
-    } catch {}
-  }
-  return records;
-}
-async function findLegacyImage(lookup, userId) {
-  if (!lookup.chatId)
-    return null;
-  const records = await loadLegacyRecords(lookup.chatId, userId);
-  for (const record of records) {
-    const index = record.slots.findIndex((slot) => lookup.imageId && slot.imageId === lookup.imageId || lookup.imageUrl && slot.imageUrl === lookup.imageUrl);
-    if (index >= 0)
-      return { record, index };
-  }
-  if (lookup.messageId && lookup.imageIndex !== undefined) {
-    const record = records.find((candidate) => candidate.messageId === lookup.messageId && (lookup.swipeId === undefined || candidate.swipeId === lookup.swipeId));
-    if (record && record.slots[lookup.imageIndex])
-      return { record, index: lookup.imageIndex };
-  }
-  return null;
-}
-var GALLERY_CHATS_PER_PAGE = 5;
-function compareIds(a, b) {
-  if (/^-?\d+$/.test(a) && /^-?\d+$/.test(b)) {
-    const diff = Number(a) - Number(b);
-    if (diff !== 0)
-      return diff;
-  }
-  return a.localeCompare(b);
-}
-async function chatInfo(chatId, images, userId) {
-  let name;
-  let cardName;
-  try {
-    const host = spindle;
-    const meta = typeof host.chats?.get === "function" ? await host.chats.get(chatId, userId) : null;
-    if (meta?.name)
-      name = meta.name;
-    if (meta?.character_id && typeof host.characters?.get === "function") {
-      const character = await host.characters.get(meta.character_id, userId);
-      if (character?.name)
-        cardName = character.name;
-    }
-  } catch {}
-  const messages = new Set(images.map((image) => image.messageId).filter(Boolean));
-  const branches = new Set(images.filter((image) => image.swipeId > 0).map((image) => `${image.messageId}:${image.swipeId}`));
-  return { chatId, name, cardName, messageCount: messages.size, branchCount: branches.size, images };
-}
-async function listInlayGallery(userId, page, selectedChatId) {
-  const selected = typeof selectedChatId === "string" && /^[a-zA-Z0-9_-]+$/.test(selectedChatId.trim()) ? selectedChatId.trim() : undefined;
-  const chatIds = new Set;
-  for (const raw of await listPaths("states/", userId)) {
-    const normalized = raw.replace(/\\/g, "/").replace(/^\/+/, "");
-    const path = normalized.startsWith("states/") ? normalized : `states/${normalized}`;
-    if (!path.endsWith(".json"))
-      continue;
-    const chatId = path.slice(7, -5);
-    if (chatId && !chatId.includes("/"))
-      chatIds.add(chatId);
-  }
-  if (selected)
-    chatIds.add(selected);
-  const sorted = [...chatIds].sort(compareIds);
-  const totalPages = Math.max(1, Math.ceil(sorted.length / GALLERY_CHATS_PER_PAGE));
-  let requested = Math.floor(Number(page));
-  if (!Number.isFinite(requested) || requested < 1)
-    requested = 1;
-  if (requested > totalPages)
-    requested = totalPages;
-  const targets = selected ? [selected] : sorted.slice((requested - 1) * GALLERY_CHATS_PER_PAGE, requested * GALLERY_CHATS_PER_PAGE);
-  const chats = await Promise.all(targets.map(async (chatId) => {
-    const images = [];
-    for (const record of await loadLegacyRecords(chatId, userId)) {
-      if (!record.messageId)
-        continue;
-      record.slots.forEach((slot, index) => {
-        if (!slot.imageUrl)
-          return;
-        images.push({
-          chatId: record.chatId,
-          messageId: record.messageId,
-          swipeId: record.swipeId,
-          imageId: slot.imageId,
-          imageUrl: slot.imageUrl,
-          imageIndex: index,
-          paragraph: slot.paragraph || index + 1,
-          prompt: slot.prompt,
-          negativePrompt: slot.negativePrompt,
-          quote: ""
-        });
-      });
-    }
-    images.sort((a, b) => compareIds(a.messageId, b.messageId) || a.swipeId - b.swipeId || a.paragraph - b.paragraph || a.imageIndex - b.imageIndex || a.imageUrl.localeCompare(b.imageUrl));
-    return chatInfo(chatId, images, userId);
-  }));
-  return { page: requested, totalChats: sorted.length, totalPages, chatIds: sorted, chats, records: chats };
-}
 // src/engine/compose/provider-prompt.ts
 var BUNDLED_COMFY_WORKFLOW_PROFILE = n2;
 // src/engine/compose/nsfw.ts
@@ -60294,7 +59732,7 @@ function messageUiState(doc, input) {
     };
   });
   const active = message?.revisions.find((r) => r.revisionId === activeRevisionId);
-  const busy = !!input.job && (input.job.status === "queued" || input.job.status === "running");
+  const busy = input.busy ?? (!!input.job && (input.job.status === "queued" || input.job.status === "running"));
   return {
     chatId: input.chatId,
     messageId: input.messageId,
@@ -63045,7 +62483,7 @@ function labelError(code, label, extra = {}) {
 
 // src/backend/pipeline/generate.ts
 var rec2 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
-var str3 = (v) => v == null ? "" : String(v).trim();
+var str2 = (v) => v == null ? "" : String(v).trim();
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 function originForAttempt(kind) {
   return kind === "automatic" ? "initial" : kind;
@@ -63243,7 +62681,7 @@ async function generateMessageIllustrations(deps, req) {
     activePersona,
     personaRecords
   });
-  const profile = str3(rec2(runtime.novelai).analysisProfile);
+  const profile = str2(rec2(runtime.novelai).analysisProfile);
   const freeCharacters = profile === "v5-hybrid" && ne.freeCharacterGenerationEnabled && !!auto;
   if (!(profile === "v5-hybrid" || ft.analyzerIdentityCandidates.length > 0 || ft.analyzerPersonaCandidates.length > 0 || freeCharacters))
     return { ...empty(PIPELINE_TEXT.noCandidates), assetHints };
@@ -63396,7 +62834,7 @@ async function generateMessageIllustrations(deps, req) {
     references: ft.references,
     outfitReference: ft.outfitReference,
     characterReference: ft.characterReference,
-    seedSetting: req.revision ? () => ({ seed: str3(req.revision.seed), fixed: !!(req.revision.seedFixed && str3(req.revision.seed)) }) : ft.seedSetting,
+    seedSetting: req.revision ? () => ({ seed: str2(req.revision.seed), fixed: !!(req.revision.seedFixed && str2(req.revision.seed)) }) : ft.seedSetting,
     previousCharacterStateMap: ft.previousCharacterStateMap,
     previousContinuitySnapshot: getLatestContinuityCheckpointSnapshot2(hr, chatKey, "novelai-v5"),
     previousGlobalModifierRefs: previousGlobalModifierRefs(ft.visualContinuity),
@@ -63447,12 +62885,12 @@ async function generateMessageIllustrations(deps, req) {
         throw new Error(PIPELINE_TEXT.slotMismatch.en);
       const generation = rec2(image.generation);
       const meta = rec2(generation.providerMetadata);
-      const imageId = str3(meta.imageId) || str3(generation.requestId);
+      const imageId = str2(meta.imageId) || str2(generation.requestId);
       if (!imageId)
         throw new Error("The image provider returned no image id.");
       const actors = (Array.isArray(image.actors) ? image.actors : []).map(rec2);
-      const key = str3(actors.find((a) => str3(a.identityKey))?.identityKey) || str3(decision.lorebook_prompt_key);
-      const label = idLabel(key) || str3(actors[0]?.identityName) || character.name;
+      const key = str2(actors.find((a) => str2(a.identityKey))?.identityKey) || str2(decision.lorebook_prompt_key);
+      const label = idLabel(key) || str2(actors[0]?.identityName) || character.name;
       const assetName = createGeneratedAssetName({ label, kind: "chat", ...UUID_RE.test(imageId) ? { id: imageId } : {} });
       const width = Math.max(0, Math.round(Number(generation.width) || 0));
       const height = Math.max(0, Math.round(Number(generation.height) || 0));
@@ -63462,7 +62900,7 @@ async function generateMessageIllustrations(deps, req) {
         slotIndex: slot.index,
         assetName,
         savedPath: imageResultUrl(imageId),
-        extension: str3(generation.extension) || "png",
+        extension: str2(generation.extension) || "png",
         entryId: `generated:${assetName}`,
         ...width ? { width } : {},
         ...height ? { height } : {},
@@ -63485,37 +62923,37 @@ async function generateMessageIllustrations(deps, req) {
         revisionId: req.revisionId,
         createdAt: Date.now(),
         engineProvider,
-        lumiverseProvider: str3(meta.lumiverseProvider) || imageTarget.lumiverseProvider,
-        model: str3(meta.model) || imageTarget.model,
-        seed: str3(generation.seed),
+        lumiverseProvider: str2(meta.lumiverseProvider) || imageTarget.lumiverseProvider,
+        model: str2(meta.model) || imageTarget.model,
+        seed: str2(generation.seed),
         seedFixed: image.seedFixed === true,
         width,
         height,
         sizeId: Number(plan.sizeId) || 0,
-        positivePrompt: str3(recordRequest.positive) || str3(providerPrompt.positivePrompt),
-        negativePrompt: str3(recordRequest.negative) || str3(providerPrompt.negativePrompt),
+        positivePrompt: str2(recordRequest.positive) || str2(providerPrompt.positivePrompt),
+        negativePrompt: str2(recordRequest.negative) || str2(providerPrompt.negativePrompt),
         characters: (Array.isArray(recordRequest.characters) ? recordRequest.characters : Array.isArray(providerPrompt.characterPrompts) ? providerPrompt.characterPrompts : []).map((c) => {
           const r = rec2(c);
           return {
-            prompt: str3(r.prompt),
-            negativePrompt: str3(r.negativePrompt ?? r.uc),
+            prompt: str2(r.prompt),
+            negativePrompt: str2(r.negativePrompt ?? r.uc),
             ...Number.isFinite(Number(r.actorIndex)) ? { actorIndex: Number(r.actorIndex) } : {},
             ...Number.isFinite(Number(r.centerX)) ? { centerX: Number(r.centerX), centerY: Number(r.centerY) } : {}
           };
         }),
         ...novelAIConfig ? { novelAIConfig } : {},
         actors: actors.map((a) => ({
-          identityKey: str3(a.identityKey),
-          identityName: str3(a.identityName),
-          kind: str3(a.kind),
+          identityKey: str2(a.identityKey),
+          identityName: str2(a.identityName),
+          kind: str2(a.kind),
           actorIndex: Number(a.actorIndex) || 0,
-          ...str3(a.selectedFormId) ? { selectedFormId: str3(a.selectedFormId) } : {},
-          ...str3(a.selectedOutfitId) ? { selectedOutfitId: str3(a.selectedOutfitId) } : {}
+          ...str2(a.selectedFormId) ? { selectedFormId: str2(a.selectedFormId) } : {},
+          ...str2(a.selectedOutfitId) ? { selectedOutfitId: str2(a.selectedOutfitId) } : {}
         })),
-        ...str3(plan.artistId) ? { artistId: str3(plan.artistId) } : {},
+        ...str2(plan.artistId) ? { artistId: str2(plan.artistId) } : {},
         promptKey: key,
-        presetId: str3(decision.preset_id ?? decision.composition_id),
-        analyzerText: str3(decision.reason ?? decision.body_action),
+        presetId: str2(decision.preset_id ?? decision.composition_id),
+        analyzerText: str2(decision.reason ?? decision.body_action),
         sentParameters: rec2(meta.sentParameters),
         generationOrigin: origin,
         ...entry.parentEntryId ? { parentEntryId: entry.parentEntryId } : {}
@@ -63540,7 +62978,7 @@ async function generateMessageIllustrations(deps, req) {
         req.onPhase?.(phase, {
           imageIndex: Number.isFinite(Number(e.imageIndex)) ? Number(e.imageIndex) : undefined,
           imageCount: imageCount ?? (Number.isFinite(Number(progress.imageCount)) ? Number(progress.imageCount) : undefined),
-          providerStage: str3(progress.providerStage) || undefined
+          providerStage: str2(progress.providerStage) || undefined
         });
     }
   };
@@ -63714,7 +63152,7 @@ async function updateSidecar(storage, chatId, mutate, tree) {
 
 // src/backend/pipeline/controller.ts
 var rec3 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
-var str4 = (v) => v == null ? "" : String(v).trim();
+var str3 = (v) => v == null ? "" : String(v).trim();
 var sleep = (ms, signal) => new Promise((resolve) => {
   const t = setTimeout(done, ms);
   function done() {
@@ -63899,7 +63337,7 @@ function createChatPipelineController(services, engine, options = {}) {
     if (retryable === false)
       return false;
     const status = Number(r.httpStatus ?? r.status ?? rec3(inner.details).status);
-    const code = str4(r.code) || str4(inner.detailCode);
+    const code = str3(r.code) || str3(inner.detailCode);
     return retryable === true || error instanceof TypeError || status === 408 || status === 429 || status >= 500 && status < 600 || ["ANALYZER_JSON_PARSE", "ANALYZER_EMPTY_RESPONSE", "ANALYZER_TIMEOUT", "REQUEST_TIMEOUT", "CHAN_SERVER_TIMEOUT", "CHAN_SERVER_NETWORK", "V5_ANALYZER_NO_USABLE_ILLUSTRATION"].includes(code) || error instanceof RpcFailure && error.error.code === "timeout";
   };
   const errorOf = (e, label) => {
@@ -64238,8 +63676,8 @@ function createChatPipelineController(services, engine, options = {}) {
         const next = list.find((a) => a.id === overrides.artistId) ?? fail2("not-found", `Artist not found: ${overrides.artistId}`);
         const old = list.find((a) => a.id === record.artistId);
         const tracked = rec3(rec3(record.novelAIConfig).nonArtistPromptWeightArtist);
-        out.positive = replaceSegment(out.positive, str4(tracked.positive) || str4(old?.prompt), str4(next.prompt));
-        out.negative = replaceSegment(out.negative, str4(tracked.negative) || str4(old?.negativePrompt), str4(next.negativePrompt));
+        out.positive = replaceSegment(out.positive, str3(tracked.positive) || str3(old?.prompt), str3(next.prompt));
+        out.negative = replaceSegment(out.negative, str3(tracked.negative) || str3(old?.negativePrompt), str3(next.negativePrompt));
         const o = rec3(next.novelAIOverrides);
         for (const key of ["steps", "scale", "cfgRescale"])
           if (Number.isFinite(Number(o[key])))
@@ -64247,7 +63685,7 @@ function createChatPipelineController(services, engine, options = {}) {
       } else {
         const entries = config.animaArtists.entries;
         const next = entries.find((a) => a.id === overrides.artistId) ?? fail2("not-found", `Artist not found: ${overrides.artistId}`);
-        out.positive = replaceSegment(out.positive, str4(entries.find((a) => a.id === record.artistId)?.text), str4(next.text));
+        out.positive = replaceSegment(out.positive, str3(entries.find((a) => a.id === record.artistId)?.text), str3(next.text));
       }
       out.artistId = overrides.artistId;
     }
@@ -64294,7 +63732,7 @@ function createChatPipelineController(services, engine, options = {}) {
         ...center ? { centerX: center.x, centerY: center.y, coordinateMode: "fixed" } : o.centers && o.centers[i] === null ? { coordinateMode: "automatic" } : {}
       };
     }).filter((_c, i) => !excluded.has(i));
-    const seed = keepSeed ? str4(o.seed) || record.seed : "";
+    const seed = keepSeed ? str3(o.seed) || record.seed : "";
     const provider = record.engineProvider === "comfy-ui" ? "comfy-ui" : record.engineProvider === "chan-server" ? "chan-server" : "novelai";
     if (provider !== "novelai")
       return { provider, prompt: positive, negativePrompt: negative, seed, width, height };
@@ -64339,8 +63777,10 @@ function createChatPipelineController(services, engine, options = {}) {
       const target = await services.images.resolveTarget();
       if (engineProviderFor(target) !== record.engineProvider)
         throw new RpcFailure(rpcError("unsupported", "The image provider changed since this image was generated. Regenerate the whole message instead.", { retryable: false }));
-      const overrides = job.regenerate?.overrides ?? sidecar.drafts[slotId]?.overrides;
-      const keepSeed = !!job.regenerate?.overrides && !!overrides?.seedFixed;
+      const draft = sidecar.drafts[slotId]?.overrides;
+      const explicit = job.regenerate?.overrides;
+      const overrides = draft || explicit ? { ...draft ?? {}, ...explicit ?? {} } : undefined;
+      const keepSeed = !!overrides?.seedFixed;
       const rebuilt = await applyArtistAndOutfits(chatId, record, overrides);
       const request = regenerationRequest(record, overrides, keepSeed, config, slotId, rebuilt);
       const chat = await getChat(chatId);
@@ -64366,10 +63806,11 @@ function createChatPipelineController(services, engine, options = {}) {
         throw new DOMException("Regeneration was cancelled.", "AbortError");
       await targetGuard(job.target)();
       const meta = rec3(result.providerMetadata);
-      const imageId = str4(meta.imageId) || str4(result.requestId);
+      const imageId = str3(meta.imageId) || str3(result.requestId);
       if (!imageId)
         throw new Error("The image provider returned no image id.");
-      const label = record.actors.find((a) => a.kind !== "persona")?.identityName || record.actors[0]?.identityName || "Character";
+      const sourceLabel = /^(.+?)\.__am__\./u.exec(source.assetName ?? "")?.[1] ?? "";
+      const label = sourceLabel || record.actors.find((a) => a.kind !== "persona")?.identityName || record.actors[0]?.identityName || "Character";
       const assetName = createGeneratedAssetName({ label, kind: "chat", .../^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(imageId) ? { id: imageId } : {} });
       const width = Math.max(0, Math.round(Number(result.width) || 0));
       const height = Math.max(0, Math.round(Number(result.height) || 0));
@@ -64379,7 +63820,7 @@ function createChatPipelineController(services, engine, options = {}) {
         kind: "generated",
         assetName,
         savedPath: imageResultUrl(imageId),
-        extension: str4(result.extension) || "png",
+        extension: str3(result.extension) || "png",
         createdAt: now(),
         width,
         height,
@@ -64401,12 +63842,12 @@ function createChatPipelineController(services, engine, options = {}) {
           imageId,
           assetName,
           createdAt: entry.createdAt,
-          seed: str4(result.seed),
+          seed: str3(result.seed),
           seedFixed: keepSeed,
           width,
           height,
           sizeId: overrides?.sizeId ?? record.sizeId,
-          positivePrompt: str4(result.effectivePrompt) || str4(finalized.positivePrompt) || String(request.prompt ?? ""),
+          positivePrompt: str3(result.effectivePrompt) || str3(finalized.positivePrompt) || String(request.prompt ?? ""),
           negativePrompt: String(request.negativePrompt ?? ""),
           sentParameters: rec3(meta.sentParameters),
           generationOrigin: "regenerate",
@@ -64414,8 +63855,8 @@ function createChatPipelineController(services, engine, options = {}) {
           actors: rebuilt.actors,
           ...rebuilt.artistId ? { artistId: rebuilt.artistId } : {},
           characters: (request.config && Array.isArray(request.config.characterPrompts) ? request.config.characterPrompts : []).map((ch, i) => ({
-            prompt: str4(ch.prompt),
-            negativePrompt: str4(ch.uc),
+            prompt: str3(ch.prompt),
+            negativePrompt: str3(ch.uc),
             actorIndex: Number.isFinite(Number(ch.actorIndex)) ? Number(ch.actorIndex) : i,
             centerX: Number(ch.centerX ?? 0.5),
             centerY: Number(ch.centerY ?? 0.5),
@@ -64523,7 +63964,7 @@ function createChatPipelineController(services, engine, options = {}) {
       if (!o)
         return {};
       const actor = record.actors.find((a) => a.actorIndex === i);
-      return { outfitChoices: o.choices, selectedOutfitId: draft?.outfitByActor?.[o.key] ?? actor?.selectedOutfitId ?? "" };
+      return { outfitChoices: o.choices, selectedOutfitId: draft?.outfitByActor?.[o.key] ?? actor?.selectedOutfitId ?? "", actorKey: o.key };
     };
     const overrides = new Map((draft?.sections ?? []).map((s) => [s.id, s]));
     const pick = (id, value, negativeValue) => {
@@ -64647,6 +64088,10 @@ function createChatPipelineController(services, engine, options = {}) {
       await services.storage.updateJson(sidecarPath(chatId), null, (current) => current ? JSON.parse(JSON.stringify(current).replace(pattern, (m, n) => Number(n) > swipe ? `${messageId}@${Number(n) - 1}` : m)) : current).catch(() => {
         return;
       });
+      const doc = await services.storage.loadChatData(chatId);
+      const shifted = Object.values(doc.history.messagesByKey).map((m) => ({ key: m.messageKey, parsed: parseHistoryMessageId(m.messageId) })).filter((m) => m.parsed?.messageId === messageId && m.parsed.swipeIndex >= swipe);
+      for (const m of shifted)
+        await publish(chatId, m.key).catch((e) => log("warn", "Re-bake after swipe deletion failed", toRpcError(e)));
     }
     emitChanged(chatId, []);
   };
@@ -64655,11 +64100,11 @@ function createChatPipelineController(services, engine, options = {}) {
     tracker.ended(payload);
     if (disposed || payload.error)
       return;
-    const chatId = str4(payload.chatId);
-    const messageId = str4(payload.messageId);
+    const chatId = str3(payload.chatId);
+    const messageId = str3(payload.messageId);
     if (!chatId || !messageId)
       return;
-    if (!AUTO_GENERATION_TYPES.has(str4(payload.generationType).toLowerCase()))
+    if (!AUTO_GENERATION_TYPES.has(str3(payload.generationType).toLowerCase()))
       return;
     try {
       const [settings, config] = await Promise.all([services.storage.loadChatImageGenerationSettings(), services.storage.loadConfig()]);
@@ -64680,7 +64125,7 @@ function createChatPipelineController(services, engine, options = {}) {
   };
   const handleHostEvent = async (event, raw) => {
     const payload = rec3(raw);
-    const chatId = str4(payload.chatId) || str4(rec3(payload.message).chat_id);
+    const chatId = str3(payload.chatId) || str3(rec3(payload.message).chat_id);
     switch (event) {
       case "GENERATION_STARTED":
         tracker.started(payload);
@@ -64691,7 +64136,7 @@ function createChatPipelineController(services, engine, options = {}) {
       case "GENERATION_ENDED":
         return handleGenerationEnded(raw);
       case "MESSAGE_DELETED": {
-        const ids = [str4(payload.messageId), str4(rec3(payload.message).id), ...Array.isArray(payload.messageIds) ? payload.messageIds.map(str4) : []].filter(Boolean);
+        const ids = [str3(payload.messageId), str3(rec3(payload.message).id), ...Array.isArray(payload.messageIds) ? payload.messageIds.map(str3) : []].filter(Boolean);
         for (const id of ids)
           if (chatId)
             await dropMessageData(chatId, id).catch((e) => log("warn", "Message data cleanup failed", toRpcError(e)));
@@ -64699,14 +64144,14 @@ function createChatPipelineController(services, engine, options = {}) {
       }
       case "MESSAGE_SWIPED": {
         const message = rec3(payload.message);
-        if (payload.action === "deleted" && chatId && str4(message.id) && Number.isSafeInteger(payload.swipeId))
-          await dropMessageData(chatId, str4(message.id), Number(payload.swipeId)).catch((e) => log("warn", "Swipe data cleanup failed", toRpcError(e)));
+        if (payload.action === "deleted" && chatId && str3(message.id) && Number.isSafeInteger(payload.swipeId))
+          await dropMessageData(chatId, str3(message.id), Number(payload.swipeId)).catch((e) => log("warn", "Swipe data cleanup failed", toRpcError(e)));
         else if (chatId)
           emitChanged(chatId, []);
         return;
       }
       case "CHARACTER_EDITED": {
-        const id = str4(payload.characterId) || str4(payload.id) || str4(rec3(payload.character).id);
+        const id = str3(payload.characterId) || str3(payload.id) || str3(rec3(payload.character).id);
         services.sources.invalidate(id || undefined);
         return;
       }
@@ -64768,8 +64213,8 @@ function createChatPipelineController(services, engine, options = {}) {
     async start(params) {
       if (disposed)
         fail2("unsupported", "The pipeline was disposed.");
-      const chatId = str4(params.chatId);
-      const messageId = str4(params.messageId);
+      const chatId = str3(params.chatId);
+      const messageId = str3(params.messageId);
       const swipeIndex = Number(params.swipeIndex);
       if (!chatId || !messageId || !Number.isSafeInteger(swipeIndex) || swipeIndex < 0)
         fail2("bad-request", "chatId, messageId and swipeIndex are required.");
@@ -64829,7 +64274,7 @@ function createChatPipelineController(services, engine, options = {}) {
       return [...jobs.values()].filter((j) => !j.dismissed && (!chatId || j.target.chatId === chatId) && (j.snapshot.status === "queued" || j.snapshot.status === "running" || j.snapshot.canRetry)).map((j) => jsonClone(j.snapshot));
     },
     async regenerateSlot(params) {
-      const chatId = str4(params.chatId);
+      const chatId = str3(params.chatId);
       const doc = await services.storage.loadChatData(chatId);
       const resolved = resolveHistorySlot(doc.history, { slotId: params.slotId, messageKey: params.messageKey });
       if (!resolved)
@@ -65064,7 +64509,7 @@ function createChatPipelineController(services, engine, options = {}) {
       return zoomDetails(chatId, slotId);
     },
     async requestAiPromptEdit(chatId, slotId, entryId, request) {
-      const instruction = str4(request.instruction);
+      const instruction = str3(request.instruction);
       if (!instruction)
         throw new RpcFailure(labelError("bad-request", PIPELINE_TEXT.editInstructionEmpty));
       if (instruction.length > 2000)
@@ -65109,6 +64554,7 @@ function createChatPipelineController(services, engine, options = {}) {
         throw new RpcFailure(rpcError("unsupported", "Could not load the regeneration settings of the selected image."));
       const entry = resolved.entries.find((e) => e.entryId === proposal.entryId);
       const imageId = imageIdFromResultUrl(entry.savedPath) ?? record.imageId;
+      const imageRef = entry.savedPath?.startsWith("/api/") ? { url: entry.savedPath } : imageId ? { url: imageResultUrl(imageId) } : { imageId };
       const draft = (await readSidecar(services.storage, chatId)).drafts[slotId]?.overrides;
       const req = proposal.request;
       const revision = {
@@ -65120,9 +64566,9 @@ function createChatPipelineController(services, engine, options = {}) {
         seed: record.seed,
         seedFixed: !!draft?.seedFixed,
         evidenceKey: [proposal.entryId, entry.assetName, record.positivePrompt.length.toString(36)].join(":"),
-        image: async () => ({ type: "image", ...await services.imageBytes.getImage({ imageId }) }),
+        image: async () => ({ type: "image", ...await services.imageBytes.getImage(imageRef) }),
         ...req.imageToImage ? {
-          imageToImage: async () => (await services.imageBytes.getImage({ imageId })).data,
+          imageToImage: async () => (await services.imageBytes.getImage(imageRef)).data,
           imageToImageStrength: Math.min(1, Math.max(0.4, Number(req.strength) || 0.4)),
           imageToImageNoise: Math.min(1, Math.max(0, Number(req.noise) || 0))
         } : {}
@@ -65174,7 +64620,8 @@ function createChatPipelineController(services, engine, options = {}) {
         if (wanted ? !wanted.has(m.id) : !isIllustratableMessage(m))
           continue;
         const planKey = illustrationMessageKey(toHistoryMessageId(m.id, m.swipeId));
-        const running = messageJobs.get(k(chatId, planKey)) ?? [...slotJobs.values()].find((j) => j.target.chatId === chatId && j.planKey === planKey);
+        const messageJob = messageJobs.get(k(chatId, planKey));
+        const running = messageJob ?? [...slotJobs.values()].find((j) => j.target.chatId === chatId && j.planKey === planKey);
         const latest = running ?? [...jobs.values()].reverse().find((j) => j.target.chatId === chatId && j.planKey === planKey && !j.dismissed);
         const lastError = lastErrors.get(k(chatId, planKey));
         out.push(messageUiState(doc, {
@@ -65183,6 +64630,7 @@ function createChatPipelineController(services, engine, options = {}) {
           swipeIndex: m.swipeId,
           eligible: isIllustratableMessage(m),
           ...latest ? { job: jsonClone(latest.snapshot) } : {},
+          busy: !!messageJob && (messageJob.snapshot.status === "queued" || messageJob.snapshot.status === "running"),
           regeneratingSlotIds: regenerating,
           ...lastError ? { lastError } : {}
         }));
@@ -65279,7 +64727,7 @@ class ProviderRunRegistry {
   }
 }
 var rec4 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
-var str5 = (v) => v == null ? "" : String(v).trim();
+var str4 = (v) => v == null ? "" : String(v).trim();
 var num = (v, fallback, min, max) => {
   const n = Number(v);
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
@@ -65313,9 +64761,9 @@ function toImageBytes(value, fallbackMime = "image/png") {
     return value.length ? { data: bytesToBase642(value), mimeType: fallbackMime } : null;
   const r = rec4(value);
   if (typeof r.data === "string" && r.data)
-    return { data: r.data, mimeType: str5(r.mimeType) || str5(r.mime_type) || fallbackMime };
+    return { data: r.data, mimeType: str4(r.mimeType) || str4(r.mime_type) || fallbackMime };
   if (r.bytes instanceof Uint8Array && r.bytes.length)
-    return { data: bytesToBase642(r.bytes), mimeType: str5(r.mimeType) || fallbackMime };
+    return { data: bytesToBase642(r.bytes), mimeType: str4(r.mimeType) || fallbackMime };
   if (r.image !== undefined)
     return toImageBytes(r.image, fallbackMime);
   return null;
@@ -65382,11 +64830,11 @@ function normalizeCharacterPrompts(value) {
   return (Array.isArray(value) ? value : []).map((raw) => {
     const r = rec4(raw);
     return {
-      prompt: str5(r.prompt),
-      uc: str5(r.uc),
+      prompt: str4(r.prompt),
+      uc: str4(r.uc),
       centerX: num(r.centerX, 0.5, 0, 1),
       centerY: num(r.centerY, 0.5, 0, 1),
-      actorSlot: str5(r.actorSlot) || undefined,
+      actorSlot: str4(r.actorSlot) || undefined,
       coordinateMode: r.coordinateMode === "automatic" ? "automatic" : "fixed"
     };
   }).filter((c) => c.prompt || c.uc);
@@ -65396,17 +64844,17 @@ function buildNovelAIRequest(request, ctx, extras = {}) {
   const force = request.forceNsfwPrefix ?? ctx.forceNsfwPrefix();
   const prompt = force && rawPrompt.trim() ? prependNsfwTag2(rawPrompt) : rawPrompt;
   const config = { ...rec4(request.config), width: request.width, height: request.height, negativePrompt: request.negativePrompt, seed: request.seed };
-  const input = str5(prompt);
+  const input = str4(prompt);
   if (!input)
     throw Object.assign(new Error("NovelAI prompt is empty."), { code: "NOVELAI_PROMPT_EMPTY", retryable: false });
-  const model = str5(ctx.model) || str5(config.naiModel) || "nai-diffusion-5-full";
+  const model = str4(ctx.model) || str4(config.naiModel) || "nai-diffusion-5-full";
   const v4 = /^nai-diffusion-(?:4|5)(?:-|$)/u.test(model);
   const v5Profile = config.analysisProfile === "v5-hybrid";
   const forced = config.forceCharacterCoordinates === true;
   const characters = normalizeCharacterPrompts(config.characterPrompts);
   const anyFixed = characters.some((c) => c.coordinateMode !== "automatic");
   const useCoords = forced ? characters.length > 0 && anyFixed : v5Profile ? !!config.useCoords && characters.length > 0 && anyFixed : !!config.useCoords && characters.length > 1 && anyFixed;
-  const negative = str5(config.negativePrompt);
+  const negative = str4(config.negativePrompt);
   const parameters = { negative_prompt: negative };
   if (v4) {
     parameters.v4_prompt = { caption: { base_caption: input, char_captions: toNovelAICharacterCaptions2(characters, "prompt", v5Profile || forced) }, use_coords: useCoords, use_order: config.useOrder !== false };
@@ -65419,8 +64867,8 @@ function buildNovelAIRequest(request, ctx, extras = {}) {
   const pos = body.parameters.v4_prompt?.caption.char_captions ?? [];
   const neg = body.parameters.v4_negative_prompt?.caption.char_captions ?? [];
   const novelai = {
-    sampler: str5(config.sampler) || "k_euler_ancestral",
-    noiseSchedule: str5(config.noiseSchedule) || "karras",
+    sampler: str4(config.sampler) || "k_euler_ancestral",
+    noiseSchedule: str4(config.noiseSchedule) || "karras",
     steps: Math.round(num(config.steps, 28, 1, 50)),
     scale: Number(config.scale) || 6,
     cfgRescale: Number.isFinite(Number(config.cfgRescale)) ? Number(config.cfgRescale) : 0.5,
@@ -65463,7 +64911,7 @@ async function prepareReferences(services, refs, signal) {
     const asset = rec4(r.asset);
     try {
       const prepared = toImageBytes(r.image) ?? await services.imageBytes.getAsset(asset, { signal });
-      const type = str5(r.type);
+      const type = str4(r.type);
       references.push({
         ...prepared,
         strength: num(r.strength, 0.6, 0, 1),
@@ -65473,7 +64921,7 @@ async function prepareReferences(services, refs, signal) {
     } catch (error) {
       if (signal?.aborted)
         throw error;
-      failures.push({ asset: str5(asset.key) || str5(asset.name), error: error instanceof Error ? error.message : String(error) });
+      failures.push({ asset: str4(asset.key) || str4(asset.name), error: error instanceof Error ? error.message : String(error) });
     }
   }
   return { references, failures };
@@ -65521,8 +64969,8 @@ function createComfyAdapter(services, registry) {
       const seedText = normalizeSeed(request.seed);
       const result = await generateImage(services, {
         purpose: ctx.purpose,
-        prompt: str5(request.prompt),
-        negativePrompt: str5(request.negativePrompt),
+        prompt: str4(request.prompt),
+        negativePrompt: str4(request.negativePrompt),
         width: Math.max(1, Math.round(Number(request.width) || 832)),
         height: Math.max(1, Math.round(Number(request.height) || 1216)),
         seed: seedText ? Number(seedText) : randomSeed2(),
@@ -65547,8 +64995,8 @@ function createGenericAdapter(services, registry) {
       const seedText = normalizeSeed(request.seed);
       const result = await generateImage(services, {
         purpose: ctx.purpose,
-        prompt: str5(request.prompt),
-        negativePrompt: str5(request.negativePrompt),
+        prompt: str4(request.prompt),
+        negativePrompt: str4(request.negativePrompt),
         width: Math.max(1, Math.round(Number(request.width) || 832)),
         height: Math.max(1, Math.round(Number(request.height) || 1216)),
         seed: seedText ? Number(seedText) : randomSeed2(),
@@ -65718,13 +65166,13 @@ function createRouter(options) {
 }
 
 // src/backend/services/util.ts
-function asRecord4(value) {
+function asRecord3(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 function asArray2(value) {
   return Array.isArray(value) ? value : [];
 }
-function str6(value) {
+function str5(value) {
   return typeof value === "string" ? value.trim() : typeof value === "number" && Number.isFinite(value) ? String(value) : "";
 }
 function errorMessage(error) {
@@ -65732,7 +65180,7 @@ function errorMessage(error) {
     return error.message;
   if (typeof error === "string")
     return error;
-  const message = asRecord4(error).message;
+  const message = asRecord3(error).message;
   return typeof message === "string" ? message : String(error ?? "Unknown error");
 }
 function abortError(reason) {
@@ -65867,7 +65315,7 @@ function jsonClone2(value) {
 var EXTENSION_VERSION = "0.10.0";
 var REQUIRED_PERMISSIONS = ["generation", "image_gen", "chat_mutation", "chats", "characters", "personas", "world_books", "images", "interceptor", "app_manipulation"];
 function requireId(value, name) {
-  const id = str6(value);
+  const id = str5(value);
   if (!id)
     fail2("bad-request", `${name} is required.`);
   return id;
@@ -65881,7 +65329,7 @@ function nullsToDefaults(value, defaults) {
     return defaults === undefined ? undefined : jsonClone2(defaults);
   if (!value || typeof value !== "object" || Array.isArray(value))
     return value;
-  const d = asRecord4(defaults);
+  const d = asRecord3(defaults);
   const out = {};
   for (const [key, v] of Object.entries(value)) {
     const next = nullsToDefaults(v, d[key]);
@@ -65906,7 +65354,7 @@ function applyScopeToDocument(doc, scope) {
   return { ...doc, characterPrompt: { ...doc.characterPrompt, charxSettings: { overrides: scope.characterPrompt.charxSettings.overrides } } };
 }
 function dirtyFieldsOf(scope, characterId) {
-  const dirty = asRecord4(asRecord4(scope.characterPrompt.charxGenerationDefaults).dirtyFieldsBySourceId)[characterId];
+  const dirty = asRecord3(asRecord3(scope.characterPrompt.charxGenerationDefaults).dirtyFieldsBySourceId)[characterId];
   return (Array.isArray(dirty) ? dirty : []).filter((f) => CHARX_SETTING_FIELDS.includes(f));
 }
 async function updateCharx(ctx, characterId, op, reason) {
@@ -65955,9 +65403,9 @@ var coreHandlers = {
     return { config, chatImageGeneration, uiState };
   },
   async "config.update"(params, ctx) {
-    const patch = asRecord4(params.patch);
+    const patch = asRecord3(params.patch);
     let providerHint = null;
-    const imagePatch = asRecord4(patch.image);
+    const imagePatch = asRecord3(patch.image);
     if (typeof imagePatch.connectionId === "string" && typeof imagePatch.provider !== "string") {
       const id = imagePatch.connectionId;
       const list = await ctx.images.listConnections().catch(() => []);
@@ -65990,10 +65438,14 @@ var coreHandlers = {
   "connections.listImage": async (_p, ctx) => ({ connections: await ctx.images.listConnections() }),
   "connections.listImageModels": async (params, ctx) => ({ models: await ctx.images.listModels(requireId(params.connectionId, "connectionId")) }),
   "connections.listLlmModels": async (params, ctx) => ({ models: await ctx.llm.listModels(requireId(params.connectionId, "connectionId")) }),
-  "analyzer.testMessage": (params, ctx) => ctx.llm.testMessage(params.text, params.analysis ? asRecord4(params.analysis) : undefined),
+  "analyzer.testMessage": (params, ctx) => ctx.llm.testMessage(params.text, params.analysis ? asRecord3(params.analysis) : undefined),
   "image.testConnection": (params, ctx) => ctx.images.testConnection(params.connectionId),
   "workspace.listCharacters": async (_p, ctx) => ({ characters: await ctx.sources.listCharacters() }),
   async "charxSettings.get"(params, ctx) {
+    if (typeof params.characterId === "string" && !params.characterId.trim()) {
+      const scope = charxScopeFor(await ctx.storage.loadConfig(), null);
+      return { effective: resolveEffectiveCharxSettings(scope, ""), all: resolveAllCharxSettings(scope), dirtyFields: [] };
+    }
     const characterId = requireId(params.characterId, "characterId");
     const [config, doc] = await Promise.all([ctx.storage.loadConfig(), ctx.storage.loadCharacterDocument(characterId)]);
     let scope = charxScopeFor(config, doc);
@@ -66006,11 +65458,11 @@ var coreHandlers = {
   },
   async "charxSettings.setOverride"(params, ctx) {
     const characterId = requireId(params.characterId, "characterId");
-    const scope = await updateCharx(ctx, characterId, (s) => setCharxOverride(s, characterId, asRecord4(params.patch)), "charx-settings");
+    const scope = await updateCharx(ctx, characterId, (s) => setCharxOverride(s, characterId, asRecord3(params.patch)), "charx-settings");
     return { effective: resolveEffectiveCharxSettings(scope, characterId), dirtyFields: dirtyFieldsOf(scope, characterId) };
   },
   async "charxSettings.setDefaults"(params, ctx) {
-    const config = await ctx.storage.updateConfig((c) => applyScopeToConfig(c, setCharxDefaults(charxScopeFor(c, null), asRecord4(params.patch))));
+    const config = await ctx.storage.updateConfig((c) => applyScopeToConfig(c, setCharxDefaults(charxScopeFor(c, null), asRecord3(params.patch))));
     return { all: resolveAllCharxSettings(charxScopeFor(config, null)) };
   },
   async "charxSettings.resetAll"(_params, ctx) {
@@ -66037,7 +65489,7 @@ var coreHandlers = {
   },
   async "artists.list"(params, ctx) {
     const config = await ctx.storage.loadConfig();
-    const characterId = str6(params.characterId);
+    const characterId = str5(params.characterId);
     const doc = characterId ? await ctx.storage.loadCharacterDocument(characterId) : null;
     const anima = normalizeAnimaArtists(config.animaArtists);
     if (characterId && doc?.animaArtistId)
@@ -66052,24 +65504,24 @@ var coreHandlers = {
     };
   },
   async "artists.upsertNovelAI"(params, ctx) {
-    const input = asRecord4(params.entry);
+    const input = asRecord3(params.entry);
     let saved;
     await ctx.storage.updateConfig((config) => {
       const list = [...config.characterPrompt.artistPrompts];
-      const preset = DEFAULT_ARTIST_PRESETS.find((p) => p.id === str6(input.id));
+      const preset = DEFAULT_ARTIST_PRESETS.find((p) => p.id === str5(input.id));
       if (preset?.id === NO_ARTIST_ID)
         fail2("bad-request", "The 'no artist' entry cannot be edited.");
-      const taken = new Set(list.map((e) => str6(e.id)).concat(DEFAULT_ARTIST_PRESETS.map((p) => p.id)));
-      const id = str6(input.id) || prefixedId("artist", taken);
+      const taken = new Set(list.map((e) => str5(e.id)).concat(DEFAULT_ARTIST_PRESETS.map((p) => p.id)));
+      const id = str5(input.id) || prefixedId("artist", taken);
       if (preset) {
         saved = { id, title: preset.title, prompt: preset.prompt, ...input.novelAIOverrides ? { novelAIOverrides: input.novelAIOverrides } : {}, ...input.nonArtistPromptWeight ? { nonArtistPromptWeight: input.nonArtistPromptWeight } : {} };
       } else {
-        const title = str6(input.title);
+        const title = str5(input.title);
         if (!title)
           fail2("bad-request", "The artist title is required.", { messageKo: "작가 이름을 입력해주세요." });
-        saved = { ...input, id, title, prompt: str6(input.prompt), ...input.negativePrompt !== undefined ? { negativePrompt: str6(input.negativePrompt) } : {} };
+        saved = { ...input, id, title, prompt: str5(input.prompt), ...input.negativePrompt !== undefined ? { negativePrompt: str5(input.negativePrompt) } : {} };
       }
-      const index = list.findIndex((e) => str6(e.id) === id);
+      const index = list.findIndex((e) => str5(e.id) === id);
       if (index >= 0)
         list[index] = saved;
       else
@@ -66080,19 +65532,19 @@ var coreHandlers = {
   },
   async "artists.deleteNovelAI"(params, ctx) {
     const id = requireId(params.id, "id");
-    await ctx.storage.updateConfig((config) => ({ ...config, characterPrompt: { ...config.characterPrompt, artistPrompts: config.characterPrompt.artistPrompts.filter((e) => str6(e.id) !== id) } }));
+    await ctx.storage.updateConfig((config) => ({ ...config, characterPrompt: { ...config.characterPrompt, artistPrompts: config.characterPrompt.artistPrompts.filter((e) => str5(e.id) !== id) } }));
     return { ok: true };
   },
   async "artists.upsertAnima"(params, ctx) {
-    const input = asRecord4(params.entry);
-    const text = str6(input.text);
+    const input = asRecord3(params.entry);
+    const text = str5(input.text);
     if (!text)
       fail2("bad-request", "The artist prompt text is required.");
     let saved;
     await ctx.storage.updateConfig((config) => {
       const entries = [...config.animaArtists.entries];
-      const id = str6(input.id) && str6(input.id) !== NO_ARTIST_ID ? str6(input.id) : prefixedId("anima", new Set(entries.map((e) => e.id)));
-      saved = { id, title: str6(input.title) || id, text, ...str6(input.portableOrigin) ? { portableOrigin: str6(input.portableOrigin) } : {} };
+      const id = str5(input.id) && str5(input.id) !== NO_ARTIST_ID ? str5(input.id) : prefixedId("anima", new Set(entries.map((e) => e.id)));
+      saved = { id, title: str5(input.title) || id, text, ...str5(input.portableOrigin) ? { portableOrigin: str5(input.portableOrigin) } : {} };
       const index = entries.findIndex((e) => e.id === id);
       if (index >= 0)
         entries[index] = saved;
@@ -66108,8 +65560,8 @@ var coreHandlers = {
     return { ok: true };
   },
   async "artists.select"(params, ctx) {
-    const artistId = str6(params.artistId);
-    const characterId = str6(params.characterId);
+    const artistId = str5(params.artistId);
+    const characterId = str5(params.characterId);
     const config = await ctx.storage.loadConfig();
     if (params.list === "novelai") {
       if (!characterId)
@@ -66133,7 +65585,7 @@ var coreHandlers = {
   async "personas.list"(params, ctx) {
     const [config, personas, active, chat] = await Promise.all([ctx.storage.loadConfig(), ctx.sources.listPersonas(), ctx.sources.getActivePersona(), ctx.sources.getActiveChat()]);
     const settings = normalizePersonaSettings(config.characterPrompt.personaSettings);
-    const characterId = str6(params.characterId);
+    const characterId = str5(params.characterId);
     const boundId = chat && (!characterId || chat.characterId === characterId || chat.groupCharacterIds.includes(characterId)) ? chat.personaId : null;
     return {
       personas: personas.map((p) => ({
@@ -66154,7 +65606,7 @@ var coreHandlers = {
     await ctx.storage.updateConfig((config) => {
       const settings = normalizePersonaSettings(config.characterPrompt.personaSettings);
       const current = resolvePersonaForms(settings, config.characterPrompt.personaGender, personaId);
-      if (formCollectionRevision(current) !== str6(params.baseRevision)) {
+      if (formCollectionRevision(current) !== str5(params.baseRevision)) {
         fail2("conflict", "The persona appearance was changed elsewhere. Reload it, then apply your edit again.", { detailCode: "FORM_COLLECTION_BASE_CHANGED", details: { expected: params.baseRevision, actual: formCollectionRevision(current) } });
       }
       collection = normalizeFormCollection(params.collection, { fallbackGender: config.characterPrompt.personaGender === "female" ? "female" : "male" });
@@ -66632,7 +66084,7 @@ function createImageBytesService(deps) {
     } catch (error) {
       throw new RpcFailure({ code: "provider-error", message: `Could not read image ${imageId}: ${errorMessage(error)}`, retryable: true });
     }
-    const url = str6(asRecord4(dto).url);
+    const url = str5(asRecord3(dto).url);
     if (!url)
       fail2("not-found", `Image not found: ${imageId}`, { detailCode: "IMAGE_NOT_FOUND" });
     return url;
@@ -66653,7 +66105,7 @@ function createImageBytesService(deps) {
   const service = {
     pendingCount: () => pending.size,
     async getImage(ref, options = {}) {
-      const url = str6(ref.url) || (str6(ref.imageId) ? await imageUrl(str6(ref.imageId)) : "");
+      const url = str5(ref.url) || (str5(ref.imageId) ? await imageUrl(str5(ref.imageId)) : "");
       if (!url)
         fail2("bad-request", "No image id or URL given.");
       return base64Of(url, options);
@@ -66662,14 +66114,14 @@ function createImageBytesService(deps) {
       const asset = normalizeAssetRef(raw);
       if (asset.key.startsWith(STORAGE_KEY_PREFIX))
         return fromStorageKey(asset.key);
-      const crop = asRecord4(asset.cropReference);
-      const characterId = str6(asset.characterTarget?.chaId);
+      const crop = asRecord3(asset.cropReference);
+      const characterId = str5(asset.characterTarget?.chaId);
       if ((Object.keys(crop).length || asset.name.startsWith(CROP_ASSET_NAME_PREFIX)) && characterId) {
         const cropName = (asset.name || asset.key).replace(/\.png$/i, "");
         const bytes = await fromStorage(STORAGE_PATHS.characterReferenceCrop(characterId, cropName), "png");
         if (bytes)
           return bytes;
-        const sourceKey = str6(crop.assetKey);
+        const sourceKey = str5(crop.assetKey);
         if (sourceKey.startsWith(STORAGE_KEY_PREFIX))
           return fromStorageKey(sourceKey);
         if (sourceKey)
@@ -66690,12 +66142,12 @@ function createImageBytesService(deps) {
     },
     acceptFrontendMessage(message) {
       const type = message?.type;
-      if (type !== FETCH_BRIDGE_RESPONSE && type !== "avatar_image_response")
+      if (type !== FETCH_BRIDGE_RESPONSE)
         return false;
-      const entry = finish(str6(message.requestId));
+      const entry = finish(str5(message.requestId));
       if (!entry)
         return true;
-      const error = str6(message.error);
+      const error = str5(message.error);
       if (error) {
         const status = Number(message.status);
         entry.reject(new RpcFailure({ code: status === 404 ? "not-found" : status === 401 || status === 403 ? "permission-denied" : "provider-error", message: error, detailCode: "FETCH_BRIDGE_ERROR", ...Number.isFinite(status) && status ? { details: { status } } : {} }));
@@ -66705,8 +66157,8 @@ function createImageBytesService(deps) {
         entry.resolve({ json: message.json });
         return true;
       }
-      const data = str6(message.data).replace(/^data:[^;,]+;base64,/, "");
-      const mimeType = str6(message.mimeType).toLowerCase();
+      const data = str5(message.data).replace(/^data:[^;,]+;base64,/, "");
+      const mimeType = str5(message.mimeType).toLowerCase();
       if (!data || data.length > FETCH_BRIDGE_MAX_BASE64 || !IMAGE_MIME.test(mimeType)) {
         entry.reject(new RpcFailure({ code: "provider-error", message: "The frontend returned an invalid image.", detailCode: "FETCH_BRIDGE_INVALID_IMAGE" }));
         return true;
@@ -66725,7 +66177,7 @@ var NOVELAI_SAMPLER_IDS = Object.freeze(["k_euler_ancestral", "k_euler", "k_dpmp
 function samplerCandidateFrom(value) {
   if (typeof value === "string")
     return value.trim() || undefined;
-  const record = asRecord4(value);
+  const record = asRecord3(value);
   for (const key of ["id", "value", "sampler", "sampler_name", "name", "slug"]) {
     const found = record[key];
     if (typeof found === "string" && found.trim())
@@ -66762,18 +66214,18 @@ function randomSeed3() {
   return buf[0];
 }
 function parseSeed(value) {
-  const s = typeof value === "number" ? Number.isSafeInteger(value) ? String(value) : "" : str6(value);
+  const s = typeof value === "number" ? Number.isSafeInteger(value) ? String(value) : "" : str5(value);
   if (!/^\d+$/.test(s))
     return null;
   const n = Number(s);
   return Number.isSafeInteger(n) && n >= 0 && n <= 4294967295 ? n : null;
 }
 function readComfyConfig(metadata, workflowId) {
-  const record = asRecord4(metadata);
+  const record = asRecord3(metadata);
   const library = asArray2(record.comfyui_workflows);
-  const selected = str6(workflowId) || str6(record.comfyui_active_workflow_id);
-  const comfy = (selected ? library.find((entry) => str6(entry?.id) === selected)?.config : undefined) ?? record.comfyui;
-  const config = asRecord4(comfy);
+  const selected = str5(workflowId) || str5(record.comfyui_active_workflow_id);
+  const comfy = (selected ? library.find((entry) => str5(entry?.id) === selected)?.config : undefined) ?? record.comfyui;
+  const config = asRecord3(comfy);
   const workflow = config.workflow_api_json || config.workflow_json;
   if (!workflow || typeof workflow !== "object" || !Array.isArray(config.field_mappings))
     return null;
@@ -66811,7 +66263,7 @@ function parseOverride(value) {
   if (typeof value !== "string" || !value.trim())
     return {};
   try {
-    return asRecord4(JSON.parse(value));
+    return asRecord3(JSON.parse(value));
   } catch {
     return {};
   }
@@ -66827,7 +66279,7 @@ function buildNovelAIParameters(request, config, target, connectionDefaults = {}
   const scale = Number.isFinite(Number(o.scale ?? nai.scale)) ? Number(o.scale ?? nai.scale) || 6 : 6;
   const cfgRescale = clampNum(o.cfgRescale ?? nai.cfgRescale, 0, 1, 0.5);
   const sampler = normalizeNovelAiSampler(o.sampler ?? nai.sampler) ?? "k_euler_ancestral";
-  const noiseSchedule = str6(o.noiseSchedule ?? nai.noiseSchedule) || "karras";
+  const noiseSchedule = str5(o.noiseSchedule ?? nai.noiseSchedule) || "karras";
   const qualityToggle = (o.qualityToggle ?? nai.qualityToggle) !== false;
   const useOrder = (o.useOrder ?? nai.useOrder) !== false;
   const useCoords = o.useCoords === true;
@@ -66893,7 +66345,7 @@ function buildComfyParameters(request, config, target, connectionMetadata, seedS
   const width = clampInt2(request.width, 64, 4096, 832);
   const height = clampInt2(request.height, 64, 4096, 1216);
   const seed = parseSeed(request.seed) ?? seedSource();
-  const workflowId = str6(request.comfy?.workflowId) || target.comfyuiWorkflowId;
+  const workflowId = str5(request.comfy?.workflowId) || target.comfyuiWorkflowId;
   const parameters = { ...config.image.parameters, width, height, seed, negativePrompt: String(request.negativePrompt ?? "") };
   delete parameters.rawRequestOverride;
   if (workflowId)
@@ -66907,7 +66359,7 @@ function buildComfyParameters(request, config, target, connectionMetadata, seedS
     parameters.resolvedSourceImages = [{ data: source.data.replace(/^data:[^;,]+;base64,/, ""), mimeType: source.mimeType }];
     parameters.resolvedReferenceImages = [];
     parameters.denoise = denoise;
-    parameters.comfyui_field_values = { ...asRecord4(parameters.comfyui_field_values), denoise };
+    parameters.comfyui_field_values = { ...asRecord3(parameters.comfyui_field_values), denoise };
   }
   return { parameters, seed, width, height, notes: [] };
 }
@@ -66923,7 +66375,7 @@ function buildGenericParameters(request, config) {
 function isRetryableImageError(error) {
   if (isAbortLike(error))
     return false;
-  const r = asRecord4(error);
+  const r = asRecord3(error);
   if (r.retryable === false)
     return false;
   if (r.retryable === true)
@@ -67005,8 +66457,8 @@ function createImageService(deps) {
   const queues = new Map;
   const log = (level, message, details) => deps.log?.append(level, "image", message, details);
   function toInfo(dto) {
-    const r = asRecord4(dto);
-    return { id: str6(r.id), name: str6(r.name), provider: str6(r.provider), model: str6(r.model), isDefault: r.is_default === true, defaultParameters: asRecord4(r.default_parameters), metadata: asRecord4(r.metadata) };
+    const r = asRecord3(dto);
+    return { id: str5(r.id), name: str5(r.name), provider: str5(r.provider), model: str5(r.model), isDefault: r.is_default === true, defaultParameters: asRecord3(r.default_parameters), metadata: asRecord3(r.metadata) };
   }
   async function connection(connectionId) {
     const key = connectionId || "\x00default";
@@ -67032,7 +66484,7 @@ function createImageService(deps) {
   }
   function targetOf(config, info, modelOverride) {
     const generationProvider = generationProviderFromLumiverse(info.provider);
-    const model = str6(modelOverride) || config.image.model || info.model;
+    const model = str5(modelOverride) || config.image.model || info.model;
     return {
       connectionId: info.id,
       connectionName: info.name,
@@ -67053,7 +66505,7 @@ function createImageService(deps) {
   const service = {
     async resolveTarget(overrides = {}) {
       const config = await deps.loadConfig();
-      const info = await connection(str6(overrides.connectionId) || config.image.connectionId);
+      const info = await connection(str5(overrides.connectionId) || config.image.connectionId);
       return targetOf(config, info, overrides.model);
     },
     async generate(request, options = {}) {
@@ -67061,7 +66513,7 @@ function createImageService(deps) {
       if (signal?.aborted)
         throw abortError(signal.reason);
       const config = normalizeConfig(await deps.loadConfig());
-      const info = await connection(str6(request.connectionId) || config.image.connectionId);
+      const info = await connection(str5(request.connectionId) || config.image.connectionId);
       const target = targetOf(config, info, request.model);
       const prompt = String(request.prompt ?? "").trim();
       if (!prompt)
@@ -67087,7 +66539,7 @@ function createImageService(deps) {
         const pending = host.imageGen.generate(input);
         let abandoned = false;
         pending.then((late) => {
-          const id = str6(asRecord4(late).imageId);
+          const id = str5(asRecord3(late).imageId);
           if (abandoned && id)
             host.images.delete(id, userId).catch(() => {
               return;
@@ -67106,7 +66558,7 @@ function createImageService(deps) {
               })
             ]).finally(() => clearTimeout(timer));
           }
-          return asRecord4(await race);
+          return asRecord3(await race);
         } catch (error) {
           abandoned = true;
           throw error;
@@ -67119,7 +66571,7 @@ function createImageService(deps) {
           onProgress?.({ label: attempt === 1 ? "Generating image" : `Generating image (retry ${attempt - 1}/${retries})`, labelKo: "이미지 생성 중", ...attempt > 1 ? { retry: { attempt: attempt - 1, total: retries } } : {} });
           try {
             const result = await callOnce();
-            if (!str6(result.imageId) && !str6(result.imageDataUrl))
+            if (!str5(result.imageId) && !str5(result.imageDataUrl))
               throw new RpcFailure({ code: "provider-error", message: "The image provider returned no image.", retryable: true, detailCode: "IMAGE_EMPTY_RESULT" });
             return { result, attempts: attempt };
           } catch (error) {
@@ -67137,17 +66589,17 @@ function createImageService(deps) {
         }
       };
       const { result, attempts } = request.queue === false ? await attemptLoop() : await queueFor(target.generationProvider).run(gapMs, attemptLoop, signal, (position, depth) => onProgress?.({ label: "Waiting for the image queue", labelKo: "이미지 생성 대기 중", queue: { position, depth } }));
-      const imageId = str6(result.imageId);
+      const imageId = str5(result.imageId);
       const data = mimeOfDataUrl(result.imageDataUrl);
       const out = {
         imageId,
-        url: str6(result.imageUrl) || (imageId ? `/api/v1/image-gen/results/${imageId}` : ""),
+        url: str5(result.imageUrl) || (imageId ? `/api/v1/image-gen/results/${imageId}` : ""),
         width: built.width,
         height: built.height,
         seed: built.seed === null ? "" : String(built.seed),
         provider: target.generationProvider,
-        lumiverseProvider: str6(result.provider) || target.lumiverseProvider,
-        model: str6(result.model) || target.model,
+        lumiverseProvider: str5(result.provider) || target.lumiverseProvider,
+        model: str5(result.model) || target.model,
         mimeType: data?.mimeType ?? "image/png",
         sentParameters: stripBase64ForRecord(built.parameters),
         attempts
@@ -67159,7 +66611,7 @@ function createImageService(deps) {
     async deleteImages(imageIds) {
       const out = [];
       for (const imageId of imageIds) {
-        if (!str6(imageId))
+        if (!str5(imageId))
           continue;
         try {
           out.push({ imageId, status: await host.images.delete(imageId, userId) ? "removed" : "unknown" });
@@ -67181,10 +66633,10 @@ function createImageService(deps) {
       }
     },
     async listModels(connectionId) {
-      const info = await connection(str6(connectionId));
+      const info = await connection(str5(connectionId));
       try {
         const list = asArray2(await host.imageGen.getModels(info.id, userId));
-        const models = list.map((m) => ({ id: str6(m.id), label: str6(m.label) || str6(m.id) })).filter((m) => m.id);
+        const models = list.map((m) => ({ id: str5(m.id), label: str5(m.label) || str5(m.id) })).filter((m) => m.id);
         if (info.model && !models.some((m) => m.id === info.model))
           models.unshift({ id: info.model, label: info.model });
         return models;
@@ -67197,7 +66649,7 @@ function createImageService(deps) {
       try {
         const config = await deps.loadConfig();
         cache.clear();
-        const info = await connection(str6(connectionId) || config.image.connectionId);
+        const info = await connection(str5(connectionId) || config.image.connectionId);
         await host.imageGen.getModels(info.id, userId);
         return { ok: true, latencyMs: now() - started };
       } catch (error) {
@@ -67230,7 +66682,7 @@ function textParts(value) {
   if (typeof value === "string")
     return value;
   return asArray2(value).map((part) => {
-    const r = asRecord4(part);
+    const r = asRecord3(part);
     if (r.type === "thinking" || r.type === "reasoning")
       return "";
     return typeof r.text === "string" ? r.text : typeof r.content === "string" ? r.content : "";
@@ -67240,20 +66692,20 @@ function textParts(value) {
 function extractText(result) {
   if (typeof result === "string")
     return result;
-  const root = asRecord4(result);
+  const root = asRecord3(result);
   for (const key of ["content", "text", "output_text", "output", "message"]) {
     const value = root[key];
     if (typeof value === "string")
       return value;
-    const text = textParts(value) || (value && typeof value === "object" && !Array.isArray(value) ? textParts(asRecord4(value).content) : "");
+    const text = textParts(value) || (value && typeof value === "object" && !Array.isArray(value) ? textParts(asRecord3(value).content) : "");
     if (text)
       return text;
   }
-  const choice = asRecord4(asArray2(root.choices)[0]);
-  return textParts(asRecord4(choice.message).content) || (typeof choice.text === "string" ? choice.text : "");
+  const choice = asRecord3(asArray2(root.choices)[0]);
+  return textParts(asRecord3(choice.message).content) || (typeof choice.text === "string" ? choice.text : "");
 }
 function extractUsage(result) {
-  const usage = asRecord4(asRecord4(result).usage);
+  const usage = asRecord3(asRecord3(result).usage);
   const out = {};
   for (const [key, value] of Object.entries(usage)) {
     const n = Number(value);
@@ -67262,7 +66714,7 @@ function extractUsage(result) {
         out[key] = n;
     }
   }
-  const details = asRecord4(usage.prompt_tokens_details);
+  const details = asRecord3(usage.prompt_tokens_details);
   for (const key of ["cached_tokens", "cache_write_tokens"]) {
     const n = Number(details[key]);
     if (Number.isFinite(n) && details[key] !== undefined)
@@ -67271,16 +66723,16 @@ function extractUsage(result) {
   return out;
 }
 function extractFinishReason(result) {
-  const root = asRecord4(result);
+  const root = asRecord3(result);
   if (typeof root.finish_reason === "string")
     return root.finish_reason;
   if (typeof root.finishReason === "string")
     return root.finishReason;
-  const first = asRecord4(asArray2(root.choices)[0]);
+  const first = asRecord3(asArray2(root.choices)[0]);
   return typeof first.finish_reason === "string" ? first.finish_reason : "";
 }
 function declaredVisionSupport(metadata) {
-  const record = asRecord4(metadata);
+  const record = asRecord3(metadata);
   const pick = (root, keys) => {
     for (const key of keys)
       if (typeof root[key] === "boolean")
@@ -67290,11 +66742,11 @@ function declaredVisionSupport(metadata) {
   const direct = pick(record, ["vision", "supportsVision", "supports_vision", "multimodal", "supportsImages", "supports_images"]);
   if (direct !== null)
     return direct;
-  const capabilities = asRecord4(record.capabilities);
+  const capabilities = asRecord3(record.capabilities);
   const nested = pick(capabilities, ["vision", "image", "images", "multimodal"]);
   if (nested !== null)
     return nested;
-  const modalities = [record.input_modalities, record.inputModalities, capabilities.input_modalities, capabilities.inputModalities].flatMap((v) => asArray2(v).map((x) => str6(x).toLowerCase()));
+  const modalities = [record.input_modalities, record.inputModalities, capabilities.input_modalities, capabilities.inputModalities].flatMap((v) => asArray2(v).map((x) => str5(x).toLowerCase()));
   if (modalities.includes("image") || modalities.includes("vision"))
     return true;
   if (modalities.length > 0 && modalities.every((v) => v === "text"))
@@ -67310,7 +66762,7 @@ function isJsonModeRejection(error) {
   return /response_format|json_object|json mode|structured output/i.test(message) || httpStatusOf(error) === 400 && /format|invalid.*(?:argument|parameter)/i.test(message);
 }
 function httpStatusOf(error) {
-  const r = asRecord4(error);
+  const r = asRecord3(error);
   for (const key of ["status", "statusCode", "httpStatus"]) {
     const n = Number(r[key]);
     if (Number.isInteger(n) && n >= 100 && n <= 599)
@@ -67331,7 +66783,7 @@ function makeAnalyzerError(message, extra) {
 function classifyLlmError(error) {
   if (error instanceof AnalyzerClientErrorClass)
     return error;
-  const code = str6(asRecord4(error).code);
+  const code = str5(asRecord3(error).code);
   if (/^ANALYZER_/.test(code))
     return makeAnalyzerError(errorMessage(error), { code, httpStatus: httpStatusOf(error), cause: error });
   const status = httpStatusOf(error);
@@ -67397,10 +66849,10 @@ function toLlmMessage(message) {
     return { role, content: message.content };
   const parts = [];
   for (const raw of asArray2(message.content)) {
-    const p = asRecord4(raw);
+    const p = asRecord3(raw);
     if (p.type === "image") {
       const data = String(p.data ?? "").replace(/^data:[^;,]+;base64,/, "");
-      const mime = str6(p.mime_type) || str6(p.mimeType) || "image/png";
+      const mime = str5(p.mime_type) || str5(p.mimeType) || "image/png";
       if (data)
         parts.push({ type: "image", data, mime_type: mime });
     } else if (typeof p.text === "string")
@@ -67429,7 +66881,7 @@ function createLlmService(deps) {
     let dto = null;
     try {
       if (connectionId)
-        dto = asRecord4(await host.connections.get(connectionId, userId));
+        dto = asRecord3(await host.connections.get(connectionId, userId));
       else {
         const list = asArray2(await host.connections.list(userId));
         dto = list.find((c) => c.is_default === true) ?? list[0] ?? null;
@@ -67437,14 +66889,14 @@ function createLlmService(deps) {
     } catch (error) {
       throw new RpcFailure({ code: "provider-error", message: `Could not read the LLM connection: ${errorMessage(error)}`, detailCode: "ANALYZER_CONNECTION_MISSING" });
     }
-    if (!dto || !str6(dto.id)) {
+    if (!dto || !str5(dto.id)) {
       throw new RpcFailure({
         code: "bad-request",
         message: connectionId ? "The selected LLM connection no longer exists. Select another connection in the model settings." : "No LLM connection is configured. Add one in Lumiverse and select it in the model settings.",
         detailCode: "ANALYZER_CONNECTION_MISSING"
       });
     }
-    return connectionCache.set(key, { id: str6(dto.id), name: str6(dto.name), provider: str6(dto.provider), model: str6(dto.model), metadata: asRecord4(dto.metadata) });
+    return connectionCache.set(key, { id: str5(dto.id), name: str5(dto.name), provider: str5(dto.provider), model: str5(dto.model), metadata: asRecord3(dto.metadata) });
   }
   async function effectiveSettings(overrides) {
     const config = await deps.loadConfig();
@@ -67617,12 +67069,12 @@ function createLlmService(deps) {
     analyzerClient(clientOptions = {}) {
       return {
         async complete(_config, messages, options = {}) {
-          const o = asRecord4(options);
+          const o = asRecord3(options);
           const signal = o.signal ?? clientOptions.signal;
           const timeoutMs = Number(o.timeoutMs);
           const maxOutputTokens = Number(o.maxOutputTokens ?? o.maxTokens);
           const result = await run({
-            purpose: str6(o.purpose) || clientOptions.purpose || "analyzer",
+            purpose: str5(o.purpose) || clientOptions.purpose || "analyzer",
             messages: messages.map(toLlmMessage),
             responseMode: o.responseMode === "text" ? "text" : "json",
             ...o.structuredOutputSchema && typeof o.structuredOutputSchema === "object" ? { schema: o.structuredOutputSchema } : {},
@@ -67648,13 +67100,13 @@ function createLlmService(deps) {
     async listConnections() {
       try {
         const list = asArray2(await host.connections.list(userId));
-        return list.map((c) => ({ id: str6(c.id), name: str6(c.name), provider: str6(c.provider), model: str6(c.model), isDefault: c.is_default === true, hasApiKey: c.has_api_key === true }));
+        return list.map((c) => ({ id: str5(c.id), name: str5(c.name), provider: str5(c.provider), model: str5(c.model), isDefault: c.is_default === true, hasApiKey: c.has_api_key === true }));
       } catch (error) {
         throw new RpcFailure({ code: "provider-error", message: `Could not list LLM connections: ${errorMessage(error)}` });
       }
     },
     async listModels(connectionId) {
-      const connection = await resolveConnection(str6(connectionId));
+      const connection = await resolveConnection(str5(connectionId));
       const out = [];
       const seen = new Set;
       const add = (id, label = id) => {
@@ -67666,11 +67118,11 @@ function createLlmService(deps) {
       add(connection.model);
       if (deps.getJson) {
         try {
-          const result = asRecord4(await deps.getJson(`/api/v1/connections/${encodeURIComponent(connection.id)}/models`, { timeoutMs: 20000 }));
-          const labels = asRecord4(result.model_labels);
+          const result = asRecord3(await deps.getJson(`/api/v1/connections/${encodeURIComponent(connection.id)}/models`, { timeoutMs: 20000 }));
+          const labels = asRecord3(result.model_labels);
           for (const id of asArray2(result.models))
             if (typeof id === "string")
-              add(id, str6(labels[id]) || id);
+              add(id, str5(labels[id]) || id);
         } catch (error) {
           log("warn", `Model list of ${connection.name || connection.id} unavailable.`, errorMessage(error));
         }
@@ -67680,7 +67132,7 @@ function createLlmService(deps) {
     async testMessage(text, settings) {
       const started = Date.now();
       try {
-        const result = await run({ purpose: "message-test", messages: [{ role: "user", content: str6(text) || DEFAULT_TEST_MESSAGE }], responseMode: "text", retries: 0, ...settings ? { settings } : {} }, {}, 0);
+        const result = await run({ purpose: "message-test", messages: [{ role: "user", content: str5(text) || DEFAULT_TEST_MESSAGE }], responseMode: "text", retries: 0, ...settings ? { settings } : {} }, {}, 0);
         return { ok: true, latencyMs: Date.now() - started, reply: result.raw };
       } catch (error) {
         const rpc = isAbortLike(error) ? { code: "cancelled", message: "The test was cancelled." } : error instanceof RpcFailure ? error.error : llmErrorToRpc(classifyLlmError(error));
@@ -67747,13 +67199,13 @@ var UUID_RE2 = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/iu;
 var CHARACTER_WORDS = ["character", "profile", "identity", "persona", "appearance", "personality", "speech", "body", "face", "hair", "eyes"];
 var WORLD_WORDS = ["world", "setting", "location", "school", "system", "rule", "rules", "scenario", "background", "plot"];
 function lowerSpace(value) {
-  return str6(value).toLocaleLowerCase().replace(/\s+/g, " ").trim();
+  return str5(value).toLocaleLowerCase().replace(/\s+/g, " ").trim();
 }
 function uniqueTrimmed(values) {
-  return [...new Set(values.map(str6).filter(Boolean))];
+  return [...new Set(values.map(str5).filter(Boolean))];
 }
 function displayName(name, fallback) {
-  const n = str6(name) || fallback;
+  const n = str5(name) || fallback;
   return UUID_RE2.test(n) ? fallback : n;
 }
 function memberAliases(values) {
@@ -67768,23 +67220,23 @@ function memberAliases(values) {
   return [...out].filter((a) => a.length >= 2);
 }
 function sourceSummary(c) {
-  const d = str6(c.description);
+  const d = str5(c.description);
   return [
     d ? `Description:
 ${d.slice(0, 1200)}` : "",
     c.personality ? `Personality:
-${str6(c.personality).slice(0, 800)}` : "",
+${str5(c.personality).slice(0, 800)}` : "",
     c.scenario ? `Scenario:
-${str6(c.scenario).slice(0, 800)}` : "",
+${str5(c.scenario).slice(0, 800)}` : "",
     c.creatorNotes ? `Notes:
-${str6(c.creatorNotes).slice(0, 800)}` : ""
+${str5(c.creatorNotes).slice(0, 800)}` : ""
   ].filter(Boolean).join(`
 
 `);
 }
 function splitLoreKeys2(values) {
   const list = Array.isArray(values) ? values : [values];
-  return uniqueTrimmed(list.flatMap((v) => str6(v).split(/[,;\n|]+/g)));
+  return uniqueTrimmed(list.flatMap((v) => str5(v).split(/[,;\n|]+/g)));
 }
 function loreScore(entry, aliases) {
   const title = lowerSpace([entry.comment, entry.keys.join(","), entry.secondaryKeys.join(",")].filter(Boolean).join(" "));
@@ -67803,19 +67255,19 @@ function loreScore(entry, aliases) {
     score += 1;
   if (WORLD_WORDS.some((w) => title.includes(w)) && !aliases.some((a) => both.includes(a)))
     score -= 3;
-  if (!str6(entry.content))
+  if (!str5(entry.content))
     score -= 2;
   return score;
 }
 function isAssetMaidOwned(entry) {
-  const comment = str6(entry.comment);
+  const comment = str5(entry.comment);
   return comment === "__ASSET_MAID_DATA__" || comment === "__ASSET_MAID_BACKUP__" || entry.entryId === "asset-maid:data" || entry.entryId.startsWith("asset-maid:quarantine:");
 }
 function loreRecordsOf(entries, aliases, source) {
   return entries.flatMap((entry, index) => {
     if (entry.disabled || isAssetMaidOwned(entry))
       return [];
-    const content = str6(entry.content);
+    const content = str5(entry.content);
     if (!content)
       return [];
     const primaryKeys = splitLoreKeys2(entry.keys);
@@ -67826,7 +67278,7 @@ function loreRecordsOf(entries, aliases, source) {
         kind: "lorebook",
         id,
         selectionId: id,
-        title: str6(entry.comment) || primaryKeys.join(", ") || `Lore ${index + 1}`,
+        title: str5(entry.comment) || primaryKeys.join(", ") || `Lore ${index + 1}`,
         keys: uniqueTrimmed([...primaryKeys, ...secondaryKeys]),
         primaryKeys,
         secondaryKeys,
@@ -67844,7 +67296,7 @@ function loreRecordsOf(entries, aliases, source) {
   }).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 }
 function descriptionLore(name, description) {
-  const content = str6(description);
+  const content = str5(description);
   if (!content)
     return null;
   const keys = uniqueTrimmed([name]);
@@ -67863,7 +67315,7 @@ function dedupe(...lists) {
 function assetGenerationSignature(sourceId, activeModuleIds, shared, members, chatAssets) {
   let h = 2166136261;
   const feed = (value) => {
-    const s = str6(value);
+    const s = str5(value);
     for (let i = 0;i < s.length; i += 1) {
       h ^= s.charCodeAt(i);
       h = Math.imul(h, 16777619);
@@ -67904,7 +67356,7 @@ function extensionOf2(name, mime) {
   const fromName = name.includes(".") ? name.split(".").at(-1).toLowerCase() : "";
   if (IMAGE_EXTENSIONS.has(fromName))
     return fromName;
-  const m = str6(mime).toLowerCase();
+  const m = str5(mime).toLowerCase();
   if (m.includes("jpeg") || m.includes("jpg"))
     return "jpg";
   if (m.includes("webp"))
@@ -67950,38 +67402,38 @@ function createSourcesService(deps) {
   }
   function toCharacterInfo(dto) {
     return {
-      characterId: str6(dto.id),
-      name: str6(dto.name),
+      characterId: str5(dto.id),
+      name: str5(dto.name),
       description: String(dto.description ?? ""),
       personality: String(dto.personality ?? ""),
       scenario: String(dto.scenario ?? ""),
       creatorNotes: String(dto.creator_notes ?? ""),
-      tags: asArray2(dto.tags).map(str6).filter(Boolean),
-      avatarImageId: str6(dto.image_id) || null,
+      tags: asArray2(dto.tags).map(str5).filter(Boolean),
+      avatarImageId: str5(dto.image_id) || null,
       worldBookIds: uniqueTrimmed(asArray2(dto.world_book_ids)),
-      extensions: asRecord4(dto.extensions)
+      extensions: asRecord3(dto.extensions)
     };
   }
   function toChatInfo(dto) {
-    const metadata = asRecord4(dto.metadata);
+    const metadata = asRecord3(dto.metadata);
     const group = metadata.group === true || metadata.group === 1;
     return {
-      chatId: str6(dto.id),
-      characterId: str6(dto.character_id),
+      chatId: str5(dto.id),
+      characterId: str5(dto.character_id),
       groupCharacterIds: group ? uniqueTrimmed(asArray2(metadata.character_ids)) : [],
-      personaId: str6(metadata.persona_id) || null,
+      personaId: str5(metadata.persona_id) || null,
       metadata
     };
   }
   function toPersonaInfo(dto) {
     return {
-      personaId: str6(dto.id),
-      name: str6(dto.name),
+      personaId: str5(dto.id),
+      name: str5(dto.name),
       description: String(dto.description ?? ""),
-      avatarImageId: str6(dto.image_id) || null,
+      avatarImageId: str5(dto.image_id) || null,
       isDefault: dto.is_default === true,
-      attachedWorldBookId: str6(dto.attached_world_book_id) || null,
-      metadata: asRecord4(dto.metadata)
+      attachedWorldBookId: str5(dto.attached_world_book_id) || null,
+      metadata: asRecord3(dto.metadata)
     };
   }
   async function getCharacterDto(characterId) {
@@ -67994,13 +67446,13 @@ function createSourcesService(deps) {
       }
       if (!dto)
         fail2("not-found", `Character not found: ${characterId}`, { detailCode: "CHARACTER_NOT_FOUND" });
-      return asRecord4(dto);
+      return asRecord3(dto);
     });
   }
   async function chatCountOf(characterId) {
     return cached(`chatcount:${characterId}`, async () => {
       try {
-        return Number(asRecord4(await host.chats.list({ characterId, limit: 1, ...userId ? { userId } : {} })).total) || 0;
+        return Number(asRecord3(await host.chats.list({ characterId, limit: 1, ...userId ? { userId } : {} })).total) || 0;
       } catch {
         return 0;
       }
@@ -68009,18 +67461,18 @@ function createSourcesService(deps) {
   async function worldBook(worldBookId) {
     return cached(`wb:${worldBookId}`, async () => {
       try {
-        const dto = asRecord4(await host.world_books.get(worldBookId, userId));
-        if (!str6(dto.id))
+        const dto = asRecord3(await host.world_books.get(worldBookId, userId));
+        if (!str5(dto.id))
           return null;
         const raw = await paged((offset) => host.world_books.entries.list(worldBookId, { limit: PAGE, offset, ...userId ? { userId } : {} }));
         const entries = raw.map((e) => {
-          const r = asRecord4(e);
+          const r = asRecord3(e);
           return {
             worldBookId,
-            entryId: str6(r.id),
+            entryId: str5(r.id),
             comment: String(r.comment ?? ""),
-            keys: asArray2(r.key).map(str6).filter(Boolean),
-            secondaryKeys: asArray2(r.keysecondary).map(str6).filter(Boolean),
+            keys: asArray2(r.key).map(str5).filter(Boolean),
+            secondaryKeys: asArray2(r.keysecondary).map(str5).filter(Boolean),
             content: String(r.content ?? ""),
             disabled: r.disabled === true,
             constant: r.constant === true,
@@ -68029,7 +67481,7 @@ function createSourcesService(deps) {
             order: Number(r.order_value) || 0
           };
         });
-        return { name: str6(dto.name) || worldBookId, entries: entries.filter((e) => e.entryId) };
+        return { name: str5(dto.name) || worldBookId, entries: entries.filter((e) => e.entryId) };
       } catch (error) {
         log("warn", `World book ${worldBookId} unavailable.`, errorMessage(error));
         return null;
@@ -68045,13 +67497,13 @@ function createSourcesService(deps) {
     }
     if (!dto)
       fail2("not-found", `Chat not found: ${chatId}`, { detailCode: "CHAT_NOT_FOUND" });
-    return toChatInfo(asRecord4(dto));
+    return toChatInfo(asRecord3(dto));
   }
   async function activePersona() {
     try {
       const active = await host.personas.getActive(userId);
       const dto = active ?? await host.personas.getDefault(userId);
-      return dto ? toPersonaInfo(asRecord4(dto)) : null;
+      return dto ? toPersonaInfo(asRecord3(dto)) : null;
     } catch {
       return null;
     }
@@ -68059,14 +67511,14 @@ function createSourcesService(deps) {
   const service = {
     async listCharacters() {
       const list = await cached("characters", () => paged((offset) => host.characters.list({ limit: PAGE, offset, ...userId ? { userId } : {} })));
-      const rows = list.map((c) => asRecord4(c));
+      const rows = list.map((c) => asRecord3(c));
       return mapLimit(rows, 8, async (dto) => {
-        const characterId = str6(dto.id);
+        const characterId = str5(dto.id);
         const [chatCount, hasDocument] = await Promise.all([chatCountOf(characterId), deps.storage ? deps.storage.hasCharacterDocument(characterId).catch(() => false) : Promise.resolve(false)]);
         return {
           characterId,
           name: displayName(dto.name, "Character"),
-          avatarUrl: str6(dto.image_id) ? `/api/v1/characters/${encodeURIComponent(characterId)}/avatar?size=sm` : null,
+          avatarUrl: str5(dto.image_id) ? `/api/v1/characters/${encodeURIComponent(characterId)}/avatar?size=sm` : null,
           hasDocument,
           chatCount,
           worldBookIds: uniqueTrimmed(asArray2(dto.world_book_ids))
@@ -68074,17 +67526,17 @@ function createSourcesService(deps) {
       });
     },
     async getCharacter(characterId) {
-      return toCharacterInfo(await getCharacterDto(str6(characterId)));
+      return toCharacterInfo(await getCharacterDto(str5(characterId)));
     },
     async getActiveChat() {
       try {
         const dto = await host.chats.getActive(userId);
-        return dto ? toChatInfo(asRecord4(dto)) : null;
+        return dto ? toChatInfo(asRecord3(dto)) : null;
       } catch {
         return null;
       }
     },
-    getChat: (chatId) => chatInfo(str6(chatId)),
+    getChat: (chatId) => chatInfo(str5(chatId)),
     async loadWorldBooks(characterId, document2, options = {}) {
       const character = await service.getCharacter(characterId);
       const order = [];
@@ -68105,13 +67557,13 @@ function createSourcesService(deps) {
           chat = active;
       }
       for (const id of asArray2(chat?.metadata.chat_world_book_ids))
-        push(str6(id), "chat");
+        push(str5(id), "chat");
       try {
         for (const id of asArray2(await host.world_books.getGlobal(userId)))
-          push(str6(id), "global");
+          push(str5(id), "global");
       } catch {}
       for (const id of document2.characterPrompt.activeModules[characterId] ?? [])
-        push(str6(id), "extra");
+        push(str5(id), "extra");
       const books = await mapLimit(order, 6, async ({ id, scope }) => {
         const book = await worldBook(id);
         return book ? { worldBookId: id, name: book.name, scope, entries: book.entries } : null;
@@ -68125,18 +67577,18 @@ function createSourcesService(deps) {
       try {
         const all = await cached("worldbooks", () => paged((offset) => host.world_books.list({ limit: PAGE, offset, ...userId ? { userId } : {} })));
         for (const raw of all) {
-          const dto = asRecord4(raw);
-          const id = str6(dto.id);
+          const dto = asRecord3(raw);
+          const id = str5(dto.id);
           if (!id || out.some((s) => s.worldBookId === id))
             continue;
           const total = await cached(`wbcount:${id}`, async () => {
             try {
-              return Number(asRecord4(await host.world_books.entries.list(id, { limit: 1, ...userId ? { userId } : {} })).total) || 0;
+              return Number(asRecord3(await host.world_books.entries.list(id, { limit: 1, ...userId ? { userId } : {} })).total) || 0;
             } catch {
               return 0;
             }
           });
-          out.push({ worldBookId: id, name: str6(dto.name) || id, attached: false, connected: connected.has(id), entryCount: total, scope: "extra" });
+          out.push({ worldBookId: id, name: str5(dto.name) || id, attached: false, connected: connected.has(id), entryCount: total, scope: "extra" });
         }
       } catch (error) {
         log("warn", "World book list unavailable.", errorMessage(error));
@@ -68166,7 +67618,7 @@ function createSourcesService(deps) {
         if (promptKey !== characterId && !promptKey.startsWith(`${characterId}::lore::`))
           continue;
         for (const outfit of asArray2(outfits)) {
-          const ref = normalizeAssetRef(asRecord4(outfit).referenceAsset ?? asRecord4(outfit).reference_asset);
+          const ref = normalizeAssetRef(asRecord3(outfit).referenceAsset ?? asRecord3(outfit).reference_asset);
           if (ref.name && ref.key && assetKindOfName(ref.name) === "outfit" && IMAGE_EXTENSIONS.has(ref.extension.toLowerCase()))
             outfitRefs.push({ ...ref, sourceType: "character", moduleId: "", moduleName: "" });
         }
@@ -68213,7 +67665,7 @@ function createSourcesService(deps) {
     async listPersonas() {
       try {
         const list = await cached("personas", () => paged((offset) => host.personas.list({ limit: PAGE, offset, ...userId ? { userId } : {} })));
-        return list.map((p) => toPersonaInfo(asRecord4(p)));
+        return list.map((p) => toPersonaInfo(asRecord3(p)));
       } catch (error) {
         throw new RpcFailure({ code: "provider-error", message: `Could not list personas: ${errorMessage(error)}`, retryable: true });
       }
@@ -68224,7 +67676,7 @@ function createSourcesService(deps) {
         if (chat?.personaId) {
           const dto = await host.personas.get(chat.personaId, userId).catch(() => null);
           if (dto)
-            return toPersonaInfo(asRecord4(dto));
+            return toPersonaInfo(asRecord3(dto));
         }
       }
       return activePersona();
@@ -68238,7 +67690,7 @@ function createSourcesService(deps) {
         const add = (origin, imageId, name, extra = {}) => {
           if (!imageId || seen.has(imageId))
             return;
-          const cleanName = str6(name) || imageId;
+          const cleanName = str5(name) || imageId;
           if (cleanName.startsWith(CROP_ASSET_NAME_PREFIX))
             return;
           seen.add(imageId);
@@ -68262,27 +67714,27 @@ function createSourcesService(deps) {
           try {
             const gallery = asArray2(await deps.imageBytes.getJson(`/api/v1/characters/${encodeURIComponent(characterId)}/gallery`, { timeoutMs: 15000 }));
             for (const raw of gallery) {
-              const g = asRecord4(raw);
-              add("gallery", str6(g.image_id), str6(g.caption) || str6(g.reference) || `gallery-${str6(g.id)}`, { mime: str6(g.mime_type), width: Number(g.width) || null, height: Number(g.height) || null });
+              const g = asRecord3(raw);
+              add("gallery", str5(g.image_id), str5(g.caption) || str5(g.reference) || `gallery-${str5(g.id)}`, { mime: str5(g.mime_type), width: Number(g.width) || null, height: Number(g.height) || null });
             }
           } catch (error) {
             log("warn", `Gallery of ${characterId} unavailable (the overlay must be open to read it).`, errorMessage(error));
           }
         }
-        const expressions = asRecord4(asRecord4(character.extensions.expressions).mappings);
+        const expressions = asRecord3(asRecord3(character.extensions.expressions).mappings);
         for (const [label, imageId] of Object.entries(expressions))
-          add("expression", str6(imageId), label);
-        const risu = asRecord4(character.extensions.risu_asset_map);
+          add("expression", str5(imageId), label);
+        const risu = asRecord3(character.extensions.risu_asset_map);
         for (const [assetName, imageId] of Object.entries(risu))
-          add("risu-asset", str6(imageId), assetName);
+          add("risu-asset", str5(imageId), assetName);
         if (options.includeGenerated !== false) {
           try {
             const generated = await paged((offset) => host.images.list({ characterId, onlyOwned: true, limit: PAGE, offset, ...userId ? { userId } : {} }));
             for (const raw of generated) {
-              const img = asRecord4(raw);
-              add("generated", str6(img.id), str6(img.original_filename) || str6(img.id), { mime: str6(img.mime_type), width: Number(img.width) || null, height: Number(img.height) || null, generated: true });
+              const img = asRecord3(raw);
+              add("generated", str5(img.id), str5(img.original_filename) || str5(img.id), { mime: str5(img.mime_type), width: Number(img.width) || null, height: Number(img.height) || null, generated: true });
               const last = out.at(-1);
-              if (last && last.imageId === str6(img.id) && last.kind === "outfit" && str6(img.owner_chat_id) && assetKindOfName(last.name) === "original")
+              if (last && last.imageId === str5(img.id) && last.kind === "outfit" && str5(img.owner_chat_id) && assetKindOfName(last.name) === "original")
                 last.kind = "chat";
             }
           } catch (error) {
@@ -68353,7 +67805,7 @@ function createStorageService(host, userId, options = {}) {
   async function ensureSchemaMarker() {
     if (!schemaChecked) {
       schemaChecked = (async () => {
-        const marker = asRecord4(await readRaw(STORAGE_PATHS.schema).catch(() => ({ unreadable: true })));
+        const marker = asRecord3(await readRaw(STORAGE_PATHS.schema).catch(() => ({ unreadable: true })));
         if (marker.unreadable)
           return;
         if (marker.schema === STORAGE_SCHEMA) {
@@ -68496,7 +67948,7 @@ function createStorageService(host, userId, options = {}) {
         const split = splitConfigForStorage(next);
         const stored = { ...state.stored };
         for (const { part, kind, path } of CONFIG_PARTS) {
-          const value = withVersion(kind, asRecord4(split[part]));
+          const value = withVersion(kind, asRecord3(split[part]));
           const text = JSON.stringify(value);
           if (stored[part] === text)
             continue;
@@ -68747,10 +68199,6 @@ var runtime2 = createBackendRuntime({ host: spindle, modules: [pipelineModule, a
 function errorText(error) {
   return error instanceof Error ? error.message : String(error);
 }
-function optionalInteger(value, minimum = 0) {
-  const parsed = Number(value);
-  return value !== undefined && value !== null && value !== "" && Number.isInteger(parsed) && parsed >= minimum ? parsed : undefined;
-}
 spindle.registerInterceptor(async (messages) => stripForInterceptor(messages));
 function forUser(userId, run) {
   const targets = userId !== undefined ? [userId] : runtime2.users().length ? runtime2.users() : [undefined];
@@ -68788,51 +68236,9 @@ for (const event of PIPELINE_HOST_EVENTS) {
     });
   });
 }
-async function handleLegacyFrontendMessage(message, userId) {
-  const chatId = String(message.chatId || "");
-  switch (message.type) {
-    case "get_inlay_image_details": {
-      const requestId = String(message.requestId || "");
-      try {
-        const found = await findLegacyImage({
-          chatId,
-          messageId: String(message.messageId || "") || undefined,
-          swipeId: optionalInteger(message.swipeId),
-          imageIndex: optionalInteger(message.imageIndex),
-          imageId: String(message.imageId || "") || undefined,
-          imageUrl: String(message.imageUrl || "") || undefined
-        }, userId);
-        if (!found)
-          throw new Error("No stored details for this image.");
-        const slot = found.record.slots[found.index];
-        spindle.sendToFrontend({ type: "inlay_image_details_result", requestId, ok: true, prompt: slot.prompt, negativePrompt: slot.negativePrompt }, userId);
-      } catch (error) {
-        spindle.sendToFrontend({ type: "inlay_image_details_result", requestId, ok: false, error: errorText(error) }, userId);
-      }
-      return;
-    }
-    case "list_inlay_gallery": {
-      const requestId = String(message.requestId || "");
-      const page = Math.max(1, Math.floor(Number(message.page)) || 1);
-      const selectedChatId = typeof message.selectedChatId === "string" && message.selectedChatId.trim() ? message.selectedChatId.trim() : undefined;
-      try {
-        const result = await listInlayGallery(userId, page, selectedChatId);
-        spindle.sendToFrontend({ type: "inlay_gallery_result", requestId, ok: true, ...result }, userId);
-      } catch (error) {
-        spindle.sendToFrontend({ type: "inlay_gallery_result", requestId, ok: false, error: errorText(error) }, userId);
-      }
-      return;
-    }
-    default:
-      return;
-  }
-}
 spindle.onFrontendMessage(async (payload, userId, frontendSessionId) => {
   try {
-    if (await runtime2.handleFrontendMessage(payload, userId, frontendSessionId))
-      return;
-    const message = payload && typeof payload === "object" ? payload : {};
-    await handleLegacyFrontendMessage(message, userId);
+    await runtime2.handleFrontendMessage(payload, userId, frontendSessionId);
   } catch (error) {
     try {
       runtime2.services(userId).log.append("error", "frontend", errorText(error));
