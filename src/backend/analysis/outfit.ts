@@ -196,16 +196,33 @@ async function referenceBytes(services: BackendServices, asset: AssetRef): Promi
   return { data: bytesToBase64(bytes.data), mimeType: bytes.mimeType };
 }
 
-/** Build the ImageService request (exported for tests). */
-export async function buildOutfitImageRequest(services: BackendServices, target: OutfitImageTarget, formId: string, draft: OutfitImageDraft): Promise<{ request: ImageGenerateRequest; plan: OutfitPromptPlan; context: OutfitTargetContext }> {
-  const characterId = target.kind === "character" ? target.characterId : target.characterId || (await services.sources.getActiveChat().catch(() => null))?.characterId || "";
+interface PreparedConfig {
+  config: Any;
+  imageTarget: Awaited<ReturnType<BackendServices["images"]["resolveTarget"]>>;
+}
+
+async function prepareConfig(services: BackendServices, characterId: string): Promise<PreparedConfig> {
   const imageTarget = await services.images.resolveTarget();
   const parts = characterId ? await loadAmConfigParts(services, characterId) : { global: await services.storage.loadConfig(), document: createEmptyCharacterDocument(""), metadata: {} };
   const config = buildAmConfig(parts);
   config.runtime = { ...config.runtime, generationProvider: imageTarget.generationProvider };
   config.novelai = { ...config.novelai, naiModel: imageTarget.model };
   if (!AM.up(imageTarget.generationProvider)) fail("unsupported", "The selected provider does not support outfit image generation.");
-  const context = await resolveTargetContext(services, config, target, formId, draft);
+  return { config, imageTarget };
+}
+
+/** Reference settings (AM input `referenceType/Strength/Fidelity`, defaults = global NovelAI settings). */
+interface ReferenceSettings { type?: string; strength?: number; fidelity?: number }
+
+async function requestFromContext(
+  services: BackendServices,
+  characterId: string,
+  prepared: PreparedConfig,
+  context: OutfitTargetContext,
+  draft: OutfitImageDraft,
+  referenceSettings: ReferenceSettings = {},
+): Promise<{ request: ImageGenerateRequest; plan: OutfitPromptPlan }> {
+  const { config, imageTarget } = prepared;
   const plan = buildOutfitPrompt(config, context, draft);
   const prompt = providerPromptFor(config, plan);
   const useReference = !!(plan.referenceAllowed && draft.useCharacterReference && context.reference);
@@ -219,6 +236,7 @@ export async function buildOutfitImageRequest(services: BackendServices, target:
     seed,
     ...(characterId ? { ownerCharacterId: characterId } : {}),
   };
+  const clamp01 = (v: unknown, fallback: number) => (Number.isFinite(Number(v)) ? Math.max(0, Math.min(1, Number(v))) : fallback);
   if (imageTarget.generationProvider === "novelai") {
     // Non-artist weight (AM `Cut` in the NovelAI client) on the request texts + char caption.
     const body = {
@@ -255,9 +273,9 @@ export async function buildOutfitImageRequest(services: BackendServices, target:
             characterReferences: [
               {
                 ...(await referenceBytes(services, context.reference)),
-                type: config.novelai.characterReferenceType ?? "character",
-                strength: Number.isFinite(config.novelai.characterReferenceStrength) ? config.novelai.characterReferenceStrength : 0.6,
-                fidelity: Number.isFinite(config.novelai.characterReferenceFidelity) ? config.novelai.characterReferenceFidelity : 1,
+                type: (referenceSettings.type ?? config.novelai.characterReferenceType ?? "character") as "character",
+                strength: clamp01(referenceSettings.strength ?? config.novelai.characterReferenceStrength, 0.6),
+                fidelity: clamp01(referenceSettings.fidelity ?? config.novelai.characterReferenceFidelity, 1),
               },
             ],
           }
@@ -266,13 +284,160 @@ export async function buildOutfitImageRequest(services: BackendServices, target:
   } else if (imageTarget.generationProvider === "comfy-ui" && useReference && context.reference) {
     request.comfy = { sourceImage: await referenceBytes(services, context.reference) };
   }
+  return { request, plan };
+}
+
+/** Build the ImageService request (exported for tests). */
+export async function buildOutfitImageRequest(services: BackendServices, target: OutfitImageTarget, formId: string, draft: OutfitImageDraft): Promise<{ request: ImageGenerateRequest; plan: OutfitPromptPlan; context: OutfitTargetContext }> {
+  const characterId = target.kind === "character" ? target.characterId : target.characterId || (await services.sources.getActiveChat().catch(() => null))?.characterId || "";
+  const prepared = await prepareConfig(services, characterId);
+  const context = await resolveTargetContext(services, prepared.config, target, formId, draft);
+  const { request, plan } = await requestFromContext(services, characterId, prepared, context, draft);
   return { request, plan, context };
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * AM outfit image generator (boot `Ee` = `fOt({...})` L178913) for the chat pipeline's free outfit / character generation
+ * (AM `a1t` L168426, `gOt`/`yOt` L179298-179560).
+ * ---------------------------------------------------------------------------------------------- */
+
+/** AM `fOt.generate` input. */
+export interface AmOutfitGenerateInput {
+  characterTarget?: { chaId: string; indexHint?: number };
+  characterIndex?: number;
+  sourceId?: string;
+  promptKey: string;
+  characterName?: string;
+  /** Final main prompt (AM callers already add any nsfw prefix). */
+  mainPrompt?: string;
+  characterNegativePrompt?: string;
+  gender?: string;
+  humanlike?: boolean;
+  outfitId?: string;
+  label?: string;
+  description?: string;
+  head?: string;
+  top?: string;
+  bottom?: string;
+  legs?: string;
+  feet?: string;
+  characterReference?: Any | null;
+  referenceEnabled?: boolean;
+  referenceType?: string;
+  referenceStrength?: number;
+  referenceFidelity?: number;
+  /** "" = random. */
+  seed?: string | number;
+  signal?: AbortSignal;
+  activityManagedExternally?: boolean;
+}
+
+/** Result of `generate` (AM returns the generation + `positivePrompt`/`negativePrompt`). */
+export interface AmOutfitGenerated {
+  imageId: string;
+  url: string;
+  seed: string;
+  width: number;
+  height: number;
+  mimeType: string;
+  positivePrompt: string;
+  negativePrompt: string;
+  provider: string;
+  model: string;
+}
+
+/** AM `fOt.save` context. */
+export interface AmOutfitSaveContext {
+  assertCurrent?: () => void;
+  characterTarget?: { chaId: string; indexHint?: number };
+  characterIndex?: number;
+  characterName?: string;
+  outfitId?: string;
+  label?: string;
+  reuseSavedArtifact?: boolean;
+}
+
+export interface AmOutfitGenerator {
+  generate(input: AmOutfitGenerateInput): Promise<AmOutfitGenerated>;
+  /** Lumiverse already stored the image: returns the AM asset ref (`key` = image id, kind "outfit" name, sourceType "generated"). */
+  save(context: AmOutfitSaveContext, generated: AmOutfitGenerated): Promise<AssetRef>;
+}
+
+export function createAmOutfitGenerator(services: BackendServices, characterId: string): AmOutfitGenerator {
+  return {
+    async generate(input) {
+      input.signal?.throwIfAborted();
+      const prepared = await prepareConfig(services, characterId);
+      const context: OutfitTargetContext = {
+        sourceId: input.sourceId || characterId,
+        promptKey: input.promptKey,
+        characterName: input.characterName ?? "",
+        collection: normalizeFormCollection({}),
+        formId: "",
+        gender: input.gender ?? "unknown",
+        humanlike: input.humanlike !== false,
+        mainPrompt: input.mainPrompt ?? "",
+        formNegativePrompt: input.characterNegativePrompt ?? "",
+        reference: input.characterReference ? (AM.pn(input.characterReference) as AssetRef) : null,
+        persona: false,
+      };
+      const seed = AM.Kh(input.seed);
+      const draft: OutfitImageDraft = {
+        label: input.label ?? "",
+        description: input.description ?? "",
+        head: input.head ?? "",
+        top: input.top ?? "",
+        bottom: input.bottom ?? "",
+        legs: input.legs ?? "",
+        feet: input.feet ?? "",
+        nsfw: false,
+        seed,
+        seedFixed: !!seed,
+        useCharacterReference: input.referenceEnabled === true,
+      };
+      const { request } = await requestFromContext(services, characterId, prepared, context, draft, {
+        type: input.referenceType,
+        strength: input.referenceStrength,
+        fidelity: input.referenceFidelity,
+      });
+      const result = await services.images.generate(request, { ...(input.signal ? { signal: input.signal } : {}) });
+      input.signal?.throwIfAborted();
+      return {
+        imageId: result.imageId,
+        url: result.url,
+        seed: String(result.seed ?? ""),
+        width: result.width,
+        height: result.height,
+        mimeType: result.mimeType,
+        positivePrompt: request.prompt,
+        negativePrompt: request.negativePrompt,
+        provider: result.provider,
+        model: result.model,
+      };
+    },
+    async save(context, generated) {
+      context.assertCurrent?.();
+      const target = context.characterTarget ?? { chaId: characterId };
+      return {
+        name: createGeneratedAssetName({ label: `${context.characterName ?? ""} · ${context.label ?? ""}`, kind: "outfit" }),
+        key: generated.imageId,
+        extension: (generated.mimeType.split("/")[1] ?? "png").replace("jpeg", "jpg"),
+        sourceType: "generated",
+        moduleId: "",
+        moduleName: "",
+        ...(context.characterIndex !== undefined ? { characterIndex: context.characterIndex } : {}),
+        characterTarget: target,
+      };
+    },
+  };
 }
 
 export interface OutfitImageController {
   generate(params: RpcParams<"outfitImage.generate">): Promise<{ jobId: string }>;
   history(params: RpcParams<"outfitImage.history">): Promise<RpcResult<"outfitImage.history">>;
   save(params: RpcParams<"outfitImage.save">): Promise<RpcResult<"outfitImage.save">>;
+  /** AM outfit image generator (`fOt` generate/save) for the chat pipeline's free outfit / character generation. */
+  amGenerator(characterId: string): AmOutfitGenerator;
   cancelAll(): void;
   dispose(): void;
 }
@@ -397,6 +562,9 @@ export function createOutfitImageController(services: BackendServices): OutfitIm
       return { collection: saved! };
     },
 
+    amGenerator(characterId) {
+      return createAmOutfitGenerator(services, characterId);
+    },
     cancelAll() {
       for (const c of jobs.values()) c.abort();
     },

@@ -106,3 +106,29 @@ describe("outfit image controller", () => {
     expect(fin).toMatchObject({ jobId, error: { code: "cancelled" } });
   });
 });
+
+describe("AM outfit generator for the chat pipeline (fOt generate/save)", () => {
+  test("generate builds the fOt request; save returns a generated outfit asset ref", async () => {
+    const fx = createAnalysisFixture();
+    fx.config.value = { ...fx.config.value, image: { ...fx.config.value.image, provider: "novelai", model: "nai-diffusion-4-5-full" }, novelai: { ...fx.config.value.novelai, characterReferenceEnabled: true } };
+    const gen = createOutfitImageController(fx.services).amGenerator(CHAR);
+    const generated = await gen.generate({
+      promptKey: ALICE, characterName: "Alice", mainPrompt: "red hair", characterNegativePrompt: "bad hands", gender: "female", humanlike: true,
+      outfitId: "outfit_x", label: "Maid", head: "maid headdress", top: "maid apron", bottom: "", legs: "", feet: "",
+      characterReference: { name: "alice_smile.png", key: "img-alice_smile.png", extension: "png" }, referenceEnabled: true, referenceType: "character&style", referenceStrength: 0.4, referenceFidelity: 0.9, seed: "",
+    });
+    const request = fx.imageRequests.at(-1)!;
+    expect(request).toMatchObject({ purpose: "outfit", width: 832, height: 1216, seed: "", ownerCharacterId: CHAR });
+    expect(request.prompt).toContain("1girl, 3::solo::");
+    expect(request.prompt).toContain("red hair");
+    expect(request.prompt).toContain("maid apron");
+    expect(request.novelai?.characters?.[0]?.negativePrompt).toBe("bad hands");
+    expect(request.novelai?.characterReferences?.[0]).toMatchObject({ type: "character&style", strength: 0.4, fidelity: 0.9 });
+    expect(generated.imageId).toBe("fake-image-1");
+    let checked = false;
+    const asset = await gen.save({ assertCurrent: () => { checked = true; }, characterName: "Alice", label: "Maid", characterTarget: { chaId: CHAR } }, generated);
+    expect(checked).toBe(true);
+    expect(asset).toMatchObject({ key: "fake-image-1", sourceType: "generated", extension: "png", characterTarget: { chaId: CHAR } });
+    expect(asset.name).toMatch(/^Alice · Maid\.__am__\.outfit\./);
+  });
+});
