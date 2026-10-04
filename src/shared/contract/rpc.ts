@@ -84,10 +84,23 @@ export interface RosterItem {
   mainPrompt: string;
   analyzeEnabled: boolean;
   selectedAssetCount: number;
+  /** Row thumbnail (AM priorityAssets.getLorebookThumbnailAsset: first selected asset, else best candidate; custom: default form/outfit reference). */
+  thumbnailUrl?: string | null;
 }
 
 /** A world book usable as roster source (AM module / globalLore). */
-export interface RosterSource { worldBookId: string; name: string; attached: boolean; connected: boolean; entryCount: number; scope: "character" | "persona" | "chat" | "global" | "extra" }
+export interface RosterSource {
+  worldBookId: string;
+  name: string;
+  attached: boolean;
+  connected: boolean;
+  entryCount: number;
+  scope: "character" | "persona" | "chat" | "global" | "extra";
+  /** Images owned by the source (AM module asset count). */
+  assetCount?: number;
+  /** Module metadata badge (AM §1.6.6). */
+  metadata?: MetadataAvailability;
+}
 
 export interface WorkspaceSnapshot {
   characterId: string;
