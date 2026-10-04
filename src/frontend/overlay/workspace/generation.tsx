@@ -84,7 +84,7 @@ export function GenerationPanel({ ctx, owner, draftKey, source }: GenerationProp
   const referenceAsset = owner.kind === "character" ? formReferenceAsset(ctx.workspace?.document, draft.value, owner.promptKey, form.id) : toAssetRef(form.reference?.defaultAsset ?? null);
   const parts = ["head", "top", "bottom", "legs", "feet"] as const;
   return (
-    <div class="mx-auto grid w-full max-w-190 content-start gap-4 px-5 py-5 mobile:px-3" data-outfit-generation="">
+    <div class="mx-auto grid w-full min-w-0 max-w-190 grid-cols-[minmax(0,1fr)] content-start gap-4 px-5 py-5 mobile:px-3" data-outfit-generation="">
       <header class="flex min-h-8 items-center justify-between gap-3">
         <h1 class="truncate text-lg leading-tight font-extrabold">{title}</h1>
         <Badge>{`${session.results.length}/${MAX_GENERATION_HISTORY}`}</Badge>

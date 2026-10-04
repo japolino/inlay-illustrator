@@ -302,7 +302,8 @@ export const ANALYSIS_LABELS = {
     "artist-extraction": "Artist prompt extraction", // 작가 프롬프트 추출
     reclassification: "AI reclassification", // AI 재분류
     "unique-tag-search": "Unique tag search", // 고유태그검색
-    "representative-pick": "Representative image pick" // 대표 이미지 선택
+    "representative-pick": "Representative image pick", // 대표 이미지 선택
+    "charx-regex": "charx regex analysis" // charx 정규식 분석
   } as Record<string, string>,
   errorTitles: {
     "asset-matching": "Asset & character matching error", // 에셋&캐릭터 매칭 오류

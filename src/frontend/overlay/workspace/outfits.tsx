@@ -194,7 +194,7 @@ export function OutfitPanel(props: OutfitPaneModel) {
   const title = owner.kind === "character" ? OUTFIT_LABELS.frameTitle(owner.title) : PERSONA_LABELS.outfitFrame(owner.name);
   const options = [{ value: "all", label: OUTFIT_LABELS.showAll }, ...model.collection.forms.map((f) => ({ value: f.id, label: `${FORM_LABELS.prefix} ${f.id === model.collection.defaultFormId ? "★ " : ""}${formDisplayLabel(f.label)}` }))];
   return (
-    <div class="@container mx-auto grid w-full max-w-190 content-start gap-4 px-5 py-5 mobile:px-3" data-outfit-panel={ownerKey(owner)}>
+    <div class="@container mx-auto grid w-full min-w-0 max-w-190 grid-cols-[minmax(0,1fr)] content-start gap-4 px-5 py-5 mobile:px-3" data-outfit-panel={ownerKey(owner)}>
       <header class="flex min-h-8 flex-wrap items-center justify-between gap-3">
         <div class="flex min-w-0 items-center gap-2">
           <h1 class="truncate text-lg leading-tight font-extrabold">{title}</h1>

@@ -227,7 +227,7 @@ export function ArtistsContent() {
   const ctx = useWorkspaceCtx();
   const { state } = useArtists(ctx);
   return (
-    <div class="grid gap-3">
+    <div class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
       {state.error ? <EmptyCard tone="danger">{state.error}</EmptyCard> : null}
       {state.saveError ? <p role="alert" class="rounded-md bg-destructive/12 px-3 py-2 text-xs text-destructive">{state.saveError}</p> : null}
       {state.loading && !state.anima ? <div class="grid place-items-center py-10"><Spinner className="size-6 text-muted-foreground" /></div>

@@ -16,6 +16,24 @@ import { AnalysisNotices } from "./notices.js";
 import { PersonaContent, PersonaDock, PersonaHeaderEnd } from "./persona-tab.js";
 import { PromptsContent, PromptsDock, PromptsHeaderEnd, usePromptsCount } from "./prompts-tab.js";
 import { useSecondaryView } from "./secondary.js";
+import { draftStoreFor } from "./drafts.js";
+import type { AppController } from "../../state/app-state.js";
+
+/**
+ * Unsaved workspace edits (AM unsaved-editor guard `Te` 154609): draft keys with changes
+ * (`char:<characterId>:<promptKey>` / `persona:<personaId>`). The shell can call this before a
+ * character switch or close and ask the user to save or discard.
+ */
+export function unsavedWorkspaceDrafts(app: AppController, characterId?: string | null): string[] {
+  const drafts = draftStoreFor(app);
+  return characterId ? [...drafts.dirtyKeys(`char:${characterId}:`), ...drafts.dirtyKeys("persona:")] : drafts.dirtyKeys();
+}
+
+/** Drops unsaved workspace edits (after the user chose "discard"). */
+export function discardWorkspaceDrafts(app: AppController, keys: string[]): void {
+  const drafts = draftStoreFor(app);
+  for (const key of keys) drafts.discard(key);
+}
 
 /** After a successful prompt / persona analysis on the Assets tab, switch to Prompts / Persona after 1.5 s (AM `Uo` 154814). */
 function useAutoTabSwitch(): void {

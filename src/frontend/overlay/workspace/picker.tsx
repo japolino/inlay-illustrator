@@ -24,7 +24,7 @@ import { Button, CheckIcon, IconButton, XIcon, cn } from "../ui/index.js";
 import { DockLayout } from "../shell/dock.js";
 import { useWorkspaceCtx, type WorkspaceCtx } from "./context.js";
 import { CropDialog } from "./crop.js";
-import { applyCharacterCollection, formSaver, usePersonas, writeSelection } from "./data.js";
+import { formSaver, usePersonas, writeSelection } from "./data.js";
 import { draftKeyForCharacter, draftKeyForPersona, useFormDraftView } from "./drafts.js";
 import { CropIcon, KeyIcon, SparklesIcon, UploadIcon, ZoomInIcon } from "./icons.js";
 import { COMMON_LABELS, PICKER_LABELS } from "./labels/common.js";
@@ -321,7 +321,7 @@ export function PickerPanel({ target }: { target: PickerTarget }) {
 
   const title = pickerTitle(model.kind, model.name);
   return (
-    <div class="mx-auto grid w-full max-w-190 content-start gap-4 px-5 py-5 mobile:px-3" data-asset-picker={model.kind}>
+    <div class="mx-auto grid w-full min-w-0 max-w-190 grid-cols-[minmax(0,1fr)] content-start gap-4 px-5 py-5 mobile:px-3" data-asset-picker={model.kind}>
       <header class="flex min-h-8 items-center justify-between gap-3">
         <h1 class="truncate text-lg leading-tight font-extrabold">{title}</h1>
         <Badge>{PICKER_LABELS.count(state.total)}</Badge>

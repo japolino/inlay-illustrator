@@ -13,7 +13,7 @@ export function UniqueTagPanel() {
   const { workspace, session } = useWorkspaceCtx();
   const rows = registeredRows(workspace?.roster ?? []).filter(isRosterActive);
   return (
-    <div class="mx-auto grid w-full max-w-190 content-start gap-4 px-5 py-5 mobile:px-3" data-unique-tag-search="">
+    <div class="mx-auto grid w-full min-w-0 max-w-190 grid-cols-[minmax(0,1fr)] content-start gap-4 px-5 py-5 mobile:px-3" data-unique-tag-search="">
       <header class="flex min-h-8 items-center justify-between gap-3">
         <h1 class="truncate text-lg leading-tight font-extrabold">{UNIQUE_TAG_LABELS.paneTitle}</h1>
       </header>

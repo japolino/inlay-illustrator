@@ -19,7 +19,6 @@ import { useRunningJob } from "./notices.js";
 import { Badge, CommandButton, EmptyCard, EvidenceToggle, LabeledCheckbox, SaveButton, Spinner } from "./parts.js";
 import { openPicker } from "./picker.js";
 import { ProfileRow, analysisStates, setAllAnalysis } from "./profile-row.js";
-import { patchForm } from "../../../shared/contract/character.js";
 import { ExclusionButton, RosterToggle } from "./roster-actions.js";
 
 const SEARCH_SCOPE = "charx";
@@ -31,7 +30,7 @@ export function usePromptsCount(ctx: WorkspaceCtx): number | undefined {
 
 export function PromptsHeaderEnd() {
   const { ui, characterId, sourceUi } = useWorkspaceCtx();
-  return <SearchField className="w-56 mobile:w-full" value={sourceUi.search[SEARCH_SCOPE] ?? ""} onChange={(q) => ui.setSearch(characterId, SEARCH_SCOPE, q)} label={PROMPTS_LABELS.search} />;
+  return <SearchField className="w-56 mobile:w-32" value={sourceUi.search[SEARCH_SCOPE] ?? ""} onChange={(q) => ui.setSearch(characterId, SEARCH_SCOPE, q)} label={PROMPTS_LABELS.search} />;
 }
 
 function openUniqueTags(ctx: WorkspaceCtx): void {
@@ -115,7 +114,7 @@ export function PromptsContent() {
   const shown = new Set(visible.map((i) => i.promptKey));
   const filtering = query.trim() !== "" || Object.values(filters).some((v) => v && v !== "all");
   return (
-    <div class={cn("grid gap-1")} data-prompts-list="">
+    <div class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1" data-prompts-list="">
       {filtering && shown.size === 0 ? <p class="py-6 text-center text-xs text-muted-foreground">{query ? COMMON_LABELS.noSearchResults : PROMPTS_LABELS.noMatch}</p> : null}
       {items.map((item) => <PromptRow key={item.promptKey} ctx={ctx} item={item} hidden={!shown.has(item.promptKey)} commandLocked={!!running} />)}
     </div>
@@ -191,4 +190,3 @@ export function PromptsDock() {
   return <DockLayout leading={leading} controls={controls} trailing={trailing} />;
 }
 
-export { patchForm };

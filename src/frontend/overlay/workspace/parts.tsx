@@ -129,7 +129,7 @@ export function WorkbenchRow({ title, titleStart, titleEnd, exclusionAction, sta
   children?: ComponentChildren;
 } & { "data-prompt-key"?: string; "data-persona-id"?: string; onFocusCapture?: () => void; onPointerDownCapture?: () => void }) {
   return (
-    <article hidden={hidden} class={cn("grid gap-2.5 pt-2.5 pb-4.5", className)} data-state={active ? "active" : "inactive"} data-character-workbench-row="" {...rest}>
+    <article hidden={hidden} class={cn("grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2.5 pt-2.5 pb-4.5", className)} data-state={active ? "active" : "inactive"} data-character-workbench-row="" {...rest}>
       <header class="relative flex min-h-11 items-center gap-2 md:grid md:h-9.5 md:min-h-0 md:grid-cols-[minmax(0,1fr)_auto] md:gap-3" data-character-workbench-header="">
         <div class="flex min-w-0 flex-1 items-center gap-1 text-xs/4 font-extrabold">
           <span class="group/roster inline-flex shrink-0 items-center md:relative" data-roster-action-anchor="">
@@ -425,7 +425,7 @@ export function Menu({ label, trigger, items, align = "end" }: { label: string; 
 
 /** Centered card message (empty states). */
 export function EmptyCard({ children, tone = "muted" }: { children: ComponentChildren; tone?: "muted" | "danger" }) {
-  return <div class={cn("rounded-lg px-4 py-6 text-center text-xs leading-relaxed", tone === "danger" ? "bg-destructive/12 text-destructive" : "bg-card text-muted-foreground")} role={tone === "danger" ? "alert" : undefined}>{children}</div>;
+  return <div class={cn("min-w-0 rounded-lg px-4 py-6 text-center text-xs leading-relaxed", tone === "danger" ? "bg-destructive/12 text-destructive" : "bg-card text-muted-foreground")} role={tone === "danger" ? "alert" : undefined}>{children}</div>;
 }
 
 export type { ButtonProps };

@@ -24,7 +24,7 @@ const FILTER_SCOPE = "persona";
 
 export function PersonaHeaderEnd() {
   const { ui, characterId, sourceUi } = useWorkspaceCtx();
-  return <SearchField className="w-56 mobile:w-full" value={sourceUi.search[SEARCH_SCOPE] ?? ""} onChange={(q) => ui.setSearch(characterId, SEARCH_SCOPE, q)} label={PERSONA_LABELS.search} />;
+  return <SearchField className="w-56 mobile:w-32" value={sourceUi.search[SEARCH_SCOPE] ?? ""} onChange={(q) => ui.setSearch(characterId, SEARCH_SCOPE, q)} label={PERSONA_LABELS.search} />;
 }
 
 function scopeBadge(persona: PersonaSummary, anyBound: boolean) {
@@ -102,7 +102,7 @@ export function PersonaContent() {
   const filtering = query.trim() !== "" || Object.values(filters).some((v) => v && v !== "all");
   const anyBound = list.some((p) => p.isBound);
   return (
-    <div class="grid gap-1" data-persona-list="">
+    <div class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1" data-persona-list="">
       {filtering && shown.size === 0 ? <p class="py-6 text-center text-xs text-muted-foreground">{query ? COMMON_LABELS.noSearchResults : PERSONA_LABELS.noMatch}</p> : null}
       {list.map((p, i) => <PersonaRow key={p.personaId} ctx={ctx} persona={p} index={i} hidden={!shown.has(p.personaId)} anyBound={anyBound} commandLocked={!!running} />)}
     </div>

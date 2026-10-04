@@ -58,7 +58,7 @@ export function AssetsHeaderEnd() {
           </button>
         ))}
       </div>
-      <SearchField className="w-56 mobile:w-full" value={sourceUi.search[scope] ?? ""} onChange={(q) => ui.setSearch(characterId, scope, q)} label={view === "persona" ? ASSETS_LABELS.searchPersona : ASSETS_LABELS.searchCharx} />
+      <SearchField className="w-56 mobile:w-32" value={sourceUi.search[scope] ?? ""} onChange={(q) => ui.setSearch(characterId, scope, q)} label={view === "persona" ? ASSETS_LABELS.searchPersona : ASSETS_LABELS.searchCharx} />
     </>
   );
 }
@@ -236,7 +236,7 @@ export function AssetsContent() {
     if (!personaList.length) return <EmptyCard>{query ? ASSETS_LABELS.noResults : ASSETS_LABELS.noPersona}</EmptyCard>;
     const visible = new Set(personaFiltered.visible.map((p) => p.personaId));
     return (
-      <div class="grid gap-1" data-assets-list="persona">
+      <div class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1" data-assets-list="persona">
         {filtering && visible.size === 0 ? <p class="py-6 text-center text-xs text-muted-foreground">{query ? ASSETS_LABELS.noResults : ASSETS_LABELS.noMatch}</p> : null}
         {personaList.map((p, i) => <PersonaAssetRow key={p.personaId} ctx={ctx} persona={p} index={i} hidden={!visible.has(p.personaId)} completed={completedPersonas.has(p.personaId)} />)}
       </div>
@@ -246,7 +246,7 @@ export function AssetsContent() {
   const visible = new Set(charx.visible.map((i) => i.promptKey));
   const ordered = [...items].sort((a, b) => Number(visible.has(b.promptKey)) - Number(visible.has(a.promptKey)));
   return (
-    <div class="grid gap-1" data-assets-list="charx">
+    <div class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1" data-assets-list="charx">
       {filtering && visible.size === 0 ? <p class="py-6 text-center text-xs text-muted-foreground">{query ? ASSETS_LABELS.noResults : ASSETS_LABELS.noMatch}</p> : null}
       {ordered.map((item) => <CharxRow key={item.promptKey} ctx={ctx} item={item} hidden={!visible.has(item.promptKey)} />)}
     </div>

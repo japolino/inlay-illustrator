@@ -137,7 +137,8 @@ const ANALYSIS_TEXT: Record<AnalysisKind, { running: string; done: string }> = {
   "artist-extraction": { running: "AI analyzing artist prompt", done: "Artist prompt extraction complete" },
   reclassification: { running: "AI reclassifying", done: "AI reclassification complete" },
   "unique-tag-search": { running: "Searching unique tags", done: "Unique tag search complete" },
-  "representative-pick": { running: "Picking representative images", done: "Representative images picked" }
+  "representative-pick": { running: "Picking representative images", done: "Representative images picked" },
+  "charx-regex": { running: "Analyzing charx regex", done: "charx regex analysis complete" }
 };
 
 /** Effects of a finished analysis on the mock data. Returns the finished message. */
