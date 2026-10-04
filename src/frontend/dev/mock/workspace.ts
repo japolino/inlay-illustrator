@@ -507,3 +507,50 @@ export function workspaceMockHandlers(): MockHandlers {
     }
   };
 }
+
+/** Demo data for previews: asset selections, a form reference and a persona profile (idempotent). */
+export function seedWorkspaceDemo(db: MockDb): void {
+  const state = workspaceMockState(db);
+  if ((state as { seeded?: boolean }).seeded) return;
+  (state as { seeded?: boolean }).seeded = true;
+  const c1 = db.characters[0];
+  if (!c1) return;
+  const characterId = c1.summary.characterId;
+  const doc = documentFor(db, characterId);
+  const cp = doc.characterPrompt;
+  const pick = (...names: string[]) => names.map((n) => c1.assets.find((a) => a.asset.name === n)).filter((a): a is AssetListItem => !!a).map((a) => toStoredAssetRef(a.asset));
+  const keys = Object.keys(cp.characterForms);
+  // Fixture forms use group names ("identity", "hair") instead of catalog field ids; give them real values.
+  const demoGroups = [
+    { "identity.character_tag": ["han seo-yeon"], "hair.color": ["black hair"], "hair.length": ["long hair"], "eyes.color": ["brown eyes"], custom: ["beauty mark"] },
+    { "hair.color": ["brown hair"], "hair.length": ["short hair"], "hair.style": ["bob cut"], "eyes.color": ["green eyes"] }
+  ];
+  keys.slice(0, 2).forEach((key, i) => {
+    const c = characterForms(db, characterId, key);
+    setCharacterForms(db, characterId, key, patchForm(c, c.defaultFormId, { basePromptGroups: demoGroups[i], negativePrompt: i === 0 ? "short hair" : "" }));
+  });
+  if (keys[0]) {
+    const sel = pick("seoyeon_default", "seoyeon_smile", "seoyeon_uniform");
+    cp.assetSelections[keys[0]] = { selectedAssets: sel, selectedAssetNames: sel.map((a) => a.name) };
+    const c = characterForms(db, characterId, keys[0]);
+    const form = c.forms[0]!;
+    let next = patchForm(c, form.id, { reference: { enabled: true, defaultAsset: sel[0] ?? null } });
+    next = patchOutfit(next, form.id, form.outfits[0]!.id, { referenceAsset: sel[2] ?? null });
+    setCharacterForms(db, characterId, keys[0], next);
+  }
+  if (keys[1]) {
+    const sel = pick("mina_default", "mina_angry");
+    cp.assetSelections[keys[1]] = { selectedAssets: sel, selectedAssetNames: sel.map((a) => a.name) };
+  }
+  for (const item of c1.assets) if (item.kind === "original" && item.asset.name.startsWith("seoyeon")) item.hasMetadata = item.asset.name !== "seoyeon_uniform";
+  const persona = db.personas[0];
+  if (persona) {
+    db.config.characterPrompt.personaSettings.profiles[persona.personaId] = {
+      forms: normalizeFormCollection({
+        defaultFormId: "form_default",
+        forms: [{ id: "form_default", label: "기본", description: "", humanlike: true, gender: "male", basePromptGroups: { "hair.color": ["black hair"], "hair.length": ["short hair"], "eyes.color": ["dark eyes"] }, negativePrompt: "", reference: null, defaultOutfitId: "outfit_default",
+          outfits: [{ id: "outfit_default", label: "기본 의상", description: "", candidateEnabled: true, head: "", top: "school blazer, white shirt", bottom: "dark trousers", legs: "", feet: "loafers" }, { id: "outfit_casual", label: "Casual", description: "Weekend clothes", candidateEnabled: true, head: "cap", top: "hoodie", bottom: "jeans", legs: "", feet: "sneakers" }] }]
+      })
+    };
+  }
+}
