@@ -147,9 +147,9 @@ describe("coordinate board geometry", () => {
   });
   test("markers and centers from prompt sections", () => {
     const markers = markersFromSections([
-      { id: "main-prompt", target: "main", label: "", value: "", negativeValue: "" },
-      { id: "actor-prompt:0", target: "actor", actorIndex: 0, label: "A", value: "", negativeValue: "", centerX: 0.3, centerY: 0.5 },
-      { id: "actor-prompt:1", target: "actor", actorIndex: 1, label: "B", value: "", negativeValue: "" }
+      { id: "main", target: "main", label: "", value: "", negativeValue: "" },
+      { id: "actor:0", target: "actor", actorIndex: 0, label: "A", value: "", negativeValue: "", centerX: 0.3, centerY: 0.5 },
+      { id: "actor:1", target: "actor", actorIndex: 1, label: "B", value: "", negativeValue: "" }
     ]);
     expect(markers.map((m) => [m.ordinal, m.center])).toEqual([[1, { x: 0.3, y: 0.5 }], [2, null]]);
     expect(centersOf(markers)).toEqual([{ x: 0.3, y: 0.5 }, null]);

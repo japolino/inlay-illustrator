@@ -195,7 +195,7 @@ describe("zoom viewer (DOM, dev mock)", () => {
     (await until(() => q("[data-ii-zoom-save-prompts]"))).click();
     await until(() => calls(r, "zoom.saveDraft").length === 1);
     const sections = (calls(r, "zoom.saveDraft")[0]!.params as { overrides: { sections: Array<{ id: string; value: string }> } }).overrides.sections;
-    expect(sections.find((s) => s.id === "main-prompt")?.value).toBe("1girl, rooftop");
+    expect(sections.find((s) => s.id === "main")?.value).toBe("1girl, rooftop");
     await until(() => !q("[data-ii-zoom-save-prompts]"));
     (await until(() => { const b = q("[data-ii-zoom-delete-slot]"); return b && !b.hasAttribute("disabled") && b; })).click();
     (await until(() => q("[data-ii-zoom-slot-confirm]"))).click();

@@ -66,9 +66,9 @@ export function slotIdOf(m: Pick<MockChatMessage, "messageId" | "swipeIndex">, i
 
 function sectionsFor(seed: number, actors: Array<{ label: string; prompt: string; x: number | null; y: number | null }>): ZoomPromptSection[] {
   return [
-    { id: "main-prompt", target: "main" as const, label: "", value: `2girls, classroom, afternoon light, window, desks, artist:ningen_mame, best quality`, negativeValue: "lowres, bad anatomy, text" },
+    { id: "main", target: "main" as const, label: "", value: `2girls, classroom, afternoon light, window, desks, artist:ningen_mame, best quality`, negativeValue: "lowres, bad anatomy, text" },
     ...actors.map((actor, i) => ({
-      id: `actor-prompt:${i}`,
+      id: `actor:${i}`,
       target: "actor" as const,
       actorIndex: i,
       label: actor.label,
@@ -335,7 +335,7 @@ function snapshot(chat: MockChatData, message: MockChatMessage, attemptKind: Att
     requestedCount,
     completedSlots: 0,
     failedSlots: 0,
-    canRetry: true,
+    canRetry: false,
     canRestart: false
   };
 }
@@ -358,6 +358,7 @@ async function runMessageJob(chat: MockChatData, message: MockChatMessage, job: 
   };
   const finish = (result: "completed" | "failed" | "cancelled", error?: { code: "provider-error"; message: string; retryable: boolean }) => {
     s.status = result === "completed" ? "success" : result === "failed" ? "error" : "cancelled";
+    s.canRetry = result !== "completed";
     ctx.emit("generation.finished", { jobId: s.jobId, chatId: chat.chatId, messageKey: key, result, ...(error ? { error } : {}) });
     ctx.emit("chatData.changed", { chatId: chat.chatId, messageKeys: [key] });
   };
