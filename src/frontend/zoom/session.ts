@@ -38,6 +38,10 @@ export interface ZoomSession {
   setSizeId(sizeId: number): Promise<void>;
   setIncluded(actorIndex: number, included: boolean): Promise<void>;
   savePrompts(sections: ZoomPromptSection[]): Promise<boolean>;
+  /** Artist for the next regeneration (main / provider card select; AM zoom artist choices). */
+  setArtist(artistId: string): Promise<void>;
+  /** Outfit of one actor for the next regeneration (actor card select). */
+  setOutfit(actorKey: string, outfitId: string): Promise<void>;
   saveCenters(centers: (Center | null)[]): Promise<boolean>;
   clearDraft(part: "prompts" | "coordinates" | "all"): Promise<void>;
   importViewed(what: "prompts" | "seed"): Promise<void>;
@@ -209,6 +213,18 @@ export function useZoomSession(app: AppController, initial: ZoomTarget, onClose:
       if (included) set.delete(actorIndex);
       else set.add(actorIndex);
       await saveDraft({ excludedCharacterIndexes: [...set].sort((a, b) => a - b) }, "include");
+    },
+    async setArtist(artistId) {
+      if (!details || !artistId) return;
+      await saveDraft({ artistId }, "artist");
+    },
+    async setOutfit(actorKey, outfitId) {
+      if (!details || !actorKey || !outfitId) return;
+      // The draft stores the whole map (shallow merge): send every actor's current choice plus the change.
+      const outfitByActor: Record<string, string> = {};
+      for (const s of details.sections) if (s.actorKey && s.selectedOutfitId) outfitByActor[s.actorKey] = s.selectedOutfitId;
+      outfitByActor[actorKey] = outfitId;
+      await saveDraft({ outfitByActor }, "outfit");
     },
     async savePrompts(sections) {
       return saveDraft({ sections: sections.map((s) => ({ id: s.id, value: s.value, negativeValue: s.negativeValue })) }, "prompts");

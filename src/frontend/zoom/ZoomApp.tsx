@@ -210,6 +210,9 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
               coordinateDisabled={(!coord && (locked || historicalLock || aiOpen || !canEditCoordinates)) || excluded || !!coord?.saving}
               onCoordinate={() => (coord ? setCoord(null) : beginCoordinates())}
               compact={compact}
+              choicesDisabled={!!session.busy || !details.canRegenerate || historicalLock || editing || !!coord || aiOpen}
+              onArtist={(artistId) => void session.setArtist(artistId)}
+              onOutfit={(actorKey, outfitId) => void session.setOutfit(actorKey, outfitId)}
             />
           );
         })}

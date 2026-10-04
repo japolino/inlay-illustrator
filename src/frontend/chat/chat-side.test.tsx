@@ -203,6 +203,50 @@ describe("zoom viewer (DOM, dev mock)", () => {
     await until(() => calls(r, "zoom.getDetails").some((c) => (c.params as { slotId: string }).slotId === "illustration:msg-2@0:slot:1"));
   });
 
+  test("zoom outfit and artist selects save the regeneration draft", async () => {
+    const r = rig();
+    await r.app.init();
+    await openZoom(r);
+    q("[data-ii-zoom-info-toggle]")!.click();
+    const outfit = await until(() => q("[data-ii-zoom-outfit-select] button"));
+    const actorKey = outfit.parentElement!.getAttribute("data-ii-zoom-outfit-select")!;
+    expect(outfit.textContent).toContain("Default outfit");
+    outfit.click();
+    const option = await until(() => [...doc.querySelectorAll('[role="option"]')].find((o) => o.textContent?.includes("Casual")) as HTMLElement | undefined);
+    option.click();
+    await until(() => calls(r, "zoom.saveDraft").length === 1);
+    const overrides = (calls(r, "zoom.saveDraft")[0]!.params as { overrides: { outfitByActor: Record<string, string> } }).overrides;
+    expect(overrides.outfitByActor[actorKey]).toBe("outfit_casual");
+    expect(Object.keys(overrides.outfitByActor).length).toBeGreaterThan(1);
+    const artist = await until(() => { const b = q("[data-ii-zoom-artist-select] button"); return b && !b.hasAttribute("disabled") && b; });
+    artist.click();
+    (await until(() => [...doc.querySelectorAll('[role="option"]')].find((o) => o.textContent?.includes("Clean lineart")) as HTMLElement | undefined)).click();
+    await until(() => calls(r, "zoom.saveDraft").length === 2);
+    expect((calls(r, "zoom.saveDraft")[1]!.params as { overrides: { artistId: string } }).overrides).toEqual({ artistId: "preset-2" });
+    await until(() => q("[data-ii-zoom-artist-select] button")?.textContent?.includes("Clean lineart"));
+  });
+
+  test("chat state window: deselect a tag and save through chatState.set", async () => {
+    const r = rig();
+    await r.app.init();
+    await openZoom(r);
+    q("[data-ii-zoom-state-toggle]")!.click();
+    const chip = await until(() => q('[data-ii-zoom-state-tag="cum_on_hair"]'));
+    expect(chip.getAttribute("aria-pressed")).toBe("true");
+    expect(q("[data-ii-zoom-state-save]")!.hasAttribute("disabled")).toBe(true);
+    chip.click();
+    await until(() => q('[data-ii-zoom-state-tag="cum_on_hair"][aria-pressed="false"]'));
+    (await until(() => { const b = q("[data-ii-zoom-state-save]"); return b && !b.hasAttribute("disabled") && b; })).click();
+    await until(() => calls(r, "chatState.set").length === 1);
+    const params = calls(r, "chatState.set")[0]!.params as { baseRevision: number; actorState: { actors: Record<string, { groups: Record<string, string[]>; ttl: Record<string, number> }> } };
+    expect(params.baseRevision).toBe(3);
+    expect(params.actorState.actors.mina!.groups["state.fluid.cum.location"]).toEqual([]);
+    expect(params.actorState.actors.mina!.ttl).toEqual({});
+    expect(params.actorState.actors.seoyeon!.groups["actor.injury"]).toEqual(["bandage_on_arm", "scraped_knee"]);
+    await until(() => !q('[data-ii-zoom-state-tag="cum_on_hair"]'));
+    expect(mockChat(r.mock.db).actorState.revision).toBe(4);
+  });
+
   test("AI edit: $ mention list and insertion", async () => {
     const r = rig();
     await r.app.init();

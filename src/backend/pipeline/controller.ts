@@ -1057,7 +1057,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
       const o = choices.outfitsByActor?.get(i);
       if (!o) return {};
       const actor = record.actors.find((a) => a.actorIndex === i);
-      return { outfitChoices: o.choices, selectedOutfitId: draft?.outfitByActor?.[o.key] ?? actor?.selectedOutfitId ?? "" };
+      return { outfitChoices: o.choices, selectedOutfitId: draft?.outfitByActor?.[o.key] ?? actor?.selectedOutfitId ?? "", actorKey: o.key };
     };
     const overrides = new Map((draft?.sections ?? []).map((s) => [s.id, s] as const));
     const pick = (id: string, value: string, negativeValue: string) => {

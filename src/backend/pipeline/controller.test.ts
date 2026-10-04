@@ -219,6 +219,7 @@ describe("history, regenerate, delete", () => {
     expect(zoom.sections[0]!.selectedArtistId).toBe(artistA!.id);
     expect(zoom.sections[1]!.outfitChoices!.map((o) => o.id)).toEqual(["o1", "o2"]);
     expect(zoom.sections[1]!.selectedOutfitId).toBe("o1");
+    expect(zoom.sections[1]!.actorKey).toBe("persona::persona-1");
     const { jobId } = await pipeline.regenerateSlot({ chatId: CHAT_ID, messageKey: "illustration:m1@0", slotId, entryId, overrides: { artistId: artistB!.id, outfitByActor: { "persona::persona-1": "o2" } } });
     await waitFor(() => finished(fx, jobId).length > 0);
     expect(finished(fx, jobId)[0]!.result).toBe("completed");

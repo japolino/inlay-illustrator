@@ -1,10 +1,12 @@
 /**
  * Zoom viewer panels: chat images sidebar (AM `$kt`/`Rkt`), generation log (AM `Bkt`/`Ukt`), generation
  * settings footer (AM `KU`), prompt fields (AM `e_e`/`Dkt`), analyzer text (AM `Zxe`), slot-delete dialog
- * (AM `T0e`) and the chat state window (AM `WIt`, on `chatState.get/clear`).
+ * (AM `T0e`) and the chat state window (AM `WIt`, on `chatState.get/set/clear`).
  */
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
+import { useSelector } from "../state/store.js";
+import { outfitDisplayLabel } from "../overlay/workspace/model.js";
 import type { CurrentActorState } from "../../shared/contract/chat.js";
 import type { SlotDeletionPreview, ZoomDetails, ZoomPromptSection } from "../../shared/contract/rpc.js";
 import { cn } from "../overlay/ui/cn.js";
@@ -191,9 +193,13 @@ export interface PromptFieldProps {
   coordinateDisabled: boolean;
   onCoordinate: () => void;
   compact?: boolean;
+  /** Artist / outfit selects (zoom choices); disabled while busy, editing or locked. */
+  choicesDisabled?: boolean;
+  onArtist?: (artistId: string) => void;
+  onOutfit?: (actorKey: string, outfitId: string) => void;
 }
 
-export function PromptField({ section, ordinal, editing, draft, onDraft, providerLabel, excluded, includeDisabled, onIncluded, marker, coordinateActive, coordinateDisabled, onCoordinate, compact }: PromptFieldProps) {
+export function PromptField({ section, ordinal, editing, draft, onDraft, providerLabel, excluded, includeDisabled, onIncluded, marker, coordinateActive, coordinateDisabled, onCoordinate, compact, choicesDisabled, onArtist, onOutfit }: PromptFieldProps) {
   const [negativeOpen, setNegativeOpen] = useState(false);
   const aria = sectionAria(section);
   const actor = section.target === "actor";
@@ -230,6 +236,32 @@ export function PromptField({ section, ordinal, editing, draft, onDraft, provide
         ) : (
           <span class="inline-flex items-center gap-1.5 rounded-md bg-surface-badge px-2 py-1 font-bold"><span class="text-muted-foreground">{ZOOM_LABELS.provider}</span>{providerLabel}</span>
         )}
+        {!actor && section.artistChoices?.length && onArtist ? (
+          <span class="inline-flex min-w-0 items-center gap-1.5" data-ii-zoom-artist-select="">
+            <span class="font-bold text-muted-foreground">{ZOOM_LABELS.artist}</span>
+            <Select
+              value={section.selectedArtistId || null}
+              options={section.artistChoices.map((c) => ({ value: c.id, label: c.label }))}
+              onValueChange={(id) => onArtist(id)}
+              disabled={choicesDisabled}
+              aria-label={ZOOM_LABELS.artistSelect}
+              className="h-7 min-w-32 max-w-56 text-2xs"
+            />
+          </span>
+        ) : null}
+        {actor && section.actorKey && section.outfitChoices?.length && onOutfit ? (
+          <span class="inline-flex min-w-0 items-center gap-1.5" data-ii-zoom-outfit-select={section.actorKey}>
+            <span class="font-bold text-muted-foreground">{ZOOM_LABELS.outfit}</span>
+            <Select
+              value={section.selectedOutfitId || null}
+              options={section.outfitChoices.map((c, i) => ({ value: c.id, label: outfitDisplayLabel({ id: c.id, label: c.label === c.id ? "" : c.label }, i) }))}
+              onValueChange={(id) => onOutfit(section.actorKey!, id)}
+              disabled={choicesDisabled || excluded}
+              aria-label={fill(ZOOM_LABELS.outfitSelect, { label: section.label })}
+              className="h-7 min-w-28 max-w-48 text-2xs"
+            />
+          </span>
+        ) : null}
       </div>
       <textarea
         aria-label={aria}
@@ -352,16 +384,40 @@ function tagLabel(tag: string, raw: boolean): string {
   return parts[parts.length - 1] || tag;
 }
 
+const chipKey = (actor: string, group: string, tag: string) => `${actor}\u0000${group}\u0000${tag}`;
+
+/** Actor state with the deselected chips removed (AM `zBe` save: keep only the selected tags; ttl follows its tag). */
+export function keepSelectedTags(state: CurrentActorState, deselected: ReadonlySet<string>): CurrentActorState {
+  const actors: CurrentActorState["actors"] = {};
+  for (const [key, record] of Object.entries(state.actors)) {
+    const groups = Object.fromEntries(
+      Object.entries(record.groups).map(([group, tags]) => [group, tags.filter((tag) => !deselected.has(chipKey(key, group, tag)))])
+    ) as typeof record.groups;
+    const kept = new Set(Object.values(groups).flat());
+    const ttl = Object.fromEntries(Object.entries(record.ttl).filter(([tag]) => kept.has(tag)));
+    actors[key] = { ...record, groups, ttl };
+  }
+  return { revision: state.revision, actors };
+}
+
 export function ChatStatePanel({ app, chatId, actorNames }: { app: AppController; chatId: string; actorNames?: Record<string, string> }) {
   const confirm = useConfirm();
   const [state, setState] = useState<CurrentActorState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
+  /** Chips the user deselected (selection = keep; AM `WIt`). */
+  const [deselected, setDeselected] = useState<ReadonlySet<string>>(new Set());
+  // A generation job in this chat may rewrite the state: block edits while it runs (AM `subscribeBusy`).
+  const generating = useSelector(app.store, (s) =>
+    Object.values(s.generationJobs).some((job) => job.chatId === chatId && (job.status === "queued" || job.status === "running"))
+  );
   const load = async () => {
     setBusy(true);
     try {
       const { actorState } = await app.call("chatState.get", { chatId });
       setState(actorState);
+      setDeselected(new Set());
       setError(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -372,6 +428,34 @@ export function ChatStatePanel({ app, chatId, actorNames }: { app: AppController
   useEffect(() => {
     void load();
   }, [chatId]);
+  // Auto-reload when a generation finishes and nothing is unsaved.
+  const [wasGenerating, setWasGenerating] = useState(generating);
+  useEffect(() => {
+    if (wasGenerating && !generating && deselected.size === 0) void load();
+    setWasGenerating(generating);
+  }, [generating]);
+  const toggle = (key: string) =>
+    setDeselected((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const save = async () => {
+    if (!state || deselected.size === 0) return;
+    setSaving(true);
+    try {
+      const { actorState } = await app.call("chatState.set", { chatId, actorState: keepSelectedTags(state, deselected), baseRevision: state.revision });
+      setState(actorState);
+      setDeselected(new Set());
+      setError(null);
+    } catch (caught) {
+      const code = (caught as { error?: { code?: string } } | null)?.error?.code ?? (caught as { code?: string } | null)?.code;
+      setError(code === "conflict" ? ZOOM_LABELS.stateConflict : caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setSaving(false);
+    }
+  };
   const clear = async (actorKeys?: string[]) => {
     const ok = await confirm({ title: ZOOM_LABELS.clearConfirm, description: ZOOM_LABELS.clearConfirmDescription, confirmLabel: actorKeys ? fill(ZOOM_LABELS.clearActor, { actor: actorNames?.[actorKeys[0]!] ?? actorKeys[0]! }) : ZOOM_LABELS.clearAll, cancelLabel: ZOOM_LABELS.cancel });
     if (!ok) return;
@@ -379,6 +463,7 @@ export function ChatStatePanel({ app, chatId, actorNames }: { app: AppController
     try {
       const { actorState } = await app.call("chatState.clear", { chatId, ...(actorKeys ? { actorKeys } : {}) });
       setState(actorState);
+      setDeselected(new Set());
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -386,6 +471,7 @@ export function ChatStatePanel({ app, chatId, actorNames }: { app: AppController
     }
   };
   const actors = Object.entries(state?.actors ?? {});
+  const locked = busy || saving || generating;
   return (
     <section aria-label={ZOOM_LABELS.chatState} class="grid gap-3" data-ii-zoom-state="">
       {!state && busy ? <StatusBox tone="loading">{ZOOM_LABELS.loadingState}</StatusBox> : null}
@@ -394,7 +480,7 @@ export function ChatStatePanel({ app, chatId, actorNames }: { app: AppController
         <article key={key} class="grid gap-2 rounded-lg bg-card p-3">
           <header class="flex items-center justify-between gap-2">
             <span class="truncate text-xs font-extrabold">{actorNames?.[key] ?? key}</span>
-            <Button variant="ghost" size="sm" disabled={busy} onClick={() => void clear([key])}>{fill(ZOOM_LABELS.clearActor, { actor: "" }).trim()}</Button>
+            <Button variant="ghost" size="sm" disabled={locked} onClick={() => void clear([key])}>{fill(ZOOM_LABELS.clearActor, { actor: "" }).trim()}</Button>
           </header>
           {Object.entries(record.groups).filter(([, tags]) => tags.length > 0).map(([group, tags]) => {
             const meta = GROUP_LABEL[group] ?? { label: group, tone: "blue" as const, raw: true };
@@ -402,12 +488,31 @@ export function ChatStatePanel({ app, chatId, actorNames }: { app: AppController
               <div key={group} class="grid gap-1">
                 <span class="text-2xs font-bold text-muted-foreground">{meta.label}</span>
                 <div class="flex flex-wrap gap-1.5">
-                  {tags.map((tag) => (
-                    <span key={tag} title={tag} class={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-bold", meta.tone === "red" ? "bg-destructive/18 text-destructive" : "bg-coordinate-1/22 text-coordinate-1")}>
-                      {tagLabel(tag, meta.raw).replace(/_/gu, " ")}
-                      {record.ttl[tag] ? <span class="font-mono text-3xs opacity-75">{fill(ZOOM_LABELS.stateCount, { n: record.ttl[tag]! })}</span> : null}
-                    </span>
-                  ))}
+                  {tags.map((tag) => {
+                    const id = chipKey(key, group, tag);
+                    const selected = !deselected.has(id);
+                    return (
+                      <button
+                        type="button"
+                        key={tag}
+                        title={tag}
+                        aria-label={tag.replace(/_/gu, " ")}
+                        aria-pressed={selected}
+                        disabled={locked}
+                        data-ii-zoom-state-tag={tag}
+                        onClick={() => toggle(id)}
+                        class={cn(
+                          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-bold transition disabled:cursor-not-allowed",
+                          meta.tone === "red" ? "bg-destructive/18 text-destructive" : "bg-coordinate-1/22 text-coordinate-1",
+                          selected ? "" : "opacity-45"
+                        )}
+                      >
+                        {selected ? <CheckIcon /> : null}
+                        {tagLabel(tag, meta.raw).replace(/_/gu, " ")}
+                        {record.ttl[tag] ? <span class="font-mono text-3xs opacity-75">{fill(ZOOM_LABELS.stateCount, { n: record.ttl[tag]! })}</span> : null}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -417,8 +522,17 @@ export function ChatStatePanel({ app, chatId, actorNames }: { app: AppController
       <footer class="flex items-center justify-between gap-2">
         {error ? <span role="alert" class="inline-flex items-center gap-1 text-2xs text-destructive" title={error}><AlertIcon />{error}</span> : <span />}
         <div class="flex items-center gap-1">
-          <IconButton label={ZOOM_LABELS.refreshState} title={ZOOM_LABELS.refresh} disabled={busy} onClick={() => void load()}>{busy ? <LoaderIcon /> : <RefreshIcon />}</IconButton>
-          <Button variant="danger" size="sm" disabled={busy || actors.length === 0} onClick={() => void clear()}><TrashIcon />{ZOOM_LABELS.clearAll}</Button>
+          <IconButton label={ZOOM_LABELS.refreshState} title={ZOOM_LABELS.refresh} disabled={busy || saving} onClick={() => void load()}>{busy ? <LoaderIcon /> : <RefreshIcon />}</IconButton>
+          <IconButton
+            label={saving ? ZOOM_LABELS.savingState : ZOOM_LABELS.saveState}
+            title={ZOOM_LABELS.save}
+            disabled={locked || deselected.size === 0}
+            data-ii-zoom-state-save=""
+            onClick={() => void save()}
+          >
+            {saving ? <LoaderIcon /> : <SaveIcon />}
+          </IconButton>
+          <Button variant="danger" size="sm" disabled={locked || actors.length === 0} onClick={() => void clear()}><TrashIcon />{ZOOM_LABELS.clearAll}</Button>
         </div>
       </footer>
     </section>

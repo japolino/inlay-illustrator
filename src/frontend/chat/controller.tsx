@@ -273,7 +273,11 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
     }
     const slot = state?.slots.find((s) => s.slotId === block.attrs.slotId);
     const slotRegenerating = [...regenJobs.values()].includes(block.attrs.slotId);
-    const regenRunning = state ? regenerateJobsForMessage(jobs, state.messageKey).length > 0 && !!slot?.regenerating : false;
+    // Per-slot spinner: single-slot jobs carry their slotId (contract GenerationJobSnapshot.slotId); jobs without it fall
+    // back to the slot's `regenerating` flag from chatDom.getMessageStates.
+    const regenRunning = state
+      ? regenerateJobsForMessage(jobs, state.messageKey).some((job) => (job.slotId ? job.slotId === block.attrs.slotId : !!slot?.regenerating))
+      : false;
     const busy = busySlots.has(block.attrs.slotId) || slotRegenerating || regenRunning;
     const messageBusy = !!state && (state.busy || !!jobForMessage(jobs, state));
     const attrs = block.attrs;

@@ -66,6 +66,10 @@ export const ZOOM_LABELS = {
   includeTitle: "Uncheck to exclude this character from the regeneration request.", // 해제하면 이 캐릭터를 재생성 요청에서 제외합니다.
   includeSr: "{n}. {label}", // {n}번 {label}
   provider: "Provider", // 제공자
+  artist: "Artist", // 작가
+  artistSelect: "Artist for regeneration", // (port) 재생성 작가
+  outfit: "Outfit", // 의상
+  outfitSelect: "Outfit of {label} for regeneration", // (port) 재생성 의상
   coordinate: "Coordinate", // 좌표
   aiChoice: "AI Choice", // AI Choice
   editCoordinate: "{label} Edit coordinate", // {label} 좌표 편집
@@ -129,6 +133,10 @@ export const ZOOM_LABELS = {
   groupCum: "Fluid location", // 사정 위치
   groupInjury: "Injury", // 부상
   stateCount: "{n} turns", // (port)
+  saveState: "Save selected state", // 선택한 상태 저장
+  savingState: "Saving state", // 상태 저장 중
+  save: "Save", // 저장
+  stateConflict: "State changed. Refresh and select again.", // 상태가 변경되었습니다. 새로고침 후 다시 선택해 주세요.
   /* errors */
   noTarget: "The image slot no longer exists.", // (port)
   regenerateFailed: "Image regeneration failed", // 이미지 재생성 실패

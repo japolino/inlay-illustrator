@@ -7,7 +7,7 @@ import { createEmptyActorState, type CurrentActorState } from "../../../shared/c
 import type { ChatMessageUiState, ChatSlotUi, FooterAttempt } from "../../../shared/contract/chat-dom.js";
 import type { GenerationOrigin } from "../../../shared/contract/history.js";
 import type { AttemptKind, GenerationJobSnapshot, GenerationPhase, RegenerationOverrides, ZoomDetails, ZoomPromptSection } from "../../../shared/contract/rpc.js";
-import type { MockContext, MockHandlers } from "../mock-backend.js";
+import { MockRpcError, type MockContext, type MockHandlers } from "../mock-backend.js";
 import { svgImage, type MockDb } from "./fixtures.js";
 
 export interface MockChatEntry {
@@ -257,6 +257,9 @@ export function messageUiState(chat: MockChatData, m: MockChatMessage): ChatMess
   };
 }
 
+const MOCK_ARTISTS = [{ id: "preset-1", label: "Soft watercolor" }, { id: "preset-2", label: "Clean lineart" }];
+const MOCK_OUTFITS = [{ id: "outfit_default", label: "기본 의상" }, { id: "outfit_casual", label: "Casual" }];
+
 function zoomDetails(chat: MockChatData, slotId: string, entryId: string | undefined, ctx: MockContext): ZoomDetails {
   const found = findSlot(chat, slotId);
   if (!found) return ctx.fail("not-found", "The image slot no longer exists.");
@@ -278,6 +281,13 @@ function zoomDetails(chat: MockChatData, slotId: string, entryId: string | undef
       return center ? { ...rest, centerX: center.x, centerY: center.y } : rest;
     })
     : sections;
+  // Zoom choices (backend controller `sectionsOf`): artists on the main card, outfits on actor cards.
+  const choiced = centered.map((section): ZoomPromptSection => {
+    if (section.target === "main") return { ...section, artistChoices: MOCK_ARTISTS, selectedArtistId: draft.artistId ?? MOCK_ARTISTS[0]!.id };
+    if (section.target !== "actor") return section;
+    const actorKey = `lorebook::${section.label.split(" (")[0]}`;
+    return { ...section, actorKey, outfitChoices: MOCK_OUTFITS, selectedOutfitId: draft.outfitByActor?.[actorKey] ?? MOCK_OUTFITS[0]!.id };
+  });
   const active = revision.revisionId === message.activeRevisionId;
   return {
     chatId: chat.chatId,
@@ -298,7 +308,7 @@ function zoomDetails(chat: MockChatData, slotId: string, entryId: string | undef
     promptCodec: "novelai-structured",
     positivePrompt: entry.positivePrompt,
     negativePrompt: entry.negativePrompt,
-    sections: centered,
+    sections: choiced,
     coordinateGrid: "v4-5",
     excludedCharacterIndexes: draft.excludedCharacterIndexes ?? [],
     promptDraftActive: !!draft.promptDraft,
@@ -471,7 +481,7 @@ export function chatMockHandlers(): MockHandlers {
       if (Object.values(chat.jobs).some((j) => j.slotId === slotId && (j.snapshot.status === "queued" || j.snapshot.status === "running"))) {
         return ctx.fail("busy", "Regeneration of this image is already in progress.");
       }
-      const job: MockChatJob = { snapshot: snapshot(chat, found.message, "regenerate", 1), cancelled: false, slotId };
+      const job: MockChatJob = { snapshot: { ...snapshot(chat, found.message, "regenerate", 1), slotId }, cancelled: false, slotId };
       chat.jobs[job.snapshot.jobId] = job;
       ctx.emit("generation.progress", { ...job.snapshot });
       void runRegenerateJob(chat, found, job, overrides, ctx);
@@ -581,6 +591,12 @@ export function chatMockHandlers(): MockHandlers {
       return ctx.call("generation.regenerateSlot", { chatId: chat.chatId, messageKey: findSlot(chat, slotId)?.message ? messageKeyOf(findSlot(chat, slotId)!.message) : "", slotId });
     },
     "chatState.get": (_params, ctx) => ({ actorState: mockChat(ctx.db).actorState }),
+    "chatState.set": ({ actorState, baseRevision }, ctx) => {
+      const chat = mockChat(ctx.db);
+      if (chat.actorState.revision !== baseRevision) throw new MockRpcError("conflict", "The chat state changed since it was opened. Reload it and try again.");
+      chat.actorState = { revision: chat.actorState.revision + 1, actors: actorState.actors };
+      return { actorState: chat.actorState };
+    },
     "chatState.clear": ({ actorKeys }, ctx) => {
       const chat = mockChat(ctx.db);
       if (!actorKeys || actorKeys.length === 0) chat.actorState = createEmptyActorState();

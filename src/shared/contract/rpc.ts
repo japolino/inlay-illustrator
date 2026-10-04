@@ -232,6 +232,8 @@ export interface ZoomPromptSection {
   /** Per-actor outfit select. */
   outfitChoices?: { id: string; label: string }[];
   selectedOutfitId?: string;
+  /** Actor identity key (`RegenerationOverrides.outfitByActor` key); set on actor sections with outfit choices. */
+  actorKey?: string;
 }
 export interface ZoomDetails {
   chatId: string;
