@@ -1,0 +1,7862 @@
+{
+  "schema": "novelai-v5-scene-graph",
+  "revision": 1,
+  "status": "inactive",
+  "analysisPresets": {
+    "scene": {
+      "default": {
+        "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.",
+        "presentation": {
+          "label": "삽화",
+          "description": "장면의 흐름에 맞춰 AI가 자유롭고 다양한 연출을 적용합니다.",
+          "experimental": false
+        }
+      },
+      "options": [
+        {
+          "id": "pov",
+          "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when only the persona's hands or arms are visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Use the persona's hands and arms as POV hands to express action, contact, object manipulation, and spatial distance while keeping the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+          "variables": {
+            "preset.camera.viewpoint": "persona_first_person",
+            "preset.persona.visibility": "partial",
+            "preset.actor.coverage": "all_present"
+          },
+          "presentation": {
+            "label": "pov 연출",
+            "description": "페르소나의 시야를 기준으로 장면을 1인칭 구도로 연출합니다. 다른 인물이 등장해도 시점은 페르소나에게 유지됩니다.",
+            "experimental": false
+          }
+        },
+        {
+          "id": "ensemble",
+          "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent, duplicate, split, or restore absent Actors. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+          "variables": {
+            "preset.actor.coverage": "all_present"
+          },
+          "presentation": {
+            "label": "다인 연출",
+            "description": "현재 장면에 실제로 참여하는 인물들을 가능한 한 하나의 이미지에 함께 배치하고, 인물 간 관계와 상호작용을 중심으로 연출합니다.",
+            "experimental": false
+          }
+        },
+        {
+          "id": "comic",
+          "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+          "variables": {
+            "preset.presentation.mode": "comic_page",
+            "preset.presentation.orientation": "portrait"
+          },
+          "controls": [
+            {
+              "id": "speech-bubble",
+              "label": "말풍선",
+              "defaultEnabled": true,
+              "variables": {
+                "preset.dialogue.mode": "source_speech_bubble"
+              }
+            },
+            {
+              "id": "landscape",
+              "label": "가로형",
+              "defaultEnabled": false,
+              "variables": {
+                "preset.presentation.orientation": "landscape"
+              },
+              "instructionSuffix": "The output image resolution is 1216 × 832 pixels in landscape orientation."
+            },
+            {
+              "id": "minimum-panels",
+              "label": "최소 컷",
+              "defaultEnabled": false,
+              "variables": {},
+              "defaultValue": 2,
+              "valueOptions": [
+                {
+                  "value": 2,
+                  "variables": {
+                    "preset.comic.panel_count": "minimum_2"
+                  },
+                  "instructionSuffix": "Create at least 2 meaningful comic panels."
+                },
+                {
+                  "value": 3,
+                  "variables": {
+                    "preset.comic.panel_count": "minimum_3"
+                  },
+                  "instructionSuffix": "Create at least 3 meaningful comic panels."
+                },
+                {
+                  "value": 4,
+                  "variables": {
+                    "preset.comic.panel_count": "minimum_4"
+                  },
+                  "instructionSuffix": "Create at least 4 meaningful comic panels."
+                }
+              ]
+            }
+          ],
+          "presentation": {
+            "label": "카툰 연출",
+            "description": "하나의 장면을 여러 만화 컷으로 구성하고, 인물의 행동과 감정을 컷의 흐름에 따라 생동감 있게 연출합니다.",
+            "experimental": false
+          }
+        }
+      ]
+    },
+    "imageRatio": {
+      "default": {
+        "instruction": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+        "presentation": {
+          "label": "기본",
+          "description": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+          "experimental": false
+        }
+      },
+      "unspecified": {
+        "instruction": "Choose the sizeId that best fits the current illustration from the allowed candidates. Apply no additional aspect-ratio preference.",
+        "allowedSizeIds": [
+          1,
+          2,
+          5
+        ],
+        "presentation": {
+          "label": "미지정",
+          "description": "별도 비율 선호 없이 선택한 sizeId 후보 안에서 장면에 가장 적합한 크기를 결정합니다.",
+          "experimental": false
+        }
+      }
+    }
+  },
+  "stages": {
+    "actor_roster": {
+      "generatedActors": {
+        "lifetime": "response",
+        "candidateKeyPrefix": "free_",
+        "maxLabelLength": 96,
+        "maxTags": 24,
+        "maxInstructionLength": 320,
+        "sex": {
+          "required": true,
+          "values": [
+            "female",
+            "male",
+            "unknown"
+          ],
+          "unknownWhen": "non_human_or_not_visually_clear"
+        }
+      },
+      "modifiers": {
+        "closed": [],
+        "freeTags": [],
+        "naturalLanguage": [],
+        "requests": [
+          {
+            "when": {
+              "option": {
+                "preset.camera.viewpoint": "persona_first_person"
+              }
+            },
+            "ensure": {
+              "participants": [
+                {
+                  "actor": "persona",
+                  "role": "viewpoint"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "interaction": {
+      "definitions": [
+        {
+          "id": "fellatio",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "fellatio"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "oral_penile_stimulation",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "oral penile stimulation"
+                  ]
+                ]
+              },
+              {
+                "id": "penile_oral_sex",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "penile oral sex"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "cunnilingus",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "cunnilingus"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "oral_vulva_stimulation",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "oral vulva stimulation"
+                  ]
+                ]
+              },
+              {
+                "id": "vulva_licking",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "vulva licking"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "anilingus",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "anilingus"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "rimjob",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "rimjob"
+                  ]
+                ]
+              },
+              {
+                "id": "anal_oral_stimulation",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "anal oral stimulation"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "breast_sucking",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "breast sucking"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "sucking_breasts",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "sucking breasts"
+                  ]
+                ]
+              },
+              {
+                "id": "oral_breast_stimulation",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "oral breast stimulation"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "deepthroat",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "deepthroat"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "kissing_penis",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "kissing penis"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "licking_penis",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "licking penis"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "testicle_sucking",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "testicle sucking"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "licking_testicle",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "licking testicle"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "tonguejob",
+          "description": "An oral act of wrapping the tongue around the other actor's penis to stimulate it.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "tonguejob"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "rusty_trombone",
+          "description": "A combined act of performing anilingus and a handjob on the other actor from behind.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "rusty trombone"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "licking_armpit",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "licking armpit"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "licking_nipple",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "licking nipple"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "licking_breast",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "licking breast"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "breast_smother",
+          "description": "An act of covering the other actor's face and mouth or nose with one's own breasts.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "breast smother"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nipple_biting",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "nipple biting"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "breast_biting",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "breast biting"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "handjob",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "handjob"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "manual_penile_stimulation",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "manual penile stimulation"
+                  ]
+                ]
+              },
+              {
+                "id": "penile_hand_stimulation",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "penile hand stimulation"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "fingering",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "fingering"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "digital_vaginal_stimulation",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "digital vaginal stimulation"
+                  ]
+                ]
+              },
+              {
+                "id": "vaginal_finger_stimulation",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "vaginal finger stimulation"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "anal_fingering",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "anal fingering"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "digital_anal_stimulation",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "digital anal stimulation"
+                  ]
+                ]
+              },
+              {
+                "id": "anal_finger_stimulation",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "anal finger stimulation"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "clitoral_stimulation",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "clitoral stimulation"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "g_spot_stimulation",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "g-spot stimulation"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "prostate_milking",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "prostate milking"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "paizuri",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "paizuri"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "footjob",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "footjob"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "grinding",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "grinding"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "dry_humping",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "dry humping"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "buttjob",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "buttjob"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "thigh_sex",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "thigh sex"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "grabbing_anothers_breast",
+          "description": "Direct contact in which the source Actor grasps or kneads the target Actor's breasts.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "grabbing another's breast"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "breast_groping",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "breast groping"
+                  ]
+                ]
+              },
+              {
+                "id": "grabbing_breasts",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "grabbing breasts"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "grabbing_anothers_ass",
+          "description": "Direct contact in which the source Actor grasps or kneads the target Actor's buttocks.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "grabbing another's ass"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "ass_groping",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "ass groping"
+                  ]
+                ]
+              },
+              {
+                "id": "grabbing_buttocks",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "grabbing buttocks"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "nipple_tweak",
+          "description": "Direct stimulation in which the source Actor pinches and twists the target Actor's nipples with their fingers.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "nipple tweak"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "nipple_pinching",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "nipple pinching"
+                  ]
+                ]
+              },
+              {
+                "id": "pinching_nipples",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "pinching nipples"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "pussyjob",
+          "description": "An act in which the female source Actor rubs her genitals against the target Actor's genitals without penetration.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "pussyjob"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "sitting_on_face",
+          "description": "A direct relation in which the source Actor sits or straddles the target Actor's face.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "sitting on face"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "cooperative_fellatio",
+          "description": "A relation in which multiple actors simultaneously perform fellatio on the same target.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "cooperative fellatio"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "cooperative_handjob",
+          "description": "A relation in which multiple actors simultaneously stimulate the same target's genitals by hand.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "cooperative handjob"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "cooperative_paizuri",
+          "description": "A relation in which multiple actors jointly stimulate the same target's genitals with their breasts.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "cooperative paizuri"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "cooperative_footjob",
+          "description": "A relation in which multiple actors simultaneously stimulate the same target with their feet.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "cooperative footjob"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "cooperative_pussyjob",
+          "description": "A relation in which multiple actors jointly rub their own genitals against the same target's genitals without penetration.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "cooperative pussyjob"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "cooperative_breast_smother",
+          "description": "A relation in which multiple actors jointly cover the same target's face with their breasts.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "cooperative breast smother"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "cooperative_grinding",
+          "description": "A relation in which multiple actors jointly rub their own genitals against the same target's genitals without penetration.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "cooperative grinding"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "mutual_masturbation",
+          "allowedModes": [
+            "mutual"
+          ],
+          "defaultMode": "mutual",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "mutual masturbation"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "tribadism",
+          "description": "A mutual sexual act in which two female Actors press and rub their genitals together.",
+          "allowedModes": [
+            "mutual"
+          ],
+          "defaultMode": "mutual",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "tribadism"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "nipple_to_nipple",
+          "allowedModes": [
+            "mutual"
+          ],
+          "defaultMode": "mutual",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "nipple-to-nipple"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "double_breast_sucking",
+          "description": "A relation in which multiple actors simultaneously suck both breasts of the same target.",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "double breast sucking"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "shared_object_insertion",
+          "description": "A relation with equal participants in which one object is simultaneously inserted into two Actors.",
+          "allowedModes": [
+            "mutual"
+          ],
+          "defaultMode": "mutual",
+          "promptTarget": "relation",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "shared object insertion"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "missionary",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "missionary"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "doggystyle",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "doggystyle"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "standing_sex_from_behind",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "standing sex from behind"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "standing_missionary",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "standing missionary"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "cowgirl_position",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "cowgirl position"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "reverse_cowgirl_position",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "reverse cowgirl position"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "upright_straddle",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "upright straddle"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "suspended_congress",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "suspended congress"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "reverse_suspended_congress",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "reverse suspended congress"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "prone_bone",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "prone bone"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "mating_press",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "mating press"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "amazon_position",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "amazon position"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "reverse_upright_straddle",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "reverse upright straddle"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "spooning",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "spooning"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "piledriver_sex",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "female",
+          "prompt": {
+            "global": [
+              [
+                1,
+                "nsfw"
+              ]
+            ],
+            "tag": [
+              [
+                1,
+                "piledriver sex"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "hug",
+          "allowedModes": [
+            "directed",
+            "mutual"
+          ],
+          "defaultMode": "mutual",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "hug"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "mutual_hug",
+                "modes": [
+                  "mutual"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "mutual hug"
+                  ]
+                ]
+              },
+              {
+                "id": "embracing",
+                "modes": [
+                  "directed",
+                  "mutual"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "embracing"
+                  ]
+                ]
+              },
+              {
+                "id": "hugging_another",
+                "modes": [
+                  "directed"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "hugging another"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "hug_from_behind",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "hug from behind"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "arm_hug",
+          "allowedModes": [
+            "directed",
+            "mutual"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "arm hug"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "back_to_back",
+          "allowedModes": [
+            "mutual"
+          ],
+          "defaultMode": "mutual",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "back-to-back"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "heads_together",
+          "allowedModes": [
+            "mutual"
+          ],
+          "defaultMode": "mutual",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "heads together"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "leaning_on_person",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "leaning on person"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "arm_around_shoulder",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "arm around shoulder"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "holding_hands",
+          "allowedModes": [
+            "mutual"
+          ],
+          "defaultMode": "mutual",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "holding hands"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "handholding",
+                "modes": [
+                  "mutual"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "handholding"
+                  ]
+                ]
+              },
+              {
+                "id": "hands_clasped_together",
+                "modes": [
+                  "mutual"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "hands clasped together"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "interlocking_fingers",
+          "allowedModes": [
+            "mutual"
+          ],
+          "defaultMode": "mutual",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "interlocking fingers"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "kiss",
+          "allowedModes": [
+            "directed",
+            "mutual"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "kiss"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "kissing",
+                "modes": [
+                  "directed",
+                  "mutual"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "kissing"
+                  ]
+                ]
+              },
+              {
+                "id": "mouth_to_mouth_kiss",
+                "modes": [
+                  "directed",
+                  "mutual"
+                ],
+                "tag": [
+                  [
+                    1,
+                    "mouth-to-mouth kiss"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "french_kiss",
+          "allowedModes": [
+            "mutual"
+          ],
+          "defaultMode": "mutual",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "french kiss"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "kissing_cheek",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "kissing cheek"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "kissing_forehead",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "kissing forehead"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "kissing_hand",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "kissing hand"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "kissing_head",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "kissing head"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "kissing_neck",
+          "allowedModes": [
+            "directed"
+          ],
+          "defaultMode": "directed",
+          "promptTarget": "relation",
+          "prompt": {
+            "tag": [
+              [
+                1,
+                "kissing neck"
+              ]
+            ]
+          }
+        }
+      ],
+      "unknownIdPolicy": "project_as_interaction_id",
+      "modifiers": {
+        "closed": [
+          "interaction.sexual.penetration.route",
+          "interaction.sexual.penetration.direction",
+          "interaction.sexual.penetration.progress",
+          "interaction.sexual.ejaculation.progress",
+          "interaction.sexual.relationship",
+          "interaction.sexual.grouping",
+          "scene.context.sexual",
+          "interaction.sexual.oral.fellatio",
+          "manual.sexual.handjob",
+          "interaction.penetration.instrument"
+        ],
+        "freeTags": [],
+        "naturalLanguage": [
+          "interaction_detail"
+        ]
+      }
+    },
+    "frame_placement": {
+      "sizes": [
+        {
+          "id": 1,
+          "label": "Portrait 832 x 1216",
+          "width": 832,
+          "height": 1216,
+          "analyzerSelectable": true,
+          "when_to_use": [
+            "Vertical posture, height differences, vertical motion, or layered surroundings."
+          ]
+        },
+        {
+          "id": 2,
+          "label": "Landscape 1216 x 832",
+          "width": 1216,
+          "height": 832,
+          "analyzerSelectable": true,
+          "when_to_use": [
+            "Broad environments, lateral action or gaze, or horizontal negative space."
+          ]
+        },
+        {
+          "id": 3,
+          "label": "Portrait 896 x 1152",
+          "width": 896,
+          "height": 1152
+        },
+        {
+          "id": 4,
+          "label": "Landscape 1152 x 896",
+          "width": 1152,
+          "height": 896
+        },
+        {
+          "id": 5,
+          "label": "Square 1024 x 1024",
+          "width": 1024,
+          "height": 1024,
+          "analyzerSelectable": true,
+          "when_to_use": [
+            "Centered, frontal, symmetric, or compact framing; neutral when neither axis dominates."
+          ]
+        }
+      ],
+      "modifiers": {
+        "closed": [
+          "scene.rating",
+          "scene.environment",
+          "scene.time",
+          "scene.weather",
+          "framing.crop",
+          "framing.head_crop",
+          "orientation.facing"
+        ],
+        "freeTags": [
+          "scene.location"
+        ],
+        "naturalLanguage": [
+          "location",
+          "placement"
+        ],
+        "requests": [
+          {
+            "when": {
+              "option": {
+                "preset.camera.viewpoint": "persona_first_person"
+              }
+            },
+            "projection": {
+              "characterCoordinates": "persona-automatic"
+            }
+          },
+          {
+            "when": {
+              "option": {
+                "preset.presentation.mode": "comic_page"
+              }
+            },
+            "add": {
+              "naturalLanguage": [
+                "scene.comic_page"
+              ]
+            },
+            "remove": {
+              "closed": [
+                "framing.crop",
+                "framing.head_crop"
+              ]
+            }
+          },
+          {
+            "when": {
+              "option": {
+                "preset.comic.panel_count": "*"
+              }
+            },
+            "add": {
+              "closed": [
+                "scene.comic.min_panels"
+              ]
+            }
+          },
+          {
+            "when": {
+              "option": {
+                "preset.comic.panel_count": "minimum_2"
+              }
+            },
+            "defaults": {
+              "option": {
+                "scene.comic.min_panels": [
+                  "minimum_2"
+                ]
+              }
+            }
+          },
+          {
+            "when": {
+              "option": {
+                "preset.comic.panel_count": "minimum_3"
+              }
+            },
+            "defaults": {
+              "option": {
+                "scene.comic.min_panels": [
+                  "minimum_3"
+                ]
+              }
+            }
+          },
+          {
+            "when": {
+              "option": {
+                "preset.comic.panel_count": "minimum_4"
+              }
+            },
+            "defaults": {
+              "option": {
+                "scene.comic.min_panels": [
+                  "minimum_4"
+                ]
+              }
+            }
+          },
+          {
+            "when": {
+              "option": {
+                "preset.presentation.orientation": "portrait"
+              }
+            },
+            "projection": {
+              "sizeId": 1
+            }
+          },
+          {
+            "when": {
+              "option": {
+                "preset.presentation.orientation": "landscape"
+              }
+            },
+            "projection": {
+              "sizeId": 2
+            }
+          }
+        ]
+      }
+    },
+    "actor_detail": {
+      "objects": {
+        "types": [
+          {
+            "id": "sex_toy"
+          },
+          {
+            "id": "dildo"
+          },
+          {
+            "id": "strap_on"
+          },
+          {
+            "id": "double_dildo"
+          },
+          {
+            "id": "huge_dildo"
+          },
+          {
+            "id": "suction_cup_dildo"
+          },
+          {
+            "id": "vibrator"
+          },
+          {
+            "id": "egg_vibrator"
+          },
+          {
+            "id": "rabbit_vibrator"
+          },
+          {
+            "id": "hitachi_magic_wand"
+          },
+          {
+            "id": "remote_control_vibrator"
+          },
+          {
+            "id": "anal_beads"
+          },
+          {
+            "id": "butt_plug"
+          },
+          {
+            "id": "jewel_butt_plug"
+          },
+          {
+            "id": "artificial_vagina"
+          },
+          {
+            "id": "dildo_harness"
+          }
+        ],
+        "placements": [
+          {
+            "id": "vibrator_on_nipple"
+          },
+          {
+            "id": "vibrator_in_anus"
+          },
+          {
+            "id": "vibrator_under_clothes"
+          },
+          {
+            "id": "vibrator_under_panties"
+          },
+          {
+            "id": "vibrator_in_thighhighs"
+          },
+          {
+            "id": "vibrator_in_thigh_strap"
+          },
+          {
+            "id": "dildo_under_panties"
+          },
+          {
+            "id": "dildo_under_clothes"
+          },
+          {
+            "id": "dildo_reveal"
+          },
+          {
+            "id": "dildo_gag"
+          },
+          {
+            "id": "vibrator_cord"
+          },
+          {
+            "id": "wireless_sex_toy_controller"
+          }
+        ],
+        "props": [
+          {
+            "id": "lube"
+          },
+          {
+            "id": "used_condom"
+          },
+          {
+            "id": "condom_wrapper"
+          },
+          {
+            "id": "condom_box"
+          }
+        ],
+        "surfaces": [
+          {
+            "id": "against_wall"
+          },
+          {
+            "id": "against_glass"
+          },
+          {
+            "id": "against_railing"
+          },
+          {
+            "id": "against_tree"
+          },
+          {
+            "id": "breasts_on_glass"
+          }
+        ],
+        "derived": [
+          {
+            "id": "too_many_sex_toys",
+            "derivedOnly": true
+          }
+        ]
+      },
+      "modifiers": {
+        "closed": [
+          "actor.action",
+          "gaze.direction",
+          "actor.pose.body",
+          "actor.pose.refinement",
+          "expression.general",
+          "expression.blush",
+          "expression.tear",
+          "expression.eye.reaction",
+          "expression.eye.openness",
+          "expression.mouth",
+          "expression.sexual_response",
+          "motion.body",
+          "state.hair.condition",
+          "state.body.surface",
+          "state.body.contamination",
+          "state.body.condition",
+          "state.clothing.surface",
+          "state.clothing.arrangement",
+          "state.clothing.coverage.upper",
+          "state.clothing.coverage.lower",
+          "manual.clothing_access",
+          "state.after_activity",
+          "state.restraint.body",
+          "state.restraint.gag",
+          "state.penis.condom",
+          "state.genitals.visible_parts",
+          "state.fluid.precum",
+          "state.fluid.cum.instant",
+          "state.fluid.cum.location",
+          "state.fluid.lactation",
+          "state.fluid.pussy_juice",
+          "state.fluid.saliva"
+        ],
+        "freeTags": [
+          "actor.injury"
+        ],
+        "naturalLanguage": [
+          "pose",
+          "action",
+          "object_instruction"
+        ],
+        "requests": [
+          {
+            "when": {
+              "option": {
+                "preset.presentation.mode": "comic_page"
+              }
+            },
+            "add": {
+              "closed": [
+                "actor.framing.crop",
+                "actor.framing.head_crop"
+              ]
+            }
+          },
+          {
+            "when": {
+              "option": {
+                "preset.dialogue.mode": "source_speech_bubble"
+              }
+            },
+            "add": {
+              "naturalLanguage": [
+                "actor.comic_dialogue"
+              ]
+            }
+          }
+        ]
+      },
+      "rules": [
+        {
+          "when": {
+            "attribute": {
+              "actor.outfit.nude": true
+            }
+          },
+          "remove": {
+            "modifier": [
+              "state.clothing.surface",
+              "state.clothing.arrangement",
+              "state.clothing.coverage.upper",
+              "state.clothing.coverage.lower",
+              "manual.clothing_access"
+            ],
+            "continuity": {
+              "modifier": [
+                "state.clothing.surface",
+                "state.clothing.arrangement",
+                "state.clothing.coverage.upper",
+                "state.clothing.coverage.lower",
+                "manual.clothing_access"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "camera": {
+      "modifiers": {
+        "closed": [
+          "camera.view"
+        ],
+        "freeTags": [],
+        "naturalLanguage": [
+          "camera"
+        ],
+        "requests": [
+          {
+            "when": {
+              "option": {
+                "preset.presentation.mode": "comic_page"
+              }
+            },
+            "remove": {
+              "closed": [
+                "camera.view"
+              ]
+            }
+          },
+          {
+            "when": {
+              "option": {
+                "preset.camera.viewpoint": "persona_first_person"
+              }
+            },
+            "defaults": {
+              "option": {
+                "camera.view": [
+                  "pov"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "modifierLibrary": {
+    "freeTags": [
+      {
+        "id": "scene.location",
+        "subjects": [
+          "global"
+        ],
+        "order": 90,
+        "instruction": "Return environment tags."
+      },
+      {
+        "id": "actor.injury",
+        "subjects": [
+          "actor"
+        ],
+        "order": 100,
+        "instruction": "Return every current injury, including injuries being visibly inflicted now. Use the closest representative body-part value.",
+        "syntax": {
+          "type": "relational",
+          "head": {
+            "values": [
+              "cut",
+              "scar",
+              "bruise",
+              "bleeding",
+              "deep wound"
+            ]
+          },
+          "relation": {
+            "values": [
+              "on"
+            ]
+          },
+          "target": {
+            "values": [
+              "head",
+              "face",
+              "neck",
+              "shoulder",
+              "chest",
+              "breasts",
+              "back",
+              "stomach",
+              "waist",
+              "hips",
+              "crotch",
+              "buttocks",
+              "arm",
+              "hand",
+              "thigh",
+              "leg",
+              "foot"
+            ],
+            "attributes": {
+              "head": {
+                "body_part": "head"
+              },
+              "face": {
+                "body_part": "head",
+                "visible_from": [
+                  "front",
+                  "side"
+                ]
+              },
+              "neck": {
+                "body_part": "head"
+              },
+              "shoulder": {
+                "body_part": "top"
+              },
+              "chest": {
+                "body_part": "top",
+                "visible_from": [
+                  "front",
+                  "side"
+                ]
+              },
+              "breasts": {
+                "body_part": "top",
+                "visible_from": [
+                  "front",
+                  "side"
+                ]
+              },
+              "back": {
+                "body_part": "top",
+                "visible_from": [
+                  "back"
+                ]
+              },
+              "stomach": {
+                "body_part": "top",
+                "visible_from": [
+                  "front",
+                  "side"
+                ]
+              },
+              "arm": {
+                "body_part": "top"
+              },
+              "hand": {
+                "body_part": "top"
+              },
+              "waist": {
+                "body_part": "bottom"
+              },
+              "hips": {
+                "body_part": "bottom"
+              },
+              "crotch": {
+                "body_part": "bottom",
+                "visible_from": [
+                  "front",
+                  "side"
+                ]
+              },
+              "buttocks": {
+                "body_part": "bottom",
+                "visible_from": [
+                  "back"
+                ]
+              },
+              "thigh": {
+                "body_part": "legs"
+              },
+              "leg": {
+                "body_part": "legs"
+              },
+              "foot": {
+                "body_part": "feet"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "naturalLanguage": [
+      {
+        "id": "location",
+        "subjects": [
+          "global"
+        ],
+        "order": 90,
+        "instruction": "Return residual location details."
+      },
+      {
+        "id": "placement",
+        "subjects": [
+          "actor"
+        ],
+        "order": 99,
+        "instruction": "Return residual spatial placement for this Actor occurrence; empty when the comic-page structure channel is available."
+      },
+      {
+        "id": "interaction_detail",
+        "subjects": [
+          "interaction"
+        ],
+        "order": 100,
+        "instruction": "Return separate residual detail for each bound participant; never copy between participants."
+      },
+      {
+        "id": "pose",
+        "subjects": [
+          "actor"
+        ],
+        "order": 101,
+        "instruction": "Return residual pose detail for this Actor occurrence."
+      },
+      {
+        "id": "action",
+        "subjects": [
+          "actor"
+        ],
+        "order": 102,
+        "instruction": "Return residual action detail for this Actor occurrence."
+      },
+      {
+        "id": "object_instruction",
+        "subjects": [
+          "object"
+        ],
+        "order": 103,
+        "instruction": "Return residual object handling for the bound Actor."
+      },
+      {
+        "id": "actor.comic_dialogue",
+        "subjects": [
+          "actor"
+        ],
+        "order": 104,
+        "instruction": "Return only `speech bubble, text:<source dialogue>` for direct speech in the current message, attached to the speaking Actor occurrence; assign each utterance once. Preserve source language and script; no invention, translation, romanization, or language tag. If dialogue exceeds 40 characters including spaces, summarize to one clause of at most 30 characters without adding facts; exclude the prefix from counts. Omit when no direct speech exists.",
+        "language": "source_verbatim"
+      },
+      {
+        "id": "scene.comic_page",
+        "subjects": [
+          "global"
+        ],
+        "order": 109,
+        "instruction": "Return one integrated page composition: visual hierarchy, panel boundaries, rhythm, and reading flow. Do not list option IDs. Reading order does not imply linear layout; keep panel Camera and Actor details in their own channels."
+      },
+      {
+        "id": "camera",
+        "subjects": [
+          "global"
+        ],
+        "order": 110,
+        "instruction": "Return camera position, an unambiguous validated scene or body reference, and viewing direction."
+      }
+    ],
+    "closed": [
+      {
+        "id": "actor.action",
+        "subjects": [
+          "actor"
+        ],
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "order": 40,
+        "options": [
+          {
+            "id": "female_masturbation",
+            "prompt": [
+              [
+                1,
+                "female masturbation"
+              ]
+            ]
+          },
+          {
+            "id": "male_masturbation",
+            "prompt": [
+              [
+                1,
+                "male masturbation"
+              ]
+            ]
+          },
+          {
+            "id": "spreading_own_pussy",
+            "prompt": [
+              [
+                1,
+                "spreading own pussy"
+              ]
+            ]
+          },
+          {
+            "id": "spreading_own_anus",
+            "prompt": [
+              [
+                1,
+                "spreading own anus"
+              ]
+            ]
+          },
+          {
+            "id": "dildo_riding",
+            "prompt": [
+              [
+                1,
+                "dildo riding"
+              ]
+            ]
+          },
+          {
+            "id": "object_insertion",
+            "prompt": [
+              [
+                1,
+                "object insertion"
+              ]
+            ]
+          },
+          {
+            "id": "vaginal_object_insertion",
+            "prompt": [
+              [
+                1,
+                "vaginal object insertion"
+              ]
+            ]
+          },
+          {
+            "id": "anal_object_insertion",
+            "prompt": [
+              [
+                1,
+                "anal object insertion"
+              ]
+            ]
+          },
+          {
+            "id": "large_insertion",
+            "prompt": [
+              [
+                1,
+                "large insertion"
+              ]
+            ]
+          },
+          {
+            "id": "presenting_pussy",
+            "prompt": [
+              [
+                1,
+                "presenting pussy"
+              ]
+            ]
+          },
+          {
+            "id": "presenting_breasts",
+            "prompt": [
+              [
+                1,
+                "presenting breasts"
+              ]
+            ]
+          },
+          {
+            "id": "presenting_ass",
+            "prompt": [
+              [
+                1,
+                "presenting ass"
+              ]
+            ]
+          },
+          {
+            "id": "presenting_anus",
+            "prompt": [
+              [
+                1,
+                "presenting anus"
+              ]
+            ]
+          },
+          {
+            "id": "presenting_removed_panties",
+            "prompt": [
+              [
+                1,
+                "presenting removed panties"
+              ]
+            ]
+          },
+          {
+            "id": "presenting_armpit",
+            "prompt": [
+              [
+                1,
+                "presenting armpit"
+              ]
+            ]
+          },
+          {
+            "id": "holding_sex_toy",
+            "prompt": [
+              [
+                1,
+                "holding sex toy"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "scene.rating",
+        "subjects": [
+          "global"
+        ],
+        "description": "Choose one: nsfw for sexual activity or genital exposure; otherwise sfw. sfw emits no tag.",
+        "select": {
+          "by": "ai",
+          "min": 1,
+          "max": 1
+        },
+        "order": 1,
+        "options": [
+          {
+            "id": "sfw",
+            "prompt": null
+          },
+          {
+            "id": "nsfw",
+            "prompt": [
+              [
+                1,
+                "nsfw"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "interaction.sexual.panel_visualization",
+        "subjects": [
+          "global"
+        ],
+        "description": "Internal prompt projection catalog for fixed comicPanels.id values. Free Comic panel IDs use authored instruction only and never enter this prompt mapping.",
+        "select": {
+          "by": "local",
+          "min": 0,
+          "max": 3
+        },
+        "order": 59,
+        "options": [
+          {
+            "id": "impregnation_from_ejaculation",
+            "prompt": [
+              [
+                1,
+                "impregnation"
+              ]
+            ],
+            "description": "An independent panel depicting impregnation or fertilization resulting from internal ejaculation."
+          },
+          {
+            "id": "insertion_cross_section",
+            "prompt": [
+              [
+                1,
+                "cross-section"
+              ]
+            ],
+            "description": "An independent cross-sectional panel depicting vaginal or anal insertion of a body part or object."
+          },
+          {
+            "id": "internal_cumshot",
+            "prompt": [
+              [
+                1,
+                "internal cumshot"
+              ]
+            ],
+            "description": "An independent panel depicting internal ejaculation."
+          }
+        ],
+        "rules": []
+      },
+      {
+        "id": "scene.environment",
+        "subjects": [
+          "global"
+        ],
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "order": 60,
+        "options": [
+          {
+            "id": "indoors",
+            "prompt": [
+              [
+                1,
+                "indoors"
+              ]
+            ],
+            "rules": [
+              {
+                "remove": {
+                  "prompt": {
+                    "*": [
+                      "on ground"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "outdoors",
+            "prompt": [
+              [
+                1,
+                "outdoors"
+              ]
+            ],
+            "rules": [
+              {
+                "remove": {
+                  "prompt": {
+                    "*": [
+                      "on floor"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "scene.time",
+        "subjects": [
+          "global"
+        ],
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "order": 62,
+        "options": [
+          {
+            "id": "morning",
+            "prompt": [
+              [
+                1,
+                "morning"
+              ]
+            ]
+          },
+          {
+            "id": "day",
+            "prompt": [
+              [
+                1,
+                "day"
+              ]
+            ]
+          },
+          {
+            "id": "sunset",
+            "prompt": [
+              [
+                1,
+                "sunset"
+              ]
+            ]
+          },
+          {
+            "id": "night",
+            "prompt": [
+              [
+                1,
+                "night"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "scene.weather",
+        "subjects": [
+          "global"
+        ],
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "order": 63,
+        "options": [
+          {
+            "id": "cloudy_sky",
+            "prompt": [
+              [
+                1,
+                "cloudy sky"
+              ]
+            ]
+          },
+          {
+            "id": "rain",
+            "prompt": [
+              [
+                1,
+                "rain"
+              ]
+            ]
+          },
+          {
+            "id": "snow",
+            "prompt": [
+              [
+                1,
+                "snow"
+              ]
+            ]
+          },
+          {
+            "id": "fog",
+            "prompt": [
+              [
+                1,
+                "fog"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "interaction.sexual.penetration.route",
+        "subjects": [
+          "interaction"
+        ],
+        "description": "Select only body routes where penetration actually occurs.",
+        "order": 30,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "vaginal",
+            "prompt": [
+              [
+                1,
+                "vaginal"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "vaginal_penetration",
+                "tag": [
+                  [
+                    1,
+                    "vaginal penetration"
+                  ]
+                ]
+              },
+              {
+                "id": "vaginal_intercourse",
+                "tag": [
+                  [
+                    1,
+                    "vaginal intercourse"
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "anal",
+            "prompt": [
+              [
+                1,
+                "anal"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "anal_penetration",
+                "tag": [
+                  [
+                    1,
+                    "anal penetration"
+                  ]
+                ]
+              },
+              {
+                "id": "anal_intercourse",
+                "tag": [
+                  [
+                    1,
+                    "anal intercourse"
+                  ]
+                ]
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "when": {
+              "not": {
+                "interaction": [
+                  "missionary",
+                  "doggystyle",
+                  "standing_sex_from_behind",
+                  "standing_missionary",
+                  "cowgirl_position",
+                  "reverse_cowgirl_position",
+                  "upright_straddle",
+                  "suspended_congress",
+                  "reverse_suspended_congress",
+                  "prone_bone",
+                  "mating_press",
+                  "amazon_position",
+                  "reverse_upright_straddle",
+                  "spooning",
+                  "piledriver_sex"
+                ]
+              }
+            },
+            "exclude": {
+              "modifier": [
+                "interaction.sexual.penetration.route",
+                "interaction.sexual.penetration.direction",
+                "interaction.sexual.penetration.progress",
+                "interaction.penetration.instrument"
+              ]
+            }
+          },
+          {
+            "route": {
+              "prompt": {
+                "source": "bound_source",
+                "target": "bound_target"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "interaction.sexual.penetration.direction",
+        "subjects": [
+          "interaction"
+        ],
+        "description": "The actual direction of penetration relative to the receiving actor.",
+        "order": 31,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "from_behind",
+            "prompt": [
+              [
+                1,
+                "sex from behind"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "rear_entry_sex",
+                "tag": [
+                  [
+                    1,
+                    "rear-entry sex"
+                  ]
+                ]
+              },
+              {
+                "id": "penetration_from_behind",
+                "tag": [
+                  [
+                    1,
+                    "penetration from behind"
+                  ]
+                ]
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "when": {
+              "not": {
+                "interaction": [
+                  "missionary",
+                  "doggystyle",
+                  "standing_sex_from_behind",
+                  "standing_missionary",
+                  "cowgirl_position",
+                  "reverse_cowgirl_position",
+                  "upright_straddle",
+                  "suspended_congress",
+                  "reverse_suspended_congress",
+                  "prone_bone",
+                  "mating_press",
+                  "amazon_position",
+                  "reverse_upright_straddle",
+                  "spooning",
+                  "piledriver_sex"
+                ]
+              }
+            },
+            "exclude": {
+              "modifier": [
+                "interaction.sexual.penetration.route",
+                "interaction.sexual.penetration.direction",
+                "interaction.sexual.penetration.progress",
+                "interaction.penetration.instrument"
+              ]
+            }
+          },
+          {
+            "route": {
+              "prompt": {
+                "source": "bound_source",
+                "target": "bound_target"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "interaction.sexual.penetration.progress",
+        "subjects": [
+          "interaction"
+        ],
+        "description": "Select only the current penetration depth of an Interaction in which penetration actually occurs.",
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "shallow_penetration_just_the_tip",
+            "prompt": [
+              [
+                1,
+                "just the tip"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "shallow_penetration",
+                "tag": [
+                  [
+                    1,
+                    "shallow penetration"
+                  ]
+                ]
+              },
+              {
+                "id": "partial_penetration",
+                "tag": [
+                  [
+                    1,
+                    "partial penetration"
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "ongoing_penetration",
+            "prompt": null
+          },
+          {
+            "id": "deep_penetration",
+            "prompt": [
+              [
+                1,
+                "deep penetration"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "full_penetration",
+                "tag": [
+                  [
+                    1,
+                    "full penetration"
+                  ]
+                ]
+              },
+              {
+                "id": "fully_inserted",
+                "tag": [
+                  [
+                    1,
+                    "fully inserted"
+                  ]
+                ]
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "when": {
+              "not": {
+                "interaction": [
+                  "missionary",
+                  "doggystyle",
+                  "standing_sex_from_behind",
+                  "standing_missionary",
+                  "cowgirl_position",
+                  "reverse_cowgirl_position",
+                  "upright_straddle",
+                  "suspended_congress",
+                  "reverse_suspended_congress",
+                  "prone_bone",
+                  "mating_press",
+                  "amazon_position",
+                  "reverse_upright_straddle",
+                  "spooning",
+                  "piledriver_sex"
+                ]
+              }
+            },
+            "exclude": {
+              "modifier": [
+                "interaction.sexual.penetration.route",
+                "interaction.sexual.penetration.direction",
+                "interaction.sexual.penetration.progress",
+                "interaction.penetration.instrument"
+              ]
+            }
+          },
+          {
+            "route": {
+              "prompt": {
+                "source": "bound_source",
+                "target": "bound_target"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "interaction.sexual.ejaculation.progress",
+        "subjects": [
+          "female"
+        ],
+        "order": 41,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "internal_ejaculation",
+            "prompt": [
+              [
+                1,
+                "ejaculation"
+              ]
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "bound_target.state.fluid.cum.instant": "ejaculation_event"
+                  }
+                }
+              },
+              {
+                "when": {
+                  "option": {
+                    "interaction.sexual.penetration.route": "vaginal"
+                  }
+                },
+                "add": {
+                  "option": {
+                    "bound_target.state.fluid.cum.instant": "cum_in_pussy",
+                    "bound_target.state.fluid.cum.location": "cum_on_pussy"
+                  }
+                }
+              },
+              {
+                "when": {
+                  "option": {
+                    "interaction.sexual.penetration.route": "anal"
+                  }
+                },
+                "add": {
+                  "option": {
+                    "bound_target.state.fluid.cum.instant": "cum_in_ass"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "external_ejaculation_pullout",
+            "prompt": [
+              [
+                1,
+                "ejaculation"
+              ]
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "bound_target.state.fluid.cum.instant": [
+                      "ejaculation_event",
+                      "projectile_cum"
+                    ],
+                    "bound_source.state.genitals.visible_parts": "penis"
+                  }
+                },
+                "remove": {
+                  "prompt": {
+                    "*": [
+                      "vaginal"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "after_internal_ejaculation",
+            "prompt": [
+              [
+                1,
+                "after ejaculation"
+              ]
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "bound_target.state.fluid.cum.instant": "ejaculation_event"
+                  }
+                }
+              },
+              {
+                "when": {
+                  "option": {
+                    "interaction.sexual.penetration.route": "vaginal"
+                  }
+                },
+                "add": {
+                  "option": {
+                    "bound_target.state.fluid.cum.instant": "cum_in_pussy",
+                    "bound_target.state.fluid.cum.location": "cum_on_pussy"
+                  }
+                }
+              },
+              {
+                "when": {
+                  "option": {
+                    "interaction.sexual.penetration.route": "anal"
+                  }
+                },
+                "add": {
+                  "option": {
+                    "bound_target.state.fluid.cum.instant": "cum_in_ass"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "after_external_ejaculation_pullout",
+            "prompt": [
+              [
+                1,
+                "after ejaculation, cum string"
+              ]
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "bound_target.state.fluid.cum.instant": "ejaculation_event",
+                    "bound_source.state.genitals.visible_parts": "penis"
+                  }
+                },
+                "remove": {
+                  "prompt": {
+                    "*": [
+                      "vaginal"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "after_sex_pullout_cum_string",
+            "prompt": [
+              [
+                1,
+                "after sex, cum string"
+              ]
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "bound_target.state.fluid.cum.instant": "ejaculation_event"
+                  }
+                },
+                "remove": {
+                  "prompt": {
+                    "*": [
+                      "vaginal"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "interaction.sexual.relationship",
+        "subjects": [
+          "global"
+        ],
+        "order": 48,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "yuri",
+            "prompt": [
+              [
+                1,
+                "yuri"
+              ]
+            ]
+          },
+          {
+            "id": "yaoi",
+            "prompt": [
+              [
+                1,
+                "yaoi"
+              ]
+            ]
+          },
+          {
+            "id": "bisexual_female",
+            "prompt": [
+              [
+                1,
+                "bisexual female"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "interaction.sexual.grouping",
+        "subjects": [
+          "global"
+        ],
+        "order": 49,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 2
+        },
+        "options": [
+          {
+            "id": "ffm_threesome",
+            "prompt": [
+              [
+                1,
+                "ffm threesome"
+              ]
+            ]
+          },
+          {
+            "id": "mmf_threesome",
+            "prompt": [
+              [
+                1,
+                "mmf threesome"
+              ]
+            ]
+          },
+          {
+            "id": "fff_threesome",
+            "prompt": [
+              [
+                1,
+                "fff threesome"
+              ]
+            ]
+          },
+          {
+            "id": "foursome",
+            "prompt": [
+              [
+                1,
+                "foursome"
+              ]
+            ]
+          },
+          {
+            "id": "fivesome",
+            "prompt": [
+              [
+                1,
+                "fivesome"
+              ]
+            ]
+          },
+          {
+            "id": "group_sex",
+            "prompt": [
+              [
+                1,
+                "group sex"
+              ]
+            ]
+          },
+          {
+            "id": "orgy",
+            "prompt": [
+              [
+                1,
+                "orgy"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "scene.context.sexual",
+        "subjects": [
+          "global"
+        ],
+        "description": "Select only environmental context actually visible in the current sexual scene.",
+        "order": 50,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 2
+        },
+        "options": [
+          {
+            "id": "public_indecency",
+            "prompt": [
+              [
+                1,
+                "public indecency"
+              ]
+            ]
+          },
+          {
+            "id": "exhibitionism",
+            "prompt": [
+              [
+                1,
+                "exhibitionism"
+              ]
+            ]
+          },
+          {
+            "id": "underwater",
+            "prompt": [
+              [
+                1,
+                "underwater"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "orientation.facing",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "facing_away",
+            "prompt": [
+              [
+                2,
+                "facing away"
+              ]
+            ],
+            "rules": [
+              {
+                "replace": {
+                  "attribute": {
+                    "actor.visibility.*": "back"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "gaze.direction",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "looking_at_viewer",
+            "prompt": [
+              [
+                1,
+                "looking at viewer"
+              ]
+            ]
+          },
+          {
+            "id": "looking_at_another",
+            "prompt": [
+              [
+                1,
+                "looking at another"
+              ]
+            ]
+          },
+          {
+            "id": "looking_to_the_side",
+            "prompt": [
+              [
+                1,
+                "looking to the side"
+              ]
+            ]
+          },
+          {
+            "id": "looking_down",
+            "prompt": [
+              [
+                1,
+                "looking down"
+              ]
+            ]
+          },
+          {
+            "id": "looking_up",
+            "prompt": [
+              [
+                1,
+                "looking up"
+              ]
+            ]
+          },
+          {
+            "id": "looking_ahead",
+            "prompt": [
+              [
+                1,
+                "looking ahead"
+              ]
+            ]
+          },
+          {
+            "id": "looking_afar",
+            "prompt": [
+              [
+                1,
+                "looking afar"
+              ]
+            ]
+          },
+          {
+            "id": "sideways_glance",
+            "prompt": [
+              [
+                1,
+                "sideways glance"
+              ]
+            ]
+          },
+          {
+            "id": "looking_back",
+            "prompt": [
+              [
+                1,
+                "looking back"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "actor.pose.body",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "standing",
+            "prompt": [
+              [
+                1,
+                "standing"
+              ]
+            ]
+          },
+          {
+            "id": "sitting",
+            "prompt": [
+              [
+                1,
+                "sitting"
+              ]
+            ]
+          },
+          {
+            "id": "on_back",
+            "prompt": [
+              [
+                1,
+                "on back"
+              ]
+            ]
+          },
+          {
+            "id": "on_side",
+            "prompt": [
+              [
+                1,
+                "on side"
+              ]
+            ]
+          },
+          {
+            "id": "on_stomach",
+            "prompt": [
+              [
+                1,
+                "on stomach"
+              ]
+            ]
+          },
+          {
+            "id": "reclining",
+            "prompt": [
+              [
+                1,
+                "reclining"
+              ]
+            ]
+          },
+          {
+            "id": "arched_back",
+            "prompt": [
+              [
+                1,
+                "arched back"
+              ]
+            ]
+          },
+          {
+            "id": "kneeling",
+            "prompt": [
+              [
+                1,
+                "kneeling"
+              ]
+            ]
+          },
+          {
+            "id": "squatting",
+            "prompt": [
+              [
+                1,
+                "squatting"
+              ]
+            ]
+          },
+          {
+            "id": "all_fours",
+            "prompt": [
+              [
+                1,
+                "all fours"
+              ]
+            ]
+          },
+          {
+            "id": "wariza",
+            "prompt": [
+              [
+                1,
+                "wariza"
+              ]
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "when": {
+              "actor": {
+                "humanlike": false
+              }
+            },
+            "exclude": {
+              "modifier": [
+                "actor.pose.body"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "actor.pose.refinement",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "legs_apart",
+            "prompt": [
+              [
+                1,
+                "legs apart"
+              ]
+            ]
+          },
+          {
+            "id": "legs_up",
+            "prompt": [
+              [
+                1,
+                "legs up"
+              ]
+            ]
+          },
+          {
+            "id": "knees_to_chest",
+            "prompt": [
+              [
+                1,
+                "knees to chest"
+              ]
+            ]
+          },
+          {
+            "id": "legs_over_head",
+            "prompt": [
+              [
+                1,
+                "legs over head"
+              ]
+            ]
+          },
+          {
+            "id": "leg_lift",
+            "prompt": [
+              [
+                1,
+                "leg lift"
+              ]
+            ]
+          },
+          {
+            "id": "hands_up",
+            "prompt": [
+              [
+                1,
+                "hands up"
+              ]
+            ]
+          },
+          {
+            "id": "arms_behind_back",
+            "prompt": [
+              [
+                1,
+                "arms behind back"
+              ]
+            ]
+          },
+          {
+            "id": "arm_up",
+            "prompt": [
+              [
+                1,
+                "arm up"
+              ]
+            ]
+          },
+          {
+            "id": "arm_behind_head",
+            "prompt": [
+              [
+                1,
+                "arm behind head"
+              ]
+            ]
+          },
+          {
+            "id": "arm_behind_back",
+            "prompt": [
+              [
+                1,
+                "arm behind back"
+              ]
+            ]
+          },
+          {
+            "id": "knee_up",
+            "prompt": [
+              [
+                1,
+                "knee up"
+              ]
+            ]
+          },
+          {
+            "id": "knees_up",
+            "prompt": [
+              [
+                1,
+                "knees up"
+              ]
+            ]
+          },
+          {
+            "id": "leg_up",
+            "prompt": [
+              [
+                1,
+                "leg up"
+              ]
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "when": {
+              "actor": {
+                "humanlike": false
+              }
+            },
+            "exclude": {
+              "modifier": [
+                "actor.pose.refinement"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "expression.general",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "light_smile",
+            "prompt": [
+              [
+                1,
+                "light smile"
+              ]
+            ]
+          },
+          {
+            "id": "seductive_smile",
+            "prompt": [
+              [
+                1,
+                "seductive smile"
+              ]
+            ]
+          },
+          {
+            "id": "nervous_smile",
+            "prompt": [
+              [
+                1,
+                "nervous smile"
+              ]
+            ]
+          },
+          {
+            "id": "embarrassed",
+            "prompt": [
+              [
+                1,
+                "embarrassed"
+              ]
+            ]
+          },
+          {
+            "id": "scared",
+            "prompt": [
+              [
+                1,
+                "scared"
+              ]
+            ]
+          },
+          {
+            "id": "serious",
+            "prompt": [
+              [
+                1,
+                "serious"
+              ]
+            ]
+          },
+          {
+            "id": "exhausted",
+            "prompt": [
+              [
+                1,
+                "exhausted"
+              ]
+            ]
+          },
+          {
+            "id": "expressionless",
+            "prompt": [
+              [
+                1,
+                "expressionless"
+              ]
+            ]
+          },
+          {
+            "id": "surprised",
+            "prompt": [
+              [
+                1,
+                "surprised"
+              ]
+            ]
+          },
+          {
+            "id": "angry",
+            "prompt": [
+              [
+                1,
+                "angry"
+              ]
+            ]
+          },
+          {
+            "id": "wince",
+            "prompt": [
+              [
+                1,
+                "wince"
+              ]
+            ]
+          },
+          {
+            "id": "disdain",
+            "prompt": [
+              [
+                1,
+                "disdain"
+              ]
+            ]
+          },
+          {
+            "id": "grimace",
+            "prompt": [
+              [
+                1,
+                "grimace"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "expression.blush",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "full-face_blush",
+            "prompt": [
+              [
+                0.8,
+                "full-face blush"
+              ]
+            ]
+          },
+          {
+            "id": "blush",
+            "prompt": [
+              [
+                1,
+                "blush"
+              ]
+            ]
+          },
+          {
+            "id": "light_blush",
+            "prompt": [
+              [
+                1,
+                "light blush"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "expression.tear",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "tears",
+            "prompt": [
+              [
+                1,
+                "tears"
+              ]
+            ]
+          },
+          {
+            "id": "tearing_up",
+            "prompt": [
+              [
+                1,
+                "tearing up"
+              ]
+            ]
+          },
+          {
+            "id": "crying",
+            "prompt": [
+              [
+                1,
+                "crying"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "expression.eye.reaction",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "constricted_pupils",
+            "prompt": [
+              [
+                1,
+                "constricted pupils"
+              ]
+            ]
+          },
+          {
+            "id": "rolling_eyes",
+            "prompt": [
+              [
+                1,
+                "rolling eyes"
+              ]
+            ]
+          },
+          {
+            "id": "empty_eyes",
+            "prompt": [
+              [
+                1,
+                "empty_eyes"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "expression.eye.openness",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "closed_eyes",
+            "prompt": [
+              [
+                1,
+                "closed eyes"
+              ]
+            ]
+          },
+          {
+            "id": "one_eye_closed",
+            "prompt": [
+              [
+                1,
+                "one eye closed"
+              ]
+            ]
+          },
+          {
+            "id": "half_closed_eye",
+            "prompt": [
+              [
+                1,
+                "half-closed eye"
+              ]
+            ]
+          },
+          {
+            "id": "uneven_eyes",
+            "prompt": [
+              [
+                1,
+                "uneven eyes"
+              ]
+            ]
+          },
+          {
+            "id": "half_closed_eyes",
+            "prompt": [
+              [
+                1,
+                "half-closed eyes"
+              ]
+            ]
+          },
+          {
+            "id": "wide_eyed",
+            "prompt": [
+              [
+                1,
+                "wide-eyed"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "expression.mouth",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "open_mouth",
+            "prompt": [
+              [
+                1,
+                "open mouth"
+              ]
+            ]
+          },
+          {
+            "id": "parted_lips",
+            "prompt": [
+              [
+                1,
+                "parted lips"
+              ]
+            ]
+          },
+          {
+            "id": "closed_mouth",
+            "prompt": [
+              [
+                1,
+                "closed mouth"
+              ]
+            ]
+          },
+          {
+            "id": "wavy_mouth",
+            "prompt": [
+              [
+                1,
+                "wavy mouth"
+              ]
+            ]
+          },
+          {
+            "id": "tongue_out",
+            "prompt": [
+              [
+                1,
+                "tongue out"
+              ]
+            ]
+          },
+          {
+            "id": "clenched_teeth",
+            "prompt": [
+              [
+                1,
+                "clenched butt, teeth"
+              ]
+            ]
+          },
+          {
+            "id": "heavy_breathing",
+            "prompt": [
+              [
+                1,
+                "heavy breathing"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "expression.sexual_response",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "aroused",
+            "prompt": [
+              [
+                1,
+                "aroused"
+              ]
+            ]
+          },
+          {
+            "id": "orgasm",
+            "prompt": [
+              [
+                1,
+                "orgasm"
+              ]
+            ]
+          },
+          {
+            "id": "ahegao",
+            "prompt": [
+              [
+                1,
+                "ahegao"
+              ]
+            ]
+          },
+          {
+            "id": "fucked_silly",
+            "prompt": [
+              [
+                1,
+                "fucked silly"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "motion.body",
+        "subjects": [
+          "actor"
+        ],
+        "description": "Select at most one visible motion effect for this Actor occurrence: motion_lines for forceful or repeated directional movement, or trembling for visible shaking. Omit it when movement is only implied by the action.",
+        "order": 50,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "motion_lines",
+            "prompt": [
+              [
+                2,
+                "motion lines"
+              ]
+            ]
+          },
+          {
+            "id": "trembling",
+            "prompt": [
+              [
+                2,
+                "trembling"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.hair.condition",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "wet_hair",
+            "prompt": [
+              [
+                1,
+                "wet hair"
+              ]
+            ]
+          },
+          {
+            "id": "messy_hair",
+            "prompt": [
+              [
+                1,
+                "messy hair"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.body.surface",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "wet",
+            "prompt": [
+              [
+                1,
+                "wet"
+              ]
+            ]
+          },
+          {
+            "id": "oiled",
+            "prompt": [
+              [
+                1,
+                "oiled"
+              ]
+            ]
+          },
+          {
+            "id": "shiny_skin",
+            "prompt": [
+              [
+                1,
+                "shiny skin"
+              ]
+            ]
+          },
+          {
+            "id": "sweat",
+            "prompt": [
+              [
+                1,
+                "sweat"
+              ]
+            ]
+          },
+          {
+            "id": "very_sweaty",
+            "prompt": [
+              [
+                1,
+                "very sweaty"
+              ]
+            ]
+          },
+          {
+            "id": "steaming_body",
+            "prompt": [
+              [
+                1,
+                "steaming body"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.body.contamination",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "blood_on_face",
+            "prompt": [
+              [
+                1,
+                "blood on face"
+              ]
+            ]
+          },
+          {
+            "id": "blood_on_hand",
+            "prompt": [
+              [
+                1,
+                "blood on hand"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.body.condition",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "dirty",
+            "prompt": [
+              [
+                1,
+                "dirty"
+              ]
+            ]
+          },
+          {
+            "id": "bruise",
+            "prompt": [
+              [
+                1,
+                "bruise"
+              ]
+            ]
+          },
+          {
+            "id": "bandages",
+            "prompt": [
+              [
+                1,
+                "bandages"
+              ]
+            ]
+          },
+          {
+            "id": "runny_makeup",
+            "prompt": [
+              [
+                1,
+                "runny makeup"
+              ]
+            ]
+          },
+          {
+            "id": "scratches",
+            "prompt": [
+              [
+                1,
+                "scratches"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.clothing.surface",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "wet_clothes",
+            "prompt": [
+              [
+                1,
+                "wet clothes"
+              ]
+            ]
+          },
+          {
+            "id": "dirty_clothes",
+            "prompt": [
+              [
+                1,
+                "dirty clothes"
+              ]
+            ]
+          },
+          {
+            "id": "stained_clothes",
+            "prompt": [
+              [
+                1,
+                "stained clothes"
+              ]
+            ]
+          },
+          {
+            "id": "torn_clothes",
+            "prompt": [
+              [
+                1,
+                "torn clothes"
+              ]
+            ]
+          },
+          {
+            "id": "see_through_clothes",
+            "prompt": [
+              [
+                1,
+                "see-through clothes"
+              ]
+            ]
+          },
+          {
+            "id": "blood_on_clothes",
+            "prompt": [
+              [
+                1,
+                "blood on clothes"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.clothing.arrangement",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "open_clothes",
+            "prompt": [
+              [
+                1,
+                "open clothes"
+              ]
+            ]
+          },
+          {
+            "id": "unbuttoned",
+            "prompt": [
+              [
+                1,
+                "unbuttoned"
+              ]
+            ]
+          },
+          {
+            "id": "partially_unbuttoned",
+            "prompt": [
+              [
+                1,
+                "partially unbuttoned"
+              ]
+            ]
+          },
+          {
+            "id": "unzipped",
+            "prompt": [
+              [
+                1,
+                "unzipped"
+              ]
+            ]
+          },
+          {
+            "id": "partially_unzipped",
+            "prompt": [
+              [
+                1,
+                "partially unzipped"
+              ]
+            ]
+          },
+          {
+            "id": "partially_undressed",
+            "prompt": [
+              [
+                1,
+                "partially undressed"
+              ]
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "when": {
+              "actor": {
+                "humanlike": false
+              }
+            },
+            "exclude": {
+              "modifier": [
+                "state.clothing.arrangement"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "state.clothing.coverage.upper",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "covered_nipples",
+            "prompt": [
+              [
+                1,
+                "covered nipples"
+              ]
+            ]
+          },
+          {
+            "id": "no_bra",
+            "prompt": [
+              [
+                1,
+                "no bra"
+              ]
+            ]
+          },
+          {
+            "id": "topless",
+            "prompt": [
+              [
+                1,
+                "topless"
+              ]
+            ]
+          },
+          {
+            "id": "breasts_out",
+            "prompt": [
+              [
+                1,
+                "breasts out"
+              ]
+            ]
+          },
+          {
+            "id": "one_breast_out",
+            "prompt": [
+              [
+                1,
+                "one breast out"
+              ]
+            ]
+          },
+          {
+            "id": "nipple_slip",
+            "prompt": [
+              [
+                1,
+                "nipple slip"
+              ]
+            ]
+          },
+          {
+            "id": "strap_slip",
+            "prompt": [
+              [
+                1,
+                "strap slip"
+              ]
+            ]
+          },
+          {
+            "id": "open_bra",
+            "prompt": [
+              [
+                1,
+                "open bra"
+              ]
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "when": {
+              "actor": {
+                "humanlike": false
+              }
+            },
+            "exclude": {
+              "modifier": [
+                "state.clothing.coverage.upper"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "state.clothing.coverage.lower",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "no_panties",
+            "prompt": [
+              [
+                1,
+                "no panties"
+              ]
+            ]
+          },
+          {
+            "id": "bottomless",
+            "prompt": [
+              [
+                1,
+                "bottomless"
+              ]
+            ]
+          },
+          {
+            "id": "panty_pull",
+            "prompt": [
+              [
+                1,
+                "panty pull"
+              ]
+            ]
+          },
+          {
+            "id": "clothing_aside",
+            "prompt": [
+              [
+                1,
+                "clothing aside"
+              ]
+            ]
+          },
+          {
+            "id": "panties_around_one_leg",
+            "prompt": [
+              [
+                1,
+                "panties around one leg"
+              ]
+            ]
+          },
+          {
+            "id": "skirt_pull",
+            "prompt": [
+              [
+                1,
+                "skirt pull"
+              ]
+            ]
+          },
+          {
+            "id": "clothes_down",
+            "prompt": [
+              [
+                1,
+                "clothes down"
+              ]
+            ]
+          },
+          {
+            "id": "panties_around_ankles",
+            "prompt": [
+              [
+                1,
+                "panties around ankles"
+              ]
+            ]
+          },
+          {
+            "id": "panties_around_thighs",
+            "prompt": [
+              [
+                1,
+                "panties around thighs"
+              ]
+            ]
+          },
+          {
+            "id": "skirt_around_one_leg",
+            "prompt": [
+              [
+                1,
+                "skirt around one leg"
+              ]
+            ]
+          },
+          {
+            "id": "skirt_around_ankles",
+            "prompt": [
+              [
+                1,
+                "skirt around ankles"
+              ]
+            ]
+          },
+          {
+            "id": "open_fly",
+            "prompt": [
+              [
+                1,
+                "open fly"
+              ]
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "when": {
+              "actor": {
+                "humanlike": false
+              }
+            },
+            "exclude": {
+              "modifier": [
+                "state.clothing.coverage.lower"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "manual.clothing_access",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "clothes_lift",
+            "prompt": [
+              [
+                1,
+                "clothes lift"
+              ]
+            ]
+          },
+          {
+            "id": "clothes_pull",
+            "prompt": [
+              [
+                1,
+                "clothes pull"
+              ]
+            ]
+          },
+          {
+            "id": "hand_under_clothes",
+            "prompt": [
+              [
+                1,
+                "hand under clothes"
+              ]
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "when": {
+              "actor": {
+                "humanlike": false
+              }
+            },
+            "exclude": {
+              "modifier": [
+                "manual.clothing_access"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "state.after_activity",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "after_sex",
+            "prompt": [
+              [
+                1,
+                "after sex"
+              ]
+            ]
+          },
+          {
+            "id": "afterglow",
+            "prompt": [
+              [
+                1,
+                "afterglow"
+              ]
+            ]
+          },
+          {
+            "id": "after_masturbation",
+            "prompt": [
+              [
+                1,
+                "after masturbation"
+              ]
+            ]
+          },
+          {
+            "id": "after_handjob",
+            "prompt": [
+              [
+                1,
+                "after handjob"
+              ]
+            ]
+          },
+          {
+            "id": "after_fingering",
+            "prompt": [
+              [
+                1,
+                "after fingering"
+              ]
+            ]
+          },
+          {
+            "id": "after_fellatio",
+            "prompt": [
+              [
+                1,
+                "after fellatio"
+              ]
+            ]
+          },
+          {
+            "id": "after_cunnilingus",
+            "prompt": [
+              [
+                1,
+                "after cunnilingus"
+              ]
+            ]
+          },
+          {
+            "id": "after_paizuri",
+            "prompt": [
+              [
+                1,
+                "after paizuri"
+              ]
+            ]
+          },
+          {
+            "id": "after_vaginal",
+            "prompt": [
+              [
+                1,
+                "after vaginal"
+              ]
+            ]
+          },
+          {
+            "id": "after_anal",
+            "prompt": [
+              [
+                1,
+                "after anal"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.restraint.body",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "bound",
+            "prompt": [
+              [
+                1,
+                "bound"
+              ]
+            ]
+          },
+          {
+            "id": "restrained",
+            "prompt": [
+              [
+                1,
+                "restrained"
+              ]
+            ]
+          },
+          {
+            "id": "bound_wrists",
+            "prompt": [
+              [
+                1,
+                "bound wrists"
+              ]
+            ]
+          },
+          {
+            "id": "bound_arms",
+            "prompt": [
+              [
+                1,
+                "bound arms"
+              ]
+            ]
+          },
+          {
+            "id": "bound_ankles",
+            "prompt": [
+              [
+                1,
+                "bound ankles"
+              ]
+            ]
+          },
+          {
+            "id": "cuffs",
+            "prompt": [
+              [
+                1,
+                "cuffs"
+              ]
+            ]
+          },
+          {
+            "id": "chained",
+            "prompt": [
+              [
+                1,
+                "chained"
+              ]
+            ]
+          },
+          {
+            "id": "shibari",
+            "prompt": [
+              [
+                1,
+                "shibari"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.restraint.gag",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "gagged",
+            "prompt": [
+              [
+                1,
+                "gagged"
+              ]
+            ]
+          },
+          {
+            "id": "ball_gag",
+            "prompt": [
+              [
+                1,
+                "ball gag"
+              ]
+            ]
+          },
+          {
+            "id": "tape_gag",
+            "prompt": [
+              [
+                1,
+                "tape gag"
+              ]
+            ]
+          },
+          {
+            "id": "cloth_gag",
+            "prompt": [
+              [
+                1,
+                "cloth gag"
+              ]
+            ]
+          },
+          {
+            "id": "ring_gag",
+            "prompt": [
+              [
+                1,
+                "ring gag"
+              ]
+            ]
+          },
+          {
+            "id": "panties_in_mouth",
+            "prompt": [
+              [
+                1,
+                "panties in mouth"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.penis.condom",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "condom_on_penis",
+            "prompt": [
+              [
+                1,
+                "condom on penis"
+              ]
+            ]
+          },
+          {
+            "id": "used_condom_on_penis",
+            "prompt": [
+              [
+                1,
+                "used condom on penis"
+              ]
+            ]
+          },
+          {
+            "id": "colored_condom",
+            "prompt": [
+              [
+                1,
+                "colored condom"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.genitals.visible_parts",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "penis",
+            "prompt": [
+              [
+                1,
+                "penis"
+              ]
+            ]
+          },
+          {
+            "id": "testicles",
+            "prompt": [
+              [
+                1,
+                "testicles"
+              ]
+            ]
+          },
+          {
+            "id": "disembodied_penis",
+            "prompt": [
+              [
+                1,
+                "disembodied penis"
+              ]
+            ],
+            "derivedOnly": true
+          }
+        ]
+      },
+      {
+        "id": "state.fluid.precum",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "precum",
+            "prompt": [
+              [
+                1,
+                "precum"
+              ]
+            ]
+          },
+          {
+            "id": "precum_drip",
+            "prompt": [
+              [
+                1,
+                "precum drip"
+              ]
+            ]
+          },
+          {
+            "id": "precum_string",
+            "prompt": [
+              [
+                1,
+                "precum string"
+              ]
+            ]
+          },
+          {
+            "id": "precum_through_clothes",
+            "prompt": [
+              [
+                1,
+                "precum through clothes"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.fluid.cum.instant",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "projectile_cum",
+            "prompt": [
+              [
+                1,
+                "projectile cum"
+              ]
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "actor.state.fluid.cum.instant": "ejaculation_event"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "ejaculation_event",
+            "prompt": null,
+            "derivedOnly": true
+          },
+          {
+            "id": "cum_in_pussy",
+            "prompt": [
+              [
+                1,
+                "cum in pussy"
+              ]
+            ],
+            "derivedOnly": true
+          },
+          {
+            "id": "cum_in_ass",
+            "prompt": [
+              [
+                1,
+                "cum in ass"
+              ]
+            ],
+            "derivedOnly": true
+          }
+        ]
+      },
+      {
+        "id": "state.fluid.cum.location",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "cum_on_pussy",
+            "attributes": {
+              "body_part": "bottom"
+            },
+            "prompt": [
+              [
+                1,
+                "cum on pussy"
+              ]
+            ]
+          },
+          {
+            "id": "cum_on_stomach",
+            "attributes": {
+              "body_part": "top"
+            },
+            "prompt": [
+              [
+                1,
+                "cum on stomach"
+              ]
+            ]
+          },
+          {
+            "id": "cum_on_breast",
+            "attributes": {
+              "body_part": "top"
+            },
+            "prompt": [
+              [
+                1,
+                "cum on breast"
+              ]
+            ]
+          },
+          {
+            "id": "cum_on_face",
+            "attributes": {
+              "body_part": "head"
+            },
+            "prompt": [
+              [
+                1,
+                "facial"
+              ]
+            ]
+          },
+          {
+            "id": "cum_on_hair",
+            "attributes": {
+              "body_part": "head"
+            },
+            "prompt": [
+              [
+                1,
+                "cum on hair"
+              ]
+            ]
+          },
+          {
+            "id": "cum_on_crotch",
+            "attributes": {
+              "body_part": "bottom"
+            },
+            "prompt": [
+              [
+                1,
+                "cum on crotch"
+              ]
+            ]
+          },
+          {
+            "id": "cum_on_legs",
+            "attributes": {
+              "body_part": "legs"
+            },
+            "prompt": [
+              [
+                1,
+                "cum on legs"
+              ]
+            ]
+          },
+          {
+            "id": "cum_in_mouth",
+            "attributes": {
+              "body_part": "head"
+            },
+            "prompt": [
+              [
+                1,
+                "cum in mouth"
+              ]
+            ]
+          },
+          {
+            "id": "cum_on_ass",
+            "attributes": {
+              "body_part": "bottom"
+            },
+            "prompt": [
+              [
+                1,
+                "cum on ass"
+              ]
+            ]
+          },
+          {
+            "id": "cum_in_ass",
+            "attributes": {
+              "body_part": "bottom"
+            },
+            "prompt": [
+              [
+                1,
+                "cum in ass"
+              ]
+            ]
+          },
+          {
+            "id": "cum_on_back",
+            "attributes": {
+              "body_part": "top",
+              "visible_from": [
+                "back"
+              ]
+            },
+            "prompt": [
+              [
+                1,
+                "cum on back"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.fluid.cum.accumulation",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 0
+        },
+        "options": [
+          {
+            "id": "accumulated_cumdrip",
+            "prompt": [
+              [
+                1,
+                "cumdrip"
+              ]
+            ],
+            "derivedOnly": true
+          },
+          {
+            "id": "accumulated_cum_overflow",
+            "prompt": [
+              [
+                1,
+                "cum overflow"
+              ]
+            ],
+            "derivedOnly": true
+          },
+          {
+            "id": "accumulated_cum_pool",
+            "prompt": [
+              [
+                1,
+                "cum pool"
+              ]
+            ],
+            "derivedOnly": true
+          },
+          {
+            "id": "excessive_accumulated_cum",
+            "prompt": [
+              [
+                1,
+                "excessive cum"
+              ]
+            ],
+            "derivedOnly": true
+          }
+        ]
+      },
+      {
+        "id": "state.fluid.lactation",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "projectile_lactation",
+            "prompt": [
+              [
+                1,
+                "projectile lactation"
+              ]
+            ]
+          },
+          {
+            "id": "lactation",
+            "prompt": [
+              [
+                1,
+                "lactation"
+              ]
+            ]
+          },
+          {
+            "id": "lactation_through_clothes",
+            "prompt": [
+              [
+                1,
+                "lactation through clothes"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.fluid.pussy_juice",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "female_ejaculation",
+            "prompt": [
+              [
+                1,
+                "female ejaculation"
+              ]
+            ]
+          },
+          {
+            "id": "pussy_juice",
+            "prompt": [
+              [
+                1,
+                "pussy juice"
+              ]
+            ]
+          },
+          {
+            "id": "pussy_juice_trail",
+            "prompt": [
+              [
+                1,
+                "pussy juice trail"
+              ]
+            ]
+          },
+          {
+            "id": "pussy_juice_stain",
+            "prompt": [
+              [
+                1,
+                "pussy juice stain"
+              ]
+            ]
+          },
+          {
+            "id": "pussy_juice_puddle",
+            "prompt": [
+              [
+                1,
+                "pussy juice puddle"
+              ]
+            ]
+          },
+          {
+            "id": "pussy_juice_drip_through_clothes",
+            "prompt": [
+              [
+                1,
+                "pussy juice drip through clothes"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "state.fluid.saliva",
+        "subjects": [
+          "actor"
+        ],
+        "order": 40,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": null
+        },
+        "options": [
+          {
+            "id": "drooling",
+            "prompt": [
+              [
+                1,
+                "drooling"
+              ]
+            ]
+          },
+          {
+            "id": "saliva_drip",
+            "prompt": [
+              [
+                1,
+                "saliva drip"
+              ]
+            ]
+          },
+          {
+            "id": "saliva",
+            "prompt": [
+              [
+                1,
+                "saliva"
+              ]
+            ]
+          },
+          {
+            "id": "saliva_on_penis",
+            "prompt": [
+              [
+                1,
+                "saliva on penis"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "scene.comic.min_panels",
+        "subjects": [
+          "global"
+        ],
+        "description": "Comic-page planning only. Select the minimum panel count stated by the active user direction. Return at least that many meaningful panels and never add empty or decorative panels only to satisfy the count.",
+        "order": 47,
+        "select": {
+          "by": "ai",
+          "min": 1,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "minimum_2",
+            "prompt": null
+          },
+          {
+            "id": "minimum_3",
+            "prompt": null
+          },
+          {
+            "id": "minimum_4",
+            "prompt": null
+          }
+        ]
+      },
+      {
+        "id": "framing.crop",
+        "subjects": [
+          "global"
+        ],
+        "description": "Select at most one crop that best matches the visible body range of this single-frame illustration.",
+        "order": 48,
+        "rules": [
+          {
+            "when": {
+              "actor": "cast"
+            },
+            "weight": {
+              "prompt": "body_part"
+            }
+          }
+        ],
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "portrait",
+            "prompt": [
+              [
+                1,
+                "portrait"
+              ]
+            ]
+          },
+          {
+            "id": "upper_body",
+            "prompt": [
+              [
+                1,
+                "upper body"
+              ]
+            ]
+          },
+          {
+            "id": "cowboy_shot",
+            "prompt": null
+          },
+          {
+            "id": "feet_out_of_frame",
+            "prompt": null
+          },
+          {
+            "id": "full_body",
+            "prompt": null
+          }
+        ]
+      },
+      {
+        "id": "framing.head_crop",
+        "subjects": [
+          "global"
+        ],
+        "description": "Select at most one upper frame boundary crop while keeping the remaining visible body composition intact.",
+        "order": 49,
+        "rules": [
+          {
+            "when": {
+              "actor": "cast"
+            },
+            "weight": {
+              "prompt": "head_crop_body_part"
+            }
+          }
+        ],
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "head_out_of_frame",
+            "prompt": [
+              [
+                1,
+                "head out of frame"
+              ]
+            ],
+            "rules": [
+              {
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": "*",
+                    "expression.general": "*",
+                    "expression.blush": "*",
+                    "expression.mouth": [
+                      "open_mouth",
+                      "parted_lips",
+                      "closed_mouth",
+                      "wavy_mouth",
+                      "tongue_out",
+                      "clenched_teeth"
+                    ],
+                    "expression.sexual_response": [
+                      "ahegao"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "eyes_out_of_frame",
+            "prompt": [
+              [
+                1,
+                "eyes out of frame"
+              ]
+            ],
+            "rules": [
+              {
+                "when": {
+                  "actor": "cast"
+                },
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": [
+                      "tearing_up"
+                    ]
+                  },
+                  "prompt": {
+                    "actor.identity.base.eyes.*": "*"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "lower_body",
+            "prompt": [
+              [
+                1,
+                "lower body"
+              ]
+            ],
+            "rules": [
+              {
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": "*",
+                    "expression.general": "*",
+                    "expression.blush": "*",
+                    "expression.mouth": [
+                      "open_mouth",
+                      "parted_lips",
+                      "closed_mouth",
+                      "wavy_mouth",
+                      "tongue_out",
+                      "clenched_teeth"
+                    ],
+                    "expression.sexual_response": [
+                      "ahegao"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "actor.framing.crop",
+        "subjects": [
+          "actor"
+        ],
+        "description": "For this comic Actor occurrence only, select at most one lower frame crop or one deliberate body-part focus. Focus options are exclusive framing choices and locally override actor.framing.head_crop.",
+        "order": 48,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "portrait",
+            "prompt": [
+              [
+                1,
+                "portrait"
+              ]
+            ]
+          },
+          {
+            "id": "upper_body",
+            "prompt": [
+              [
+                1,
+                "upper body"
+              ]
+            ]
+          },
+          {
+            "id": "cowboy_shot",
+            "prompt": null
+          },
+          {
+            "id": "feet_out_of_frame",
+            "prompt": null
+          },
+          {
+            "id": "full_body",
+            "prompt": null
+          },
+          {
+            "id": "ass_focus",
+            "prompt": [
+              [
+                1,
+                "ass focus"
+              ]
+            ],
+            "rules": [
+              {
+                "exclude": {
+                  "option": {
+                    "actor.framing.head_crop": [
+                      "head_out_of_frame",
+                      "eyes_out_of_frame",
+                      "lower_body"
+                    ]
+                  }
+                }
+              },
+              {
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": "*",
+                    "expression.general": "*",
+                    "expression.blush": "*",
+                    "expression.mouth": [
+                      "open_mouth",
+                      "parted_lips",
+                      "closed_mouth",
+                      "wavy_mouth",
+                      "tongue_out",
+                      "clenched_teeth"
+                    ],
+                    "expression.sexual_response": [
+                      "ahegao"
+                    ]
+                  }
+                }
+              },
+              {
+                "add": {
+                  "option": {
+                    "orientation.facing": "facing_away"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "foot_focus",
+            "prompt": [
+              [
+                1,
+                "foot focus"
+              ]
+            ],
+            "rules": [
+              {
+                "exclude": {
+                  "option": {
+                    "actor.framing.head_crop": [
+                      "head_out_of_frame",
+                      "eyes_out_of_frame",
+                      "lower_body"
+                    ]
+                  }
+                }
+              },
+              {
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": "*",
+                    "expression.general": "*",
+                    "expression.blush": "*",
+                    "expression.mouth": [
+                      "open_mouth",
+                      "parted_lips",
+                      "closed_mouth",
+                      "wavy_mouth",
+                      "tongue_out",
+                      "clenched_teeth"
+                    ],
+                    "expression.sexual_response": [
+                      "ahegao"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "hip_focus",
+            "prompt": [
+              [
+                1,
+                "hip focus"
+              ]
+            ],
+            "rules": [
+              {
+                "exclude": {
+                  "option": {
+                    "actor.framing.head_crop": [
+                      "head_out_of_frame",
+                      "eyes_out_of_frame",
+                      "lower_body"
+                    ]
+                  }
+                }
+              },
+              {
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": "*",
+                    "expression.general": "*",
+                    "expression.blush": "*",
+                    "expression.mouth": [
+                      "open_mouth",
+                      "parted_lips",
+                      "closed_mouth",
+                      "wavy_mouth",
+                      "tongue_out",
+                      "clenched_teeth"
+                    ],
+                    "expression.sexual_response": [
+                      "ahegao"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "eye_focus",
+            "prompt": [
+              [
+                1,
+                "eye focus"
+              ]
+            ],
+            "rules": [
+              {
+                "exclude": {
+                  "option": {
+                    "actor.framing.head_crop": [
+                      "head_out_of_frame",
+                      "eyes_out_of_frame",
+                      "lower_body"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "breast_focus",
+            "prompt": [
+              [
+                1,
+                "breast focus"
+              ]
+            ],
+            "rules": [
+              {
+                "exclude": {
+                  "option": {
+                    "actor.framing.head_crop": [
+                      "head_out_of_frame",
+                      "eyes_out_of_frame",
+                      "lower_body"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "hand_focus",
+            "prompt": [
+              [
+                1,
+                "hand focus"
+              ]
+            ],
+            "rules": [
+              {
+                "exclude": {
+                  "option": {
+                    "actor.framing.head_crop": [
+                      "head_out_of_frame",
+                      "eyes_out_of_frame",
+                      "lower_body"
+                    ]
+                  }
+                }
+              },
+              {
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": "*",
+                    "expression.general": "*",
+                    "expression.blush": "*",
+                    "expression.mouth": [
+                      "open_mouth",
+                      "parted_lips",
+                      "closed_mouth",
+                      "wavy_mouth",
+                      "tongue_out",
+                      "clenched_teeth"
+                    ],
+                    "expression.sexual_response": [
+                      "ahegao"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "crotch_focus",
+            "prompt": [
+              [
+                1,
+                "crotch focus"
+              ]
+            ],
+            "rules": [
+              {
+                "exclude": {
+                  "option": {
+                    "actor.framing.head_crop": [
+                      "head_out_of_frame",
+                      "eyes_out_of_frame",
+                      "lower_body"
+                    ]
+                  }
+                }
+              },
+              {
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": "*",
+                    "expression.general": "*",
+                    "expression.blush": "*",
+                    "expression.mouth": [
+                      "open_mouth",
+                      "parted_lips",
+                      "closed_mouth",
+                      "wavy_mouth",
+                      "tongue_out",
+                      "clenched_teeth"
+                    ],
+                    "expression.sexual_response": [
+                      "ahegao"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "pectoral_focus",
+            "prompt": [
+              [
+                1,
+                "pectoral focus"
+              ]
+            ],
+            "rules": [
+              {
+                "exclude": {
+                  "option": {
+                    "actor.framing.head_crop": [
+                      "head_out_of_frame",
+                      "eyes_out_of_frame",
+                      "lower_body"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "weight": {
+              "prompt": "body_part"
+            }
+          },
+          {
+            "when": {
+              "actor": {
+                "humanlike": false
+              }
+            },
+            "exclude": {
+              "option": {
+                "actor.framing.crop": [
+                  "portrait",
+                  "upper_body",
+                  "cowboy_shot",
+                  "feet_out_of_frame",
+                  "ass_focus",
+                  "foot_focus",
+                  "hip_focus",
+                  "breast_focus",
+                  "hand_focus",
+                  "crotch_focus",
+                  "pectoral_focus"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "actor.framing.head_crop",
+        "subjects": [
+          "actor"
+        ],
+        "description": "For this comic Actor occurrence only, select at most one upper frame boundary crop visible in its panel. A focus option selected in actor.framing.crop locally overrides this selection.",
+        "order": 49,
+        "rules": [
+          {
+            "weight": {
+              "prompt": "head_crop_body_part"
+            }
+          }
+        ],
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "head_out_of_frame",
+            "prompt": [
+              [
+                1,
+                "head out of frame"
+              ]
+            ],
+            "rules": [
+              {
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": "*",
+                    "expression.general": "*",
+                    "expression.blush": "*",
+                    "expression.mouth": [
+                      "open_mouth",
+                      "parted_lips",
+                      "closed_mouth",
+                      "wavy_mouth",
+                      "tongue_out",
+                      "clenched_teeth"
+                    ],
+                    "expression.sexual_response": [
+                      "ahegao"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "eyes_out_of_frame",
+            "prompt": [
+              [
+                1,
+                "eyes out of frame"
+              ]
+            ],
+            "rules": [
+              {
+                "when": {
+                  "actor": "cast"
+                },
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": [
+                      "tearing_up"
+                    ]
+                  },
+                  "prompt": {
+                    "actor.identity.base.eyes.*": "*"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "lower_body",
+            "prompt": [
+              [
+                1,
+                "lower body"
+              ]
+            ],
+            "rules": [
+              {
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": "*",
+                    "expression.general": "*",
+                    "expression.blush": "*",
+                    "expression.mouth": [
+                      "open_mouth",
+                      "parted_lips",
+                      "closed_mouth",
+                      "wavy_mouth",
+                      "tongue_out",
+                      "clenched_teeth"
+                    ],
+                    "expression.sexual_response": [
+                      "ahegao"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "framing.presence",
+        "subjects": [
+          "actor"
+        ],
+        "order": 49,
+        "select": {
+          "by": "local",
+          "min": 0,
+          "max": 2
+        },
+        "options": [
+          {
+            "id": "pov_hands",
+            "prompt": [
+              [
+                1,
+                "pov hands"
+              ]
+            ],
+            "rules": [
+              {
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": "*",
+                    "expression.general": "*",
+                    "expression.blush": "*",
+                    "expression.mouth": [
+                      "open_mouth",
+                      "parted_lips",
+                      "closed_mouth",
+                      "wavy_mouth",
+                      "tongue_out",
+                      "clenched_teeth"
+                    ],
+                    "expression.sexual_response": [
+                      "ahegao"
+                    ]
+                  }
+                }
+              },
+              {
+                "remove": {
+                  "prompt": {
+                    "actor.identity.*": "*",
+                    "actor.outfit.head": "*"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "out_of_frame",
+            "prompt": [
+              [
+                1,
+                "out of frame"
+              ]
+            ],
+            "rules": [
+              {
+                "remove": {
+                  "option": {
+                    "gaze.direction": "*",
+                    "expression.eye.reaction": "*",
+                    "expression.eye.openness": "*",
+                    "expression.tear": "*",
+                    "expression.general": "*",
+                    "expression.blush": "*",
+                    "expression.mouth": [
+                      "open_mouth",
+                      "parted_lips",
+                      "closed_mouth",
+                      "wavy_mouth",
+                      "tongue_out",
+                      "clenched_teeth"
+                    ],
+                    "expression.sexual_response": [
+                      "ahegao"
+                    ]
+                  }
+                }
+              },
+              {
+                "when": {
+                  "not": {
+                    "option": {
+                      "framing.presence": "pov_hands"
+                    }
+                  }
+                },
+                "remove": {
+                  "prompt": {
+                    "actor.identity.*": "*",
+                    "actor.outfit.*": "*"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "camera.view",
+        "subjects": [
+          "global"
+        ],
+        "order": 50,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 2
+        },
+        "options": [
+          {
+            "id": "from_side",
+            "prompt": [
+              [
+                1,
+                "from side"
+              ]
+            ]
+          },
+          {
+            "id": "from_behind",
+            "prompt": [
+              [
+                1,
+                "from behind"
+              ]
+            ]
+          },
+          {
+            "id": "from_above",
+            "prompt": [
+              [
+                1,
+                "from above"
+              ]
+            ]
+          },
+          {
+            "id": "from_below",
+            "prompt": [
+              [
+                1,
+                "from below"
+              ]
+            ]
+          },
+          {
+            "id": "pov",
+            "prompt": [
+              [
+                1,
+                "pov"
+              ]
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "persona.framing.presence": [
+                      "pov_hands",
+                      "out_of_frame"
+                    ]
+                  }
+                }
+              },
+              {
+                "remove": {
+                  "prompt": {
+                    "persona.identity.*": "*",
+                    "persona.outfit.*": "*",
+                    "persona.actor.action.*": "*",
+                    "persona.gaze.direction.*": "*",
+                    "persona.actor.pose.*": "*",
+                    "persona.expression.*": "*",
+                    "persona.state.*": "*",
+                    "persona.manual.*": "*",
+                    "persona.actor.injury.*": "*",
+                    "persona.interaction.*": "*",
+                    "persona.object.*": "*",
+                    "persona.placement.*": "*",
+                    "persona.orientation.*": "*",
+                    "persona.continuity.*": "*"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "pov_hands",
+            "prompt": [
+              [
+                1,
+                "pov hands"
+              ]
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "persona.framing.presence": [
+                      "pov_hands",
+                      "out_of_frame"
+                    ]
+                  }
+                }
+              },
+              {
+                "remove": {
+                  "prompt": {
+                    "persona.identity.*": "*",
+                    "persona.outfit.*": "*",
+                    "persona.actor.action.*": "*",
+                    "persona.gaze.direction.*": "*",
+                    "persona.actor.pose.*": "*",
+                    "persona.expression.*": "*",
+                    "persona.state.*": "*",
+                    "persona.manual.*": "*",
+                    "persona.actor.injury.*": "*",
+                    "persona.interaction.*": "*",
+                    "persona.object.*": "*",
+                    "persona.placement.*": "*",
+                    "persona.orientation.*": "*",
+                    "persona.continuity.*": "*"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "dutch_angle",
+            "prompt": [
+              [
+                1,
+                "dutch angle"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "interaction.sexual.oral.fellatio",
+        "subjects": [
+          "interaction"
+        ],
+        "description": "Only when the male genital organ is at a height accessible to the mouth.",
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 2
+        },
+        "order": 52,
+        "options": [
+          {
+            "id": "poking_face_or_mouth_with_penis",
+            "prompt": [
+              [
+                1,
+                "poking with penis, penis on face"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "penis_against_face_or_mouth",
+                "tag": [
+                  [
+                    1,
+                    "penis against face, penis at mouth"
+                  ]
+                ]
+              },
+              {
+                "id": "poking_face_or_mouth",
+                "tag": [
+                  [
+                    1,
+                    "poking face or mouth with penis"
+                  ]
+                ]
+              }
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "male.state.genitals.visible_parts": "penis"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "reverse_fellatio",
+            "prompt": [
+              [
+                1,
+                "reverse fellatio"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "inverted_fellatio",
+                "tag": [
+                  [
+                    1,
+                    "inverted fellatio"
+                  ]
+                ]
+              },
+              {
+                "id": "upside_down_fellatio",
+                "tag": [
+                  [
+                    1,
+                    "upside-down fellatio"
+                  ]
+                ]
+              }
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "male.state.genitals.visible_parts": "penis"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "route": {
+              "prompt": {
+                "source": "bound_source",
+                "target": "bound_target"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "manual.sexual.handjob",
+        "subjects": [
+          "interaction"
+        ],
+        "description": "Only for an actual act of directly stimulating genitals or testicles by hand. Exclude mere hand placement or upper-body contact.",
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "order": 50,
+        "options": [
+          {
+            "id": "penis_grab",
+            "prompt": [
+              [
+                1,
+                "penis grab"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "grabbing_penis",
+                "tag": [
+                  [
+                    1,
+                    "grabbing penis"
+                  ]
+                ]
+              },
+              {
+                "id": "hand_gripping_penis",
+                "tag": [
+                  [
+                    1,
+                    "hand gripping penis"
+                  ]
+                ]
+              }
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "male.state.genitals.visible_parts": "penis"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "caressing_testicles",
+            "prompt": [
+              [
+                1,
+                "caressing testicles"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "stroking_testicles",
+                "tag": [
+                  [
+                    1,
+                    "stroking testicles"
+                  ]
+                ]
+              },
+              {
+                "id": "gently_touching_testicles",
+                "tag": [
+                  [
+                    1,
+                    "gently touching testicles"
+                  ]
+                ]
+              }
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "male.state.genitals.visible_parts": "testicles"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "testicle_grab",
+            "prompt": [
+              [
+                1,
+                "testicle grab"
+              ]
+            ],
+            "collisionFallbacks": [
+              {
+                "id": "grabbing_testicles",
+                "tag": [
+                  [
+                    1,
+                    "grabbing testicles"
+                  ]
+                ]
+              },
+              {
+                "id": "gripping_testicles",
+                "tag": [
+                  [
+                    1,
+                    "gripping testicles"
+                  ]
+                ]
+              }
+            ],
+            "rules": [
+              {
+                "add": {
+                  "option": {
+                    "male.state.genitals.visible_parts": "testicles"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "route": {
+              "prompt": {
+                "source": "bound_source",
+                "target": "bound_target"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "interaction.penetration.instrument",
+        "subjects": [
+          "interaction"
+        ],
+        "description": "In Free Scene, select only visually identifiable tools actually used for penetration.",
+        "order": 20,
+        "select": {
+          "by": "ai",
+          "min": 0,
+          "max": 1
+        },
+        "options": [
+          {
+            "id": "penis",
+            "prompt": [
+              [
+                1,
+                "penis"
+              ]
+            ]
+          },
+          {
+            "id": "strap_on",
+            "prompt": [
+              [
+                1,
+                "strap-on"
+              ]
+            ]
+          },
+          {
+            "id": "sex_toy",
+            "prompt": [
+              [
+                1,
+                "sex toy"
+              ]
+            ]
+          },
+          {
+            "id": "disembodied_penis",
+            "prompt": [
+              [
+                1,
+                "disembodied penis"
+              ]
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "when": {
+              "not": {
+                "interaction": [
+                  "missionary",
+                  "doggystyle",
+                  "standing_sex_from_behind",
+                  "standing_missionary",
+                  "cowgirl_position",
+                  "reverse_cowgirl_position",
+                  "upright_straddle",
+                  "suspended_congress",
+                  "reverse_suspended_congress",
+                  "prone_bone",
+                  "mating_press",
+                  "amazon_position",
+                  "reverse_upright_straddle",
+                  "spooning",
+                  "piledriver_sex"
+                ]
+              }
+            },
+            "exclude": {
+              "modifier": [
+                "interaction.sexual.penetration.route",
+                "interaction.sexual.penetration.direction",
+                "interaction.sexual.penetration.progress",
+                "interaction.penetration.instrument"
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "weights": {
+      "body_part": {
+        "by": [
+          "option",
+          "body_part"
+        ],
+        "reduce": "max",
+        "values": {
+          "portrait": {
+            "head": 1,
+            "top": 1,
+            "bottom": 0,
+            "legs": 0,
+            "feet": 0
+          },
+          "upper_body": {
+            "head": 1,
+            "top": 1,
+            "bottom": 0.3,
+            "legs": 0,
+            "feet": 0
+          },
+          "cowboy_shot": {
+            "head": 1,
+            "top": 1,
+            "bottom": 1,
+            "legs": 0.8,
+            "feet": 0
+          },
+          "feet_out_of_frame": {
+            "head": 1,
+            "top": 1,
+            "bottom": 1,
+            "legs": 1,
+            "feet": 0
+          },
+          "full_body": {
+            "head": 1,
+            "top": 1,
+            "bottom": 1,
+            "legs": 1,
+            "feet": 1
+          },
+          "ass_focus": {
+            "head": 0,
+            "top": 0.3,
+            "bottom": 1,
+            "legs": 0.3,
+            "feet": 0
+          },
+          "hip_focus": {
+            "head": 0,
+            "top": 0.3,
+            "bottom": 1,
+            "legs": 0.3,
+            "feet": 0
+          },
+          "crotch_focus": {
+            "head": 0,
+            "top": 0,
+            "bottom": 1,
+            "legs": 0.3,
+            "feet": 0
+          },
+          "breast_focus": {
+            "head": 0.3,
+            "top": 1,
+            "bottom": 0.3,
+            "legs": 0,
+            "feet": 0
+          },
+          "pectoral_focus": {
+            "head": 0.3,
+            "top": 1,
+            "bottom": 0.3,
+            "legs": 0,
+            "feet": 0
+          },
+          "eye_focus": {
+            "head": 1,
+            "top": 0.3,
+            "bottom": 0,
+            "legs": 0,
+            "feet": 0
+          },
+          "hand_focus": {
+            "head": 0,
+            "top": 0,
+            "bottom": 0,
+            "legs": 0,
+            "feet": 0
+          },
+          "foot_focus": {
+            "head": 0,
+            "top": 0,
+            "bottom": 0,
+            "legs": 0.3,
+            "feet": 1
+          }
+        }
+      },
+      "head_crop_body_part": {
+        "by": [
+          "option",
+          "body_part"
+        ],
+        "reduce": "multiply",
+        "values": {
+          "head_out_of_frame": {
+            "head": 0,
+            "top": 1,
+            "bottom": 1,
+            "legs": 1,
+            "feet": 1
+          },
+          "lower_body": {
+            "head": 0,
+            "top": 0,
+            "bottom": 1,
+            "legs": 1,
+            "feet": 1
+          }
+        }
+      }
+    },
+    "continuity": {
+      "policies": [
+        {
+          "id": "scene.location",
+          "scope": "global",
+          "onValue": "replace",
+          "onNone": "keep",
+          "lifetime": "persistent",
+          "clear": "group",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "scene.environment",
+          "scope": "global",
+          "onValue": "replace",
+          "onNone": "keep",
+          "lifetime": "persistent",
+          "clear": "group",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "scene.time",
+          "scope": "global",
+          "onValue": "replace",
+          "onNone": "keep",
+          "lifetime": "persistent",
+          "clear": "group",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "scene.weather",
+          "scope": "global",
+          "onValue": "replace",
+          "onNone": "keep",
+          "lifetime": "persistent",
+          "clear": "group",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "state.fluid.cum.location",
+          "scope": "actor",
+          "when": {
+            "actor": {
+              "gender": "female"
+            }
+          },
+          "onValue": "accumulate",
+          "onNone": "keep",
+          "lifetime": "persistent",
+          "clear": "option",
+          "route": [
+            "analyzer.reference",
+            "option"
+          ],
+          "editor": {
+            "surface": "actor-state",
+            "label": "사정 위치",
+            "order": 10,
+            "editable": true,
+            "tone": "blue",
+            "tagLabel": "last-token"
+          },
+          "counter": "cum_count"
+        },
+        {
+          "id": "actor.injury",
+          "scope": "actor",
+          "onValue": "accumulate",
+          "onNone": "keep",
+          "lifetime": "persistent",
+          "clear": "option",
+          "route": [
+            "analyzer.reference",
+            "option"
+          ],
+          "editor": {
+            "surface": "actor-state",
+            "label": "부상",
+            "order": 20,
+            "editable": true,
+            "tone": "red",
+            "tagLabel": "raw"
+          }
+        },
+        {
+          "id": "state.fluid.precum",
+          "scope": "actor",
+          "onValue": "merge",
+          "onNone": "keep",
+          "lifetime": "turn",
+          "clear": "option",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "state.fluid.lactation",
+          "scope": "actor",
+          "onValue": "merge",
+          "onNone": "keep",
+          "lifetime": "turn",
+          "clear": "option",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "state.fluid.pussy_juice",
+          "scope": "actor",
+          "onValue": "merge",
+          "onNone": "keep",
+          "lifetime": "turn",
+          "clear": "option",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "state.fluid.saliva",
+          "scope": "actor",
+          "onValue": "accumulate",
+          "onNone": "keep",
+          "lifetime": {
+            "turns": 2
+          },
+          "clear": "option",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "state.after_activity",
+          "scope": "actor",
+          "onValue": "replace",
+          "onNone": "keep",
+          "lifetime": "turn",
+          "clear": "group",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "state.clothing.arrangement",
+          "scope": "actor",
+          "onValue": "merge",
+          "onNone": "keep",
+          "lifetime": "persistent",
+          "clear": "option",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "state.clothing.coverage.upper",
+          "scope": "actor",
+          "onValue": "merge",
+          "onNone": "keep",
+          "lifetime": "persistent",
+          "clear": "option",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "state.clothing.coverage.lower",
+          "scope": "actor",
+          "onValue": "merge",
+          "onNone": "keep",
+          "lifetime": "persistent",
+          "clear": "option",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "state.restraint.body",
+          "scope": "actor",
+          "onValue": "merge",
+          "onNone": "keep",
+          "lifetime": "persistent",
+          "clear": "option",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "state.restraint.gag",
+          "scope": "actor",
+          "onValue": "replace",
+          "onNone": "keep",
+          "lifetime": "persistent",
+          "clear": "group",
+          "route": [
+            "analyzer.reference"
+          ]
+        },
+        {
+          "id": "state.penis.condom",
+          "scope": "actor",
+          "onValue": "replace",
+          "onNone": "keep",
+          "lifetime": "persistent",
+          "clear": "group",
+          "route": [
+            "analyzer.reference"
+          ]
+        }
+      ],
+      "optionLifetimeOverrides": [
+        {
+          "groupId": "state.fluid.cum.location",
+          "optionId": "cum_in_mouth",
+          "lifetime": {
+            "turns": 1
+          }
+        }
+      ],
+      "counters": [
+        {
+          "id": "cum_count",
+          "scope": "actor",
+          "source": "state.fluid.cum.location",
+          "operation": "count_distinct_events",
+          "on_clear": "decrement",
+          "events": {
+            "from": "interaction",
+            "actor": "bound_target",
+            "when": {
+              "option": {
+                "interaction.sexual.ejaculation.progress": [
+                  "internal_ejaculation",
+                  "external_ejaculation_pullout",
+                  "after_internal_ejaculation",
+                  "after_external_ejaculation_pullout",
+                  "after_sex_pullout_cum_string"
+                ]
+              }
+            },
+            "fallback": {
+              "from": "actor_detail",
+              "actor": "actor",
+              "when": {
+                "option": {
+                  "state.fluid.cum.instant": "ejaculation_event"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "derived": [
+        {
+          "id": "accumulated_cumdrip",
+          "sourceCounter": "cum_count",
+          "when": {
+            "gte": 3
+          }
+        },
+        {
+          "id": "accumulated_cum_overflow",
+          "sourceCounter": "cum_count",
+          "when": {
+            "gte": 4
+          }
+        },
+        {
+          "id": "accumulated_cum_pool",
+          "sourceCounter": "cum_count",
+          "when": {
+            "gte": 5
+          }
+        },
+        {
+          "id": "excessive_accumulated_cum",
+          "sourceCounter": "cum_count",
+          "when": {
+            "gte": 6
+          }
+        }
+      ]
+    }
+  }
+}
