@@ -22,7 +22,7 @@ describe("storage service: raw JSON", () => {
     fake.files.set("x/bad.json", "{oops");
     await expect(storage.readJson("x/bad.json", null)).rejects.toMatchObject({ error: { code: "storage-error", detailCode: "STORAGE_CORRUPT_JSON" } });
     await storage.writeJson("x/y.json", { b: 2 });
-    expect(await storage.readJson("x/y.json", null)).toEqual({ b: 2 });
+    expect(await storage.readJson<unknown>("x/y.json", null)).toEqual({ b: 2 });
     expect((await storage.list("x/")).sort()).toEqual(["x/bad.json", "x/y.json"]);
     expect(JSON.parse(fake.files.get("storage-schema.json") as string)).toMatchObject({ schema: "inlay-illustrator.storage", version: 1 });
   });
