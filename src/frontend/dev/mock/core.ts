@@ -46,6 +46,13 @@ export function buildSnapshot(db: MockDb, characterId: string, ctx?: MockContext
   const connected = new Set(cp.activeModules[characterId] ?? []);
   const roster: RosterItem[] = [];
   const selectionCount = (key: string) => cp.assetSelections[key]?.selectedAssetNames?.length ?? 0;
+  /** Mock thumbnail: first asset whose name starts with the first word of the title (lower case). */
+  const thumbnail = (title: string): string | null => {
+    const word = title.replace(/\(.*\)/u, "").trim().split(/\s+/u).pop()?.toLowerCase() ?? "";
+    const romanized: Record<string, string> = { "한서연": "seoyeon", "김민아": "mina", "강지훈": "jihoon" };
+    const key = romanized[title.split(" ")[0] ?? ""] ?? word;
+    return character.assets.find((a) => a.kind === "original" && key && a.asset.name.startsWith(key))?.thumbnailUrl ?? null;
+  };
   const descKey = descriptionPromptKey(characterId);
   roster.push({
     promptKey: descKey,
@@ -59,6 +66,7 @@ export function buildSnapshot(db: MockDb, characterId: string, ctx?: MockContext
     recognitionKeys: effectiveRecognitionKeys([character.summary.name], cp.customLorebookKeys[descKey]),
     content: character.description,
     score: 0,
+    thumbnailUrl: null,
     registered: registered.has(CHARACTER_DESCRIPTION_LORE_ID),
     workspaceEnabled: !disabled.has(CHARACTER_DESCRIPTION_LORE_ID),
     mainPrompt: mainPromptOf(doc, descKey),
@@ -85,6 +93,7 @@ export function buildSnapshot(db: MockDb, characterId: string, ctx?: MockContext
         recognitionKeys: effectiveRecognitionKeys(entry.keys, cp.customLorebookKeys[promptKey]),
         content: entry.content,
         score: entry.keys.length,
+        thumbnailUrl: thumbnail(entry.title),
         registered: registered.has(selectionId),
         workspaceEnabled: !disabled.has(selectionId),
         mainPrompt: mainPromptOf(doc, promptKey),
@@ -106,6 +115,7 @@ export function buildSnapshot(db: MockDb, characterId: string, ctx?: MockContext
       recognitionKeys: custom.recognitionKeys,
       content: custom.appearanceDescription,
       score: 0,
+      thumbnailUrl: null,
       registered: custom.rosterRegistered !== false,
       workspaceEnabled: custom.workspaceEnabled !== false,
       ...(custom.origin ? { origin: custom.origin } : {}),

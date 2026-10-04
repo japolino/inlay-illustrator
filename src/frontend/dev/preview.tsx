@@ -9,6 +9,7 @@
  *   dev=1                                 developer mode
  *   latency=<ms>                          mock latency (default 120)
  *   scene=<name>                          extra scene set up by an area (see PREVIEW_SCENES)
+ *   vw=<px>                               emulated viewport width (set by screenshot.ts for mobile shots)
  */
 import { setup } from "../../frontend.js";
 import { createFullMockBackend } from "./mock/index.js";
@@ -16,6 +17,13 @@ import { createFakeSpindleContext } from "./fake-context.js";
 import { PREVIEW_SCENES } from "./scenes.js";
 
 const params = new URLSearchParams(location.hash.replace(/^#/, ""));
+// Headless Chrome cannot make windows narrower than ~500px: emulate the mobile width through the host variable.
+const vw = params.get("vw");
+if (vw) {
+  document.documentElement.style.setProperty("--app-scaled-viewport-width", `${vw}px`);
+  document.documentElement.style.setProperty("--ii-preview-width", `${vw}px`);
+  document.body.style.overflow = "hidden";
+}
 const latency = Number(params.get("latency") ?? 120);
 const mock = createFullMockBackend({ latencyMs: latency, timeScale: Number(params.get("timescale") ?? 1) });
 if (params.get("dev") === "1") mock.db.config.ui.developerModeEnabled = true;

@@ -22,17 +22,26 @@ export const SHELL_LABELS = {
   placeholderNote: "This screen is part of the Asset Maid port and is not available yet.",
   stopTask: "Stop task", // 작업 중지
   closeNotification: "Close notification", // 알림 닫기
-  cancel: "Cancel" // 취소
+  cancel: "Cancel", // 취소
+  closeWorkspace: "Close workspace", // 작업영역 닫기
+  backToWorkspaceShort: "Back to workspace", // 작업공간으로 돌아가기
+  noCharacterSelected: "Pick a character in the rail, or open a character chat.",
+  reload: "Reload", // 다시 불러오기
+  loadingData: "Loading Asset Maid data", // Asset Maid 데이터 불러오는 중
+  splitAdjust: "Main area / workspace width adjust", // 메인 영역과 작업 영역 너비 조절
+  widthAdjust: (label: string) => `${label} width adjust`, // ${c} 너비 조절
+  connectionFailed: "Could not reach the Inlay Illustrator backend.",
+  retry: "Retry"
 } as const;
 
 export type WorkspaceTab = "assets" | "prompts" | "artists" | "persona";
 
 /** Tab definitions (`lU`, AssetMaid.pretty.js 151701-151706). */
-export const WORKSPACE_TABS: Array<{ id: WorkspaceTab; label: string; mobileLabel: string; description: string }> = [
-  { id: "assets", label: "Asset analysis", mobileLabel: "Assets", description: "Analyse character images and outfits." }, // 에셋분석 / 에셋
-  { id: "prompts", label: "Prompts", mobileLabel: "Prompts", description: "Edit the prompts of registered people." }, // 프롬프트
-  { id: "artists", label: "Artist selection", mobileLabel: "Artists", description: "Choose artist tags for image generation." }, // 작가선택 / 작가
-  { id: "persona", label: "Persona", mobileLabel: "Persona", description: "Persona appearance and outfits." } // 페르소나
+export const WORKSPACE_TABS: Array<{ id: WorkspaceTab; label: string; mobileLabel: string; returnLabel: string; description: string }> = [
+  { id: "assets", label: "Asset analysis", mobileLabel: "Assets", returnLabel: "Back to asset analysis", description: "Analyse character images and outfits." }, // 에셋분석 / 에셋 / 에셋분석으로 돌아가기
+  { id: "prompts", label: "Prompts", mobileLabel: "Prompts", returnLabel: "Back to prompts", description: "Edit the prompts of registered people." }, // 프롬프트 / 프롬프트로 돌아가기
+  { id: "artists", label: "Artist selection", mobileLabel: "Artists", returnLabel: "Back to artist selection", description: "Choose artist tags for image generation." }, // 작가선택 / 작가 / 작가선택으로 돌아가기
+  { id: "persona", label: "Persona", mobileLabel: "Persona", returnLabel: "Back to persona", description: "Persona appearance and outfits." } // 페르소나 / 페르소나로 돌아가기
 ];
 
 export type SettingsSection = "analysis-profile" | "charx" | "all-charx" | "model" | "image-model" | "system" | "logs";

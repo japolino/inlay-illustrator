@@ -65,7 +65,6 @@ export function createOverlayController(ctx: SpindleFrontendContext, options: Ov
         portal={() => layer}
         navigation={navigation}
         onClose={() => controller.close()}
-        patchConfig={options.patchConfig}
       />,
       appMount
     );

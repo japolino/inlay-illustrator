@@ -48,7 +48,7 @@ export async function screenshots(shots: Array<{ name: string; hash: string }>, 
         const args = [browser, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--no-default-browser-check",
           `--user-data-dir=${PREVIEW_DIR}-browser-profile`, `--window-size=${w},${h}`, `--virtual-time-budget=${options.budgetMs ?? 6000}`,
           ...(kind === "mobile" ? ["--force-device-scale-factor=1", "--touch-events=enabled"] : []),
-          `--screenshot=${file}`, `http://127.0.0.1:${server.port}/index.html#${shot.hash}`];
+          `--screenshot=${file}`, `http://127.0.0.1:${server.port}/index.html#${shot.hash}${kind === "mobile" ? `&vw=${w}` : ""}`];
         // Async spawn: a sync spawn would block this process's preview server.
         const proc = Bun.spawn(args, { stdout: "pipe", stderr: "pipe" });
         const timer = setTimeout(() => proc.kill(), 90_000);

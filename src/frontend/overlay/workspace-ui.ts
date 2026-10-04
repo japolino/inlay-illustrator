@@ -75,6 +75,15 @@ const NO_SOURCE = "__none__";
 /** Store + operations. One per overlay. */
 export class WorkspaceUiStore {
   readonly store = new Store<WorkspaceUi>({ sidebarOpen: true, navigationLayout: "grid", splitRatio: 0.5, bySource: {} });
+  /** Unsaved-editor guard (AM `Te` 154609): the editor reports `dirty`; navigation goes through `runGuarded`. */
+  readonly guard = new Store<{ dirty: boolean; pending: (() => void) | null }>({ dirty: false, pending: null });
+
+  /** Runs `action` now, or parks it and asks the editor to show its unsaved-changes prompt. */
+  runGuarded(action: () => void): void {
+    if (this.guard.get().dirty) this.guard.patch({ pending: action });
+    else action();
+  }
+
   /** Called when a persisted field changes (navigationLayout / splitRatio). */
   onPersist: ((ui: WorkspaceUi) => void) | null = null;
 
