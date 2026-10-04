@@ -24,7 +24,7 @@ import type {
   StoredAssetRef,
 } from "./character.js";
 import type { CountPolicy, CurrentActorState, IllustrationPlan } from "./chat.js";
-import type { ChatImageGenerationSettings, CharxSettingsPatch, EffectiveCharxSettings, GenerationProvider, InlayConfig, PromptCodecId, UiState } from "./config.js";
+import type { AnalyzerSettings, ChatImageGenerationSettings, CharxSettingsPatch, EffectiveCharxSettings, GenerationProvider, InlayConfig, PromptCodecId, UiState } from "./config.js";
 import type { CharxSettingField } from "./character.js";
 import type { GenerationOrigin, HistoryTree } from "./history.js";
 import type { ChatMessageUiState } from "./chat-dom.js";
@@ -129,7 +129,13 @@ export type AnalysisKind =
   | "artist-extraction" // AM Mvt.extractArtistPrompt
   | "reclassification" // AM prompt partitions (ope session)
   | "unique-tag-search" // AM Oct session (Danbooru character tag)
-  | "representative-pick"; // AM sve (no LLM)
+  | "representative-pick" // AM sve (no LLM)
+  | "charx-regex"; // AM charxRegexAnalysis (detect asset tokens in the character's regex scripts)
+/** One charx asset regex detector (AM `charxAssetRegexAnalysis[id].detectors[]`, `sH` 120727: `new RegExp(in, flags)`). */
+export interface CharxRegexDetector { /** Pattern source (AM `in`). */ in: string; flags?: string; scriptName?: string; scriptIndex?: number; source?: "manual" | "script"; [key: string]: unknown }
+/** AM `charxAssetRegexAnalysis[characterId]` (status done/manual enables the detectors). */
+export interface CharxRegexAnalysis { status: string; detectors: CharxRegexDetector[]; [key: string]: unknown }
+
 export type JobStatus = "queued" | "running" | "success" | "partial" | "no-evidence" | "error" | "cancelled";
 
 export interface AnalysisStartParams {
@@ -297,7 +303,11 @@ export interface RpcMethods {
 
   /* settings (analysis-profile, model, image-model, system pages) */
   "config.get": { params: Empty; result: { config: InlayConfig; chatImageGeneration: ChatImageGenerationSettings; uiState: UiState } };
-  /** Deep-merge patch then normalize (AM `config.update`). */
+  /**
+   * Deep-merge patch then normalize (AM `config.update`). Plain objects merge; arrays/primitives replace; `undefined` is
+   * skipped; `null` replaces the value and the normalizer then falls back to the field default (= reset to default).
+   * Map keys cannot be deleted by a patch: use the dedicated methods (charxSettings.*, artists.*, ...).
+   */
   "config.update": { params: { patch: DeepPartial<InlayConfig> }; result: { config: InlayConfig } };
   "config.factoryReset": { params: { confirm: true }; result: Ok };
   "chatImageGeneration.set": { params: { settings: ChatImageGenerationSettings }; result: { settings: ChatImageGenerationSettings; notice: string } };
@@ -309,7 +319,7 @@ export interface RpcMethods {
   "connections.listImageModels": { params: { connectionId: string }; result: { models: ModelOption[] } };
   "connections.listLlmModels": { params: { connectionId: string }; result: { models: ModelOption[] } };
   /** Settings "message test" (AM `T0t`). */
-  "analyzer.testMessage": { params: { text?: string }; result: { ok: boolean; latencyMs: number; reply?: string; error?: RpcError } };
+  "analyzer.testMessage": { params: { text?: string; /** Unsaved draft settings merged over `config.analysis` for this test only. */ analysis?: DeepPartial<AnalyzerSettings> }; result: { ok: boolean; latencyMs: number; reply?: string; error?: RpcError } };
   "image.testConnection": { params: { connectionId?: string }; result: { ok: boolean; latencyMs: number; error?: RpcError } };
 
   /* charx rail / workspace / roster */
@@ -383,6 +393,10 @@ export interface RpcMethods {
   "charxSettings.setOverride": { params: { characterId: string; patch: CharxSettingsPatch }; result: { effective: EffectiveCharxSettings; dirtyFields: CharxSettingField[] } };
   "charxSettings.setDefaults": { params: { patch: CharxSettingsPatch }; result: { all: EffectiveCharxSettings } };
   "charxSettings.clearOverrides": { params: { characterId: string }; result: { effective: EffectiveCharxSettings } };
+  /** "Reset all per-charx settings" (AM `ENe` 24861: bump every default revision so all overrides lose). */
+  "charxSettings.resetAll": { params: Empty; result: { all: EffectiveCharxSettings } };
+  /** Charx asset regex detectors (AM `characterPrompt.charxAssetRegexAnalysis[characterId]`, manual edit). */
+  "charxRegex.setDetectors": { params: { characterId: string; detectors: CharxRegexDetector[] }; result: { analysis: CharxRegexAnalysis } };
   /** Reset this character's Asset Maid data (chats and generated images stay). */
   "character.reset": { params: { characterId: string; confirm: true }; result: Ok };
 
@@ -500,7 +514,7 @@ export const RPC_METHODS = [
   "artists.list", "artists.upsertNovelAI", "artists.deleteNovelAI", "artists.upsertAnima", "artists.deleteAnima", "artists.select",
   "personas.list", "personas.saveForms", "personas.setSettings",
   "outfitImage.generate", "outfitImage.history", "outfitImage.save",
-  "charxSettings.get", "charxSettings.setOverride", "charxSettings.setDefaults", "charxSettings.clearOverrides", "character.reset",
+  "charxSettings.get", "charxSettings.setOverride", "charxSettings.setDefaults", "charxSettings.clearOverrides", "charxSettings.resetAll", "charxRegex.setDetectors", "character.reset",
   "logs.list", "logs.clear",
   "generation.start", "generation.cancel", "generation.retry", "generation.restart", "generation.dismiss", "generation.listActive", "generation.regenerateSlot",
   "history.get", "history.selectEntry", "history.selectRevision", "history.deleteEntry", "history.prepareSlotDeletion", "history.deleteSlot", "history.retryCleanup",
