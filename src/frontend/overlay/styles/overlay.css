@@ -131,6 +131,18 @@
  * Selectors already start with .ii-am-root, so the scoper leaves them alone.
  */
 @layer base {
+  /*
+   * Drop host-page author styles on everything inside the overlay (host
+   * element rules such as `h1 { color }` or `button { ... }`), back to the
+   * browser defaults. Utilities (.ii-am-root .x) are more specific and win.
+   * SVG and replaced elements are skipped: `revert` would also drop their
+   * presentation attributes (stroke, fill, width, height).
+   */
+  .ii-am-root :where(:not(svg, svg *, img, video, canvas, iframe)),
+  .ii-am-root ::before,
+  .ii-am-root ::after {
+    all: revert;
+  }
   .ii-am-root {
     color-scheme: dark;
     color: var(--color-foreground);
