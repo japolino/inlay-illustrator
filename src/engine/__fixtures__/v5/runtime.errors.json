@@ -1,0 +1,1758 @@
+[
+ {
+  "name": "no-placements",
+  "graph": {
+   "slotNumber": 0,
+   "status": "recovered",
+   "presentationMode": "single-frame",
+   "actors": [
+    {
+     "actorId": "actor_1",
+     "candidateKey": "actor.g00nx3.1d3zc2v",
+     "formId": "form_default",
+     "sex": "female",
+     "continuityIdentity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:alice"
+     },
+     "outfit": {
+      "selectedId": "outfit_1"
+     }
+    },
+    {
+     "actorId": "actor_2",
+     "candidateKey": "actor.1fmv888.fk4pvw",
+     "formId": "form_default",
+     "sex": "male",
+     "continuityIdentity": {
+      "kind": "persona_reference",
+      "value": "persona::p1"
+     },
+     "outfit": {
+      "selectedId": "outfit_1"
+     }
+    }
+   ],
+   "interactions": [
+    {
+     "interactionRef": "interaction:0",
+     "id": "arm_hug",
+     "mode": "directed",
+     "sourceActorId": "actor_1",
+     "targetActorId": "actor_2",
+     "bindingStatus": "complete",
+     "unresolvedActorRefs": [],
+     "modifiers": [],
+     "participantDetails": []
+    },
+    {
+     "interactionRef": "interaction:1",
+     "id": "sleeve_grab",
+     "mode": "directed",
+     "sourceActorId": "actor_1",
+     "targetActorId": "actor_2",
+     "bindingStatus": "complete",
+     "unresolvedActorRefs": [],
+     "modifiers": [],
+     "participantDetails": [
+      {
+       "actorId": "actor_1",
+       "text": "fingers pinching the hoodie sleeve"
+      }
+     ]
+    }
+   ],
+   "location": {
+    "modifiers": [
+     {
+      "id": "scene.rating",
+      "options": [
+       "sfw"
+      ]
+     },
+     {
+      "id": "scene.environment",
+      "options": [
+       "outdoors"
+      ]
+     },
+     {
+      "id": "scene.time",
+      "options": [
+       "morning"
+      ]
+     }
+    ],
+    "freeTags": [
+     "school_gate",
+     "cherry_blossoms"
+    ],
+    "instruction": "Brick school gate with morning sunlight.",
+    "comicPageInstruction": "",
+    "comicPageModifiers": [],
+    "comicPanels": [],
+    "comicCrossPanelActors": []
+   },
+   "analyzerSizeId": 2,
+   "framePlacement": [],
+   "actorDetails": [
+    {
+     "actorId": "actor_1",
+     "placementIndex": 0,
+     "actions": [],
+     "modifiers": [
+      {
+       "id": "gaze.direction",
+       "options": [
+        "looking_at_another"
+       ]
+      },
+      {
+       "id": "expression.general",
+       "options": [
+        "light_smile"
+       ]
+      },
+      {
+       "id": "expression.mouth",
+       "options": [
+        "open_mouth"
+       ]
+      },
+      {
+       "id": "actor.pose.body",
+       "options": [
+        "standing"
+       ]
+      }
+     ],
+     "freeTags": [],
+     "penetratingInjuries": [],
+     "poseInstruction": "leaning forward slightly",
+     "actionInstruction": "waving one hand high",
+     "objects": [],
+     "objectInstruction": "",
+     "dialogueInstruction": ""
+    },
+    {
+     "actorId": "actor_2",
+     "placementIndex": 1,
+     "actions": [],
+     "modifiers": [
+      {
+       "id": "expression.general",
+       "options": [
+        "surprised"
+       ]
+      },
+      {
+       "id": "actor.pose.body",
+       "options": [
+        "standing"
+       ]
+      }
+     ],
+     "freeTags": [],
+     "penetratingInjuries": [],
+     "poseInstruction": "",
+     "actionInstruction": "running toward the gate",
+     "objects": [],
+     "objectInstruction": "",
+     "dialogueInstruction": ""
+    }
+   ],
+   "camera": {
+    "modifiers": [
+     {
+      "id": "camera.view",
+      "options": [
+       "from_side"
+      ]
+     }
+    ],
+    "instruction": "Eye-level camera at the gate facing both actors."
+   },
+   "diagnostics": [
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.illustrations[0].frame_placement.freeTags[0]",
+     "message": "Canonicalized a free tag to 'school_gate'."
+    },
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.illustrations[0].frame_placement.freeTags[1]",
+     "message": "Canonicalized a free tag to 'cherry_blossoms'."
+    }
+   ]
+  },
+  "ruleContext": {
+   "selectionKey": "k",
+   "actorHumanlike": {
+    "actor_1": true,
+    "actor_2": true
+   },
+   "provider": "novelai",
+   "completelyNudeActorIds": [],
+   "ruleContinuityByActorId": {}
+  },
+  "result": {
+   "kind": "free_scene",
+   "slotNumber": 0,
+   "sourceStatus": "recovered",
+   "presentationMode": "single-frame",
+   "actors": [
+    {
+     "actorId": "actor_1",
+     "candidateKey": "actor.g00nx3.1d3zc2v",
+     "formId": "form_default",
+     "sex": "female",
+     "continuityIdentity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:alice"
+     },
+     "outfit": {
+      "selectedId": "outfit_1"
+     }
+    },
+    {
+     "actorId": "actor_2",
+     "candidateKey": "actor.1fmv888.fk4pvw",
+     "formId": "form_default",
+     "sex": "male",
+     "continuityIdentity": {
+      "kind": "persona_reference",
+      "value": "persona::p1"
+     },
+     "outfit": {
+      "selectedId": "outfit_1"
+     }
+    }
+   ],
+   "interactions": [
+    {
+     "interactionRef": "interaction:0",
+     "id": "arm_hug",
+     "mode": "directed",
+     "sourceActorId": "actor_1",
+     "targetActorId": "actor_2",
+     "bindingStatus": "complete",
+     "unresolvedActorRefs": [],
+     "modifiers": [],
+     "participantDetails": []
+    },
+    {
+     "interactionRef": "interaction:1",
+     "id": "sleeve_grab",
+     "mode": "directed",
+     "sourceActorId": "actor_1",
+     "targetActorId": "actor_2",
+     "bindingStatus": "complete",
+     "unresolvedActorRefs": [],
+     "modifiers": [],
+     "participantDetails": [
+      {
+       "actorId": "actor_1",
+       "text": "fingers pinching the hoodie sleeve"
+      }
+     ]
+    }
+   ],
+   "location": {
+    "modifiers": [
+     {
+      "id": "scene.rating",
+      "options": [
+       "sfw"
+      ]
+     },
+     {
+      "id": "scene.environment",
+      "options": [
+       "outdoors"
+      ]
+     },
+     {
+      "id": "scene.time",
+      "options": [
+       "morning"
+      ]
+     }
+    ],
+    "freeTags": [
+     "school_gate",
+     "cherry_blossoms"
+    ],
+    "instruction": "Brick school gate with morning sunlight.",
+    "comicPageInstruction": "",
+    "comicPageModifiers": [],
+    "comicPanels": [],
+    "comicCrossPanelActors": []
+   },
+   "actorDetails": [
+    {
+     "actorId": "actor_1",
+     "placementIndex": 0,
+     "actions": [],
+     "modifiers": [
+      {
+       "id": "gaze.direction",
+       "options": [
+        "looking_at_another"
+       ]
+      },
+      {
+       "id": "expression.general",
+       "options": [
+        "light_smile"
+       ]
+      },
+      {
+       "id": "expression.mouth",
+       "options": [
+        "open_mouth"
+       ]
+      },
+      {
+       "id": "actor.pose.body",
+       "options": [
+        "standing"
+       ]
+      }
+     ],
+     "freeTags": [],
+     "penetratingInjuries": [],
+     "poseInstruction": "leaning forward slightly",
+     "actionInstruction": "waving one hand high",
+     "objects": [],
+     "objectInstruction": "",
+     "dialogueInstruction": ""
+    },
+    {
+     "actorId": "actor_2",
+     "placementIndex": 1,
+     "actions": [],
+     "modifiers": [
+      {
+       "id": "expression.general",
+       "options": [
+        "surprised"
+       ]
+      },
+      {
+       "id": "actor.pose.body",
+       "options": [
+        "standing"
+       ]
+      }
+     ],
+     "freeTags": [],
+     "penetratingInjuries": [],
+     "poseInstruction": "",
+     "actionInstruction": "running toward the gate",
+     "objects": [],
+     "objectInstruction": "",
+     "dialogueInstruction": ""
+    }
+   ],
+   "responseDiagnostics": [
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.illustrations[0].frame_placement.freeTags[0]",
+     "message": "Canonicalized a free tag to 'school_gate'."
+    },
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.illustrations[0].frame_placement.freeTags[1]",
+     "message": "Canonicalized a free tag to 'cherry_blossoms'."
+    }
+   ],
+   "rulePromptEffects": [
+    {
+     "operation": "remove",
+     "prompt": {
+      "*": [
+       "on floor"
+      ]
+     },
+     "owner": {
+      "kind": "global"
+     },
+     "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
+    }
+   ],
+   "projectionAttributes": [],
+   "matchedRules": [
+    {
+     "rule": {
+      "id": "rule:fnv1a64-32e6fe4743f5a7e4",
+      "source": {
+       "kind": "option",
+       "definitionId": "scene.environment",
+       "optionId": "outdoors",
+       "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
+      },
+      "phases": [
+       "result"
+      ],
+      "rule": {
+       "remove": {
+        "prompt": {
+         "*": [
+          "on floor"
+         ]
+        }
+       }
+      },
+      "effects": {
+       "remove": {
+        "prompt": {
+         "*": [
+          "on floor"
+         ]
+        }
+       }
+      }
+     },
+     "owner": {
+      "kind": "global"
+     },
+     "chanceOwner": {
+      "kind": "global"
+     },
+     "sourceOptions": [
+      "outdoors"
+     ]
+    }
+   ],
+   "ruleCandidates": [
+    {
+     "rule": {
+      "id": "rule:fnv1a64-32e6fe4743f5a7e4",
+      "source": {
+       "kind": "option",
+       "definitionId": "scene.environment",
+       "optionId": "outdoors",
+       "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
+      },
+      "phases": [
+       "result"
+      ],
+      "rule": {
+       "remove": {
+        "prompt": {
+         "*": [
+          "on floor"
+         ]
+        }
+       }
+      },
+      "effects": {
+       "remove": {
+        "prompt": {
+         "*": [
+          "on floor"
+         ]
+        }
+       }
+      }
+     },
+     "owner": {
+      "kind": "global"
+     },
+     "chanceOwner": {
+      "kind": "global"
+     },
+     "sourceOptions": [
+      "outdoors"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-7d921ae24ec88be7",
+      "source": {
+       "kind": "stage",
+       "stage": "actor_detail",
+       "sourcePath": "raw.stages.actor_detail.rules[0]"
+      },
+      "phases": [
+       "result"
+      ],
+      "rule": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.surface",
+          "state.clothing.arrangement",
+          "state.clothing.coverage.upper",
+          "state.clothing.coverage.lower",
+          "manual.clothing_access"
+         ]
+        },
+        "modifier": [
+         "state.clothing.surface",
+         "state.clothing.arrangement",
+         "state.clothing.coverage.upper",
+         "state.clothing.coverage.lower",
+         "manual.clothing_access"
+        ]
+       },
+       "when": {
+        "attribute": {
+         "actor.outfit.nude": true
+        }
+       }
+      },
+      "effects": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.surface",
+          "state.clothing.arrangement",
+          "state.clothing.coverage.upper",
+          "state.clothing.coverage.lower",
+          "manual.clothing_access"
+         ]
+        },
+        "modifier": [
+         "state.clothing.surface",
+         "state.clothing.arrangement",
+         "state.clothing.coverage.upper",
+         "state.clothing.coverage.lower",
+         "manual.clothing_access"
+        ]
+       }
+      },
+      "condition": {
+       "attribute": {
+        "actor.outfit.nude": true
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "sourceOptions": []
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-7d921ae24ec88be7",
+      "source": {
+       "kind": "stage",
+       "stage": "actor_detail",
+       "sourcePath": "raw.stages.actor_detail.rules[0]"
+      },
+      "phases": [
+       "result"
+      ],
+      "rule": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.surface",
+          "state.clothing.arrangement",
+          "state.clothing.coverage.upper",
+          "state.clothing.coverage.lower",
+          "manual.clothing_access"
+         ]
+        },
+        "modifier": [
+         "state.clothing.surface",
+         "state.clothing.arrangement",
+         "state.clothing.coverage.upper",
+         "state.clothing.coverage.lower",
+         "manual.clothing_access"
+        ]
+       },
+       "when": {
+        "attribute": {
+         "actor.outfit.nude": true
+        }
+       }
+      },
+      "effects": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.surface",
+          "state.clothing.arrangement",
+          "state.clothing.coverage.upper",
+          "state.clothing.coverage.lower",
+          "manual.clothing_access"
+         ]
+        },
+        "modifier": [
+         "state.clothing.surface",
+         "state.clothing.arrangement",
+         "state.clothing.coverage.upper",
+         "state.clothing.coverage.lower",
+         "manual.clothing_access"
+        ]
+       }
+      },
+      "condition": {
+       "attribute": {
+        "actor.outfit.nude": true
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "sourceOptions": []
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-89542616329395a8",
+      "source": {
+       "kind": "definition",
+       "definitionId": "actor.pose.body",
+       "sourcePath": "raw.modifierLibrary.closed[15].rules[0]"
+      },
+      "phases": [
+       "candidate"
+      ],
+      "rule": {
+       "exclude": {
+        "modifier": [
+         "actor.pose.body"
+        ]
+       },
+       "when": {
+        "actor": {
+         "humanlike": false
+        }
+       }
+      },
+      "effects": {
+       "exclude": {
+        "modifier": [
+         "actor.pose.body"
+        ]
+       }
+      },
+      "condition": {
+       "actor": {
+        "humanlike": false
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "sourceOptions": [
+      "standing"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-89542616329395a8",
+      "source": {
+       "kind": "definition",
+       "definitionId": "actor.pose.body",
+       "sourcePath": "raw.modifierLibrary.closed[15].rules[0]"
+      },
+      "phases": [
+       "candidate"
+      ],
+      "rule": {
+       "exclude": {
+        "modifier": [
+         "actor.pose.body"
+        ]
+       },
+       "when": {
+        "actor": {
+         "humanlike": false
+        }
+       }
+      },
+      "effects": {
+       "exclude": {
+        "modifier": [
+         "actor.pose.body"
+        ]
+       }
+      },
+      "condition": {
+       "actor": {
+        "humanlike": false
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "sourceOptions": [
+      "standing"
+     ]
+    }
+   ],
+   "ruleContext": {
+    "selectionKey": "k",
+    "actorHumanlike": {
+     "actor_1": true,
+     "actor_2": true
+    },
+    "provider": "novelai",
+    "completelyNudeActorIds": [],
+    "ruleContinuityByActorId": {}
+   },
+   "ruleProjectionSelections": {
+    "global:scene.rating": [
+     "sfw"
+    ],
+    "global:scene.environment": [
+     "outdoors"
+    ],
+    "global:scene.time": [
+     "morning"
+    ],
+    "global:camera.view": [
+     "from_side"
+    ],
+    "actor:actor_1:0:gaze.direction": [
+     "looking_at_another"
+    ],
+    "actor:actor_1:0:expression.general": [
+     "light_smile"
+    ],
+    "actor:actor_1:0:expression.mouth": [
+     "open_mouth"
+    ],
+    "actor:actor_1:0:actor.pose.body": [
+     "standing"
+    ],
+    "actor:actor_1:0:actor.action": [],
+    "actor:actor_2:1:expression.general": [
+     "surprised"
+    ],
+    "actor:actor_2:1:actor.pose.body": [
+     "standing"
+    ],
+    "actor:actor_2:1:actor.action": []
+   },
+   "allowedModifierDefinitionIds": [
+    "actor.framing.crop",
+    "actor.framing.head_crop",
+    "actor.pose.body",
+    "actor.pose.refinement",
+    "camera.view",
+    "expression.blush",
+    "expression.eye.openness",
+    "expression.eye.reaction",
+    "expression.general",
+    "expression.mouth",
+    "expression.sexual_response",
+    "expression.tear",
+    "framing.crop",
+    "framing.head_crop",
+    "framing.presence",
+    "gaze.direction",
+    "interaction.penetration.instrument",
+    "interaction.sexual.ejaculation.progress",
+    "interaction.sexual.grouping",
+    "interaction.sexual.oral.fellatio",
+    "interaction.sexual.panel_visualization",
+    "interaction.sexual.penetration.direction",
+    "interaction.sexual.penetration.progress",
+    "interaction.sexual.penetration.route",
+    "interaction.sexual.relationship",
+    "manual.clothing_access",
+    "manual.sexual.handjob",
+    "motion.body",
+    "orientation.facing",
+    "scene.comic.min_panels",
+    "scene.context.sexual",
+    "scene.environment",
+    "scene.rating",
+    "scene.time",
+    "scene.weather",
+    "state.after_activity",
+    "state.body.condition",
+    "state.body.contamination",
+    "state.body.surface",
+    "state.clothing.arrangement",
+    "state.clothing.coverage.lower",
+    "state.clothing.coverage.upper",
+    "state.clothing.surface",
+    "state.fluid.cum.accumulation",
+    "state.fluid.cum.instant",
+    "state.fluid.cum.location",
+    "state.fluid.lactation",
+    "state.fluid.precum",
+    "state.fluid.pussy_juice",
+    "state.fluid.saliva",
+    "state.genitals.visible_parts",
+    "state.hair.condition",
+    "state.penis.condom",
+    "state.restraint.body",
+    "state.restraint.gag"
+   ],
+   "placements": [],
+   "renderActorOrder": [],
+   "camera": {
+    "source": "analyzer",
+    "modifiers": [
+     {
+      "id": "camera.view",
+      "options": [
+       "from_side"
+      ]
+     }
+    ],
+    "instruction": "Eye-level camera at the gate facing both actors.",
+    "sizeId": 2,
+    "sizeSource": "analyzer"
+   }
+  },
+  "error": null
+ },
+ {
+  "name": "bad-size",
+  "graph": {
+   "slotNumber": 0,
+   "status": "recovered",
+   "presentationMode": "single-frame",
+   "actors": [
+    {
+     "actorId": "actor_1",
+     "candidateKey": "actor.g00nx3.1d3zc2v",
+     "formId": "form_default",
+     "sex": "female",
+     "continuityIdentity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:alice"
+     },
+     "outfit": {
+      "selectedId": "outfit_1"
+     }
+    },
+    {
+     "actorId": "actor_2",
+     "candidateKey": "actor.1fmv888.fk4pvw",
+     "formId": "form_default",
+     "sex": "male",
+     "continuityIdentity": {
+      "kind": "persona_reference",
+      "value": "persona::p1"
+     },
+     "outfit": {
+      "selectedId": "outfit_1"
+     }
+    }
+   ],
+   "interactions": [
+    {
+     "interactionRef": "interaction:0",
+     "id": "arm_hug",
+     "mode": "directed",
+     "sourceActorId": "actor_1",
+     "targetActorId": "actor_2",
+     "bindingStatus": "complete",
+     "unresolvedActorRefs": [],
+     "modifiers": [],
+     "participantDetails": []
+    },
+    {
+     "interactionRef": "interaction:1",
+     "id": "sleeve_grab",
+     "mode": "directed",
+     "sourceActorId": "actor_1",
+     "targetActorId": "actor_2",
+     "bindingStatus": "complete",
+     "unresolvedActorRefs": [],
+     "modifiers": [],
+     "participantDetails": [
+      {
+       "actorId": "actor_1",
+       "text": "fingers pinching the hoodie sleeve"
+      }
+     ]
+    }
+   ],
+   "location": {
+    "modifiers": [
+     {
+      "id": "scene.rating",
+      "options": [
+       "sfw"
+      ]
+     },
+     {
+      "id": "scene.environment",
+      "options": [
+       "outdoors"
+      ]
+     },
+     {
+      "id": "scene.time",
+      "options": [
+       "morning"
+      ]
+     }
+    ],
+    "freeTags": [
+     "school_gate",
+     "cherry_blossoms"
+    ],
+    "instruction": "Brick school gate with morning sunlight.",
+    "comicPageInstruction": "",
+    "comicPageModifiers": [],
+    "comicPanels": [],
+    "comicCrossPanelActors": []
+   },
+   "analyzerSizeId": 2,
+   "framePlacement": [
+    {
+     "actorId": "actor_1",
+     "placementIndex": 0,
+     "center": {
+      "x": 0.35,
+      "y": 0.5
+     },
+     "source": "analyzer",
+     "instruction": "left of the gate pillar"
+    },
+    {
+     "actorId": "actor_2",
+     "placementIndex": 1,
+     "center": {
+      "x": 0.68,
+      "y": 0.52
+     },
+     "source": "analyzer",
+     "instruction": ""
+    }
+   ],
+   "actorDetails": [
+    {
+     "actorId": "actor_1",
+     "placementIndex": 0,
+     "actions": [],
+     "modifiers": [
+      {
+       "id": "gaze.direction",
+       "options": [
+        "looking_at_another"
+       ]
+      },
+      {
+       "id": "expression.general",
+       "options": [
+        "light_smile"
+       ]
+      },
+      {
+       "id": "expression.mouth",
+       "options": [
+        "open_mouth"
+       ]
+      },
+      {
+       "id": "actor.pose.body",
+       "options": [
+        "standing"
+       ]
+      }
+     ],
+     "freeTags": [],
+     "penetratingInjuries": [],
+     "poseInstruction": "leaning forward slightly",
+     "actionInstruction": "waving one hand high",
+     "objects": [],
+     "objectInstruction": "",
+     "dialogueInstruction": ""
+    },
+    {
+     "actorId": "actor_2",
+     "placementIndex": 1,
+     "actions": [],
+     "modifiers": [
+      {
+       "id": "expression.general",
+       "options": [
+        "surprised"
+       ]
+      },
+      {
+       "id": "actor.pose.body",
+       "options": [
+        "standing"
+       ]
+      }
+     ],
+     "freeTags": [],
+     "penetratingInjuries": [],
+     "poseInstruction": "",
+     "actionInstruction": "running toward the gate",
+     "objects": [],
+     "objectInstruction": "",
+     "dialogueInstruction": ""
+    }
+   ],
+   "camera": {
+    "modifiers": [
+     {
+      "id": "camera.view",
+      "options": [
+       "from_side"
+      ]
+     }
+    ],
+    "instruction": "Eye-level camera at the gate facing both actors."
+   },
+   "diagnostics": [
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.illustrations[0].frame_placement.freeTags[0]",
+     "message": "Canonicalized a free tag to 'school_gate'."
+    },
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.illustrations[0].frame_placement.freeTags[1]",
+     "message": "Canonicalized a free tag to 'cherry_blossoms'."
+    }
+   ]
+  },
+  "ruleContext": {
+   "selectionKey": "k",
+   "actorHumanlike": {
+    "actor_1": true,
+    "actor_2": true
+   },
+   "provider": "novelai",
+   "completelyNudeActorIds": [],
+   "ruleContinuityByActorId": {},
+   "requestedSizeId": 9
+  },
+  "result": {
+   "kind": "free_scene",
+   "slotNumber": 0,
+   "sourceStatus": "recovered",
+   "presentationMode": "single-frame",
+   "actors": [
+    {
+     "actorId": "actor_1",
+     "candidateKey": "actor.g00nx3.1d3zc2v",
+     "formId": "form_default",
+     "sex": "female",
+     "continuityIdentity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:alice"
+     },
+     "outfit": {
+      "selectedId": "outfit_1"
+     }
+    },
+    {
+     "actorId": "actor_2",
+     "candidateKey": "actor.1fmv888.fk4pvw",
+     "formId": "form_default",
+     "sex": "male",
+     "continuityIdentity": {
+      "kind": "persona_reference",
+      "value": "persona::p1"
+     },
+     "outfit": {
+      "selectedId": "outfit_1"
+     }
+    }
+   ],
+   "interactions": [
+    {
+     "interactionRef": "interaction:0",
+     "id": "arm_hug",
+     "mode": "directed",
+     "sourceActorId": "actor_1",
+     "targetActorId": "actor_2",
+     "bindingStatus": "complete",
+     "unresolvedActorRefs": [],
+     "modifiers": [],
+     "participantDetails": []
+    },
+    {
+     "interactionRef": "interaction:1",
+     "id": "sleeve_grab",
+     "mode": "directed",
+     "sourceActorId": "actor_1",
+     "targetActorId": "actor_2",
+     "bindingStatus": "complete",
+     "unresolvedActorRefs": [],
+     "modifiers": [],
+     "participantDetails": [
+      {
+       "actorId": "actor_1",
+       "text": "fingers pinching the hoodie sleeve"
+      }
+     ]
+    }
+   ],
+   "location": {
+    "modifiers": [
+     {
+      "id": "scene.rating",
+      "options": [
+       "sfw"
+      ]
+     },
+     {
+      "id": "scene.environment",
+      "options": [
+       "outdoors"
+      ]
+     },
+     {
+      "id": "scene.time",
+      "options": [
+       "morning"
+      ]
+     }
+    ],
+    "freeTags": [
+     "school_gate",
+     "cherry_blossoms"
+    ],
+    "instruction": "Brick school gate with morning sunlight.",
+    "comicPageInstruction": "",
+    "comicPageModifiers": [],
+    "comicPanels": [],
+    "comicCrossPanelActors": []
+   },
+   "actorDetails": [
+    {
+     "actorId": "actor_1",
+     "placementIndex": 0,
+     "actions": [],
+     "modifiers": [
+      {
+       "id": "gaze.direction",
+       "options": [
+        "looking_at_another"
+       ]
+      },
+      {
+       "id": "expression.general",
+       "options": [
+        "light_smile"
+       ]
+      },
+      {
+       "id": "expression.mouth",
+       "options": [
+        "open_mouth"
+       ]
+      },
+      {
+       "id": "actor.pose.body",
+       "options": [
+        "standing"
+       ]
+      }
+     ],
+     "freeTags": [],
+     "penetratingInjuries": [],
+     "poseInstruction": "leaning forward slightly",
+     "actionInstruction": "waving one hand high",
+     "objects": [],
+     "objectInstruction": "",
+     "dialogueInstruction": ""
+    },
+    {
+     "actorId": "actor_2",
+     "placementIndex": 1,
+     "actions": [],
+     "modifiers": [
+      {
+       "id": "expression.general",
+       "options": [
+        "surprised"
+       ]
+      },
+      {
+       "id": "actor.pose.body",
+       "options": [
+        "standing"
+       ]
+      }
+     ],
+     "freeTags": [],
+     "penetratingInjuries": [],
+     "poseInstruction": "",
+     "actionInstruction": "running toward the gate",
+     "objects": [],
+     "objectInstruction": "",
+     "dialogueInstruction": ""
+    }
+   ],
+   "responseDiagnostics": [
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.illustrations[0].frame_placement.freeTags[0]",
+     "message": "Canonicalized a free tag to 'school_gate'."
+    },
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.illustrations[0].frame_placement.freeTags[1]",
+     "message": "Canonicalized a free tag to 'cherry_blossoms'."
+    }
+   ],
+   "rulePromptEffects": [
+    {
+     "operation": "remove",
+     "prompt": {
+      "*": [
+       "on floor"
+      ]
+     },
+     "owner": {
+      "kind": "global"
+     },
+     "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
+    }
+   ],
+   "projectionAttributes": [
+    {
+     "actorId": "actor_1",
+     "placementIndex": 0,
+     "values": {
+      "actor.visibility.*": [
+       "front",
+       "side"
+      ]
+     }
+    },
+    {
+     "actorId": "actor_2",
+     "placementIndex": 1,
+     "values": {
+      "actor.visibility.*": [
+       "front",
+       "side"
+      ]
+     }
+    }
+   ],
+   "matchedRules": [
+    {
+     "rule": {
+      "id": "rule:fnv1a64-32e6fe4743f5a7e4",
+      "source": {
+       "kind": "option",
+       "definitionId": "scene.environment",
+       "optionId": "outdoors",
+       "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
+      },
+      "phases": [
+       "result"
+      ],
+      "rule": {
+       "remove": {
+        "prompt": {
+         "*": [
+          "on floor"
+         ]
+        }
+       }
+      },
+      "effects": {
+       "remove": {
+        "prompt": {
+         "*": [
+          "on floor"
+         ]
+        }
+       }
+      }
+     },
+     "owner": {
+      "kind": "global"
+     },
+     "chanceOwner": {
+      "kind": "global"
+     },
+     "sourceOptions": [
+      "outdoors"
+     ]
+    }
+   ],
+   "ruleCandidates": [
+    {
+     "rule": {
+      "id": "rule:fnv1a64-32e6fe4743f5a7e4",
+      "source": {
+       "kind": "option",
+       "definitionId": "scene.environment",
+       "optionId": "outdoors",
+       "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
+      },
+      "phases": [
+       "result"
+      ],
+      "rule": {
+       "remove": {
+        "prompt": {
+         "*": [
+          "on floor"
+         ]
+        }
+       }
+      },
+      "effects": {
+       "remove": {
+        "prompt": {
+         "*": [
+          "on floor"
+         ]
+        }
+       }
+      }
+     },
+     "owner": {
+      "kind": "global"
+     },
+     "chanceOwner": {
+      "kind": "global"
+     },
+     "sourceOptions": [
+      "outdoors"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-7d921ae24ec88be7",
+      "source": {
+       "kind": "stage",
+       "stage": "actor_detail",
+       "sourcePath": "raw.stages.actor_detail.rules[0]"
+      },
+      "phases": [
+       "result"
+      ],
+      "rule": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.surface",
+          "state.clothing.arrangement",
+          "state.clothing.coverage.upper",
+          "state.clothing.coverage.lower",
+          "manual.clothing_access"
+         ]
+        },
+        "modifier": [
+         "state.clothing.surface",
+         "state.clothing.arrangement",
+         "state.clothing.coverage.upper",
+         "state.clothing.coverage.lower",
+         "manual.clothing_access"
+        ]
+       },
+       "when": {
+        "attribute": {
+         "actor.outfit.nude": true
+        }
+       }
+      },
+      "effects": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.surface",
+          "state.clothing.arrangement",
+          "state.clothing.coverage.upper",
+          "state.clothing.coverage.lower",
+          "manual.clothing_access"
+         ]
+        },
+        "modifier": [
+         "state.clothing.surface",
+         "state.clothing.arrangement",
+         "state.clothing.coverage.upper",
+         "state.clothing.coverage.lower",
+         "manual.clothing_access"
+        ]
+       }
+      },
+      "condition": {
+       "attribute": {
+        "actor.outfit.nude": true
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "sourceOptions": []
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-7d921ae24ec88be7",
+      "source": {
+       "kind": "stage",
+       "stage": "actor_detail",
+       "sourcePath": "raw.stages.actor_detail.rules[0]"
+      },
+      "phases": [
+       "result"
+      ],
+      "rule": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.surface",
+          "state.clothing.arrangement",
+          "state.clothing.coverage.upper",
+          "state.clothing.coverage.lower",
+          "manual.clothing_access"
+         ]
+        },
+        "modifier": [
+         "state.clothing.surface",
+         "state.clothing.arrangement",
+         "state.clothing.coverage.upper",
+         "state.clothing.coverage.lower",
+         "manual.clothing_access"
+        ]
+       },
+       "when": {
+        "attribute": {
+         "actor.outfit.nude": true
+        }
+       }
+      },
+      "effects": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.surface",
+          "state.clothing.arrangement",
+          "state.clothing.coverage.upper",
+          "state.clothing.coverage.lower",
+          "manual.clothing_access"
+         ]
+        },
+        "modifier": [
+         "state.clothing.surface",
+         "state.clothing.arrangement",
+         "state.clothing.coverage.upper",
+         "state.clothing.coverage.lower",
+         "manual.clothing_access"
+        ]
+       }
+      },
+      "condition": {
+       "attribute": {
+        "actor.outfit.nude": true
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "sourceOptions": []
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-89542616329395a8",
+      "source": {
+       "kind": "definition",
+       "definitionId": "actor.pose.body",
+       "sourcePath": "raw.modifierLibrary.closed[15].rules[0]"
+      },
+      "phases": [
+       "candidate"
+      ],
+      "rule": {
+       "exclude": {
+        "modifier": [
+         "actor.pose.body"
+        ]
+       },
+       "when": {
+        "actor": {
+         "humanlike": false
+        }
+       }
+      },
+      "effects": {
+       "exclude": {
+        "modifier": [
+         "actor.pose.body"
+        ]
+       }
+      },
+      "condition": {
+       "actor": {
+        "humanlike": false
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "sourceOptions": [
+      "standing"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-89542616329395a8",
+      "source": {
+       "kind": "definition",
+       "definitionId": "actor.pose.body",
+       "sourcePath": "raw.modifierLibrary.closed[15].rules[0]"
+      },
+      "phases": [
+       "candidate"
+      ],
+      "rule": {
+       "exclude": {
+        "modifier": [
+         "actor.pose.body"
+        ]
+       },
+       "when": {
+        "actor": {
+         "humanlike": false
+        }
+       }
+      },
+      "effects": {
+       "exclude": {
+        "modifier": [
+         "actor.pose.body"
+        ]
+       }
+      },
+      "condition": {
+       "actor": {
+        "humanlike": false
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "sourceOptions": [
+      "standing"
+     ]
+    }
+   ],
+   "ruleContext": {
+    "selectionKey": "k",
+    "actorHumanlike": {
+     "actor_1": true,
+     "actor_2": true
+    },
+    "provider": "novelai",
+    "completelyNudeActorIds": [],
+    "ruleContinuityByActorId": {},
+    "requestedSizeId": 9
+   },
+   "ruleProjectionSelections": {
+    "global:scene.rating": [
+     "sfw"
+    ],
+    "global:scene.environment": [
+     "outdoors"
+    ],
+    "global:scene.time": [
+     "morning"
+    ],
+    "global:camera.view": [
+     "from_side"
+    ],
+    "actor:actor_1:0:gaze.direction": [
+     "looking_at_another"
+    ],
+    "actor:actor_1:0:expression.general": [
+     "light_smile"
+    ],
+    "actor:actor_1:0:expression.mouth": [
+     "open_mouth"
+    ],
+    "actor:actor_1:0:actor.pose.body": [
+     "standing"
+    ],
+    "actor:actor_1:0:actor.action": [],
+    "actor:actor_2:1:expression.general": [
+     "surprised"
+    ],
+    "actor:actor_2:1:actor.pose.body": [
+     "standing"
+    ],
+    "actor:actor_2:1:actor.action": []
+   },
+   "allowedModifierDefinitionIds": [
+    "actor.framing.crop",
+    "actor.framing.head_crop",
+    "actor.pose.body",
+    "actor.pose.refinement",
+    "camera.view",
+    "expression.blush",
+    "expression.eye.openness",
+    "expression.eye.reaction",
+    "expression.general",
+    "expression.mouth",
+    "expression.sexual_response",
+    "expression.tear",
+    "framing.crop",
+    "framing.head_crop",
+    "framing.presence",
+    "gaze.direction",
+    "interaction.penetration.instrument",
+    "interaction.sexual.ejaculation.progress",
+    "interaction.sexual.grouping",
+    "interaction.sexual.oral.fellatio",
+    "interaction.sexual.panel_visualization",
+    "interaction.sexual.penetration.direction",
+    "interaction.sexual.penetration.progress",
+    "interaction.sexual.penetration.route",
+    "interaction.sexual.relationship",
+    "manual.clothing_access",
+    "manual.sexual.handjob",
+    "motion.body",
+    "orientation.facing",
+    "scene.comic.min_panels",
+    "scene.context.sexual",
+    "scene.environment",
+    "scene.rating",
+    "scene.time",
+    "scene.weather",
+    "state.after_activity",
+    "state.body.condition",
+    "state.body.contamination",
+    "state.body.surface",
+    "state.clothing.arrangement",
+    "state.clothing.coverage.lower",
+    "state.clothing.coverage.upper",
+    "state.clothing.surface",
+    "state.fluid.cum.accumulation",
+    "state.fluid.cum.instant",
+    "state.fluid.cum.location",
+    "state.fluid.lactation",
+    "state.fluid.precum",
+    "state.fluid.pussy_juice",
+    "state.fluid.saliva",
+    "state.genitals.visible_parts",
+    "state.hair.condition",
+    "state.penis.condom",
+    "state.restraint.body",
+    "state.restraint.gag"
+   ],
+   "placements": [
+    {
+     "actorId": "actor_1",
+     "status": "applied",
+     "value": {
+      "actorId": "actor_1",
+      "placementIndex": 0,
+      "center": {
+       "x": 0.35,
+       "y": 0.5
+      },
+      "source": "analyzer",
+      "instruction": "left of the gate pillar"
+     }
+    },
+    {
+     "actorId": "actor_2",
+     "status": "applied",
+     "value": {
+      "actorId": "actor_2",
+      "placementIndex": 1,
+      "center": {
+       "x": 0.68,
+       "y": 0.52
+      },
+      "source": "analyzer",
+      "instruction": ""
+     }
+    }
+   ],
+   "renderActorOrder": [
+    "actor_1",
+    "actor_2"
+   ],
+   "camera": {
+    "source": "analyzer",
+    "modifiers": [
+     {
+      "id": "camera.view",
+      "options": [
+       "from_side"
+      ]
+     }
+    ],
+    "instruction": "Eye-level camera at the gate facing both actors.",
+    "sizeId": 2,
+    "sizeSource": "analyzer"
+   }
+  },
+  "error": null
+ }
+]
