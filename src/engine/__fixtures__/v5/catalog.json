@@ -1,0 +1,1271 @@
+{
+ "defaultCatalog": {
+  "hashes": {
+   "source": "fnv1a64-e65fafec739f8713",
+   "semantic": "fnv1a64-1dc35c86294c43fe",
+   "analyzer": "fnv1a64-107966add79109cd",
+   "rules": "fnv1a64-cb823a9cdcf5e829",
+   "prompts": "fnv1a64-468ef278c7608dab",
+   "weights": "fnv1a64-4d0463fac277af5e",
+   "continuity": "fnv1a64-bd22a1f16b22c8b8"
+  },
+  "stats": {
+   "definitions": 56,
+   "options": 291,
+   "sourceRules": 67,
+   "compiledRules": 67
+  },
+  "fingerprint": "v5.fnv1a64-2d2b8892321dc763",
+  "compilerVersion": "novelai-v5-catalog-v1",
+  "sizes": {
+   "__map__": [
+    [
+     1,
+     {
+      "id": 1,
+      "label": "Portrait 832 x 1216",
+      "width": 832,
+      "height": 1216,
+      "analyzerSelectable": true,
+      "guidance": {
+       "whenToUse": [
+        "Vertical posture, height differences, vertical motion, or layered surroundings."
+       ],
+       "avoidWhen": []
+      }
+     }
+    ],
+    [
+     2,
+     {
+      "id": 2,
+      "label": "Landscape 1216 x 832",
+      "width": 1216,
+      "height": 832,
+      "analyzerSelectable": true,
+      "guidance": {
+       "whenToUse": [
+        "Broad environments, lateral action or gaze, or horizontal negative space."
+       ],
+       "avoidWhen": []
+      }
+     }
+    ],
+    [
+     3,
+     {
+      "id": 3,
+      "label": "Portrait 896 x 1152",
+      "width": 896,
+      "height": 1152,
+      "analyzerSelectable": false,
+      "guidance": {
+       "whenToUse": [],
+       "avoidWhen": []
+      }
+     }
+    ],
+    [
+     4,
+     {
+      "id": 4,
+      "label": "Landscape 1152 x 896",
+      "width": 1152,
+      "height": 896,
+      "analyzerSelectable": false,
+      "guidance": {
+       "whenToUse": [],
+       "avoidWhen": []
+      }
+     }
+    ],
+    [
+     5,
+     {
+      "id": 5,
+      "label": "Square 1024 x 1024",
+      "width": 1024,
+      "height": 1024,
+      "analyzerSelectable": true,
+      "guidance": {
+       "whenToUse": [
+        "Centered, frontal, symmetric, or compact framing; neutral when neither axis dominates."
+       ],
+       "avoidWhen": []
+      }
+     }
+    ]
+   ]
+  },
+  "analyzerSizes": [
+   {
+    "id": 1,
+    "label": "Portrait 832 x 1216",
+    "width": 832,
+    "height": 1216,
+    "guidance": {
+     "whenToUse": [
+      "Vertical posture, height differences, vertical motion, or layered surroundings."
+     ],
+     "avoidWhen": []
+    }
+   },
+   {
+    "id": 2,
+    "label": "Landscape 1216 x 832",
+    "width": 1216,
+    "height": 832,
+    "guidance": {
+     "whenToUse": [
+      "Broad environments, lateral action or gaze, or horizontal negative space."
+     ],
+     "avoidWhen": []
+    }
+   },
+   {
+    "id": 5,
+    "label": "Square 1024 x 1024",
+    "width": 1024,
+    "height": 1024,
+    "guidance": {
+     "whenToUse": [
+      "Centered, frontal, symmetric, or compact framing; neutral when neither axis dominates."
+     ],
+     "avoidWhen": []
+    }
+   }
+  ],
+  "interaction0": {
+   "id": "hug",
+   "guidance": {
+    "whenToUse": [],
+    "avoidWhen": []
+   },
+   "allowedModes": [
+    "directed",
+    "mutual"
+   ],
+   "defaultMode": "mutual",
+   "promptTarget": "relation",
+   "prompt": {
+    "tag": [
+     [
+      1,
+      "hug"
+     ]
+    ],
+    "collisionFallbacks": [
+     {
+      "id": "mutual_hug",
+      "modes": [
+       "mutual"
+      ],
+      "tag": [
+       [
+        1,
+        "mutual hug"
+       ]
+      ]
+     },
+     {
+      "id": "embracing",
+      "modes": [
+       "directed",
+       "mutual"
+      ],
+      "tag": [
+       [
+        1,
+        "embracing"
+       ]
+      ]
+     },
+     {
+      "id": "hugging_another",
+      "modes": [
+       "directed"
+      ],
+      "tag": [
+       [
+        1,
+        "hugging another"
+       ]
+      ]
+     }
+    ]
+   },
+   "rules": []
+  },
+  "definition0": {
+   "id": "framing.crop",
+   "library": "shared",
+   "subjects": [
+    "global"
+   ],
+   "guidance": {
+    "description": "Select at most one crop that best matches the visible body range of this single-frame illustration.",
+    "whenToUse": [],
+    "avoidWhen": []
+   },
+   "order": 48,
+   "selection": {
+    "by": "ai",
+    "min": 0,
+    "max": 1
+   },
+   "options": {
+    "__map__": [
+     [
+      "cowboy_shot",
+      {
+       "id": "cowboy_shot",
+       "semanticId": "framing.crop.cowboy_shot",
+       "analyzerSelectable": true,
+       "derivedOnly": false,
+       "guidance": {
+        "whenToUse": [],
+        "avoidWhen": []
+       },
+       "order": 48,
+       "visibleFrom": [],
+       "prompt": null,
+       "sourceTargetBinding": false,
+       "collisionFallbacks": [],
+       "rules": []
+      }
+     ],
+     [
+      "feet_out_of_frame",
+      {
+       "id": "feet_out_of_frame",
+       "semanticId": "framing.crop.feet_out_of_frame",
+       "analyzerSelectable": true,
+       "derivedOnly": false,
+       "guidance": {
+        "whenToUse": [],
+        "avoidWhen": []
+       },
+       "order": 48,
+       "visibleFrom": [],
+       "prompt": null,
+       "sourceTargetBinding": false,
+       "collisionFallbacks": [],
+       "rules": []
+      }
+     ],
+     [
+      "full_body",
+      {
+       "id": "full_body",
+       "semanticId": "framing.crop.full_body",
+       "analyzerSelectable": true,
+       "derivedOnly": false,
+       "guidance": {
+        "whenToUse": [],
+        "avoidWhen": []
+       },
+       "order": 48,
+       "visibleFrom": [],
+       "prompt": null,
+       "sourceTargetBinding": false,
+       "collisionFallbacks": [],
+       "rules": []
+      }
+     ],
+     [
+      "portrait",
+      {
+       "id": "portrait",
+       "semanticId": "framing.crop.portrait",
+       "analyzerSelectable": true,
+       "derivedOnly": false,
+       "guidance": {
+        "whenToUse": [],
+        "avoidWhen": []
+       },
+       "order": 48,
+       "visibleFrom": [],
+       "prompt": [
+        [
+         1,
+         "portrait"
+        ]
+       ],
+       "sourceTargetBinding": false,
+       "collisionFallbacks": [],
+       "rules": []
+      }
+     ],
+     [
+      "upper_body",
+      {
+       "id": "upper_body",
+       "semanticId": "framing.crop.upper_body",
+       "analyzerSelectable": true,
+       "derivedOnly": false,
+       "guidance": {
+        "whenToUse": [],
+        "avoidWhen": []
+       },
+       "order": 48,
+       "visibleFrom": [],
+       "prompt": [
+        [
+         1,
+         "upper body"
+        ]
+       ],
+       "sourceTargetBinding": false,
+       "collisionFallbacks": [],
+       "rules": []
+      }
+     ]
+    ]
+   },
+   "sourceTargetBinding": false,
+   "rules": [
+    {
+     "id": "rule:fnv1a64-22d73b179b7bc3e3",
+     "source": {
+      "kind": "definition",
+      "definitionId": "framing.crop",
+      "sourcePath": "raw.modifierLibrary.closed[47].rules[0]"
+     },
+     "phases": [
+      "weight"
+     ],
+     "rule": {
+      "weight": {
+       "prompt": "body_part"
+      },
+      "when": {
+       "actor": "cast"
+      }
+     },
+     "effects": {},
+     "condition": {
+      "actor": "cast"
+     },
+     "weight": {
+      "prompt": "body_part"
+     }
+    }
+   ]
+  },
+  "weights": {
+   "__map__": [
+    [
+     "body_part",
+     {
+      "by": [
+       "option",
+       "body_part"
+      ],
+      "reduce": "max",
+      "values": {
+       "ass_focus": {
+        "bottom": 1,
+        "feet": 0,
+        "head": 0,
+        "legs": 0.3,
+        "top": 0.3
+       },
+       "breast_focus": {
+        "bottom": 0.3,
+        "feet": 0,
+        "head": 0.3,
+        "legs": 0,
+        "top": 1
+       },
+       "cowboy_shot": {
+        "bottom": 1,
+        "feet": 0,
+        "head": 1,
+        "legs": 0.8,
+        "top": 1
+       },
+       "crotch_focus": {
+        "bottom": 1,
+        "feet": 0,
+        "head": 0,
+        "legs": 0.3,
+        "top": 0
+       },
+       "eye_focus": {
+        "bottom": 0,
+        "feet": 0,
+        "head": 1,
+        "legs": 0,
+        "top": 0.3
+       },
+       "feet_out_of_frame": {
+        "bottom": 1,
+        "feet": 0,
+        "head": 1,
+        "legs": 1,
+        "top": 1
+       },
+       "foot_focus": {
+        "bottom": 0,
+        "feet": 1,
+        "head": 0,
+        "legs": 0.3,
+        "top": 0
+       },
+       "full_body": {
+        "bottom": 1,
+        "feet": 1,
+        "head": 1,
+        "legs": 1,
+        "top": 1
+       },
+       "hand_focus": {
+        "bottom": 0,
+        "feet": 0,
+        "head": 0,
+        "legs": 0,
+        "top": 0
+       },
+       "hip_focus": {
+        "bottom": 1,
+        "feet": 0,
+        "head": 0,
+        "legs": 0.3,
+        "top": 0.3
+       },
+       "pectoral_focus": {
+        "bottom": 0.3,
+        "feet": 0,
+        "head": 0.3,
+        "legs": 0,
+        "top": 1
+       },
+       "portrait": {
+        "bottom": 0,
+        "feet": 0,
+        "head": 1,
+        "legs": 0,
+        "top": 1
+       },
+       "upper_body": {
+        "bottom": 0.3,
+        "feet": 0,
+        "head": 1,
+        "legs": 0,
+        "top": 1
+       }
+      }
+     }
+    ],
+    [
+     "head_crop_body_part",
+     {
+      "by": [
+       "option",
+       "body_part"
+      ],
+      "reduce": "multiply",
+      "values": {
+       "head_out_of_frame": {
+        "bottom": 1,
+        "feet": 1,
+        "head": 0,
+        "legs": 1,
+        "top": 1
+       },
+       "lower_body": {
+        "bottom": 1,
+        "feet": 1,
+        "head": 0,
+        "legs": 1,
+        "top": 0
+       }
+      }
+     }
+    ]
+   ]
+  },
+  "promptEntryCount": 518
+ },
+ "diagnostics": {
+  "not-an-object": {
+   "input": "not-an-object",
+   "result": {
+    "valid": false,
+    "diagnostics": [
+     {
+      "code": "invalid-type",
+      "severity": "error",
+      "sourcePath": "raw",
+      "message": "Expected an object."
+     }
+    ]
+   },
+   "error": {
+    "name": "NovelAIV5RawValidationError",
+    "message": "raw: Expected an object.",
+    "diagnostics": [
+     {
+      "code": "invalid-type",
+      "severity": "error",
+      "sourcePath": "raw",
+      "message": "Expected an object."
+     }
+    ]
+   }
+  },
+  "schema-status": {
+   "input": "schema-status",
+   "result": {
+    "valid": false,
+    "diagnostics": [
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.schema",
+      "message": "Unexpected V5 raw schema."
+     },
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.revision",
+      "message": "Unexpected V5 raw revision."
+     },
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.status",
+      "message": "V5 raw must remain inactive before cutover."
+     }
+    ]
+   },
+   "error": {
+    "name": "NovelAIV5RawValidationError",
+    "message": "raw.schema: Unexpected V5 raw schema.",
+    "diagnostics": [
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.schema",
+      "message": "Unexpected V5 raw schema."
+     },
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.revision",
+      "message": "Unexpected V5 raw revision."
+     },
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.status",
+      "message": "V5 raw must remain inactive before cutover."
+     }
+    ]
+   }
+  },
+  "unknown-fields": {
+   "input": "unknown-fields",
+   "result": {
+    "valid": false,
+    "diagnostics": [
+     {
+      "code": "unknown-field",
+      "severity": "error",
+      "sourcePath": "raw.extra",
+      "message": "Unknown field 'extra'."
+     },
+     {
+      "code": "unknown-field",
+      "severity": "error",
+      "sourcePath": "raw.modifierLibrary.closed[1].options[0].colour",
+      "message": "Unknown field 'colour'."
+     }
+    ]
+   },
+   "error": {
+    "name": "NovelAIV5RawValidationError",
+    "message": "raw.extra: Unknown field 'extra'.",
+    "diagnostics": [
+     {
+      "code": "unknown-field",
+      "severity": "error",
+      "sourcePath": "raw.extra",
+      "message": "Unknown field 'extra'."
+     },
+     {
+      "code": "unknown-field",
+      "severity": "error",
+      "sourcePath": "raw.modifierLibrary.closed[1].options[0].colour",
+      "message": "Unknown field 'colour'."
+     }
+    ]
+   }
+  },
+  "selectable-sizes": {
+   "input": "selectable-sizes",
+   "result": {
+    "valid": false,
+    "diagnostics": [
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.stages.frame_placement.sizes",
+      "message": "V5 Free Scene Analyzer sizes must be exactly 1, 2, and 5 in catalog order."
+     }
+    ]
+   },
+   "error": {
+    "name": "NovelAIV5RawValidationError",
+    "message": "raw.stages.frame_placement.sizes: V5 Free Scene Analyzer sizes must be exactly 1, 2, and 5 in catalog order.",
+    "diagnostics": [
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.stages.frame_placement.sizes",
+      "message": "V5 Free Scene Analyzer sizes must be exactly 1, 2, and 5 in catalog order."
+     }
+    ]
+   }
+  },
+  "bad-rule": {
+   "input": "bad-rule",
+   "result": {
+    "valid": false,
+    "diagnostics": [
+     {
+      "code": "invalid-prompt",
+      "severity": "error",
+      "sourcePath": "raw.modifierLibrary.closed[3].rules[0].add.prompt.nowhere.tag",
+      "message": "Invalid semantic prompt destination 'nowhere.tag'."
+     },
+     {
+      "code": "invalid-rule",
+      "severity": "error",
+      "sourcePath": "raw.modifierLibrary.closed[3].rules[1].route.prompt",
+      "message": "Bound Interaction prompt routing requires source='bound_source' and target='bound_target' together."
+     }
+    ]
+   },
+   "error": {
+    "name": "NovelAIV5RawValidationError",
+    "message": "raw.modifierLibrary.closed[3].rules[0].add.prompt.nowhere.tag: Invalid semantic prompt destination 'nowhere.tag'.",
+    "diagnostics": [
+     {
+      "code": "invalid-prompt",
+      "severity": "error",
+      "sourcePath": "raw.modifierLibrary.closed[3].rules[0].add.prompt.nowhere.tag",
+      "message": "Invalid semantic prompt destination 'nowhere.tag'."
+     },
+     {
+      "code": "invalid-rule",
+      "severity": "error",
+      "sourcePath": "raw.modifierLibrary.closed[3].rules[1].route.prompt",
+      "message": "Bound Interaction prompt routing requires source='bound_source' and target='bound_target' together."
+     }
+    ]
+   }
+  },
+  "other-option-id": {
+   "input": "other-option-id",
+   "result": {
+    "valid": false,
+    "diagnostics": [
+     {
+      "code": "invalid-id",
+      "severity": "error",
+      "sourcePath": "raw.modifierLibrary.closed[4].options[4].id",
+      "message": "Closed option ID 'other' must be represented by no selection."
+     }
+    ]
+   },
+   "error": {
+    "name": "NovelAIV5RawValidationError",
+    "message": "raw.modifierLibrary.closed[4].options[4].id: Closed option ID 'other' must be represented by no selection.",
+    "diagnostics": [
+     {
+      "code": "invalid-id",
+      "severity": "error",
+      "sourcePath": "raw.modifierLibrary.closed[4].options[4].id",
+      "message": "Closed option ID 'other' must be represented by no selection."
+     }
+    ]
+   }
+  },
+  "missing-interaction-tag": {
+   "input": "missing-interaction-tag",
+   "result": {
+    "valid": false,
+    "diagnostics": [
+     {
+      "code": "missing-field",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[0].prompt.tag",
+      "message": "Interaction prompt requires one canonical tag prompt."
+     },
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].allowedModes[0]",
+      "message": "Interaction mode must be 'directed' or 'mutual'."
+     },
+     {
+      "code": "missing-field",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].allowedModes",
+      "message": "Interaction requires at least one allowed mode."
+     },
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].defaultMode",
+      "message": "Interaction defaultMode must be included in allowedModes."
+     },
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].prompt.collisionFallbacks[0].modes[0]",
+      "message": "Interaction collision fallback mode 'directed' is not allowed by the Interaction."
+     },
+     {
+      "code": "missing-field",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].prompt.collisionFallbacks[0].modes",
+      "message": "Interaction collision fallback requires at least one allowed mode."
+     },
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].prompt.collisionFallbacks[1].modes[0]",
+      "message": "Interaction collision fallback mode 'directed' is not allowed by the Interaction."
+     },
+     {
+      "code": "missing-field",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].prompt.collisionFallbacks[1].modes",
+      "message": "Interaction collision fallback requires at least one allowed mode."
+     }
+    ]
+   },
+   "error": {
+    "name": "NovelAIV5RawValidationError",
+    "message": "raw.stages.interaction.definitions[0].prompt.tag: Interaction prompt requires one canonical tag prompt.",
+    "diagnostics": [
+     {
+      "code": "missing-field",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[0].prompt.tag",
+      "message": "Interaction prompt requires one canonical tag prompt."
+     },
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].allowedModes[0]",
+      "message": "Interaction mode must be 'directed' or 'mutual'."
+     },
+     {
+      "code": "missing-field",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].allowedModes",
+      "message": "Interaction requires at least one allowed mode."
+     },
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].defaultMode",
+      "message": "Interaction defaultMode must be included in allowedModes."
+     },
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].prompt.collisionFallbacks[0].modes[0]",
+      "message": "Interaction collision fallback mode 'directed' is not allowed by the Interaction."
+     },
+     {
+      "code": "missing-field",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].prompt.collisionFallbacks[0].modes",
+      "message": "Interaction collision fallback requires at least one allowed mode."
+     },
+     {
+      "code": "invalid-value",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].prompt.collisionFallbacks[1].modes[0]",
+      "message": "Interaction collision fallback mode 'directed' is not allowed by the Interaction."
+     },
+     {
+      "code": "missing-field",
+      "severity": "error",
+      "sourcePath": "raw.stages.interaction.definitions[1].prompt.collisionFallbacks[1].modes",
+      "message": "Interaction collision fallback requires at least one allowed mode."
+     }
+    ]
+   }
+  }
+ },
+ "modified": {
+  "weight-change": {
+   "hashes": {
+    "source": "fnv1a64-3f056a2c88a83647",
+    "semantic": "fnv1a64-5c41258fcedbacb2",
+    "analyzer": "fnv1a64-107966add79109cd",
+    "rules": "fnv1a64-cb823a9cdcf5e829",
+    "prompts": "fnv1a64-141e1e82d63a7797",
+    "weights": "fnv1a64-4d0463fac277af5e",
+    "continuity": "fnv1a64-bd22a1f16b22c8b8"
+   },
+   "stats": {
+    "definitions": 56,
+    "options": 291,
+    "sourceRules": 67,
+    "compiledRules": 67
+   },
+   "fingerprint": "v5.fnv1a64-facddd3138c333c0",
+   "diagnostics": [],
+   "sample": {
+    "id": "scene.environment",
+    "library": "shared",
+    "subjects": [
+     "global"
+    ],
+    "guidance": {
+     "whenToUse": [],
+     "avoidWhen": []
+    },
+    "order": 60,
+    "selection": {
+     "by": "ai",
+     "min": 0,
+     "max": 1
+    },
+    "options": {
+     "__map__": [
+      [
+       "indoors",
+       {
+        "id": "indoors",
+        "semanticId": "scene.environment.indoors",
+        "analyzerSelectable": true,
+        "derivedOnly": false,
+        "guidance": {
+         "whenToUse": [],
+         "avoidWhen": []
+        },
+        "order": 60,
+        "visibleFrom": [],
+        "prompt": [
+         [
+          1.2,
+          "indoors"
+         ]
+        ],
+        "sourceTargetBinding": false,
+        "collisionFallbacks": [],
+        "rules": [
+         {
+          "id": "rule:fnv1a64-15714d0bca4c6fe8",
+          "source": {
+           "kind": "option",
+           "definitionId": "scene.environment",
+           "optionId": "indoors",
+           "sourcePath": "raw.modifierLibrary.closed[3].options[0].rules[0]"
+          },
+          "phases": [
+           "result"
+          ],
+          "rule": {
+           "remove": {
+            "prompt": {
+             "*": [
+              "on ground"
+             ]
+            }
+           }
+          },
+          "effects": {
+           "remove": {
+            "prompt": {
+             "*": [
+              "on ground"
+             ]
+            }
+           }
+          }
+         }
+        ]
+       }
+      ],
+      [
+       "outdoors",
+       {
+        "id": "outdoors",
+        "semanticId": "scene.environment.outdoors",
+        "analyzerSelectable": true,
+        "derivedOnly": false,
+        "guidance": {
+         "whenToUse": [],
+         "avoidWhen": []
+        },
+        "order": 60,
+        "visibleFrom": [],
+        "prompt": [
+         [
+          1,
+          "outdoors"
+         ]
+        ],
+        "sourceTargetBinding": false,
+        "collisionFallbacks": [],
+        "rules": [
+         {
+          "id": "rule:fnv1a64-32e6fe4743f5a7e4",
+          "source": {
+           "kind": "option",
+           "definitionId": "scene.environment",
+           "optionId": "outdoors",
+           "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
+          },
+          "phases": [
+           "result"
+          ],
+          "rule": {
+           "remove": {
+            "prompt": {
+             "*": [
+              "on floor"
+             ]
+            }
+           }
+          },
+          "effects": {
+           "remove": {
+            "prompt": {
+             "*": [
+              "on floor"
+             ]
+            }
+           }
+          }
+         }
+        ]
+       }
+      ]
+     ]
+    },
+    "sourceTargetBinding": false,
+    "rules": []
+   }
+  },
+  "new-option": {
+   "hashes": {
+    "source": "fnv1a64-081c5c9bc7f9b71c",
+    "semantic": "fnv1a64-78b1553eaf75fd7e",
+    "analyzer": "fnv1a64-2ffdf7dd470decd3",
+    "rules": "fnv1a64-cb823a9cdcf5e829",
+    "prompts": "fnv1a64-a91f3b938b9bcbcb",
+    "weights": "fnv1a64-4d0463fac277af5e",
+    "continuity": "fnv1a64-bd22a1f16b22c8b8"
+   },
+   "stats": {
+    "definitions": 56,
+    "options": 292,
+    "sourceRules": 67,
+    "compiledRules": 67
+   },
+   "fingerprint": "v5.fnv1a64-ea6e7c903620d7cf",
+   "diagnostics": [],
+   "sample": {
+    "id": "scene.time",
+    "library": "shared",
+    "subjects": [
+     "global"
+    ],
+    "guidance": {
+     "whenToUse": [],
+     "avoidWhen": []
+    },
+    "order": 62,
+    "selection": {
+     "by": "ai",
+     "min": 0,
+     "max": 1
+    },
+    "options": {
+     "__map__": [
+      [
+       "dawn",
+       {
+        "id": "dawn",
+        "semanticId": "scene.time.dawn",
+        "analyzerSelectable": true,
+        "derivedOnly": false,
+        "guidance": {
+         "description": "Early morning light.",
+         "whenToUse": [],
+         "avoidWhen": []
+        },
+        "order": 62,
+        "visibleFrom": [],
+        "prompt": [
+         [
+          1,
+          "dawn"
+         ]
+        ],
+        "sourceTargetBinding": false,
+        "collisionFallbacks": [],
+        "rules": []
+       }
+      ],
+      [
+       "day",
+       {
+        "id": "day",
+        "semanticId": "scene.time.day",
+        "analyzerSelectable": true,
+        "derivedOnly": false,
+        "guidance": {
+         "whenToUse": [],
+         "avoidWhen": []
+        },
+        "order": 62,
+        "visibleFrom": [],
+        "prompt": [
+         [
+          1,
+          "day"
+         ]
+        ],
+        "sourceTargetBinding": false,
+        "collisionFallbacks": [],
+        "rules": []
+       }
+      ],
+      [
+       "morning",
+       {
+        "id": "morning",
+        "semanticId": "scene.time.morning",
+        "analyzerSelectable": true,
+        "derivedOnly": false,
+        "guidance": {
+         "whenToUse": [],
+         "avoidWhen": []
+        },
+        "order": 62,
+        "visibleFrom": [],
+        "prompt": [
+         [
+          1,
+          "morning"
+         ]
+        ],
+        "sourceTargetBinding": false,
+        "collisionFallbacks": [],
+        "rules": []
+       }
+      ],
+      [
+       "night",
+       {
+        "id": "night",
+        "semanticId": "scene.time.night",
+        "analyzerSelectable": true,
+        "derivedOnly": false,
+        "guidance": {
+         "whenToUse": [],
+         "avoidWhen": []
+        },
+        "order": 62,
+        "visibleFrom": [],
+        "prompt": [
+         [
+          1,
+          "night"
+         ]
+        ],
+        "sourceTargetBinding": false,
+        "collisionFallbacks": [],
+        "rules": []
+       }
+      ],
+      [
+       "sunset",
+       {
+        "id": "sunset",
+        "semanticId": "scene.time.sunset",
+        "analyzerSelectable": true,
+        "derivedOnly": false,
+        "guidance": {
+         "whenToUse": [],
+         "avoidWhen": []
+        },
+        "order": 62,
+        "visibleFrom": [],
+        "prompt": [
+         [
+          1,
+          "sunset"
+         ]
+        ],
+        "sourceTargetBinding": false,
+        "collisionFallbacks": [],
+        "rules": []
+       }
+      ]
+     ]
+    },
+    "sourceTargetBinding": false,
+    "rules": []
+   }
+  },
+  "new-interaction": {
+   "hashes": {
+    "source": "fnv1a64-471bc9637ebbe554",
+    "semantic": "fnv1a64-27fbfc194d717b1a",
+    "analyzer": "fnv1a64-a71ec7aa771d3e32",
+    "rules": "fnv1a64-cb823a9cdcf5e829",
+    "prompts": "fnv1a64-8e8cc8c0b1e86bee",
+    "weights": "fnv1a64-4d0463fac277af5e",
+    "continuity": "fnv1a64-bd22a1f16b22c8b8"
+   },
+   "stats": {
+    "definitions": 56,
+    "options": 291,
+    "sourceRules": 67,
+    "compiledRules": 67
+   },
+   "fingerprint": "v5.fnv1a64-451b911f21773c94",
+   "diagnostics": [],
+   "sample": {
+    "id": "high_five",
+    "guidance": {
+     "description": "Two actors slap raised palms.",
+     "whenToUse": [],
+     "avoidWhen": []
+    },
+    "allowedModes": [
+     "mutual"
+    ],
+    "defaultMode": "mutual",
+    "promptTarget": "relation",
+    "prompt": {
+     "tag": [
+      [
+       1,
+       "high five"
+      ]
+     ],
+     "collisionFallbacks": []
+    },
+    "rules": []
+   }
+  }
+ },
+ "vectors": [
+  {
+   "value": null,
+   "canonical": "null",
+   "hash": "fnv1a64-dcb35b6bb0f524e6"
+  },
+  {
+   "value": true,
+   "canonical": "true",
+   "hash": "fnv1a64-13eaf1716af0f33b"
+  },
+  {
+   "value": 0,
+   "canonical": "0",
+   "hash": "fnv1a64-07fc2807b4bd3d5d"
+  },
+  {
+   "value": 0,
+   "canonical": "0",
+   "hash": "fnv1a64-07fc2807b4bd3d5d"
+  },
+  {
+   "value": 1.5,
+   "canonical": "1.5",
+   "hash": "fnv1a64-f24d7abf9afa5df7"
+  },
+  {
+   "value": "plain",
+   "canonical": "\"plain\"",
+   "hash": "fnv1a64-088b96661d7b789f"
+  },
+  {
+   "value": "ünïcødé ✓ 한글",
+   "canonical": "\"ünïcødé ✓ 한글\"",
+   "hash": "fnv1a64-287abf4a731ffbb5"
+  },
+  {
+   "value": [
+    3,
+    1,
+    2
+   ],
+   "canonical": "[3,1,2]",
+   "hash": "fnv1a64-4e96f8b58f0c34eb"
+  },
+  {
+   "value": [
+    1,
+    {
+     "__undefined__": true
+    },
+    null
+   ],
+   "error": {
+    "name": "TypeError",
+    "message": "Unsupported canonical V5 value: undefined."
+   }
+  },
+  {
+   "value": {
+    "b": 1,
+    "a": 2,
+    "c": {
+     "z": [
+      1,
+      {
+       "y": 2,
+       "x": 0
+      }
+     ]
+    }
+   },
+   "canonical": "{\"a\":2,\"b\":1,\"c\":{\"z\":[1,{\"x\":0,\"y\":2}]}}",
+   "hash": "fnv1a64-1f65fefdf1ded2f6"
+  },
+  {
+   "value": {
+    "": "",
+    "Z": 1,
+    "a": 2,
+    "_": 3
+   },
+   "canonical": "{\"\":\"\",\"Z\":1,\"_\":3,\"a\":2}",
+   "hash": "fnv1a64-0747d556088e9463"
+  },
+  {
+   "value": {
+    "__number__": "NaN"
+   },
+   "error": {
+    "name": "TypeError",
+    "message": "Canonical V5 values cannot contain non-finite numbers."
+   }
+  },
+  {
+   "value": [
+    {
+     "__bigint__": "1"
+    }
+   ],
+   "error": {
+    "name": "TypeError",
+    "message": "Unsupported canonical V5 value: bigint."
+   }
+  }
+ ]
+}
