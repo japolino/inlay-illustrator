@@ -12,7 +12,7 @@ image generation, storage, clock, randomness) is injected.
   `core/tooling/slice-config.json` and emits their full top-level dependency closure in original order.
   The current slice has about 2450 declarations and about 54k lines, including the data literals (`vW`, `dg`, prompt texts).
   So algorithms, prompt texts and data tables are byte-identical by construction.
-- Only top-level identifiers are renamed (about 190 roots and helpers, map in `core/names.json` → `renames`).
+- Only top-level identifiers are renamed (about 145 roots and helpers, map in `core/names.json` → `renames`).
   Local identifiers keep their minified names. Every declaration has the comment `// AM <origName> @<prettyLine>`,
   so the spec line references (`spec/*.md`) still work.
 - `Date.now`, `Math.random`, `crypto.*` and `performance.now` in the slice are rewritten to `amEnv.*` (`core/env.ts`).
@@ -127,7 +127,7 @@ All golden fixtures come from the ORIGINAL bundle (`scratch/pipeline/analyzer/am
 - No golden fixture for the legacy (custom "Preset catalog v1" raw JSON) compile path. No sample ships, and 0.9.88 has no UI for it.
 - Not covered end to end: JEV TypeSafe roster pre-pass (dropped by PORT-PLAN), V5 split streaming inside `Ygt`, `prepareCharacters` / `prepareOutfits`
   (free character/outfit generation callbacks), director / ComfyUI references and img2img with real bytes, the non-artist weight in the NovelAI body.
-- Only about 190 top-level identifiers have meaningful names. The other core internals keep their minified names (tagged with the original line).
+- Only about 145 top-level identifiers have meaningful names. The other core internals keep their minified names (tagged with the original line).
   The facades alias them at the import site.
 - The core is `// @ts-nocheck`. Types live in the area facades (`*/types.ts`), not in the generated file.
 - Original behaviour kept on purpose: V5 recovery (`PRe`) drops `framing.crop` / `head_crop` from frame_placement. One random seed is used per batch.
