@@ -9,10 +9,36 @@
  * gallery and the lightbox details keep working for existing images. Nothing
  * here writes. The Asset Maid port stores new images in its own chat data.
  */
-import { listPaths, readJson } from "./storage.js";
-import { asRecord, cleanArray } from "./utils.js";
-
 declare const spindle: import("lumiverse-spindle-types").SpindleAPI;
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function cleanArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+/** Lenient JSON read of a 0.9.x file: any failure (missing, unreadable, corrupt) yields `fallback`. */
+async function readJson<T>(path: string, fallback: T, userId?: string): Promise<T> {
+  try {
+    const value = JSON.parse(await spindle.userStorage.read(path, userId)) as unknown;
+    if (value && typeof value === "object" && !Array.isArray(value) && fallback && typeof fallback === "object" && !Array.isArray(fallback)) return { ...fallback, ...(value as object) } as T;
+    return (value ?? fallback) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Stored paths under a prefix (host: relative to the prefix), or [] when listing fails. */
+async function listPaths(prefix: string, userId?: string): Promise<string[]> {
+  try {
+    const paths = await spindle.userStorage.list(prefix, userId);
+    return Array.isArray(paths) ? paths.filter((path): path is string => typeof path === "string" && path.length > 0) : [];
+  } catch {
+    return [];
+  }
+}
 
 export type LegacyImageSlot = {
   imageId: string;
