@@ -12,6 +12,8 @@ Import everything from `src/shared/contract/index.ts`.
 | `history.ts` | Image History tree, validator (69 AM issue codes), command reducer, cleanup/99-cap, commitRevision, store<->tree projections. |
 | `storage.ts` | userStorage paths, file versions, migration hooks, AM key mapping. |
 | `rpc.ts` | Frontend<->backend protocol: methods (request/response pairs), events, envelopes, guards. |
+| `chat-dom.ts` | Baked illustration blocks in message content, chat actions, per-message UI state (§10). |
+| `bridge.ts` | Backend -> frontend fetch bridge for image bytes and same-origin REST JSON (§11). |
 
 Source references: `spec/data.md` (Part A, Part C §2-§4), `spec/pipeline.md` §4-§5, `spec/novelai.md` §7/§9, `spec/llm.md` §1,
 `spec/ui.md` (action lists). Line numbers in code comments refer to `AssetMaid.pretty.js`.
@@ -319,3 +321,24 @@ interface ChatDataDocument {
   older shapes. Files newer than the build are reported `tooNew` and must not be overwritten.
 - The RPC handshake (`session.hello`) exchanges `protocol`; mismatches answer `protocol-mismatch`.
 - Parity fixtures pin Asset Maid 0.9.88 behaviour; a deliberate deviation must update the fixture test with a comment.
+
+## 10. Chat DOM (`chat-dom.ts`)
+
+- The backend bakes one block per selected History entry into the message content: `<!-- inlay_illustrator -->` + one
+  `div.inlay-illustrator-image.am-illustration-projection[data-inlay-illustrator="true"][data-no-island]` holding only
+  `span.inlay-illustrator-frame > img` (no nested `div`). Blocks go after the blank line of paragraph gap `slotIndex` (AM
+  `insertionOffsets`), each followed by a blank line. The interceptor strips them, so baking is idempotent.
+- Wrapper attributes: `ILLUSTRATION_ATTR` (`data-inlay-illustrator-{chat-id,message-id,swipe-id,message-key,revision-id,slot-id,
+  slot-index,entry-id,asset,image-id,entry-index,entry-count,can-regenerate,image-index}`); parse with `readIllustrationAttributes`.
+- Native asset suppression carrier: `span.am-native-asset-suppression[data-inlay-illustrator-suppressed][data-inlay-illustrator-suppressed-payload]`.
+- The frontend injects the controls (footer + edge controls) and maps `CHAT_ACTIONS` to RPC (`CHAT_ACTION_RPC`); state from
+  `chatDom.getMessageStates`, refreshed on `chatData.changed`, progress from `generation.progress` / `generation.finished`.
+- History entries of generated images: `assetName = <label>.__am__.chat.<uuid>`, `savedPath = /api/v1/image-gen/results/<imageId>`.
+- Pipeline sidecar (backend-private): `chats/<chatId>/pipeline.json` (generation records for regeneration / zoom, zoom drafts).
+
+## 11. Fetch bridge (`bridge.ts`)
+
+Backend -> frontend `{type:"inlay-illustrator:fetch-request", requestId, url, as:"base64"|"json"}`; the frontend fetches the
+same-origin `/api/...` URL (`isAllowedBridgeUrl`) and answers once with `{type:"inlay-illustrator:fetch-response", requestId,
+data+mimeType | json | error, status?}`. Used for image bytes (vision, references) and REST-only data (character gallery,
+LLM model lists). The legacy `avatar_image_request/response` pair is still accepted.
