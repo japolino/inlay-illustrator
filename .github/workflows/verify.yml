@@ -1,9 +1,9 @@
 name: verify
 on:
   push:
-    branches: [staging]
+    branches: [staging, testing]
   pull_request:
-    branches: [staging]
+    branches: [staging, testing]
 jobs:
   verify:
     runs-on: ubuntu-latest
