@@ -6,7 +6,9 @@
  */
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { DEFAULT_CONFIG } from "../../shared/config.js";
+// The 0.9.x renderer (rendering.ts, not owned here) still takes the interim display config; only that fixture uses it.
+import { DEFAULT_CONFIG as LEGACY_RENDER_CONFIG } from "../../shared/config.js";
+import { DEFAULT_CONFIG, errorResponse, normalizeConfig, okResponse, RPC_MESSAGE_TYPE, type InlayConfig } from "../../shared/contract/index.js";
 import { renderInlaidMessage } from "../../backend/rendering.js";
 import type { LumiverseClient, MessageRecord, Paginated } from "./client.js";
 import { LumiverseError } from "./client.js";
@@ -132,7 +134,7 @@ function inlayRenderedContent(): string {
     perspectiveSources: ["adaptive", "adaptive"],
     paragraphs: [1, 2],
     slotStatuses: ["completed", "pending"]
-  }, DEFAULT_CONFIG);
+  }, LEGACY_RENDER_CONFIG);
 }
 
 // ---------------------------------------------------------------------------
@@ -190,64 +192,73 @@ describe("lumiverse_status", () => {
 });
 
 describe("Inlay extension state and stored image details", () => {
-  test("describes config fields with current/default values and enums", async () => {
+  function rpcStub(handle: (method: string, params: Record<string, any>) => unknown) {
+    return async (_id: string, payload: Record<string, unknown>, options: { responseType: string; requestId?: string }) => {
+      expect(options.responseType).toBe(RPC_MESSAGE_TYPE);
+      expect(options.requestId).toBe(payload.requestId as string);
+      return okResponse(payload as never, handle(String(payload.method), payload.params as Record<string, any>) as never) as unknown as Record<string, unknown>;
+    };
+  }
+
+  test("describes config sections with current/default values over RPC", async () => {
     const client = stubClient({
-      extensionMessage: async (_id, payload) => ({
-        type: "state",
-        config: { ...DEFAULT_CONFIG, fabCorner: "top-left", enabled: true },
-        parserConnections: [{ id: "parser1", name: "Deepseek V4 Flash" }],
-        chatId: payload.chatId || "",
-        characterAppearance: {}
-      })
+      extensionMessage: rpcStub((method) =>
+        method === "config.get"
+          ? { config: { ...normalizeConfig({}), enabled: false }, chatImageGeneration: {}, uiState: {} }
+          : { connections: [{ id: "parser1", name: "Deepseek V4 Flash" }] })
     });
     const result = await inlayDescribeConfig(context(client, fakeClock()));
-    expect((result.config as Record<string, unknown>).fabCorner).toBe("top-left");
-    const corner = (result.fields as Array<Record<string, unknown>>).find((field) => field.name === "fabCorner");
-    expect(corner?.allowed_values).toEqual(["bottom-right", "bottom-left", "top-right", "top-left"]);
+    expect((result.config as Record<string, unknown>).enabled).toBe(false);
+    const analysis = (result.fields as Array<Record<string, unknown>>).find((field) => field.name === "analysis");
+    expect(analysis?.default).toEqual(DEFAULT_CONFIG.analysis);
     expect(result.parser_connections).toEqual([{ id: "parser1", name: "Deepseek V4 Flash" }]);
   });
 
-  test("previews normalized config patches without persisting", async () => {
-    let setCalls = 0;
+  test("previews normalized deep-merged config patches without persisting", async () => {
+    const methods: string[] = [];
     const client = stubClient({
-      extensionMessage: async (_id, payload) => {
-        if (payload.type === "set_config") setCalls += 1;
-        return { type: "state", config: DEFAULT_CONFIG, parserConnections: [], characterAppearance: {} };
-      }
+      extensionMessage: rpcStub((method) => {
+        methods.push(method);
+        return { config: normalizeConfig({}), chatImageGeneration: {}, uiState: {} };
+      })
     });
-    const result = await inlayPatchConfig(context(client, fakeClock()), { patch: { fabCorner: "top-left", inlayImageMaxHeightVh: 999 }, dry_run: true });
-    expect(setCalls).toBe(0);
-    expect((result.after as Record<string, unknown>).fabCorner).toBe("top-left");
-    expect((result.after as Record<string, unknown>).inlayImageMaxHeightVh).toBe(100);
-    expect(result.changed_fields).toEqual(["inlayImageMaxHeightVh", "fabCorner"]);
+    const result = await inlayPatchConfig(context(client, fakeClock()), { patch: { analysis: { temperature: 9 } }, dry_run: true });
+    expect(methods).toEqual(["config.get"]);
+    expect((result.after as InlayConfig).analysis.temperature).toBe(2);
+    expect((result.after as InlayConfig).analysis.timeoutMs).toBe(DEFAULT_CONFIG.analysis.timeoutMs);
+    expect(result.changed_fields).toEqual(["analysis"]);
+    await expect(inlayPatchConfig(context(client, fakeClock()), { patch: { fabCorner: "x" } })).rejects.toThrow("Unknown Inlay config field");
   });
 
-  test("patches and resets allowlisted config fields", async () => {
-    let current = { ...DEFAULT_CONFIG, enabled: true };
+  test("patches and resets config sections through config.update", async () => {
+    let current = normalizeConfig({ enabled: true });
     const client = stubClient({
-      extensionMessage: async (_id, payload) => {
-        if (payload.type === "get_state") return { type: "state", config: current, parserConnections: [], characterAppearance: {} };
-        current = { ...current, ...(payload.patch as object) };
-        return { type: "config_updated", config: current };
-      }
+      extensionMessage: rpcStub((method, params) => {
+        if (method === "config.get") return { config: current, chatImageGeneration: {}, uiState: {} };
+        current = normalizeConfig({ ...current, ...params.patch });
+        return { config: current };
+      })
     });
     const patched = await inlayPatchConfig(context(client, fakeClock()), { patch: { enabled: false } });
-    expect((patched.after as Record<string, unknown>).enabled).toBe(false);
+    expect((patched.after as InlayConfig).enabled).toBe(false);
     const reset = await inlayResetConfig(context(client, fakeClock()), { fields: ["enabled"] });
-    expect((reset.after as Record<string, unknown>).enabled).toBe(DEFAULT_CONFIG.enabled);
+    expect((reset.after as InlayConfig).enabled).toBe(DEFAULT_CONFIG.enabled);
     await expect(inlayResetConfig(context(client, fakeClock()), { all: true })).rejects.toThrow("confirm_all=true");
   });
 
-  test("returns generated character memory tags for a chat", async () => {
-    const client = stubClient({
-      extensionMessage: async (_id, payload) => ({
-        type: "state", config: DEFAULT_CONFIG, parserConnections: [], chatId: payload.chatId,
-        characterAppearance: { Miyoko: "young woman, black hair, red eyes" }
-      })
-    });
+  test("returns the accumulated actor state of a chat", async () => {
+    const actorState = { revision: 2, actors: { a: { name: "Miyoko" } } };
+    const client = stubClient({ extensionMessage: rpcStub((method, params) => (method === "chatState.get" && params.chatId === "chat1" ? { actorState } : null)) });
     const state: DriverState = { characterId: "c1", chatId: "chat1" };
     const result = await inlayGetCharacterTags(context(client, fakeClock(), state), {});
-    expect(result.character_tags).toEqual({ Miyoko: "young woman, black hair, red eyes" });
+    expect(result).toEqual({ chat_id: "chat1", actor_state: actorState });
+  });
+
+  test("RPC errors surface as tool errors", async () => {
+    const client = stubClient({
+      extensionMessage: async (_id, payload) => errorResponse(payload as never, { code: "internal", message: "boom" }) as unknown as Record<string, unknown>
+    });
+    await expect(inlayDescribeConfig(context(client, fakeClock()))).rejects.toThrow("config.get failed: boom");
   });
 
   test("returns the exact stored prompt shown by the image lightbox", async () => {

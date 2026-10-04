@@ -85,11 +85,11 @@ The settings tools use Lumiverse's authenticated WebSocket bridge—the same
 extension channel used by the Inlay frontend—and expose only fixed,
 allowlisted operations:
 
-- `inlay_describe_config`: current/default/type/enum metadata for every field.
-- `inlay_patch_config`: partial patch with an optional non-persisting `dry_run`.
+- `inlay_describe_config`: current/default/type metadata for every settings section (RPC `config.get`).
+- `inlay_patch_config`: deep-merge patch (RPC `config.update`; arrays replace, `null` resets to default) with an optional non-persisting `dry_run`.
 - `inlay_reset_config`: reset selected fields, or all fields with explicit
   `all=true` and `confirm_all=true`.
-- `inlay_get_character_tags`: durable generated appearance tags for a chat.
+- `inlay_get_character_tags`: the chat's accumulated actor state (RPC `chatState.get`).
 - `inlay_get_image_details`: exact positive/negative prompt and perspective
   shown when a generated image is clicked.
 

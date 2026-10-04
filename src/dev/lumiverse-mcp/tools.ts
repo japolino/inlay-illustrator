@@ -10,7 +10,18 @@
  * /api/v1/generate) emits that event; /generate/dry-run never does.
  */
 
-import { DEFAULT_CONFIG, FAB_CORNER_OPTIONS, INLAY_IMAGE_ASPECT_PRESETS, normalizeConfig, type Config } from "../../shared/config.js";
+import {
+  createRequest,
+  DEFAULT_CONFIG,
+  isRpcResponse,
+  normalizeConfig,
+  RPC_MESSAGE_TYPE,
+  type DeepPartial,
+  type InlayConfig,
+  type RpcMethod,
+  type RpcParams,
+  type RpcResult
+} from "../../shared/contract/index.js";
 import { LumiverseError, type LumiverseClient, type MessageRecord, type GenerateStatusResponse } from "./client.js";
 import { cleanNarrative, extractInlayBlocks, hasInlayMarkup, inferInlayStatus, type InlayBlock } from "./inlay-markers.js";
 
@@ -147,81 +158,66 @@ export async function lumiverseStatus(ctx: ToolContext): Promise<StatusResult> {
 }
 
 const INLAY_EXTENSION_IDENTIFIER = "inlay-illustrator";
-const CONFIG_ENUMS: Partial<Record<keyof Config, readonly string[]>> = {
-  imageAlignment: ["center", "left"],
-  inlayImageAspect: INLAY_IMAGE_ASPECT_PRESETS.map((preset) => preset.value),
-  coverImageAspect: INLAY_IMAGE_ASPECT_PRESETS.map((preset) => preset.value),
-  coverImagePosition: ["top", "bottom"],
-  fabCorner: FAB_CORNER_OPTIONS.map((option) => option.value)
-};
+
+/** One RPC call to the Inlay backend over the extension WebSocket bridge (contract `rpc.ts` envelopes). */
+async function inlayRpc<M extends RpcMethod>(ctx: ToolContext, method: M, params: RpcParams<M>): Promise<RpcResult<M>> {
+  const extensionId = await ctx.client.resolveExtensionId(INLAY_EXTENSION_IDENTIFIER);
+  const request = createRequest(method, params, `mcp:${crypto.randomUUID()}`);
+  const response = await ctx.client.extensionMessage<Record<string, unknown> & { type: string }>(
+    extensionId,
+    request as unknown as Record<string, unknown>,
+    { responseType: RPC_MESSAGE_TYPE, requestId: request.requestId, timeoutMs: 20_000 }
+  );
+  if (!isRpcResponse(response)) throw new LumiverseError(`Invalid ${method} response from the Inlay backend.`, "/api/ws", null);
+  if (!response.ok) throw new LumiverseError(`${method} failed: ${response.error.message}`, "/api/ws", 400);
+  return response.result as RpcResult<M>;
+}
 
 function configValueType(value: unknown): string {
   if (Array.isArray(value)) return "array";
-  if (value === null) return "string|null";
+  if (value === null) return "null";
   return typeof value;
 }
 
-function changedConfigKeys(before: Config, after: Config): string[] {
+function changedConfigKeys(before: InlayConfig, after: InlayConfig): string[] {
   return Object.keys(DEFAULT_CONFIG).filter((key) =>
-    JSON.stringify(before[key as keyof Config]) !== JSON.stringify(after[key as keyof Config])
+    JSON.stringify(before[key as keyof InlayConfig]) !== JSON.stringify(after[key as keyof InlayConfig])
   );
 }
 
-async function inlayState(
-  ctx: ToolContext,
-  chatId = ""
-): Promise<{ config: Config; parserConnections: unknown[]; characterAppearance: Record<string, string>; chatId: string }> {
-  const extensionId = await ctx.client.resolveExtensionId(INLAY_EXTENSION_IDENTIFIER);
-  const response = await ctx.client.extensionMessage<Record<string, unknown>>(
-    extensionId,
-    { type: "get_state", chatId },
-    { responseType: "state", timeoutMs: 20_000 }
-  );
-  const config = normalizeConfig((response.config || {}) as Partial<Config>);
-  return {
-    config,
-    parserConnections: Array.isArray(response.parserConnections) ? response.parserConnections : [],
-    characterAppearance: response.characterAppearance && typeof response.characterAppearance === "object"
-      ? response.characterAppearance as Record<string, string>
-      : {},
-    chatId: String(response.chatId || chatId)
-  };
+function mergePatch(base: unknown, patch: unknown): unknown {
+  if (patch === undefined) return base;
+  if (!patch || typeof patch !== "object" || Array.isArray(patch) || !base || typeof base !== "object" || Array.isArray(base)) return patch;
+  const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+  for (const [key, value] of Object.entries(patch as Record<string, unknown>)) out[key] = mergePatch(out[key], value);
+  return out;
 }
 
+/** Top-level config sections (`InlayConfig` keys) with current and default values. */
 export async function inlayDescribeConfig(ctx: ToolContext): Promise<Record<string, unknown>> {
-  const state = await inlayState(ctx);
+  const [state, llm] = await Promise.all([inlayRpc(ctx, "config.get", {}), inlayRpc(ctx, "connections.listLlm", {}).catch(() => ({ connections: [] }))]);
   const fields = Object.keys(DEFAULT_CONFIG).map((name) => {
-    const key = name as keyof Config;
-    return {
-      name,
-      type: configValueType(DEFAULT_CONFIG[key]),
-      current: state.config[key],
-      default: DEFAULT_CONFIG[key],
-      ...(CONFIG_ENUMS[key] ? { allowed_values: CONFIG_ENUMS[key] } : {})
-    };
+    const key = name as keyof InlayConfig;
+    return { name, type: configValueType(DEFAULT_CONFIG[key]), current: state.config[key], default: DEFAULT_CONFIG[key] };
   });
-  return { extension: INLAY_EXTENSION_IDENTIFIER, config: state.config, fields, parser_connections: state.parserConnections };
+  return { extension: INLAY_EXTENSION_IDENTIFIER, config: state.config, chat_image_generation: state.chatImageGeneration, fields, parser_connections: llm.connections };
 }
 
+/** Deep-merge patch over the config (`config.update` semantics: objects merge, arrays/primitives replace, null = default). */
 export async function inlayPatchConfig(
   ctx: ToolContext,
   input: { patch: Record<string, unknown>; dry_run?: boolean }
 ): Promise<Record<string, unknown>> {
-  const beforeState = await inlayState(ctx);
+  const before = (await inlayRpc(ctx, "config.get", {})).config;
   const known = new Set(Object.keys(DEFAULT_CONFIG));
   const unknown = Object.keys(input.patch).filter((key) => !known.has(key));
   if (unknown.length) throw new LumiverseError(`Unknown Inlay config field(s): ${unknown.join(", ")}.`, "/api/ws", 400);
-  const after = normalizeConfig({ ...beforeState.config, ...input.patch } as Partial<Config>);
-  const changed = changedConfigKeys(beforeState.config, after);
-  if (input.dry_run) return { dry_run: true, before: beforeState.config, after, changed_fields: changed };
-  const extensionId = await ctx.client.resolveExtensionId(INLAY_EXTENSION_IDENTIFIER);
-  const response = await ctx.client.extensionMessage<Record<string, unknown>>(
-    extensionId,
-    { type: "set_config", patch: input.patch, chatId: "" },
-    { responseType: "config_updated", timeoutMs: 20_000 }
-  );
-  const persisted = normalizeConfig((response.config || {}) as Partial<Config>);
-  return { dry_run: false, before: beforeState.config, after: persisted, changed_fields: changedConfigKeys(beforeState.config, persisted) };
+  if (input.dry_run) {
+    const after = normalizeConfig(mergePatch(before, input.patch));
+    return { dry_run: true, before, after, changed_fields: changedConfigKeys(before, after) };
+  }
+  const { config: after } = await inlayRpc(ctx, "config.update", { patch: input.patch as DeepPartial<InlayConfig> });
+  return { dry_run: false, before, after, changed_fields: changedConfigKeys(before, after) };
 }
 
 export async function inlayResetConfig(
@@ -235,18 +231,19 @@ export async function inlayResetConfig(
   if (!requested.length) throw new LumiverseError("Provide fields or set all=true.", "/api/ws", 400);
   const unknown = requested.filter((key) => !(key in DEFAULT_CONFIG));
   if (unknown.length) throw new LumiverseError(`Unknown Inlay config field(s): ${unknown.join(", ")}.`, "/api/ws", 400);
-  const patch = Object.fromEntries(requested.map((key) => [key, DEFAULT_CONFIG[key as keyof Config]]));
+  const patch = Object.fromEntries(requested.map((key) => [key, DEFAULT_CONFIG[key as keyof InlayConfig]]));
   const result = await inlayPatchConfig(ctx, { patch });
   return { ...result, reset_fields: requested };
 }
 
+/** Accumulated actor state of a chat (Asset Maid "current chat state"; replaces the 0.9 character-memory tags). */
 export async function inlayGetCharacterTags(
   ctx: ToolContext,
   input: { chat_id?: string }
 ): Promise<Record<string, unknown>> {
   const chatId = requireChat(ctx, input.chat_id);
-  const state = await inlayState(ctx, chatId);
-  return { chat_id: chatId, character_tags: state.characterAppearance };
+  const { actorState } = await inlayRpc(ctx, "chatState.get", { chatId });
+  return { chat_id: chatId, actor_state: actorState };
 }
 
 export async function inlayGetImageDetails(

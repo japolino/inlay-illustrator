@@ -70,7 +70,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     "inlay_describe_config",
     {
       title: "Describe Inlay configuration",
-      description: "Lists every Inlay Illustrator setting with its current value, default value, type, and allowed enum values. Uses Lumiverse's authenticated extension WebSocket bridge and never exposes credentials.",
+      description: "Lists every Inlay Illustrator settings section with its current and default value. Uses Lumiverse's authenticated extension WebSocket bridge and never exposes credentials.",
       inputSchema: {}
     },
     async () => ({ content: [{ type: "text", text: JSON.stringify(await inlayDescribeConfig(ctx)) }] })
@@ -80,7 +80,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     "inlay_patch_config",
     {
       title: "Patch Inlay configuration",
-      description: "Validates and applies a partial Inlay Illustrator configuration patch. Set dry_run=true to preview normalized before/after values without persisting anything.",
+      description: "Deep-merges and applies a partial Inlay Illustrator configuration patch (objects merge, arrays replace, null resets a field to its default). Set dry_run=true to preview normalized before/after values without persisting anything.",
       inputSchema: {
         patch: z.record(z.string(), z.unknown()),
         dry_run: z.boolean().optional()
@@ -106,8 +106,8 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
   server.registerTool(
     "inlay_get_character_tags",
     {
-      title: "Get generated character tags",
-      description: "Returns Inlay's durable generated character-appearance tags for the selected chat, exactly as shown in the extension's character-memory UI.",
+      title: "Get the chat's accumulated actor state",
+      description: "Returns Inlay's accumulated actor state for the selected chat (Asset Maid current chat state: outfits and appearance carried between turns).",
       inputSchema: { chat_id: z.string().optional() }
     },
     async (args) => ({ content: [{ type: "text", text: JSON.stringify(await inlayGetCharacterTags(ctx, args)) }] })
