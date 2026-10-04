@@ -136,7 +136,10 @@ export interface AnalysisStartParams {
   kind: AnalysisKind;
   characterId: string;
   evidenceMode?: EvidenceMode;
-  /** Explicit targets in UI order (AM `promptKeys`/`promptOrder`). */
+  /**
+   * character-prompts: UI order of the Assets tab rows (AM `promptOrder`; targets come from the analyze-enabled selection).
+   * references / asset-matching / reclassification: explicit targets (AM `promptKeys`).
+   */
   promptKeys?: string[];
   personaIds?: string[];
   /** asset-matching: re-run even when signatures are unchanged. */
@@ -319,9 +322,9 @@ export interface RpcMethods {
   "recognitionKeys.set": { params: { characterId: string; promptKey: string; keys: string[] }; result: WorkspaceSnapshot };
 
   /* custom characters */
-  "customCharacters.create": { params: { characterId: string; input: CustomCharacterInput }; result: { character: CustomCharacter; snapshot: WorkspaceSnapshot } };
-  "customCharacters.update": { params: { characterId: string; customId: string; input: CustomCharacterInput }; result: { character: CustomCharacter; snapshot: WorkspaceSnapshot } };
-  "customCharacters.remove": { params: { characterId: string; customId: string }; result: WorkspaceSnapshot };
+  "customCharacters.create": { params: { characterId: string; input: CustomCharacterInput; /** Document revision guard (`CharacterDocument.updatedAt` the UI edited). */ baseUpdatedAt?: string }; result: { character: CustomCharacter; snapshot: WorkspaceSnapshot } };
+  "customCharacters.update": { params: { characterId: string; customId: string; input: CustomCharacterInput; baseUpdatedAt?: string }; result: { character: CustomCharacter; snapshot: WorkspaceSnapshot } };
+  "customCharacters.remove": { params: { characterId: string; customId: string; baseUpdatedAt?: string }; result: WorkspaceSnapshot };
   "customCharacters.setRosterRegistered": { params: { characterId: string; customIds: string[] | "all"; registered: boolean }; result: WorkspaceSnapshot };
   "customCharacters.setWorkspaceEnabled": { params: { characterId: string; customIds: string[] | "all"; enabled: boolean }; result: WorkspaceSnapshot };
   "customCharacters.promote": { params: { characterId: string; customIds: string[] | "all" }; result: WorkspaceSnapshot };
@@ -339,7 +342,7 @@ export interface RpcMethods {
   "assets.setSelection": { params: { characterId: string; promptKey: string; assets: StoredAssetRef[] }; result: Ok };
   "assets.clearSelections": { params: { characterId: string; promptKeys?: string[] }; result: Ok };
   /** Set a form / outfit / persona reference from the picker. */
-  "assets.setReference": { params: { target: { kind: "character-form"; characterId: string; promptKey: string; formId: string } | { kind: "character-outfit"; characterId: string; promptKey: string; formId: string; outfitId: string } | { kind: "persona"; personaId: string; formId?: string; outfitId?: string } | { kind: "artist-extraction"; characterId: string }; asset: StoredAssetRef | null }; result: Ok };
+  "assets.setReference": { params: { target: { kind: "character-form"; characterId: string; promptKey: string; formId: string } | { kind: "character-outfit"; characterId: string; promptKey: string; formId: string; outfitId: string } | { kind: "persona"; personaId: string; formId?: string; outfitId?: string; /** Source scope (AM personaSettings.sourceScopes[characterId]); default = active chat character. */ characterId?: string } | { kind: "artist-extraction"; characterId: string }; asset: StoredAssetRef | null }; result: Ok };
   "assets.inspectMetadata": { params: { characterId: string; asset: AssetRef }; result: { hasMetadata: boolean; summary: MetadataSummary | null; raw?: unknown } };
   "assets.clearMetadataRecords": { params: { characterId: string; assetNames?: string[] }; result: Ok };
   /** Upload an image (base64 without data: prefix) as a reference asset. */
