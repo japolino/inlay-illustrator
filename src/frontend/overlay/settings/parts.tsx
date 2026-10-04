@@ -281,13 +281,15 @@ export function AnalyzeButton({ running, disabled, title, labels, onRun, onCance
 }
 
 /** Large radio card (analysis profile `jwe`, image provider `oxt`). */
-export function ChoiceCard({ selected, label, description, onSelect, gradient, image, disabled, ...rest }: {
+export function ChoiceCard({ selected, label, description, onSelect, gradient, image, monogram, disabled, ...rest }: {
   selected: boolean;
   label: string;
   description: string;
   onSelect?: () => void;
   gradient?: string;
   image?: { src: string; className: string };
+  /** Large decorative text at the right edge (port replacement for Asset Maid's remote images). */
+  monogram?: string;
   disabled?: boolean;
 } & Record<`data-${string}`, string>) {
   return (
@@ -300,8 +302,12 @@ export function ChoiceCard({ selected, label, description, onSelect, gradient, i
             selected ? "opacity-95 brightness-100 saturate-100" : "opacity-45 brightness-75 saturate-50 group-hover:opacity-60")} />
       ) : null}
       {gradient ? <span aria-hidden="true" class={cn("pointer-events-none absolute inset-0 bg-gradient-to-br transition-opacity duration-300", gradient, selected ? "opacity-100" : "opacity-45 group-hover:opacity-70")} /> : null}
+      {monogram ? (
+        <span aria-hidden="true" class={cn("pointer-events-none absolute -right-2 -bottom-6 text-[6.5rem] leading-none font-black tracking-tighter transition-[opacity,transform] duration-300 group-hover:scale-[1.015] mobile:text-[5rem]",
+          selected ? "text-primary/30" : "text-foreground/8 group-hover:text-foreground/12")}>{monogram}</span>
+      ) : null}
       <span aria-hidden="true" class={cn("pointer-events-none absolute inset-0", image ? cn("bg-gradient-to-r", selected ? "from-surface-prompt-field via-surface-prompt-field/72 to-transparent" : "from-surface-prompt-field via-surface-prompt-field/94 to-transparent") : "bg-gradient-to-t from-surface-prompt-field/82 via-transparent to-transparent")} />
-      <span class={cn("relative z-10 flex min-h-34 min-w-0 flex-col justify-between gap-4 p-4 mobile:min-h-28 mobile:p-3", image && "max-w-[62%]")}>
+      <span class={cn("relative z-10 flex min-h-34 min-w-0 flex-col justify-between gap-4 p-4 mobile:min-h-28 mobile:p-3", (image || monogram) && "max-w-[62%]")}>
         <span class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <span class={cn("min-w-0 truncate text-sm leading-tight font-extrabold", selected ? "text-selected-foreground" : "text-muted-foreground")}>{label}</span>
           {selected ? <SelectedPill /> : null}

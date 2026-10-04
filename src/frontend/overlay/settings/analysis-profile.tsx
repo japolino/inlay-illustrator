@@ -28,9 +28,10 @@ import { EyeIcon, GroupIcon, ImageIcon, PanelsIcon, PencilIcon, PlusIcon, RatioI
 import { ANALYSIS_LABELS as A, PAGE_TITLES } from "./labels.js";
 import { ChoiceCard, LabeledCheckbox, LoadingBox, SettingsFrame } from "./parts.js";
 
-const PROFILE_OPTIONS: Array<{ value: AnalysisProfile; image: string; imageClassName: string }> = [
-  { value: "v5-hybrid", image: "https://i.postimg.cc/W4rDTB61/5.png", imageClassName: "-right-6 h-[118%] w-[62%]" },
-  { value: "v4-5", image: "https://i.postimg.cc/dVZ3jbf6/4-5.png", imageClassName: "-right-3 h-[110%] w-[60%]" }
+/** Asset Maid hot-linked two mascot images (i.postimg.cc); the port draws a local monogram instead (no third-party requests). */
+const PROFILE_OPTIONS: Array<{ value: AnalysisProfile; monogram: string; gradient: string }> = [
+  { value: "v5-hybrid", monogram: "V5", gradient: "from-primary/28 via-primary/10 to-transparent" },
+  { value: "v4-5", monogram: "V4.5", gradient: "from-analyzer-key/22 via-analyzer-key/8 to-transparent" }
 ];
 
 const PRESET_ICONS: Record<string, FunctionComponent<{ className?: string }>> = {
@@ -75,7 +76,8 @@ export function ProfileSelector({ value, onChange }: { value: AnalysisProfile; o
           selected={value === option.value}
           label={A.profiles[option.value].label}
           description={A.profiles[option.value].description}
-          image={{ src: option.image, className: option.imageClassName }}
+          gradient={option.gradient}
+          monogram={option.monogram}
           onSelect={() => { if (value !== option.value) onChange(option.value); }}
           data-analysis-profile-option={option.value}
         />

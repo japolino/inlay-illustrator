@@ -283,6 +283,7 @@ export const IMAGE_LABELS = {
 
 export const SYSTEM_LABELS = {
   customSizes: "Custom resolutions", // 커스텀 해상도
+  noCustomSizes: "No custom resolutions. Built-in sizes are always available.",
   addSize: "Add custom resolution", // 커스텀 해상도 추가
   sizeWidth: "Custom resolution width", // 커스텀 해상도 가로
   sizeHeight: "Custom resolution height", // 커스텀 해상도 세로

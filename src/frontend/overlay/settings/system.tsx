@@ -205,6 +205,7 @@ export function CustomSizes({ sizes, onChange }: { sizes: readonly CustomImageSi
           <PlusIcon />
         </IconButton>
       </div>
+      {!rows.length ? <p class="text-2xs text-muted-foreground">{S.noCustomSizes}</p> : null}
       <div class="grid grid-cols-2 items-start gap-x-6 gap-y-2 mobile:grid-cols-1">
         {rows.map((row) => {
           const editing = draft?.id === row.id;
