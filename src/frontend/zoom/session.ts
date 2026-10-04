@@ -77,6 +77,7 @@ export function useZoomSession(app: AppController, initial: ZoomTarget, onClose:
   const chatRevision = useSelector(app.store, (s) => s.chatDataRevision[target.chatId] ?? 0);
   const jobs = useSelector(app.store, (s) => s.generationJobs);
   const items = useMemo(() => flattenItems(groups), [groups]);
+  const [groupsLoaded, setGroupsLoaded] = useState(false);
 
   const loadDetails = useCallback(async (next: ZoomTarget, keepOnError = false) => {
     const id = ++request.current;
@@ -106,6 +107,7 @@ export function useZoomSession(app: AppController, initial: ZoomTarget, onClose:
     try {
       const { messages } = await app.call("chatDom.getMessageStates", { chatId });
       setGroups(buildImageGroups(messages));
+      setGroupsLoaded(true);
     } catch {
       // keep the previous list
     }
@@ -157,6 +159,16 @@ export function useZoomSession(app: AppController, initial: ZoomTarget, onClose:
   }, [app, run]);
 
   const select = (item: ZoomImageItem) => setTarget({ chatId: targetRef.current.chatId, slotId: item.slotId, entryId: item.entryId, messageKey: item.messageKey });
+
+  // The viewed slot was removed elsewhere (message / swipe / slot deleted, maybe in another tab): move to another chat
+  // image, or close when the chat has none (qa #11: the viewer kept polling a dead slot).
+  useEffect(() => {
+    if (!groupsLoaded || loading || error?.code !== "not-found") return;
+    if (items.some((i) => i.slotId === target.slotId)) return;
+    const next = items.find((i) => i.messageKey === target.messageKey) ?? items[items.length - 1];
+    if (next) select(next);
+    else onClose();
+  }, [groupsLoaded, loading, error, items]);
 
   const session: ZoomSession = {
     target,

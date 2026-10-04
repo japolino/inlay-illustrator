@@ -7,6 +7,7 @@ import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { useSelector } from "../state/store.js";
 import { outfitDisplayLabel } from "../overlay/workspace/model.js";
+import { ARTISTS_LABELS } from "../overlay/workspace/labels/artists.js";
 import type { CurrentActorState } from "../../shared/contract/chat.js";
 import type { SlotDeletionPreview, ZoomDetails, ZoomPromptSection } from "../../shared/contract/rpc.js";
 import { cn } from "../overlay/ui/cn.js";
@@ -241,7 +242,7 @@ export function PromptField({ section, ordinal, editing, draft, onDraft, provide
             <span class="font-bold text-muted-foreground">{ZOOM_LABELS.artist}</span>
             <Select
               value={section.selectedArtistId || null}
-              options={section.artistChoices.map((c) => ({ value: c.id, label: c.label }))}
+              options={section.artistChoices.map((c) => ({ value: c.id, label: ARTISTS_LABELS.presetTitles[c.id] ?? c.label }))}
               onValueChange={(id) => onArtist(id)}
               disabled={choicesDisabled}
               aria-label={ZOOM_LABELS.artistSelect}
@@ -457,7 +458,7 @@ export function ChatStatePanel({ app, chatId, actorNames }: { app: AppController
     }
   };
   const clear = async (actorKeys?: string[]) => {
-    const ok = await confirm({ title: ZOOM_LABELS.clearConfirm, description: ZOOM_LABELS.clearConfirmDescription, confirmLabel: actorKeys ? fill(ZOOM_LABELS.clearActor, { actor: actorNames?.[actorKeys[0]!] ?? actorKeys[0]! }) : ZOOM_LABELS.clearAll, cancelLabel: ZOOM_LABELS.cancel });
+    const ok = await confirm({ title: ZOOM_LABELS.clearConfirm, description: ZOOM_LABELS.clearConfirmDescription, confirmLabel: actorKeys ? fill(ZOOM_LABELS.clearActor, { actor: nameOf(actorKeys[0]!) }) : ZOOM_LABELS.clearAll, cancelLabel: ZOOM_LABELS.cancel });
     if (!ok) return;
     setBusy(true);
     try {
@@ -472,14 +473,17 @@ export function ChatStatePanel({ app, chatId, actorNames }: { app: AppController
   };
   const actors = Object.entries(state?.actors ?? {});
   const locked = busy || saving || generating;
+  // Actor keys are prompt keys (`<characterId>::lore::<book>:<entry>`, `persona::<id>`): show roster titles.
+  const roster = useSelector(app.store, (s) => s.workspace?.roster);
+  const nameOf = (key: string): string => actorNames?.[key] ?? roster?.find((r) => r.promptKey === key)?.title ?? key;
   return (
     <section aria-label={ZOOM_LABELS.chatState} class="grid gap-3" data-ii-zoom-state="">
       {!state && busy ? <StatusBox tone="loading">{ZOOM_LABELS.loadingState}</StatusBox> : null}
       {state && actors.length === 0 ? <StatusBox tone="empty">{ZOOM_LABELS.stateEmpty}</StatusBox> : null}
       {actors.map(([key, record]) => (
-        <article key={key} class="grid gap-2 rounded-lg bg-card p-3">
-          <header class="flex items-center justify-between gap-2">
-            <span class="truncate text-xs font-extrabold">{actorNames?.[key] ?? key}</span>
+        <article key={key} class="grid min-w-0 gap-2 rounded-lg bg-card p-3">
+          <header class="flex min-w-0 items-center justify-between gap-2">
+            <span class="min-w-0 truncate text-xs font-extrabold" title={key}>{nameOf(key)}</span>
             <Button variant="ghost" size="sm" disabled={locked} onClick={() => void clear([key])}>{fill(ZOOM_LABELS.clearActor, { actor: "" }).trim()}</Button>
           </header>
           {Object.entries(record.groups).filter(([, tags]) => tags.length > 0).map(([group, tags]) => {
