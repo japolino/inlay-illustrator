@@ -5486,6 +5486,10 @@ function NB(e) {
       r = t?.lorebooks.length === 1 ? t.lorebooks[0] : null;
     return t && r ? Fs(t, r) : "";
   }
+// AM Vnt @90584
+function Vnt(e, t) {
+    return EB(e, t).map(({ promptKey: r }) => r);
+  }
 // AM Ufe @90587
 function Ufe(e) {
     const t = zi(e.name || e.key);
@@ -6014,11 +6018,210 @@ function OP(e, t) {
     }
     return r.size === 1 ? [...r.values()][0] : null;
   }
+// AM Fn @91142
+function Fn(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM mT @91145
+function mT(e) {
+    return Fn(e).normalize("NFKC").toLocaleLowerCase();
+  }
 // AM Iw @91179
 function Iw(e, t) {
     if (!t) return e.key;
     const r = e.lorebooks.find((n) => n.id === t);
     return r ? Fs(e, r) : `${e.key}::lore::${t}`;
+  }
+// AM sh @92689
+function sh(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM xot @92692
+function xot(e, t) {
+    return [t, sh(e.key), sh(e.name), sh(e.extension).replace(/^\./u, "").toLowerCase()].join("\0");
+  }
+// AM _ot @92695
+function _ot() {
+    return typeof DOMException == "function"
+      ? new DOMException("The operation was aborted.", "AbortError")
+      : Object.assign(new Error("The operation was aborted."), { name: "AbortError" });
+  }
+// AM KB @92700
+function KB(e) {
+    return e instanceof Error && e.name === "AbortError";
+  }
+// AM $B @92703
+function $B(e) {
+    if (e?.aborted) throw e.reason ?? _ot();
+  }
+// AM Iot @92706
+function Iot(e) {
+    const t = Math.max(1, Math.floor(e.maxEntries ?? 128)),
+      r = new Map();
+    let n = !1;
+    const o = (a, i) => {
+      for (r.delete(a), r.set(a, i); r.size > t;) {
+        const s = r.keys().next().value;
+        if (!s) break;
+        r.delete(s);
+      }
+    };
+    return {
+      async readAsset(a, i = {}) {
+        if (n) throw new Error("Stored asset reader is disposed.");
+        $B(i.signal);
+        const s = sh(e.getScopeKey?.(a)),
+          c = xot(a, s),
+          l = r.get(c);
+        if (l)
+          try {
+            return await e.primary.readAsset(l, i);
+          } catch (f) {
+            if (KB(f) || i.signal?.aborted) throw f;
+            r.delete(c);
+          }
+        let d;
+        try {
+          return await e.primary.readAsset(a, i);
+        } catch (f) {
+          if (KB(f) || i.signal?.aborted) throw f;
+          d = f;
+        }
+        $B(i.signal);
+        const u = await e.resolveFallback(a);
+        if (($B(i.signal), !u || !sh(u.key) || sh(u.key) === sh(a.key) || sh(e.getScopeKey?.(a)) !== s)) throw d;
+        try {
+          const f = await e.primary.readAsset(u, i);
+          return (sh(e.getScopeKey?.(a)) === s && o(c, u), f);
+        } catch (f) {
+          throw KB(f) || i.signal?.aborted ? f : d;
+        }
+      },
+      clear() {
+        r.clear();
+      },
+      dispose() {
+        ((n = !0), r.clear());
+      },
+    };
+  }
+// AM GB @93068
+var GB = () => [];
+// AM cme @93069
+var cme = new WeakMap();
+// AM lme @93070
+function lme(e, t) {
+    let r = cme.get(e);
+    r || ((r = new WeakMap()), cme.set(e, r));
+    let n = r.get(t);
+    return (n || ((n = { members: {}, sources: {} }), r.set(t, n)), n);
+  }
+// AM kw @93076
+function kw(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM Not @93079
+function Not(e) {
+    return [...new Set(e.map(kw).filter(Boolean))];
+  }
+// AM Rot @93082
+function Rot(e) {
+    let t = 2166136261;
+    const r = (n) => {
+      const o = kw(n);
+      for (let a = 0; a < o.length; a += 1) ((t ^= o.charCodeAt(a)), (t = Math.imul(t, 16777619)));
+    };
+    for (const n of e)
+      (r(n.id),
+        r(n.title),
+        n.recognitionKeys.forEach(r),
+        r(n.rosterRegistered === !1 ? "unregistered" : "registered"),
+        r(n.workspaceEnabled === !1 ? "disabled" : "enabled"),
+        r(n.origin ?? "registered"));
+    return (t >>> 0).toString(16).padStart(8, "0");
+  }
+// AM Mot @93097
+function Mot(e) {
+    return `virtual-character:${kw(e)}`;
+  }
+// AM zot @93100
+function zot(e, t) {
+    const r = e.members.reduce((n, o) => n + o.assetCount, 0);
+    return t.flatMap((n) => {
+      const o = kw(n.id),
+        a = kw(n.title),
+        i = Not(n.recognitionKeys),
+        s = n.rosterRegistered !== !1 && n.workspaceEnabled !== !1;
+      if (!o || !a || !i.length) return [];
+      const c = {
+        kind: "lorebook",
+        id: o,
+        selectionId: o,
+        title: a,
+        keys: i,
+        primaryKeys: i,
+        secondaryKeys: [],
+        selective: !1,
+        useRegex: !1,
+        content: "",
+        score: 0,
+        alwaysActive: !1,
+        sourceType: "character",
+        sourceName: e.name,
+        runtimePromptKey: o,
+        runtimeOrigin: { kind: "custom-character", id: o, ...(n.origin === "ai-auto" ? { origin: "ai-auto" } : {}) },
+        runtimeSelected: s,
+        runtimeBasePrompt: "",
+      };
+      return [
+        {
+          sourceId: e.id,
+          id: o,
+          key: Mot(o),
+          name: a,
+          aliases: i,
+          sourceSummary: "",
+          lorebooks: [c],
+          originalAssets: GB(),
+          outfitGeneratedAssets: GB(),
+          chatGeneratedAssets: GB(),
+          assetCount: r,
+          previewAsset: null,
+          characterIndex: e.index,
+          characterTarget: e.characterTarget,
+          assetScope: "source",
+        },
+      ];
+    });
+  }
+// AM dme @93149
+function dme(e, t, r = "active") {
+    const n = lme(e, t),
+      o = (n.members.all ??= zot(e, t));
+    if (r === "all") return o;
+    if (!n.members.registered) {
+      const a = new Set(t.filter((i) => i.rosterRegistered !== !1).map((i) => kw(i.id)));
+      n.members.registered = o.filter((i) => a.has(i.id));
+    }
+    return r === "registered"
+      ? n.members.registered
+      : (n.members.active ??= n.members.registered.filter((a) => a.lorebooks[0].runtimeSelected === !0));
+  }
+// AM rI @93161
+function rI(e, t, r = "active") {
+    if (!e) return null;
+    const n = lme(e, t),
+      o = n.sources[r];
+    if (o) return o;
+    const a = dme(e, t, r);
+    if (!a.length) return (n.sources[r] = e);
+    const i = new Set(a.map((c) => c.id)),
+      s = Rot(t.filter((c) => i.has(kw(c.id))));
+    return (n.sources[r] = {
+      ...e,
+      assetGeneration: `${e.assetGeneration ?? "source"}|runtime-lore:${s}`,
+      members: [...e.members, ...a],
+    });
   }
 // AM Tot @93206
 function Tot(e) {
@@ -12418,6 +12621,7 @@ export {
   EB,
   Gnt,
   NB,
+  Vnt,
   Ufe,
   qfe,
   RB,
@@ -12446,7 +12650,25 @@ export {
   Jfe,
   mot,
   OP,
+  Fn,
+  mT,
   Iw,
+  sh,
+  xot,
+  _ot,
+  KB,
+  $B,
+  Iot,
+  GB,
+  cme,
+  lme,
+  kw,
+  Not,
+  Rot,
+  Mot,
+  zot,
+  dme,
+  rI,
   Tot,
   bd,
   La,
