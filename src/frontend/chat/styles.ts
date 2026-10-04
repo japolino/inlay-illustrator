@@ -282,7 +282,8 @@ export const CHAT_SIDE_CSS = String.raw`
 .ii-am-root.ii-am-chat-runtime-host {
   position: fixed;
   right: 18px;
-  bottom: 66px;
+  /* Above the host composer: src/frontend/composer-inset.ts measures it (fallback 66px). */
+  bottom: var(--ii-am-composer-inset, 66px);
   z-index: 9989;
   display: block;
   width: min(380px, calc(100vw - 36px));

@@ -1,6 +1,7 @@
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
 import { render } from "preact";
 import { CLEANUP_KEY, DRAWER_TAB_OPTIONS } from "./frontend/constants.js";
+import { startComposerInset } from "./frontend/composer-inset.js";
 import { installInlayFab, loadFabCorner, saveFabCorner, type FabCorner } from "./frontend/fab.js";
 import { INPUT_BAR_ACTION_ID, OVERLAY_ROOT_CLASS } from "./frontend/overlay/constants.js";
 import { createOverlayController, type OverlayController } from "./frontend/overlay/controller.js";
@@ -61,6 +62,9 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
     getActiveChatId: activeChatId,
     subscribeOverlay: (listener) => store.subscribe(() => listener(store.get().overlayOpen))
   });
+
+  // Our body-level layers (FAB, count panel, toasts) sit above the host composer, whatever its height.
+  const composer = startComposerInset();
 
   // FAB corner is a device preference; the launcher panel edits it.
   const cornerListeners = new Set<(corner: FabCorner) => void>();
@@ -137,6 +141,7 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
       cornerListeners.add(listener);
       return () => cornerListeners.delete(listener);
     },
+    composer,
     subscribeHidden: (listener) => {
       const zoomSignal = zoomVisibility(app);
       const update = () => listener(store.get().overlayOpen || zoomSignal.isOpen());
@@ -168,6 +173,7 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
     unsubForeign();
     unsubChatSwitched();
     unsubOverlayDrawer();
+    composer.stop();
     removeChatSide();
     zoom.destroy();
     removeInputBarClick?.();

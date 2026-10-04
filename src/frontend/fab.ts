@@ -17,6 +17,7 @@
  */
 
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
+import { COMPOSER_INSET_VAR, rectToCssPx, type ComposerInsetTracker } from "./composer-inset.js";
 
 export type FabCorner = "bottom-right" | "bottom-left" | "top-right" | "top-left";
 export const FAB_CORNER_OPTIONS: Array<{ value: FabCorner; label: string }> = [
@@ -249,7 +250,8 @@ function clamp(value: number, min: number, max: number): number {
 
 export function fabButtonEdges(corner: FabCorner): Edges {
   const inset = px(FAB_INSET_PX);
-  const bottom = px(FAB_BOTTOM_INSET_PX);
+  // Above the host composer (src/frontend/composer-inset.ts publishes the measured inset).
+  const bottom = `var(${COMPOSER_INSET_VAR}, ${px(FAB_BOTTOM_INSET_PX)})`;
   if (corner === "bottom-right") return { right: px(FAB_BOTTOM_RIGHT_INSET_PX), bottom, left: "auto", top: "auto" };
   if (corner === "bottom-left") return { left: inset, bottom, right: "auto", top: "auto" };
   if (corner === "top-right") return { right: inset, top: inset, left: "auto", bottom: "auto" };
@@ -258,11 +260,11 @@ export function fabButtonEdges(corner: FabCorner): Edges {
 
 export type FabRect = { left: number; right: number; top: number; bottom: number; width: number; height: number };
 
-export function fabButtonRect(corner: FabCorner, viewport: { width: number; height: number }): FabRect {
+export function fabButtonRect(corner: FabCorner, viewport: { width: number; height: number }, bottomInset = FAB_BOTTOM_INSET_PX): FabRect {
   const size = 48;
   const right = corner === "bottom-right" ? FAB_BOTTOM_RIGHT_INSET_PX : FAB_INSET_PX;
   const left = corner.endsWith("-right") ? viewport.width - right - size : FAB_INSET_PX;
-  const top = corner.startsWith("top") ? FAB_INSET_PX : viewport.height - FAB_BOTTOM_INSET_PX - size;
+  const top = corner.startsWith("top") ? FAB_INSET_PX : viewport.height - bottomInset - size;
   return { left, top, right: left + size, bottom: top + size, width: size, height: size };
 }
 
@@ -317,6 +319,8 @@ export function installInlayFab(
     subscribeCorner?: (listener: (corner: FabCorner) => void) => () => void;
     /** Hidden while our overlay or the zoom viewer covers the page (the FAB must not sit above them). */
     subscribeHidden?: (listener: (hidden: boolean) => void) => () => void;
+    /** Composer inset tracker (body zoom calibration for the menu placement). */
+    composer?: Pick<ComposerInsetTracker, "current" | "unitPx" | "viewportCss">;
   }
 ): (() => void) & { setCorner?: (corner: FabCorner) => void } {
   if (typeof document === "undefined") return () => {};
@@ -378,25 +382,20 @@ export function installInlayFab(
   }
 
   function positionMenu(): void {
+    // Rects are in viewport units; menu.style.left/top are CSS px inside the (possibly zoomed) body.
+    const unit = options.composer?.unitPx() ?? 1;
+    const viewport = options.composer?.viewportCss() ?? { width: window.innerWidth, height: window.innerHeight };
+    const toCss = (value: number) => rectToCssPx(value, unit);
     const buttonRect = typeof button.getBoundingClientRect === "function"
-      ? button.getBoundingClientRect()
-      : fabButtonRect(corner, { width: window.innerWidth, height: window.innerHeight });
+      ? (() => {
+        const r = button.getBoundingClientRect();
+        return { left: toCss(r.left), top: toCss(r.top), right: toCss(r.right), bottom: toCss(r.bottom), width: toCss(r.width), height: toCss(r.height) };
+      })()
+      : fabButtonRect(corner, viewport, options.composer?.current() ?? FAB_BOTTOM_INSET_PX);
     const measured = typeof menu.getBoundingClientRect === "function" ? menu.getBoundingClientRect() : { width: 0, height: 0 };
-    const menuWidth = measured && measured.width > 0 ? measured.width : 230;
-    const menuHeight = measured && measured.height > 0 ? measured.height : 140;
-    const position = fabMenuPosition(
-      corner,
-      {
-        left: buttonRect.left,
-        top: buttonRect.top,
-        right: buttonRect.right,
-        bottom: buttonRect.bottom,
-        width: buttonRect.width,
-        height: buttonRect.height
-      },
-      { width: menuWidth, height: menuHeight },
-      { width: window.innerWidth, height: window.innerHeight }
-    );
+    const menuWidth = measured && measured.width > 0 ? toCss(measured.width) : 230;
+    const menuHeight = measured && measured.height > 0 ? toCss(measured.height) : 140;
+    const position = fabMenuPosition(corner, buttonRect, { width: menuWidth, height: menuHeight }, viewport);
     menu.style.left = px(position.left);
     menu.style.top = px(position.top);
     menu.style.right = "auto";
