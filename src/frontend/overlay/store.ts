@@ -1,14 +1,8 @@
 import { useEffect, useState } from "preact/hooks";
-import { DEFAULT_CONFIG, type Config } from "../../shared/config.js";
-import type { ImageConnection, ParserConnection } from "../contracts.js";
 
-/** Frontend snapshot shared by the overlay, the launcher panel and chat-side helpers. */
+/** Host-side snapshot shared by the overlay controller and the launchers (no backend data: see AppController). */
 export type FrontendSnapshot = {
   chatId: string;
-  status: string;
-  config: Config;
-  parserConnections: ParserConnection[];
-  imageConnections: ImageConnection[];
   overlayOpen: boolean;
 };
 
@@ -17,15 +11,7 @@ export class FrontendStore {
   private readonly listeners = new Set<() => void>();
 
   constructor(initial?: Partial<FrontendSnapshot>) {
-    this.snapshot = {
-      chatId: "",
-      status: "Loading…",
-      config: { ...DEFAULT_CONFIG },
-      parserConnections: [],
-      imageConnections: [],
-      overlayOpen: false,
-      ...initial
-    };
+    this.snapshot = { chatId: "", overlayOpen: false, ...initial };
   }
 
   get(): FrontendSnapshot {

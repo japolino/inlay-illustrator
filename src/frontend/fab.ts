@@ -17,8 +17,35 @@
  */
 
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
-import type { Config, FabCorner } from "../shared/config.js";
-import { normalizeFabCorner } from "../shared/config.js";
+
+export type FabCorner = "bottom-right" | "bottom-left" | "top-right" | "top-left";
+export const FAB_CORNER_OPTIONS: Array<{ value: FabCorner; label: string }> = [
+  { value: "bottom-right", label: "Bottom right" },
+  { value: "bottom-left", label: "Bottom left" },
+  { value: "top-right", label: "Top right" },
+  { value: "top-left", label: "Top left" }
+];
+export const DEFAULT_FAB_CORNER: FabCorner = "bottom-right";
+export function normalizeFabCorner(value: unknown): FabCorner {
+  const text = String(value ?? "").trim().toLowerCase();
+  return (FAB_CORNER_OPTIONS.some((option) => option.value === text) ? text : DEFAULT_FAB_CORNER) as FabCorner;
+}
+const FAB_CORNER_STORAGE_KEY = "inlay-illustrator:fab-corner";
+/** FAB corner is a per-device preference (localStorage), not part of the Asset Maid config. */
+export function loadFabCorner(storage: Pick<Storage, "getItem"> | undefined = globalThis.localStorage): FabCorner {
+  try {
+    return normalizeFabCorner(storage?.getItem(FAB_CORNER_STORAGE_KEY));
+  } catch {
+    return DEFAULT_FAB_CORNER;
+  }
+}
+export function saveFabCorner(corner: FabCorner, storage: Pick<Storage, "setItem"> | undefined = globalThis.localStorage): void {
+  try {
+    storage?.setItem(FAB_CORNER_STORAGE_KEY, corner);
+  } catch {
+    /* private mode */
+  }
+}
 
 export type Edges = Partial<Record<"left" | "right" | "top" | "bottom", string>>;
 
@@ -262,8 +289,16 @@ export function installInlayFab(
     getCorner: () => FabCorner;
     openGallery: () => void;
     openSettings?: () => void;
+    /** Empty turn: generate illustrations for the latest assistant message. */
+    generateLatest: () => Promise<unknown> | void;
+    /** Menu: reroll the latest message's illustrations. */
+    rerollLatest: () => Promise<unknown> | void;
+    /** Busy state source (running generation jobs). */
+    subscribeBusy?: (listener: (busy: boolean) => void) => () => void;
+    /** Corner changes (launcher setting). */
+    subscribeCorner?: (listener: (corner: FabCorner) => void) => () => void;
   }
-): () => void {
+): (() => void) & { setCorner?: (corner: FabCorner) => void } {
   if (typeof document === "undefined") return () => {};
 
   let corner = normalizeFabCorner(options.getCorner());
@@ -307,10 +342,9 @@ export function installInlayFab(
   }
 
   const rerollItem = menuItem(MENU_REROLL, "Reroll images (from this turn)", SVG_REFRESH);
-  const sidecarItem = menuItem(MENU_SIDECAR, "Reroll images with sidecar (from this turn)", SVG_LLM);
   const galleryItem = menuItem(MENU_GALLERY, "Open Gallery", SVG_GALLERY);
-  const settingsItem = menuItem(MENU_SETTINGS, "Open Settings", SVG_SETTINGS);
-  menu.append(rerollItem, sidecarItem, galleryItem, settingsItem);
+  const settingsItem = menuItem(MENU_SETTINGS, "Open Inlay Illustrator", SVG_SETTINGS);
+  menu.append(rerollItem, galleryItem, settingsItem);
 
   function applyEdges(element: HTMLElement, edges: Edges): void {
     element.style.left = edges.left ?? "auto";
@@ -357,7 +391,6 @@ export function installInlayFab(
     positionMenu();
     button.setAttribute("aria-expanded", "true");
     rerollItem.disabled = busy;
-    sidecarItem.disabled = busy;
   }
 
   function closeMenu(): void {
@@ -393,10 +426,7 @@ export function installInlayFab(
   function setBusy(next: boolean): void {
     busy = next;
     button.classList.toggle("inlay-fab-busy", next);
-    if (menuOpen) {
-      rerollItem.disabled = next;
-      sidecarItem.disabled = next;
-    }
+    if (menuOpen) rerollItem.disabled = next;
   }
 
   function activeChatId(): string {
@@ -463,28 +493,16 @@ export function installInlayFab(
       options.openGallery();
       return;
     }
-    const chatId = activeChatId();
-    if (!chatId) return;
-    setBusy(true);
-    ctx.sendToBackend({
-      type: "reroll_all_images",
-      requestId: makeRequestId("inlay-fab-reroll-all"),
-      chatId,
-      sidecar: action === MENU_SIDECAR
-    });
+    if (!activeChatId()) return;
+    void Promise.resolve(options.rerollLatest()).catch(() => undefined);
   }
 
   function handleButtonClick(): void {
     if (busy) return;
     if (!hasImagesThisTurn) {
       // Empty turn: trigger generation for this turn!
-      const chatId = activeChatId();
-      if (!chatId) return;
-      setBusy(true);
-      ctx.sendToBackend({
-        type: "generate_latest",
-        chatId
-      });
+      if (!activeChatId()) return;
+      void Promise.resolve(options.generateLatest()).catch(() => undefined);
       return;
     }
     // Normal state: toggle popup menu
@@ -543,53 +561,15 @@ export function installInlayFab(
     if (menuOpen) positionMenu();
   }
 
-  const unsubscribeBackend = ctx.onBackendMessage((payload: unknown) => {
-    if (!payload || typeof payload !== "object") return;
-    const message = payload as Record<string, unknown>;
-    if (message.type === "status") {
-      if (typeof message.busy === "boolean") {
-        setBusy(message.busy === true);
-      } else {
-        const s = String(message.status || "");
-        if (
-          s === "Generated" ||
-          s === "Error" ||
-          s === "Ready" ||
-          s === "Skipped" ||
-          s === "No image generated" ||
-          s === "Already generated" ||
-          s.startsWith("Error:") ||
-          Boolean(message.error)
-        ) {
-          setBusy(false);
-        }
-      }
-      checkTurnState();
-    } else if (message.type === "generation_progress") {
-      const stage = String(message.stage || "");
-      if (stage === "completed" || stage === "failed" || stage === "cancelled") {
-        setBusy(false);
-      }
-      checkTurnState();
-    } else if (message.type === "config_updated" || message.type === "state") {
-      const config = message.config && typeof message.config === "object"
-        ? message.config as Record<string, unknown>
-        : null;
-      if (config && config.fabCorner !== undefined) {
-        setCorner(config.fabCorner as FabCorner);
-      }
-      checkTurnState();
-    } else if (
-      message.type === "inlay_reroll_all_result" ||
-      message.type === "inlay_image_action_result"
-    ) {
-      setBusy(false);
-      checkTurnState();
-    }
-  });
+  const unsubscribeBusy = options.subscribeBusy?.((next) => {
+    setBusy(next);
+    checkTurnState();
+  }) ?? (() => undefined);
+  const unsubscribeCorner = options.subscribeCorner?.((next) => setCorner(next)) ?? (() => undefined);
 
   return () => {
-    unsubscribeBackend();
+    unsubscribeBusy();
+    unsubscribeCorner();
     if (checkDebounceTimer) clearTimeout(checkDebounceTimer);
     chatObserver?.disconnect();
     document.removeEventListener("click", onDocumentClick, true);

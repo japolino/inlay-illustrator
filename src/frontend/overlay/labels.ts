@@ -69,6 +69,7 @@ export const SETTINGS_GROUPS: Array<{ label: string; items: Array<{ id: Settings
 
 export const DEFAULT_SETTINGS_SECTION: SettingsSection = "charx";
 
+/** @deprecated interim labels (settings sub-agent replaces them). */
 export const SYSTEM_SETTINGS_LABELS = {
   displaySection: "In-chat display",
   fabCorner: "Floating button corner",
@@ -90,9 +91,25 @@ export const SYSTEM_SETTINGS_LABELS = {
 
 export const LAUNCHER_LABELS = {
   title: "Inlay Illustrator",
-  subtitle: "Asset Maid scene illustration and character assets (work in progress).",
+  subtitle: "Scene illustrations and character assets (Asset Maid port).",
   open: "Open Inlay Illustrator",
+  settings: "Open settings",
   status: "Status",
+  backend: "Backend",
+  ready: "Ready",
+  connecting: "Connecting…",
+  error: "Error",
+  character: "Character",
+  none: "None",
+  imageProvider: "Image generation",
+  notConnected: "No image connection",
+  permissions: "Permissions",
+  missing: (list: string) => `Missing: ${list}`,
+  jobs: "Jobs",
+  idle: "Idle",
+  autoGeneration: "Automatic chat images", // 자동 생성
+  autoGenerationHint: "Illustrate new assistant messages automatically.",
+  fabCorner: "Floating button",
   inputBarLabel: "Inlay Illustrator",
   inputBarSubtitle: "Open the Asset Maid workspace"
 } as const;

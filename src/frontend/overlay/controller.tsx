@@ -27,7 +27,6 @@ export type OverlayController = {
 export type OverlayControllerOptions = {
   store: FrontendStore;
   app: AppController;
-  patchConfig: (patch: Partial<import("../../shared/config.js").Config>) => void;
   doc?: Document;
   onHostFallback?: (kind: OverlayHostKind, error: unknown) => void;
 };

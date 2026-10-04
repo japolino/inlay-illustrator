@@ -169,7 +169,7 @@ describe("overlay controller", () => {
     const { FrontendStore } = await import("./store.js");
     const ui: FakeUi = { calls: [], visible: [] };
     const store = new FrontendStore();
-    const controller = createOverlayController(fakeCtx(ui), { store, app: testApp(), patchConfig: () => undefined, doc });
+    const controller = createOverlayController(fakeCtx(ui), { store, app: testApp(), doc });
     expect(controller.hostKind()).toBeNull();
     controller.open();
     controller.close();
@@ -200,7 +200,7 @@ describe("overlay controller", () => {
   test("opens the settings area with the Asset Maid navigation", async () => {
     const { createOverlayController } = await import("./controller.js");
     const { FrontendStore } = await import("./store.js");
-    const controller = createOverlayController(fakeCtx({ calls: [], visible: [] }), { store: new FrontendStore(), app: testApp(), patchConfig: () => undefined, doc });
+    const controller = createOverlayController(fakeCtx({ calls: [], visible: [] }), { store: new FrontendStore(), app: testApp(), doc });
     controller.open({ settings: "system" });
     const items = [...doc.querySelectorAll("[data-settings-navigation-item]")].map((item) => item.getAttribute("data-settings-navigation-item"));
     expect(items).toEqual(["analysis-profile", "charx", "all-charx", "model", "image-model", "system"]);
