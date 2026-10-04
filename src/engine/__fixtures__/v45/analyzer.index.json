@@ -1,0 +1,12 @@
+{
+ "scenarios": [
+  "single-stage",
+  "single-stage-errors",
+  "modifier-repair",
+  "continuity-changed",
+  "two-stage",
+  "revision-and-images",
+  "outfit-proposal"
+ ],
+ "seed": 45
+}
