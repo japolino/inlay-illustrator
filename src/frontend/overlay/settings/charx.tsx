@@ -21,8 +21,9 @@ import type { AnalysisKind } from "../../../shared/contract/rpc.js";
 import { useApp, useAppState, useRpcQuery } from "../../state/app-state.js";
 import { toRpcError } from "../../rpc/client.js";
 import { Button, IconButton, Select, Switch, TrashIcon, cn, useConfirm, type SelectOption } from "../ui/index.js";
-import { PencilIcon, PlusIcon, ResetIcon, SpinnerIcon } from "./icons.js";
+import { ResetIcon, SpinnerIcon } from "./icons.js";
 import { CHARX_LABELS as X, COMMON_LABELS as C, PAGE_TITLES } from "./labels.js";
+import { CharxRegexRows } from "./charx-regex.js";
 import { AnalyzeButton, Badge, ErrorBox, LoadingBox, Row, SaveActions, SectionCard, SettingsFrame } from "./parts.js";
 
 export type CharxScope = "charx" | "all";
@@ -244,7 +245,6 @@ export function CharxSettingsPage({ scope }: { scope: CharxScope }) {
   const negativeField: PromptField = anima ? "animaNegativePrompt" : "negativePrompt";
   const metadataState = sourceMetadataState(workspace?.metadataAvailability);
   const metadataPresent = Object.keys(workspace?.metadataAvailability ?? {}).length > 0;
-  const regexRows = regexRowsOf(workspace?.document.characterPrompt.charxAssetRegexAnalysis);
   const sizeOptions = fixedResolutionOptions(config.runtime.customImageSizes);
   const metadataTone = metadataState === "none" ? "danger" : metadataState === "partial" ? "warning" : metadataState === "available" ? "success" : "neutral";
   const analyzeLabels = { analyze: X.analyze, stop: X.stop, stopAnalysis: X.stopAnalysis };
@@ -320,23 +320,7 @@ export function CharxSettingsPage({ scope }: { scope: CharxScope }) {
         <Row title={X.assetClassification.title} description={X.assetClassification.description}>
           <AnalyzeButton running={!!runningMatching} title={X.assetClassificationTitle} labels={analyzeLabels} onRun={() => startAnalysis("asset-matching")} onCancel={() => runningMatching && void app.cancelAnalysis(runningMatching.jobId)} />
         </Row>
-        <div class="grid gap-2 py-3" data-charx-regex="">
-          <Row title={X.regex.title} description={X.regex.description} className="py-0">
-            <IconButton label={X.regexAdd} disabled title={X.regexLater}><PlusIcon /></IconButton>
-            <AnalyzeButton running={false} disabled title={X.regexLater} labels={analyzeLabels} onRun={() => undefined} onCancel={() => undefined} />
-          </Row>
-          {regexRows.length ? (
-            <div class="grid gap-1.5">
-              {regexRows.map((row) => (
-                <div key={row.id} class="flex min-w-0 items-center gap-1.5">
-                  <input class="h-8 min-w-0 flex-1 rounded-md border-0 bg-surface-prompt-field px-2.5 font-mono text-2xs text-foreground outline-none" readOnly value={row.value} aria-label={X.regexInput} />
-                  <IconButton label={C.edit} disabled title={X.regexLater}><PencilIcon /></IconButton>
-                </div>
-              ))}
-            </div>
-          ) : <p class="text-2xs text-muted-foreground">{X.regexEmpty}</p>}
-          <p class="text-2xs text-muted-foreground/80">{X.regexLater}</p>
-        </div>
+        <CharxRegexRows characterId={characterId} analysis={workspace?.document.characterPrompt.charxAssetRegexAnalysis} disabled={scope === "all"} />
       </SectionCard>
       <SectionCard title={X.dataManagement} disabled={scope === "all"}>
         <Row title={X.metadataRecord.title} description={X.metadataRecord.description}>
@@ -365,16 +349,3 @@ function ToggleRow({ title, description, marker, checked, onChange, field }: { t
   );
 }
 
-/** Regex rows from `charxAssetRegexAnalysis[targetId].detectors[].in` (`dxt` 144887). */
-export function regexRowsOf(analysis: Record<string, unknown> | undefined): Array<{ id: string; targetId: string; detectorIndex: number; value: string }> {
-  const rows: Array<{ id: string; targetId: string; detectorIndex: number; value: string }> = [];
-  for (const [targetId, entry] of Object.entries(analysis ?? {})) {
-    const detectors = entry && typeof entry === "object" ? (entry as { detectors?: unknown }).detectors : undefined;
-    if (!Array.isArray(detectors)) continue;
-    detectors.forEach((detector, index) => {
-      const value = detector && typeof detector === "object" ? (detector as { in?: unknown }).in : undefined;
-      if (typeof value === "string") rows.push({ id: `${targetId}:${index}`, targetId, detectorIndex: index, value });
-    });
-  }
-  return rows;
-}

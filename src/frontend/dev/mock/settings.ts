@@ -167,6 +167,22 @@ export function settingsMockHandlers(): MockHandlers {
       ctx.emit("config.changed", { config: ctx.db.config });
       return { effective: resolveEffectiveCharxSettings(scopeOf(ctx.db, characterId), characterId) };
     },
+    "charxRegex.setDetectors": ({ characterId, detectors }, ctx) => {
+      const doc = documentFor(ctx.db, characterId);
+      for (const [index, d] of detectors.entries()) {
+        try {
+          new RegExp(String(d.in), "u");
+        } catch {
+          ctx.fail("bad-request", `Detector ${index + 1} is not a valid regular expression.`);
+        }
+      }
+      const map = (doc.characterPrompt.charxAssetRegexAnalysis ?? {}) as Record<string, unknown>;
+      const analysis = { status: detectors.length ? "done" : "not_applicable", analyzedAt: new Date().toISOString(), detectors, error: "" };
+      doc.characterPrompt.charxAssetRegexAnalysis = { ...map, [characterId]: analysis } as typeof doc.characterPrompt.charxAssetRegexAnalysis;
+      doc.updatedAt = new Date().toISOString();
+      ctx.emit("document.changed", { characterId, updatedAt: doc.updatedAt, reason: "charx-regex" });
+      return { analysis };
+    },
     "character.reset": async ({ characterId }, ctx) => {
       if (!findCharacter(ctx.db, characterId)) ctx.fail("not-found", `Character ${characterId} not found.`);
       await ctx.delay(400);

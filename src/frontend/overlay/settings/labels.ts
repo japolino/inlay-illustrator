@@ -155,7 +155,10 @@ export const CHARX_LABELS = {
   regexAdd: "Add regex entry", // 정규식 항목 추가
   regexInput: "Character asset regex", // charx 에셋 정규식
   regexEmpty: "No analyzed or added regexes.", // 분석되거나 추가된 정규식이 없습니다.
-  regexLater: "Regex analysis and editing are not available yet in Inlay Illustrator.",
+  regexEdit: "Edit regex", // 정규식 편집
+  regexSave: "Save regex", // 정규식 저장
+  regexDelete: "Delete regex", // 정규식 삭제
+  regexInvalid: "Enter a valid regex.", // 유효한 정규식을 입력하세요.
   analyze: "Analyze", // 분석
   stop: "Stop", // 중지
   stopAnalysis: "Stop analysis", // 분석 중지

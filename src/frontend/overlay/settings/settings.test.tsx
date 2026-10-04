@@ -22,7 +22,8 @@ import {
   toggleSizeCandidate
 } from "./directions.js";
 import { saveCustomSize, setAnalysisMode, setCountMode, setCountRange, setFixedCount, setSplitTotal } from "./system-helpers.js";
-import { anyCharxDirty, fixedResolutionOptions, regexRowsOf, resetAllPatch, sourceMetadataState } from "./charx.js";
+import { anyCharxDirty, fixedResolutionOptions, resetAllPatch, sourceMetadataState } from "./charx.js";
+import { detectorsOf, nextDetectors, regexError } from "./charx-regex.js";
 import { formatLogList, mergeLogEntries, scopeLabel } from "./logs.js";
 import { pickAnalyzerError } from "./analyzer-errors.js";
 import { llmConnectionOptions, modelOptions } from "./model.js";
@@ -125,7 +126,14 @@ describe("settings form helpers", () => {
     const patch = resetAllPatch(config);
     expect(patch.characterPrompt.charxGenerationDefaults.dirtyFieldsBySourceId).toEqual({ c1: [] });
     expect(patch.characterPrompt.charxGenerationDefaults.revisionByField.nsfwAlwaysEnabled).toBe(1);
-    expect(regexRowsOf({ t1: { detectors: [{ in: "\\[img:(.+?)\\]" }] } })).toEqual([{ id: "t1:0", targetId: "t1", detectorIndex: 0, value: "\\[img:(.+?)\\]" }]);
+    const detectors = detectorsOf({ t1: { detectors: [{ in: "\\[img:(.+?)\\]", source: "script", scriptIndex: 2 }, { bad: 1 }] } }, "t1");
+    expect(detectors).toEqual([{ in: "\\[img:(.+?)\\]", source: "script", scriptIndex: 2 }]);
+    expect(detectorsOf({ t1: { detectors: [] } }, "t2")).toEqual([]);
+    expect(nextDetectors(detectors, -1, " <img=(.+?)> ")).toEqual([...detectors, { in: "<img=(.+?)>", source: "manual" }]);
+    expect(nextDetectors(detectors, 0, "x")).toEqual([{ in: "x", source: "script", scriptIndex: 2 }]);
+    expect(nextDetectors(detectors, 0, null)).toEqual([]);
+    expect(regexError("(")).toBe("Enter a valid regex.");
+    expect(regexError("a+")).toBeNull();
   });
   test("log helpers merge newest first and export oldest first", () => {
     const a = { seq: 1, at: "2026-01-01T00:00:00Z", level: "info" as const, scope: "chat-image", message: "one" };
@@ -239,6 +247,30 @@ describe("settings pages (DOM)", () => {
     expect(mock.db.config.characterPrompt.charxGenerationDefaults.nsfwAlwaysEnabled).toBe(false);
     (doc.querySelector("[data-charx-reset-scope]") as HTMLButtonElement).click();
     await until(() => !doc.querySelector('[data-charx-field="nsfwAlwaysEnabled"]')?.textContent?.includes("Custom"));
+    controller.destroy();
+  });
+
+  test("charx regex rows: add, edit and delete detectors through charxRegex.setDetectors", async () => {
+    const { mock, controller } = await openSettings("charx");
+    const enabled = (selector: string) => until(() => { const b = doc.querySelector(selector) as HTMLButtonElement | null; return b && !b.disabled && b; });
+    (await enabled("[data-charx-regex-add]")).click();
+    const row = await until(() => doc.querySelector('[data-charx-regex-row="-1"] input'));
+    input(row, "(");
+    await until(() => row.getAttribute("aria-invalid") === "true");
+    input(row, "\\[img:(.+?)\\]");
+    (await enabled("[data-charx-regex-save]")).click();
+    await until(() => doc.querySelector('[data-charx-regex-row="0"]'));
+    const calls = () => mock.calls.filter((c) => c.method === "charxRegex.setDetectors");
+    expect(calls()[0]!.params).toEqual({ characterId: "char-seoyeon", detectors: [{ in: "\\[img:(.+?)\\]", source: "manual" }] });
+    (await enabled('[data-charx-regex-row="0"] [data-charx-regex-edit]')).click();
+    const edit = await until(() => doc.querySelector('[data-charx-regex-row="0"] input:not([readonly])'));
+    input(edit, "<img=(.+?)>");
+    edit.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }) as unknown as Event);
+    await until(() => calls().length === 2);
+    expect((calls()[1]!.params as { detectors: unknown[] }).detectors).toEqual([{ in: "<img=(.+?)>", source: "manual" }]);
+    (await enabled('[data-charx-regex-row="0"] [data-charx-regex-delete]')).click();
+    await until(() => calls().length === 3 && !doc.querySelector('[data-charx-regex-row="0"]'));
+    expect((calls()[2]!.params as { detectors: unknown[] }).detectors).toEqual([]);
     controller.destroy();
   });
 
