@@ -1,11 +1,11 @@
 {
-  "version": "0.9.1",
+  "version": "0.10.0",
   "name": "Inlay Illustrator",
   "identifier": "inlay_illustrator",
   "author": "japolino",
   "github": "https://github.com/japolino/inlay-illustrator",
   "homepage": "https://github.com/japolino/inlay-illustrator",
-  "description": "Lightboard 4.5.3 scene and comic illustration for Lumiverse, with editable prompts, saved styles, and dedicated character reference snapshots.",
+  "description": "Asset Maid-based scene illustration and character asset manager for Lumiverse.",
   "permissions": [
     "generation",
     "interceptor",
@@ -15,7 +15,9 @@
     "chats",
     "characters",
     "personas",
-    "world_books"
+    "world_books",
+    "app_manipulation",
+    "ui_panels"
   ],
   "requested_capabilities": [
     "base64_decode"
