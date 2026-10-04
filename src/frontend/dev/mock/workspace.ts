@@ -203,6 +203,8 @@ async function runJob(ctx: MockContext, job: MockJob, params: AnalysisStartParam
   const steps = state.jobSteps;
   const label = ANALYSIS_TEXT[job.kind].running;
   const rowsRunning: RowNotice[] = (params.promptKeys ?? []).map((promptKey) => ({ promptKey, status: "running" }));
+  // Let the start response reach the client before the first progress event.
+  await ctx.delay(250);
   for (let step = 0; step <= steps; step += 1) {
     if (job.cancelled) break;
     job.status = "running";

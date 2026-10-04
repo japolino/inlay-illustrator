@@ -342,26 +342,27 @@ export function PromptRowLayout({ title, titleStart, titleEnd, exclusionAction, 
       hidden={hidden}
       data-prompt-key={rowId}
       actions={<div class="flex w-max shrink-0 items-center gap-1.5 md:gap-2" data-prompt-row-actions="">{actions}</div>}
-      bodyClassName="mobile:h-auto mobile:max-h-none"
+      className="@container"
+      bodyClassName="@max-[40rem]:h-auto @max-[40rem]:max-h-none"
     >
       <div
         class={cn(
-          "grid size-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-2",
-          referenceVisible ? "grid-cols-[9rem_minmax(0,1fr)_11.875rem] mobile:grid-cols-[6rem_minmax(0,1fr)]" : "grid-cols-[minmax(0,1fr)_11.875rem] mobile:grid-cols-1"
+          "grid size-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-2 @max-[40rem]:grid-rows-none",
+          referenceVisible ? "grid-cols-[9rem_minmax(0,1fr)_11.875rem] @max-[40rem]:grid-cols-[6rem_minmax(0,1fr)]" : "grid-cols-[minmax(0,1fr)_11.875rem] @max-[40rem]:grid-cols-1"
         )}
         data-prompt-row-layout=""
         onFocusCapture={onActivate}
         onPointerDownCapture={onActivate}
       >
-        {referenceVisible ? <div class="row-span-2 min-h-0 min-w-0 mobile:row-span-1 mobile:h-36" data-prompt-reference-slot="">{referenceCard}</div> : null}
-        <div class="min-w-0" data-prompt-form-header="">{formHeader}</div>
-        <div class="grid h-7.5 min-w-0 grid-cols-[minmax(0,1fr)_auto_2.5rem] items-center max-md:h-11 mobile:col-span-full" data-prompt-row-controls="">
+        {referenceVisible ? <div class="row-span-2 min-h-0 min-w-0 @max-[40rem]:h-36" data-prompt-reference-slot="">{referenceCard}</div> : null}
+        <div class="min-w-0 @max-[40rem]:self-start" data-prompt-form-header="">{formHeader}</div>
+        <div class="grid h-7.5 min-w-0 grid-cols-[minmax(0,1fr)_auto_2.5rem] items-center max-md:h-11 @max-[40rem]:col-start-2 @max-[40rem]:self-start" data-prompt-row-controls="">
           <div class="min-w-0">{genderControl}</div>
           {rowAnalysisControl != null ? <div class="ml-1.5 md:ml-2">{rowAnalysisControl}</div> : <span />}
           <IconButton size="workbenchIcon" label={resetLabel} onClick={onReset}><RotateCcwIcon /></IconButton>
         </div>
-        <div class="h-full min-h-0 min-w-0 mobile:col-span-full mobile:h-44" data-prompt-main-editor="">{formEditor ?? basePromptEditor}</div>
-        <div class="h-full min-h-0 min-w-0 mobile:col-span-full mobile:h-28" data-prompt-negative-editor="">{negativePromptEditor}</div>
+        <div class="h-full min-h-0 min-w-0 @max-[40rem]:col-span-full @max-[40rem]:h-44" data-prompt-main-editor="">{formEditor ?? basePromptEditor}</div>
+        <div class="h-full min-h-0 min-w-0 @max-[40rem]:col-span-full @max-[40rem]:h-28" data-prompt-negative-editor="">{negativePromptEditor}</div>
       </div>
     </WorkbenchRow>
   );

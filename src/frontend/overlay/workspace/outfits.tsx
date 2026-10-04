@@ -173,7 +173,7 @@ function OutfitCard({ model, ctx, owner, formId, outfit, index, active, onActiva
         <OutfitTile outfit={outfit} isDefault={isDefault} label={label} visible={ctx.provider.referenceUiVisible || owner.kind === "persona"} fallbackUrl={owner.kind === "persona" ? owner.avatarUrl : null}
           onSelect={() => { ctx.sessions.update(ctx.characterId, { returnTarget: owner.kind === "persona" ? "persona-outfit" : "outfit" }); openPicker(ctx, pickerTarget); }} />
         <div class="grid min-w-0 content-start gap-1.5">
-          <BufferedField label={OUTFIT_LABELS.name} placeholder={OUTFIT_LABELS.name} value={outfit.label} onChange={(v) => { if (v.trim()) set({ label: v }); }} />
+          <BufferedField label={OUTFIT_LABELS.name} placeholder={OUTFIT_LABELS.name} value={outfit.label === "기본 의상" || /^의상 \d+$/u.test(outfit.label) ? label : outfit.label} onChange={(v) => { if (v.trim()) set({ label: v }); }} />
           <BufferedField label={OUTFIT_LABELS.description} placeholder={OUTFIT_LABELS.description} value={outfit.description} onChange={(v) => set({ description: v })} />
           {(["head", "top", "bottom", "legs", "feet"] as const).map((part) => (
             <BufferedField key={part} label={OUTFIT_LABELS.parts[part]!} placeholder={OUTFIT_LABELS.parts[part]!} value={outfit[part]} onChange={(v) => set({ [part]: v })} />
@@ -194,7 +194,7 @@ export function OutfitPanel(props: OutfitPaneModel) {
   const title = owner.kind === "character" ? OUTFIT_LABELS.frameTitle(owner.title) : PERSONA_LABELS.outfitFrame(owner.name);
   const options = [{ value: "all", label: OUTFIT_LABELS.showAll }, ...model.collection.forms.map((f) => ({ value: f.id, label: `${FORM_LABELS.prefix} ${f.id === model.collection.defaultFormId ? "★ " : ""}${formDisplayLabel(f.label)}` }))];
   return (
-    <div class="mx-auto grid w-full max-w-190 content-start gap-4 px-5 py-5 mobile:px-3" data-outfit-panel={ownerKey(owner)}>
+    <div class="@container mx-auto grid w-full max-w-190 content-start gap-4 px-5 py-5 mobile:px-3" data-outfit-panel={ownerKey(owner)}>
       <header class="flex min-h-8 flex-wrap items-center justify-between gap-3">
         <div class="flex min-w-0 items-center gap-2">
           <h1 class="truncate text-lg leading-tight font-extrabold">{title}</h1>
@@ -210,7 +210,7 @@ export function OutfitPanel(props: OutfitPaneModel) {
               <span class="h-px w-3 bg-border" />{form.id === model.collection.defaultFormId ? "★ " : ""}{formDisplayLabel(form.label)}<span class="h-px flex-1 bg-border" />
             </h2>
           ) : null}
-          <div class="grid gap-2 md:grid-cols-2">
+          <div class="grid gap-2 @min-[44rem]:grid-cols-2">
             {form.outfits.map((outfit, i) => (
               <OutfitCard key={outfit.id} model={model} ctx={ctx} owner={owner} formId={form.id} outfit={outfit} index={i} active={outfit.id === activeId} onActivate={() => { if (outfit.id !== activeId) model.setActive(outfit.id); }} />
             ))}

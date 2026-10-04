@@ -56,16 +56,16 @@ const SCENES: Record<string, PreviewScene> = {
   "prompts-outfit": async ({ doc }) => {
     await tab(doc, "prompts");
     await ready(doc, "[data-prompts-list]");
-    await clickLabel(doc, "[data-prompts-list]", "Outfit prompt");
+    await clickLabel(doc, "[data-prompts-list]", "한서연 (Han Seo-yeon) outfit prompt");
     await ready(doc, "[data-outfit-panel]");
   },
   "prompts-generation": async ({ mock, doc }) => {
     await tab(doc, "prompts");
     workspaceMockState(mock.db).jobStepMs = 150;
     await ready(doc, "[data-prompts-list]");
-    await clickLabel(doc, "[data-prompts-list]", "Outfit prompt");
+    await clickLabel(doc, "[data-prompts-list]", "한서연 (Han Seo-yeon) outfit prompt");
     await ready(doc, "[data-outfit-card]");
-    await clickLabel(doc, "[data-outfit-panel]", "Generate outfit outfit_1");
+    await clickLabel(doc, "[data-outfit-panel]", "Generate outfit Uniform");
     await ready(doc, "[data-outfit-generation]");
     await clickLabel(doc, "[data-generation-dock]", "Generate outfit image");
     await ready(doc, "[data-generation-history]");

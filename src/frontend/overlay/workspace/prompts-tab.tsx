@@ -63,7 +63,7 @@ function PromptRow({ ctx, item, hidden, commandLocked }: { ctx: WorkspaceCtx; it
           onClick={() => characterId && void app.mutateWorkspace("customCharacters.promote", { characterId, customIds: [item.selectionId] }).catch(() => undefined)}><BadgeCheckIcon /></IconButton>
       ) : undefined}
       trailingActions={
-        <IconButton size="workbenchIcon" variant={outfitOpen ? "default" : "subtle"} label={PROMPTS_LABELS.outfitPrompt} aria-pressed={outfitOpen}
+        <IconButton size="workbenchIcon" variant={outfitOpen ? "default" : "subtle"} label={PROMPTS_LABELS.outfitPromptOf(item.title)} title={PROMPTS_LABELS.outfitPrompt} aria-pressed={outfitOpen}
           onClick={() => (outfitOpen ? ui.closeSecondary(characterId) : ui.openSecondary(characterId, "outfit", { promptKey: item.promptKey }))}><ShirtIcon /></IconButton>
       }
       hidden={hidden}
