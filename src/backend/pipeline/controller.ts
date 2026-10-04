@@ -33,6 +33,10 @@ import {
   resolveHistorySlot,
   rpcError,
   toHistoryMessageId,
+  validateCurrentActorState,
+  listNovelAIArtists,
+  resolveFormCollection,
+  resolvePersonaForms,
   type AiPromptEditProposal,
   type AiPromptEditRequest,
   type AssetCleanupResult,
@@ -87,7 +91,7 @@ import {
 import { HostGenerationTracker, isIllustratableMessage, loadMessages, swipeContent, writeSwipeContent, type ChatMessageView } from "./host-chat.js";
 import { formatLabel, labelError, phaseProgress, PIPELINE_TEXT, type Label } from "./labels.js";
 import { bakeMessage, messageSlots, stripForInterceptor, type InterceptorMessage } from "./markup.js";
-import { readSidecar, updateSidecar } from "./records.js";
+import { readSidecar, sidecarPath, updateSidecar } from "./records.js";
 
 type Rec = Record<string, unknown>;
 const rec = (v: unknown): Rec => (v && typeof v === "object" && !Array.isArray(v) ? (v as Rec) : {});
@@ -149,6 +153,7 @@ export interface ChatPipeline {
   /* chatState.* / chatDom.* */
   getChatState(chatId: string): Promise<{ actorState: CurrentActorState }>;
   clearChatState(chatId: string, actorKeys?: string[]): Promise<{ actorState: CurrentActorState }>;
+  setChatState(chatId: string, actorState: CurrentActorState, baseRevision: number): Promise<{ actorState: CurrentActorState }>;
   getMessageStates(chatId: string, messageIds?: string[]): Promise<{ messages: ChatMessageUiState[] }>;
 
   /** Re-bake one message from its History (publish). */
@@ -261,6 +266,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
         failedSlots: 0,
         canRetry: false,
         canRestart: false,
+        ...(input.slotId ? { slotId: input.slotId } : {}),
       },
       target: input.target,
       planKey: input.planKey,
@@ -291,6 +297,12 @@ export function createChatPipelineController(services: BackendServices, engine: 
     if (error) lastErrors.set(k(job.target.chatId, job.planKey), error);
     else if (result === "completed") lastErrors.delete(k(job.target.chatId, job.planKey));
     emitProgress(job);
+    log(result === "failed" || result === "blocked" ? "warn" : "info", `Illustration ${job.kind} ${result}: ${job.planKey}`, {
+      jobId: job.snapshot.jobId,
+      chatId: job.target.chatId,
+      attemptKind: job.snapshot.attemptKind,
+      ...(error ? { error } : {}),
+    });
     services.events.emit("generation.finished", { jobId: job.snapshot.jobId, chatId: job.target.chatId, messageKey: job.planKey, result, ...(error ? { error } : {}) });
   };
 
@@ -898,17 +910,59 @@ export function createChatPipelineController(services: BackendServices, engine: 
   const providerOf = (record: GenerationRecord | null): ZoomDetails["generationProvider"] =>
     !record ? "novelai" : record.engineProvider === "comfy-ui" ? "comfy-ui" : record.engineProvider === "chan-server" ? "generic" : "novelai";
 
-  const sectionsOf = (record: GenerationRecord | null, draft: RegenerationOverrides | undefined): ZoomPromptSection[] => {
+  interface SectionChoices {
+    artists?: { id: string; label: string }[];
+    outfitsByActor?: Map<number, { key: string; choices: { id: string; label: string }[] }>;
+  }
+
+  /** Artist list per codec (NovelAI presets + user artists / Anima list) and each actor's form outfits (zoom selects). */
+  const choicesFor = async (record: GenerationRecord | null, chatId: string): Promise<SectionChoices> => {
+    if (!record) return {};
+    const config = await services.storage.loadConfig();
+    const artists =
+      record.engineProvider === "novelai"
+        ? listNovelAIArtists(config.characterPrompt.artistPrompts).map((a) => ({ id: a.id, label: a.displayTitle || a.id }))
+        : config.animaArtists.entries.map((a) => ({ id: a.id, label: a.title || a.id }));
+    const outfitsByActor = new Map<number, { key: string; choices: { id: string; label: string }[] }>();
+    const chat = await getChat(chatId).catch(() => null);
+    for (const actor of record.actors) {
+      if (!actor.identityKey) continue;
+      try {
+        let forms;
+        if (actor.identityKey.startsWith("persona::"))
+          forms = resolvePersonaForms(config.characterPrompt.personaSettings, config.characterPrompt.personaGender, actor.identityKey.slice(9));
+        else {
+          const owner = actor.identityKey.includes("::") ? actor.identityKey.split("::")[0]! : (chat?.characterId ?? "");
+          const document = owner ? await services.storage.loadCharacterDocument(owner) : null;
+          forms = resolveFormCollection(document?.characterPrompt.characterForms ?? {}, actor.identityKey, {} as never);
+        }
+        const form = forms.forms.find((f) => f.id === actor.selectedFormId) ?? forms.forms.find((f) => f.id === forms.defaultFormId) ?? forms.forms[0];
+        if (form) outfitsByActor.set(actor.actorIndex, { key: actor.identityKey, choices: form.outfits.map((o) => ({ id: o.id, label: o.label || o.id })) });
+      } catch {
+        /* no forms for this actor */
+      }
+    }
+    return { artists, outfitsByActor };
+  };
+
+  const sectionsOf = (record: GenerationRecord | null, draft: RegenerationOverrides | undefined, choices: SectionChoices = {}): ZoomPromptSection[] => {
     if (!record) return [];
+    const artist = choices.artists ? { artistChoices: choices.artists, selectedArtistId: draft?.artistId ?? record.artistId ?? "" } : {};
+    const outfitOf = (i: number) => {
+      const o = choices.outfitsByActor?.get(i);
+      if (!o) return {};
+      const actor = record.actors.find((a) => a.actorIndex === i);
+      return { outfitChoices: o.choices, selectedOutfitId: draft?.outfitByActor?.[o.key] ?? actor?.selectedOutfitId ?? "" };
+    };
     const overrides = new Map((draft?.sections ?? []).map((s) => [s.id, s] as const));
     const pick = (id: string, value: string, negativeValue: string) => {
       const o = overrides.get(id);
       return { value: o?.value ?? value, negativeValue: o?.negativeValue ?? negativeValue };
     };
-    if (record.engineProvider !== "novelai") return [{ id: "provider", target: "provider", label: "Prompt", ...pick("provider", draft?.positivePrompt ?? record.positivePrompt, draft?.negativePrompt ?? record.negativePrompt) }];
+    if (record.engineProvider !== "novelai") return [{ id: "provider", target: "provider", label: "Prompt", ...pick("provider", draft?.positivePrompt ?? record.positivePrompt, draft?.negativePrompt ?? record.negativePrompt), ...artist }];
     const chars = charactersOf(record);
     return [
-      { id: "main", target: "main", label: "Main prompt", ...pick("main", draft?.positivePrompt ?? record.positivePrompt, draft?.negativePrompt ?? record.negativePrompt) },
+      { id: "main", target: "main", label: "Main prompt", ...pick("main", draft?.positivePrompt ?? record.positivePrompt, draft?.negativePrompt ?? record.negativePrompt), ...artist },
       ...chars.map((c, i): ZoomPromptSection => {
         const center = draft?.centers?.[i];
         return {
@@ -919,6 +973,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
           ...pick(`actor:${i}`, c.prompt, c.uc),
           centerX: center ? center.x : c.centerX,
           centerY: center ? center.y : c.centerY,
+          ...outfitOf(i),
         };
       }),
     ];
@@ -956,7 +1011,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
       promptCodec: provider === "original" ? null : promptCodecForProvider(provider),
       positivePrompt: draft?.positivePrompt ?? record?.positivePrompt ?? "",
       negativePrompt: draft?.negativePrompt ?? record?.negativePrompt ?? "",
-      sections: sectionsOf(record, draft),
+      sections: sectionsOf(record, draft, await choicesFor(record, chatId)),
       coordinateGrid: isNovelAI ? (v5 ? "v5" : "v4-5") : null,
       excludedCharacterIndexes: [...(draft?.excludedCharacterIndexes ?? [])],
       promptDraftActive: !!draft && (draft.positivePrompt !== undefined || draft.negativePrompt !== undefined || !!draft.sections?.length),
@@ -1013,7 +1068,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
     if (swipe !== undefined) {
       const pattern = new RegExp(`${messageId.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}@(\\d+)(?![0-9])`, "gu");
       await services.storage
-        .updateJson(`${"chats/"}${encodeURIComponent(chatId)}/pipeline.json`, null as unknown, (current) =>
+        .updateJson(sidecarPath(chatId), null as unknown, (current) =>
           current ? JSON.parse(JSON.stringify(current).replace(pattern, (m, n: string) => (Number(n) > swipe ? `${messageId}@${Number(n) - 1}` : m))) : current,
         )
         .catch(() => undefined);
@@ -1482,6 +1537,19 @@ export function createChatPipelineController(services: BackendServices, engine: 
       return { actorState: written.actorState };
     },
 
+    async setChatState(chatId, actorState, baseRevision) {
+      const checked = validateCurrentActorState(actorState);
+      if (!checked.ok) fail("bad-request", `Invalid actor state: ${checked.issues[0]?.message ?? "unknown issue"}`, { details: checked.issues });
+      const written = await services.storage.updateChatData(chatId, (doc) => {
+        if (doc.actorState.revision !== baseRevision)
+          fail("conflict", "The chat state changed since it was opened. Reload it and try again.", { details: { revision: doc.actorState.revision, baseRevision } });
+        doc.actorState = { revision: doc.actorState.revision + 1, actors: checked.state.actors };
+        return doc;
+      });
+      emitChanged(chatId, []);
+      return { actorState: written.actorState };
+    },
+
     async getMessageStates(chatId, messageIds) {
       const [messages, doc] = await Promise.all([loadMessages(services.host, chatId), services.storage.loadChatData(chatId)]);
       const wanted = messageIds?.length ? new Set(messageIds) : null;
@@ -1489,7 +1557,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
       const out: ChatMessageUiState[] = [];
       for (const m of messages) {
         if (m.role !== "assistant") continue;
-        if (wanted && !wanted.has(m.id)) continue;
+        if (wanted ? !wanted.has(m.id) : !isIllustratableMessage(m)) continue;
         const planKey = illustrationMessageKey(toHistoryMessageId(m.id, m.swipeId));
         const running = messageJobs.get(k(chatId, planKey)) ?? [...slotJobs.values()].find((j) => j.target.chatId === chatId && j.planKey === planKey);
         const latest = running ?? [...jobs.values()].reverse().find((j) => j.target.chatId === chatId && j.planKey === planKey && !j.dismissed);

@@ -76,6 +76,10 @@ export const chatHandlers: HandlerGroup = {
   /* chat state window */
   "chatState.get": (params, ctx) => pipelineOf(ctx).getChatState(need(params.chatId, "chatId")),
   "chatState.clear": (params, ctx) => pipelineOf(ctx).clearChatState(need(params.chatId, "chatId"), params.actorKeys),
+  "chatState.set": (params, ctx) => {
+    if (!Number.isSafeInteger(params.baseRevision)) fail("bad-request", "baseRevision is required.");
+    return pipelineOf(ctx).setChatState(need(params.chatId, "chatId"), params.actorState, params.baseRevision);
+  },
 
   /* chat DOM */
   "chatDom.getMessageStates": (params, ctx) => pipelineOf(ctx).getMessageStates(need(params.chatId, "chatId"), params.messageIds),

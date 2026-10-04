@@ -124,7 +124,9 @@ export interface GenerationRecord {
   characters: Array<{ prompt: string; negativePrompt: string; actorIndex?: number; centerX?: number; centerY?: number; coordinateMode?: string }>;
   /** Per-image NovelAI config (apiKey placeholder removed), needed to re-send through the NovelAI adapter. */
   novelAIConfig?: Rec;
-  actors: Array<{ identityKey: string; identityName: string; kind: string; actorIndex: number }>;
+  actors: Array<{ identityKey: string; identityName: string; kind: string; actorIndex: number; selectedFormId?: string; selectedOutfitId?: string }>;
+  /** Artist preset of the prompt plan (NovelAI `selectedArtistId` / Anima artist id). */
+  artistId?: string;
   promptKey: string;
   presetId: string;
   analyzerText: string;
@@ -621,7 +623,15 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
           };
         }),
         ...(novelAIConfig ? { novelAIConfig } : {}),
-        actors: actors.map((a) => ({ identityKey: str(a.identityKey), identityName: str(a.identityName), kind: str(a.kind), actorIndex: Number(a.actorIndex) || 0 })),
+        actors: actors.map((a) => ({
+          identityKey: str(a.identityKey),
+          identityName: str(a.identityName),
+          kind: str(a.kind),
+          actorIndex: Number(a.actorIndex) || 0,
+          ...(str(a.selectedFormId) ? { selectedFormId: str(a.selectedFormId) } : {}),
+          ...(str(a.selectedOutfitId) ? { selectedOutfitId: str(a.selectedOutfitId) } : {}),
+        })),
+        ...(str(plan.artistId) ? { artistId: str(plan.artistId) } : {}),
         promptKey: key,
         presetId: str(decision.preset_id ?? decision.composition_id),
         analyzerText: str(decision.reason ?? decision.body_action),

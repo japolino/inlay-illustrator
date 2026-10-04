@@ -41,7 +41,64 @@ function scriptedAnalyzer(request: LlmCompleteRequest): string {
   });
 }
 
+/** Scripted V5 analyzer (scene graph response) with the active persona as the only actor. */
+function scriptedV5Analyzer(request: LlmCompleteRequest): string {
+  const last = request.messages[request.messages.length - 1]!;
+  const text = typeof last.content === "string" ? last.content : last.content.map((p) => (p.type === "text" ? p.text : "")).join("");
+  const json = JSON.parse(text.slice(text.indexOf("{")));
+  const slot = Number(/<slot_number: (\d+)>/u.exec(json.scene)![1]);
+  return JSON.stringify({
+    illustrations: [
+      {
+        slot_number: slot,
+        actor_roster: [{ actorId: "actor_1", candidateKey: json.active_persona_candidate_key }],
+        interaction: { items: [], modifiers: [], instructions: [] },
+        frame_placement: {
+          sizeId: 2,
+          modifiers: [
+            { id: "scene.rating", options: ["sfw"] },
+            { id: "scene.environment", options: ["outdoors"] },
+          ],
+          freeTags: ["school gate"],
+          instruction: "",
+          items: [{ actorId: "actor_1", center: { x: 0.5, y: 0.5 } }],
+        },
+        actor_detail: [{ actorId: "actor_1", placementIndex: 0, actions: [], modifiers: [{ id: "expression.general", options: ["light_smile"] }], freeTags: [], poseInstruction: "", actionInstruction: "running", objectInstruction: "" }],
+        camera: { modifiers: [], instruction: "" },
+      },
+    ],
+  });
+}
+
 describe("pipeline end to end over the real engine", () => {
+  test("V5 profile: scene graph analyzer -> NovelAI V5 request -> History + V5 continuity", async () => {
+    setEngineEnv(seededEnv(9));
+    try {
+      const fx = createPipelineFixture({
+        config: {
+          image: { provider: "novelai", model: "nai-diffusion-5-full", connectionId: "img-1" },
+          novelai: { analysisProfile: "v5-hybrid" },
+          runtime: { generationAutoRetryCount: 0 },
+        },
+      });
+      fx.llmReplies.push((request: LlmCompleteRequest) => scriptedV5Analyzer(request));
+      const { pipeline } = createPipelineModule(fx.services);
+      await pipeline.handleGenerationEnded({ chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
+      await waitFor(() => finished(fx).length > 0, 20000);
+      expect(finished(fx)[0]!.error).toBeUndefined();
+      expect(finished(fx)[0]!.result).toBe("completed");
+      expect(fx.imageRequests.length).toBe(1);
+      expect(fx.imageRequests[0]!.width).toBe(1216);
+      const doc = fx.chatData.get(CHAT_ID)!;
+      expect(doc.plans["illustration:m1@0"]!.status).toBe("complete");
+      expect(doc.store.messages["m1@0"]!.generations[0]!.continuity).toBeDefined();
+      expect(fx.message("m1").content).toContain("fake-image-1");
+      pipeline.dispose();
+    } finally {
+      setEngineEnv(null);
+    }
+  }, 30000);
+
   test("GENERATION_ENDED -> analyzer -> NovelAI request -> History + baked message + continuity", async () => {
     setEngineEnv(seededEnv(7));
     try {

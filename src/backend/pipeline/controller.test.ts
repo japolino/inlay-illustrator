@@ -64,6 +64,7 @@ describe("automatic generation (GENERATION_ENDED)", () => {
     expect(f.error?.messageKo).toBe("이미지를 삽입할 문단 위치를 찾지 못했습니다. 메시지 본문을 확인해 주세요.");
     expect(fx.chatData.get(CHAT_ID)!.plans["illustration:m1@0"]!.status).toBe("error");
     const states = await pipeline.getMessageStates(CHAT_ID);
+    expect(states.messages.length).toBe(1);
     expect(states.messages[0]!.attempt).toBe("retry");
   });
 });
@@ -174,6 +175,10 @@ describe("history, regenerate, delete", () => {
     expect(details.entryId).toBe(firstEntry.entryId);
     expect(details.positivePrompt).toBe("pos 1");
     expect(details.sections.map((s) => s.id)).toEqual(["main", "actor:0"]);
+    expect(details.sections[0]!.artistChoices!.length).toBeGreaterThan(0);
+    expect(details.sections[1]!.outfitChoices).toBeDefined();
+    const regenJob = fx.events.find((e) => e.event === "generation.progress" && (e.payload as { jobId: string }).jobId === jobId)!.payload as { slotId?: string };
+    expect(regenJob.slotId).toBe(slotId);
     expect(details.history.length).toBe(2);
   });
 
@@ -298,6 +303,16 @@ describe("swipes, events, recovery", () => {
     expect(fx.chatData.get(CHAT_ID)!.plans["illustration:m1@0"]!.status).toBe("error");
   });
 
+  test("group chat: the speaking member is the primary character (owner of the images)", async () => {
+    const { fx, engine, pipeline } = setup({ messages: [{ id: "m1", content: STORY, name: "Bob" } as never] });
+    fx.characters.push({ ...fx.characters[0]!, characterId: "char-2", name: "Bob" });
+    fx.chats[0] = { ...fx.chats[0]!, groupCharacterIds: ["char-1", "char-2"] };
+    const { jobId } = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0 });
+    await waitFor(() => finished(fx, jobId).length > 0);
+    expect(engine.runs[0]!.context.ownerCharacterId).toBe("char-2");
+    expect((engine.runs[0]!.input as any).analyzerInput.context.cacheSourceId).toBe("char-2");
+  });
+
   test("interceptor strip", () => {
     const { pipeline } = setup();
     expect(pipeline.stripForInterceptor([{ role: "assistant", content: "x" }])[0]!.content).toBe("x");
@@ -312,5 +327,11 @@ describe("swipes, events, recovery", () => {
     expect(Object.keys((await pipeline.getChatState(CHAT_ID)).actorState.actors)).toEqual(["persona::persona-1"]);
     const cleared = await pipeline.clearChatState(CHAT_ID);
     expect(cleared.actorState.actors).toEqual({});
+    const edited = { revision: cleared.actorState.revision, actors: { "persona::persona-1": { groups: { "state.fluid.cum.location": [], "actor.injury": ["scar"] }, count: 0, ttl: {} } } };
+    await expect(pipeline.setChatState(CHAT_ID, edited, cleared.actorState.revision - 1)).rejects.toMatchObject({ error: { code: "conflict" } });
+    const saved = await pipeline.setChatState(CHAT_ID, edited, cleared.actorState.revision);
+    expect(saved.actorState.revision).toBe(cleared.actorState.revision + 1);
+    expect(saved.actorState.actors["persona::persona-1"]!.groups["actor.injury"]).toEqual(["scar"]);
+    expect(fx.events.some((e) => e.event === "chatData.changed")).toBe(true);
   });
 });
