@@ -182,6 +182,56 @@ describe("history, regenerate, delete", () => {
     expect(details.history.length).toBe(2);
   });
 
+  test("zoom artist + outfit selection rebuilds the prompts on regeneration", async () => {
+    const { fx, engine, pipeline } = await generated();
+    const { listNovelAIArtists } = await import("../../shared/contract/index.js");
+    const [, artistA, artistB] = listNovelAIArtists([]);
+    await fx.services.storage.updateConfig((config) => {
+      const profiles = { ...config.characterPrompt.personaSettings.profiles } as Record<string, unknown>;
+      profiles["persona-1"] = {
+        forms: {
+          defaultFormId: "form_default",
+          forms: [
+            {
+              id: "form_default", label: "Default", description: "", humanlike: true, gender: "male", basePromptGroups: {}, negativePrompt: "", reference: null, defaultOutfitId: "o1",
+              outfits: [
+                { id: "o1", label: "Hoodie", description: "", candidateEnabled: true, head: "", top: "grey hoodie", bottom: "jeans", legs: "", feet: "" },
+                { id: "o2", label: "Suit", description: "", candidateEnabled: true, head: "", top: "black suit jacket", bottom: "black pants", legs: "", feet: "" },
+              ],
+            },
+          ],
+        },
+      };
+      return { ...config, characterPrompt: { ...config.characterPrompt, personaSettings: { ...config.characterPrompt.personaSettings, profiles } } } as typeof config;
+    });
+    const slotId = "illustration:m1@0:slot:0";
+    const entryId = Object.values(fx.chatData.get(CHAT_ID)!.history.entriesById).find((e) => e.slotId === slotId)!.entryId;
+    const sidecar = fx.json.get("chats/chat-1/pipeline.json") as any;
+    Object.assign(sidecar.records[entryId], {
+      artistId: artistA!.id,
+      positivePrompt: `1boy, school, ${artistA!.prompt}`,
+      negativePrompt: `${artistA!.negativePrompt}`,
+      actors: [{ identityKey: "persona::persona-1", identityName: "Shouta", kind: "persona", actorIndex: 0, selectedFormId: "form_default", selectedOutfitId: "o1" }],
+      characters: [{ prompt: "1boy, grey hoodie, jeans, smile", negativePrompt: "bad", actorIndex: 0 }],
+    });
+    fx.json.set("chats/chat-1/pipeline.json", sidecar);
+    const zoom = await pipeline.getZoomDetails(CHAT_ID, slotId, entryId);
+    expect(zoom.sections[0]!.selectedArtistId).toBe(artistA!.id);
+    expect(zoom.sections[1]!.outfitChoices!.map((o) => o.id)).toEqual(["o1", "o2"]);
+    expect(zoom.sections[1]!.selectedOutfitId).toBe("o1");
+    const { jobId } = await pipeline.regenerateSlot({ chatId: CHAT_ID, messageKey: "illustration:m1@0", slotId, entryId, overrides: { artistId: artistB!.id, outfitByActor: { "persona::persona-1": "o2" } } });
+    await waitFor(() => finished(fx, jobId).length > 0);
+    expect(finished(fx, jobId)[0]!.result).toBe("completed");
+    const request = engine.dispatches.at(-1)!.request as any;
+    expect(request.prompt).toContain(artistB!.prompt);
+    expect(request.prompt).not.toContain(artistA!.prompt);
+    expect(request.config.characterPrompts[0].prompt).toBe("1boy, black suit jacket, black pants, smile");
+    const regen = Object.values(fx.chatData.get(CHAT_ID)!.history.entriesById).find((e) => e.generationOrigin === "regenerate")!;
+    const record = (fx.json.get("chats/chat-1/pipeline.json") as any).records[regen.entryId];
+    expect(record.artistId).toBe(artistB!.id);
+    expect(record.actors[0].selectedOutfitId).toBe("o2");
+  });
+
   test("deleteEntry falls back and deletes the unreferenced image", async () => {
     const { fx, pipeline } = await generated();
     const slotId = "illustration:m1@0:slot:0";

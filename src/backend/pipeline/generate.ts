@@ -32,6 +32,8 @@ import {
   previousGlobalModifierRefs,
   resolveIdentityEvidence,
   resolveNovelAIRunConfig,
+  resolveOutfitCreationMode,
+  buildKnownIdentities,
   resolveSourceGenerationSettings,
   toPlannerImageToken,
   withCustomCharacterMembers,
@@ -62,7 +64,9 @@ import { buildCharxAssetRegexDetectors, detectImageTokens, detectNativeAssetMark
 import { persistV5ContinuityState } from "../../engine/core/asset-maid-core";
 import type { ImageProviderId } from "../../engine/index.js";
 import type { BackendServices, ChatInfo, PersonaInfo, ResolvedImageTarget } from "../services/types.js";
+import type { BackendModules } from "../rpc/types.js";
 import type { EnginePort } from "./engine-port.js";
+import { openAutoGeneration, type AutoGeneration } from "./auto.js";
 import type { ChatMessageView } from "./host-chat.js";
 import { cleanMessageContent } from "./markup.js";
 import { formatLabel, PIPELINE_TEXT } from "./labels.js";
@@ -309,6 +313,10 @@ export function continuityChat(messages: readonly ChatMessageView[], target: { i
 export interface GeneratorDeps {
   services: BackendServices;
   engine: EnginePort;
+  /** Feature modules (the analysis module supplies the outfit image generator for free outfit generation). */
+  getModules?: () => BackendModules;
+  /** AM E1t `_`: outfits allocated per (character, chat message), replayed into later analyzer runs. */
+  replayOutfits?: Map<string, Map<string, unknown>>;
 }
 
 export async function generateMessageIllustrations(deps: GeneratorDeps, req: GenerateMessageRequest): Promise<GenerateMessageResult> {
@@ -342,12 +350,35 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
   };
   const customCharacters = [...docs.values()].flatMap((d) => d.customCharacters);
 
+  // Free character / outfit generation stores (AM autoCharacter / autoOutfit over the AM config store of the primary
+  // character). The config store also backs `getConfig`, so outfits / forms generated during the run are visible.
+  let auto: AutoGeneration | null = null;
+  try {
+    auto = await openAutoGeneration(services, deps.getModules, primaryId);
+  } catch (e) {
+    try {
+      services.log.append("warn", "pipeline", "Free character/outfit generation is unavailable for this run.", { error: e instanceof Error ? e.message : String(e) });
+    } catch {
+      /* ignore */
+    }
+  }
+  /** Characters generated in this run (AM E1t `jt` 169540): merged into `characterForms` of the live config. */
+  let generatedForms: Rec = {};
+
   // Runtime config (AM merged Y0 shape) + engine provider.
-  const runtime = buildRuntimeConfig(config, primaryDoc, { resolvedImageModel: imageTarget.model }) as unknown as Rec;
   const otherPrompts = memberIds.slice(1).map((id) => rec(docs.get(id)?.characterPrompt));
-  runtime.characterPrompt = mergeCharacterPrompts(rec(runtime.characterPrompt), otherPrompts);
-  runtime.runtime = { ...rec(runtime.runtime), generationProvider: engineProvider };
-  runtime.chatImageGenerationSettings = jsonClone(req.settings);
+  const decorate = (base: Rec): Rec => {
+    const runtime = jsonClone(base);
+    const novelai = rec(runtime.novelai);
+    runtime.novelai = { ...novelai, naiModel: imageTarget.model, characterReferenceEnabled: imageTarget.isNovelAIV5 ? false : novelai.characterReferenceEnabled };
+    const cp = mergeCharacterPrompts(rec(runtime.characterPrompt), otherPrompts);
+    runtime.characterPrompt = { ...cp, characterForms: { ...rec(cp.characterForms), ...generatedForms } };
+    runtime.runtime = { ...rec(runtime.runtime), generationProvider: engineProvider };
+    runtime.chatImageGenerationSettings = jsonClone(req.settings);
+    return runtime;
+  };
+  const runtime = decorate(auto ? (auto.store.getCurrentSnapshot() as Rec) : (buildRuntimeConfig(config, primaryDoc, { resolvedImageModel: imageTarget.model }) as unknown as Rec));
+  const getConfig = () => (auto ? decorate(auto.store.getCurrentSnapshot() as Rec) : runtime) as unknown as AssetMaidConfig;
   const amConfig = runtime as unknown as AssetMaidConfig;
   const sourceId = primaryId;
   const ne = resolveSourceGenerationSettings(amConfig, sourceId);
@@ -381,6 +412,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
   const sourceWithCustom = withCustomCharacterMembers(source, customCharacters as unknown[]);
   const ft = buildAnalyzerContextInputs({
     config: amConfig,
+    getConfig,
     continuity: hr as unknown as ContextContinuityState,
     chatKey,
     messages: requestMessages,
@@ -392,9 +424,10 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
     personaRecords,
   });
 
-  // Readiness (AM d1t 168807). Free character generation needs the auto-character hook (not wired: off).
+  // Readiness (AM d1t 168807). Free character generation: V5 profile + per-character setting + the store (E1t 169564).
   const profile = str(rec(runtime.novelai).analysisProfile);
-  if (!(profile === "v5-hybrid" || ft.analyzerIdentityCandidates.length > 0 || ft.analyzerPersonaCandidates.length > 0))
+  const freeCharacters = profile === "v5-hybrid" && ne.freeCharacterGenerationEnabled && !!auto;
+  if (!(profile === "v5-hybrid" || ft.analyzerIdentityCandidates.length > 0 || ft.analyzerPersonaCandidates.length > 0 || freeCharacters))
     return { ...empty(PIPELINE_TEXT.noCandidates), assetHints };
 
   const evidence = await resolveIdentityEvidence({
@@ -409,6 +442,10 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
     signal: req.signal,
   });
   const candidateSlots = buildCandidateSlots(req.slots, evidence);
+  // Outfits allocated by earlier runs of the same message (AM E1t `_` map, 169534-169536 / 169791-169794).
+  const operationKey = `${chatKey}:${req.historyId}`;
+  const replayKey = JSON.stringify([primaryId, operationKey]);
+  const replayOutfits = [...(deps.replayOutfits?.get(replayKey)?.values() ?? [])];
   const assembled = assembleAnalyzerInput({
     config: amConfig,
     sourceId,
@@ -418,10 +455,11 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
     imageCountConstraint: W,
     checkpoint: { chatKey, messageIndex: targetMessage?.index ?? req.target, messageId: req.historyId },
     modelType: "illustration-generation",
+    replayGeneratedOutfits: replayOutfits as never,
     ...(req.splitAnalysis ? { splitAnalysis: req.splitAnalysis as never } : {}),
     ...(req.revision ? { revisionDirection: req.revision.direction, revisionPromptChannels: req.revision.currentPrompt as never, revisionEvidenceKey: req.revision.evidenceKey } : {}),
   });
-  assembled.context.freeCharacterGenerationEnabled = false;
+  assembled.context.freeCharacterGenerationEnabled = freeCharacters;
   const revisionImage = req.revision?.image && (await services.llm.supportsVision().catch(() => false)) ? [await req.revision.image()] : [];
   if (req.signal.aborted) throw new DOMException("Image generation preparation was cancelled.", "AbortError");
 
@@ -465,6 +503,38 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
   };
 
   const comfyTimeout = Number(rec(runtime.runtime).comfyuiCompletionTimeoutMs) || 600000;
+
+  // Free outfit generation (AM E1t 169652-169656, 169783-169796): v4-5 after preset/analysis validation, v5 per actor.
+  const creationMode = auto?.imagesAvailable ? resolveOutfitCreationMode(amConfig) : "tags-only";
+  const prepareRoutePlan = auto
+    ? (routePlan: unknown, signal?: AbortSignal) => auto!.autoOutfit.prepare({ routePlan, source: sourceWithCustom, sourceId, signal, creationMode })
+    : undefined;
+  const prepareOutfits = auto
+    ? ({ actors, signal }: { actors: unknown[]; signal?: AbortSignal }) =>
+        auto!.autoOutfit.prepareActors({
+          actors,
+          source: sourceWithCustom,
+          sourceId,
+          signal,
+          creationMode,
+          onOutfitAllocated: (o: Rec) => {
+            if (!deps.replayOutfits) return;
+            const map = deps.replayOutfits.get(replayKey) ?? new Map<string, unknown>();
+            map.set(JSON.stringify([o.promptKey, o.formId, o.outfitId]), o);
+            deps.replayOutfits.set(replayKey, map);
+            while (deps.replayOutfits.size > 64) deps.replayOutfits.delete(deps.replayOutfits.keys().next().value!);
+          },
+        })
+    : undefined;
+  // Free character generation (AM E1t 169768-169782): generated forms join the live config (`jt`).
+  const knownIdentities = freeCharacters ? buildKnownIdentities(withCustomCharacterMembers(source, customCharacters as unknown[], "all"), personaRecords) : [];
+  const prepareCharacters = freeCharacters
+    ? async (input: Rec) => {
+        const prepared = await auto!.autoCharacter.prepare({ ...input, sourceId, operationKey, knownIdentities });
+        generatedForms = Object.fromEntries(prepared.flatMap((p) => (p.forms ? [[p.identityKey, p.forms]] : [])));
+        return prepared;
+      }
+    : undefined;
   const input: Rec = {
     automaticRetryManaged: true,
     imageRetryCount: config.runtime.generationAutoRetryCount,
@@ -514,7 +584,15 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       checkpointPolicy: checkpointPolicyFor(req.attemptKind),
       ...assembled,
       ...(revisionImage.length ? { imageParts: revisionImage } : {}),
+      ...(prepareRoutePlan
+        ? {
+            afterPresetValidated: prepareRoutePlan,
+            afterAnalysisValidated: ({ routePlan }: { routePlan: unknown }, signal?: AbortSignal) => prepareRoutePlan(routePlan, signal),
+          }
+        : {}),
     },
+    ...(prepareCharacters ? { prepareCharacters } : {}),
+    ...(prepareOutfits ? { prepareOutfits } : {}),
     promptInputs: ft.promptInputs,
     v5PromptContext: ft.v5PromptContext,
     references: ft.references,
@@ -692,6 +770,13 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       error = e instanceof Error ? e.message : String(e);
       failure = e;
     }
+  }
+
+  if (auto) {
+    // Pending document writes of generated characters / outfits finish before the job commits (AM `settle`).
+    await auto.autoCharacter.settle().catch(() => undefined);
+    await auto.store.settle().catch(() => undefined);
+    auto.dispose();
   }
 
   const done = new Set([...(req.attemptKind === "retry" ? req.existingEntries : []), ...entries].map((e) => e.slotId));

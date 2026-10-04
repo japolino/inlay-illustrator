@@ -31,7 +31,7 @@ export interface PipelineModuleOptions extends ControllerOptions {
   engine?: EnginePort;
 }
 
-export function createPipelineModule(services: BackendServices, _getModules?: () => BackendModules, options: PipelineModuleOptions = {}): { pipeline: ChatPipeline } {
+export function createPipelineModule(services: BackendServices, getModules?: () => BackendModules, options: PipelineModuleOptions = {}): { pipeline: ChatPipeline } {
   const engine =
     options.engine ??
     createEnginePort(services, {
@@ -45,5 +45,5 @@ export function createPipelineModule(services: BackendServices, _getModules?: ()
         }
       },
     });
-  return { pipeline: createChatPipelineController(services, engine, options) };
+  return { pipeline: createChatPipelineController(services, engine, { ...(getModules ? { getModules } : {}), ...options }) };
 }

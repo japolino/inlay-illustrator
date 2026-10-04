@@ -64,6 +64,7 @@ import {
 } from "../../shared/contract/index.js";
 import { resolveImageSize } from "../../engine/compose/index.js";
 import { fail, isAbortLike, RpcFailure, toRpcError } from "../rpc/errors.js";
+import type { BackendModules } from "../rpc/types.js";
 import type { BackendServices, ChatInfo } from "../services/types.js";
 import {
   bakeSelection,
@@ -202,6 +203,8 @@ interface ProposalRecord {
 export interface ControllerOptions {
   /** Clock / ids for tests. */
   now?: () => number;
+  /** Feature modules (analysis: outfit image generator for free outfit generation). */
+  getModules?: () => BackendModules;
 }
 
 export function createChatPipelineController(services: BackendServices, engine: EnginePort, options: ControllerOptions = {}): ChatPipeline {
@@ -225,6 +228,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
   const cleanups = new Map<string, CleanupRecord>();
   const proposals = new Map<string, ProposalRecord>();
   const lastErrors = new Map<string, RpcError>();
+  const replayOutfits = new Map<string, Map<string, unknown>>();
   let disposed = false;
   let seq = 0;
   const nextId = (prefix: string) => `${prefix}:${now().toString(36)}:${(++seq).toString(36)}`;
@@ -508,7 +512,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
       const hasEntries = plan.entries.length > 0 || plan.revisions.some((r) => r.entries.length > 0);
       const activityLabel = opts.automatic ? (hasEntries ? "Regenerate" : "Chat") : attemptKind === "initial" ? "Previous" : "Regenerate";
       const result: GenerateMessageResult = await generateMessageIllustrations(
-        { services, engine },
+        { services, engine, ...(options.getModules ? { getModules: options.getModules } : {}), replayOutfits },
         {
           chatId,
           chat,
@@ -709,18 +713,96 @@ export function createChatPipelineController(services: BackendServices, engine: 
   };
 
   /** Engine ImageRequest for a stored record + zoom overrides (AM `$bt` 122394-122520, prompts already finalized). */
-  const regenerationRequest = (record: GenerationRecord, overrides: RegenerationOverrides | undefined, keepSeed: boolean, config: InlayConfig, slotId: string) => {
+  /** Split prompt tags at top-level commas and compare them without NovelAI weight syntax (`1.2::tag ::`, `{}`/`[]`). */
+  const bareTag = (tag: string) => tag.trim().replace(/^-?\d+(?:\.\d+)?::/u, "").replace(/::$/u, "").replace(/^[{[]+|[}\]]+$/gu, "").trim().toLocaleLowerCase();
+  const outfitTags = (outfit: Rec | undefined) =>
+    ["head", "top", "bottom", "legs", "feet"].flatMap((p) => String(outfit?.[p] ?? "").split(",")).map((t) => t.trim()).filter(Boolean);
+  /** Replace the old outfit's part tags in a prompt by the new outfit's tags (in place of the first removed tag). */
+  const swapOutfitTags = (prompt: string, oldTags: string[], newTags: string[]) => {
+    const old = new Set(oldTags.map(bareTag));
+    const parts = prompt.split(",");
+    let insertAt = -1;
+    const kept: string[] = [];
+    for (const part of parts) {
+      if (part.trim() && old.has(bareTag(part))) {
+        if (insertAt < 0) insertAt = kept.length;
+        continue;
+      }
+      kept.push(part);
+    }
+    const added = newTags.map((t) => ` ${t}`);
+    if (insertAt < 0) kept.push(...added);
+    else kept.splice(insertAt, 0, ...added);
+    return kept.join(",").replace(/^\s*,\s*/u, "").replace(/\s+,/gu, ",").trim();
+  };
+  const ARTIST_SEGMENT_LOST = {
+    en: "Editing made the artist prompt segment undetectable. Edit the artist part and the rest separately in the original.",
+    ko: "편집으로 작가 프롬프트 구간을 확인할 수 없습니다. 원본에서 작가 구간과 나머지 내용을 나누어 편집해 주세요.",
+  };
+  const replaceSegment = (text: string, oldSegment: string, nextSegment: string): string => {
+    const from = oldSegment.trim();
+    if (!from) return nextSegment.trim() ? (text.trim() ? `${text.trim()}, ${nextSegment.trim()}` : nextSegment.trim()) : text;
+    const index = text.indexOf(from);
+    if (index < 0) throw new RpcFailure(labelError("conflict", ARTIST_SEGMENT_LOST));
+    const next = `${text.slice(0, index)}${nextSegment.trim()}${text.slice(index + from.length)}`;
+    return next.replace(/,\s*,/gu, ",").replace(/^\s*,\s*|\s*,\s*$/gu, "").trim();
+  };
+
+  /**
+   * Zoom artist / outfit selection (AM zoom `saveEditedPrompt` 160908-160928 + `$bt` 122319): the artist segment of the
+   * main/negative prompt is swapped for the selected artist (NovelAI presets also carry steps/scale/cfgRescale
+   * overrides, AM `jY`), and each actor's outfit part tags are swapped for the selected outfit's tags.
+   */
+  const applyArtistAndOutfits = async (chatId: string, record: GenerationRecord, overrides: RegenerationOverrides | undefined) => {
+    const out = { positive: record.positivePrompt, negative: record.negativePrompt, characters: charactersOf(record), configPatch: {} as Rec, artistId: record.artistId, actors: record.actors.map((a) => ({ ...a })) };
+    if (!overrides) return out;
+    const config = await services.storage.loadConfig();
+    if (overrides.artistId && overrides.artistId !== record.artistId) {
+      if (record.engineProvider === "novelai") {
+        const list = listNovelAIArtists(config.characterPrompt.artistPrompts);
+        const next = list.find((a) => a.id === overrides.artistId) ?? fail("not-found", `Artist not found: ${overrides.artistId}`);
+        const old = list.find((a) => a.id === record.artistId);
+        const tracked = rec(rec(record.novelAIConfig).nonArtistPromptWeightArtist);
+        out.positive = replaceSegment(out.positive, str(tracked.positive) || str(old?.prompt), str(next.prompt));
+        out.negative = replaceSegment(out.negative, str(tracked.negative) || str(old?.negativePrompt), str(next.negativePrompt));
+        const o = rec(next.novelAIOverrides);
+        for (const key of ["steps", "scale", "cfgRescale"]) if (Number.isFinite(Number(o[key]))) out.configPatch[key] = Number(o[key]);
+      } else {
+        const entries = config.animaArtists.entries;
+        const next = entries.find((a) => a.id === overrides.artistId) ?? fail("not-found", `Artist not found: ${overrides.artistId}`);
+        out.positive = replaceSegment(out.positive, str(entries.find((a) => a.id === record.artistId)?.text), str(next.text));
+      }
+      out.artistId = overrides.artistId;
+    }
+    const choices: Awaited<ReturnType<typeof formsByActor>> = overrides.outfitByActor && Object.keys(overrides.outfitByActor).length ? await formsByActor(record, chatId, config) : new Map();
+    for (const [key, outfitId] of Object.entries(overrides.outfitByActor ?? {})) {
+      const actor = out.actors.find((a) => a.identityKey === key);
+      if (!actor || !outfitId || actor.selectedOutfitId === outfitId) continue;
+      const form = choices.get(actor.actorIndex);
+      const next = form?.outfits.find((x) => x.id === outfitId);
+      if (!next) fail("not-found", `Outfit not found: ${outfitId}`);
+      const oldTags = outfitTags(form?.outfits.find((x) => x.id === actor.selectedOutfitId) as Rec | undefined);
+      const newTags = outfitTags(next as unknown as Rec);
+      const ch = out.characters.find((c) => c.actorIndex === actor.actorIndex);
+      if (record.engineProvider === "novelai" && ch) ch.prompt = swapOutfitTags(ch.prompt, oldTags, newTags);
+      else out.positive = swapOutfitTags(out.positive, oldTags, newTags);
+      actor.selectedOutfitId = outfitId;
+    }
+    return out;
+  };
+
+  const regenerationRequest = (record: GenerationRecord, overrides: RegenerationOverrides | undefined, keepSeed: boolean, config: InlayConfig, slotId: string, rebuilt?: Awaited<ReturnType<typeof applyArtistAndOutfits>>) => {
     const o = overrides ?? {};
     const sections = new Map((o.sections ?? []).map((s) => [s.id, s] as const));
     const main = sections.get("main") ?? sections.get("provider");
     const size = o.sizeId ? resolveImageSize(o.sizeId, (config.runtime.customImageSizes ?? []) as never) : undefined;
     const width = size?.width ?? record.width;
     const height = size?.height ?? record.height;
-    const positive = o.positivePrompt ?? main?.value ?? record.positivePrompt;
-    const negative = o.negativePrompt ?? main?.negativeValue ?? record.negativePrompt;
+    const positive = o.positivePrompt ?? main?.value ?? rebuilt?.positive ?? record.positivePrompt;
+    const negative = o.negativePrompt ?? main?.negativeValue ?? rebuilt?.negative ?? record.negativePrompt;
     const excluded = new Set(o.excludedCharacterIndexes ?? []);
     let anyCenter = false;
-    const characters = charactersOf(record)
+    const characters = (rebuilt?.characters ?? charactersOf(record))
       .map((c, i) => {
         const s = sections.get(`actor:${i}`);
         const center = o.centers?.[i];
@@ -751,6 +833,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
       forceNsfwPrefix: false,
       config: {
         ...cfg,
+        ...(rebuilt?.configPatch ?? {}),
         width,
         height,
         characterPrompts: characters,
@@ -779,7 +862,8 @@ export function createChatPipelineController(services: BackendServices, engine: 
         throw new RpcFailure(rpcError("unsupported", "The image provider changed since this image was generated. Regenerate the whole message instead.", { retryable: false }));
       const overrides = job.regenerate?.overrides ?? sidecar.drafts[slotId]?.overrides;
       const keepSeed = !!job.regenerate?.overrides && !!overrides?.seedFixed;
-      const request = regenerationRequest(record, overrides, keepSeed, config, slotId);
+      const rebuilt = await applyArtistAndOutfits(chatId, record, overrides);
+      const request = regenerationRequest(record, overrides, keepSeed, config, slotId, rebuilt);
       const chat = await getChat(chatId);
       const messages = await loadMessages(services.host, chatId);
       const characterId = await speakingCharacterId(services, chat, findMessage(messages, job.target.messageId).view);
@@ -846,6 +930,16 @@ export function createChatPipelineController(services: BackendServices, engine: 
           sentParameters: rec(meta.sentParameters),
           generationOrigin: "regenerate",
           parentEntryId: source.entryId,
+          actors: rebuilt.actors,
+          ...(rebuilt.artistId ? { artistId: rebuilt.artistId } : {}),
+          characters: (request.config && Array.isArray((request.config as Rec).characterPrompts) ? ((request.config as Rec).characterPrompts as Rec[]) : []).map((ch, i) => ({
+            prompt: str(ch.prompt),
+            negativePrompt: str(ch.uc),
+            actorIndex: Number.isFinite(Number(ch.actorIndex)) ? Number(ch.actorIndex) : i,
+            centerX: Number(ch.centerX ?? 0.5),
+            centerY: Number(ch.centerY ?? 0.5),
+            ...(ch.coordinateMode ? { coordinateMode: String(ch.coordinateMode) } : {}),
+          })),
         };
       }, written.history);
       job.snapshot.completedSlots = 1;
@@ -915,15 +1009,9 @@ export function createChatPipelineController(services: BackendServices, engine: 
     outfitsByActor?: Map<number, { key: string; choices: { id: string; label: string }[] }>;
   }
 
-  /** Artist list per codec (NovelAI presets + user artists / Anima list) and each actor's form outfits (zoom selects). */
-  const choicesFor = async (record: GenerationRecord | null, chatId: string): Promise<SectionChoices> => {
-    if (!record) return {};
-    const config = await services.storage.loadConfig();
-    const artists =
-      record.engineProvider === "novelai"
-        ? listNovelAIArtists(config.characterPrompt.artistPrompts).map((a) => ({ id: a.id, label: a.displayTitle || a.id }))
-        : config.animaArtists.entries.map((a) => ({ id: a.id, label: a.title || a.id }));
-    const outfitsByActor = new Map<number, { key: string; choices: { id: string; label: string }[] }>();
+  /** Form (with outfits) of each record actor: persona forms from the global persona settings, else the owner's document. */
+  const formsByActor = async (record: GenerationRecord, chatId: string, config: InlayConfig) => {
+    const out = new Map<number, { id: string; outfits: Array<{ id: string; label: string } & Rec> }>();
     const chat = await getChat(chatId).catch(() => null);
     for (const actor of record.actors) {
       if (!actor.identityKey) continue;
@@ -937,10 +1025,27 @@ export function createChatPipelineController(services: BackendServices, engine: 
           forms = resolveFormCollection(document?.characterPrompt.characterForms ?? {}, actor.identityKey, {} as never);
         }
         const form = forms.forms.find((f) => f.id === actor.selectedFormId) ?? forms.forms.find((f) => f.id === forms.defaultFormId) ?? forms.forms[0];
-        if (form) outfitsByActor.set(actor.actorIndex, { key: actor.identityKey, choices: form.outfits.map((o) => ({ id: o.id, label: o.label || o.id })) });
+        if (form) out.set(actor.actorIndex, form as never);
       } catch {
         /* no forms for this actor */
       }
+    }
+    return out;
+  };
+
+  /** Artist list per codec (NovelAI presets + user artists / Anima list) and each actor's form outfits (zoom selects). */
+  const choicesFor = async (record: GenerationRecord | null, chatId: string): Promise<SectionChoices> => {
+    if (!record) return {};
+    const config = await services.storage.loadConfig();
+    const artists =
+      record.engineProvider === "novelai"
+        ? listNovelAIArtists(config.characterPrompt.artistPrompts).map((a) => ({ id: a.id, label: a.displayTitle || a.id }))
+        : config.animaArtists.entries.map((a) => ({ id: a.id, label: a.title || a.id }));
+    const outfitsByActor = new Map<number, { key: string; choices: { id: string; label: string }[] }>();
+    const forms = await formsByActor(record, chatId, config);
+    for (const actor of record.actors) {
+      const form = forms.get(actor.actorIndex);
+      if (form) outfitsByActor.set(actor.actorIndex, { key: actor.identityKey, choices: form.outfits.map((o) => ({ id: o.id, label: o.label || o.id })) });
     }
     return { artists, outfitsByActor };
   };

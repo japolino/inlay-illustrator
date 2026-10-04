@@ -70,7 +70,105 @@ function scriptedV5Analyzer(request: LlmCompleteRequest): string {
   });
 }
 
+/** V5 analyzer that introduces an unregistered character (free character generation, AM generated_actor_proposals). */
+function scriptedFreeCharacterAnalyzer(request: LlmCompleteRequest): string {
+  const last = request.messages[request.messages.length - 1]!;
+  const text = typeof last.content === "string" ? last.content : last.content.map((p) => (p.type === "text" ? p.text : "")).join("");
+  const json = JSON.parse(text.slice(text.indexOf("{")));
+  const slot = Number(/<slot_number: (\d+)>/u.exec(json.scene)![1]);
+  return JSON.stringify({
+    generated_actor_proposals: [
+      {
+        candidateKey: "free_1",
+        label: "Hana",
+        tags: "1girl, red hair",
+        instruction: "",
+        sex: "female",
+        profile: {
+          recognitionKeys: ["Hana"],
+          formLabel: "red-haired young teacher",
+          humanlike: true,
+          basePromptGroups: { "hair.color": ["red hair"], "eyes.color": ["green eyes"] },
+          defaultOutfit: { name: "Grey Blazer and Pencil Skirt", head: "", top: "grey blazer, white blouse", bottom: "grey pencil skirt", legs: "", feet: "black heels" },
+        },
+      },
+    ],
+    illustrations: [
+      {
+        slot_number: slot,
+        actor_roster: [{ actorId: "actor_1", candidateKey: "free_1" }],
+        interaction: { items: [], modifiers: [], instructions: [] },
+        frame_placement: { sizeId: 1, modifiers: [{ id: "scene.rating", options: ["sfw"] }], freeTags: ["classroom"], instruction: "", items: [{ actorId: "actor_1", center: { x: 0.5, y: 0.5 } }] },
+        actor_detail: [{ actorId: "actor_1", placementIndex: 0, actions: [], modifiers: [{ id: "expression.general", options: ["light_smile"] }], freeTags: [], poseInstruction: "", actionInstruction: "", objectInstruction: "" }],
+        camera: { modifiers: [], instruction: "" },
+      },
+    ],
+  });
+}
+
+/** v4-5 analyzer that proposes a new outfit for the first actor (free outfit generation, AM outfit_proposals). */
+function scriptedOutfitProposalAnalyzer(request: LlmCompleteRequest): string {
+  const base = JSON.parse(scriptedAnalyzer(request));
+  const actor = base.illustrations[0].actors[0];
+  delete actor.outfit_id;
+  actor.outfit_proposal_id = "proposal_1";
+  base.outfit_proposals = [
+    { id: "proposal_1", candidate_key: actor.candidate_key, form_ref: actor.form_ref, name: "Red Track Suit", head: "", top: "red track jacket", bottom: "red track pants", legs: "", feet: "white sneakers", reason: "running", confidence: 0.9 },
+  ];
+  return JSON.stringify(base);
+}
+
 describe("pipeline end to end over the real engine", () => {
+  test("v4-5 free outfit generation saves the proposed outfit (tags only) and uses it", async () => {
+    setEngineEnv(seededEnv(3));
+    try {
+      const fx = createPipelineFixture({
+        config: { image: { provider: "novelai", model: "nai-diffusion-4-5-full", connectionId: "img-1" }, novelai: { analysisProfile: "v4-5" }, runtime: { generationAutoRetryCount: 0 } },
+      });
+      fx.llmReplies.push((request: LlmCompleteRequest) => scriptedOutfitProposalAnalyzer(request));
+      const { pipeline } = createPipelineModule(fx.services);
+      await pipeline.handleGenerationEnded({ chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
+      await waitFor(() => finished(fx).length > 0, 20000);
+      expect(finished(fx)[0]!.error).toBeUndefined();
+      expect(finished(fx)[0]!.result).toBe("completed");
+      const profile = (fx.config.value.characterPrompt.personaSettings.profiles as Record<string, any>)["persona-1"];
+      expect(JSON.stringify(profile)).toContain("red track jacket");
+      expect(JSON.stringify(fx.imageRequests[0])).toContain("red track jacket");
+      pipeline.dispose();
+    } finally {
+      setEngineEnv(null);
+    }
+  }, 30000);
+
+  test("V5 free character generation persists the generated character into the character document", async () => {
+    setEngineEnv(seededEnv(5));
+    try {
+      const fx = createPipelineFixture({
+        config: {
+          image: { provider: "novelai", model: "nai-diffusion-5-full", connectionId: "img-1" },
+          novelai: { analysisProfile: "v5-hybrid" },
+          runtime: { generationAutoRetryCount: 0 },
+        },
+      });
+      fx.llmReplies.push((request: LlmCompleteRequest) => scriptedFreeCharacterAnalyzer(request));
+      const { pipeline } = createPipelineModule(fx.services);
+      await pipeline.handleGenerationEnded({ chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
+      await waitFor(() => finished(fx).length > 0, 20000);
+      expect(finished(fx)[0]!.error).toBeUndefined();
+      expect(finished(fx)[0]!.result).toBe("completed");
+      expect(JSON.stringify(fx.llmRequests[0]!.messages)).toContain("generated_actor_proposals");
+      const doc = fx.documents.get("char-1")!;
+      expect(doc.customCharacters.map((c) => [c.title, c.origin])).toEqual([["Hana", "ai-auto"]]);
+      const forms = doc.characterPrompt.characterForms[doc.customCharacters[0]!.id]!;
+      expect(forms.forms[0]!.outfits[0]!.top).toBe("grey blazer, white blouse");
+      expect(fx.imageRequests[0]!.novelai?.characters?.[0]?.prompt).toContain("red hair");
+      expect(fx.events.some((e) => e.event === "document.changed")).toBe(true);
+      pipeline.dispose();
+    } finally {
+      setEngineEnv(null);
+    }
+  }, 30000);
+
   test("V5 profile: scene graph analyzer -> NovelAI V5 request -> History + V5 continuity", async () => {
     setEngineEnv(seededEnv(9));
     try {
