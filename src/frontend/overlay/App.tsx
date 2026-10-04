@@ -140,6 +140,26 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
     if (!sectionVisible(section, developerMode)) setSection(DEFAULT_SETTINGS_SECTION);
   }, [developerMode, section]);
 
+  // AM `Uo` 154814: 1.5 s after a character prompt / persona analysis completes, show its result tab.
+  const analysisJobs = useAppState((s) => s.analysisJobs);
+  const finishedJobs = Object.values(analysisJobs).filter((job) => job.finishedAt && (job.status === "success" || job.status === "partial"));
+  const seenJobs = useRef(new Set<string>());
+  useEffect(() => {
+    for (const job of finishedJobs) {
+      if (seenJobs.current.has(job.jobId)) continue;
+      seenJobs.current.add(job.jobId);
+      const target: WorkspaceTab | null = job.kind === "character-prompts" ? "prompts" : job.kind === "persona" ? "persona" : null;
+      const from: WorkspaceTab = "assets";
+      if (!target || job.characterId !== characterId || activeTab !== from) continue;
+      const tabAtFinish = activeTab;
+      const characterAtFinish = characterId;
+      setTimeout(() => {
+        const current = workspaceUi.source(characterAtFinish).activeTab;
+        if (app.state.selectedCharacterId === characterAtFinish && current === tabAtFinish) setActiveTab(target);
+      }, 1500);
+    }
+  }, [finishedJobs.length]);
+
   const guarded = (action: () => void) => workspaceUi.runGuarded(action);
   const toggleSettings = () => guarded(() => {
     setSettingsOpen((open) => !open);
