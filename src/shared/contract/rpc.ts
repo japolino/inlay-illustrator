@@ -27,6 +27,7 @@ import type { CountPolicy, CurrentActorState, IllustrationPlan } from "./chat.js
 import type { ChatImageGenerationSettings, CharxSettingsPatch, EffectiveCharxSettings, GenerationProvider, InlayConfig, PromptCodecId, UiState } from "./config.js";
 import type { CharxSettingField } from "./character.js";
 import type { GenerationOrigin, HistoryTree } from "./history.js";
+import type { ChatMessageUiState } from "./chat-dom.js";
 
 export const RPC_PROTOCOL_VERSION = 1;
 /** Message `type` used on the Spindle frontend/backend channel. */
@@ -406,6 +407,10 @@ export interface RpcMethods {
   /* chat state window (AM "accumulated state of the current chat") */
   "chatState.get": { params: { chatId: string }; result: { actorState: CurrentActorState } };
   "chatState.clear": { params: { chatId: string; actorKeys?: string[] }; result: { actorState: CurrentActorState } };
+
+  /* chat DOM (footers / edge controls, see chat-dom.ts) */
+  /** Per-message UI state for the injected chat controls. `messageIds` = Lumiverse message ids (all swipes' active one); empty = every message with data. */
+  "chatDom.getMessageStates": { params: { chatId: string; messageIds?: string[] }; result: { messages: ChatMessageUiState[] } };
 }
 
 export type RpcMethod = keyof RpcMethods;
@@ -485,6 +490,7 @@ export const RPC_METHODS = [
   "history.get", "history.selectEntry", "history.selectRevision", "history.deleteEntry", "history.prepareSlotDeletion", "history.deleteSlot", "history.retryCleanup",
   "zoom.getDetails", "zoom.saveDraft", "zoom.clearDraft", "zoom.importViewed", "zoom.requestAiPromptEdit", "zoom.applyAiPromptEdit",
   "chatState.get", "chatState.clear",
+  "chatDom.getMessageStates",
 ] as const satisfies readonly RpcMethod[];
 
 export const RPC_EVENTS = [
