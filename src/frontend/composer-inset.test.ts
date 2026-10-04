@@ -46,7 +46,7 @@ describe("composer inset tracker (DOM)", () => {
       return { ...r, left: 0, right: r.width, x: 0, y: r.top, toJSON: () => r } as DOMRect;
     };
     rects.set("probe", { top: 744, bottom: 844, height: 100, width: 0 });
-    const tracker = startComposerInset(doc, win as unknown as Window & typeof globalThis);
+    const tracker = startComposerInset(doc, win as never);
     expect(tracker.current()).toBe(66);
     expect(doc.documentElement.style.getPropertyValue(COMPOSER_INSET_VAR)).toBe("66px");
     const composer = doc.createElement("div");
