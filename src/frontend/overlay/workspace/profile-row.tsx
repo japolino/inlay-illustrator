@@ -159,7 +159,7 @@ export function ProfileRow(props: ProfileRowProps) {
         }
         genderControl={<GenderToggle value={form.gender} label={props.genderLabel} onChange={(g: Gender) => commit((c) => patchForm(c, form.id, { gender: g }))} />}
         rowAnalysisControl={showAnalysis ? (
-          <LabeledCheckbox label={COMMON_LABELS.analyze} title={textTitle} disabled={props.commandLocked || (!props.reclass && !referenceAsset)}
+          <LabeledCheckbox label={COMMON_LABELS.analyze} className="px-1.5" title={textTitle} disabled={props.commandLocked || (!props.reclass && !referenceAsset)}
             checked={formAnalysisEnabled(form)} onCheckedChange={(v) => commit((c) => { const f = findForm(c, form.id); return patchForm(c, f.id, { reference: { ...(f.reference ?? {}), referenceAnalysisEnabled: v } }); })} />
         ) : undefined}
         resetLabel={props.resetLabel}

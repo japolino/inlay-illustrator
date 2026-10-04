@@ -356,9 +356,9 @@ export function PromptRowLayout({ title, titleStart, titleEnd, exclusionAction, 
       >
         {referenceVisible ? <div class="row-span-2 min-h-0 min-w-0 @max-[40rem]:h-36" data-prompt-reference-slot="">{referenceCard}</div> : null}
         <div class="min-w-0 @max-[40rem]:self-start" data-prompt-form-header="">{formHeader}</div>
-        <div class="grid h-7.5 min-w-0 grid-cols-[minmax(0,1fr)_auto_2.5rem] items-center max-md:h-11 @max-[40rem]:col-start-2 @max-[40rem]:self-start" data-prompt-row-controls="">
+        <div class="grid h-7.5 min-w-0 grid-cols-[auto_minmax(0,1fr)_2.5rem] items-center max-md:h-11 @max-[40rem]:col-start-2 @max-[40rem]:self-start" data-prompt-row-controls="">
           <div class="min-w-0">{genderControl}</div>
-          {rowAnalysisControl != null ? <div class="ml-1.5 md:ml-2">{rowAnalysisControl}</div> : <span />}
+          {rowAnalysisControl != null ? <div class="min-w-0 justify-self-end">{rowAnalysisControl}</div> : <span />}
           <IconButton size="workbenchIcon" label={resetLabel} onClick={onReset}><RotateCcwIcon /></IconButton>
         </div>
         <div class="h-full min-h-0 min-w-0 @max-[40rem]:col-span-full @max-[40rem]:h-44" data-prompt-main-editor="">{formEditor ?? basePromptEditor}</div>

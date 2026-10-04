@@ -83,7 +83,7 @@ function useOutfitModel({ ctx, owner, draftKey, source }: OutfitPaneModel) {
       const form = findForm(collection, formId);
       const outfit = outfitId ? form.outfits.find((o) => o.id === outfitId) : undefined;
       const blank: GenerationDraft = { label: "", description: "", head: "", top: "", bottom: "", legs: "", feet: "", nsfw: false, gender: form.gender };
-      const draftValues: GenerationDraft = outfit ? { label: outfit.label, description: outfit.description, head: outfit.head, top: outfit.top, bottom: outfit.bottom, legs: outfit.legs, feet: outfit.feet, nsfw: false, gender: form.gender } : blank;
+      const draftValues: GenerationDraft = outfit ? { label: outfitDisplayLabel(outfit, form.outfits.indexOf(outfit)), description: outfit.description, head: outfit.head, top: outfit.top, bottom: outfit.bottom, legs: outfit.legs, feet: outfit.feet, nsfw: false, gender: form.gender } : blank;
       const seedSetting = owner.kind === "character" ? ctx.workspace?.document.characterPrompt.seedSettings[owner.promptKey] : undefined;
       sessions.openGeneration(characterId, {
         target: owner.kind === "character" ? { kind: "character", characterId: characterId ?? "", promptKey: owner.promptKey } : { kind: "persona", personaId: owner.personaId, ...(characterId ? { characterId } : {}) },

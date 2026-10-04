@@ -246,7 +246,7 @@ export function GenderToggle({ value, onChange, label = GENDER_LABELS.characterG
           disabled={disabled}
           onClick={() => onChange(o.value)}
           class={cn(
-            "grid h-6.5 w-7 place-items-center rounded text-xs font-black text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/55 disabled:opacity-45 max-md:h-10 max-md:w-10",
+            "grid h-6.5 w-6 place-items-center rounded text-xs font-black text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/55 disabled:opacity-45 max-md:h-10 max-md:w-10",
             value === o.value && (o.value === "female" ? "bg-gender-female/20 text-gender-female" : o.value === "male" ? "bg-gender-male/20 text-gender-male" : "bg-selected text-selected-foreground")
           )}
         >
