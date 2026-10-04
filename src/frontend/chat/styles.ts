@@ -587,7 +587,7 @@ export const CHAT_SIDE_CSS = String.raw`
   .ii-am-root .ii-am-chat-toast { min-height: 44px; }
   .ii-am-root .ii-am-chat-toast__content { grid-template-columns: 16px minmax(0, 1fr) 44px; min-height: 44px; padding: 4px 4px 4px 12px; gap: 6px; }
   .ii-am-root .ii-am-chat-toast__action { width: 44px; height: 44px; }
-  .ii-am-root .ii-am-chat-count:not([data-ii-floating="true"]) { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px)); display: grid; justify-items: end; }
+  .ii-am-root .ii-am-chat-count:not([data-ii-floating="true"]) { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); bottom: var(--ii-am-composer-inset, calc(64px + env(safe-area-inset-bottom, 0px))); display: grid; justify-items: end; }
   .ii-am-root .ii-am-chat-count:not([data-ii-floating="true"]) .ii-am-chat-count__panel { top: auto; right: 0; bottom: calc(100% + 8px); height: 48px; max-width: calc(100vw - 24px); overflow-x: auto; scrollbar-width: none; }
   .ii-am-root .ii-am-chat-count[data-ii-menu="count"] .ii-am-chat-count__panel,
   .ii-am-root .ii-am-chat-count[data-ii-menu="scene"] .ii-am-chat-count__panel { overflow: visible; }
