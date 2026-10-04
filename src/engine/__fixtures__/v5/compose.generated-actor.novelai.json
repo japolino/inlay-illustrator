@@ -1,0 +1,1252 @@
+{
+ "scenario": {
+  "response": "generatedActor",
+  "provider": "novelai",
+  "seed": 49,
+  "freechar": true
+ },
+ "analysis": {
+  "profile": "v5-hybrid",
+  "response": {
+   "illustrations": [
+    {
+     "slotNumber": 1,
+     "status": "recovered",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "free_1",
+       "sex": "male",
+       "generated": {
+        "profile": {
+         "recognitionKeys": [
+          "School janitor"
+         ],
+         "humanlike": true,
+         "basePromptGroups": {
+          "marks.distinctive": [
+           "old man",
+           "grey hair",
+           "blue overalls"
+          ]
+         },
+         "defaultOutfit": {
+          "name": "기본 의상",
+          "description": "",
+          "head": "",
+          "top": "",
+          "bottom": "",
+          "legs": "",
+          "feet": "",
+          "reason": "",
+          "confidence": 0
+         }
+        },
+        "label": "School janitor",
+        "tags": [
+         "old_man",
+         "grey_hair",
+         "blue_overalls"
+        ],
+        "instruction": "Stooped posture, holding a broom."
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.m0ais.6ynrym",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "id": "arm_around_shoulder",
+       "mode": "directed",
+       "sourceActorId": "actor_2",
+       "targetActorId": "actor_1",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": []
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "indoors"
+        ]
+       }
+      ],
+      "freeTags": [
+       "hallway"
+      ],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 2,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.3,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "center": {
+        "x": 0.7,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "exhausted"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "actions": [],
+       "modifiers": [],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].tags[0]",
+       "message": "Canonicalized a free tag to 'old_man'."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].tags[1]",
+       "message": "Canonicalized a free tag to 'grey_hair'."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].tags[2]",
+       "message": "Canonicalized a free tag to 'blue_overalls'."
+      },
+      {
+       "code": "generated-character-profile-reconstructed",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile",
+       "message": "Reconstructed the profile from the same generated Actor's identity evidence."
+      },
+      {
+       "code": "generated-character-recognition-key-meaning-recovered",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile.recognitionKeys",
+       "message": "Recovered recognition keys from the generated Actor identity."
+      },
+      {
+       "code": "generated-character-humanlike-defaulted",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile.humanlike",
+       "message": "Used the existing appearance-form default for an unspecified humanlike value."
+      },
+      {
+       "code": "generated-character-base-prompt-meaning-recovered",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile.basePromptGroups",
+       "message": "Recovered persistent appearance tags from the generated Actor identity tags."
+      },
+      {
+       "code": "generated-character-outfit-name-recovered",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile.defaultOutfit.name",
+       "message": "Used the default outfit label because its name was missing."
+      }
+     ]
+    }
+   ],
+   "diagnostics": [
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].tags[0]",
+     "message": "Canonicalized a free tag to 'old_man'."
+    },
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].tags[1]",
+     "message": "Canonicalized a free tag to 'grey_hair'."
+    },
+    {
+     "code": "tag-canonicalized",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].tags[2]",
+     "message": "Canonicalized a free tag to 'blue_overalls'."
+    },
+    {
+     "code": "generated-character-profile-reconstructed",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile",
+     "message": "Reconstructed the profile from the same generated Actor's identity evidence."
+    },
+    {
+     "code": "generated-character-recognition-key-meaning-recovered",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile.recognitionKeys",
+     "message": "Recovered recognition keys from the generated Actor identity."
+    },
+    {
+     "code": "generated-character-humanlike-defaulted",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile.humanlike",
+     "message": "Used the existing appearance-form default for an unspecified humanlike value."
+    },
+    {
+     "code": "generated-character-base-prompt-meaning-recovered",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile.basePromptGroups",
+     "message": "Recovered persistent appearance tags from the generated Actor identity tags."
+    },
+    {
+     "code": "generated-character-outfit-name-recovered",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile.defaultOutfit.name",
+     "message": "Used the default outfit label because its name was missing."
+    }
+   ]
+  },
+  "attempts": 1,
+  "resumedFromCheckpoint": false,
+  "candidateBindings": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "identityReferences": [
+     "persona::p1",
+     "Shouta",
+     "p1"
+    ],
+    "sex": "male",
+    "continuityIdentity": {
+     "kind": "persona_reference",
+     "value": "persona::p1"
+    },
+    "outfitCandidateIds": [
+     "Casual hoodie"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "unknown_form_1",
+      "formId": "form_default",
+      "sex": "male",
+      "defaultOutfitRef": "Casual hoodie",
+      "outfits": [
+       {
+        "outfitRef": "Casual hoodie",
+        "outfitId": "outfit_1"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "unknown_form_1"
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "identityReferences": [
+     "lore:alice",
+     "Alice",
+     "Ally"
+    ],
+    "sex": "female",
+    "continuityIdentity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:alice"
+    },
+    "outfitCandidateIds": [
+     "Navy sailor school uniform",
+     "White summer sundress"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "silver_hair,_blue_eyes",
+      "formId": "form_default",
+      "sex": "female",
+      "defaultOutfitRef": "Navy sailor school uniform",
+      "outfits": [
+       {
+        "outfitRef": "Navy sailor school uniform",
+        "outfitId": "outfit_1"
+       },
+       {
+        "outfitRef": "White summer sundress",
+        "outfitId": "outfit_2"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "silver_hair,_blue_eyes"
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "identityReferences": [
+     "lore:bob",
+     "Bob"
+    ],
+    "sex": "male",
+    "continuityIdentity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:bob"
+    },
+    "outfitCandidateIds": [
+     "Grey business suit"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "black_hair,_tall",
+      "formId": "form_default",
+      "sex": "male",
+      "defaultOutfitRef": "Grey business suit",
+      "outfits": [
+       {
+        "outfitRef": "Grey business suit",
+        "outfitId": "outfit_1"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "black_hair,_tall"
+   }
+  ],
+  "candidateSourceKeys": {
+   "actor.g00nx3.1d3zc2v": "lore:alice",
+   "actor.m0ais.6ynrym": "lore:bob",
+   "actor.1fmv888.fk4pvw": "persona::p1"
+  },
+  "requestPayload": "fnv1a64-82bd78bc1217e302",
+  "localProjection": {
+   "characterCoordinates": "fixed"
+  },
+  "catalogFingerprint": "v5.fnv1a64-2d2b8892321dc763"
+ },
+ "plans": [
+  {
+   "format": "novelai-v5-interaction-led-prompt-v1",
+   "sizeId": 2,
+   "width": 1216,
+   "height": 832,
+   "global": {
+    "tags": [
+     "2::1boy::",
+     "1.5::artist:hwansang ::",
+     "year 2025",
+     "masterpiece",
+     "best quality",
+     "indoors",
+     "hallway",
+     "very aesthetic"
+    ],
+    "instructions": [],
+    "serializedPrompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, hallway, very aesthetic"
+   },
+   "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+   "characters": [
+    {
+     "tags": [
+      "old_man",
+      "grey_hair",
+      "blue_overalls",
+      "target#arm around shoulder",
+      "exhausted"
+     ],
+     "instructions": [
+      "Stooped posture, holding a broom."
+     ],
+     "serializedPrompt": "old_man, grey_hair, blue_overalls, target#arm around shoulder, exhausted\nStooped posture, holding a broom.",
+     "actorId": "actor_1",
+     "placementIndex": 0,
+     "candidateKey": "free_1",
+     "sex": "male",
+     "centerX": 0.3,
+     "centerY": 0.5,
+     "negativePrompt": ""
+    },
+    {
+     "tags": [
+      "male",
+      "black hair",
+      "source#arm around shoulder",
+      "grey suit jacket",
+      "white shirt",
+      "blue necktie",
+      "grey suit pants",
+      "black dress shoes"
+     ],
+     "instructions": [],
+     "serializedPrompt": "male, black hair, source#arm around shoulder, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+     "actorId": "actor_2",
+     "placementIndex": 1,
+     "candidateKey": "actor.m0ais.6ynrym",
+     "sex": "male",
+     "centerX": 0.7,
+     "centerY": 0.5,
+     "negativePrompt": ""
+    }
+   ],
+   "ledger": [
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "actor_roster.male.count",
+     "value": "1boy",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:male",
+     "weight": 2,
+     "id": "ledger:00000",
+     "semanticKey": "1boy",
+     "inputIndex": 0,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "actor.identity.sex",
+     "value": "male",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:actor_2:sex",
+     "weight": 1,
+     "id": "ledger:00001",
+     "semanticKey": "male",
+     "inputIndex": 1,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "generated_actor.free_1.tag.1",
+     "value": "old_man",
+     "order": 0,
+     "sourceKind": "generated-actor",
+     "sourceId": "generated-actor:free_1",
+     "weight": 1,
+     "id": "ledger:00002",
+     "semanticKey": "old man",
+     "inputIndex": 2,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "generated_actor.free_1.tag.2",
+     "value": "grey_hair",
+     "order": 0,
+     "sourceKind": "generated-actor",
+     "sourceId": "generated-actor:free_1",
+     "weight": 1,
+     "id": "ledger:00003",
+     "semanticKey": "grey hair",
+     "inputIndex": 3,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "generated_actor.free_1.tag.3",
+     "value": "blue_overalls",
+     "order": 0,
+     "sourceKind": "generated-actor",
+     "sourceId": "generated-actor:free_1",
+     "weight": 1,
+     "id": "ledger:00004",
+     "semanticKey": "blue overalls",
+     "inputIndex": 4,
+     "status": "applied"
+    },
+    {
+     "lane": "instruction",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "generated_actor.free_1.instruction",
+     "value": "Stooped posture, holding a broom.",
+     "order": 1,
+     "sourceKind": "generated-actor",
+     "sourceId": "generated-actor:free_1",
+     "id": "ledger:00005",
+     "semanticKey": "stooped posture holding a broom",
+     "inputIndex": 5,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "base.hair.color",
+     "value": "black hair",
+     "order": 9100,
+     "sourceKind": "external-identity",
+     "sourceId": "lore:bob:hair.color:0",
+     "weight": 1,
+     "id": "ledger:00014",
+     "semanticKey": "black hair",
+     "inputIndex": 14,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.marks.distinctive",
+     "value": "old man",
+     "order": 10100,
+     "sourceKind": "external-identity",
+     "sourceId": "free_1:marks.distinctive:0",
+     "weight": 1,
+     "id": "ledger:00011",
+     "semanticKey": "old man",
+     "inputIndex": 11,
+     "status": "suppressed",
+     "suppressionReason": "semantic_duplicate"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.marks.distinctive",
+     "value": "grey hair",
+     "order": 10101,
+     "sourceKind": "external-identity",
+     "sourceId": "free_1:marks.distinctive:1",
+     "weight": 1,
+     "id": "ledger:00012",
+     "semanticKey": "grey hair",
+     "inputIndex": 12,
+     "status": "suppressed",
+     "suppressionReason": "semantic_duplicate"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.marks.distinctive",
+     "value": "blue overalls",
+     "order": 10102,
+     "sourceKind": "external-identity",
+     "sourceId": "free_1:marks.distinctive:2",
+     "weight": 1,
+     "id": "ledger:00013",
+     "semanticKey": "blue overalls",
+     "inputIndex": 13,
+     "status": "suppressed",
+     "suppressionReason": "semantic_duplicate"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.1",
+     "value": "1.5::artist:hwansang ::",
+     "order": 9500,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00020",
+     "semanticKey": "artist hwansang",
+     "inputIndex": 20,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.2",
+     "value": "year 2025",
+     "order": 9501,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00021",
+     "semanticKey": "year 2025",
+     "inputIndex": 21,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.3",
+     "value": "masterpiece",
+     "order": 9502,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00022",
+     "semanticKey": "masterpiece",
+     "inputIndex": 22,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.4",
+     "value": "best quality",
+     "order": 9503,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00023",
+     "semanticKey": "best quality",
+     "inputIndex": 23,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "interaction.arm_around_shoulder.directed.source",
+     "value": "source#arm around shoulder",
+     "order": 41,
+     "sourceKind": "closed",
+     "sourceId": "interaction:interaction:0",
+     "weight": 1,
+     "id": "ledger:00006",
+     "semanticKey": "arm around shoulder",
+     "inputIndex": 6,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "interaction.arm_around_shoulder.directed.target",
+     "value": "target#arm around shoulder",
+     "order": 42,
+     "sourceKind": "closed",
+     "sourceId": "interaction:interaction:0",
+     "weight": 1,
+     "id": "ledger:00007",
+     "semanticKey": "arm around shoulder",
+     "inputIndex": 7,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "expression.general.exhausted",
+     "value": "exhausted",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:expression.general.exhausted",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00008",
+     "semanticKey": "exhausted",
+     "inputIndex": 8,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.environment.indoors",
+     "value": "indoors",
+     "order": 6060,
+     "sourceKind": "closed",
+     "sourceId": "scene-location:scene.environment:scene.environment.indoors",
+     "weight": 1,
+     "id": "ledger:00009",
+     "semanticKey": "indoors",
+     "inputIndex": 9,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.free.hallway",
+     "value": "hallway",
+     "order": 0,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "weight": 1,
+     "id": "ledger:00010",
+     "semanticKey": "hallway",
+     "inputIndex": 10,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.top.1",
+     "value": "grey suit jacket",
+     "order": 9100,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:top",
+     "weight": 1,
+     "id": "ledger:00015",
+     "semanticKey": "grey suit jacket",
+     "inputIndex": 15,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.top.2",
+     "value": "white shirt",
+     "order": 9101,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:top",
+     "weight": 1,
+     "id": "ledger:00016",
+     "semanticKey": "white shirt",
+     "inputIndex": 16,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.top.3",
+     "value": "blue necktie",
+     "order": 9102,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:top",
+     "weight": 1,
+     "id": "ledger:00017",
+     "semanticKey": "blue necktie",
+     "inputIndex": 17,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.bottom",
+     "value": "grey suit pants",
+     "order": 9200,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:bottom",
+     "weight": 1,
+     "id": "ledger:00018",
+     "semanticKey": "grey suit pants",
+     "inputIndex": 18,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.feet",
+     "value": "black dress shoes",
+     "order": 9300,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:feet",
+     "weight": 1,
+     "id": "ledger:00019",
+     "semanticKey": "black dress shoes",
+     "inputIndex": 19,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "fixed.positive",
+     "value": "very aesthetic",
+     "order": 10000,
+     "sourceKind": "external-fixed",
+     "sourceId": "character-generation-settings",
+     "weight": 1,
+     "id": "ledger:00024",
+     "semanticKey": "very aesthetic",
+     "inputIndex": 24,
+     "status": "applied"
+    }
+   ]
+  }
+ ],
+ "requests": [
+  {
+   "provider": "novelai",
+   "providerRef": {
+    "providerId": "novelai",
+    "queueScopeKey": "image-provider:novelai:global"
+   },
+   "prompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, hallway, very aesthetic",
+   "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+   "seed": "1234567",
+   "width": 1216,
+   "height": 832,
+   "maxAttempts": 1,
+   "config": {
+    "apiKey": "test-key",
+    "naiModel": "nai-diffusion-5-full",
+    "seed": "1234567",
+    "steps": 28,
+    "scale": 5,
+    "sampler": "k_euler_ancestral",
+    "analysisProfile": "v5-hybrid",
+    "width": 1216,
+    "height": 832,
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "useCoords": false,
+    "characterPrompts": [
+     {
+      "actorSlot": "actor_1",
+      "prompt": "old_man, grey_hair, blue_overalls, target#arm around shoulder, exhausted\nStooped posture, holding a broom.",
+      "uc": "",
+      "centerX": 0.3,
+      "centerY": 0.5,
+      "coordinateMode": "automatic"
+     },
+     {
+      "actorSlot": "actor_2",
+      "prompt": "male, black hair, source#arm around shoulder, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+      "uc": "",
+      "centerX": 0.7,
+      "centerY": 0.5,
+      "coordinateMode": "automatic"
+     }
+    ]
+   },
+   "references": [],
+   "queueMeta": {
+    "kind": "generation",
+    "source": "novelai-v5-interaction-led",
+    "sourceImageToken": "slot:s2"
+   }
+  }
+ ],
+ "images": [
+  {
+   "sourceImageToken": "slot:s2",
+   "providerRef": {
+    "providerId": "novelai",
+    "queueScopeKey": "image-provider:novelai:global"
+   },
+   "actors": [
+    {
+     "actorId": "actor_1",
+     "actorIndex": 0,
+     "kind": "character",
+     "gender": "",
+     "identityKey": "",
+     "identityName": "",
+     "selectedFormId": "form_default",
+     "selectedOutfitId": "outfit_default",
+     "identitySuppressed": false,
+     "prompt": "old_man, grey_hair, blue_overalls, target#arm around shoulder, exhausted\nStooped posture, holding a broom.",
+     "negativePrompt": ""
+    },
+    {
+     "actorId": "actor_2",
+     "actorIndex": 1,
+     "kind": "character",
+     "gender": "",
+     "identityKey": "lore:bob",
+     "identityName": "",
+     "selectedFormId": "form_default",
+     "selectedOutfitId": "outfit_1",
+     "identitySuppressed": false,
+     "prompt": "male, black hair, source#arm around shoulder, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+     "negativePrompt": ""
+    }
+   ],
+   "promptSegments": {
+    "artistPositive": {
+     "start": 11,
+     "end": 72
+    },
+    "artistNegative": {
+     "start": 30,
+     "end": 57
+    },
+    "outfits": {
+     "actor_2": {
+      "start": 46,
+      "end": 125
+     }
+    }
+   },
+   "analysisMetadata": {
+    "hash": "fnv1a64-cd0f65e1e6bf2022"
+   },
+   "decision": {
+    "hash": "fnv1a64-cd36dc628e588641"
+   },
+   "analyzerContinuity": {
+    "previous_modifiers": {
+     "global": {},
+     "actors": {
+      "primary": {},
+      "secondary": {},
+      "persona": {}
+     }
+    },
+    "previous_preset_refs": {
+     "actors": {
+      "primary": "",
+      "secondary": "",
+      "persona": ""
+     }
+    },
+    "previous_outfit_refs": {
+     "actors": {
+      "primary": null,
+      "secondary": null,
+      "persona": null
+     }
+    },
+    "previous_scene_tags": [],
+    "previous_background_tags": [],
+    "previous_scene_location_tags": []
+   },
+   "promptPlan": {
+    "globalPositive": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, hallway, very aesthetic",
+    "bodyAction": "",
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "characters": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "placementIndex": 0,
+      "selectedOutfitId": "outfit_default",
+      "prompt": "old_man, grey_hair, blue_overalls, target#arm around shoulder, exhausted\nStooped posture, holding a broom.",
+      "uc": ""
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "placementIndex": 1,
+      "selectedOutfitId": "outfit_1",
+      "prompt": "male, black hair, source#arm around shoulder, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+      "uc": "",
+      "identityKey": "lore:bob",
+      "identity": {
+       "type": "character",
+       "key": "lore:bob",
+       "name": ""
+      }
+     }
+    ],
+    "removeTags": [],
+    "width": 1216,
+    "height": 832,
+    "sizeId": 2,
+    "selectedFraming": "",
+    "selectedVariantId": "",
+    "artistId": "detail_anime_illustration_style",
+    "artistName": "v5 style",
+    "matchedIdentityKeys": {
+     "actor_2": "lore:bob"
+    },
+    "selectedFormIds": {
+     "actor_1": "form_default",
+     "actor_2": "form_default"
+    },
+    "selectedOutfitIds": {
+     "actor_1": "outfit_default",
+     "actor_2": "outfit_1"
+    },
+    "actorIdentities": {
+     "actor_2": {
+      "type": "character",
+      "key": "lore:bob",
+      "name": ""
+     }
+    },
+    "identitySuppressedActorSlots": []
+   },
+   "novelAIConfig": {
+    "apiKey": "test-key",
+    "naiModel": "nai-diffusion-5-full",
+    "seed": "1234567",
+    "steps": 28,
+    "scale": 5,
+    "sampler": "k_euler_ancestral",
+    "analysisProfile": "v5-hybrid",
+    "width": 1216,
+    "height": 832,
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "useCoords": false,
+    "characterPrompts": [
+     {
+      "actorSlot": "actor_1",
+      "prompt": "old_man, grey_hair, blue_overalls, target#arm around shoulder, exhausted\nStooped posture, holding a broom.",
+      "uc": "",
+      "centerX": 0.3,
+      "centerY": 0.5,
+      "coordinateMode": "automatic"
+     },
+     {
+      "actorSlot": "actor_2",
+      "prompt": "male, black hair, source#arm around shoulder, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+      "uc": "",
+      "centerX": 0.7,
+      "centerY": 0.5,
+      "coordinateMode": "automatic"
+     }
+    ]
+   },
+   "characterReferences": [],
+   "seedFixed": true,
+   "providerPrompt": {
+    "provider": "novelai",
+    "profileId": "nai-diffusion-5-full",
+    "profileRevision": 0,
+    "sourceFormat": "novelai-v5-interaction-led-prompt-v1",
+    "requestFormat": "novelai-v5-hybrid",
+    "formatterRevision": 1,
+    "globalPositivePrompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, hallway, very aesthetic",
+    "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "positivePrompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, hallway, very aesthetic",
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "characterPrompts": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "old_man, grey_hair, blue_overalls, target#arm around shoulder, exhausted\nStooped posture, holding a broom.",
+      "negativePrompt": "",
+      "centerX": 0.3,
+      "centerY": 0.5
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "male, black hair, source#arm around shoulder, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+      "negativePrompt": "",
+      "centerX": 0.7,
+      "centerY": 0.5
+     }
+    ],
+    "diagnostics": []
+   },
+   "generation": {
+    "provider": "novelai",
+    "bytes": {
+     "__bytes__": []
+    },
+    "mimeType": "image/png",
+    "extension": "png",
+    "seed": "1234567",
+    "width": 1216,
+    "height": 832,
+    "requestId": "fake-1",
+    "providerMetadata": {},
+    "providerRef": {
+     "providerId": "novelai",
+     "queueScopeKey": "image-provider:novelai:global"
+    }
+   },
+   "generationRecord": {
+    "hash": "fnv1a64-2cdeb02186f36421"
+   }
+  }
+ ],
+ "continuity": {
+  "actors": {
+   "lore:bob": {
+    "identity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:bob"
+    },
+    "storageKey": "lore:bob",
+    "characterName": "",
+    "groups": {},
+    "counters": {},
+    "turn": 1,
+    "expires": {},
+    "passthrough": {}
+   }
+  },
+  "scene": {
+   "backgroundTags": [
+    "hallway"
+   ],
+   "locationTags": [
+    "hallway"
+   ]
+  },
+  "modifierRefs": {
+   "global": {
+    "scene.environment": [
+     "indoors"
+    ]
+   }
+  },
+  "outfitRefs": {
+   "actors": {
+    "lore:bob": {
+     "formId": "form_default",
+     "outfitId": "outfit_1",
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+    }
+   }
+  }
+ },
+ "snapshot": {
+  "scene": {
+   "backgroundTags": [
+    "hallway"
+   ],
+   "locationTags": [
+    "hallway"
+   ]
+  },
+  "characters": {
+   "lore:bob": {
+    "_continuity_turn": 1
+   }
+  },
+  "modifierRefs": {
+   "global": {
+    "scene.environment": [
+     "indoors"
+    ]
+   }
+  },
+  "outfitRefs": {
+   "actors": {
+    "lore:bob": {
+     "formId": "form_default",
+     "outfitId": "outfit_1",
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+    }
+   }
+  }
+ },
+ "events": [
+  {
+   "phase": "analyzing-preset"
+  },
+  {
+   "phase": "planning",
+   "imageCount": 1
+  },
+  {
+   "phase": "generating",
+   "imageIndex": 0,
+   "imageCount": 1
+  },
+  {
+   "phase": "generating",
+   "imageIndex": 1,
+   "imageCount": 1,
+   "sourceImageToken": "slot:s2"
+  },
+  {
+   "phase": "applying-continuity"
+  },
+  {
+   "phase": "complete",
+   "imageIndex": 1,
+   "imageCount": 1
+  }
+ ]
+}

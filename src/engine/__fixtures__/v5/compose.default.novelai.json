@@ -1,0 +1,7321 @@
+{
+ "scenario": {
+  "response": "default",
+  "provider": "novelai",
+  "seed": 41,
+  "full": true
+ },
+ "analysis": {
+  "profile": "v5-hybrid",
+  "response": {
+   "illustrations": [
+    {
+     "slotNumber": 0,
+     "status": "recovered",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v",
+       "formId": "form_default",
+       "sex": "female",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.1fmv888.fk4pvw",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "persona_reference",
+        "value": "persona::p1"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "id": "arm_hug",
+       "mode": "directed",
+       "sourceActorId": "actor_1",
+       "targetActorId": "actor_2",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": []
+      },
+      {
+       "interactionRef": "interaction:1",
+       "id": "sleeve_grab",
+       "mode": "directed",
+       "sourceActorId": "actor_1",
+       "targetActorId": "actor_2",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": [],
+       "participantDetails": [
+        {
+         "actorId": "actor_1",
+         "text": "fingers pinching the hoodie sleeve"
+        }
+       ]
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "outdoors"
+        ]
+       },
+       {
+        "id": "scene.time",
+        "options": [
+         "morning"
+        ]
+       }
+      ],
+      "freeTags": [
+       "school_gate",
+       "cherry_blossoms"
+      ],
+      "instruction": "Brick school gate with morning sunlight.",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 2,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.35,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": "left of the gate pillar"
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "center": {
+        "x": 0.68,
+        "y": 0.52
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "gaze.direction",
+         "options": [
+          "looking_at_another"
+         ]
+        },
+        {
+         "id": "expression.general",
+         "options": [
+          "light_smile"
+         ]
+        },
+        {
+         "id": "expression.mouth",
+         "options": [
+          "open_mouth"
+         ]
+        },
+        {
+         "id": "actor.pose.body",
+         "options": [
+          "standing"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "leaning forward slightly",
+       "actionInstruction": "waving one hand high",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "surprised"
+         ]
+        },
+        {
+         "id": "actor.pose.body",
+         "options": [
+          "standing"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "penetratingInjuries": [],
+       "poseInstruction": "",
+       "actionInstruction": "running toward the gate",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [
+       {
+        "id": "camera.view",
+        "options": [
+         "from_side"
+        ]
+       }
+      ],
+      "instruction": "Eye-level camera at the gate facing both actors."
+     },
+     "diagnostics": [
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[0]",
+       "message": "Canonicalized a free tag to 'school_gate'."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[1]",
+       "message": "Canonicalized a free tag to 'cherry_blossoms'."
+      }
+     ]
+    },
+    {
+     "slotNumber": 1,
+     "status": "degraded",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.m0ais.6ynrym",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "scene.environment",
+        "options": [
+         "indoors"
+        ]
+       }
+      ],
+      "freeTags": [
+       "staff_room",
+       "window"
+      ],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 1,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.5,
+        "y": 0.45
+       },
+       "facing": {
+        "id": "facing_away"
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "gaze.direction",
+         "options": [
+          "looking_down"
+         ]
+        },
+        {
+         "id": "expression.general",
+         "options": [
+          "exhausted"
+         ]
+        }
+       ],
+       "freeTags": [
+        "scar on face"
+       ],
+       "penetratingInjuries": [],
+       "poseInstruction": "hands on the window sill",
+       "actionInstruction": "sighing",
+       "objects": [],
+       "objectInstruction": "",
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [],
+      "instruction": "Camera behind the actor looking out the window."
+     },
+     "diagnostics": [
+      {
+       "code": "frame-scene-modifier-omitted",
+       "impact": "degraded",
+       "path": "$.illustrations[1].frame_placement.modifiers",
+       "message": "Omitted an Actor-facing modifier from the Frame Placement scene modifier list."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[1].frame_placement.freeTags[0]",
+       "message": "Canonicalized a free tag to 'staff_room'."
+      }
+     ]
+    }
+   ],
+   "diagnostics": []
+  },
+  "attempts": 1,
+  "resumedFromCheckpoint": false,
+  "candidateBindings": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "identityReferences": [
+     "persona::p1",
+     "Shouta",
+     "p1"
+    ],
+    "sex": "male",
+    "continuityIdentity": {
+     "kind": "persona_reference",
+     "value": "persona::p1"
+    },
+    "outfitCandidateIds": [
+     "Casual hoodie"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "unknown_form_1",
+      "formId": "form_default",
+      "sex": "male",
+      "defaultOutfitRef": "Casual hoodie",
+      "outfits": [
+       {
+        "outfitRef": "Casual hoodie",
+        "outfitId": "outfit_1"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "unknown_form_1"
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "identityReferences": [
+     "lore:alice",
+     "Alice",
+     "Ally"
+    ],
+    "sex": "female",
+    "continuityIdentity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:alice"
+    },
+    "outfitCandidateIds": [
+     "Navy sailor school uniform",
+     "White summer sundress"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "silver_hair,_blue_eyes",
+      "formId": "form_default",
+      "sex": "female",
+      "defaultOutfitRef": "Navy sailor school uniform",
+      "outfits": [
+       {
+        "outfitRef": "Navy sailor school uniform",
+        "outfitId": "outfit_1"
+       },
+       {
+        "outfitRef": "White summer sundress",
+        "outfitId": "outfit_2"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "silver_hair,_blue_eyes"
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "identityReferences": [
+     "lore:bob",
+     "Bob"
+    ],
+    "sex": "male",
+    "continuityIdentity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:bob"
+    },
+    "outfitCandidateIds": [
+     "Grey business suit"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "black_hair,_tall",
+      "formId": "form_default",
+      "sex": "male",
+      "defaultOutfitRef": "Grey business suit",
+      "outfits": [
+       {
+        "outfitRef": "Grey business suit",
+        "outfitId": "outfit_1"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "black_hair,_tall"
+   }
+  ],
+  "candidateSourceKeys": {
+   "actor.g00nx3.1d3zc2v": "lore:alice",
+   "actor.m0ais.6ynrym": "lore:bob",
+   "actor.1fmv888.fk4pvw": "persona::p1"
+  },
+  "requestPayload": "fnv1a64-36dd2d379eda46e1",
+  "localProjection": {
+   "characterCoordinates": "fixed"
+  },
+  "catalogFingerprint": "v5.fnv1a64-2d2b8892321dc763"
+ },
+ "plans": [
+  {
+   "format": "novelai-v5-interaction-led-prompt-v1",
+   "sizeId": 2,
+   "width": 1216,
+   "height": 832,
+   "global": {
+    "tags": [
+     "2::1girl::",
+     "2::1boy::",
+     "1.5::artist:hwansang ::",
+     "year 2025",
+     "masterpiece",
+     "best quality",
+     "from side",
+     "outdoors",
+     "morning",
+     "school gate",
+     "cherry blossoms",
+     "very aesthetic"
+    ],
+    "instructions": [
+     "Brick school gate with morning sunlight.",
+     "Eye-level camera at the gate facing both actors."
+    ],
+    "serializedPrompt": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nBrick school gate with morning sunlight. Eye-level camera at the gate facing both actors."
+   },
+   "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+   "characters": [
+    {
+     "tags": [
+      "female",
+      "silver hair",
+      "blue eyes",
+      "source#arm hug",
+      "source#sleeve grab",
+      "white sailor shirt",
+      "navy sailor collar",
+      "red neckerchief",
+      "navy pleated skirt",
+      "black thighhighs",
+      "brown loafers",
+      "looking at another",
+      "light smile",
+      "open mouth",
+      "standing"
+     ],
+     "instructions": [
+      "fingers pinching the hoodie sleeve.",
+      "left of the gate pillar.",
+      "leaning forward slightly.",
+      "waving one hand high."
+     ],
+     "serializedPrompt": "female, silver hair, blue eyes, source#arm hug, source#sleeve grab, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers, looking at another, light smile, open mouth, standing\nfingers pinching the hoodie sleeve. left of the gate pillar. leaning forward slightly. waving one hand high.",
+     "actorId": "actor_1",
+     "placementIndex": 0,
+     "candidateKey": "actor.g00nx3.1d3zc2v",
+     "sex": "female",
+     "centerX": 0.35,
+     "centerY": 0.5,
+     "negativePrompt": "bad hands"
+    },
+    {
+     "tags": [
+      "male",
+      "1::kazehaya shouta::",
+      "target#arm hug",
+      "target#sleeve grab",
+      "black hoodie",
+      "jeans",
+      "sneakers",
+      "surprised",
+      "standing"
+     ],
+     "instructions": [
+      "running toward the gate."
+     ],
+     "serializedPrompt": "male, 1::kazehaya shouta::, target#arm hug, target#sleeve grab, black hoodie, jeans, sneakers, surprised, standing\nrunning toward the gate.",
+     "actorId": "actor_2",
+     "placementIndex": 1,
+     "candidateKey": "actor.1fmv888.fk4pvw",
+     "sex": "male",
+     "centerX": 0.68,
+     "centerY": 0.52,
+     "negativePrompt": ""
+    }
+   ],
+   "ledger": [
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "actor_roster.female.count",
+     "value": "1girl",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:female",
+     "weight": 2,
+     "id": "ledger:00000",
+     "semanticKey": "1girl",
+     "inputIndex": 0,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "actor_roster.male.count",
+     "value": "1boy",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:male",
+     "weight": 2,
+     "id": "ledger:00001",
+     "semanticKey": "1boy",
+     "inputIndex": 1,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.identity.sex",
+     "value": "female",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:actor_1:sex",
+     "weight": 1,
+     "id": "ledger:00002",
+     "semanticKey": "female",
+     "inputIndex": 2,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "actor.identity.sex",
+     "value": "male",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:actor_2:sex",
+     "weight": 1,
+     "id": "ledger:00003",
+     "semanticKey": "male",
+     "inputIndex": 3,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.hair.color",
+     "value": "silver hair",
+     "order": 9100,
+     "sourceKind": "external-identity",
+     "sourceId": "lore:alice:hair.color:0",
+     "weight": 1,
+     "id": "ledger:00026",
+     "semanticKey": "silver hair",
+     "inputIndex": 26,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.eyes.color",
+     "value": "blue eyes",
+     "order": 9500,
+     "sourceKind": "external-identity",
+     "sourceId": "lore:alice:eyes.color:0",
+     "weight": 1,
+     "id": "ledger:00027",
+     "semanticKey": "blue eyes",
+     "inputIndex": 27,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "base.custom",
+     "value": "1::kazehaya shouta::",
+     "order": 10300,
+     "sourceKind": "external-identity",
+     "sourceId": "persona::p1:custom:0",
+     "weight": 1,
+     "id": "ledger:00034",
+     "semanticKey": "kazehaya shouta",
+     "inputIndex": 34,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.1",
+     "value": "1.5::artist:hwansang ::",
+     "order": 9500,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00038",
+     "semanticKey": "artist hwansang",
+     "inputIndex": 38,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.2",
+     "value": "year 2025",
+     "order": 9501,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00039",
+     "semanticKey": "year 2025",
+     "inputIndex": 39,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.3",
+     "value": "masterpiece",
+     "order": 9502,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00040",
+     "semanticKey": "masterpiece",
+     "inputIndex": 40,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.4",
+     "value": "best quality",
+     "order": 9503,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00041",
+     "semanticKey": "best quality",
+     "inputIndex": 41,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "interaction.arm_hug.directed.source",
+     "value": "source#arm hug",
+     "order": 41,
+     "sourceKind": "closed",
+     "sourceId": "interaction:interaction:0",
+     "weight": 1,
+     "id": "ledger:00004",
+     "semanticKey": "arm hug",
+     "inputIndex": 4,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "interaction.arm_hug.directed.target",
+     "value": "target#arm hug",
+     "order": 42,
+     "sourceKind": "closed",
+     "sourceId": "interaction:interaction:0",
+     "weight": 1,
+     "id": "ledger:00005",
+     "semanticKey": "arm hug",
+     "inputIndex": 5,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "gaze.direction.looking_at_another",
+     "value": "looking at another",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:gaze.direction.looking_at_another",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00009",
+     "semanticKey": "looking at another",
+     "inputIndex": 9,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "expression.general.light_smile",
+     "value": "light smile",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:expression.general.light_smile",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00010",
+     "semanticKey": "light smile",
+     "inputIndex": 10,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "expression.mouth.open_mouth",
+     "value": "open mouth",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:expression.mouth.open_mouth",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00011",
+     "semanticKey": "open mouth",
+     "inputIndex": 11,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.pose.body.standing",
+     "value": "standing",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:actor.pose.body.standing",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00012",
+     "semanticKey": "standing",
+     "inputIndex": 12,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "expression.general.surprised",
+     "value": "surprised",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_2:expression.general.surprised",
+     "weight": 1,
+     "placementIndex": 1,
+     "id": "ledger:00015",
+     "semanticKey": "surprised",
+     "inputIndex": 15,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "actor.pose.body.standing",
+     "value": "standing",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_2:actor.pose.body.standing",
+     "weight": 1,
+     "placementIndex": 1,
+     "id": "ledger:00016",
+     "semanticKey": "standing",
+     "inputIndex": 16,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "camera.view.from_side",
+     "value": "from side",
+     "order": 5050,
+     "sourceKind": "closed",
+     "sourceId": "camera",
+     "weight": 1,
+     "id": "ledger:00024",
+     "semanticKey": "from side",
+     "inputIndex": 24,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.environment.outdoors",
+     "value": "outdoors",
+     "order": 6060,
+     "sourceKind": "closed",
+     "sourceId": "scene-location:scene.environment:scene.environment.outdoors",
+     "weight": 1,
+     "id": "ledger:00018",
+     "semanticKey": "outdoors",
+     "inputIndex": 18,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.time.morning",
+     "value": "morning",
+     "order": 6262,
+     "sourceKind": "closed",
+     "sourceId": "scene-location:scene.time:scene.time.morning",
+     "weight": 1,
+     "id": "ledger:00019",
+     "semanticKey": "morning",
+     "inputIndex": 19,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.free.school_gate",
+     "value": "school gate",
+     "order": 0,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "weight": 1,
+     "id": "ledger:00020",
+     "semanticKey": "school gate",
+     "inputIndex": 20,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.free.cherry_blossoms",
+     "value": "cherry blossoms",
+     "order": 0,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "weight": 1,
+     "id": "ledger:00021",
+     "semanticKey": "cherry blossoms",
+     "inputIndex": 21,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "interaction.free.directed.source.sleeve_grab",
+     "value": "source#sleeve grab",
+     "order": 100,
+     "sourceKind": "recovered-free",
+     "sourceId": "interaction:interaction:1",
+     "weight": 1,
+     "id": "ledger:00006",
+     "semanticKey": "sleeve grab",
+     "inputIndex": 6,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "interaction.free.directed.target.sleeve_grab",
+     "value": "target#sleeve grab",
+     "order": 100,
+     "sourceKind": "recovered-free",
+     "sourceId": "interaction:interaction:1",
+     "weight": 1,
+     "id": "ledger:00007",
+     "semanticKey": "sleeve grab",
+     "inputIndex": 7,
+     "status": "applied"
+    },
+    {
+     "lane": "instruction",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.instruction",
+     "value": "Brick school gate with morning sunlight.",
+     "order": 9000,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "id": "ledger:00022",
+     "semanticKey": "brick school gate with morning sunlight",
+     "inputIndex": 22,
+     "status": "applied"
+    },
+    {
+     "lane": "instruction",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "placement.instruction.actor_1",
+     "value": "left of the gate pillar",
+     "order": 9900,
+     "sourceKind": "recovered-free",
+     "sourceId": "placement:actor_1",
+     "placementIndex": 0,
+     "id": "ledger:00023",
+     "semanticKey": "left of the gate pillar",
+     "inputIndex": 23,
+     "status": "applied"
+    },
+    {
+     "lane": "instruction",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "interaction.instruction.interaction:1.0.actor_1",
+     "value": "fingers pinching the hoodie sleeve",
+     "order": 10000,
+     "sourceKind": "recovered-free",
+     "sourceId": "interaction:1",
+     "id": "ledger:00008",
+     "semanticKey": "fingers pinching the hoodie sleeve",
+     "inputIndex": 8,
+     "status": "applied"
+    },
+    {
+     "lane": "instruction",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.pose.instruction.actor_1",
+     "value": "leaning forward slightly",
+     "order": 10100,
+     "sourceKind": "recovered-free",
+     "sourceId": "actor-detail:actor_1",
+     "placementIndex": 0,
+     "id": "ledger:00013",
+     "semanticKey": "leaning forward slightly",
+     "inputIndex": 13,
+     "status": "applied"
+    },
+    {
+     "lane": "instruction",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.action.instruction.actor_1",
+     "value": "waving one hand high",
+     "order": 10200,
+     "sourceKind": "recovered-free",
+     "sourceId": "actor-detail:actor_1",
+     "placementIndex": 0,
+     "id": "ledger:00014",
+     "semanticKey": "waving one hand high",
+     "inputIndex": 14,
+     "status": "applied"
+    },
+    {
+     "lane": "instruction",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "actor.action.instruction.actor_2",
+     "value": "running toward the gate",
+     "order": 10200,
+     "sourceKind": "recovered-free",
+     "sourceId": "actor-detail:actor_2",
+     "placementIndex": 1,
+     "id": "ledger:00017",
+     "semanticKey": "running toward the gate",
+     "inputIndex": 17,
+     "status": "applied"
+    },
+    {
+     "lane": "instruction",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "camera.instruction",
+     "value": "Eye-level camera at the gate facing both actors.",
+     "order": 11000,
+     "sourceKind": "recovered-free",
+     "sourceId": "camera",
+     "id": "ledger:00025",
+     "semanticKey": "eye level camera at the gate facing both actors",
+     "inputIndex": 25,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.1",
+     "value": "white sailor shirt",
+     "order": 9100,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "weight": 1,
+     "id": "ledger:00028",
+     "semanticKey": "white sailor shirt",
+     "inputIndex": 28,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.top",
+     "value": "black hoodie",
+     "order": 9100,
+     "sourceKind": "external",
+     "sourceId": "outfit:persona::p1:outfit_1:top",
+     "weight": 1,
+     "id": "ledger:00035",
+     "semanticKey": "black hoodie",
+     "inputIndex": 35,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.2",
+     "value": "navy sailor collar",
+     "order": 9101,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "weight": 1,
+     "id": "ledger:00029",
+     "semanticKey": "navy sailor collar",
+     "inputIndex": 29,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.3",
+     "value": "red neckerchief",
+     "order": 9102,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "weight": 1,
+     "id": "ledger:00030",
+     "semanticKey": "red neckerchief",
+     "inputIndex": 30,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.bottom",
+     "value": "navy pleated skirt",
+     "order": 9200,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:bottom",
+     "weight": 1,
+     "id": "ledger:00031",
+     "semanticKey": "navy pleated skirt",
+     "inputIndex": 31,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.bottom",
+     "value": "jeans",
+     "order": 9200,
+     "sourceKind": "external",
+     "sourceId": "outfit:persona::p1:outfit_1:bottom",
+     "weight": 1,
+     "id": "ledger:00036",
+     "semanticKey": "jeans",
+     "inputIndex": 36,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.legs",
+     "value": "black thighhighs",
+     "order": 9300,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:legs",
+     "weight": 1,
+     "id": "ledger:00032",
+     "semanticKey": "black thighhighs",
+     "inputIndex": 32,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.feet",
+     "value": "sneakers",
+     "order": 9300,
+     "sourceKind": "external",
+     "sourceId": "outfit:persona::p1:outfit_1:feet",
+     "weight": 1,
+     "id": "ledger:00037",
+     "semanticKey": "sneakers",
+     "inputIndex": 37,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.feet",
+     "value": "brown loafers",
+     "order": 9400,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:feet",
+     "weight": 1,
+     "id": "ledger:00033",
+     "semanticKey": "brown loafers",
+     "inputIndex": 33,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "fixed.positive",
+     "value": "very aesthetic",
+     "order": 10000,
+     "sourceKind": "external-fixed",
+     "sourceId": "character-generation-settings",
+     "weight": 1,
+     "id": "ledger:00042",
+     "semanticKey": "very aesthetic",
+     "inputIndex": 42,
+     "status": "applied"
+    }
+   ]
+  },
+  {
+   "format": "novelai-v5-interaction-led-prompt-v1",
+   "sizeId": 1,
+   "width": 832,
+   "height": 1216,
+   "global": {
+    "tags": [
+     "2::1boy::",
+     "1.5::artist:hwansang ::",
+     "year 2025",
+     "masterpiece",
+     "best quality",
+     "indoors",
+     "staff room",
+     "window",
+     "very aesthetic"
+    ],
+    "instructions": [
+     "Camera behind the actor looking out the window."
+    ],
+    "serializedPrompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window."
+   },
+   "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+   "characters": [
+    {
+     "tags": [
+      "male",
+      "black hair",
+      "grey suit jacket",
+      "white shirt",
+      "blue necktie",
+      "grey suit pants",
+      "black dress shoes",
+      "looking down",
+      "exhausted",
+      "2::facing away::"
+     ],
+     "instructions": [
+      "hands on the window sill.",
+      "sighing."
+     ],
+     "serializedPrompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes, looking down, exhausted, 2::facing away::\nhands on the window sill. sighing.",
+     "actorId": "actor_1",
+     "placementIndex": 0,
+     "candidateKey": "actor.m0ais.6ynrym",
+     "sex": "male",
+     "centerX": 0.5,
+     "centerY": 0.45,
+     "negativePrompt": ""
+    }
+   ],
+   "ledger": [
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "actor_roster.male.count",
+     "value": "1boy",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:male",
+     "weight": 2,
+     "id": "ledger:00000",
+     "semanticKey": "1boy",
+     "inputIndex": 0,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.identity.sex",
+     "value": "male",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:actor_1:sex",
+     "weight": 1,
+     "id": "ledger:00001",
+     "semanticKey": "male",
+     "inputIndex": 1,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.hair.color",
+     "value": "black hair",
+     "order": 9100,
+     "sourceKind": "external-identity",
+     "sourceId": "lore:bob:hair.color:0",
+     "weight": 1,
+     "id": "ledger:00012",
+     "semanticKey": "black hair",
+     "inputIndex": 12,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.1",
+     "value": "1.5::artist:hwansang ::",
+     "order": 9500,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00018",
+     "semanticKey": "artist hwansang",
+     "inputIndex": 18,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.2",
+     "value": "year 2025",
+     "order": 9501,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00019",
+     "semanticKey": "year 2025",
+     "inputIndex": 19,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.3",
+     "value": "masterpiece",
+     "order": 9502,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00020",
+     "semanticKey": "masterpiece",
+     "inputIndex": 20,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.4",
+     "value": "best quality",
+     "order": 9503,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00021",
+     "semanticKey": "best quality",
+     "inputIndex": 21,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "gaze.direction.looking_down",
+     "value": "looking down",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:gaze.direction.looking_down",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00002",
+     "semanticKey": "looking down",
+     "inputIndex": 2,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "expression.general.exhausted",
+     "value": "exhausted",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:expression.general.exhausted",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00003",
+     "semanticKey": "exhausted",
+     "inputIndex": 3,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "orientation.facing.facing_away",
+     "value": "facing away",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "placement:actor_1:facing:orientation.facing.facing_away",
+     "weight": 2,
+     "placementIndex": 0,
+     "id": "ledger:00010",
+     "semanticKey": "facing away",
+     "inputIndex": 10,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.environment.indoors",
+     "value": "indoors",
+     "order": 6060,
+     "sourceKind": "closed",
+     "sourceId": "scene-location:scene.environment:scene.environment.indoors",
+     "weight": 1,
+     "id": "ledger:00007",
+     "semanticKey": "indoors",
+     "inputIndex": 7,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.free.staff_room",
+     "value": "staff room",
+     "order": 0,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "weight": 1,
+     "id": "ledger:00008",
+     "semanticKey": "staff room",
+     "inputIndex": 8,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.free.window",
+     "value": "window",
+     "order": 0,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "weight": 1,
+     "id": "ledger:00009",
+     "semanticKey": "window",
+     "inputIndex": 9,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.injury.current.actor_1.0",
+     "value": "scar on face",
+     "order": 10000,
+     "sourceKind": "recovered-free",
+     "sourceId": "actor-detail:actor_1:actor.injury",
+     "weight": 1,
+     "placementIndex": 0,
+     "suppressionReason": "visibility",
+     "id": "ledger:00004",
+     "semanticKey": "scar on face",
+     "inputIndex": 4,
+     "status": "suppressed"
+    },
+    {
+     "lane": "instruction",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.pose.instruction.actor_1",
+     "value": "hands on the window sill",
+     "order": 10100,
+     "sourceKind": "recovered-free",
+     "sourceId": "actor-detail:actor_1",
+     "placementIndex": 0,
+     "id": "ledger:00005",
+     "semanticKey": "hands on the window sill",
+     "inputIndex": 5,
+     "status": "applied"
+    },
+    {
+     "lane": "instruction",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.action.instruction.actor_1",
+     "value": "sighing",
+     "order": 10200,
+     "sourceKind": "recovered-free",
+     "sourceId": "actor-detail:actor_1",
+     "placementIndex": 0,
+     "id": "ledger:00006",
+     "semanticKey": "sighing",
+     "inputIndex": 6,
+     "status": "applied"
+    },
+    {
+     "lane": "instruction",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "camera.instruction",
+     "value": "Camera behind the actor looking out the window.",
+     "order": 11000,
+     "sourceKind": "recovered-free",
+     "sourceId": "camera",
+     "id": "ledger:00011",
+     "semanticKey": "camera behind the actor looking out the window",
+     "inputIndex": 11,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.1",
+     "value": "grey suit jacket",
+     "order": 9100,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:top",
+     "weight": 1,
+     "id": "ledger:00013",
+     "semanticKey": "grey suit jacket",
+     "inputIndex": 13,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.2",
+     "value": "white shirt",
+     "order": 9101,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:top",
+     "weight": 1,
+     "id": "ledger:00014",
+     "semanticKey": "white shirt",
+     "inputIndex": 14,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.3",
+     "value": "blue necktie",
+     "order": 9102,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:top",
+     "weight": 1,
+     "id": "ledger:00015",
+     "semanticKey": "blue necktie",
+     "inputIndex": 15,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.bottom",
+     "value": "grey suit pants",
+     "order": 9200,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:bottom",
+     "weight": 1,
+     "id": "ledger:00016",
+     "semanticKey": "grey suit pants",
+     "inputIndex": 16,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.feet",
+     "value": "black dress shoes",
+     "order": 9300,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:feet",
+     "weight": 1,
+     "id": "ledger:00017",
+     "semanticKey": "black dress shoes",
+     "inputIndex": 17,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "fixed.positive",
+     "value": "very aesthetic",
+     "order": 10000,
+     "sourceKind": "external-fixed",
+     "sourceId": "character-generation-settings",
+     "weight": 1,
+     "id": "ledger:00022",
+     "semanticKey": "very aesthetic",
+     "inputIndex": 22,
+     "status": "applied"
+    }
+   ]
+  }
+ ],
+ "requests": [
+  {
+   "provider": "novelai",
+   "providerRef": {
+    "providerId": "novelai",
+    "queueScopeKey": "image-provider:novelai:global"
+   },
+   "prompt": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nBrick school gate with morning sunlight. Eye-level camera at the gate facing both actors.",
+   "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+   "seed": "1234567",
+   "width": 1216,
+   "height": 832,
+   "maxAttempts": 1,
+   "config": {
+    "apiKey": "test-key",
+    "naiModel": "nai-diffusion-5-full",
+    "seed": "1234567",
+    "steps": 28,
+    "scale": 5,
+    "sampler": "k_euler_ancestral",
+    "analysisProfile": "v5-hybrid",
+    "width": 1216,
+    "height": 832,
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "useCoords": false,
+    "characterPrompts": [
+     {
+      "actorSlot": "actor_1",
+      "prompt": "female, silver hair, blue eyes, source#arm hug, source#sleeve grab, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers, looking at another, light smile, open mouth, standing\nfingers pinching the hoodie sleeve. left of the gate pillar. leaning forward slightly. waving one hand high.",
+      "uc": "bad hands",
+      "centerX": 0.35,
+      "centerY": 0.5,
+      "coordinateMode": "automatic"
+     },
+     {
+      "actorSlot": "actor_2",
+      "prompt": "male, 1::kazehaya shouta::, target#arm hug, target#sleeve grab, black hoodie, jeans, sneakers, surprised, standing\nrunning toward the gate.",
+      "uc": "",
+      "centerX": 0.68,
+      "centerY": 0.52,
+      "coordinateMode": "automatic"
+     }
+    ]
+   },
+   "references": [],
+   "queueMeta": {
+    "kind": "generation",
+    "source": "novelai-v5-interaction-led",
+    "sourceImageToken": "slot:s1"
+   }
+  },
+  {
+   "provider": "novelai",
+   "providerRef": {
+    "providerId": "novelai",
+    "queueScopeKey": "image-provider:novelai:global"
+   },
+   "prompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window.",
+   "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+   "seed": "1234567",
+   "width": 832,
+   "height": 1216,
+   "maxAttempts": 1,
+   "config": {
+    "apiKey": "test-key",
+    "naiModel": "nai-diffusion-5-full",
+    "seed": "1234567",
+    "steps": 28,
+    "scale": 5,
+    "sampler": "k_euler_ancestral",
+    "analysisProfile": "v5-hybrid",
+    "width": 832,
+    "height": 1216,
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "useCoords": false,
+    "characterPrompts": [
+     {
+      "actorSlot": "actor_1",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes, looking down, exhausted, 2::facing away::\nhands on the window sill. sighing.",
+      "uc": "",
+      "centerX": 0.5,
+      "centerY": 0.45,
+      "coordinateMode": "automatic"
+     }
+    ]
+   },
+   "references": [],
+   "queueMeta": {
+    "kind": "generation",
+    "source": "novelai-v5-interaction-led",
+    "sourceImageToken": "slot:s2"
+   }
+  }
+ ],
+ "images": [
+  {
+   "sourceImageToken": "slot:s1",
+   "providerRef": {
+    "providerId": "novelai",
+    "queueScopeKey": "image-provider:novelai:global"
+   },
+   "actors": [
+    {
+     "actorId": "actor_1",
+     "actorIndex": 0,
+     "kind": "character",
+     "gender": "",
+     "identityKey": "lore:alice",
+     "identityName": "",
+     "selectedFormId": "form_default",
+     "selectedOutfitId": "outfit_1",
+     "identitySuppressed": false,
+     "prompt": "female, silver hair, blue eyes, source#arm hug, source#sleeve grab, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers, looking at another, light smile, open mouth, standing\nfingers pinching the hoodie sleeve. left of the gate pillar. leaning forward slightly. waving one hand high.",
+     "negativePrompt": "bad hands"
+    },
+    {
+     "actorId": "actor_2",
+     "actorIndex": 1,
+     "kind": "persona",
+     "gender": "",
+     "identityKey": "persona::p1",
+     "identityName": "",
+     "selectedFormId": "form_default",
+     "selectedOutfitId": "outfit_1",
+     "identitySuppressed": false,
+     "prompt": "male, 1::kazehaya shouta::, target#arm hug, target#sleeve grab, black hoodie, jeans, sneakers, surprised, standing\nrunning toward the gate.",
+     "negativePrompt": ""
+    }
+   ],
+   "promptSegments": {
+    "artistPositive": {
+     "start": 23,
+     "end": 84
+    },
+    "artistNegative": {
+     "start": 30,
+     "end": 57
+    },
+    "outfits": {
+     "actor_1": {
+      "start": 68,
+      "end": 176
+     },
+     "actor_2": {
+      "start": 64,
+      "end": 93
+     }
+    }
+   },
+   "analysisMetadata": {
+    "v": 1,
+    "p": "v5",
+    "st": "recovered",
+    "sl": 0,
+    "r": [
+     [
+      1,
+      "female",
+      null,
+      "outfit_1"
+     ],
+     [
+      2,
+      "male",
+      null,
+      "outfit_1"
+     ]
+    ],
+    "i": [
+     {
+      "id": "arm_hug",
+      "mo": "d",
+      "s": 1,
+      "t": 2,
+      "b": "c",
+      "m": [],
+      "d": []
+     },
+     {
+      "id": "sleeve_grab",
+      "mo": "d",
+      "s": 1,
+      "t": 2,
+      "b": "c",
+      "m": [],
+      "d": [
+       [
+        1,
+        "fingers pinching the hoodie sleeve"
+       ]
+      ]
+     }
+    ],
+    "f": {
+     "m": [
+      [
+       "scene.rating",
+       [
+        "sfw"
+       ]
+      ],
+      [
+       "scene.environment",
+       [
+        "outdoors"
+       ]
+      ],
+      [
+       "scene.time",
+       [
+        "morning"
+       ]
+      ]
+     ],
+     "t": [
+      "school_gate",
+      "cherry_blossoms"
+     ],
+     "n": "Brick school gate with morning sunlight.",
+     "c": "",
+     "pg": [],
+     "p": [],
+     "x": [],
+     "a": [
+      [
+       1,
+       0.35,
+       0.5,
+       "",
+       "analyzer",
+       "left of the gate pillar",
+       0,
+       ""
+      ],
+      [
+       2,
+       0.68,
+       0.52,
+       "",
+       "analyzer",
+       "",
+       1,
+       ""
+      ]
+     ]
+    },
+    "d": [
+     {
+      "a": 1,
+      "x": [],
+      "m": [
+       [
+        "gaze.direction",
+        [
+         "looking_at_another"
+        ]
+       ],
+       [
+        "expression.general",
+        [
+         "light_smile"
+        ]
+       ],
+       [
+        "expression.mouth",
+        [
+         "open_mouth"
+        ]
+       ],
+       [
+        "actor.pose.body",
+        [
+         "standing"
+        ]
+       ]
+      ],
+      "t": [],
+      "p": "leaning forward slightly",
+      "q": "waving one hand high",
+      "o": "",
+      "g": "",
+      "z": 0,
+      "b": []
+     },
+     {
+      "a": 2,
+      "x": [],
+      "m": [
+       [
+        "expression.general",
+        [
+         "surprised"
+        ]
+       ],
+       [
+        "actor.pose.body",
+        [
+         "standing"
+        ]
+       ]
+      ],
+      "t": [],
+      "p": "",
+      "q": "running toward the gate",
+      "o": "",
+      "g": "",
+      "z": 1,
+      "b": []
+     }
+    ],
+    "c": [
+     [
+      [
+       "camera.view",
+       [
+        "from_side"
+       ]
+      ]
+     ],
+     "Eye-level camera at the gate facing both actors.",
+     2,
+     1216,
+     832
+    ],
+    "ct": {
+     "a": [
+      {
+       "a": 1,
+       "r": {},
+       "p": {},
+       "s": {},
+       "c": {},
+       "n": {},
+       "d": []
+      },
+      {
+       "a": 2,
+       "r": {},
+       "p": {},
+       "s": {},
+       "c": {},
+       "n": {},
+       "d": []
+      }
+     ],
+     "l": [],
+     "sm": [
+      [
+       "scene.environment",
+       [
+        "outdoors"
+       ]
+      ],
+      [
+       "scene.time",
+       [
+        "morning"
+       ]
+      ]
+     ],
+     "st": [
+      "school_gate",
+      "cherry_blossoms"
+     ],
+     "nl": {
+      "l": [
+       "",
+       0
+      ],
+      "a": []
+     }
+    },
+    "rc": [
+     "tag-canonicalized"
+    ],
+    "pr": [
+     [
+      2,
+      "male",
+      "",
+      [],
+      1
+     ]
+    ],
+    "md": {
+     "i": [
+      [
+       "interaction.penetration.instrument",
+       [
+        "interaction"
+       ]
+      ],
+      [
+       "interaction.sexual.ejaculation.progress",
+       [
+        "female"
+       ]
+      ],
+      [
+       "interaction.sexual.grouping",
+       [
+        "global"
+       ]
+      ],
+      [
+       "interaction.sexual.oral.fellatio",
+       [
+        "interaction"
+       ]
+      ],
+      [
+       "interaction.sexual.penetration.direction",
+       [
+        "interaction"
+       ]
+      ],
+      [
+       "interaction.sexual.penetration.progress",
+       [
+        "interaction"
+       ]
+      ],
+      [
+       "interaction.sexual.penetration.route",
+       [
+        "interaction"
+       ]
+      ],
+      [
+       "interaction.sexual.relationship",
+       [
+        "global"
+       ]
+      ],
+      [
+       "manual.sexual.handjob",
+       [
+        "interaction"
+       ]
+      ],
+      [
+       "scene.context.sexual",
+       [
+        "global"
+       ]
+      ]
+     ],
+     "f": [
+      [
+       "framing.crop",
+       [
+        "global"
+       ]
+      ],
+      [
+       "framing.head_crop",
+       [
+        "global"
+       ]
+      ],
+      [
+       "orientation.facing",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "scene.environment",
+       [
+        "global"
+       ]
+      ],
+      [
+       "scene.rating",
+       [
+        "global"
+       ]
+      ],
+      [
+       "scene.time",
+       [
+        "global"
+       ]
+      ],
+      [
+       "scene.weather",
+       [
+        "global"
+       ]
+      ]
+     ],
+     "a": [
+      [
+       "actor.pose.body",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "actor.pose.refinement",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.blush",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.eye.openness",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.eye.reaction",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.general",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.mouth",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.sexual_response",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.tear",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "gaze.direction",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "manual.clothing_access",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "motion.body",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.after_activity",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.body.condition",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.body.contamination",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.body.surface",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.clothing.arrangement",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.clothing.coverage.lower",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.clothing.coverage.upper",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.clothing.surface",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.fluid.cum.instant",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.fluid.cum.location",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.fluid.lactation",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.fluid.precum",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.fluid.pussy_juice",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.fluid.saliva",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.genitals.visible_parts",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.hair.condition",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.penis.condom",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.restraint.body",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.restraint.gag",
+       [
+        "actor"
+       ]
+      ]
+     ],
+     "c": [
+      [
+       "camera.view",
+       [
+        "global"
+       ]
+      ]
+     ]
+    },
+    "ff": {
+     "i": {
+      "f": [],
+      "n": [
+       "interaction_detail"
+      ]
+     },
+     "f": {
+      "f": [
+       "scene.location"
+      ],
+      "n": [
+       "location",
+       "placement"
+      ]
+     },
+     "a": {
+      "f": [
+       "actor.injury"
+      ],
+      "n": [
+       "pose",
+       "action",
+       "object_instruction"
+      ]
+     },
+     "c": {
+      "f": [],
+      "n": [
+       "camera"
+      ]
+     }
+    },
+    "ci": {
+     "g": [
+      [
+       "actor.injury",
+       "actor"
+      ],
+      [
+       "scene.environment",
+       "global"
+      ],
+      [
+       "scene.location",
+       "global"
+      ],
+      [
+       "scene.time",
+       "global"
+      ],
+      [
+       "scene.weather",
+       "global"
+      ],
+      [
+       "state.after_activity",
+       "actor"
+      ],
+      [
+       "state.clothing.arrangement",
+       "actor"
+      ],
+      [
+       "state.clothing.coverage.lower",
+       "actor"
+      ],
+      [
+       "state.clothing.coverage.upper",
+       "actor"
+      ],
+      [
+       "state.fluid.cum.location",
+       "actor"
+      ],
+      [
+       "state.fluid.lactation",
+       "actor"
+      ],
+      [
+       "state.fluid.precum",
+       "actor"
+      ],
+      [
+       "state.fluid.pussy_juice",
+       "actor"
+      ],
+      [
+       "state.fluid.saliva",
+       "actor"
+      ],
+      [
+       "state.penis.condom",
+       "actor"
+      ],
+      [
+       "state.restraint.body",
+       "actor"
+      ],
+      [
+       "state.restraint.gag",
+       "actor"
+      ]
+     ],
+     "n": [
+      "cum_count"
+     ],
+     "d": [
+      "accumulated_cum_overflow",
+      "accumulated_cum_pool",
+      "accumulated_cumdrip",
+      "excessive_accumulated_cum"
+     ]
+    }
+   },
+   "decision": {
+    "source_image_token": "slot:s1",
+    "slot_id": "slot:s1",
+    "slot_number": 0,
+    "analysis_profile": "v5-hybrid",
+    "v5_interaction_led": {
+     "format": "novelai-v5-interaction-led-history-v1",
+     "catalogFingerprint": "v5.fnv1a64-2d2b8892321dc763",
+     "normalizedGraph": {
+      "slotNumber": 0,
+      "status": "recovered",
+      "presentationMode": "single-frame",
+      "actors": [
+       {
+        "actorId": "actor_1",
+        "candidateKey": "actor.g00nx3.1d3zc2v",
+        "formId": "form_default",
+        "sex": "female",
+        "continuityIdentity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "outfit": {
+         "selectedId": "outfit_1"
+        }
+       },
+       {
+        "actorId": "actor_2",
+        "candidateKey": "actor.1fmv888.fk4pvw",
+        "formId": "form_default",
+        "sex": "male",
+        "continuityIdentity": {
+         "kind": "persona_reference",
+         "value": "persona::p1"
+        },
+        "outfit": {
+         "selectedId": "outfit_1"
+        }
+       }
+      ],
+      "interactions": [
+       {
+        "interactionRef": "interaction:0",
+        "id": "arm_hug",
+        "mode": "directed",
+        "sourceActorId": "actor_1",
+        "targetActorId": "actor_2",
+        "bindingStatus": "complete",
+        "unresolvedActorRefs": [],
+        "modifiers": [],
+        "participantDetails": []
+       },
+       {
+        "interactionRef": "interaction:1",
+        "id": "sleeve_grab",
+        "mode": "directed",
+        "sourceActorId": "actor_1",
+        "targetActorId": "actor_2",
+        "bindingStatus": "complete",
+        "unresolvedActorRefs": [],
+        "modifiers": [],
+        "participantDetails": [
+         {
+          "actorId": "actor_1",
+          "text": "fingers pinching the hoodie sleeve"
+         }
+        ]
+       }
+      ],
+      "location": {
+       "modifiers": [
+        {
+         "id": "scene.rating",
+         "options": [
+          "sfw"
+         ]
+        },
+        {
+         "id": "scene.environment",
+         "options": [
+          "outdoors"
+         ]
+        },
+        {
+         "id": "scene.time",
+         "options": [
+          "morning"
+         ]
+        }
+       ],
+       "freeTags": [
+        "school_gate",
+        "cherry_blossoms"
+       ],
+       "instruction": "Brick school gate with morning sunlight.",
+       "comicPageInstruction": "",
+       "comicPageModifiers": [],
+       "comicPanels": [],
+       "comicCrossPanelActors": []
+      },
+      "analyzerSizeId": 2,
+      "framePlacement": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "center": {
+         "x": 0.35,
+         "y": 0.5
+        },
+        "source": "analyzer",
+        "instruction": "left of the gate pillar"
+       },
+       {
+        "actorId": "actor_2",
+        "placementIndex": 1,
+        "center": {
+         "x": 0.68,
+         "y": 0.52
+        },
+        "source": "analyzer",
+        "instruction": ""
+       }
+      ],
+      "actorDetails": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "actions": [],
+        "modifiers": [
+         {
+          "id": "gaze.direction",
+          "options": [
+           "looking_at_another"
+          ]
+         },
+         {
+          "id": "expression.general",
+          "options": [
+           "light_smile"
+          ]
+         },
+         {
+          "id": "expression.mouth",
+          "options": [
+           "open_mouth"
+          ]
+         },
+         {
+          "id": "actor.pose.body",
+          "options": [
+           "standing"
+          ]
+         }
+        ],
+        "freeTags": [],
+        "penetratingInjuries": [],
+        "poseInstruction": "leaning forward slightly",
+        "actionInstruction": "waving one hand high",
+        "objects": [],
+        "objectInstruction": "",
+        "dialogueInstruction": ""
+       },
+       {
+        "actorId": "actor_2",
+        "placementIndex": 1,
+        "actions": [],
+        "modifiers": [
+         {
+          "id": "expression.general",
+          "options": [
+           "surprised"
+          ]
+         },
+         {
+          "id": "actor.pose.body",
+          "options": [
+           "standing"
+          ]
+         }
+        ],
+        "freeTags": [],
+        "penetratingInjuries": [],
+        "poseInstruction": "",
+        "actionInstruction": "running toward the gate",
+        "objects": [],
+        "objectInstruction": "",
+        "dialogueInstruction": ""
+       }
+      ],
+      "camera": {
+       "modifiers": [
+        {
+         "id": "camera.view",
+         "options": [
+          "from_side"
+         ]
+        }
+       ],
+       "instruction": "Eye-level camera at the gate facing both actors."
+      },
+      "diagnostics": [
+       {
+        "code": "tag-canonicalized",
+        "impact": "recovered",
+        "path": "$.illustrations[0].frame_placement.freeTags[0]",
+        "message": "Canonicalized a free tag to 'school_gate'."
+       },
+       {
+        "code": "tag-canonicalized",
+        "impact": "recovered",
+        "path": "$.illustrations[0].frame_placement.freeTags[1]",
+        "message": "Canonicalized a free tag to 'cherry_blossoms'."
+       }
+      ]
+     },
+     "diagnostics": [
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[0]",
+       "message": "Canonicalized a free tag to 'school_gate'."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[1]",
+       "message": "Canonicalized a free tag to 'cherry_blossoms'."
+      }
+     ],
+     "executedPromptPlan": {
+      "format": "novelai-v5-interaction-led-prompt-v1",
+      "sizeId": 2,
+      "width": 1216,
+      "height": 832,
+      "global": {
+       "tags": [
+        "2::1girl::",
+        "2::1boy::",
+        "1.5::artist:hwansang ::",
+        "year 2025",
+        "masterpiece",
+        "best quality",
+        "from side",
+        "outdoors",
+        "morning",
+        "school gate",
+        "cherry blossoms",
+        "very aesthetic"
+       ],
+       "instructions": [
+        "Brick school gate with morning sunlight.",
+        "Eye-level camera at the gate facing both actors."
+       ],
+       "serializedPrompt": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nBrick school gate with morning sunlight. Eye-level camera at the gate facing both actors."
+      },
+      "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+      "characters": [
+       {
+        "tags": [
+         "female",
+         "silver hair",
+         "blue eyes",
+         "source#arm hug",
+         "source#sleeve grab",
+         "white sailor shirt",
+         "navy sailor collar",
+         "red neckerchief",
+         "navy pleated skirt",
+         "black thighhighs",
+         "brown loafers",
+         "looking at another",
+         "light smile",
+         "open mouth",
+         "standing"
+        ],
+        "instructions": [
+         "fingers pinching the hoodie sleeve.",
+         "left of the gate pillar.",
+         "leaning forward slightly.",
+         "waving one hand high."
+        ],
+        "serializedPrompt": "female, silver hair, blue eyes, source#arm hug, source#sleeve grab, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers, looking at another, light smile, open mouth, standing\nfingers pinching the hoodie sleeve. left of the gate pillar. leaning forward slightly. waving one hand high.",
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "candidateKey": "actor.g00nx3.1d3zc2v",
+        "sex": "female",
+        "centerX": 0.35,
+        "centerY": 0.5,
+        "negativePrompt": "bad hands"
+       },
+       {
+        "tags": [
+         "male",
+         "1::kazehaya shouta::",
+         "target#arm hug",
+         "target#sleeve grab",
+         "black hoodie",
+         "jeans",
+         "sneakers",
+         "surprised",
+         "standing"
+        ],
+        "instructions": [
+         "running toward the gate."
+        ],
+        "serializedPrompt": "male, 1::kazehaya shouta::, target#arm hug, target#sleeve grab, black hoodie, jeans, sneakers, surprised, standing\nrunning toward the gate.",
+        "actorId": "actor_2",
+        "placementIndex": 1,
+        "candidateKey": "actor.1fmv888.fk4pvw",
+        "sex": "male",
+        "centerX": 0.68,
+        "centerY": 0.52,
+        "negativePrompt": ""
+       }
+      ],
+      "ledger": [
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "actor_roster.female.count",
+        "value": "1girl",
+        "order": 0,
+        "sourceKind": "actor-roster",
+        "sourceId": "actor-roster:female",
+        "weight": 2,
+        "id": "ledger:00000",
+        "semanticKey": "1girl",
+        "inputIndex": 0,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "actor_roster.male.count",
+        "value": "1boy",
+        "order": 0,
+        "sourceKind": "actor-roster",
+        "sourceId": "actor-roster:male",
+        "weight": 2,
+        "id": "ledger:00001",
+        "semanticKey": "1boy",
+        "inputIndex": 1,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "actor.identity.sex",
+        "value": "female",
+        "order": 0,
+        "sourceKind": "actor-roster",
+        "sourceId": "actor-roster:actor_1:sex",
+        "weight": 1,
+        "id": "ledger:00002",
+        "semanticKey": "female",
+        "inputIndex": 2,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_2"
+        },
+        "semanticId": "actor.identity.sex",
+        "value": "male",
+        "order": 0,
+        "sourceKind": "actor-roster",
+        "sourceId": "actor-roster:actor_2:sex",
+        "weight": 1,
+        "id": "ledger:00003",
+        "semanticKey": "male",
+        "inputIndex": 3,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "base.hair.color",
+        "value": "silver hair",
+        "order": 9100,
+        "sourceKind": "external-identity",
+        "sourceId": "lore:alice:hair.color:0",
+        "weight": 1,
+        "id": "ledger:00026",
+        "semanticKey": "silver hair",
+        "inputIndex": 26,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "base.eyes.color",
+        "value": "blue eyes",
+        "order": 9500,
+        "sourceKind": "external-identity",
+        "sourceId": "lore:alice:eyes.color:0",
+        "weight": 1,
+        "id": "ledger:00027",
+        "semanticKey": "blue eyes",
+        "inputIndex": 27,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_2"
+        },
+        "semanticId": "base.custom",
+        "value": "1::kazehaya shouta::",
+        "order": 10300,
+        "sourceKind": "external-identity",
+        "sourceId": "persona::p1:custom:0",
+        "weight": 1,
+        "id": "ledger:00034",
+        "semanticKey": "kazehaya shouta",
+        "inputIndex": 34,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "artist.detail_anime_illustration_style.1",
+        "value": "1.5::artist:hwansang ::",
+        "order": 9500,
+        "sourceKind": "external-artist",
+        "sourceId": "detail_anime_illustration_style",
+        "weight": 1,
+        "id": "ledger:00038",
+        "semanticKey": "artist hwansang",
+        "inputIndex": 38,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "artist.detail_anime_illustration_style.2",
+        "value": "year 2025",
+        "order": 9501,
+        "sourceKind": "external-artist",
+        "sourceId": "detail_anime_illustration_style",
+        "weight": 1,
+        "id": "ledger:00039",
+        "semanticKey": "year 2025",
+        "inputIndex": 39,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "artist.detail_anime_illustration_style.3",
+        "value": "masterpiece",
+        "order": 9502,
+        "sourceKind": "external-artist",
+        "sourceId": "detail_anime_illustration_style",
+        "weight": 1,
+        "id": "ledger:00040",
+        "semanticKey": "masterpiece",
+        "inputIndex": 40,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "artist.detail_anime_illustration_style.4",
+        "value": "best quality",
+        "order": 9503,
+        "sourceKind": "external-artist",
+        "sourceId": "detail_anime_illustration_style",
+        "weight": 1,
+        "id": "ledger:00041",
+        "semanticKey": "best quality",
+        "inputIndex": 41,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "interaction.arm_hug.directed.source",
+        "value": "source#arm hug",
+        "order": 41,
+        "sourceKind": "closed",
+        "sourceId": "interaction:interaction:0",
+        "weight": 1,
+        "id": "ledger:00004",
+        "semanticKey": "arm hug",
+        "inputIndex": 4,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_2"
+        },
+        "semanticId": "interaction.arm_hug.directed.target",
+        "value": "target#arm hug",
+        "order": 42,
+        "sourceKind": "closed",
+        "sourceId": "interaction:interaction:0",
+        "weight": 1,
+        "id": "ledger:00005",
+        "semanticKey": "arm hug",
+        "inputIndex": 5,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "gaze.direction.looking_at_another",
+        "value": "looking at another",
+        "order": 4040,
+        "sourceKind": "closed",
+        "sourceId": "actor-detail:actor_1:gaze.direction.looking_at_another",
+        "weight": 1,
+        "placementIndex": 0,
+        "id": "ledger:00009",
+        "semanticKey": "looking at another",
+        "inputIndex": 9,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "expression.general.light_smile",
+        "value": "light smile",
+        "order": 4040,
+        "sourceKind": "closed",
+        "sourceId": "actor-detail:actor_1:expression.general.light_smile",
+        "weight": 1,
+        "placementIndex": 0,
+        "id": "ledger:00010",
+        "semanticKey": "light smile",
+        "inputIndex": 10,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "expression.mouth.open_mouth",
+        "value": "open mouth",
+        "order": 4040,
+        "sourceKind": "closed",
+        "sourceId": "actor-detail:actor_1:expression.mouth.open_mouth",
+        "weight": 1,
+        "placementIndex": 0,
+        "id": "ledger:00011",
+        "semanticKey": "open mouth",
+        "inputIndex": 11,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "actor.pose.body.standing",
+        "value": "standing",
+        "order": 4040,
+        "sourceKind": "closed",
+        "sourceId": "actor-detail:actor_1:actor.pose.body.standing",
+        "weight": 1,
+        "placementIndex": 0,
+        "id": "ledger:00012",
+        "semanticKey": "standing",
+        "inputIndex": 12,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_2"
+        },
+        "semanticId": "expression.general.surprised",
+        "value": "surprised",
+        "order": 4040,
+        "sourceKind": "closed",
+        "sourceId": "actor-detail:actor_2:expression.general.surprised",
+        "weight": 1,
+        "placementIndex": 1,
+        "id": "ledger:00015",
+        "semanticKey": "surprised",
+        "inputIndex": 15,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_2"
+        },
+        "semanticId": "actor.pose.body.standing",
+        "value": "standing",
+        "order": 4040,
+        "sourceKind": "closed",
+        "sourceId": "actor-detail:actor_2:actor.pose.body.standing",
+        "weight": 1,
+        "placementIndex": 1,
+        "id": "ledger:00016",
+        "semanticKey": "standing",
+        "inputIndex": 16,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "camera.view.from_side",
+        "value": "from side",
+        "order": 5050,
+        "sourceKind": "closed",
+        "sourceId": "camera",
+        "weight": 1,
+        "id": "ledger:00024",
+        "semanticKey": "from side",
+        "inputIndex": 24,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "scene.environment.outdoors",
+        "value": "outdoors",
+        "order": 6060,
+        "sourceKind": "closed",
+        "sourceId": "scene-location:scene.environment:scene.environment.outdoors",
+        "weight": 1,
+        "id": "ledger:00018",
+        "semanticKey": "outdoors",
+        "inputIndex": 18,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "scene.time.morning",
+        "value": "morning",
+        "order": 6262,
+        "sourceKind": "closed",
+        "sourceId": "scene-location:scene.time:scene.time.morning",
+        "weight": 1,
+        "id": "ledger:00019",
+        "semanticKey": "morning",
+        "inputIndex": 19,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "scene.location.free.school_gate",
+        "value": "school gate",
+        "order": 0,
+        "sourceKind": "recovered-free",
+        "sourceId": "scene-location",
+        "weight": 1,
+        "id": "ledger:00020",
+        "semanticKey": "school gate",
+        "inputIndex": 20,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "scene.location.free.cherry_blossoms",
+        "value": "cherry blossoms",
+        "order": 0,
+        "sourceKind": "recovered-free",
+        "sourceId": "scene-location",
+        "weight": 1,
+        "id": "ledger:00021",
+        "semanticKey": "cherry blossoms",
+        "inputIndex": 21,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "interaction.free.directed.source.sleeve_grab",
+        "value": "source#sleeve grab",
+        "order": 100,
+        "sourceKind": "recovered-free",
+        "sourceId": "interaction:interaction:1",
+        "weight": 1,
+        "id": "ledger:00006",
+        "semanticKey": "sleeve grab",
+        "inputIndex": 6,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_2"
+        },
+        "semanticId": "interaction.free.directed.target.sleeve_grab",
+        "value": "target#sleeve grab",
+        "order": 100,
+        "sourceKind": "recovered-free",
+        "sourceId": "interaction:interaction:1",
+        "weight": 1,
+        "id": "ledger:00007",
+        "semanticKey": "sleeve grab",
+        "inputIndex": 7,
+        "status": "applied"
+       },
+       {
+        "lane": "instruction",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "scene.location.instruction",
+        "value": "Brick school gate with morning sunlight.",
+        "order": 9000,
+        "sourceKind": "recovered-free",
+        "sourceId": "scene-location",
+        "id": "ledger:00022",
+        "semanticKey": "brick school gate with morning sunlight",
+        "inputIndex": 22,
+        "status": "applied"
+       },
+       {
+        "lane": "instruction",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "placement.instruction.actor_1",
+        "value": "left of the gate pillar",
+        "order": 9900,
+        "sourceKind": "recovered-free",
+        "sourceId": "placement:actor_1",
+        "placementIndex": 0,
+        "id": "ledger:00023",
+        "semanticKey": "left of the gate pillar",
+        "inputIndex": 23,
+        "status": "applied"
+       },
+       {
+        "lane": "instruction",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "interaction.instruction.interaction:1.0.actor_1",
+        "value": "fingers pinching the hoodie sleeve",
+        "order": 10000,
+        "sourceKind": "recovered-free",
+        "sourceId": "interaction:1",
+        "id": "ledger:00008",
+        "semanticKey": "fingers pinching the hoodie sleeve",
+        "inputIndex": 8,
+        "status": "applied"
+       },
+       {
+        "lane": "instruction",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "actor.pose.instruction.actor_1",
+        "value": "leaning forward slightly",
+        "order": 10100,
+        "sourceKind": "recovered-free",
+        "sourceId": "actor-detail:actor_1",
+        "placementIndex": 0,
+        "id": "ledger:00013",
+        "semanticKey": "leaning forward slightly",
+        "inputIndex": 13,
+        "status": "applied"
+       },
+       {
+        "lane": "instruction",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "actor.action.instruction.actor_1",
+        "value": "waving one hand high",
+        "order": 10200,
+        "sourceKind": "recovered-free",
+        "sourceId": "actor-detail:actor_1",
+        "placementIndex": 0,
+        "id": "ledger:00014",
+        "semanticKey": "waving one hand high",
+        "inputIndex": 14,
+        "status": "applied"
+       },
+       {
+        "lane": "instruction",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_2"
+        },
+        "semanticId": "actor.action.instruction.actor_2",
+        "value": "running toward the gate",
+        "order": 10200,
+        "sourceKind": "recovered-free",
+        "sourceId": "actor-detail:actor_2",
+        "placementIndex": 1,
+        "id": "ledger:00017",
+        "semanticKey": "running toward the gate",
+        "inputIndex": 17,
+        "status": "applied"
+       },
+       {
+        "lane": "instruction",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "camera.instruction",
+        "value": "Eye-level camera at the gate facing both actors.",
+        "order": 11000,
+        "sourceKind": "recovered-free",
+        "sourceId": "camera",
+        "id": "ledger:00025",
+        "semanticKey": "eye level camera at the gate facing both actors",
+        "inputIndex": 25,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "outfit.top.1",
+        "value": "white sailor shirt",
+        "order": 9100,
+        "sourceKind": "external",
+        "sourceId": "outfit:lore:alice:outfit_1:top",
+        "weight": 1,
+        "id": "ledger:00028",
+        "semanticKey": "white sailor shirt",
+        "inputIndex": 28,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_2"
+        },
+        "semanticId": "outfit.top",
+        "value": "black hoodie",
+        "order": 9100,
+        "sourceKind": "external",
+        "sourceId": "outfit:persona::p1:outfit_1:top",
+        "weight": 1,
+        "id": "ledger:00035",
+        "semanticKey": "black hoodie",
+        "inputIndex": 35,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "outfit.top.2",
+        "value": "navy sailor collar",
+        "order": 9101,
+        "sourceKind": "external",
+        "sourceId": "outfit:lore:alice:outfit_1:top",
+        "weight": 1,
+        "id": "ledger:00029",
+        "semanticKey": "navy sailor collar",
+        "inputIndex": 29,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "outfit.top.3",
+        "value": "red neckerchief",
+        "order": 9102,
+        "sourceKind": "external",
+        "sourceId": "outfit:lore:alice:outfit_1:top",
+        "weight": 1,
+        "id": "ledger:00030",
+        "semanticKey": "red neckerchief",
+        "inputIndex": 30,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "outfit.bottom",
+        "value": "navy pleated skirt",
+        "order": 9200,
+        "sourceKind": "external",
+        "sourceId": "outfit:lore:alice:outfit_1:bottom",
+        "weight": 1,
+        "id": "ledger:00031",
+        "semanticKey": "navy pleated skirt",
+        "inputIndex": 31,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_2"
+        },
+        "semanticId": "outfit.bottom",
+        "value": "jeans",
+        "order": 9200,
+        "sourceKind": "external",
+        "sourceId": "outfit:persona::p1:outfit_1:bottom",
+        "weight": 1,
+        "id": "ledger:00036",
+        "semanticKey": "jeans",
+        "inputIndex": 36,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "outfit.legs",
+        "value": "black thighhighs",
+        "order": 9300,
+        "sourceKind": "external",
+        "sourceId": "outfit:lore:alice:outfit_1:legs",
+        "weight": 1,
+        "id": "ledger:00032",
+        "semanticKey": "black thighhighs",
+        "inputIndex": 32,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_2"
+        },
+        "semanticId": "outfit.feet",
+        "value": "sneakers",
+        "order": 9300,
+        "sourceKind": "external",
+        "sourceId": "outfit:persona::p1:outfit_1:feet",
+        "weight": 1,
+        "id": "ledger:00037",
+        "semanticKey": "sneakers",
+        "inputIndex": 37,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "outfit.feet",
+        "value": "brown loafers",
+        "order": 9400,
+        "sourceKind": "external",
+        "sourceId": "outfit:lore:alice:outfit_1:feet",
+        "weight": 1,
+        "id": "ledger:00033",
+        "semanticKey": "brown loafers",
+        "inputIndex": 33,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "fixed.positive",
+        "value": "very aesthetic",
+        "order": 10000,
+        "sourceKind": "external-fixed",
+        "sourceId": "character-generation-settings",
+        "weight": 1,
+        "id": "ledger:00042",
+        "semanticKey": "very aesthetic",
+        "inputIndex": 42,
+        "status": "applied"
+       }
+      ]
+     }
+    },
+    "visual_continuity_state": {
+     "scene": {
+      "backgroundTags": [
+       "school_gate",
+       "cherry_blossoms"
+      ],
+      "locationTags": [
+       "school_gate"
+      ],
+      "naturalLanguage": {
+       "location": "Brick school gate with morning sunlight."
+      }
+     },
+     "characters": {
+      "lore:alice": {
+       "naturalLanguage": {
+        "pose": "leaning forward slightly",
+        "action": "waving one hand high"
+       },
+       "_continuity_turn": 1
+      },
+      "persona:persona::p1": {
+       "naturalLanguage": {
+        "action": "running toward the gate"
+       },
+       "_continuity_turn": 1
+      }
+     },
+     "modifierRefs": {
+      "global": {
+       "scene.environment": [
+        "outdoors"
+       ],
+       "scene.time": [
+        "morning"
+       ]
+      }
+     },
+     "outfitRefs": {
+      "actors": {
+       "lore:alice": {
+        "formId": "form_default",
+        "outfitId": "outfit_1",
+        "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+       },
+       "persona::p1": {
+        "formId": "form_default",
+        "outfitId": "outfit_1",
+        "description": "black hoodie, jeans, sneakers"
+       }
+      }
+     }
+    }
+   },
+   "analyzerContinuity": {
+    "previous_modifiers": {
+     "global": {},
+     "actors": {
+      "primary": {},
+      "secondary": {},
+      "persona": {}
+     }
+    },
+    "previous_preset_refs": {
+     "actors": {
+      "primary": "",
+      "secondary": "",
+      "persona": ""
+     }
+    },
+    "previous_outfit_refs": {
+     "actors": {
+      "primary": null,
+      "secondary": null,
+      "persona": null
+     }
+    },
+    "previous_scene_tags": [],
+    "previous_background_tags": [],
+    "previous_scene_location_tags": []
+   },
+   "promptPlan": {
+    "globalPositive": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nBrick school gate with morning sunlight. Eye-level camera at the gate facing both actors.",
+    "bodyAction": "",
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "characters": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "placementIndex": 0,
+      "selectedOutfitId": "outfit_1",
+      "prompt": "female, silver hair, blue eyes, source#arm hug, source#sleeve grab, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers, looking at another, light smile, open mouth, standing\nfingers pinching the hoodie sleeve. left of the gate pillar. leaning forward slightly. waving one hand high.",
+      "uc": "bad hands",
+      "identityKey": "lore:alice",
+      "identity": {
+       "type": "character",
+       "key": "lore:alice",
+       "name": ""
+      }
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "placementIndex": 1,
+      "selectedOutfitId": "outfit_1",
+      "prompt": "male, 1::kazehaya shouta::, target#arm hug, target#sleeve grab, black hoodie, jeans, sneakers, surprised, standing\nrunning toward the gate.",
+      "uc": "",
+      "identityKey": "persona::p1",
+      "identity": {
+       "type": "persona",
+       "key": "persona::p1",
+       "name": ""
+      }
+     }
+    ],
+    "removeTags": [],
+    "width": 1216,
+    "height": 832,
+    "sizeId": 2,
+    "selectedFraming": "",
+    "selectedVariantId": "",
+    "artistId": "detail_anime_illustration_style",
+    "artistName": "v5 style",
+    "matchedIdentityKeys": {
+     "actor_1": "lore:alice",
+     "actor_2": "persona::p1"
+    },
+    "selectedFormIds": {
+     "actor_1": "form_default",
+     "actor_2": "form_default"
+    },
+    "selectedOutfitIds": {
+     "actor_1": "outfit_1",
+     "actor_2": "outfit_1"
+    },
+    "actorIdentities": {
+     "actor_1": {
+      "type": "character",
+      "key": "lore:alice",
+      "name": ""
+     },
+     "actor_2": {
+      "type": "persona",
+      "key": "persona::p1",
+      "name": ""
+     }
+    },
+    "identitySuppressedActorSlots": []
+   },
+   "novelAIConfig": {
+    "apiKey": "test-key",
+    "naiModel": "nai-diffusion-5-full",
+    "seed": "1234567",
+    "steps": 28,
+    "scale": 5,
+    "sampler": "k_euler_ancestral",
+    "analysisProfile": "v5-hybrid",
+    "width": 1216,
+    "height": 832,
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "useCoords": false,
+    "characterPrompts": [
+     {
+      "actorSlot": "actor_1",
+      "prompt": "female, silver hair, blue eyes, source#arm hug, source#sleeve grab, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers, looking at another, light smile, open mouth, standing\nfingers pinching the hoodie sleeve. left of the gate pillar. leaning forward slightly. waving one hand high.",
+      "uc": "bad hands",
+      "centerX": 0.35,
+      "centerY": 0.5,
+      "coordinateMode": "automatic"
+     },
+     {
+      "actorSlot": "actor_2",
+      "prompt": "male, 1::kazehaya shouta::, target#arm hug, target#sleeve grab, black hoodie, jeans, sneakers, surprised, standing\nrunning toward the gate.",
+      "uc": "",
+      "centerX": 0.68,
+      "centerY": 0.52,
+      "coordinateMode": "automatic"
+     }
+    ]
+   },
+   "characterReferences": [],
+   "seedFixed": true,
+   "providerPrompt": {
+    "provider": "novelai",
+    "profileId": "nai-diffusion-5-full",
+    "profileRevision": 0,
+    "sourceFormat": "novelai-v5-interaction-led-prompt-v1",
+    "requestFormat": "novelai-v5-hybrid",
+    "formatterRevision": 1,
+    "globalPositivePrompt": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nBrick school gate with morning sunlight. Eye-level camera at the gate facing both actors.",
+    "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "positivePrompt": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nBrick school gate with morning sunlight. Eye-level camera at the gate facing both actors.",
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "characterPrompts": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "female, silver hair, blue eyes, source#arm hug, source#sleeve grab, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers, looking at another, light smile, open mouth, standing\nfingers pinching the hoodie sleeve. left of the gate pillar. leaning forward slightly. waving one hand high.",
+      "negativePrompt": "bad hands",
+      "centerX": 0.35,
+      "centerY": 0.5
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "male, 1::kazehaya shouta::, target#arm hug, target#sleeve grab, black hoodie, jeans, sneakers, surprised, standing\nrunning toward the gate.",
+      "negativePrompt": "",
+      "centerX": 0.68,
+      "centerY": 0.52
+     }
+    ],
+    "diagnostics": []
+   },
+   "generation": {
+    "provider": "novelai",
+    "bytes": {
+     "__bytes__": []
+    },
+    "mimeType": "image/png",
+    "extension": "png",
+    "seed": "1234567",
+    "width": 1216,
+    "height": 832,
+    "requestId": "fake-1",
+    "providerMetadata": {},
+    "providerRef": {
+     "providerId": "novelai",
+     "queueScopeKey": "image-provider:novelai:global"
+    }
+   },
+   "generationRecord": {
+    "version": 1,
+    "snapshot": {
+     "version": 1,
+     "planId": "00000000-0000-4000-8000-000000000000",
+     "provider": {
+      "id": "novelai",
+      "transport": "",
+      "profileId": "nai-diffusion-5-full",
+      "profileRevision": 0,
+      "promptFormat": "novelai-v5-hybrid",
+      "formatterRevision": 1
+     },
+     "prompt": {
+      "kind": "structured",
+      "positive": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nBrick school gate with morning sunlight. Eye-level camera at the gate facing both actors.",
+      "negative": "bad anatomy, text, watermark, lowres, worst quality, text",
+      "characters": [
+       {
+        "actorId": "actor_1",
+        "actorIndex": 0,
+        "prompt": "female, silver hair, blue eyes, source#arm hug, source#sleeve grab, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers, looking at another, light smile, open mouth, standing\nfingers pinching the hoodie sleeve. left of the gate pillar. leaning forward slightly. waving one hand high.",
+        "negativePrompt": "bad hands",
+        "centerX": 0.35,
+        "centerY": 0.5
+       },
+       {
+        "actorId": "actor_2",
+        "actorIndex": 1,
+        "prompt": "male, 1::kazehaya shouta::, target#arm hug, target#sleeve grab, black hoodie, jeans, sneakers, surprised, standing\nrunning toward the gate.",
+        "negativePrompt": "",
+        "centerX": 0.68,
+        "centerY": 0.52
+       }
+      ]
+     },
+     "requestedSize": {
+      "presetId": 2,
+      "width": 1216,
+      "height": 832
+     },
+     "seed": {
+      "value": "1234567",
+      "fixed": true
+     },
+     "references": [],
+     "analyzerDecision": {
+      "source_image_token": "slot:s1",
+      "slot_id": "slot:s1",
+      "slot_number": 0,
+      "analysis_profile": "v5-hybrid",
+      "v5_interaction_led": {
+       "format": "novelai-v5-interaction-led-history-v1",
+       "catalogFingerprint": "v5.fnv1a64-2d2b8892321dc763",
+       "normalizedGraph": {
+        "slotNumber": 0,
+        "status": "recovered",
+        "presentationMode": "single-frame",
+        "actors": [
+         {
+          "actorId": "actor_1",
+          "candidateKey": "actor.g00nx3.1d3zc2v",
+          "formId": "form_default",
+          "sex": "female",
+          "continuityIdentity": {
+           "kind": "lorebook_prompt_key",
+           "value": "lore:alice"
+          },
+          "outfit": {
+           "selectedId": "outfit_1"
+          }
+         },
+         {
+          "actorId": "actor_2",
+          "candidateKey": "actor.1fmv888.fk4pvw",
+          "formId": "form_default",
+          "sex": "male",
+          "continuityIdentity": {
+           "kind": "persona_reference",
+           "value": "persona::p1"
+          },
+          "outfit": {
+           "selectedId": "outfit_1"
+          }
+         }
+        ],
+        "interactions": [
+         {
+          "interactionRef": "interaction:0",
+          "id": "arm_hug",
+          "mode": "directed",
+          "sourceActorId": "actor_1",
+          "targetActorId": "actor_2",
+          "bindingStatus": "complete",
+          "unresolvedActorRefs": [],
+          "modifiers": [],
+          "participantDetails": []
+         },
+         {
+          "interactionRef": "interaction:1",
+          "id": "sleeve_grab",
+          "mode": "directed",
+          "sourceActorId": "actor_1",
+          "targetActorId": "actor_2",
+          "bindingStatus": "complete",
+          "unresolvedActorRefs": [],
+          "modifiers": [],
+          "participantDetails": [
+           {
+            "actorId": "actor_1",
+            "text": "fingers pinching the hoodie sleeve"
+           }
+          ]
+         }
+        ],
+        "location": {
+         "modifiers": [
+          {
+           "id": "scene.rating",
+           "options": [
+            "sfw"
+           ]
+          },
+          {
+           "id": "scene.environment",
+           "options": [
+            "outdoors"
+           ]
+          },
+          {
+           "id": "scene.time",
+           "options": [
+            "morning"
+           ]
+          }
+         ],
+         "freeTags": [
+          "school_gate",
+          "cherry_blossoms"
+         ],
+         "instruction": "Brick school gate with morning sunlight.",
+         "comicPageInstruction": "",
+         "comicPageModifiers": [],
+         "comicPanels": [],
+         "comicCrossPanelActors": []
+        },
+        "analyzerSizeId": 2,
+        "framePlacement": [
+         {
+          "actorId": "actor_1",
+          "placementIndex": 0,
+          "center": {
+           "x": 0.35,
+           "y": 0.5
+          },
+          "source": "analyzer",
+          "instruction": "left of the gate pillar"
+         },
+         {
+          "actorId": "actor_2",
+          "placementIndex": 1,
+          "center": {
+           "x": 0.68,
+           "y": 0.52
+          },
+          "source": "analyzer",
+          "instruction": ""
+         }
+        ],
+        "actorDetails": [
+         {
+          "actorId": "actor_1",
+          "placementIndex": 0,
+          "actions": [],
+          "modifiers": [
+           {
+            "id": "gaze.direction",
+            "options": [
+             "looking_at_another"
+            ]
+           },
+           {
+            "id": "expression.general",
+            "options": [
+             "light_smile"
+            ]
+           },
+           {
+            "id": "expression.mouth",
+            "options": [
+             "open_mouth"
+            ]
+           },
+           {
+            "id": "actor.pose.body",
+            "options": [
+             "standing"
+            ]
+           }
+          ],
+          "freeTags": [],
+          "penetratingInjuries": [],
+          "poseInstruction": "leaning forward slightly",
+          "actionInstruction": "waving one hand high",
+          "objects": [],
+          "objectInstruction": "",
+          "dialogueInstruction": ""
+         },
+         {
+          "actorId": "actor_2",
+          "placementIndex": 1,
+          "actions": [],
+          "modifiers": [
+           {
+            "id": "expression.general",
+            "options": [
+             "surprised"
+            ]
+           },
+           {
+            "id": "actor.pose.body",
+            "options": [
+             "standing"
+            ]
+           }
+          ],
+          "freeTags": [],
+          "penetratingInjuries": [],
+          "poseInstruction": "",
+          "actionInstruction": "running toward the gate",
+          "objects": [],
+          "objectInstruction": "",
+          "dialogueInstruction": ""
+         }
+        ],
+        "camera": {
+         "modifiers": [
+          {
+           "id": "camera.view",
+           "options": [
+            "from_side"
+           ]
+          }
+         ],
+         "instruction": "Eye-level camera at the gate facing both actors."
+        },
+        "diagnostics": [
+         {
+          "code": "tag-canonicalized",
+          "impact": "recovered",
+          "path": "$.illustrations[0].frame_placement.freeTags[0]",
+          "message": "Canonicalized a free tag to 'school_gate'."
+         },
+         {
+          "code": "tag-canonicalized",
+          "impact": "recovered",
+          "path": "$.illustrations[0].frame_placement.freeTags[1]",
+          "message": "Canonicalized a free tag to 'cherry_blossoms'."
+         }
+        ]
+       },
+       "diagnostics": [
+        {
+         "code": "tag-canonicalized",
+         "impact": "recovered",
+         "path": "$.illustrations[0].frame_placement.freeTags[0]",
+         "message": "Canonicalized a free tag to 'school_gate'."
+        },
+        {
+         "code": "tag-canonicalized",
+         "impact": "recovered",
+         "path": "$.illustrations[0].frame_placement.freeTags[1]",
+         "message": "Canonicalized a free tag to 'cherry_blossoms'."
+        }
+       ],
+       "executedPromptPlan": {
+        "format": "novelai-v5-interaction-led-prompt-v1",
+        "sizeId": 2,
+        "width": 1216,
+        "height": 832,
+        "global": {
+         "tags": [
+          "2::1girl::",
+          "2::1boy::",
+          "1.5::artist:hwansang ::",
+          "year 2025",
+          "masterpiece",
+          "best quality",
+          "from side",
+          "outdoors",
+          "morning",
+          "school gate",
+          "cherry blossoms",
+          "very aesthetic"
+         ],
+         "instructions": [
+          "Brick school gate with morning sunlight.",
+          "Eye-level camera at the gate facing both actors."
+         ],
+         "serializedPrompt": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nBrick school gate with morning sunlight. Eye-level camera at the gate facing both actors."
+        },
+        "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+        "characters": [
+         {
+          "tags": [
+           "female",
+           "silver hair",
+           "blue eyes",
+           "source#arm hug",
+           "source#sleeve grab",
+           "white sailor shirt",
+           "navy sailor collar",
+           "red neckerchief",
+           "navy pleated skirt",
+           "black thighhighs",
+           "brown loafers",
+           "looking at another",
+           "light smile",
+           "open mouth",
+           "standing"
+          ],
+          "instructions": [
+           "fingers pinching the hoodie sleeve.",
+           "left of the gate pillar.",
+           "leaning forward slightly.",
+           "waving one hand high."
+          ],
+          "serializedPrompt": "female, silver hair, blue eyes, source#arm hug, source#sleeve grab, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers, looking at another, light smile, open mouth, standing\nfingers pinching the hoodie sleeve. left of the gate pillar. leaning forward slightly. waving one hand high.",
+          "actorId": "actor_1",
+          "placementIndex": 0,
+          "candidateKey": "actor.g00nx3.1d3zc2v",
+          "sex": "female",
+          "centerX": 0.35,
+          "centerY": 0.5,
+          "negativePrompt": "bad hands"
+         },
+         {
+          "tags": [
+           "male",
+           "1::kazehaya shouta::",
+           "target#arm hug",
+           "target#sleeve grab",
+           "black hoodie",
+           "jeans",
+           "sneakers",
+           "surprised",
+           "standing"
+          ],
+          "instructions": [
+           "running toward the gate."
+          ],
+          "serializedPrompt": "male, 1::kazehaya shouta::, target#arm hug, target#sleeve grab, black hoodie, jeans, sneakers, surprised, standing\nrunning toward the gate.",
+          "actorId": "actor_2",
+          "placementIndex": 1,
+          "candidateKey": "actor.1fmv888.fk4pvw",
+          "sex": "male",
+          "centerX": 0.68,
+          "centerY": 0.52,
+          "negativePrompt": ""
+         }
+        ],
+        "ledger": [
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "actor_roster.female.count",
+          "value": "1girl",
+          "order": 0,
+          "sourceKind": "actor-roster",
+          "sourceId": "actor-roster:female",
+          "weight": 2,
+          "id": "ledger:00000",
+          "semanticKey": "1girl",
+          "inputIndex": 0,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "actor_roster.male.count",
+          "value": "1boy",
+          "order": 0,
+          "sourceKind": "actor-roster",
+          "sourceId": "actor-roster:male",
+          "weight": 2,
+          "id": "ledger:00001",
+          "semanticKey": "1boy",
+          "inputIndex": 1,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "actor.identity.sex",
+          "value": "female",
+          "order": 0,
+          "sourceKind": "actor-roster",
+          "sourceId": "actor-roster:actor_1:sex",
+          "weight": 1,
+          "id": "ledger:00002",
+          "semanticKey": "female",
+          "inputIndex": 2,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_2"
+          },
+          "semanticId": "actor.identity.sex",
+          "value": "male",
+          "order": 0,
+          "sourceKind": "actor-roster",
+          "sourceId": "actor-roster:actor_2:sex",
+          "weight": 1,
+          "id": "ledger:00003",
+          "semanticKey": "male",
+          "inputIndex": 3,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "base.hair.color",
+          "value": "silver hair",
+          "order": 9100,
+          "sourceKind": "external-identity",
+          "sourceId": "lore:alice:hair.color:0",
+          "weight": 1,
+          "id": "ledger:00026",
+          "semanticKey": "silver hair",
+          "inputIndex": 26,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "base.eyes.color",
+          "value": "blue eyes",
+          "order": 9500,
+          "sourceKind": "external-identity",
+          "sourceId": "lore:alice:eyes.color:0",
+          "weight": 1,
+          "id": "ledger:00027",
+          "semanticKey": "blue eyes",
+          "inputIndex": 27,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_2"
+          },
+          "semanticId": "base.custom",
+          "value": "1::kazehaya shouta::",
+          "order": 10300,
+          "sourceKind": "external-identity",
+          "sourceId": "persona::p1:custom:0",
+          "weight": 1,
+          "id": "ledger:00034",
+          "semanticKey": "kazehaya shouta",
+          "inputIndex": 34,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "artist.detail_anime_illustration_style.1",
+          "value": "1.5::artist:hwansang ::",
+          "order": 9500,
+          "sourceKind": "external-artist",
+          "sourceId": "detail_anime_illustration_style",
+          "weight": 1,
+          "id": "ledger:00038",
+          "semanticKey": "artist hwansang",
+          "inputIndex": 38,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "artist.detail_anime_illustration_style.2",
+          "value": "year 2025",
+          "order": 9501,
+          "sourceKind": "external-artist",
+          "sourceId": "detail_anime_illustration_style",
+          "weight": 1,
+          "id": "ledger:00039",
+          "semanticKey": "year 2025",
+          "inputIndex": 39,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "artist.detail_anime_illustration_style.3",
+          "value": "masterpiece",
+          "order": 9502,
+          "sourceKind": "external-artist",
+          "sourceId": "detail_anime_illustration_style",
+          "weight": 1,
+          "id": "ledger:00040",
+          "semanticKey": "masterpiece",
+          "inputIndex": 40,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "artist.detail_anime_illustration_style.4",
+          "value": "best quality",
+          "order": 9503,
+          "sourceKind": "external-artist",
+          "sourceId": "detail_anime_illustration_style",
+          "weight": 1,
+          "id": "ledger:00041",
+          "semanticKey": "best quality",
+          "inputIndex": 41,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "interaction.arm_hug.directed.source",
+          "value": "source#arm hug",
+          "order": 41,
+          "sourceKind": "closed",
+          "sourceId": "interaction:interaction:0",
+          "weight": 1,
+          "id": "ledger:00004",
+          "semanticKey": "arm hug",
+          "inputIndex": 4,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_2"
+          },
+          "semanticId": "interaction.arm_hug.directed.target",
+          "value": "target#arm hug",
+          "order": 42,
+          "sourceKind": "closed",
+          "sourceId": "interaction:interaction:0",
+          "weight": 1,
+          "id": "ledger:00005",
+          "semanticKey": "arm hug",
+          "inputIndex": 5,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "gaze.direction.looking_at_another",
+          "value": "looking at another",
+          "order": 4040,
+          "sourceKind": "closed",
+          "sourceId": "actor-detail:actor_1:gaze.direction.looking_at_another",
+          "weight": 1,
+          "placementIndex": 0,
+          "id": "ledger:00009",
+          "semanticKey": "looking at another",
+          "inputIndex": 9,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "expression.general.light_smile",
+          "value": "light smile",
+          "order": 4040,
+          "sourceKind": "closed",
+          "sourceId": "actor-detail:actor_1:expression.general.light_smile",
+          "weight": 1,
+          "placementIndex": 0,
+          "id": "ledger:00010",
+          "semanticKey": "light smile",
+          "inputIndex": 10,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "expression.mouth.open_mouth",
+          "value": "open mouth",
+          "order": 4040,
+          "sourceKind": "closed",
+          "sourceId": "actor-detail:actor_1:expression.mouth.open_mouth",
+          "weight": 1,
+          "placementIndex": 0,
+          "id": "ledger:00011",
+          "semanticKey": "open mouth",
+          "inputIndex": 11,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "actor.pose.body.standing",
+          "value": "standing",
+          "order": 4040,
+          "sourceKind": "closed",
+          "sourceId": "actor-detail:actor_1:actor.pose.body.standing",
+          "weight": 1,
+          "placementIndex": 0,
+          "id": "ledger:00012",
+          "semanticKey": "standing",
+          "inputIndex": 12,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_2"
+          },
+          "semanticId": "expression.general.surprised",
+          "value": "surprised",
+          "order": 4040,
+          "sourceKind": "closed",
+          "sourceId": "actor-detail:actor_2:expression.general.surprised",
+          "weight": 1,
+          "placementIndex": 1,
+          "id": "ledger:00015",
+          "semanticKey": "surprised",
+          "inputIndex": 15,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_2"
+          },
+          "semanticId": "actor.pose.body.standing",
+          "value": "standing",
+          "order": 4040,
+          "sourceKind": "closed",
+          "sourceId": "actor-detail:actor_2:actor.pose.body.standing",
+          "weight": 1,
+          "placementIndex": 1,
+          "id": "ledger:00016",
+          "semanticKey": "standing",
+          "inputIndex": 16,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "camera.view.from_side",
+          "value": "from side",
+          "order": 5050,
+          "sourceKind": "closed",
+          "sourceId": "camera",
+          "weight": 1,
+          "id": "ledger:00024",
+          "semanticKey": "from side",
+          "inputIndex": 24,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "scene.environment.outdoors",
+          "value": "outdoors",
+          "order": 6060,
+          "sourceKind": "closed",
+          "sourceId": "scene-location:scene.environment:scene.environment.outdoors",
+          "weight": 1,
+          "id": "ledger:00018",
+          "semanticKey": "outdoors",
+          "inputIndex": 18,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "scene.time.morning",
+          "value": "morning",
+          "order": 6262,
+          "sourceKind": "closed",
+          "sourceId": "scene-location:scene.time:scene.time.morning",
+          "weight": 1,
+          "id": "ledger:00019",
+          "semanticKey": "morning",
+          "inputIndex": 19,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "scene.location.free.school_gate",
+          "value": "school gate",
+          "order": 0,
+          "sourceKind": "recovered-free",
+          "sourceId": "scene-location",
+          "weight": 1,
+          "id": "ledger:00020",
+          "semanticKey": "school gate",
+          "inputIndex": 20,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "scene.location.free.cherry_blossoms",
+          "value": "cherry blossoms",
+          "order": 0,
+          "sourceKind": "recovered-free",
+          "sourceId": "scene-location",
+          "weight": 1,
+          "id": "ledger:00021",
+          "semanticKey": "cherry blossoms",
+          "inputIndex": 21,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "interaction.free.directed.source.sleeve_grab",
+          "value": "source#sleeve grab",
+          "order": 100,
+          "sourceKind": "recovered-free",
+          "sourceId": "interaction:interaction:1",
+          "weight": 1,
+          "id": "ledger:00006",
+          "semanticKey": "sleeve grab",
+          "inputIndex": 6,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_2"
+          },
+          "semanticId": "interaction.free.directed.target.sleeve_grab",
+          "value": "target#sleeve grab",
+          "order": 100,
+          "sourceKind": "recovered-free",
+          "sourceId": "interaction:interaction:1",
+          "weight": 1,
+          "id": "ledger:00007",
+          "semanticKey": "sleeve grab",
+          "inputIndex": 7,
+          "status": "applied"
+         },
+         {
+          "lane": "instruction",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "scene.location.instruction",
+          "value": "Brick school gate with morning sunlight.",
+          "order": 9000,
+          "sourceKind": "recovered-free",
+          "sourceId": "scene-location",
+          "id": "ledger:00022",
+          "semanticKey": "brick school gate with morning sunlight",
+          "inputIndex": 22,
+          "status": "applied"
+         },
+         {
+          "lane": "instruction",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "placement.instruction.actor_1",
+          "value": "left of the gate pillar",
+          "order": 9900,
+          "sourceKind": "recovered-free",
+          "sourceId": "placement:actor_1",
+          "placementIndex": 0,
+          "id": "ledger:00023",
+          "semanticKey": "left of the gate pillar",
+          "inputIndex": 23,
+          "status": "applied"
+         },
+         {
+          "lane": "instruction",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "interaction.instruction.interaction:1.0.actor_1",
+          "value": "fingers pinching the hoodie sleeve",
+          "order": 10000,
+          "sourceKind": "recovered-free",
+          "sourceId": "interaction:1",
+          "id": "ledger:00008",
+          "semanticKey": "fingers pinching the hoodie sleeve",
+          "inputIndex": 8,
+          "status": "applied"
+         },
+         {
+          "lane": "instruction",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "actor.pose.instruction.actor_1",
+          "value": "leaning forward slightly",
+          "order": 10100,
+          "sourceKind": "recovered-free",
+          "sourceId": "actor-detail:actor_1",
+          "placementIndex": 0,
+          "id": "ledger:00013",
+          "semanticKey": "leaning forward slightly",
+          "inputIndex": 13,
+          "status": "applied"
+         },
+         {
+          "lane": "instruction",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "actor.action.instruction.actor_1",
+          "value": "waving one hand high",
+          "order": 10200,
+          "sourceKind": "recovered-free",
+          "sourceId": "actor-detail:actor_1",
+          "placementIndex": 0,
+          "id": "ledger:00014",
+          "semanticKey": "waving one hand high",
+          "inputIndex": 14,
+          "status": "applied"
+         },
+         {
+          "lane": "instruction",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_2"
+          },
+          "semanticId": "actor.action.instruction.actor_2",
+          "value": "running toward the gate",
+          "order": 10200,
+          "sourceKind": "recovered-free",
+          "sourceId": "actor-detail:actor_2",
+          "placementIndex": 1,
+          "id": "ledger:00017",
+          "semanticKey": "running toward the gate",
+          "inputIndex": 17,
+          "status": "applied"
+         },
+         {
+          "lane": "instruction",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "camera.instruction",
+          "value": "Eye-level camera at the gate facing both actors.",
+          "order": 11000,
+          "sourceKind": "recovered-free",
+          "sourceId": "camera",
+          "id": "ledger:00025",
+          "semanticKey": "eye level camera at the gate facing both actors",
+          "inputIndex": 25,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "outfit.top.1",
+          "value": "white sailor shirt",
+          "order": 9100,
+          "sourceKind": "external",
+          "sourceId": "outfit:lore:alice:outfit_1:top",
+          "weight": 1,
+          "id": "ledger:00028",
+          "semanticKey": "white sailor shirt",
+          "inputIndex": 28,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_2"
+          },
+          "semanticId": "outfit.top",
+          "value": "black hoodie",
+          "order": 9100,
+          "sourceKind": "external",
+          "sourceId": "outfit:persona::p1:outfit_1:top",
+          "weight": 1,
+          "id": "ledger:00035",
+          "semanticKey": "black hoodie",
+          "inputIndex": 35,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "outfit.top.2",
+          "value": "navy sailor collar",
+          "order": 9101,
+          "sourceKind": "external",
+          "sourceId": "outfit:lore:alice:outfit_1:top",
+          "weight": 1,
+          "id": "ledger:00029",
+          "semanticKey": "navy sailor collar",
+          "inputIndex": 29,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "outfit.top.3",
+          "value": "red neckerchief",
+          "order": 9102,
+          "sourceKind": "external",
+          "sourceId": "outfit:lore:alice:outfit_1:top",
+          "weight": 1,
+          "id": "ledger:00030",
+          "semanticKey": "red neckerchief",
+          "inputIndex": 30,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "outfit.bottom",
+          "value": "navy pleated skirt",
+          "order": 9200,
+          "sourceKind": "external",
+          "sourceId": "outfit:lore:alice:outfit_1:bottom",
+          "weight": 1,
+          "id": "ledger:00031",
+          "semanticKey": "navy pleated skirt",
+          "inputIndex": 31,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_2"
+          },
+          "semanticId": "outfit.bottom",
+          "value": "jeans",
+          "order": 9200,
+          "sourceKind": "external",
+          "sourceId": "outfit:persona::p1:outfit_1:bottom",
+          "weight": 1,
+          "id": "ledger:00036",
+          "semanticKey": "jeans",
+          "inputIndex": 36,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "outfit.legs",
+          "value": "black thighhighs",
+          "order": 9300,
+          "sourceKind": "external",
+          "sourceId": "outfit:lore:alice:outfit_1:legs",
+          "weight": 1,
+          "id": "ledger:00032",
+          "semanticKey": "black thighhighs",
+          "inputIndex": 32,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_2"
+          },
+          "semanticId": "outfit.feet",
+          "value": "sneakers",
+          "order": 9300,
+          "sourceKind": "external",
+          "sourceId": "outfit:persona::p1:outfit_1:feet",
+          "weight": 1,
+          "id": "ledger:00037",
+          "semanticKey": "sneakers",
+          "inputIndex": 37,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "outfit.feet",
+          "value": "brown loafers",
+          "order": 9400,
+          "sourceKind": "external",
+          "sourceId": "outfit:lore:alice:outfit_1:feet",
+          "weight": 1,
+          "id": "ledger:00033",
+          "semanticKey": "brown loafers",
+          "inputIndex": 33,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "fixed.positive",
+          "value": "very aesthetic",
+          "order": 10000,
+          "sourceKind": "external-fixed",
+          "sourceId": "character-generation-settings",
+          "weight": 1,
+          "id": "ledger:00042",
+          "semanticKey": "very aesthetic",
+          "inputIndex": 42,
+          "status": "applied"
+         }
+        ]
+       }
+      },
+      "visual_continuity_state": {
+       "scene": {
+        "backgroundTags": [
+         "school_gate",
+         "cherry_blossoms"
+        ],
+        "locationTags": [
+         "school_gate"
+        ],
+        "naturalLanguage": {
+         "location": "Brick school gate with morning sunlight."
+        }
+       },
+       "characters": {
+        "lore:alice": {
+         "naturalLanguage": {
+          "pose": "leaning forward slightly",
+          "action": "waving one hand high"
+         },
+         "_continuity_turn": 1
+        },
+        "persona:persona::p1": {
+         "naturalLanguage": {
+          "action": "running toward the gate"
+         },
+         "_continuity_turn": 1
+        }
+       },
+       "modifierRefs": {
+        "global": {
+         "scene.environment": [
+          "outdoors"
+         ],
+         "scene.time": [
+          "morning"
+         ]
+        }
+       },
+       "outfitRefs": {
+        "actors": {
+         "lore:alice": {
+          "formId": "form_default",
+          "outfitId": "outfit_1",
+          "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+         },
+         "persona::p1": {
+          "formId": "form_default",
+          "outfitId": "outfit_1",
+          "description": "black hoodie, jeans, sneakers"
+         }
+        }
+       }
+      },
+      "artist_id": "detail_anime_illustration_style",
+      "artist_name": "v5 style"
+     }
+    },
+    "request": {
+     "provider": "novelai",
+     "transport": "",
+     "profileId": "nai-diffusion-5-full",
+     "profileRevision": 0,
+     "promptFormat": "novelai-v5-hybrid",
+     "formatterRevision": 1,
+     "positive": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nBrick school gate with morning sunlight. Eye-level camera at the gate facing both actors.",
+     "negative": "bad anatomy, text, watermark, lowres, worst quality, text",
+     "characters": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "female, silver hair, blue eyes, source#arm hug, source#sleeve grab, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers, looking at another, light smile, open mouth, standing\nfingers pinching the hoodie sleeve. left of the gate pillar. leaning forward slightly. waving one hand high.",
+       "negativePrompt": "bad hands",
+       "centerX": 0.35,
+       "centerY": 0.5
+      },
+      {
+       "actorId": "actor_2",
+       "actorIndex": 1,
+       "prompt": "male, 1::kazehaya shouta::, target#arm hug, target#sleeve grab, black hoodie, jeans, sneakers, surprised, standing\nrunning toward the gate.",
+       "negativePrompt": "",
+       "centerX": 0.68,
+       "centerY": 0.52
+      }
+     ],
+     "seed": "1234567",
+     "requestedSize": {
+      "width": 1216,
+      "height": 832
+     }
+    },
+    "result": {
+     "actualSize": {
+      "width": 1216,
+      "height": 832
+     },
+     "requestId": "fake-1",
+     "providerMetadata": {}
+    }
+   }
+  },
+  {
+   "sourceImageToken": "slot:s2",
+   "providerRef": {
+    "providerId": "novelai",
+    "queueScopeKey": "image-provider:novelai:global"
+   },
+   "actors": [
+    {
+     "actorId": "actor_1",
+     "actorIndex": 0,
+     "kind": "character",
+     "gender": "",
+     "identityKey": "lore:bob",
+     "identityName": "",
+     "selectedFormId": "form_default",
+     "selectedOutfitId": "outfit_1",
+     "identitySuppressed": false,
+     "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes, looking down, exhausted, 2::facing away::\nhands on the window sill. sighing.",
+     "negativePrompt": ""
+    }
+   ],
+   "promptSegments": {
+    "artistPositive": {
+     "start": 11,
+     "end": 72
+    },
+    "artistNegative": {
+     "start": 30,
+     "end": 57
+    },
+    "outfits": {
+     "actor_1": {
+      "start": 18,
+      "end": 97
+     }
+    }
+   },
+   "analysisMetadata": {
+    "v": 1,
+    "p": "v5",
+    "st": "degraded",
+    "sl": 1,
+    "r": [
+     [
+      1,
+      "male",
+      null,
+      "outfit_1"
+     ]
+    ],
+    "i": [],
+    "f": {
+     "m": [
+      [
+       "scene.rating",
+       [
+        "sfw"
+       ]
+      ],
+      [
+       "scene.environment",
+       [
+        "indoors"
+       ]
+      ]
+     ],
+     "t": [
+      "staff_room",
+      "window"
+     ],
+     "n": "",
+     "c": "",
+     "pg": [],
+     "p": [],
+     "x": [],
+     "a": [
+      [
+       1,
+       0.5,
+       0.45,
+       "facing_away",
+       "analyzer",
+       "",
+       0,
+       ""
+      ]
+     ]
+    },
+    "d": [
+     {
+      "a": 1,
+      "x": [],
+      "m": [
+       [
+        "gaze.direction",
+        [
+         "looking_down"
+        ]
+       ],
+       [
+        "expression.general",
+        [
+         "exhausted"
+        ]
+       ]
+      ],
+      "t": [
+       "scar on face"
+      ],
+      "p": "hands on the window sill",
+      "q": "sighing",
+      "o": "",
+      "g": "",
+      "z": 0,
+      "b": []
+     }
+    ],
+    "c": [
+     [],
+     "Camera behind the actor looking out the window.",
+     1,
+     832,
+     1216
+    ],
+    "ct": {
+     "a": [
+      {
+       "a": 1,
+       "r": {},
+       "p": {
+        "actor.injury": [
+         "scar on face"
+        ]
+       },
+       "s": {},
+       "c": {},
+       "n": {},
+       "d": []
+      }
+     ],
+     "l": [],
+     "sm": [
+      [
+       "scene.environment",
+       [
+        "indoors"
+       ]
+      ],
+      [
+       "scene.time",
+       [
+        "morning"
+       ]
+      ]
+     ],
+     "st": [
+      "staff_room",
+      "window"
+     ],
+     "nl": {
+      "l": [
+       "",
+       0
+      ],
+      "a": []
+     }
+    },
+    "rc": [
+     "frame-scene-modifier-omitted",
+     "tag-canonicalized"
+    ],
+    "pr": [
+     [
+      0,
+      "male",
+      "",
+      [],
+      1
+     ]
+    ],
+    "md": {
+     "i": [
+      [
+       "interaction.penetration.instrument",
+       [
+        "interaction"
+       ]
+      ],
+      [
+       "interaction.sexual.ejaculation.progress",
+       [
+        "female"
+       ]
+      ],
+      [
+       "interaction.sexual.grouping",
+       [
+        "global"
+       ]
+      ],
+      [
+       "interaction.sexual.oral.fellatio",
+       [
+        "interaction"
+       ]
+      ],
+      [
+       "interaction.sexual.penetration.direction",
+       [
+        "interaction"
+       ]
+      ],
+      [
+       "interaction.sexual.penetration.progress",
+       [
+        "interaction"
+       ]
+      ],
+      [
+       "interaction.sexual.penetration.route",
+       [
+        "interaction"
+       ]
+      ],
+      [
+       "interaction.sexual.relationship",
+       [
+        "global"
+       ]
+      ],
+      [
+       "manual.sexual.handjob",
+       [
+        "interaction"
+       ]
+      ],
+      [
+       "scene.context.sexual",
+       [
+        "global"
+       ]
+      ]
+     ],
+     "f": [
+      [
+       "framing.crop",
+       [
+        "global"
+       ]
+      ],
+      [
+       "framing.head_crop",
+       [
+        "global"
+       ]
+      ],
+      [
+       "orientation.facing",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "scene.environment",
+       [
+        "global"
+       ]
+      ],
+      [
+       "scene.rating",
+       [
+        "global"
+       ]
+      ],
+      [
+       "scene.time",
+       [
+        "global"
+       ]
+      ],
+      [
+       "scene.weather",
+       [
+        "global"
+       ]
+      ]
+     ],
+     "a": [
+      [
+       "actor.pose.body",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "actor.pose.refinement",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.blush",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.eye.openness",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.eye.reaction",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.general",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.mouth",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.sexual_response",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "expression.tear",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "gaze.direction",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "manual.clothing_access",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "motion.body",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.after_activity",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.body.condition",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.body.contamination",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.body.surface",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.clothing.arrangement",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.clothing.coverage.lower",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.clothing.coverage.upper",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.clothing.surface",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.fluid.cum.instant",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.fluid.cum.location",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.fluid.lactation",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.fluid.precum",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.fluid.pussy_juice",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.fluid.saliva",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.genitals.visible_parts",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.hair.condition",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.penis.condom",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.restraint.body",
+       [
+        "actor"
+       ]
+      ],
+      [
+       "state.restraint.gag",
+       [
+        "actor"
+       ]
+      ]
+     ],
+     "c": [
+      [
+       "camera.view",
+       [
+        "global"
+       ]
+      ]
+     ]
+    },
+    "ff": {
+     "i": {
+      "f": [],
+      "n": [
+       "interaction_detail"
+      ]
+     },
+     "f": {
+      "f": [
+       "scene.location"
+      ],
+      "n": [
+       "location",
+       "placement"
+      ]
+     },
+     "a": {
+      "f": [
+       "actor.injury"
+      ],
+      "n": [
+       "pose",
+       "action",
+       "object_instruction"
+      ]
+     },
+     "c": {
+      "f": [],
+      "n": [
+       "camera"
+      ]
+     }
+    },
+    "ci": {
+     "g": [
+      [
+       "actor.injury",
+       "actor"
+      ],
+      [
+       "scene.environment",
+       "global"
+      ],
+      [
+       "scene.location",
+       "global"
+      ],
+      [
+       "scene.time",
+       "global"
+      ],
+      [
+       "scene.weather",
+       "global"
+      ],
+      [
+       "state.after_activity",
+       "actor"
+      ],
+      [
+       "state.clothing.arrangement",
+       "actor"
+      ],
+      [
+       "state.clothing.coverage.lower",
+       "actor"
+      ],
+      [
+       "state.clothing.coverage.upper",
+       "actor"
+      ],
+      [
+       "state.fluid.cum.location",
+       "actor"
+      ],
+      [
+       "state.fluid.lactation",
+       "actor"
+      ],
+      [
+       "state.fluid.precum",
+       "actor"
+      ],
+      [
+       "state.fluid.pussy_juice",
+       "actor"
+      ],
+      [
+       "state.fluid.saliva",
+       "actor"
+      ],
+      [
+       "state.penis.condom",
+       "actor"
+      ],
+      [
+       "state.restraint.body",
+       "actor"
+      ],
+      [
+       "state.restraint.gag",
+       "actor"
+      ]
+     ],
+     "n": [
+      "cum_count"
+     ],
+     "d": [
+      "accumulated_cum_overflow",
+      "accumulated_cum_pool",
+      "accumulated_cumdrip",
+      "excessive_accumulated_cum"
+     ]
+    }
+   },
+   "decision": {
+    "source_image_token": "slot:s2",
+    "slot_id": "slot:s2",
+    "slot_number": 1,
+    "analysis_profile": "v5-hybrid",
+    "v5_interaction_led": {
+     "format": "novelai-v5-interaction-led-history-v1",
+     "catalogFingerprint": "v5.fnv1a64-2d2b8892321dc763",
+     "normalizedGraph": {
+      "slotNumber": 1,
+      "status": "degraded",
+      "presentationMode": "single-frame",
+      "actors": [
+       {
+        "actorId": "actor_1",
+        "candidateKey": "actor.m0ais.6ynrym",
+        "formId": "form_default",
+        "sex": "male",
+        "continuityIdentity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:bob"
+        },
+        "outfit": {
+         "selectedId": "outfit_1"
+        }
+       }
+      ],
+      "interactions": [],
+      "location": {
+       "modifiers": [
+        {
+         "id": "scene.rating",
+         "options": [
+          "sfw"
+         ]
+        },
+        {
+         "id": "scene.environment",
+         "options": [
+          "indoors"
+         ]
+        }
+       ],
+       "freeTags": [
+        "staff_room",
+        "window"
+       ],
+       "instruction": "",
+       "comicPageInstruction": "",
+       "comicPageModifiers": [],
+       "comicPanels": [],
+       "comicCrossPanelActors": []
+      },
+      "analyzerSizeId": 1,
+      "framePlacement": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "center": {
+         "x": 0.5,
+         "y": 0.45
+        },
+        "facing": {
+         "id": "facing_away"
+        },
+        "source": "analyzer",
+        "instruction": ""
+       }
+      ],
+      "actorDetails": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "actions": [],
+        "modifiers": [
+         {
+          "id": "gaze.direction",
+          "options": [
+           "looking_down"
+          ]
+         },
+         {
+          "id": "expression.general",
+          "options": [
+           "exhausted"
+          ]
+         }
+        ],
+        "freeTags": [
+         "scar on face"
+        ],
+        "penetratingInjuries": [],
+        "poseInstruction": "hands on the window sill",
+        "actionInstruction": "sighing",
+        "objects": [],
+        "objectInstruction": "",
+        "dialogueInstruction": ""
+       }
+      ],
+      "camera": {
+       "modifiers": [],
+       "instruction": "Camera behind the actor looking out the window."
+      },
+      "diagnostics": [
+       {
+        "code": "frame-scene-modifier-omitted",
+        "impact": "degraded",
+        "path": "$.illustrations[1].frame_placement.modifiers",
+        "message": "Omitted an Actor-facing modifier from the Frame Placement scene modifier list."
+       },
+       {
+        "code": "tag-canonicalized",
+        "impact": "recovered",
+        "path": "$.illustrations[1].frame_placement.freeTags[0]",
+        "message": "Canonicalized a free tag to 'staff_room'."
+       }
+      ]
+     },
+     "diagnostics": [
+      {
+       "code": "frame-scene-modifier-omitted",
+       "impact": "degraded",
+       "path": "$.illustrations[1].frame_placement.modifiers",
+       "message": "Omitted an Actor-facing modifier from the Frame Placement scene modifier list."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[1].frame_placement.freeTags[0]",
+       "message": "Canonicalized a free tag to 'staff_room'."
+      }
+     ],
+     "executedPromptPlan": {
+      "format": "novelai-v5-interaction-led-prompt-v1",
+      "sizeId": 1,
+      "width": 832,
+      "height": 1216,
+      "global": {
+       "tags": [
+        "2::1boy::",
+        "1.5::artist:hwansang ::",
+        "year 2025",
+        "masterpiece",
+        "best quality",
+        "indoors",
+        "staff room",
+        "window",
+        "very aesthetic"
+       ],
+       "instructions": [
+        "Camera behind the actor looking out the window."
+       ],
+       "serializedPrompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window."
+      },
+      "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+      "characters": [
+       {
+        "tags": [
+         "male",
+         "black hair",
+         "grey suit jacket",
+         "white shirt",
+         "blue necktie",
+         "grey suit pants",
+         "black dress shoes",
+         "looking down",
+         "exhausted",
+         "2::facing away::"
+        ],
+        "instructions": [
+         "hands on the window sill.",
+         "sighing."
+        ],
+        "serializedPrompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes, looking down, exhausted, 2::facing away::\nhands on the window sill. sighing.",
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "candidateKey": "actor.m0ais.6ynrym",
+        "sex": "male",
+        "centerX": 0.5,
+        "centerY": 0.45,
+        "negativePrompt": ""
+       }
+      ],
+      "ledger": [
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "actor_roster.male.count",
+        "value": "1boy",
+        "order": 0,
+        "sourceKind": "actor-roster",
+        "sourceId": "actor-roster:male",
+        "weight": 2,
+        "id": "ledger:00000",
+        "semanticKey": "1boy",
+        "inputIndex": 0,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "actor.identity.sex",
+        "value": "male",
+        "order": 0,
+        "sourceKind": "actor-roster",
+        "sourceId": "actor-roster:actor_1:sex",
+        "weight": 1,
+        "id": "ledger:00001",
+        "semanticKey": "male",
+        "inputIndex": 1,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "base.hair.color",
+        "value": "black hair",
+        "order": 9100,
+        "sourceKind": "external-identity",
+        "sourceId": "lore:bob:hair.color:0",
+        "weight": 1,
+        "id": "ledger:00012",
+        "semanticKey": "black hair",
+        "inputIndex": 12,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "artist.detail_anime_illustration_style.1",
+        "value": "1.5::artist:hwansang ::",
+        "order": 9500,
+        "sourceKind": "external-artist",
+        "sourceId": "detail_anime_illustration_style",
+        "weight": 1,
+        "id": "ledger:00018",
+        "semanticKey": "artist hwansang",
+        "inputIndex": 18,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "artist.detail_anime_illustration_style.2",
+        "value": "year 2025",
+        "order": 9501,
+        "sourceKind": "external-artist",
+        "sourceId": "detail_anime_illustration_style",
+        "weight": 1,
+        "id": "ledger:00019",
+        "semanticKey": "year 2025",
+        "inputIndex": 19,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "artist.detail_anime_illustration_style.3",
+        "value": "masterpiece",
+        "order": 9502,
+        "sourceKind": "external-artist",
+        "sourceId": "detail_anime_illustration_style",
+        "weight": 1,
+        "id": "ledger:00020",
+        "semanticKey": "masterpiece",
+        "inputIndex": 20,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "artist.detail_anime_illustration_style.4",
+        "value": "best quality",
+        "order": 9503,
+        "sourceKind": "external-artist",
+        "sourceId": "detail_anime_illustration_style",
+        "weight": 1,
+        "id": "ledger:00021",
+        "semanticKey": "best quality",
+        "inputIndex": 21,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "gaze.direction.looking_down",
+        "value": "looking down",
+        "order": 4040,
+        "sourceKind": "closed",
+        "sourceId": "actor-detail:actor_1:gaze.direction.looking_down",
+        "weight": 1,
+        "placementIndex": 0,
+        "id": "ledger:00002",
+        "semanticKey": "looking down",
+        "inputIndex": 2,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "expression.general.exhausted",
+        "value": "exhausted",
+        "order": 4040,
+        "sourceKind": "closed",
+        "sourceId": "actor-detail:actor_1:expression.general.exhausted",
+        "weight": 1,
+        "placementIndex": 0,
+        "id": "ledger:00003",
+        "semanticKey": "exhausted",
+        "inputIndex": 3,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "orientation.facing.facing_away",
+        "value": "facing away",
+        "order": 4040,
+        "sourceKind": "closed",
+        "sourceId": "placement:actor_1:facing:orientation.facing.facing_away",
+        "weight": 2,
+        "placementIndex": 0,
+        "id": "ledger:00010",
+        "semanticKey": "facing away",
+        "inputIndex": 10,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "scene.environment.indoors",
+        "value": "indoors",
+        "order": 6060,
+        "sourceKind": "closed",
+        "sourceId": "scene-location:scene.environment:scene.environment.indoors",
+        "weight": 1,
+        "id": "ledger:00007",
+        "semanticKey": "indoors",
+        "inputIndex": 7,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "scene.location.free.staff_room",
+        "value": "staff room",
+        "order": 0,
+        "sourceKind": "recovered-free",
+        "sourceId": "scene-location",
+        "weight": 1,
+        "id": "ledger:00008",
+        "semanticKey": "staff room",
+        "inputIndex": 8,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "scene.location.free.window",
+        "value": "window",
+        "order": 0,
+        "sourceKind": "recovered-free",
+        "sourceId": "scene-location",
+        "weight": 1,
+        "id": "ledger:00009",
+        "semanticKey": "window",
+        "inputIndex": 9,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "actor.injury.current.actor_1.0",
+        "value": "scar on face",
+        "order": 10000,
+        "sourceKind": "recovered-free",
+        "sourceId": "actor-detail:actor_1:actor.injury",
+        "weight": 1,
+        "placementIndex": 0,
+        "suppressionReason": "visibility",
+        "id": "ledger:00004",
+        "semanticKey": "scar on face",
+        "inputIndex": 4,
+        "status": "suppressed"
+       },
+       {
+        "lane": "instruction",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "actor.pose.instruction.actor_1",
+        "value": "hands on the window sill",
+        "order": 10100,
+        "sourceKind": "recovered-free",
+        "sourceId": "actor-detail:actor_1",
+        "placementIndex": 0,
+        "id": "ledger:00005",
+        "semanticKey": "hands on the window sill",
+        "inputIndex": 5,
+        "status": "applied"
+       },
+       {
+        "lane": "instruction",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "actor.action.instruction.actor_1",
+        "value": "sighing",
+        "order": 10200,
+        "sourceKind": "recovered-free",
+        "sourceId": "actor-detail:actor_1",
+        "placementIndex": 0,
+        "id": "ledger:00006",
+        "semanticKey": "sighing",
+        "inputIndex": 6,
+        "status": "applied"
+       },
+       {
+        "lane": "instruction",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "camera.instruction",
+        "value": "Camera behind the actor looking out the window.",
+        "order": 11000,
+        "sourceKind": "recovered-free",
+        "sourceId": "camera",
+        "id": "ledger:00011",
+        "semanticKey": "camera behind the actor looking out the window",
+        "inputIndex": 11,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "outfit.top.1",
+        "value": "grey suit jacket",
+        "order": 9100,
+        "sourceKind": "external",
+        "sourceId": "outfit:lore:bob:outfit_1:top",
+        "weight": 1,
+        "id": "ledger:00013",
+        "semanticKey": "grey suit jacket",
+        "inputIndex": 13,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "outfit.top.2",
+        "value": "white shirt",
+        "order": 9101,
+        "sourceKind": "external",
+        "sourceId": "outfit:lore:bob:outfit_1:top",
+        "weight": 1,
+        "id": "ledger:00014",
+        "semanticKey": "white shirt",
+        "inputIndex": 14,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "outfit.top.3",
+        "value": "blue necktie",
+        "order": 9102,
+        "sourceKind": "external",
+        "sourceId": "outfit:lore:bob:outfit_1:top",
+        "weight": 1,
+        "id": "ledger:00015",
+        "semanticKey": "blue necktie",
+        "inputIndex": 15,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "outfit.bottom",
+        "value": "grey suit pants",
+        "order": 9200,
+        "sourceKind": "external",
+        "sourceId": "outfit:lore:bob:outfit_1:bottom",
+        "weight": 1,
+        "id": "ledger:00016",
+        "semanticKey": "grey suit pants",
+        "inputIndex": 16,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "actor",
+         "actorId": "actor_1"
+        },
+        "semanticId": "outfit.feet",
+        "value": "black dress shoes",
+        "order": 9300,
+        "sourceKind": "external",
+        "sourceId": "outfit:lore:bob:outfit_1:feet",
+        "weight": 1,
+        "id": "ledger:00017",
+        "semanticKey": "black dress shoes",
+        "inputIndex": 17,
+        "status": "applied"
+       },
+       {
+        "lane": "tag",
+        "destination": {
+         "kind": "global"
+        },
+        "semanticId": "fixed.positive",
+        "value": "very aesthetic",
+        "order": 10000,
+        "sourceKind": "external-fixed",
+        "sourceId": "character-generation-settings",
+        "weight": 1,
+        "id": "ledger:00022",
+        "semanticKey": "very aesthetic",
+        "inputIndex": 22,
+        "status": "applied"
+       }
+      ]
+     }
+    },
+    "visual_continuity_state": {
+     "scene": {
+      "backgroundTags": [
+       "staff_room",
+       "window"
+      ],
+      "locationTags": [
+       "staff_room"
+      ]
+     },
+     "characters": {
+      "lore:alice": {
+       "naturalLanguage": {
+        "pose": "leaning forward slightly",
+        "action": "waving one hand high"
+       },
+       "_continuity_turn": 1
+      },
+      "persona:persona::p1": {
+       "naturalLanguage": {
+        "action": "running toward the gate"
+       },
+       "_continuity_turn": 1
+      },
+      "lore:bob": {
+       "naturalLanguage": {
+        "pose": "hands on the window sill",
+        "action": "sighing"
+       },
+       "_continuity_turn": 1
+      }
+     },
+     "modifierRefs": {
+      "global": {
+       "scene.environment": [
+        "indoors"
+       ],
+       "scene.time": [
+        "morning"
+       ]
+      }
+     },
+     "outfitRefs": {
+      "actors": {
+       "lore:alice": {
+        "formId": "form_default",
+        "outfitId": "outfit_1",
+        "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+       },
+       "persona::p1": {
+        "formId": "form_default",
+        "outfitId": "outfit_1",
+        "description": "black hoodie, jeans, sneakers"
+       },
+       "lore:bob": {
+        "formId": "form_default",
+        "outfitId": "outfit_1",
+        "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+       }
+      }
+     }
+    }
+   },
+   "analyzerContinuity": {
+    "previous_modifiers": {
+     "global": {},
+     "actors": {
+      "primary": {},
+      "secondary": {},
+      "persona": {}
+     }
+    },
+    "previous_preset_refs": {
+     "actors": {
+      "primary": "",
+      "secondary": "",
+      "persona": ""
+     }
+    },
+    "previous_outfit_refs": {
+     "actors": {
+      "primary": null,
+      "secondary": null,
+      "persona": null
+     }
+    },
+    "previous_scene_tags": [],
+    "previous_background_tags": [],
+    "previous_scene_location_tags": []
+   },
+   "promptPlan": {
+    "globalPositive": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window.",
+    "bodyAction": "",
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "characters": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "placementIndex": 0,
+      "selectedOutfitId": "outfit_1",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes, looking down, exhausted, 2::facing away::\nhands on the window sill. sighing.",
+      "uc": "",
+      "identityKey": "lore:bob",
+      "identity": {
+       "type": "character",
+       "key": "lore:bob",
+       "name": ""
+      }
+     }
+    ],
+    "removeTags": [],
+    "width": 832,
+    "height": 1216,
+    "sizeId": 1,
+    "selectedFraming": "",
+    "selectedVariantId": "",
+    "artistId": "detail_anime_illustration_style",
+    "artistName": "v5 style",
+    "matchedIdentityKeys": {
+     "actor_1": "lore:bob"
+    },
+    "selectedFormIds": {
+     "actor_1": "form_default"
+    },
+    "selectedOutfitIds": {
+     "actor_1": "outfit_1"
+    },
+    "actorIdentities": {
+     "actor_1": {
+      "type": "character",
+      "key": "lore:bob",
+      "name": ""
+     }
+    },
+    "identitySuppressedActorSlots": []
+   },
+   "novelAIConfig": {
+    "apiKey": "test-key",
+    "naiModel": "nai-diffusion-5-full",
+    "seed": "1234567",
+    "steps": 28,
+    "scale": 5,
+    "sampler": "k_euler_ancestral",
+    "analysisProfile": "v5-hybrid",
+    "width": 832,
+    "height": 1216,
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "useCoords": false,
+    "characterPrompts": [
+     {
+      "actorSlot": "actor_1",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes, looking down, exhausted, 2::facing away::\nhands on the window sill. sighing.",
+      "uc": "",
+      "centerX": 0.5,
+      "centerY": 0.45,
+      "coordinateMode": "automatic"
+     }
+    ]
+   },
+   "characterReferences": [],
+   "seedFixed": true,
+   "providerPrompt": {
+    "provider": "novelai",
+    "profileId": "nai-diffusion-5-full",
+    "profileRevision": 0,
+    "sourceFormat": "novelai-v5-interaction-led-prompt-v1",
+    "requestFormat": "novelai-v5-hybrid",
+    "formatterRevision": 1,
+    "globalPositivePrompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window.",
+    "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "positivePrompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window.",
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "characterPrompts": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes, looking down, exhausted, 2::facing away::\nhands on the window sill. sighing.",
+      "negativePrompt": "",
+      "centerX": 0.5,
+      "centerY": 0.45
+     }
+    ],
+    "diagnostics": []
+   },
+   "generation": {
+    "provider": "novelai",
+    "bytes": {
+     "__bytes__": []
+    },
+    "mimeType": "image/png",
+    "extension": "png",
+    "seed": "1234567",
+    "width": 832,
+    "height": 1216,
+    "requestId": "fake-2",
+    "providerMetadata": {},
+    "providerRef": {
+     "providerId": "novelai",
+     "queueScopeKey": "image-provider:novelai:global"
+    }
+   },
+   "generationRecord": {
+    "version": 1,
+    "snapshot": {
+     "version": 1,
+     "planId": "00000000-0000-4000-8000-000000000001",
+     "provider": {
+      "id": "novelai",
+      "transport": "",
+      "profileId": "nai-diffusion-5-full",
+      "profileRevision": 0,
+      "promptFormat": "novelai-v5-hybrid",
+      "formatterRevision": 1
+     },
+     "prompt": {
+      "kind": "structured",
+      "positive": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window.",
+      "negative": "bad anatomy, text, watermark, lowres, worst quality, text",
+      "characters": [
+       {
+        "actorId": "actor_1",
+        "actorIndex": 0,
+        "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes, looking down, exhausted, 2::facing away::\nhands on the window sill. sighing.",
+        "negativePrompt": "",
+        "centerX": 0.5,
+        "centerY": 0.45
+       }
+      ]
+     },
+     "requestedSize": {
+      "presetId": 1,
+      "width": 832,
+      "height": 1216
+     },
+     "seed": {
+      "value": "1234567",
+      "fixed": true
+     },
+     "references": [],
+     "analyzerDecision": {
+      "source_image_token": "slot:s2",
+      "slot_id": "slot:s2",
+      "slot_number": 1,
+      "analysis_profile": "v5-hybrid",
+      "v5_interaction_led": {
+       "format": "novelai-v5-interaction-led-history-v1",
+       "catalogFingerprint": "v5.fnv1a64-2d2b8892321dc763",
+       "normalizedGraph": {
+        "slotNumber": 1,
+        "status": "degraded",
+        "presentationMode": "single-frame",
+        "actors": [
+         {
+          "actorId": "actor_1",
+          "candidateKey": "actor.m0ais.6ynrym",
+          "formId": "form_default",
+          "sex": "male",
+          "continuityIdentity": {
+           "kind": "lorebook_prompt_key",
+           "value": "lore:bob"
+          },
+          "outfit": {
+           "selectedId": "outfit_1"
+          }
+         }
+        ],
+        "interactions": [],
+        "location": {
+         "modifiers": [
+          {
+           "id": "scene.rating",
+           "options": [
+            "sfw"
+           ]
+          },
+          {
+           "id": "scene.environment",
+           "options": [
+            "indoors"
+           ]
+          }
+         ],
+         "freeTags": [
+          "staff_room",
+          "window"
+         ],
+         "instruction": "",
+         "comicPageInstruction": "",
+         "comicPageModifiers": [],
+         "comicPanels": [],
+         "comicCrossPanelActors": []
+        },
+        "analyzerSizeId": 1,
+        "framePlacement": [
+         {
+          "actorId": "actor_1",
+          "placementIndex": 0,
+          "center": {
+           "x": 0.5,
+           "y": 0.45
+          },
+          "facing": {
+           "id": "facing_away"
+          },
+          "source": "analyzer",
+          "instruction": ""
+         }
+        ],
+        "actorDetails": [
+         {
+          "actorId": "actor_1",
+          "placementIndex": 0,
+          "actions": [],
+          "modifiers": [
+           {
+            "id": "gaze.direction",
+            "options": [
+             "looking_down"
+            ]
+           },
+           {
+            "id": "expression.general",
+            "options": [
+             "exhausted"
+            ]
+           }
+          ],
+          "freeTags": [
+           "scar on face"
+          ],
+          "penetratingInjuries": [],
+          "poseInstruction": "hands on the window sill",
+          "actionInstruction": "sighing",
+          "objects": [],
+          "objectInstruction": "",
+          "dialogueInstruction": ""
+         }
+        ],
+        "camera": {
+         "modifiers": [],
+         "instruction": "Camera behind the actor looking out the window."
+        },
+        "diagnostics": [
+         {
+          "code": "frame-scene-modifier-omitted",
+          "impact": "degraded",
+          "path": "$.illustrations[1].frame_placement.modifiers",
+          "message": "Omitted an Actor-facing modifier from the Frame Placement scene modifier list."
+         },
+         {
+          "code": "tag-canonicalized",
+          "impact": "recovered",
+          "path": "$.illustrations[1].frame_placement.freeTags[0]",
+          "message": "Canonicalized a free tag to 'staff_room'."
+         }
+        ]
+       },
+       "diagnostics": [
+        {
+         "code": "frame-scene-modifier-omitted",
+         "impact": "degraded",
+         "path": "$.illustrations[1].frame_placement.modifiers",
+         "message": "Omitted an Actor-facing modifier from the Frame Placement scene modifier list."
+        },
+        {
+         "code": "tag-canonicalized",
+         "impact": "recovered",
+         "path": "$.illustrations[1].frame_placement.freeTags[0]",
+         "message": "Canonicalized a free tag to 'staff_room'."
+        }
+       ],
+       "executedPromptPlan": {
+        "format": "novelai-v5-interaction-led-prompt-v1",
+        "sizeId": 1,
+        "width": 832,
+        "height": 1216,
+        "global": {
+         "tags": [
+          "2::1boy::",
+          "1.5::artist:hwansang ::",
+          "year 2025",
+          "masterpiece",
+          "best quality",
+          "indoors",
+          "staff room",
+          "window",
+          "very aesthetic"
+         ],
+         "instructions": [
+          "Camera behind the actor looking out the window."
+         ],
+         "serializedPrompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window."
+        },
+        "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+        "characters": [
+         {
+          "tags": [
+           "male",
+           "black hair",
+           "grey suit jacket",
+           "white shirt",
+           "blue necktie",
+           "grey suit pants",
+           "black dress shoes",
+           "looking down",
+           "exhausted",
+           "2::facing away::"
+          ],
+          "instructions": [
+           "hands on the window sill.",
+           "sighing."
+          ],
+          "serializedPrompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes, looking down, exhausted, 2::facing away::\nhands on the window sill. sighing.",
+          "actorId": "actor_1",
+          "placementIndex": 0,
+          "candidateKey": "actor.m0ais.6ynrym",
+          "sex": "male",
+          "centerX": 0.5,
+          "centerY": 0.45,
+          "negativePrompt": ""
+         }
+        ],
+        "ledger": [
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "actor_roster.male.count",
+          "value": "1boy",
+          "order": 0,
+          "sourceKind": "actor-roster",
+          "sourceId": "actor-roster:male",
+          "weight": 2,
+          "id": "ledger:00000",
+          "semanticKey": "1boy",
+          "inputIndex": 0,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "actor.identity.sex",
+          "value": "male",
+          "order": 0,
+          "sourceKind": "actor-roster",
+          "sourceId": "actor-roster:actor_1:sex",
+          "weight": 1,
+          "id": "ledger:00001",
+          "semanticKey": "male",
+          "inputIndex": 1,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "base.hair.color",
+          "value": "black hair",
+          "order": 9100,
+          "sourceKind": "external-identity",
+          "sourceId": "lore:bob:hair.color:0",
+          "weight": 1,
+          "id": "ledger:00012",
+          "semanticKey": "black hair",
+          "inputIndex": 12,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "artist.detail_anime_illustration_style.1",
+          "value": "1.5::artist:hwansang ::",
+          "order": 9500,
+          "sourceKind": "external-artist",
+          "sourceId": "detail_anime_illustration_style",
+          "weight": 1,
+          "id": "ledger:00018",
+          "semanticKey": "artist hwansang",
+          "inputIndex": 18,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "artist.detail_anime_illustration_style.2",
+          "value": "year 2025",
+          "order": 9501,
+          "sourceKind": "external-artist",
+          "sourceId": "detail_anime_illustration_style",
+          "weight": 1,
+          "id": "ledger:00019",
+          "semanticKey": "year 2025",
+          "inputIndex": 19,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "artist.detail_anime_illustration_style.3",
+          "value": "masterpiece",
+          "order": 9502,
+          "sourceKind": "external-artist",
+          "sourceId": "detail_anime_illustration_style",
+          "weight": 1,
+          "id": "ledger:00020",
+          "semanticKey": "masterpiece",
+          "inputIndex": 20,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "artist.detail_anime_illustration_style.4",
+          "value": "best quality",
+          "order": 9503,
+          "sourceKind": "external-artist",
+          "sourceId": "detail_anime_illustration_style",
+          "weight": 1,
+          "id": "ledger:00021",
+          "semanticKey": "best quality",
+          "inputIndex": 21,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "gaze.direction.looking_down",
+          "value": "looking down",
+          "order": 4040,
+          "sourceKind": "closed",
+          "sourceId": "actor-detail:actor_1:gaze.direction.looking_down",
+          "weight": 1,
+          "placementIndex": 0,
+          "id": "ledger:00002",
+          "semanticKey": "looking down",
+          "inputIndex": 2,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "expression.general.exhausted",
+          "value": "exhausted",
+          "order": 4040,
+          "sourceKind": "closed",
+          "sourceId": "actor-detail:actor_1:expression.general.exhausted",
+          "weight": 1,
+          "placementIndex": 0,
+          "id": "ledger:00003",
+          "semanticKey": "exhausted",
+          "inputIndex": 3,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "orientation.facing.facing_away",
+          "value": "facing away",
+          "order": 4040,
+          "sourceKind": "closed",
+          "sourceId": "placement:actor_1:facing:orientation.facing.facing_away",
+          "weight": 2,
+          "placementIndex": 0,
+          "id": "ledger:00010",
+          "semanticKey": "facing away",
+          "inputIndex": 10,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "scene.environment.indoors",
+          "value": "indoors",
+          "order": 6060,
+          "sourceKind": "closed",
+          "sourceId": "scene-location:scene.environment:scene.environment.indoors",
+          "weight": 1,
+          "id": "ledger:00007",
+          "semanticKey": "indoors",
+          "inputIndex": 7,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "scene.location.free.staff_room",
+          "value": "staff room",
+          "order": 0,
+          "sourceKind": "recovered-free",
+          "sourceId": "scene-location",
+          "weight": 1,
+          "id": "ledger:00008",
+          "semanticKey": "staff room",
+          "inputIndex": 8,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "scene.location.free.window",
+          "value": "window",
+          "order": 0,
+          "sourceKind": "recovered-free",
+          "sourceId": "scene-location",
+          "weight": 1,
+          "id": "ledger:00009",
+          "semanticKey": "window",
+          "inputIndex": 9,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "actor.injury.current.actor_1.0",
+          "value": "scar on face",
+          "order": 10000,
+          "sourceKind": "recovered-free",
+          "sourceId": "actor-detail:actor_1:actor.injury",
+          "weight": 1,
+          "placementIndex": 0,
+          "suppressionReason": "visibility",
+          "id": "ledger:00004",
+          "semanticKey": "scar on face",
+          "inputIndex": 4,
+          "status": "suppressed"
+         },
+         {
+          "lane": "instruction",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "actor.pose.instruction.actor_1",
+          "value": "hands on the window sill",
+          "order": 10100,
+          "sourceKind": "recovered-free",
+          "sourceId": "actor-detail:actor_1",
+          "placementIndex": 0,
+          "id": "ledger:00005",
+          "semanticKey": "hands on the window sill",
+          "inputIndex": 5,
+          "status": "applied"
+         },
+         {
+          "lane": "instruction",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "actor.action.instruction.actor_1",
+          "value": "sighing",
+          "order": 10200,
+          "sourceKind": "recovered-free",
+          "sourceId": "actor-detail:actor_1",
+          "placementIndex": 0,
+          "id": "ledger:00006",
+          "semanticKey": "sighing",
+          "inputIndex": 6,
+          "status": "applied"
+         },
+         {
+          "lane": "instruction",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "camera.instruction",
+          "value": "Camera behind the actor looking out the window.",
+          "order": 11000,
+          "sourceKind": "recovered-free",
+          "sourceId": "camera",
+          "id": "ledger:00011",
+          "semanticKey": "camera behind the actor looking out the window",
+          "inputIndex": 11,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "outfit.top.1",
+          "value": "grey suit jacket",
+          "order": 9100,
+          "sourceKind": "external",
+          "sourceId": "outfit:lore:bob:outfit_1:top",
+          "weight": 1,
+          "id": "ledger:00013",
+          "semanticKey": "grey suit jacket",
+          "inputIndex": 13,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "outfit.top.2",
+          "value": "white shirt",
+          "order": 9101,
+          "sourceKind": "external",
+          "sourceId": "outfit:lore:bob:outfit_1:top",
+          "weight": 1,
+          "id": "ledger:00014",
+          "semanticKey": "white shirt",
+          "inputIndex": 14,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "outfit.top.3",
+          "value": "blue necktie",
+          "order": 9102,
+          "sourceKind": "external",
+          "sourceId": "outfit:lore:bob:outfit_1:top",
+          "weight": 1,
+          "id": "ledger:00015",
+          "semanticKey": "blue necktie",
+          "inputIndex": 15,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "outfit.bottom",
+          "value": "grey suit pants",
+          "order": 9200,
+          "sourceKind": "external",
+          "sourceId": "outfit:lore:bob:outfit_1:bottom",
+          "weight": 1,
+          "id": "ledger:00016",
+          "semanticKey": "grey suit pants",
+          "inputIndex": 16,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "actor",
+           "actorId": "actor_1"
+          },
+          "semanticId": "outfit.feet",
+          "value": "black dress shoes",
+          "order": 9300,
+          "sourceKind": "external",
+          "sourceId": "outfit:lore:bob:outfit_1:feet",
+          "weight": 1,
+          "id": "ledger:00017",
+          "semanticKey": "black dress shoes",
+          "inputIndex": 17,
+          "status": "applied"
+         },
+         {
+          "lane": "tag",
+          "destination": {
+           "kind": "global"
+          },
+          "semanticId": "fixed.positive",
+          "value": "very aesthetic",
+          "order": 10000,
+          "sourceKind": "external-fixed",
+          "sourceId": "character-generation-settings",
+          "weight": 1,
+          "id": "ledger:00022",
+          "semanticKey": "very aesthetic",
+          "inputIndex": 22,
+          "status": "applied"
+         }
+        ]
+       }
+      },
+      "visual_continuity_state": {
+       "scene": {
+        "backgroundTags": [
+         "staff_room",
+         "window"
+        ],
+        "locationTags": [
+         "staff_room"
+        ]
+       },
+       "characters": {
+        "lore:alice": {
+         "naturalLanguage": {
+          "pose": "leaning forward slightly",
+          "action": "waving one hand high"
+         },
+         "_continuity_turn": 1
+        },
+        "persona:persona::p1": {
+         "naturalLanguage": {
+          "action": "running toward the gate"
+         },
+         "_continuity_turn": 1
+        },
+        "lore:bob": {
+         "naturalLanguage": {
+          "pose": "hands on the window sill",
+          "action": "sighing"
+         },
+         "_continuity_turn": 1
+        }
+       },
+       "modifierRefs": {
+        "global": {
+         "scene.environment": [
+          "indoors"
+         ],
+         "scene.time": [
+          "morning"
+         ]
+        }
+       },
+       "outfitRefs": {
+        "actors": {
+         "lore:alice": {
+          "formId": "form_default",
+          "outfitId": "outfit_1",
+          "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+         },
+         "persona::p1": {
+          "formId": "form_default",
+          "outfitId": "outfit_1",
+          "description": "black hoodie, jeans, sneakers"
+         },
+         "lore:bob": {
+          "formId": "form_default",
+          "outfitId": "outfit_1",
+          "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+         }
+        }
+       }
+      },
+      "artist_id": "detail_anime_illustration_style",
+      "artist_name": "v5 style"
+     }
+    },
+    "request": {
+     "provider": "novelai",
+     "transport": "",
+     "profileId": "nai-diffusion-5-full",
+     "profileRevision": 0,
+     "promptFormat": "novelai-v5-hybrid",
+     "formatterRevision": 1,
+     "positive": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window.",
+     "negative": "bad anatomy, text, watermark, lowres, worst quality, text",
+     "characters": [
+      {
+       "actorId": "actor_1",
+       "actorIndex": 0,
+       "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes, looking down, exhausted, 2::facing away::\nhands on the window sill. sighing.",
+       "negativePrompt": "",
+       "centerX": 0.5,
+       "centerY": 0.45
+      }
+     ],
+     "seed": "1234567",
+     "requestedSize": {
+      "width": 832,
+      "height": 1216
+     }
+    },
+    "result": {
+     "actualSize": {
+      "width": 832,
+      "height": 1216
+     },
+     "requestId": "fake-2",
+     "providerMetadata": {}
+    }
+   }
+  }
+ ],
+ "continuity": {
+  "actors": {
+   "lore:alice": {
+    "identity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:alice"
+    },
+    "storageKey": "lore:alice",
+    "characterName": "",
+    "groups": {},
+    "counters": {},
+    "turn": 1,
+    "expires": {},
+    "passthrough": {
+     "naturalLanguage": {
+      "pose": "leaning forward slightly",
+      "action": "waving one hand high"
+     }
+    }
+   },
+   "persona:persona::p1": {
+    "identity": {
+     "kind": "persona_reference",
+     "value": "persona::p1"
+    },
+    "storageKey": "persona:persona::p1",
+    "characterName": "",
+    "groups": {},
+    "counters": {},
+    "turn": 1,
+    "expires": {},
+    "passthrough": {
+     "naturalLanguage": {
+      "action": "running toward the gate"
+     }
+    }
+   },
+   "lore:bob": {
+    "identity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:bob"
+    },
+    "storageKey": "lore:bob",
+    "characterName": "",
+    "groups": {},
+    "counters": {},
+    "turn": 1,
+    "expires": {},
+    "passthrough": {
+     "naturalLanguage": {
+      "pose": "hands on the window sill",
+      "action": "sighing"
+     }
+    }
+   }
+  },
+  "scene": {
+   "backgroundTags": [
+    "staff_room",
+    "window"
+   ],
+   "locationTags": [
+    "staff_room"
+   ]
+  },
+  "modifierRefs": {
+   "global": {
+    "scene.environment": [
+     "indoors"
+    ],
+    "scene.time": [
+     "morning"
+    ]
+   }
+  },
+  "outfitRefs": {
+   "actors": {
+    "lore:alice": {
+     "formId": "form_default",
+     "outfitId": "outfit_1",
+     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+    },
+    "persona::p1": {
+     "formId": "form_default",
+     "outfitId": "outfit_1",
+     "description": "black hoodie, jeans, sneakers"
+    },
+    "lore:bob": {
+     "formId": "form_default",
+     "outfitId": "outfit_1",
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+    }
+   }
+  },
+  "sceneLayouts": [
+   {
+    "sizeId": 1,
+    "actors": [
+     {
+      "identity": {
+       "kind": "lorebook_prompt_key",
+       "value": "lore:bob"
+      },
+      "center": {
+       "x": 0.5,
+       "y": 0.45
+      },
+      "facing": {
+       "id": "facing_away"
+      }
+     }
+    ]
+   },
+   {
+    "sizeId": 2,
+    "actors": [
+     {
+      "identity": {
+       "kind": "lorebook_prompt_key",
+       "value": "lore:alice"
+      },
+      "center": {
+       "x": 0.35,
+       "y": 0.5
+      }
+     },
+     {
+      "identity": {
+       "kind": "persona_reference",
+       "value": "persona::p1"
+      },
+      "center": {
+       "x": 0.7,
+       "y": 0.5
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "snapshot": {
+  "scene": {
+   "backgroundTags": [
+    "staff_room",
+    "window"
+   ],
+   "locationTags": [
+    "staff_room"
+   ]
+  },
+  "characters": {
+   "lore:alice": {
+    "naturalLanguage": {
+     "pose": "leaning forward slightly",
+     "action": "waving one hand high"
+    },
+    "_continuity_turn": 1
+   },
+   "persona:persona::p1": {
+    "naturalLanguage": {
+     "action": "running toward the gate"
+    },
+    "_continuity_turn": 1
+   },
+   "lore:bob": {
+    "naturalLanguage": {
+     "pose": "hands on the window sill",
+     "action": "sighing"
+    },
+    "_continuity_turn": 1
+   }
+  },
+  "modifierRefs": {
+   "global": {
+    "scene.environment": [
+     "indoors"
+    ],
+    "scene.time": [
+     "morning"
+    ]
+   }
+  },
+  "outfitRefs": {
+   "actors": {
+    "lore:alice": {
+     "formId": "form_default",
+     "outfitId": "outfit_1",
+     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+    },
+    "persona::p1": {
+     "formId": "form_default",
+     "outfitId": "outfit_1",
+     "description": "black hoodie, jeans, sneakers"
+    },
+    "lore:bob": {
+     "formId": "form_default",
+     "outfitId": "outfit_1",
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+    }
+   }
+  },
+  "participants": {
+   "sceneLayouts": [
+    {
+     "sizeId": 1,
+     "actors": [
+      {
+       "identity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "center": {
+        "x": 0.5,
+        "y": 0.45
+       },
+       "facing": {
+        "id": "facing_away"
+       }
+      }
+     ]
+    },
+    {
+     "sizeId": 2,
+     "actors": [
+      {
+       "identity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "center": {
+        "x": 0.35,
+        "y": 0.5
+       }
+      },
+      {
+       "identity": {
+        "kind": "persona_reference",
+        "value": "persona::p1"
+       },
+       "center": {
+        "x": 0.7,
+        "y": 0.5
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "events": [
+  {
+   "phase": "analyzing-preset"
+  },
+  {
+   "phase": "planning",
+   "imageCount": 2
+  },
+  {
+   "phase": "generating",
+   "imageIndex": 0,
+   "imageCount": 2
+  },
+  {
+   "phase": "generating",
+   "imageIndex": 1,
+   "imageCount": 2,
+   "sourceImageToken": "slot:s1"
+  },
+  {
+   "phase": "generating",
+   "imageIndex": 2,
+   "imageCount": 2,
+   "sourceImageToken": "slot:s2"
+  },
+  {
+   "phase": "applying-continuity"
+  },
+  {
+   "phase": "complete",
+   "imageIndex": 2,
+   "imageCount": 2
+  }
+ ]
+}

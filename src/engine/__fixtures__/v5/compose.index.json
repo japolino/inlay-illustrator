@@ -1,0 +1,74 @@
+{
+ "scenarios": {
+  "default.novelai": {
+   "response": "default",
+   "provider": "novelai",
+   "seed": 41,
+   "full": true
+  },
+  "default.comfy-ui": {
+   "response": "default",
+   "provider": "comfy-ui",
+   "seed": 41
+  },
+  "default.chan-server": {
+   "response": "default",
+   "provider": "chan-server",
+   "seed": 41
+  },
+  "pov.novelai": {
+   "response": "pov",
+   "directions": "pov",
+   "provider": "novelai",
+   "seed": 42,
+   "forceAiChoiceCoordinates": false
+  },
+  "comic.novelai": {
+   "response": "comic",
+   "directions": "comic",
+   "provider": "novelai",
+   "seed": 43
+  },
+  "ensemble.comfy-ui": {
+   "response": "ensemble",
+   "directions": "ensemble",
+   "provider": "comfy-ui",
+   "seed": 44
+  },
+  "routing.novelai-nsfw-prefix": {
+   "response": "routing",
+   "provider": "novelai",
+   "seed": 45,
+   "forceNsfwPrefix": true
+  },
+  "continuity.turn2": {
+   "response": "continuity",
+   "provider": "novelai",
+   "seed": 46,
+   "previous": "default.novelai",
+   "stateAccumulationEnabled": true
+  },
+  "revision.novelai": {
+   "response": "default",
+   "provider": "novelai",
+   "seed": 47,
+   "revisionDirection": "Make her smile"
+  },
+  "skip-slot1.size5": {
+   "response": "default",
+   "provider": "novelai",
+   "seed": 48,
+   "skipSlotNumbers": [
+    1
+   ],
+   "requestedSizeId": 5
+  },
+  "generated-actor.novelai": {
+   "response": "generatedActor",
+   "provider": "novelai",
+   "seed": 49,
+   "freechar": true
+  }
+ },
+ "comfyProfileId": "asset-maid-comfy-ui-workflow-v1"
+}
