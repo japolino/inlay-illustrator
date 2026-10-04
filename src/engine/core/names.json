@@ -120,7 +120,9 @@
   "rebuildContinuityFromChatStore",
   "rebuildContinuityAtMessage",
   "writeLocalLoreActorState",
-  "createCatalogSourceResolver"
+  "createCatalogSourceResolver",
+  "buildCharxAssetRegexDetectors",
+  "writeContinuityCheckpointsToChatStore"
  ],
  "renames": {
   "uV": "NovelAIV5RawValidationError",
@@ -254,7 +256,9 @@
   "Hje": "normalizeAnalysisProfile",
   "hlt": "createCatalogSourceResolver",
   "flt": "DEFAULT_CATALOG_COMPILERS",
-  "n$e": "compileCustomV45Catalog"
+  "n$e": "compileCustomV45Catalog",
+  "sH": "buildCharxAssetRegexDetectors",
+  "NBe": "writeContinuityCheckpointsToChatStore"
  },
  "units": [
   {
@@ -4928,6 +4932,11 @@
    "line": 42283
   },
   {
+   "orig": "Zl",
+   "name": "Zl",
+   "line": 42286
+  },
+  {
    "orig": "Er",
    "name": "Er",
    "line": 42289
@@ -5203,6 +5212,11 @@
    "line": 42956
   },
   {
+   "orig": "gDe",
+   "name": "gDe",
+   "line": 42979
+  },
+  {
    "orig": "Cte",
    "name": "Cte",
    "line": 42984
@@ -5236,6 +5250,36 @@
    "orig": "lc",
    "name": "lc",
    "line": 43133
+  },
+  {
+   "orig": "hA",
+   "name": "hA",
+   "line": 43226
+  },
+  {
+   "orig": "IDe",
+   "name": "IDe",
+   "line": 43240
+  },
+  {
+   "orig": "kDe",
+   "name": "kDe",
+   "line": 43290
+  },
+  {
+   "orig": "jte",
+   "name": "jte",
+   "line": 43295
+  },
+  {
+   "orig": "ADe",
+   "name": "ADe",
+   "line": 43303
+  },
+  {
+   "orig": "H8",
+   "name": "H8",
+   "line": 43324
   },
   {
    "orig": "RN",
@@ -7928,6 +7972,26 @@
    "line": 54208
   },
   {
+   "orig": "toe",
+   "name": "toe",
+   "line": 54223
+  },
+  {
+   "orig": "roe",
+   "name": "roe",
+   "line": 54226
+  },
+  {
+   "orig": "DA",
+   "name": "DA",
+   "line": 54231
+  },
+  {
+   "orig": "kBe",
+   "name": "kBe",
+   "line": 54237
+  },
+  {
    "orig": "noe",
    "name": "noe",
    "line": 54416
@@ -7951,6 +8015,16 @@
    "orig": "aoe",
    "name": "rebuildContinuityFromChatStore",
    "line": 54489
+  },
+  {
+   "orig": "EBe",
+   "name": "EBe",
+   "line": 54495
+  },
+  {
+   "orig": "NBe",
+   "name": "writeContinuityCheckpointsToChatStore",
+   "line": 54505
   },
   {
    "orig": "N$",
@@ -11626,6 +11700,51 @@
    "orig": "Iyt",
    "name": "createImageGenerationDispatcher",
    "line": 120220
+  },
+  {
+   "orig": "Jo",
+   "name": "Jo",
+   "line": 120403
+  },
+  {
+   "orig": "Cl",
+   "name": "Cl",
+   "line": 120406
+  },
+  {
+   "orig": "kbe",
+   "name": "kbe",
+   "line": 120412
+  },
+  {
+   "orig": "Ryt",
+   "name": "Ryt",
+   "line": 120466
+  },
+  {
+   "orig": "FI",
+   "name": "FI",
+   "line": 120489
+  },
+  {
+   "orig": "$2",
+   "name": "$2",
+   "line": 120507
+  },
+  {
+   "orig": "kf",
+   "name": "kf",
+   "line": 120715
+  },
+  {
+   "orig": "$yt",
+   "name": "$yt",
+   "line": 120718
+  },
+  {
+   "orig": "sH",
+   "name": "buildCharxAssetRegexDetectors",
+   "line": 120727
   },
   {
    "orig": "Rbe",

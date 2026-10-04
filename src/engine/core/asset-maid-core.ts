@@ -26589,6 +26589,10 @@ var YLe =
 function zn(e) {
     return e !== null && typeof e == "object" && !Array.isArray(e) ? e : null;
   }
+// AM Zl @42286
+function Zl(e) {
+    return zn(e) ?? {};
+  }
 // AM Er @42289
 function Er(e) {
     return typeof e == "string" || typeof e == "number" ? String(e).trim() : "";
@@ -27323,6 +27327,12 @@ function B8(e, t) {
         e.recentCheckpoints[r]?.length)
     );
   }
+// AM gDe @42979
+function gDe(e) {
+    if (typeof e == "string") return H8(e);
+    const t = zn(e);
+    return t && jte(t) ? H8(JSON.stringify(e)) : Kv(e);
+  }
 // AM Cte @42984
 function Cte(e, t) {
     const r = [],
@@ -27481,6 +27491,95 @@ function Kv(e) {
 // AM lc @43133
 function lc(e) {
     return structuredClone(e);
+  }
+// AM hA @43226
+function hA(e, t) {
+    const r = zn(e);
+    return r
+      ? {
+          ...r,
+          ...(Object.hasOwn(r, "updatedAt") ? {} : { updatedAt: t.capturedAt }),
+          ...(Object.hasOwn(r, "updatedAtChatIndex") || t.chatIndex === void 0
+            ? {}
+            : { updatedAtChatIndex: t.chatIndex }),
+          ...(Object.hasOwn(r, "updatedAtMessageIndex") ? {} : { updatedAtMessageIndex: t.messageIndex }),
+          ...(Object.hasOwn(r, "updatedAtMessageId") ? {} : { updatedAtMessageId: t.messageId }),
+        }
+      : e;
+  }
+// AM IDe @43240
+function IDe(e) {
+    const t = Zl(e),
+      r = Number(t.chatIndex),
+      n = {
+        capturedAt: Math.max(0, Number(t.capturedAt) || 0),
+        messageId: Er(t.messageId),
+        messageIndex: Math.max(0, Math.floor(Number(t.messageIndex) || 0)),
+        ...(Number.isInteger(r) && r >= 0 ? { chatIndex: r } : {}),
+      },
+      o = Object.fromEntries(Object.entries(Zl(t.characters)).map(([s, c]) => [s, hA(c, n)])),
+      a = Zl(t.nsfwPositions),
+      i = Object.keys(a).length
+        ? { ...a, scenes: Object.fromEntries(Object.entries(Zl(a.scenes)).map(([s, c]) => [s, hA(c, n)])) }
+        : void 0;
+    return {
+      messageId: n.messageId,
+      messageIndex: n.messageIndex,
+      ...(Er(t.historyRevisionId) ? { historyRevisionId: Er(t.historyRevisionId) } : {}),
+      ...(Number.isInteger(Number(t.historyRevisionOrder)) && Number(t.historyRevisionOrder) >= 0
+        ? { historyRevisionOrder: Number(t.historyRevisionOrder) }
+        : {}),
+      capturedAt: n.capturedAt,
+      ...(t.scene === void 0 ? {} : { scene: hA(t.scene, n) }),
+      characters: o,
+      ...(t.modifierRefs === void 0 ? {} : { modifierRefs: hA(t.modifierRefs, n) }),
+      ...(t.outfitRefs === void 0 ? {} : { outfitRefs: hA(t.outfitRefs, n) }),
+      ...(i === void 0 ? {} : { nsfwPositions: i }),
+      ...(t.participants === void 0 ? {} : { participants: t.participants }),
+    };
+  }
+// AM kDe @43290
+function kDe(e) {
+    return ["scenes", "characters", "modifierRefs", "outfitRefs", "nsfwPositions", "recentCheckpoints"].some((t) =>
+      Object.hasOwn(e, t),
+    );
+  }
+// AM jte @43295
+function jte(e) {
+    return (
+      Object.hasOwn(e, "current") ||
+      Object.hasOwn(e, "checkpoints") ||
+      Object.hasOwn(e, "historicalStaticBases") ||
+      (oc(e.version) !== null && !kDe(e))
+    );
+  }
+// AM ADe @43303
+function ADe(e) {
+    const t = Zl(e);
+    if (!jte(t)) return e;
+    const r = Zl(t.current),
+      n = Object.fromEntries(
+        Object.entries(Zl(t.checkpoints)).flatMap(([o, a]) => (Array.isArray(a) ? [[o, a.map(IDe)]] : [])),
+      );
+    return {
+      version: oc(t.version) ?? 1,
+      scenes: Zl(r.scenes),
+      characters: Zl(r.characters),
+      modifierRefs: Zl(r.modifierRefs),
+      outfitRefs: Zl(r.outfitRefs),
+      nsfwPositions: Zl(r.nsfwPositions),
+      recentCheckpoints: n,
+      historicalStaticBases: Zl(t.historicalStaticBases),
+    };
+  }
+// AM H8 @43324
+function H8(e) {
+    if (typeof e != "string" || !e.trim()) return createEmptyContinuityState();
+    try {
+      return Kv(ADe(JSON.parse(e)));
+    } catch {
+      return createEmptyContinuityState();
+    }
   }
 // AM RN @43352
 function RN(e) {
@@ -35984,6 +36083,31 @@ function mergeLocalLoreActorState(e, t) {
 function ER(e) {
     return e == null ? "" : String(e).trim();
   }
+// AM toe @54223
+function toe(e) {
+    return Object.values(e.slots).some((t) => t.length > 0) || !!e.deletedSlotIndices?.length;
+  }
+// AM roe @54226
+function roe(e) {
+    const t = new Map();
+    for (const r of e?.generations ?? []) t.has(r.id) || t.set(r.id, r);
+    return t;
+  }
+// AM DA @54231
+function DA(e, t, r) {
+    const n = e.get(t);
+    if (n) return n;
+    const o = roe(r);
+    return (e.set(t, o), o);
+  }
+// AM kBe @54237
+function kBe(e) {
+    const t = e?.generations ?? [];
+    for (let r = t.length - 1; r >= 0; r -= 1) {
+      const n = t[r];
+      if (n && toe(n)) return n;
+    }
+  }
 // AM noe @54416
 function noe(e) {
     const t = e.generation.continuity;
@@ -36047,6 +36171,39 @@ function rebuildContinuityFromChatStore(e, t, r) {
     let o = "asset-maid-current-state-tail";
     for (; n.some((a) => RR(a) === o);) o += "-tail";
     return rebuildContinuityAtMessage(e, t, [...n, o], o);
+  }
+// AM EBe @54495
+function EBe(e) {
+    return Xk({
+      ...(e.scene === void 0 ? {} : { scene: structuredClone(e.scene) }),
+      characters: structuredClone(e.characters),
+      ...(e.modifierRefs === void 0 ? {} : { modifierRefs: structuredClone(e.modifierRefs) }),
+      ...(e.outfitRefs === void 0 ? {} : { outfitRefs: structuredClone(e.outfitRefs) }),
+      ...(e.nsfwPositions === void 0 ? {} : { nsfwPositions: structuredClone(e.nsfwPositions) }),
+      ...(e.participants === void 0 ? {} : { participants: structuredClone(e.participants) }),
+    });
+  }
+// AM NBe @54505
+function writeContinuityCheckpointsToChatStore(e, t, r) {
+    for (const i of Object.values(e.messages)) for (const s of i.generations) delete s.continuity;
+    const n = new Map(),
+      o = new Map(),
+      a = gDe(t);
+    for (const i of a.recentCheckpoints[r] ?? []) {
+      const s = i.messageId.replace(/^id:/u, ""),
+        c = e.messages[s];
+      if (!c) continue;
+      let l;
+      if (
+        (i.historyRevisionId
+          ? (l = DA(n, s, c).get(i.historyRevisionId))
+          : (o.has(s) || o.set(s, kBe(c)), (l = o.get(s))),
+        l)
+      ) {
+        const d = EBe(i);
+        d && (l.continuity = d);
+      }
+    }
   }
 // AM N$ @63326
 function N$(e) {
@@ -50451,6 +50608,123 @@ var _yt = class {
 function createImageGenerationDispatcher(e, t = createProviderQueues(), r = () => 0) {
     return new _yt(e, t, r);
   }
+// AM Jo @120403
+function Jo(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM Cl @120406
+function Cl(e) {
+    return e !== null && typeof e == "object" && !Array.isArray(e) ? e : {};
+  }
+// AM kbe @120412
+function kbe(e) {
+    return Array.isArray(e) ? e : Object.keys(Cl(e)).length ? [e] : [];
+  }
+// AM Ryt @120466
+function Ryt(e) {
+    if (typeof e == "string") {
+      const i = Jo(e);
+      return i ? { scriptIndex: -1, in: i, source: "manual", flags: "" } : null;
+    }
+    if (Array.isArray(e)) {
+      const i = Jo(e[0]);
+      return i ? { scriptIndex: -1, in: i, source: "manual", flags: Jo(e[1]) } : null;
+    }
+    const t = Cl(e),
+      r = Number(t.scriptIndex ?? t.script_index),
+      n = Jo(t.in ?? t.regex ?? t.pattern ?? t.input),
+      o = Jo(t.source ?? t.mode ?? t.kind),
+      a = t.manual === !0 || o === "manual" || o === "user" || !Number.isInteger(r) || r < 0;
+    return !n || (!a && r < 0)
+      ? null
+      : {
+          scriptIndex: Number.isInteger(r) ? r : -1,
+          in: n,
+          source: a ? "manual" : "script",
+          flags: Jo(t.flags ?? t.flag),
+        };
+  }
+// AM FI @120489
+function FI(e) {
+    const t = Cl(e),
+      r = kbe(
+        Array.isArray(e) || typeof e == "string"
+          ? e
+          : (t.detectors ?? t.detector ?? t.regexes ?? t.patterns ?? ((t.in ?? t.regex ?? t.pattern) ? e : [])),
+      )
+        .map(Ryt)
+        .filter((o) => !!o),
+      n = Jo(t.status);
+    return {
+      status: n === "done" || n === "error" ? n : r.length ? "done" : "not_applicable",
+      analyzedAt: Jo(t.analyzedAt ?? t.analyzed_at),
+      scriptSignature: Jo(t.scriptSignature ?? t.script_signature),
+      detectors: r,
+      error: Jo(t.error),
+    };
+  }
+// AM $2 @120507
+function $2(e) {
+    return (
+      (e.ableFlag ? Jo(e.flag || "g") : "g")
+        .replace(/[^dgimsuvy]/g, "")
+        .split("")
+        .filter((t, r, n) => n.indexOf(t) === r)
+        .join("") || "u"
+    );
+  }
+// AM kf @120715
+function kf(e) {
+    return e == null ? "" : String(e).trim();
+  }
+// AM $yt @120718
+function $yt(e) {
+    return Array.from(
+      new Set(
+        [kf(e.chaId), kf(e.id), kf(e.name), ...(Array.isArray(e.characters) ? e.characters.map(kf) : [])].filter(
+          Boolean,
+        ),
+      ),
+    );
+  }
+// AM sH @120727
+function buildCharxAssetRegexDetectors(e) {
+    const t = e.character,
+      r = e.analysisMap && typeof e.analysisMap == "object" && !Array.isArray(e.analysisMap) ? e.analysisMap : {},
+      n = Array.from(new Set([...(t ? $yt(t) : []), ...(e.characterIds ?? []).map(kf)].filter(Boolean)));
+    if (!n.length) return [];
+    const o = (t && kf(t.type) !== "group" && Array.isArray(t.customscript) ? t.customscript : []).map((s) =>
+        s && typeof s == "object" ? s : {},
+      ),
+      a =
+        t && kf(t.type) !== "group" && Array.isArray(t.customscript)
+          ? new Set([t.chaId, t.id, t.name].map(kf).filter(Boolean))
+          : new Set(),
+      i = [];
+    for (const s of n) {
+      if (!Object.hasOwn(r, s)) continue;
+      const c = FI(r[s]),
+        l = c.detectors.some((f) => f.source === "manual");
+      if (c.status !== "done" && !l) continue;
+      const d = a.has(s),
+        u = d ? o : [];
+      for (const f of c.detectors) {
+        const m = u[f.scriptIndex],
+          h = m && f.in === kf(m.in) ? m : u.find((y) => f.in === kf(y.in));
+        if (!(f.source === "script" && d && !h))
+          try {
+            i.push({
+              scriptName:
+                f.source === "manual"
+                  ? `manual_regex_${i.length + 1}`
+                  : kf(h?.comment ?? h?.name) || `regex_${f.scriptIndex + 1}`,
+              regex: new RegExp(f.in, h ? $2(h) : f.flags || (f.source === "script" ? "g" : "u")),
+            });
+          } catch {}
+      }
+    }
+    return i;
+  }
 // AM Rbe @120764
 var Rbe = "data-am-native-asset-suppression";
 // AM Mbe @120765
@@ -52754,6 +53028,7 @@ export {
   WLe,
   YLe,
   zn,
+  Zl,
   Er,
   gte,
   ON,
@@ -52809,6 +53084,7 @@ export {
   reconcileContinuityCheckpoints,
   createEmptyContinuityState,
   B8,
+  gDe,
   Cte,
   yDe,
   bDe,
@@ -52816,6 +53092,12 @@ export {
   Ote,
   Kv,
   lc,
+  hA,
+  IDe,
+  kDe,
+  jte,
+  ADe,
+  H8,
   RN,
   Nte,
   CDe,
@@ -53354,11 +53636,17 @@ export {
   writeLocalLoreActorState,
   mergeLocalLoreActorState,
   ER,
+  toe,
+  roe,
+  DA,
+  kBe,
   noe,
   RR,
   jBe,
   rebuildContinuityAtMessage,
   rebuildContinuityFromChatStore,
+  EBe,
+  writeContinuityCheckpointsToChatStore,
   N$,
   R$,
   M$,
@@ -54094,6 +54382,15 @@ export {
   xyt,
   _yt,
   createImageGenerationDispatcher,
+  Jo,
+  Cl,
+  kbe,
+  Ryt,
+  FI,
+  $2,
+  kf,
+  $yt,
+  buildCharxAssetRegexDetectors,
   Rbe,
   Mbe,
   Byt,

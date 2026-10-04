@@ -120,7 +120,9 @@
   "aoe",
   "ooe",
   "Tne",
-  "hlt"
+  "hlt",
+  "sH",
+  "NBe"
  ],
  "renames": {
   "uV": "NovelAIV5RawValidationError",
@@ -254,6 +256,8 @@
   "Hje": "normalizeAnalysisProfile",
   "hlt": "createCatalogSourceResolver",
   "flt": "DEFAULT_CATALOG_COMPILERS",
-  "n$e": "compileCustomV45Catalog"
+  "n$e": "compileCustomV45Catalog",
+  "sH": "buildCharxAssetRegexDetectors",
+  "NBe": "writeContinuityCheckpointsToChatStore"
  }
 }
