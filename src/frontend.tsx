@@ -1,11 +1,8 @@
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
 import { render } from "preact";
 import { respondToAvatarImageRequest } from "./frontend/avatar-image.js";
-import { CLEANUP_KEY, DRAWER_TAB_OPTIONS, HOST_STYLES } from "./frontend/constants.js";
-import { installInlayLightbox } from "./frontend/lightbox.js";
+import { CLEANUP_KEY, DRAWER_TAB_OPTIONS } from "./frontend/constants.js";
 import { installInlayFab, loadFabCorner, saveFabCorner, type FabCorner } from "./frontend/fab.js";
-import { createInlayGallery } from "./frontend/gallery.js";
-import { cleanupModalStyles } from "./frontend/modal.js";
 import { INPUT_BAR_ACTION_ID, OVERLAY_ROOT_CLASS } from "./frontend/overlay/constants.js";
 import { createOverlayController, type OverlayController } from "./frontend/overlay/controller.js";
 import { LAUNCHER_LABELS } from "./frontend/overlay/labels.js";
@@ -30,10 +27,7 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
   const client = new RpcClient(spindleTransport(ctx), { clientId: "ui" });
   const app = new AppController(client, { surface: "overlay" });
   const store = new FrontendStore();
-  const removeStyle = ctx.dom.addStyle(HOST_STYLES);
   const removeOverlayStyle = ctx.dom.addStyle(OVERLAY_CSS);
-  const removeLightbox = installInlayLightbox(ctx);
-  const gallery = createInlayGallery(ctx);
 
   function activeChatId(): string {
     try {
@@ -95,7 +89,14 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
   async function latestTarget(): Promise<{ chatId: string; messageId: string; swipeIndex: number } | null> {
     const chatId = activeChatId();
     if (!chatId) return null;
-    const { messages } = await app.call("chatDom.getMessageStates", { chatId });
+    // getMessageStates without ids only returns messages that already have data; ask for the last mounted bubbles too.
+    let messageIds: string[] | undefined;
+    try {
+      messageIds = ctx.dom.listMessageElements().map((bubble) => bubble.messageId).filter(Boolean).slice(-6);
+    } catch {
+      messageIds = undefined;
+    }
+    const { messages } = await app.call("chatDom.getMessageStates", { chatId, ...(messageIds?.length ? { messageIds } : {}) });
     const last = [...messages].reverse().find((message) => message.eligible);
     return last ? { chatId, messageId: last.messageId, swipeIndex: last.swipeIndex } : null;
   }
@@ -111,7 +112,11 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
   // Launcher 3: the floating button (generate / reroll / gallery / open the overlay).
   const removeFab = installInlayFab(ctx, {
     getCorner: () => fabCorner.get(),
-    openGallery: () => gallery.open(activeChatId()),
+    openGallery: () => {
+      void zoom.openChat(activeChatId()).then((opened) => {
+        if (!opened) app.notify({ tone: "info", message: "No images in this chat yet." });
+      });
+    },
     openSettings: () => overlay.open(),
     generateLatest: () => generateLatest(),
     rerollLatest: () => generateLatest("reroll"),
@@ -152,13 +157,9 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
     inputBarAction?.destroy();
     overlay.destroy();
     removeFab();
-    gallery.destroy();
-    cleanupModalStyles();
-    removeLightbox();
     render(null, launcherRoot);
     app.destroy();
     client.destroy();
-    removeStyle();
     removeOverlayStyle();
     tab.destroy();
     if ((globalThis as Record<string, unknown>)[CLEANUP_KEY] === cleanup) {

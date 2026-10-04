@@ -82,7 +82,8 @@ export function createFakeSpindleContext(doc: Document, mock: MockBackend, optio
       for (const element of injected) element.remove();
       injected.clear();
     },
-    createElement: (tag: string) => doc.createElement(tag)
+    createElement: (tag: string) => doc.createElement(tag),
+    listMessageElements: () => [...doc.querySelectorAll("[data-message-id]")].map((element) => ({ messageId: element.getAttribute("data-message-id") ?? "", element }))
   };
 
   const base: Record<string, unknown> = {

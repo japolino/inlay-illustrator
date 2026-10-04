@@ -37,7 +37,9 @@ export function CharxRail({ settingsOpen, onSelect, onToggleSettings }: { settin
   const selectedId = useAppState((s) => s.selectedCharacterId);
   const list = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    list.current?.querySelector(`[data-charx-source-id="${CSS.escape(selectedId ?? "")}"]`)?.scrollIntoView?.({ block: "nearest" });
+    const id = selectedId ?? "";
+    const escaped = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(id) : id.replace(/["\\]/g, "\\$&");
+    list.current?.querySelector(`[data-charx-source-id="${escaped}"]`)?.scrollIntoView?.({ block: "nearest" });
   }, [selectedId, characters?.length]);
   return (
     <nav aria-label={L.characterSelection} class="flex min-h-0 flex-col items-center gap-2 border-r border-border bg-sidebar py-3" data-source-transition-control="">

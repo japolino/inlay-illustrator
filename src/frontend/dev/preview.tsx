@@ -15,6 +15,7 @@ import { setup } from "../../frontend.js";
 import { createFullMockBackend } from "./mock/index.js";
 import { createFakeSpindleContext } from "./fake-context.js";
 import { PREVIEW_SCENES } from "./scenes.js";
+import { renderChatFixture } from "./chat-fixture.js";
 
 const params = new URLSearchParams(location.hash.replace(/^#/, ""));
 // Headless Chrome cannot make windows narrower than ~500px: emulate the mobile width through the host variable.
@@ -30,6 +31,7 @@ if (params.get("dev") === "1") mock.db.config.ui.developerModeEnabled = true;
 const characterId = params.get("character");
 if (characterId) mock.db.status.activeCharacterId = characterId;
 
+renderChatFixture(document, mock);
 const fake = createFakeSpindleContext(document, mock);
 (globalThis as Record<string, unknown>).__iiMock = mock;
 const handles = setup(fake.ctx, {

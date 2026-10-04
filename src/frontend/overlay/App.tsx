@@ -8,7 +8,7 @@ import {
   type SettingsSection,
   type WorkspaceTab
 } from "./labels.js";
-import { SettingsPage } from "./settings/index.js";
+import { AnalyzerErrorNotices, SettingsPage } from "./settings/index.js";
 import type { FrontendStore } from "./store.js";
 import {
   ArrowLeftIcon,
@@ -66,6 +66,7 @@ export function OverlayApp({ layers, toasts, portal, app, navigation, onClose }:
         <ToastProvider store={toasts}>
           <ConfirmProvider defaultCancelLabel={SHELL_LABELS.cancel}>
             <Shell navigation={navigation} onClose={onClose} />
+            <AnalyzerErrorNotices />
             <ToastHost labels={{ stopTask: SHELL_LABELS.stopTask, closeNotification: SHELL_LABELS.closeNotification }} />
           </ConfirmProvider>
         </ToastProvider>
@@ -137,9 +138,10 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
     }
   }, [navigation.requestId]);
 
+  const configLoaded = useAppState((s) => s.config !== null);
   useEffect(() => {
-    if (!sectionVisible(section, developerMode)) setSection(DEFAULT_SETTINGS_SECTION);
-  }, [developerMode, section]);
+    if (configLoaded && !sectionVisible(section, developerMode)) setSection(DEFAULT_SETTINGS_SECTION);
+  }, [developerMode, section, configLoaded]);
 
   // AM `Uo` 154814: 1.5 s after a character prompt / persona analysis completes, show its result tab.
   const analysisJobs = useAppState((s) => s.analysisJobs);
