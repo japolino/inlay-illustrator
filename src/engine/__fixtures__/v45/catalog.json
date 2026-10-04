@@ -1,0 +1,832 @@
+{
+ "compilerVersion": "raw-rule-ir-v12",
+ "hashes": {
+  "source": "fnv1a64-ec588a022c13616f",
+  "semantic": "fnv1a64-dfa0b43fa13d090d",
+  "analyzer": "fnv1a64-a6547a2ddfd9e7c9",
+  "local": "fnv1a64-8700f142a0256045",
+  "prompts": "fnv1a64-5b3eb5db71e226b4",
+  "weights": "fnv1a64-9ba4204d55f2051f"
+ },
+ "stats": {
+  "sourceRuleCount": 633,
+  "syntheticRuleCount": 23,
+  "attributedRuleCount": 633,
+  "ruleInstanceCount": 726,
+  "ruleProfileCount": 725,
+  "familySelectorCount": 45,
+  "expandedFamilyReferenceCount": 2617,
+  "dependencyEdgeCount": 1211,
+  "dependencyCycleCount": 0
+ },
+ "diagnosticsCount": 0,
+ "stateLoaded": {
+  "presets": 213,
+  "modifiers": 105
+ },
+ "summary": {
+  "presetRequestSchema": "asset_maid_analyzer_illustration_preset_request_v1",
+  "modifierRequestSchema": "asset_maid_analyzer_illustration_modifier_request_v1",
+  "illustrationRequestSchema": "asset_maid_analyzer_illustration_request_v2",
+  "illustrationResponseSchema": "asset_maid_analyzer_illustration_response_v2",
+  "presetCount": 49,
+  "modifierFeatureCount": 5,
+  "checkpointCount": 0,
+  "catalogSource": "rule-ir",
+  "analyzerProjectionFingerprint": "raw-rule-analyzer-v1.15pob1p"
+ },
+ "analyzerProjectionFingerprints": {
+  "all": "raw-rule-analyzer-v1.15pob1p",
+  "solo-reference": "raw-rule-analyzer-v1.kpv2rr"
+ },
+ "wireIdsComplete": true,
+ "fingerprints": {
+  "wireIds": "194bdtq",
+  "analyzerProjection": "14if8vf",
+  "sizes": "1rc5xl6",
+  "definitions": "1y85eor",
+  "options": "1iddv4x",
+  "presetNodes": "ocnp8s",
+  "continuity": "1ebl0e4",
+  "rulesByPhase": "1p5ump4",
+  "weights": "g6iabv"
+ },
+ "counts": {
+  "sizes": 5,
+  "definitions": 105,
+  "options": 617,
+  "presetNodes": 322,
+  "presetPaths": 213
+ },
+ "sizes": {
+  "__map__": [
+   [
+    1,
+    {
+     "id": 1,
+     "label": "Portrait 832 x 1216",
+     "width": 832,
+     "height": 1216
+    }
+   ],
+   [
+    2,
+    {
+     "id": 2,
+     "label": "Landscape 1216 x 832",
+     "width": 1216,
+     "height": 832
+    }
+   ],
+   [
+    3,
+    {
+     "id": 3,
+     "label": "Portrait 896 x 1152",
+     "width": 896,
+     "height": 1152
+    }
+   ],
+   [
+    4,
+    {
+     "id": 4,
+     "label": "Landscape 1152 x 896",
+     "width": 1152,
+     "height": 896
+    }
+   ],
+   [
+    5,
+    {
+     "id": 5,
+     "label": "Square 1024 x 1024",
+     "width": 1024,
+     "height": 1024
+    }
+   ]
+  ]
+ },
+ "presetPathKeys": [
+  "composition=1boy_solo|category=general|position=free|variant=default|frame=cowboy_shot|size=1",
+  "composition=1boy_solo|category=general|position=free|variant=default|frame=cowboy_shot|size=2",
+  "composition=1boy_solo|category=general|position=free|variant=default|frame=feet_out_of_frame|size=1",
+  "composition=1boy_solo|category=general|position=free|variant=default|frame=feet_out_of_frame|size=2",
+  "composition=1boy_solo|category=general|position=free|variant=default|frame=full_body|size=1",
+  "composition=1boy_solo|category=general|position=free|variant=default|frame=full_body|size=2",
+  "composition=1boy_solo|category=general|position=free|variant=default|frame=portrait|size=2",
+  "composition=1boy_solo|category=general|position=free|variant=default|frame=upper_body|size=1",
+  "composition=1boy_solo|category=general|position=free|variant=default|frame=upper_body|size=2",
+  "composition=1boy_solo|category=sexual|position=free|variant=default|frame=cowboy_shot|size=1",
+  "composition=1boy_solo|category=sexual|position=free|variant=default|frame=cowboy_shot|size=2",
+  "composition=1boy_solo|category=sexual|position=free|variant=default|frame=feet_out_of_frame|size=1",
+  "composition=1boy_solo|category=sexual|position=free|variant=default|frame=feet_out_of_frame|size=2",
+  "composition=1boy_solo|category=sexual|position=free|variant=default|frame=full_body|size=1",
+  "composition=1boy_solo|category=sexual|position=free|variant=default|frame=full_body|size=2",
+  "composition=1boy_solo|category=sexual|position=free|variant=default|frame=upper_body|size=1",
+  "composition=1boy_solo|category=sexual|position=free|variant=default|frame=upper_body|size=2",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=default|frame=cowboy_shot|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=default|frame=feet_out_of_frame|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=default|frame=full_body|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=default|frame=upper_body|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=from_front_diagonal|frame=cowboy_shot|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=from_front_diagonal|frame=feet_out_of_frame|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=from_front_diagonal|frame=full_body|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=from_front_diagonal|frame=upper_body|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=from_side|frame=cowboy_shot|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=from_side|frame=feet_out_of_frame|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=from_side|frame=full_body|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=from_side|frame=upper_body|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=pov|frame=cowboy_shot|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=pov|frame=feet_out_of_frame|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=pov|frame=full_body|size=1",
+  "composition=1girl_1boy|category=foreplay|position=face_to_face_upright|variant=pov|frame=upper_body|size=1",
+  "composition=1girl_1boy|category=foreplay|position=female_behind_male_upright|variant=default",
+  "composition=1girl_1boy|category=foreplay|position=female_behind_male_upright|variant=from_behind",
+  "composition=1girl_1boy|category=foreplay|position=female_behind_male_upright|variant=from_side",
+  "composition=1girl_1boy|category=foreplay|position=female_bent_over_male_rear_access|variant=default",
+  "composition=1girl_1boy|category=foreplay|position=female_bent_over_male_rear_access|variant=from_behind",
+  "composition=1girl_1boy|category=foreplay|position=female_bent_over_male_rear_access|variant=from_behind_below",
+  "composition=1girl_1boy|category=foreplay|position=female_bent_over_male_rear_access|variant=from_below",
+  "composition=1girl_1boy|category=foreplay|position=female_bent_over_male_rear_access|variant=from_side",
+  "composition=1girl_1boy|category=foreplay|position=female_bent_over_male_rear_access|variant=from_side_above",
+  "composition=1girl_1boy|category=foreplay|position=female_bent_over_male_rear_access|variant=pov",
+  "composition=1girl_1boy|category=foreplay|position=female_high_male_low_contact|variant=default",
+  "composition=1girl_1boy|category=foreplay|position=female_high_male_low_contact|variant=from_below",
+  "composition=1girl_1boy|category=foreplay|position=female_high_male_low_contact|variant=from_front_diagonal",
+  "composition=1girl_1boy|category=foreplay|position=female_high_male_low_contact|variant=from_side",
+  "composition=1girl_1boy|category=foreplay|position=female_high_male_low_contact|variant=pov",
+  "composition=1girl_1boy|category=foreplay|position=female_low_male_high_contact|variant=default",
+  "composition=1girl_1boy|category=foreplay|position=female_low_male_high_contact|variant=from_front_diagonal",
+  "composition=1girl_1boy|category=foreplay|position=female_low_male_high_contact|variant=from_side",
+  "composition=1girl_1boy|category=foreplay|position=female_low_male_high_contact|variant=from_side_above",
+  "composition=1girl_1boy|category=foreplay|position=female_low_male_high_contact|variant=pov",
+  "composition=1girl_1boy|category=foreplay|position=female_over_male_supine_parallel|variant=default",
+  "composition=1girl_1boy|category=foreplay|position=female_over_male_supine_parallel|variant=from_side",
+  "composition=1girl_1boy|category=foreplay|position=female_over_male_supine_parallel|variant=from_side_above",
+  "composition=1girl_1boy|category=foreplay|position=female_over_male_supine_parallel|variant=pov",
+  "composition=1girl_1boy|category=foreplay|position=female_sitting_on_male_face|variant=default",
+  "composition=1girl_1boy|category=foreplay|position=female_sitting_on_male_face|variant=from_front_diagonal",
+  "composition=1girl_1boy|category=foreplay|position=female_sitting_on_male_face|variant=from_side",
+  "composition=1girl_1boy|category=foreplay|position=female_sitting_on_male_face|variant=from_side_above",
+  "composition=1girl_1boy|category=foreplay|position=lap_straddle_upright|variant=default",
+  "composition=1girl_1boy|category=foreplay|position=lap_straddle_upright|variant=from_behind_below",
+  "composition=1girl_1boy|category=foreplay|position=lap_straddle_upright|variant=from_front_diagonal",
+  "composition=1girl_1boy|category=foreplay|position=lap_straddle_upright|variant=from_side",
+  "composition=1girl_1boy|category=foreplay|position=lap_straddle_upright|variant=pov",
+  "composition=1girl_1boy|category=foreplay|position=male_behind_female_upright|variant=default",
+  "composition=1girl_1boy|category=foreplay|position=male_behind_female_upright|variant=from_behind",
+  "composition=1girl_1boy|category=foreplay|position=male_behind_female_upright|variant=from_behind_below",
+  "composition=1girl_1boy|category=foreplay|position=male_behind_female_upright|variant=from_front_diagonal",
+  "composition=1girl_1boy|category=foreplay|position=male_behind_female_upright|variant=from_side",
+  "composition=1girl_1boy|category=foreplay|position=male_behind_female_upright|variant=pov",
+  "composition=1girl_1boy|category=foreplay|position=male_bent_over_female_rear_access|variant=default",
+  "composition=1girl_1boy|category=foreplay|position=male_bent_over_female_rear_access|variant=from_behind",
+  "composition=1girl_1boy|category=foreplay|position=male_bent_over_female_rear_access|variant=from_behind_below",
+  "composition=1girl_1boy|category=foreplay|position=male_bent_over_female_rear_access|variant=from_side",
+  "composition=1girl_1boy|category=foreplay|position=male_over_female_horizontal_parallel|variant=default",
+  "composition=1girl_1boy|category=foreplay|position=male_over_female_horizontal_parallel|variant=from_side",
+  "composition=1girl_1boy|category=foreplay|position=male_over_female_horizontal_parallel|variant=from_side_above",
+  "composition=1girl_1boy|category=foreplay|position=male_over_female_horizontal_parallel|variant=pov",
+  "composition=1girl_1boy|category=foreplay|position=side_lying_parallel_contact|variant=default",
+  "composition=1girl_1boy|category=foreplay|position=side_lying_parallel_contact|variant=from_above",
+  "composition=1girl_1boy|category=foreplay|position=side_lying_parallel_contact|variant=from_side",
+  "composition=1girl_1boy|category=foreplay|position=side_lying_parallel_contact|variant=from_side_above",
+  "composition=1girl_1boy|category=foreplay|position=side_lying_parallel_contact|variant=pov",
+  "composition=1girl_1boy|category=foreplay|position=sixty_nine_oral|variant=default",
+  "composition=1girl_1boy|category=foreplay|position=sixty_nine_oral|variant=from_above",
+  "composition=1girl_1boy|category=foreplay|position=sixty_nine_oral|variant=from_side",
+  "composition=1girl_1boy|category=foreplay|position=sixty_nine_oral|variant=from_side_above",
+  "composition=1girl_1boy|category=insertion|position=amazon_position|variant=default",
+  "composition=1girl_1boy|category=insertion|position=amazon_position|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=amazon_position|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=amazon_position|variant=from_side_above",
+  "composition=1girl_1boy|category=insertion|position=amazon_position|variant=pov",
+  "composition=1girl_1boy|category=insertion|position=breasts_on_glass_sex_from_behind|variant=default",
+  "composition=1girl_1boy|category=insertion|position=breasts_on_glass_sex_from_behind|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=breasts_on_glass_sex_from_behind|variant=from_front_diagonal",
+  "composition=1girl_1boy|category=insertion|position=breasts_on_glass_sex_from_behind|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=cowgirl_position|variant=default",
+  "composition=1girl_1boy|category=insertion|position=cowgirl_position|variant=from_behind",
+  "composition=1girl_1boy|category=insertion|position=cowgirl_position|variant=from_behind_below",
+  "composition=1girl_1boy|category=insertion|position=cowgirl_position|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=cowgirl_position|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=cowgirl_position|variant=pov",
+  "composition=1girl_1boy|category=insertion|position=doggystyle|variant=default",
+  "composition=1girl_1boy|category=insertion|position=doggystyle|variant=from_behind",
+  "composition=1girl_1boy|category=insertion|position=doggystyle|variant=from_behind_below",
+  "composition=1girl_1boy|category=insertion|position=doggystyle|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=doggystyle|variant=from_below_ceiling",
+  "composition=1girl_1boy|category=insertion|position=doggystyle|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=doggystyle|variant=from_side_above",
+  "composition=1girl_1boy|category=insertion|position=doggystyle|variant=pov",
+  "composition=1girl_1boy|category=insertion|position=mating_press|variant=default",
+  "composition=1girl_1boy|category=insertion|position=mating_press|variant=from_behind",
+  "composition=1girl_1boy|category=insertion|position=mating_press|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=mating_press|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=mating_press|variant=from_side_above",
+  "composition=1girl_1boy|category=insertion|position=mating_press|variant=pov",
+  "composition=1girl_1boy|category=insertion|position=missionary|variant=default",
+  "composition=1girl_1boy|category=insertion|position=missionary|variant=from_behind",
+  "composition=1girl_1boy|category=insertion|position=missionary|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=missionary|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=missionary|variant=from_side_above",
+  "composition=1girl_1boy|category=insertion|position=missionary|variant=pov|frame=default|size=1",
+  "composition=1girl_1boy|category=insertion|position=missionary|variant=pov|frame=upper_body|size=3",
+  "composition=1girl_1boy|category=insertion|position=piledriver_sex|variant=default",
+  "composition=1girl_1boy|category=insertion|position=piledriver_sex|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=piledriver_sex|variant=from_side_above",
+  "composition=1girl_1boy|category=insertion|position=prone_bone|variant=default",
+  "composition=1girl_1boy|category=insertion|position=prone_bone|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=prone_bone|variant=from_side_above",
+  "composition=1girl_1boy|category=insertion|position=reverse_cowgirl_position|variant=default",
+  "composition=1girl_1boy|category=insertion|position=reverse_cowgirl_position|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=reverse_cowgirl_position|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=reverse_cowgirl_position|variant=from_side_above",
+  "composition=1girl_1boy|category=insertion|position=reverse_cowgirl_position|variant=pov",
+  "composition=1girl_1boy|category=insertion|position=reverse_suspended_congress|variant=default",
+  "composition=1girl_1boy|category=insertion|position=reverse_suspended_congress|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=reverse_suspended_congress|variant=from_front_diagonal",
+  "composition=1girl_1boy|category=insertion|position=reverse_suspended_congress|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=reverse_upright_straddle|variant=default",
+  "composition=1girl_1boy|category=insertion|position=reverse_upright_straddle|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=reverse_upright_straddle|variant=from_front_diagonal",
+  "composition=1girl_1boy|category=insertion|position=reverse_upright_straddle|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=spooning|variant=default",
+  "composition=1girl_1boy|category=insertion|position=spooning|variant=from_above",
+  "composition=1girl_1boy|category=insertion|position=spooning|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=standing_missionary|variant=default",
+  "composition=1girl_1boy|category=insertion|position=standing_missionary|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=standing_missionary|variant=from_front_diagonal",
+  "composition=1girl_1boy|category=insertion|position=standing_missionary|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=standing_missionary|variant=pov",
+  "composition=1girl_1boy|category=insertion|position=standing_sex_from_behind|variant=default",
+  "composition=1girl_1boy|category=insertion|position=standing_sex_from_behind|variant=from_behind_below",
+  "composition=1girl_1boy|category=insertion|position=standing_sex_from_behind|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=standing_sex_from_behind|variant=from_front_diagonal",
+  "composition=1girl_1boy|category=insertion|position=standing_sex_from_behind|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=standing_sex_from_behind|variant=lower_body",
+  "composition=1girl_1boy|category=insertion|position=standing_sex_from_behind|variant=pov",
+  "composition=1girl_1boy|category=insertion|position=suspended_congress|variant=default",
+  "composition=1girl_1boy|category=insertion|position=suspended_congress|variant=from_behind_below",
+  "composition=1girl_1boy|category=insertion|position=suspended_congress|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=suspended_congress|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=suspended_congress|variant=pov",
+  "composition=1girl_1boy|category=insertion|position=upright_straddle|variant=default",
+  "composition=1girl_1boy|category=insertion|position=upright_straddle|variant=from_below",
+  "composition=1girl_1boy|category=insertion|position=upright_straddle|variant=from_front_diagonal",
+  "composition=1girl_1boy|category=insertion|position=upright_straddle|variant=from_side",
+  "composition=1girl_1boy|category=insertion|position=upright_straddle|variant=pov",
+  "composition=1girl_solo|category=general|position=free|variant=default|frame=cowboy_shot|size=1",
+  "composition=1girl_solo|category=general|position=free|variant=default|frame=cowboy_shot|size=2",
+  "composition=1girl_solo|category=general|position=free|variant=default|frame=feet_out_of_frame|size=1",
+  "composition=1girl_solo|category=general|position=free|variant=default|frame=feet_out_of_frame|size=2",
+  "composition=1girl_solo|category=general|position=free|variant=default|frame=full_body|size=1",
+  "composition=1girl_solo|category=general|position=free|variant=default|frame=full_body|size=2",
+  "composition=1girl_solo|category=general|position=free|variant=default|frame=portrait|size=2",
+  "composition=1girl_solo|category=general|position=free|variant=default|frame=upper_body|size=1",
+  "composition=1girl_solo|category=general|position=free|variant=default|frame=upper_body|size=2",
+  "composition=1girl_solo|category=sexual|position=free|variant=default|frame=cowboy_shot|size=1",
+  "composition=1girl_solo|category=sexual|position=free|variant=default|frame=cowboy_shot|size=2",
+  "composition=1girl_solo|category=sexual|position=free|variant=default|frame=feet_out_of_frame|size=1",
+  "composition=1girl_solo|category=sexual|position=free|variant=default|frame=feet_out_of_frame|size=2",
+  "composition=1girl_solo|category=sexual|position=free|variant=default|frame=full_body|size=1",
+  "composition=1girl_solo|category=sexual|position=free|variant=default|frame=full_body|size=2",
+  "composition=1girl_solo|category=sexual|position=free|variant=default|frame=upper_body|size=1",
+  "composition=1girl_solo|category=sexual|position=free|variant=default|frame=upper_body|size=2",
+  "composition=2girls_1boy|category=sexual|position=cooperative_breast_smother|variant=default",
+  "composition=2girls_1boy|category=sexual|position=cooperative_fellatio|variant=default",
+  "composition=2girls_1boy|category=sexual|position=cooperative_fellatio|variant=pov",
+  "composition=2girls_1boy|category=sexual|position=cooperative_footjob|variant=default",
+  "composition=2girls_1boy|category=sexual|position=cooperative_footjob|variant=pov",
+  "composition=2girls_1boy|category=sexual|position=cooperative_handjob|variant=default",
+  "composition=2girls_1boy|category=sexual|position=cooperative_handjob|variant=pov",
+  "composition=2girls_1boy|category=sexual|position=cooperative_paizuri|variant=default",
+  "composition=2girls_1boy|category=sexual|position=cooperative_paizuri|variant=pov",
+  "composition=2girls_1boy|category=sexual|position=cooperative_pussyjob|variant=default",
+  "composition=2girls_1boy|category=sexual|position=cooperative_pussyjob|variant=pov",
+  "composition=2girls_1boy|category=sexual|position=oral_sandwich|variant=default",
+  "composition=2girls_1boy|category=sexual|position=oral_sandwich|variant=from_above",
+  "composition=2girls_1boy|category=sexual|position=reverse_spitroast|variant=default",
+  "composition=2girls_1boy|category=sexual|position=reverse_spitroast|variant=from_side",
+  "composition=2girls|category=general|position=facing_each_other|variant=default",
+  "composition=2girls|category=general|position=facing_viewer|variant=default",
+  "composition=2girls|category=general|position=free|variant=default",
+  "composition=2girls|category=general|position=primary_behind_secondary|variant=from_side",
+  "composition=2girls|category=general|position=secondary_behind_primary|variant=from_side",
+  "composition=2girls|category=sexual|position=doggystyle|variant=default",
+  "composition=2girls|category=sexual|position=doggystyle|variant=from_side",
+  "composition=2girls|category=sexual|position=doggystyle|variant=pov",
+  "composition=2girls|category=sexual|position=missionary|variant=default",
+  "composition=2girls|category=sexual|position=standing_sex_from_behind|variant=default",
+  "composition=2girls|category=sexual|position=standing_sex_from_behind|variant=from_side",
+  "composition=2girls|category=sexual|position=standing_sex_from_behind|variant=pov"
+ ],
+ "presetPathsFingerprint": "1raqule",
+ "continuity": {
+  "groups": {
+   "__map__": [
+    [
+     "scene.background",
+     {
+      "definitionId": "scene.background",
+      "subjects": [
+       "global"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "scene.environment",
+     {
+      "definitionId": "scene.environment",
+      "subjects": [
+       "global"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "scene.lighting",
+     {
+      "definitionId": "scene.lighting",
+      "subjects": [
+       "global"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "scene.location",
+     {
+      "definitionId": "scene.location",
+      "subjects": [
+       "global"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "scene.location.anchor",
+     {
+      "definitionId": "scene.location.anchor",
+      "subjects": [
+       "global"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "scene.location.theme",
+     {
+      "definitionId": "scene.location.theme",
+      "subjects": [
+       "global"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "scene.props",
+     {
+      "definitionId": "scene.props",
+      "subjects": [
+       "global"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "scene.time",
+     {
+      "definitionId": "scene.time",
+      "subjects": [
+       "global"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "scene.weather",
+     {
+      "definitionId": "scene.weather",
+      "subjects": [
+       "global"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "state.after_activity",
+     {
+      "definitionId": "state.after_activity",
+      "subjects": [
+       "actor"
+      ],
+      "policy": {
+       "lifetime": {
+        "turns": 1
+       },
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "state.body.condition",
+     {
+      "definitionId": "state.body.condition",
+      "subjects": [
+       "actor"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "state.body.surface",
+     {
+      "definitionId": "state.body.surface",
+      "subjects": [
+       "actor"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "state.clothing.arrangement",
+     {
+      "definitionId": "state.clothing.arrangement",
+      "subjects": [
+       "actor"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "state.clothing.coverage.lower",
+     {
+      "definitionId": "state.clothing.coverage.lower",
+      "subjects": [
+       "female"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "state.clothing.coverage.upper",
+     {
+      "definitionId": "state.clothing.coverage.upper",
+      "subjects": [
+       "female"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "state.clothing.surface",
+     {
+      "definitionId": "state.clothing.surface",
+      "subjects": [
+       "actor"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "state.fluid.cum.location",
+     {
+      "definitionId": "state.fluid.cum.location",
+      "subjects": [
+       "female"
+      ],
+      "policy": {
+       "clear": {
+        "avoid_when": [
+         "Do not use for mere non-observation, occlusion, elapsed time, scene changes, or an inferred shower; do not also return other location options that were not removed."
+        ],
+        "description": "Return only directly removed semen locations and reset the accumulated count.",
+        "granularity": "option",
+        "when_to_use": [
+         "When the current context explicitly describes the actor washing or wiping away previous semen traces, return only location options actually removed."
+        ]
+       },
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "accumulate",
+       "when": {
+        "actor": {
+         "gender": "female"
+        }
+       }
+      },
+      "route": [
+       "analyzer.reference",
+       "option"
+      ],
+      "counterId": "cum_count"
+     }
+    ],
+    [
+     "state.fluid.saliva",
+     {
+      "definitionId": "state.fluid.saliva",
+      "subjects": [
+       "female"
+      ],
+      "policy": {
+       "lifetime": {
+        "turns": 2
+       },
+       "on_none": "keep",
+       "on_value": "accumulate"
+      },
+      "route": [
+       "analyzer.reference",
+       "option"
+      ]
+     }
+    ],
+    [
+     "state.penis.condom",
+     {
+      "definitionId": "state.penis.condom",
+      "subjects": [
+       "male"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "state.penis.exposure",
+     {
+      "definitionId": "state.penis.exposure",
+      "subjects": [
+       "male"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "state.restraint.body",
+     {
+      "definitionId": "state.restraint.body",
+      "subjects": [
+       "actor"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "state.restraint.gag",
+     {
+      "definitionId": "state.restraint.gag",
+      "subjects": [
+       "actor"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ],
+    [
+     "state.sex_toy.placement",
+     {
+      "definitionId": "state.sex_toy.placement",
+      "subjects": [
+       "actor"
+      ],
+      "policy": {
+       "lifetime": "persistent",
+       "on_none": "keep",
+       "on_value": "replace"
+      },
+      "route": [
+       "analyzer.reference"
+      ]
+     }
+    ]
+   ]
+  },
+  "counters": {
+   "__map__": [
+    [
+     "cum_count",
+     "state.fluid.cum.location"
+    ]
+   ]
+  },
+  "derived": {
+   "__map__": [
+    [
+     "state.fluid.cum.accumulation",
+     "state.fluid.cum.location"
+    ]
+   ]
+  }
+ },
+ "spot": {
+  "definitionIds": [
+   "action.detail.freeform",
+   "action.freeform",
+   "camera.detail.freeform",
+   "camera.focus.body_part",
+   "camera.framing.crop",
+   "camera.framing.face_crop",
+   "camera.view",
+   "expression.blush",
+   "expression.eye.openness",
+   "expression.eye.reaction",
+   "expression.general",
+   "expression.mouth",
+   "expression.sexual_response",
+   "expression.tear",
+   "gaze.direction",
+   "interaction.detail.freeform",
+   "interaction.exposure.focus",
+   "interaction.partner.directed",
+   "interaction.partner.freeform",
+   "interaction.partner.head_contact.female_to_male",
+   "interaction.partner.lower_body_contact",
+   "interaction.partner.mouth_contact",
+   "interaction.partner.saliva",
+   "interaction.sex_toy.action",
+   "interaction.sexual.contact.footjob",
+   "interaction.sexual.contact.paizuri",
+   "interaction.sexual.contact.pelvic_rubbing",
+   "interaction.sexual.cooperative",
+   "interaction.sexual.ejaculation.progress",
+   "interaction.sexual.intensity",
+   "interaction.sexual.intercourse",
+   "interaction.sexual.oral.anilingus",
+   "interaction.sexual.oral.breast",
+   "interaction.sexual.oral.cunnilingus",
+   "interaction.sexual.oral.fellatio",
+   "interaction.sexual.penetration.context",
+   "interaction.sexual.penetration.direction",
+   "interaction.sexual.penetration.progress",
+   "interaction.sexual.penetration.route",
+   "interaction.sexual.position.refinement"
+  ],
+  "firstDefinition": {
+   "id": "action.detail.freeform",
+   "kind": "freeform",
+   "subjects": [
+    "actor"
+   ],
+   "guidance": {
+    "whenToUse": [],
+    "avoidWhen": []
+   },
+   "bodyParts": {
+    "__map__": []
+   },
+   "visibleFrom": [],
+   "order": 142,
+   "selection": {
+    "stage": "analyzer",
+    "min": 0,
+    "max": 1
+   },
+   "options": {
+    "__map__": []
+   },
+   "freeformOutput": "natural_language",
+   "freeformInstruction": "Supplement only movement direction, tool manipulation, speed, and momentary state not adequately conveyed by the selected action tags with one short subjectless English visual sentence, without unsupported facts. Do not use names or pronouns or repeat selected tags.",
+   "freeformMaxLength": 160
+  }
+ }
+}
