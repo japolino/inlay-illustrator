@@ -94,6 +94,9 @@ describe("core handlers: charx settings, reset, artists, personas", () => {
     const cleared = await call("charxSettings.clearOverrides", { characterId: "c1" });
     expect(cleared.effective.nsfwAlwaysEnabled).toBe(before.effective.nsfwAlwaysEnabled);
     expect((await call("charxSettings.get", { characterId: "c1" })).dirtyFields).toEqual([]);
+    const none = await call("charxSettings.get", { characterId: "" });
+    expect(none.dirtyFields).toEqual([]);
+    expect(none.all).toBeDefined();
   });
 
   test("charxSettings.resetAll bumps the default revisions so overrides lose", async () => {

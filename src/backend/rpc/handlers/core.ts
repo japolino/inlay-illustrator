@@ -199,6 +199,11 @@ export const coreHandlers: HandlerGroup = {
 
   /* charx settings */
   async "charxSettings.get"(params, ctx) {
+    // The "all characters" page may run with no character selected (characterId ""): defaults only.
+    if (typeof params.characterId === "string" && !params.characterId.trim()) {
+      const scope = charxScopeFor(await ctx.storage.loadConfig(), null);
+      return { effective: resolveEffectiveCharxSettings(scope, ""), all: resolveAllCharxSettings(scope), dirtyFields: [] };
+    }
     const characterId = requireId(params.characterId, "characterId");
     const [config, doc] = await Promise.all([ctx.storage.loadConfig(), ctx.storage.loadCharacterDocument(characterId)]);
     let scope = charxScopeFor(config, doc);

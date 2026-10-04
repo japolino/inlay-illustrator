@@ -426,6 +426,7 @@ export interface RpcMethods {
   "outfitImage.save": { params: { target: OutfitImageTarget; formId: string; outfitId?: string; resultIds: string[]; mode: "add" | "replace"; draft: OutfitImageDraft }; result: { collection: FormCollection } };
 
   /* current / all charx settings + data management */
+  /** `characterId: ""` (all-characters page without a selection): `effective` = the defaults, no dirty fields. */
   "charxSettings.get": { params: { characterId: string }; result: { effective: EffectiveCharxSettings; all: EffectiveCharxSettings; dirtyFields: CharxSettingField[] } };
   "charxSettings.setOverride": { params: { characterId: string; patch: CharxSettingsPatch }; result: { effective: EffectiveCharxSettings; dirtyFields: CharxSettingField[] } };
   "charxSettings.setDefaults": { params: { patch: CharxSettingsPatch }; result: { all: EffectiveCharxSettings } };

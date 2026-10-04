@@ -120,6 +120,8 @@ export class AppController {
   private readonly noticeSinks = new Set<NoticeSink>();
   private readonly disposers: Array<() => void> = [];
   private workspaceRequest = 0;
+  /** A `document.changed` arrived while a load was in flight: load once more when it ends. */
+  private reloadPending = false;
   private initPromise: Promise<void> | null = null;
 
   constructor(client: RpcClient, options: { surface?: "overlay" | "drawer" | "chat" } = {}) {
@@ -147,6 +149,7 @@ export class AppController {
         this.store.patch({ status: hello.status });
         const [cfg] = await Promise.all([this.call("config.get", {}), this.loadCharacters()]);
         this.store.patch({ config: cfg.config, chatImageGeneration: cfg.chatImageGeneration, uiState: cfg.uiState, connection: "ready" });
+        void this.recoverActiveJobs();
         if (!this.state.selectedCharacterId) {
           const preferred = hello.status.activeCharacterId ?? this.state.characters?.[0]?.characterId ?? null;
           if (preferred) await this.selectCharacter(preferred);
@@ -156,6 +159,21 @@ export class AppController {
       }
     })();
     return this.initPromise;
+  }
+
+  /** Jobs that were already running before this page loaded (Stop buttons, spinners, footer busy). */
+  private async recoverActiveJobs(): Promise<void> {
+    const [analysis, generation] = await Promise.all([
+      this.call("analysis.listActive", {}).catch(() => ({ jobs: [] })),
+      this.call("generation.listActive", {}).catch(() => ({ jobs: [] }))
+    ]);
+    for (const job of analysis.jobs) {
+      if (this.state.analysisJobs[job.jobId]) continue;
+      this.upsertAnalysisJob({ jobId: job.jobId, kind: job.kind, characterId: job.characterId, status: job.status, progress: job.progress, rows: [], startedAt: Date.now() });
+    }
+    const generationJobs = { ...this.state.generationJobs };
+    for (const job of generation.jobs) if (!generationJobs[job.jobId] && (job.status === "queued" || job.status === "running")) generationJobs[job.jobId] = job;
+    this.store.patch({ generationJobs });
   }
 
   async loadCharacters(): Promise<void> {
@@ -187,6 +205,21 @@ export class AppController {
       if (request !== this.workspaceRequest) return;
       this.store.patch({ workspaceState: "error", workspaceError: toRpcError(error) });
     }
+    if (this.reloadPending && request === this.workspaceRequest && characterId === this.state.selectedCharacterId) {
+      this.reloadPending = false;
+      void this.selectCharacter(characterId);
+    }
+  }
+
+  /**
+   * The character's stored data changed (document write, or an analysis that wrote only the metadata cache / global
+   * persona settings): bump the revision (personas, charx settings refetch) and reload the workspace snapshot.
+   */
+  private documentChanged(characterId: string): void {
+    this.bump("documentRevision", characterId);
+    if (characterId !== this.state.selectedCharacterId) return;
+    if (this.state.workspaceState === "loading") this.reloadPending = true;
+    else void this.selectCharacter(characterId);
   }
 
   reloadWorkspace(): Promise<void> {
@@ -346,10 +379,7 @@ export class AppController {
     });
     this.on("config.changed", ({ config }) => this.store.patch({ config }));
     this.on("chatImageGeneration.changed", ({ settings }) => this.store.patch({ chatImageGeneration: settings }));
-    this.on("document.changed", ({ characterId }) => {
-      this.bump("documentRevision", characterId);
-      if (characterId === this.state.selectedCharacterId && this.state.workspaceState !== "loading") void this.selectCharacter(characterId);
-    });
+    this.on("document.changed", ({ characterId }) => this.documentChanged(characterId));
     this.on("chatData.changed", ({ chatId }) => this.bump("chatDataRevision", chatId));
     this.on("analysis.progress", (payload) => {
       const existing = this.state.analysisJobs[payload.jobId];
@@ -378,6 +408,8 @@ export class AppController {
         finishedAt: Date.now()
       });
       this.scheduleJobCleanup("analysisJobs", payload.jobId);
+      // Some analyses write only the metadata cache or global persona settings (no document.changed).
+      if (payload.characterId) this.documentChanged(payload.characterId);
     });
     this.on("outfitImage.progress", ({ jobId, progress }) => {
       this.store.patch({ outfitJobs: { ...this.state.outfitJobs, [jobId]: { ...this.state.outfitJobs[jobId], jobId, progress, done: false } } });

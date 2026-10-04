@@ -54,6 +54,36 @@ describe("AppController", () => {
     expect(app.activeAnalysis()).toHaveLength(0);
   });
 
+  test("analysis.finished reloads the workspace; a document.changed during a load triggers one more load", async () => {
+    const { app, mock } = setup();
+    await app.init();
+    const loads = () => mock.calls.filter((c) => c.method === "workspace.load").length;
+    const before = loads();
+    const revision = app.state.documentRevision["char-seoyeon"] ?? 0;
+    mock.emit("analysis.finished", { jobId: "j2", kind: "metadata-check", characterId: "char-seoyeon", status: "success", message: "Done" });
+    await tick();
+    expect(loads()).toBe(before + 1);
+    expect(app.state.documentRevision["char-seoyeon"]).toBe(revision + 1);
+    const pending = app.reloadWorkspace();
+    expect(app.state.workspaceState).toBe("loading");
+    mock.emit("document.changed", { characterId: "char-seoyeon", updatedAt: "x", reason: "test" });
+    await pending;
+    await tick();
+    expect(loads()).toBe(before + 3);
+    expect(app.state.workspaceState).toBe("ready");
+  });
+
+  test("init recovers jobs that were running before the page loaded", async () => {
+    const { app, mock } = setup();
+    const job = { jobId: "g1", chatId: "c1", messageKey: "illustration:m1@0", attemptKind: "initial", status: "running", phase: "generating", progress: { label: "x" }, requestedCount: 1, completedSlots: 0, failedSlots: 0, canRetry: false, canRestart: false } as const;
+    mock.handlers["generation.listActive"] = () => ({ jobs: [job] });
+    mock.handlers["analysis.listActive"] = () => ({ jobs: [{ jobId: "a1", kind: "persona", characterId: "char-seoyeon", status: "running", progress: { label: "Reading" } }] });
+    await app.init();
+    await tick();
+    expect(app.state.generationJobs.g1?.status).toBe("running");
+    expect(app.activeAnalysis({ characterId: "char-seoyeon" }).map((j) => j.jobId)).toEqual(["a1"]);
+  });
+
   test("mergePatch deep-merges objects and replaces arrays", () => {
     expect(mergePatch({ a: { b: 1, c: [1, 2] }, d: 1 }, { a: { c: [3] } })).toEqual({ a: { b: 1, c: [3] }, d: 1 });
   });
