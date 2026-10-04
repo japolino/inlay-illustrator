@@ -133,7 +133,13 @@
   "ZAt",
   "OW",
   "mb",
-  "c1t"
+  "c1t",
+  "Wv",
+  "zne",
+  "OBe",
+  "hDe",
+  "Ete",
+  "Dne"
  ],
  "renames": {
   "uV": "NovelAIV5RawValidationError",
@@ -273,6 +279,12 @@
   "M_e": "resolveAnalyzerExecutionMode",
   "d1t": "assertAnalyzerReady",
   "u1t": "resolveCheckpointPolicy",
-  "f1t": "resolveGenerationType"
+  "f1t": "resolveGenerationType",
+  "Wv": "readLocalLoreActorState",
+  "zne": "toLocalLoreActorEntry",
+  "OBe": "readContinuityCheckpointsFromChatStore",
+  "hDe": "hasContinuityData",
+  "Ete": "serializeContinuityState",
+  "Dne": "applyActorStateEdit"
  }
 }

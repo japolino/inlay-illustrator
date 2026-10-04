@@ -133,7 +133,13 @@
   "ZAt",
   "OW",
   "mb",
-  "c1t"
+  "c1t",
+  "readLocalLoreActorState",
+  "toLocalLoreActorEntry",
+  "readContinuityCheckpointsFromChatStore",
+  "hasContinuityData",
+  "serializeContinuityState",
+  "applyActorStateEdit"
  ],
  "renames": {
   "uV": "NovelAIV5RawValidationError",
@@ -273,7 +279,13 @@
   "M_e": "resolveAnalyzerExecutionMode",
   "d1t": "assertAnalyzerReady",
   "u1t": "resolveCheckpointPolicy",
-  "f1t": "resolveGenerationType"
+  "f1t": "resolveGenerationType",
+  "Wv": "readLocalLoreActorState",
+  "zne": "toLocalLoreActorEntry",
+  "OBe": "readContinuityCheckpointsFromChatStore",
+  "hDe": "hasContinuityData",
+  "Ete": "serializeContinuityState",
+  "Dne": "applyActorStateEdit"
  },
  "units": [
   {
@@ -5237,6 +5249,11 @@
    "line": 42956
   },
   {
+   "orig": "hDe",
+   "name": "hasContinuityData",
+   "line": 42968
+  },
+  {
    "orig": "gDe",
    "name": "gDe",
    "line": 42979
@@ -5277,6 +5294,36 @@
    "line": 43133
   },
   {
+   "orig": "mA",
+   "name": "mA",
+   "line": 43136
+  },
+  {
+   "orig": "Wx",
+   "name": "Wx",
+   "line": 43139
+  },
+  {
+   "orig": "wDe",
+   "name": "wDe",
+   "line": 43152
+  },
+  {
+   "orig": "xDe",
+   "name": "xDe",
+   "line": 43164
+  },
+  {
+   "orig": "pA",
+   "name": "pA",
+   "line": 43170
+  },
+  {
+   "orig": "_De",
+   "name": "_De",
+   "line": 43183
+  },
+  {
    "orig": "hA",
    "name": "hA",
    "line": 43226
@@ -5285,6 +5332,11 @@
    "orig": "IDe",
    "name": "IDe",
    "line": 43240
+  },
+  {
+   "orig": "SDe",
+   "name": "SDe",
+   "line": 43270
   },
   {
    "orig": "kDe",
@@ -5300,6 +5352,11 @@
    "orig": "ADe",
    "name": "ADe",
    "line": 43303
+  },
+  {
+   "orig": "Ete",
+   "name": "serializeContinuityState",
+   "line": 43321
   },
   {
    "orig": "H8",
@@ -7977,9 +8034,24 @@
    "line": 52329
   },
   {
+   "orig": "Mne",
+   "name": "Mne",
+   "line": 52332
+  },
+  {
    "orig": "ey",
    "name": "ey",
    "line": 52337
+  },
+  {
+   "orig": "zne",
+   "name": "toLocalLoreActorEntry",
+   "line": 52340
+  },
+  {
+   "orig": "Wv",
+   "name": "readLocalLoreActorState",
+   "line": 52355
   },
   {
    "orig": "Tne",
@@ -7990,6 +8062,11 @@
    "orig": "Lne",
    "name": "mergeLocalLoreActorState",
    "line": 52420
+  },
+  {
+   "orig": "Dne",
+   "name": "applyActorStateEdit",
+   "line": 52431
   },
   {
    "orig": "ER",
@@ -8020,6 +8097,11 @@
    "orig": "noe",
    "name": "noe",
    "line": 54416
+  },
+  {
+   "orig": "OBe",
+   "name": "readContinuityCheckpointsFromChatStore",
+   "line": 54434
   },
   {
    "orig": "RR",

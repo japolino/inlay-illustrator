@@ -27335,6 +27335,18 @@ function B8(e, t) {
         e.recentCheckpoints[r]?.length)
     );
   }
+// AM hDe @42968
+function hasContinuityData(e) {
+    return [
+      e.scenes,
+      e.characters,
+      e.modifierRefs,
+      e.outfitRefs,
+      e.nsfwPositions,
+      e.recentCheckpoints,
+      e.historicalStaticBases,
+    ].some((t) => Object.keys(t).length > 0);
+  }
 // AM gDe @42979
 function gDe(e) {
     if (typeof e == "string") return H8(e);
@@ -27500,6 +27512,102 @@ function Kv(e) {
 function lc(e) {
     return structuredClone(e);
   }
+// AM mA @43136
+function mA(e, t) {
+    return Object.fromEntries(Object.entries(e).filter(([r]) => !t.has(r)));
+  }
+// AM Wx @43139
+function Wx(e, t = "") {
+    if (Array.isArray(e)) return e.length ? e.map((n) => Wx(n)) : void 0;
+    const r = zn(e);
+    if (r) {
+      const n = Object.entries(r).flatMap(([o, a]) => {
+        if (lA.includes(o) && Fv(a) === 0) return [];
+        const i = Wx(a, o);
+        return i === void 0 ? [] : [[o, i]];
+      });
+      return n.length ? Object.fromEntries(n) : void 0;
+    }
+    if (e !== void 0 && !(t === "description" && e === "")) return e;
+  }
+// AM wDe @43152
+function wDe(e) {
+    const t = [],
+      r = (n) => {
+        const o = zn(n);
+        o && t.push(o);
+      };
+    r(e.scene);
+    for (const n of Object.values(e.characters)) r(n);
+    (r(e.modifierRefs), r(e.outfitRefs));
+    for (const n of Object.values(e.nsfwPositions?.scenes ?? {})) r(n);
+    return t;
+  }
+// AM xDe @43164
+function xDe(e) {
+    for (const t of wDe(e)) {
+      const r = Number(t.updatedAtChatIndex);
+      if (Number.isInteger(r) && r >= 0) return r;
+    }
+  }
+// AM pA @43170
+function pA(e, t) {
+    const r = Wx(e),
+      n = zn(r);
+    if (!n) return r;
+    const o = { ...n };
+    return (
+      Number(o.updatedAt) === t.capturedAt && delete o.updatedAt,
+      t.chatIndex !== void 0 && Number(o.updatedAtChatIndex) === t.chatIndex && delete o.updatedAtChatIndex,
+      Number(o.updatedAtMessageIndex) === t.messageIndex && delete o.updatedAtMessageIndex,
+      o.updatedAtMessageId === t.messageId && delete o.updatedAtMessageId,
+      o
+    );
+  }
+// AM _De @43183
+function _De(e) {
+    const t = xDe(e),
+      r = {
+        capturedAt: e.capturedAt,
+        messageId: e.messageId,
+        messageIndex: e.messageIndex,
+        ...(t === void 0 ? {} : { chatIndex: t }),
+      },
+      n = Object.fromEntries(
+        Object.entries(e.characters).flatMap(([c, l]) => {
+          const d = pA(l, r);
+          return d === void 0 ? [] : [[c, d]];
+        }),
+      ),
+      o = e.nsfwPositions
+        ? Wx({
+            activeSceneIdByCharacter: e.nsfwPositions.activeSceneIdByCharacter,
+            scenes: Object.fromEntries(
+              Object.entries(e.nsfwPositions.scenes).flatMap(([c, l]) => {
+                const d = pA(l, r);
+                return d === void 0 ? [] : [[c, d]];
+              }),
+            ),
+          })
+        : void 0,
+      a = pA(e.scene, r),
+      i = pA(e.modifierRefs, r),
+      s = pA(e.outfitRefs, r);
+    return {
+      messageId: e.messageId,
+      messageIndex: e.messageIndex,
+      ...(e.historyRevisionId ? { historyRevisionId: e.historyRevisionId } : {}),
+      ...(e.historyRevisionOrder === void 0 ? {} : { historyRevisionOrder: e.historyRevisionOrder }),
+      capturedAt: e.capturedAt,
+      ...(t === void 0 ? {} : { chatIndex: t }),
+      ...(a === void 0 ? {} : { scene: a }),
+      ...(Object.keys(n).length ? { characters: n } : {}),
+      ...(i === void 0 ? {} : { modifierRefs: i }),
+      ...(s === void 0 ? {} : { outfitRefs: s }),
+      ...(o === void 0 ? {} : { nsfwPositions: o }),
+      ...(e.participants ? { participants: e.participants } : {}),
+    };
+  }
 // AM hA @43226
 function hA(e, t) {
     const r = zn(e);
@@ -27546,6 +27654,27 @@ function IDe(e) {
       ...(t.participants === void 0 ? {} : { participants: t.participants }),
     };
   }
+// AM SDe @43270
+function SDe(e) {
+    const t = new Set(Object.keys(e.recentCheckpoints)),
+      r = Wx({
+        scenes: mA(e.scenes, t),
+        characters: mA(e.characters, t),
+        modifierRefs: mA(e.modifierRefs, t),
+        outfitRefs: mA(e.outfitRefs, t),
+        nsfwPositions: mA(e.nsfwPositions, t),
+      }),
+      n = Object.fromEntries(
+        Object.entries(e.recentCheckpoints).flatMap(([a, i]) => (i.length ? [[a, i.map(_De)]] : [])),
+      ),
+      o = Wx(e.historicalStaticBases);
+    return {
+      version: oc(e.version) ?? 1,
+      ...(r === void 0 ? {} : { current: r }),
+      ...(Object.keys(n).length ? { checkpoints: n } : {}),
+      ...(o === void 0 ? {} : { historicalStaticBases: o }),
+    };
+  }
 // AM kDe @43290
 function kDe(e) {
     return ["scenes", "characters", "modifierRefs", "outfitRefs", "nsfwPositions", "recentCheckpoints"].some((t) =>
@@ -27579,6 +27708,10 @@ function ADe(e) {
       recentCheckpoints: n,
       historicalStaticBases: Zl(t.historicalStaticBases),
     };
+  }
+// AM Ete @43321
+function serializeContinuityState(e) {
+    return JSON.stringify(SDe(e));
   }
 // AM H8 @43324
 function H8(e) {
@@ -36053,9 +36186,80 @@ function stripAccumulationState(e) {
 function dc(e) {
     return e !== null && typeof e == "object" && !Array.isArray(e) ? e : {};
   }
+// AM Mne @52332
+function Mne(e) {
+    return [
+      ...new Set((Array.isArray(e) ? e : []).filter((t) => typeof t == "string" && !!t.trim()).map((t) => t.trim())),
+    ];
+  }
 // AM ey @52337
 function ey(e) {
     return Number.isFinite(Number(e)) ? Math.max(0, Math.floor(Number(e))) : 0;
+  }
+// AM zne @52340
+function toLocalLoreActorEntry(e) {
+    const t = dc(e),
+      r = dc(dc(t._continuity_expires)[Zu[0]]),
+      n = ey(t._continuity_turn),
+      o = Object.fromEntries(
+        Zu.map((a) => [a, Mne(t[a]).filter((i) => a !== Zu[0] || r[i] === void 0 || ey(r[i]) >= n)]),
+      );
+    return {
+      groups: o,
+      count: ey(t.cum_count),
+      ttl: Object.fromEntries(
+        Object.entries(r).flatMap(([a, i]) => (o[Zu[0]].includes(a) && ey(i) >= n ? [[a, ey(i) - n]] : [])),
+      ),
+    };
+  }
+// AM Wv @52355
+function readLocalLoreActorState(e) {
+    const t = dc(e).localLore,
+      r = (Array.isArray(t) ? t : []).map(dc).find((o) => o.id === gR);
+    if (!r) return { revision: 0, actors: {} };
+    const n = typeof r.content == "string" ? r.content : "";
+    try {
+      if (!n.startsWith(Rne)) throw new Error();
+      const o = dc(JSON.parse(n.slice(15)));
+      if (
+        !o.actors ||
+        Array.isArray(o.actors) ||
+        typeof o.actors != "object" ||
+        !Number.isSafeInteger(o.revision) ||
+        Number(o.revision) < 1
+      )
+        throw new Error();
+      const a = {};
+      for (const [i, s] of Object.entries(dc(o.actors))) {
+        const c = dc(s);
+        if (
+          !i ||
+          /^(?:primary|secondary|actor_\d+|female_\d+|male_\d+)$/u.test(i) ||
+          !c.groups ||
+          Array.isArray(c.groups) ||
+          typeof c.groups != "object" ||
+          !c.ttl ||
+          Array.isArray(c.ttl) ||
+          typeof c.ttl != "object" ||
+          !Number.isSafeInteger(c.count) ||
+          Number(c.count) < 0
+        )
+          throw new Error();
+        for (const l of Zu) {
+          const d = dc(c.groups)[l];
+          if (!Array.isArray(d) || d.some((u) => typeof u != "string" || !u.trim())) throw new Error();
+        }
+        if (Object.values(dc(c.ttl)).some((l) => !Number.isSafeInteger(l) || Number(l) < 0)) throw new Error();
+        a[i] = {
+          groups: Object.fromEntries(Zu.map((l) => [l, Mne(dc(c.groups)[l])])),
+          count: ey(c.count),
+          ttl: Object.fromEntries(Object.entries(dc(c.ttl)).map(([l, d]) => [l, ey(d)])),
+        };
+      }
+      return { revision: Number(o.revision), actors: a };
+    } catch {
+      throw new Error("현재 채팅의 상태 데이터를 읽을 수 없습니다. 원본은 보존됩니다.");
+    }
   }
 // AM Tne @52403
 function writeLocalLoreActorState(e, t) {
@@ -36086,6 +36290,17 @@ function mergeLocalLoreActorState(e, t) {
         (r[n] = { ...a, ...o.groups, cum_count: o.count, _continuity_turn: i, _continuity_expires: s }));
     }
     return r;
+  }
+// AM Dne @52431
+function applyActorStateEdit(e, t) {
+    const r = Object.fromEntries(Zu.map((a) => [a, e.groups[a].filter((i) => t[a]?.includes(i))])),
+      n = r[Zu[0]],
+      o = e.groups[Zu[0]].length - n.length;
+    return {
+      groups: r,
+      count: n.length ? Math.max(0, e.count - o) : 0,
+      ttl: Object.fromEntries(Object.entries(e.ttl).filter(([a]) => n.includes(a))),
+    };
   }
 // AM ER @54208
 function ER(e) {
@@ -36134,6 +36349,27 @@ function noe(e) {
           ...(t.participants === void 0 ? {} : { participants: structuredClone(t.participants) }),
         }
       : null;
+  }
+// AM OBe @54434
+function readContinuityCheckpointsFromChatStore(e, t, r = new Map()) {
+    const n = Object.entries(e.messages).flatMap(([o, a]) =>
+      a.generations.flatMap((i, s) => {
+        const c = noe({ messageId: o, messageIndex: r.get(o) ?? 0, generation: i, generationIndex: s });
+        return c ? [c] : [];
+      }),
+    );
+    return n.length
+      ? Kv({
+          version: 1,
+          scenes: {},
+          characters: {},
+          modifierRefs: {},
+          outfitRefs: {},
+          nsfwPositions: {},
+          recentCheckpoints: { [t]: n },
+          historicalStaticBases: {},
+        })
+      : createEmptyContinuityState();
   }
 // AM RR @54454
 function RR(e) {
@@ -53768,6 +54004,7 @@ export {
   reconcileContinuityCheckpoints,
   createEmptyContinuityState,
   B8,
+  hasContinuityData,
   gDe,
   Cte,
   yDe,
@@ -53776,11 +54013,19 @@ export {
   Ote,
   Kv,
   lc,
+  mA,
+  Wx,
+  wDe,
+  xDe,
+  pA,
+  _De,
   hA,
   IDe,
+  SDe,
   kDe,
   jte,
   ADe,
+  serializeContinuityState,
   H8,
   RN,
   Nte,
@@ -54316,15 +54561,20 @@ export {
   Rne,
   stripAccumulationState,
   dc,
+  Mne,
   ey,
+  toLocalLoreActorEntry,
+  readLocalLoreActorState,
   writeLocalLoreActorState,
   mergeLocalLoreActorState,
+  applyActorStateEdit,
   ER,
   toe,
   roe,
   DA,
   kBe,
   noe,
+  readContinuityCheckpointsFromChatStore,
   RR,
   jBe,
   rebuildContinuityAtMessage,
