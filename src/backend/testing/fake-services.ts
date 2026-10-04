@@ -200,7 +200,8 @@ export function createFakeServices(overrides: FakeServicesOverrides = {}): FakeS
       for (const map of [fx.json, fx.binary] as Map<string, unknown>[]) for (const key of [...map.keys()]) if (key === path || key.startsWith(path.endsWith("/") ? path : `${path}/`)) map.delete(key);
     },
     async list(prefix) {
-      return [...fx.json.keys(), ...fx.binary.keys()].filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.endsWith("/") || prefix === "" ? prefix.length : prefix.length + 1));
+      // Like the real service: paths relative to the storage root.
+      return [...fx.json.keys(), ...fx.binary.keys()].filter((k) => k.startsWith(prefix));
     },
     async loadConfig() {
       return clone(fx.config.value);
