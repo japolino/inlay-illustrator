@@ -181,6 +181,14 @@ export function GenerationDock({ ctx, owner, draftKey, source }: GenerationProps
 
   const generate = async () => {
     update({ error: null });
+    // AM keeps the seed lock per prompt key: persist it so the next dock (and the chat pipeline) reuse it.
+    const t = session.target;
+    if (t.kind === "character" && t.characterId) {
+      const saved = ctx.workspace?.document.characterPrompt.seedSettings[t.promptKey];
+      const seed = String(session.seed ?? "").trim();
+      if (!saved || saved.seed !== seed || saved.fixed !== session.seedFixed)
+        void ctx.app.call("prompts.setSeed", { characterId: t.characterId, promptKey: t.promptKey, seed, fixed: session.seedFixed }).catch(() => undefined);
+    }
     try {
       const { jobId } = await ctx.app.call("outfitImage.generate", { target: session.target, formId: session.formId, ...(session.outfitId ? { outfitId: session.outfitId } : {}), draft: imageDraft });
       update({ jobId });

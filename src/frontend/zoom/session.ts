@@ -279,6 +279,11 @@ export function useZoomSession(app: AppController, initial: ZoomTarget, onClose:
       setSlotDeleting(true);
       try {
         const result = await app.call("history.deleteSlot", { previewToken: preview.previewToken });
+        // Image cleanup can fail transiently (storage / host): retry it once before reporting a partial result.
+        if (result.cleanupId && result.cleanup.some((c) => c.status === "failed")) {
+          const retried = await app.call("history.retryCleanup", { cleanupId: result.cleanupId }).catch(() => null);
+          if (retried) result.cleanup = [...result.cleanup.filter((c) => c.status !== "failed"), ...retried.cleanup];
+        }
         const count = (status: string) => result.cleanup.filter((c) => c.status === status).length;
         const failed = count("failed");
         app.notify({
