@@ -154,6 +154,7 @@ function setupDom(): { body: any; docListeners: Map<string, Array<(e: any) => vo
     removeEventListener() {}
   };
   (globalThis as any).requestAnimationFrame = (cb: () => void) => cb();
+  (globalThis as any).cancelAnimationFrame ??= () => {};
 
   return { body, docListeners };
 }

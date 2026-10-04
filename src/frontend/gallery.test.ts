@@ -78,6 +78,7 @@ function setupDom(): Array<any> {
     removeEventListener() {}
   };
   (globalThis as any).requestAnimationFrame = (cb: () => void) => cb();
+  (globalThis as any).cancelAnimationFrame ??= () => {};
   return [body];
 }
 
