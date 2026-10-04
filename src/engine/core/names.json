@@ -119,7 +119,8 @@
   "mergeLocalLoreActorState",
   "rebuildContinuityFromChatStore",
   "rebuildContinuityAtMessage",
-  "writeLocalLoreActorState"
+  "writeLocalLoreActorState",
+  "createCatalogSourceResolver"
  ],
  "renames": {
   "uV": "NovelAIV5RawValidationError",
@@ -250,7 +251,10 @@
   "lL": "ANIMA_DEFAULT_POSITIVE_PREFIX",
   "dL": "ANIMA_DEFAULT_NEGATIVE_PREFIX",
   "$je": "ANALYSIS_PROFILES",
-  "Hje": "normalizeAnalysisProfile"
+  "Hje": "normalizeAnalysisProfile",
+  "hlt": "createCatalogSourceResolver",
+  "flt": "DEFAULT_CATALOG_COMPILERS",
+  "n$e": "compileCustomV45Catalog"
  },
  "units": [
   {
@@ -6719,9 +6723,129 @@
    "line": 49359
   },
   {
+   "orig": "Kre",
+   "name": "Kre",
+   "line": 49378
+  },
+  {
+   "orig": "bF",
+   "name": "bF",
+   "line": 49379
+  },
+  {
+   "orig": "jKe",
+   "name": "jKe",
+   "line": 49380
+  },
+  {
+   "orig": "$re",
+   "name": "$re",
+   "line": 49381
+  },
+  {
+   "orig": "EKe",
+   "name": "EKe",
+   "line": 49382
+  },
+  {
+   "orig": "NKe",
+   "name": "NKe",
+   "line": 49383
+  },
+  {
+   "orig": "RKe",
+   "name": "RKe",
+   "line": 49384
+  },
+  {
+   "orig": "aR",
+   "name": "aR",
+   "line": 49385
+  },
+  {
+   "orig": "MKe",
+   "name": "MKe",
+   "line": 49386
+  },
+  {
+   "orig": "zKe",
+   "name": "zKe",
+   "line": 49387
+  },
+  {
+   "orig": "TKe",
+   "name": "TKe",
+   "line": 49388
+  },
+  {
+   "orig": "na",
+   "name": "na",
+   "line": 49389
+  },
+  {
    "orig": "bo",
    "name": "bo",
    "line": 49392
+  },
+  {
+   "orig": "Xd",
+   "name": "Xd",
+   "line": 49395
+  },
+  {
+   "orig": "Mp",
+   "name": "Mp",
+   "line": 49398
+  },
+  {
+   "orig": "LKe",
+   "name": "LKe",
+   "line": 49408
+  },
+  {
+   "orig": "n_",
+   "name": "n_",
+   "line": 49421
+  },
+  {
+   "orig": "DKe",
+   "name": "DKe",
+   "line": 49424
+  },
+  {
+   "orig": "iR",
+   "name": "iR",
+   "line": 49431
+  },
+  {
+   "orig": "FKe",
+   "name": "FKe",
+   "line": 49441
+  },
+  {
+   "orig": "KKe",
+   "name": "KKe",
+   "line": 49455
+  },
+  {
+   "orig": "vF",
+   "name": "vF",
+   "line": 49488
+  },
+  {
+   "orig": "Bre",
+   "name": "Bre",
+   "line": 49527
+  },
+  {
+   "orig": "$Ke",
+   "name": "$Ke",
+   "line": 49534
+  },
+  {
+   "orig": "BKe",
+   "name": "BKe",
+   "line": 49541
   },
   {
    "orig": "HKe",
@@ -6732,6 +6856,91 @@
    "orig": "wF",
    "name": "wF",
    "line": 49563
+  },
+  {
+   "orig": "UKe",
+   "name": "UKe",
+   "line": 49568
+  },
+  {
+   "orig": "qKe",
+   "name": "qKe",
+   "line": 49573
+  },
+  {
+   "orig": "GKe",
+   "name": "GKe",
+   "line": 49595
+  },
+  {
+   "orig": "VKe",
+   "name": "VKe",
+   "line": 49602
+  },
+  {
+   "orig": "XKe",
+   "name": "XKe",
+   "line": 49630
+  },
+  {
+   "orig": "Hre",
+   "name": "Hre",
+   "line": 49638
+  },
+  {
+   "orig": "WKe",
+   "name": "WKe",
+   "line": 49656
+  },
+  {
+   "orig": "YKe",
+   "name": "YKe",
+   "line": 49670
+  },
+  {
+   "orig": "xF",
+   "name": "xF",
+   "line": 49688
+  },
+  {
+   "orig": "ZKe",
+   "name": "ZKe",
+   "line": 49697
+  },
+  {
+   "orig": "JKe",
+   "name": "JKe",
+   "line": 49713
+  },
+  {
+   "orig": "QKe",
+   "name": "QKe",
+   "line": 49738
+  },
+  {
+   "orig": "Ure",
+   "name": "Ure",
+   "line": 49770
+  },
+  {
+   "orig": "e$e",
+   "name": "e$e",
+   "line": 49818
+  },
+  {
+   "orig": "t$e",
+   "name": "t$e",
+   "line": 49854
+  },
+  {
+   "orig": "r$e",
+   "name": "r$e",
+   "line": 49872
+  },
+  {
+   "orig": "n$e",
+   "name": "compileCustomV45Catalog",
+   "line": 49883
   },
   {
    "orig": "Xv",
@@ -9262,6 +9471,31 @@
    "orig": "FT",
    "name": "FT",
    "line": 100652
+  },
+  {
+   "orig": "flt",
+   "name": "DEFAULT_CATALOG_COMPILERS",
+   "line": 105863
+  },
+  {
+   "orig": "mlt",
+   "name": "mlt",
+   "line": 105864
+  },
+  {
+   "orig": "plt",
+   "name": "plt",
+   "line": 105867
+  },
+  {
+   "orig": "H6",
+   "name": "H6",
+   "line": 105870
+  },
+  {
+   "orig": "hlt",
+   "name": "createCatalogSourceResolver",
+   "line": 105876
   },
   {
    "orig": "glt",

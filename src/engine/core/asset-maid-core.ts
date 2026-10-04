@@ -32755,9 +32755,207 @@ function OKe(e) {
     }
     return [...t];
   }
+// AM Kre @49378
+var Kre = new Set(["global", "actor", "female", "male", "primary", "secondary", "persona"]);
+// AM bF @49379
+var bF = /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/;
+// AM jKe @49380
+var jKe = /^[a-z][a-z0-9_]*$/;
+// AM $re @49381
+var $re = /^(global|actor|female|male|primary|secondary|persona)\.[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*$/;
+// AM EKe @49382
+var EKe = /^[a-z][a-z0-9_]*$/;
+// AM NKe @49383
+var NKe = new Set(["ref", "include_options", "action", "order", "replace"]);
+// AM RKe @49384
+var RKe = new Set(["include_options", "source", "target"]);
+// AM aR @49385
+var aR = new Set(["female", "male", "primary", "secondary", "persona"]);
+// AM MKe @49386
+var MKe = new Set(["primary", "secondary", "persona"]);
+// AM zKe @49387
+var zKe = /^(viewer|subject|global|actor|female|male)\.[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/;
+// AM TKe @49388
+var TKe = new Set(["global.camera.view", "female.orientation.body", "male.orientation.body", "male.framing.crop"]);
+// AM na @49389
+function na(e) {
+    return e !== null && typeof e == "object" && !Array.isArray(e) ? e : null;
+  }
 // AM bo @49392
 function bo(e) {
     return typeof e == "string" || typeof e == "number" ? String(e).trim() : "";
+  }
+// AM Xd @49395
+function Xd(e) {
+    return e == null ? e : JSON.parse(JSON.stringify(e));
+  }
+// AM Mp @49398
+function Mp(e) {
+    const t = Array.isArray(e) ? e : e == null ? [] : [e],
+      r = [],
+      n = new Set();
+    for (const o of t) {
+      const a = bo(o);
+      !a || n.has(a) || (n.add(a), r.push(a));
+    }
+    return r;
+  }
+// AM LKe @49408
+function LKe(e) {
+    if (e == null) return {};
+    const t = na(e);
+    if (!t) throw new Error("Preset catalog v1 global.prompt_order must be an object.");
+    const r = {};
+    for (const [n, o] of Object.entries(t)) {
+      if (!$re.test(n)) throw new Error(`Invalid prompt order path: global.prompt_order.${n}`);
+      const a = Number(o);
+      if (!Number.isFinite(a)) throw new Error(`Invalid prompt order value: global.prompt_order.${n}`);
+      r[n] = a;
+    }
+    return r;
+  }
+// AM n_ @49421
+function n_(e) {
+    return Object.fromEntries(e.map((t) => [t.id, t]));
+  }
+// AM DKe @49424
+function DKe(e, t) {
+    if (!Array.isArray(e) || !e.length) throw new Error(`Preset catalog v1 modifier subjects[] is required: ${t}`);
+    const r = Mp(e);
+    for (const n of r) if (!Kre.has(n)) throw new Error(`Invalid preset modifier subject: ${t}.${n}`);
+    if (r.includes("global") && r.length > 1) throw new Error(`Preset modifier global subject cannot be mixed: ${t}`);
+    return r;
+  }
+// AM iR @49431
+function iR(e, t, r = {}) {
+    if (e == null || (r.allowSubjectPrompt && (typeof e == "string" || Array.isArray(e)))) return;
+    const n = na(e);
+    if (!n) throw new Error(`Preset catalog v1 semantic prompt map is required: ${t}`);
+    for (const o of Object.keys(n)) {
+      if (!$re.test(o)) throw new Error(`Invalid semantic prompt path: ${t}.${o}`);
+      if (r.variant && !TKe.has(o)) throw new Error(`Unsupported preset variant prompt path: ${t}.${o}`);
+    }
+    return n;
+  }
+// AM FKe @49441
+function FKe(e, t) {
+    const r = na(e);
+    if (!r) throw new Error("Preset modifier selection object is required.");
+    const n = bo(r.type);
+    if (n !== "single" && n !== "multi") throw new Error("Preset modifier selection.type must be single or multi.");
+    const o = t === "freeform" ? "multi" : n,
+      a = Math.floor(Number(r.max_tags));
+    return {
+      type: o,
+      required: t === "freeform" ? !!r.required : r.required === void 0 ? o === "single" : !!r.required,
+      default: t === "freeform" ? "" : bo(r.default),
+      maxTags: Number.isFinite(a) && a > 0 ? a : 0,
+    };
+  }
+// AM KKe @49455
+function KKe(e, t) {
+    if (e === void 0) return [];
+    if (!Array.isArray(e)) throw new Error(`Preset catalog v1 modifier options must be an array: ${t}`);
+    const r = [],
+      n = new Set();
+    for (const [o, a] of e.entries()) {
+      const i = na(a);
+      if (!i) continue;
+      const s = bo(i.id);
+      if (!s) throw new Error(`Preset modifier option id is required: ${t}[${o}]`);
+      if (n.has(s)) throw new Error(`Duplicate preset modifier option id: ${t}.${s}`);
+      if (Object.hasOwn(i, "scope"))
+        throw new Error(`Preset catalog v1 modifier option scope is not allowed: ${t}.${s}`);
+      iR(i.prompt, `${t}.${s}.prompt`, { allowSubjectPrompt: !0 });
+      const c = na(i.roll_priority);
+      if (i.roll_priority !== void 0 && !c)
+        throw new Error(`Preset modifier option roll_priority must be an object: ${t}.${s}`);
+      const l = c
+        ? Object.fromEntries(
+            Object.entries(c).map(([d, u]) => {
+              const f = bo(d),
+                m = Number(u);
+              if (!bF.test(f)) throw new Error(`Invalid roll_priority path: ${t}.${s}.${f}`);
+              if (!Number.isInteger(m) || m < 1)
+                throw new Error(`roll_priority must be a positive integer: ${t}.${s}.${f}`);
+              return [f, m];
+            }),
+          )
+        : void 0;
+      (n.add(s), r.push({ ...Xd(i), id: s, description: bo(i.description), ...(l ? { roll_priority: l } : {}) }));
+    }
+    return r;
+  }
+// AM vF @49488
+function vF(e, t, r = 50) {
+    const n = na(e);
+    if (!n) throw new Error(`Preset modifier must be an object: ${t}`);
+    const o = bo(n.id);
+    if (!bF.test(o)) throw new Error(`Invalid semantic modifier id: ${t || o}`);
+    const a = DKe(n.subjects, t),
+      i = bo(n.mode).toLowerCase() === "freeform" ? "freeform" : "options";
+    let s;
+    try {
+      s = FKe(n.selection, i);
+    } catch (h) {
+      throw new Error(`${t}: ${h.message}`);
+    }
+    iR(n.prompt, `${t}.prompt`, { allowSubjectPrompt: !0 });
+    const c = KKe(n.options, `${t}.options`);
+    if (i !== "freeform" && !c.length && !s.default) throw new Error(`Preset modifier options are empty: ${t}`);
+    s.default && !c.some((h) => h.id === s.default) && c.unshift({ id: s.default, description: "", prompt: [] });
+    const l = Number(n.order),
+      d = nee({ continuity: n.continuity, subjects: a, selectionType: s.type, context: t }),
+      u = JQ(n.counter, `${t}.counter`);
+    if (u && !d) throw new Error(`${t}.counter requires a continuity policy.`);
+    if (u && d?.scope !== "actor") throw new Error(`${t}.counter requires actor continuity scope.`);
+    if (u && d?.onValue !== "accumulate") throw new Error(`${t}.counter requires on_value: "accumulate".`);
+    const f = {
+        ...Xd(n),
+        id: o,
+        description: bo(n.description),
+        subjects: a,
+        mode: i,
+        selection: s,
+        order: Number.isFinite(l) ? l : r,
+        options: c,
+        optionsById: n_(c),
+        ...(d ? { continuity: Xd(d) } : {}),
+        ...(u ? { counter: Xd(u) } : {}),
+      },
+      m = Hre(n.action, f, `${t}.action`);
+    return (m ? (f.action = m) : delete f.action, d || delete f.continuity, u || delete f.counter, f);
+  }
+// AM Bre @49527
+function Bre(e, t) {
+    const r = bo(e),
+      [n, ...o] = (r.endsWith(".*") ? r.slice(0, -2) : r).split(".");
+    if (!Kre.has(n) || n === "actor" || !o.length || !o.every((a) => EKe.test(a)))
+      throw new Error(`Invalid preset modifier_policy pattern: ${t}.${r}`);
+    return r;
+  }
+// AM $Ke @49534
+function $Ke(e, t) {
+    const r = na(e) ?? {};
+    return {
+      exclude: Mp(r.exclude).map((n) => Bre(n, `${t}.exclude`)),
+      include: Mp(r.include).map((n) => Bre(n, `${t}.include`)),
+    };
+  }
+// AM BKe @49541
+function BKe(e, t) {
+    if (e == null) return {};
+    const r = na(e);
+    if (!r) throw new Error(`Preset catalog v1 role_map must be an object: ${t}`);
+    const n = {};
+    for (const [o, a] of Object.entries(r)) {
+      const i = bo(o);
+      if (i !== "female" && i !== "male") throw new Error(`Invalid role_map selector: ${t}.role_map.${o}`);
+      const s = bo(a);
+      if (!MKe.has(s)) throw new Error(`Invalid role_map slot: ${t}.role_map.${i}`);
+      n[i] = s;
+    }
+    return n;
   }
 // AM HKe @49555
 function HKe(e, t) {
@@ -32773,6 +32971,409 @@ function wF(e, t) {
     let r = !1;
     for (const n of e) HKe(n.pattern, t) && (r = n.action === "exclude");
     return r;
+  }
+// AM UKe @49568
+function UKe(e, t) {
+    if (!e.endsWith(".*")) return e === t;
+    const r = e.slice(0, -2);
+    return t === r || t.startsWith(`${r}.`);
+  }
+// AM qKe @49573
+function qKe(e) {
+    const t = na(e) ?? {},
+      r = {};
+    for (const [n, o] of Object.entries(t)) {
+      const a = bo(n),
+        i = na(o);
+      if (!jKe.test(a)) throw new Error(`Invalid preset modifier lane id: ${a}`);
+      if (!i) throw new Error(`Preset modifier lane must be an object: ${a}`);
+      if (bo(i.scope) !== "subject") throw new Error(`Preset modifier lane scope must be subject: ${a}`);
+      const s = Number(i.max_active_groups);
+      if (!Number.isInteger(s) || s < 1)
+        throw new Error(`Preset modifier lane max_active_groups must be positive: ${a}`);
+      const c = Mp(i.fallback_order);
+      for (const l of c) {
+        const d = l.endsWith(".*") ? l.slice(0, -2) : l;
+        if (!bF.test(d) || (d !== a && !d.startsWith(`${a}.`)))
+          throw new Error(`Invalid preset modifier lane fallback pattern: ${a}.${l}`);
+      }
+      r[a] = { scope: "subject", maxActiveGroups: s, fallbackOrder: c };
+    }
+    return r;
+  }
+// AM GKe @49595
+function GKe(e, t) {
+    return (
+      Object.entries(e)
+        .filter(([r]) => t === r || t.startsWith(`${r}.`))
+        .sort(([r], [n]) => n.length - r.length)[0] ?? null
+    );
+  }
+// AM VKe @49602
+function VKe(e, t) {
+    if (!Array.isArray(e)) throw new Error("Preset catalog v1 modifier_library must be an array.");
+    const r = [],
+      n = new Set();
+    for (const [a, i] of e.entries()) {
+      if (!na(i)) continue;
+      const s = vF(i, `modifier_library.${bo(na(i)?.id) || a}`, 50 + a);
+      if (n.has(s.id)) throw new Error(`Duplicate preset modifier id: ${s.id}`);
+      (n.add(s.id), r.push(s));
+    }
+    const o = n_(r);
+    for (const a of r) {
+      const i = GKe(t, a.id);
+      if (i) {
+        const [c, l] = i;
+        if (a.subjects.includes("global"))
+          throw new Error(`Subject-scoped modifier lane cannot contain a global modifier: ${a.id}`);
+        if (!l.fallbackOrder.some((d) => UKe(d, a.id)))
+          throw new Error(`Preset modifier lane fallback_order does not cover: ${a.id}`);
+        if (!a.id.startsWith(`${c}.`)) throw new Error(`Preset modifier lane mismatch: ${c}.${a.id}`);
+      }
+      const s = [a.description, ...a.options.map((c) => c.description)];
+      for (const c of s)
+        for (const l of c.matchAll(/`([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)`/gi))
+          if (!o[l[1]]) throw new Error(`Unknown modifier id in description: ${a.id} -> ${l[1]}`);
+    }
+    return { entries: r, byId: o };
+  }
+// AM XKe @49630
+function XKe(e, t) {
+    if (e == null) return [];
+    if (!Array.isArray(e)) throw new Error(`Preset catalog v1 modifiers must be an array: ${t}`);
+    return e.flatMap((r) => {
+      const n = na(r);
+      return n ? [Xd(n)] : [];
+    });
+  }
+// AM Hre @49638
+function Hre(e, t, r) {
+    if (e == null) return;
+    const n = na(e);
+    if (!n) throw new Error(`Preset modifier action must be an object: ${r}`);
+    const o = Object.keys(n).find((c) => !RKe.has(c));
+    if (o) throw new Error(`Unsupported preset modifier action field: ${r}.${o}`);
+    const a = bo(n.source),
+      i = bo(n.target);
+    if (!aR.has(a) || !aR.has(i)) throw new Error(`Preset modifier action requires valid source and target: ${r}`);
+    if (a === i) throw new Error(`Preset modifier action source and target must differ: ${r}`);
+    const s = n.include_options === void 0 ? void 0 : Mp(n.include_options);
+    if (n.include_options !== void 0 && !Array.isArray(n.include_options))
+      throw new Error(`Preset modifier action include_options must be an array: ${r}`);
+    if (s && !s.length) throw new Error(`Preset modifier action include_options must not be empty: ${r}`);
+    for (const c of s ?? [])
+      if (!t.optionsById[c]) throw new Error(`Unknown preset modifier action option ref: ${r}.${c}`);
+    return { source: a, target: i, ...(s ? { include_options: s } : {}) };
+  }
+// AM WKe @49656
+function WKe(e, t) {
+    if (e == null) return;
+    const r = na(e);
+    if (!r) throw new Error(`Preset variant viewpoint must be an object: ${t}`);
+    const n = bo(r.viewer),
+      o = bo(r.subject),
+      a = bo(r.mode);
+    if (!aR.has(n)) throw new Error(`Invalid preset variant viewpoint viewer: ${t}.${n}`);
+    if (!aR.has(o)) throw new Error(`Invalid preset variant viewpoint subject: ${t}.${o}`);
+    if (n === o) throw new Error(`Preset variant viewpoint viewer and subject must differ: ${t}`);
+    if (a !== "hands_only" && a !== "view_between_legs" && a !== "penis_only")
+      throw new Error(`Invalid preset variant viewpoint mode: ${t}.${a}`);
+    return { viewer: n, subject: o, mode: a };
+  }
+// AM YKe @49670
+function YKe(e, t, r) {
+    if (e == null) return;
+    const n = na(e);
+    if (!n) throw new Error(`Preset variant modifier_filter must be an object: ${t}`);
+    const o = na(n.deny);
+    if (!o) throw new Error(`Preset variant modifier_filter.deny must be an object: ${t}`);
+    const a = {};
+    for (const [i, s] of Object.entries(o)) {
+      if (!zKe.test(i)) throw new Error(`Invalid preset variant modifier filter path: ${t}.${i}`);
+      if (!r && (i.startsWith("viewer.") || i.startsWith("subject.")))
+        throw new Error(`Preset variant role filter requires viewpoint: ${t}.${i}`);
+      const c = Mp(s);
+      if (!c.length) throw new Error(`Preset variant modifier filter values are empty: ${t}.${i}`);
+      a[i] = c;
+    }
+    if (!Object.keys(a).length) throw new Error(`Preset variant modifier_filter.deny is empty: ${t}`);
+    return { deny: a };
+  }
+// AM xF @49688
+function xF(e, t, r) {
+    if (e == null) return;
+    if (!Array.isArray(e) || e.length !== 2) throw new Error(`Preset ${r} must be [priority, duration]: ${t}`);
+    const n = Number(e[0]),
+      o = Number(e[1]);
+    if (!Number.isInteger(n) || n < 1) throw new Error(`Preset ${r} priority must be a positive integer: ${t}`);
+    if (!Number.isInteger(o) || o < 1) throw new Error(`Preset ${r} duration must be a positive integer: ${t}`);
+    return [n, o];
+  }
+// AM ZKe @49697
+function ZKe(e, t) {
+    if (!Array.isArray(e) || !e.length) throw new Error(`Preset frame sizes must be a non-empty array: ${t}`);
+    const r = [],
+      n = new Set();
+    for (const [o, a] of e.entries()) {
+      const i = na(a);
+      if (!i) throw new Error(`Preset frame size must be an object: ${t}[${o}]`);
+      const s = Number(i.id);
+      if (!Number.isInteger(s) || s < 1) throw new Error(`Preset frame size id must be a positive integer: ${t}[${o}]`);
+      if (n.has(s)) throw new Error(`Duplicate preset frame size id: ${t}.${s}`);
+      const c = xF(i.size_roll, `${t}.${s}.size_roll`, "frame size_roll");
+      if (!c) throw new Error(`Preset frame size_roll is required: ${t}.${s}`);
+      (n.add(s), r.push({ id: s, size_roll: c }));
+    }
+    return r;
+  }
+// AM JKe @49713
+function JKe(e, t) {
+    if (e == null) return [];
+    if (!Array.isArray(e)) throw new Error(`Preset variant frames must be an array: ${t}`);
+    const r = [],
+      n = new Set();
+    for (const [o, a] of e.entries()) {
+      const i = na(a);
+      if (!i) throw new Error(`Preset frame must be an object: ${t}[${o}]`);
+      const s = bo(i.id);
+      if (!s) throw new Error(`Preset frame id is required: ${t}[${o}]`);
+      if (n.has(s)) throw new Error(`Duplicate preset frame id: ${t}.${s}`);
+      const c = xF(i.frame_roll, `${t}.${s}.frame_roll`, "frame_roll"),
+        l = ZKe(i.sizes, `${t}.${s}.sizes`);
+      (n.add(s),
+        r.push({
+          id: s,
+          ...(c ? { frame_roll: c } : {}),
+          sizes: l,
+          sizesById: Object.fromEntries(l.map((d) => [d.id, d])),
+        }));
+    }
+    if (r.length && !r.some((o) => o.frame_roll))
+      throw new Error(`Preset frames require at least one frame_roll candidate: ${t}`);
+    return r;
+  }
+// AM QKe @49738
+function QKe(e, t) {
+    if (e == null) return [];
+    if (!Array.isArray(e)) throw new Error(`Preset catalog v1 variants must be an array: ${t}`);
+    const r = [],
+      n = new Set();
+    for (const [o, a] of e.entries()) {
+      const i = na(a);
+      if (!i) continue;
+      const s = bo(i.id);
+      if (!s) throw new Error(`Preset variant id is required: ${t}[${o}]`);
+      if (n.has(s)) throw new Error(`Duplicate preset variant id: ${t}.${s}`);
+      iR(i.prompt ?? {}, `${t}.${s}.prompt`, { variant: !0 });
+      const c = WKe(i.viewpoint, `${t}.${s}.viewpoint`),
+        l = xF(i.camera_roll, `${t}.${s}.camera_roll`, "variant camera_roll"),
+        d = JKe(i.frames, `${t}.${s}.frames`),
+        u = YKe(i.modifier_filter, `${t}.${s}.modifier_filter`, !!c);
+      (n.add(s),
+        r.push({
+          ...Xd(i),
+          id: s,
+          description: bo(i.description),
+          when_to_use: Mp(i.when_to_use),
+          avoid_when: Mp(i.avoid_when),
+          ...(l ? { camera_roll: l } : {}),
+          ...(c ? { viewpoint: c } : {}),
+          ...(u ? { modifier_filter: u } : {}),
+          frames: d,
+          framesById: n_(d),
+        }));
+    }
+    return r;
+  }
+// AM Ure @49770
+function Ure(e, t, r, n = []) {
+    const o = na(e);
+    if (!o) throw new Error(`Preset node must be an object: ${n.join(".") || "root"}`);
+    const a = bo(o.type),
+      i = bo(o.id);
+    if (!a || (!i && a !== "root")) throw new Error(`Preset node id/type is required: ${n.join(".") || "root"}`);
+    if (a === "source")
+      throw new Error("Preset catalog v1 does not support source nodes. Use root composition children.");
+    const s = a === "root" ? n : [...n, i],
+      c = s.join(".") || "preset";
+    iR(o.prompt, `${c}.prompt`);
+    const l = XKe(o.modifiers, c).filter((f) => {
+      const m = bo(f.ref);
+      if (m) {
+        if (!t.has(m)) return !1;
+        const h = Object.keys(f).find((y) => !NKe.has(y));
+        if (h) throw new Error(`Unsupported preset modifier ref field: ${m}.${h}`);
+        if (f.include_options !== void 0 && !Array.isArray(f.include_options))
+          throw new Error(`Preset modifier include_options must be an array: ${m}`);
+        return !0;
+      }
+      return !0;
+    });
+    for (const [f, m] of l.entries()) {
+      if (bo(m.ref)) continue;
+      const h = vF(m, `${c}.modifiers[${f}]`, 50 + f);
+      if (t.has(h.id) || r.has(h.id)) throw new Error(`Duplicate preset modifier id: ${h.id}`);
+      r.set(h.id, `${c}.modifiers[${f}]`);
+    }
+    if (o.children !== void 0 && !Array.isArray(o.children))
+      throw new Error(`Preset catalog v1 children must be an array: ${c}`);
+    const d = (Array.isArray(o.children) ? o.children : []).map((f) => Ure(f, t, r, s)),
+      u = QKe(o.variants, `${c}.variants`);
+    return {
+      ...Xd(o),
+      id: i,
+      type: a,
+      description: bo(o.description),
+      ...(na(o.prompt) ? { prompt: Xd(na(o.prompt)) } : {}),
+      modifiers: l,
+      modifierPolicy: $Ke(o.modifier_policy, c),
+      roleMap: BKe(o.role_map, c),
+      variants: u,
+      variantsById: n_(u),
+      children: d,
+      childrenById: n_(d),
+    };
+  }
+// AM e$e @49818
+function e$e(e) {
+    const t = [],
+      r = (n, o, a) => {
+        const i = [...o, n],
+          s = n.type === "root" ? a : [...a, n.id];
+        if (!n.children.length && n.type === "position") {
+          const c = i.find((v) => v.type === "composition"),
+            l = [...i].reverse().find((v) => v.type === "category"),
+            d = [...i].reverse().find((v) => v.type === "position"),
+            u = s.join("."),
+            f = na(c?.actor_requirements),
+            m = Number(f?.female),
+            h = Number(f?.male),
+            y =
+              Number.isInteger(m) && m >= 0 && Number.isInteger(h) && h >= 0 && m + h >= 1 && m + h <= 3
+                ? { female: m, male: h }
+                : null;
+          t.push({
+            id: u,
+            key: d?.id ?? n.id,
+            localId: d?.id ?? n.id,
+            path: s,
+            pathString: u,
+            compositionId: c?.id ?? s[0] ?? "",
+            categoryId: l?.id ?? "",
+            positionId: d?.id ?? "",
+            ...(y ? { actorRequirements: y } : {}),
+            nodes: i,
+            node: n,
+          });
+          return;
+        }
+        for (const c of n.children) r(c, i, s);
+      };
+    return (r(e, [], []), t);
+  }
+// AM t$e @49854
+function t$e(e, t, r, n) {
+    const o = bo(e.ref);
+    if (!o) return { modifier: vF(e, r, n), replace: e.replace === !0 };
+    const a = t[o];
+    if (!a) return null;
+    const i = Xd(a);
+    if (e.include_options !== void 0) {
+      const l = Mp(e.include_options),
+        d = new Set(i.options.map((f) => f.id));
+      for (const f of l) if (!d.has(f)) throw new Error(`Unknown preset modifier option ref: ${o}.${f}`);
+      const u = new Set(l);
+      ((i.options = i.options.filter((f) => u.has(f.id))), (i.optionsById = n_(i.options)));
+    }
+    const s = Hre(e.action, i, `${r}.action`);
+    s && (i.action = s);
+    const c = Number(e.order);
+    return (Number.isFinite(c) && (i.order = c), { modifier: i, replace: e.replace === !0 });
+  }
+// AM r$e @49872
+function r$e(e) {
+    const t = { global: [], actors: [] };
+    for (const r of e) {
+      const n = na(r.continuity);
+      if (n?.requestReference !== !0) continue;
+      const o = bo(n.scope).toLowerCase(),
+        a = o === "global" ? t.global : o === "actor" ? t.actors : null;
+      a && !a.includes(r.id) && a.push(r.id);
+    }
+    return t;
+  }
+// AM n$e @49883
+function compileCustomV45Catalog(e) {
+    const t = na(e);
+    if (!t) throw new Error("Preset catalog must be an object.");
+    const r = Xd(t),
+      n = oc(r.version);
+    if (n === null) throw new Error("Preset catalog requires a positive version marker.");
+    const o = na(r.presets);
+    if (!o || bo(o.type) !== "root") throw new Error("Preset catalog requires a root presets tree.");
+    const a = Xd(na(r.global) ?? {}),
+      i = LKe(a.prompt_order),
+      s = qKe(r.modifier_lanes),
+      c = VKe(r.modifier_library, s),
+      l = Ure(o, new Set(c.entries.map((v) => v.id)), new Map()),
+      d = e$e(l),
+      u = Object.fromEntries(d.map((v) => [v.id, v])),
+      f = {},
+      m = {},
+      h = {},
+      y = {};
+    for (const v of d) {
+      const w = new Map(),
+        x = [],
+        _ = {};
+      let I = 0;
+      for (const A of v.nodes) {
+        (A.modifierPolicy.exclude.forEach((N) => x.push({ action: "exclude", pattern: N })),
+          A.modifierPolicy.include.forEach((N) => x.push({ action: "include", pattern: N })),
+          Object.assign(_, A.roleMap));
+        const C = A.type === "root" ? "global" : "local",
+          E = A.type === "root" ? "root" : v.path.slice(0, Math.max(1, v.nodes.indexOf(A))).join(".");
+        for (const [N, T] of A.modifiers.entries()) {
+          const D = t$e(T, c.byId, `${v.id}.modifiers[${N}]`, 50 + I);
+          if (!D) continue;
+          const { modifier: K, replace: X } = D;
+          if (w.has(K.id) && !X)
+            throw new Error(`Preset catalog v1 duplicate modifier requires replace: true: ${v.id}.${K.id}`);
+          (w.set(K.id, { ...K, source: C, sourcePath: E, __sequence: I }), (I += 1));
+        }
+      }
+      const k = [...w.values()]
+          .sort((A, C) => A.order - C.order || Number(A.__sequence) - Number(C.__sequence))
+          .map((A) => {
+            const C = { ...A };
+            return (delete C.__sequence, C);
+          }),
+        P = k.find((A) => A.id === "framing.crop");
+      for (const A of v.node.variants)
+        for (const C of A.frames ?? []) {
+          if (!P) throw new Error(`Preset variant frame requires framing.crop: ${v.id}.${A.id}.${C.id}`);
+          if (!P.optionsById[C.id]) throw new Error(`Unknown preset frame option: ${v.id}.${A.id}.${C.id}`);
+        }
+      ((f[v.id] = k), (m[v.id] = r$e(k)), (h[v.id] = x), (y[v.id] = _));
+    }
+    return {
+      version: n,
+      global: a,
+      promptOrder: i,
+      analyzerModifierFeatures: Xd(r.analyzer_modifier_features),
+      modifierLibrary: c.entries,
+      modifierLibraryById: c.byId,
+      modifierLanes: s,
+      presets: l,
+      presetIndex: d,
+      presetById: u,
+      effectiveModifiersByPreset: f,
+      referenceStateByPreset: m,
+      modifierPolicyByPreset: h,
+      roleMapByPreset: y,
+      raw: r,
+    };
   }
 // AM Xv @49954
 function Xv(e, t) {
@@ -40547,6 +41148,47 @@ function FT({ source: e, selectedLorebooks: t = {}, workspaceDisabledLorebooks: 
       };
     });
     return ((n.characterLoreProjectionInputs = o), (n.characterLoreProjections = l), l);
+  }
+// AM flt @105863
+var DEFAULT_CATALOG_COMPILERS = { compileCustom: compileCustomV45Catalog, getDefaultRules: createV45RuleRuntime };
+// AM mlt @105864
+function mlt(e) {
+    return typeof e == "string" ? e.trim() : "";
+  }
+// AM plt @105867
+function plt(e, t) {
+    return H6(e, t instanceof Error ? t.message : String(t));
+  }
+// AM H6 @105870
+function H6(e, t = "") {
+    const r = e.getDefaultRules();
+    if (!r.wireIds.complete)
+      throw new Error("The built-in Rule IR cannot be activated because an Analyzer v1 route ID map is incomplete.");
+    return { catalog: null, source: "default", warning: t, ruleRuntime: r };
+  }
+// AM hlt @105876
+function createCatalogSourceResolver(e = DEFAULT_CATALOG_COMPILERS) {
+    let t = null,
+      r = null;
+    return {
+      getSnapshot() {
+        return ((r ??= H6(e)), r);
+      },
+      resolve(n = "") {
+        const o = mlt(n);
+        if (t === o && r) return r;
+        if (!o) return ((r = H6(e)), (t = o), r);
+        try {
+          r = { catalog: e.compileCustom(JSON.parse(o)), source: "custom", warning: "", ruleRuntime: null };
+        } catch (a) {
+          r = plt(e, a);
+        }
+        return ((t = o), r);
+      },
+      invalidate() {
+        t = null;
+      },
+    };
   }
 // AM glt @105899
 var glt = new Set([
@@ -52471,9 +53113,50 @@ export {
   CKe,
   Fre,
   OKe,
+  Kre,
+  bF,
+  jKe,
+  $re,
+  EKe,
+  NKe,
+  RKe,
+  aR,
+  MKe,
+  zKe,
+  TKe,
+  na,
   bo,
+  Xd,
+  Mp,
+  LKe,
+  n_,
+  DKe,
+  iR,
+  FKe,
+  KKe,
+  vF,
+  Bre,
+  $Ke,
+  BKe,
   HKe,
   wF,
+  UKe,
+  qKe,
+  GKe,
+  VKe,
+  XKe,
+  Hre,
+  WKe,
+  YKe,
+  xF,
+  ZKe,
+  JKe,
+  QKe,
+  Ure,
+  e$e,
+  t$e,
+  r$e,
+  compileCustomV45Catalog,
   Xv,
   jA,
   _F,
@@ -52980,6 +53663,11 @@ export {
   _st,
   ZP,
   FT,
+  DEFAULT_CATALOG_COMPILERS,
+  mlt,
+  plt,
+  H6,
+  createCatalogSourceResolver,
   glt,
   ylt,
   blt,

@@ -119,7 +119,8 @@
   "Lne",
   "aoe",
   "ooe",
-  "Tne"
+  "Tne",
+  "hlt"
  ],
  "renames": {
   "uV": "NovelAIV5RawValidationError",
@@ -250,6 +251,9 @@
   "lL": "ANIMA_DEFAULT_POSITIVE_PREFIX",
   "dL": "ANIMA_DEFAULT_NEGATIVE_PREFIX",
   "$je": "ANALYSIS_PROFILES",
-  "Hje": "normalizeAnalysisProfile"
+  "Hje": "normalizeAnalysisProfile",
+  "hlt": "createCatalogSourceResolver",
+  "flt": "DEFAULT_CATALOG_COMPILERS",
+  "n$e": "compileCustomV45Catalog"
  }
 }
