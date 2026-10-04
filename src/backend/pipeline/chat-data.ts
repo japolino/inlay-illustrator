@@ -190,6 +190,8 @@ export interface UiStateInput {
   job?: GenerationJobSnapshot;
   regeneratingSlotIds?: ReadonlySet<string>;
   lastError?: RpcError;
+  /** A message-level job runs (default: `job` is queued/running). Single-slot regenerations do not make the footer busy. */
+  busy?: boolean;
 }
 
 export function messageUiState(doc: ChatDataDocument, input: UiStateInput): ChatMessageUiState {
@@ -232,7 +234,7 @@ export function messageUiState(doc: ChatDataDocument, input: UiStateInput): Chat
     };
   });
   const active = message?.revisions.find((r) => r.revisionId === activeRevisionId);
-  const busy = !!input.job && (input.job.status === "queued" || input.job.status === "running");
+  const busy = input.busy ?? (!!input.job && (input.job.status === "queued" || input.job.status === "running"));
   return {
     chatId: input.chatId,
     messageId: input.messageId,

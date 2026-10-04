@@ -246,7 +246,8 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
       wrapper = inject(target, position);
       footers.set(messageId, wrapper);
     }
-    const job = jobForMessage(jobs, state) ?? state.job;
+    // state.job may be the last FINISHED job (kept until dismissed): only a busy state supplies a running job.
+    const job = jobForMessage(jobs, state) ?? (state.busy ? state.job : undefined);
     if (job && pendingFooter.has(state.messageKey) && jobs[job.jobId]) pendingFooter.delete(state.messageKey);
     const pending = pendingFooter.has(state.messageKey);
     const busy = state.busy || !!job || pending;
@@ -305,7 +306,7 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
       return;
     }
     if (action === "cancel") {
-      const job = jobForMessage(app.state.generationJobs, state) ?? state.job;
+      const job = jobForMessage(app.state.generationJobs, state) ?? (state.busy ? state.job : undefined);
       pendingFooter.delete(state.messageKey);
       try {
         await app.call("generation.cancel", job ? { jobId: job.jobId } : { chatId, messageKey: state.messageKey });

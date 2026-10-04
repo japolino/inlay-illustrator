@@ -860,8 +860,11 @@ export function createChatPipelineController(services: BackendServices, engine: 
       const target = await services.images.resolveTarget();
       if (engineProviderFor(target) !== record.engineProvider)
         throw new RpcFailure(rpcError("unsupported", "The image provider changed since this image was generated. Regenerate the whole message instead.", { retryable: false }));
-      const overrides = job.regenerate?.overrides ?? sidecar.drafts[slotId]?.overrides;
-      const keepSeed = !!job.regenerate?.overrides && !!overrides?.seedFixed;
+      // The zoom draft (prompts, centers, artist / outfit picks) is the base; explicit request overrides win per field.
+      const draft = sidecar.drafts[slotId]?.overrides;
+      const explicit = job.regenerate?.overrides;
+      const overrides = draft || explicit ? { ...(draft ?? {}), ...(explicit ?? {}) } : undefined;
+      const keepSeed = !!overrides?.seedFixed;
       const rebuilt = await applyArtistAndOutfits(chatId, record, overrides);
       const request = regenerationRequest(record, overrides, keepSeed, config, slotId, rebuilt);
       const chat = await getChat(chatId);
@@ -1664,7 +1667,8 @@ export function createChatPipelineController(services: BackendServices, engine: 
         if (m.role !== "assistant") continue;
         if (wanted ? !wanted.has(m.id) : !isIllustratableMessage(m)) continue;
         const planKey = illustrationMessageKey(toHistoryMessageId(m.id, m.swipeId));
-        const running = messageJobs.get(k(chatId, planKey)) ?? [...slotJobs.values()].find((j) => j.target.chatId === chatId && j.planKey === planKey);
+        const messageJob = messageJobs.get(k(chatId, planKey));
+        const running = messageJob ?? [...slotJobs.values()].find((j) => j.target.chatId === chatId && j.planKey === planKey);
         const latest = running ?? [...jobs.values()].reverse().find((j) => j.target.chatId === chatId && j.planKey === planKey && !j.dismissed);
         const lastError = lastErrors.get(k(chatId, planKey));
         out.push(
@@ -1674,6 +1678,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
             swipeIndex: m.swipeId,
             eligible: isIllustratableMessage(m),
             ...(latest ? { job: jsonClone(latest.snapshot) } : {}),
+            busy: !!messageJob && (messageJob.snapshot.status === "queued" || messageJob.snapshot.status === "running"),
             regeneratingSlotIds: regenerating,
             ...(lastError ? { lastError } : {}),
           }),
