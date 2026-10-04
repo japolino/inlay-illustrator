@@ -187,6 +187,8 @@ export interface GenerationJobSnapshot {
   jobId: string;
   chatId: string;
   messageKey: string;
+  /** Single-slot jobs (regenerate): the slot (per-slot spinner). */
+  slotId?: string;
   attemptKind: AttemptKind;
   status: JobStatus;
   phase: GenerationPhase;
@@ -215,7 +217,22 @@ export interface RegenerationOverrides {
   outfitByActor?: Record<string, string>;
 }
 
-export interface ZoomPromptSection { id: string; target: "provider" | "main" | "actor"; actorIndex?: number; label: string; value: string; negativeValue: string; centerX?: number; centerY?: number }
+export interface ZoomPromptSection {
+  id: string;
+  target: "provider" | "main" | "actor";
+  actorIndex?: number;
+  label: string;
+  value: string;
+  negativeValue: string;
+  centerX?: number;
+  centerY?: number;
+  /** Per-card artist select (AM zoom artist choices). */
+  artistChoices?: { id: string; label: string }[];
+  selectedArtistId?: string;
+  /** Per-actor outfit select. */
+  outfitChoices?: { id: string; label: string }[];
+  selectedOutfitId?: string;
+}
 export interface ZoomDetails {
   chatId: string;
   messageKey: string;
@@ -437,9 +454,14 @@ export interface RpcMethods {
   /* chat state window (AM "accumulated state of the current chat") */
   "chatState.get": { params: { chatId: string }; result: { actorState: CurrentActorState } };
   "chatState.clear": { params: { chatId: string; actorKeys?: string[] }; result: { actorState: CurrentActorState } };
+  /** Save an edited actor state (AM per-tag deselect + save). `baseRevision` = `actorState.revision` the UI edited (mismatch -> conflict). */
+  "chatState.set": { params: { chatId: string; actorState: CurrentActorState; baseRevision: number }; result: { actorState: CurrentActorState } };
 
   /* chat DOM (footers / edge controls, see chat-dom.ts) */
-  /** Per-message UI state for the injected chat controls. `messageIds` = Lumiverse message ids (all swipes' active one); empty = every message with data. */
+  /**
+   * Per-message UI state for the injected chat controls. `messageIds` = Lumiverse message ids (state of the active swipe).
+   * Without `messageIds`: every eligible assistant message of the chat (with or without data).
+   */
   "chatDom.getMessageStates": { params: { chatId: string; messageIds?: string[] }; result: { messages: ChatMessageUiState[] } };
 }
 
@@ -519,7 +541,7 @@ export const RPC_METHODS = [
   "generation.start", "generation.cancel", "generation.retry", "generation.restart", "generation.dismiss", "generation.listActive", "generation.regenerateSlot",
   "history.get", "history.selectEntry", "history.selectRevision", "history.deleteEntry", "history.prepareSlotDeletion", "history.deleteSlot", "history.retryCleanup",
   "zoom.getDetails", "zoom.saveDraft", "zoom.clearDraft", "zoom.importViewed", "zoom.requestAiPromptEdit", "zoom.applyAiPromptEdit",
-  "chatState.get", "chatState.clear",
+  "chatState.get", "chatState.clear", "chatState.set",
   "chatDom.getMessageStates",
 ] as const satisfies readonly RpcMethod[];
 
