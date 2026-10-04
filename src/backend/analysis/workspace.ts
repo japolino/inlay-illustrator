@@ -121,6 +121,19 @@ export function summarizeMetadataAvailability(raw: Record<string, unknown>): Rec
   return out;
 }
 
+/** Per-asset metadata check results by asset name (a positive result wins when an asset appears in several records). */
+export function summarizeAssetMetadata(raw: Record<string, unknown>): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  for (const value of Object.values(raw)) {
+    const assets: Any[] = Array.isArray((value as Any)?.assets) ? (value as Any).assets : [];
+    for (const a of assets) {
+      const name = typeof a?.name === "string" ? a.name : "";
+      if (name) out[name] = out[name] === true || a.hasMetadata === true;
+    }
+  }
+  return out;
+}
+
 export async function loadWorkspaceSnapshot(services: BackendServices, characterId: string, options: { reload?: boolean; chatId?: string } = {}): Promise<WorkspaceSnapshot> {
   if (options.reload) services.sources.invalidate(characterId);
   const [character, parts, images] = await Promise.all([
@@ -159,6 +172,7 @@ export async function loadWorkspaceSnapshot(services: BackendServices, character
     sources,
     charxSettings: resolveEffectiveConfig(parts.global, { characterId, document }),
     metadataAvailability: summarizeMetadataAvailability(parts.metadata),
+    assetMetadata: summarizeAssetMetadata(parts.metadata),
   };
 }
 

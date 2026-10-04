@@ -82,15 +82,14 @@ function Thumb({ asset, onRemove, onZoom, priority, hasMetadata, characterId }: 
   );
 }
 
-function ThumbStrip({ assets, onRemove, characterId, metadata }: { assets: AssetRef[]; onRemove: (asset: AssetRef) => void; characterId: string | null; metadata: Record<string, string> }) {
+function ThumbStrip({ assets, onRemove, characterId, metadata }: { assets: AssetRef[]; onRemove: (asset: AssetRef) => void; characterId: string | null; metadata: Record<string, boolean> }) {
   const [zoom, setZoom] = useState<AssetRef | null>(null);
   return (
     <>
       <div class="scrollbar-none flex h-full min-w-0 items-start gap-2 overflow-x-auto overscroll-x-contain" data-asset-strip="">
         {assets.map((asset, i) => {
-          const state = metadata[asset.name];
           return <Thumb key={`${asset.key}|${asset.name}`} asset={asset} priority={i < 4} characterId={characterId} onRemove={() => onRemove(asset)} onZoom={() => setZoom(asset)}
-            hasMetadata={state === "available" ? true : state === "none" ? false : undefined} />;
+            hasMetadata={metadata[asset.name]} />;
         })}
       </div>
       <AssetViewer asset={zoom} onClose={() => setZoom(null)} />
@@ -138,7 +137,7 @@ function CharxRow({ ctx, item, hidden }: { ctx: WorkspaceCtx; item: RosterItem; 
         </>
       }
     >
-      <ThumbStrip assets={assets} characterId={characterId} metadata={(workspace?.metadataAvailability ?? {}) as Record<string, string>}
+      <ThumbStrip assets={assets} characterId={characterId} metadata={workspace?.assetMetadata ?? {}}
         onRemove={(asset) => characterId && void writeSelection(app, characterId, item.promptKey, assets.filter((a) => a !== asset))} />
     </WorkbenchRow>
   );

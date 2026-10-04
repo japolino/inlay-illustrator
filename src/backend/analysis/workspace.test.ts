@@ -15,6 +15,8 @@ import {
   setRosterRegistered,
   setSeed,
   setSourceConnected,
+  summarizeAssetMetadata,
+  summarizeMetadataAvailability,
 } from "./workspace.js";
 import { ALICE, BOB, CHAR, HERO, createAnalysisFixture } from "./testing/fixtures.js";
 
@@ -59,6 +61,18 @@ describe("workspace projection", () => {
     const row = (await snapshot(fx)).roster.find((r) => r.promptKey === ALICE)!;
     expect(row.mainPrompt).toBe("red hair, green eyes");
     expect(row.analyzeEnabled).toBe(false);
+  });
+});
+
+describe("metadata cache summaries", () => {
+  test("per-record availability and per-asset results by name", () => {
+    const raw = {
+      [CHAR]: { assets: [{ name: "a.png", key: "k1", hasMetadata: true }, { name: "b.png", key: "k2", hasMetadata: false }] },
+      "module::m1": { assets: [{ name: "b.png", key: "k2", hasMetadata: true }] },
+    };
+    expect(summarizeMetadataAvailability(raw)).toEqual({ [CHAR]: "partial", "module::m1": "available" });
+    expect(summarizeAssetMetadata(raw)).toEqual({ "a.png": true, "b.png": true });
+    expect(summarizeAssetMetadata({ x: { assets: [{ name: "c.png", hasMetadata: false }] } })).toEqual({ "c.png": false });
   });
 });
 

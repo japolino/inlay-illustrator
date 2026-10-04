@@ -112,6 +112,8 @@ export interface WorkspaceSnapshot {
   charxSettings: EffectiveCharxSettings;
   /** Per-character metadata check cache (AM metadata-cache domain). */
   metadataAvailability: Record<string, MetadataAvailability>;
+  /** Per-asset metadata check result by asset name (from the metadata cache records' `assets[]`); unchecked assets are absent. */
+  assetMetadata?: Record<string, boolean>;
 }
 
 export interface PersonaSummary { personaId: string; name: string; avatarUrl: string | null; description: string; isActive: boolean; isBound: boolean; profile: PersonaProfile | null; forms: FormCollection }
