@@ -7,7 +7,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { buildOverlayCss, OVERLAY_CSS_OUTPUT } from "../../build/build-css.js";
 
-export const PREVIEW_DIR = resolve(import.meta.dir, "../../../.cache/ui-preview");
+/** Output dir; set II_PREVIEW_DIR to use a private dir when several agents build at once. */
+export const PREVIEW_DIR = resolve(process.env.II_PREVIEW_DIR || resolve(import.meta.dir, "../../../.cache/ui-preview"));
 
 export async function buildPreview(options: { css?: boolean } = {}): Promise<string> {
   if (options.css !== false) writeFileSync(OVERLAY_CSS_OUTPUT, buildOverlayCss());

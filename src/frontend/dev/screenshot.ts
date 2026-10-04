@@ -3,7 +3,7 @@
  *   bun run src/frontend/dev/screenshot.ts [name=hash ...] [--out=dir] [--no-build] [--only=desktop|mobile]
  * Example: bun run src/frontend/dev/screenshot.ts assets=open=assets settings-model=settings=model
  * Writes <out>/<name>-desktop.png (1440x900) and <out>/<name>-mobile.png (390x844). Default out: .cache/ui-shots
- * Env BROWSER overrides the browser path.
+ * Env BROWSER overrides the browser path; II_PREVIEW_DIR sets a private preview build dir.
  */
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
@@ -46,7 +46,7 @@ export async function screenshots(shots: Array<{ name: string; hash: string }>, 
         const file = join(out, `${shot.name}-${kind}.png`);
         rmSync(file, { force: true });
         const args = [browser, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--no-default-browser-check",
-          `--user-data-dir=${join(PREVIEW_DIR, "../browser-profile")}`, `--window-size=${w},${h}`, `--virtual-time-budget=${options.budgetMs ?? 6000}`,
+          `--user-data-dir=${PREVIEW_DIR}-browser-profile`, `--window-size=${w},${h}`, `--virtual-time-budget=${options.budgetMs ?? 6000}`,
           ...(kind === "mobile" ? ["--force-device-scale-factor=1", "--touch-events=enabled"] : []),
           `--screenshot=${file}`, `http://127.0.0.1:${server.port}/index.html#${shot.hash}`];
         // Async spawn: a sync spawn would block this process's preview server.
