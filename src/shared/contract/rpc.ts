@@ -121,6 +121,15 @@ export interface WorkspaceSnapshot {
 }
 
 export interface PersonaSummary { personaId: string; name: string; avatarUrl: string | null; description: string; isActive: boolean; isBound: boolean; profile: PersonaProfile | null; forms: FormCollection }
+export interface PersonaFormSelection {
+  chatId: string;
+  personaId: string | null;
+  personaName: string;
+  forms: Array<{ id: string; label: string }>;
+  selectedFormId: string | null;
+  missingForm: boolean;
+  supported: boolean;
+}
 
 export type AssetFilter = "all" | "candidate" | "chat" | "outfit" | "original" | "generated";
 export interface AssetListItem { asset: AssetRef; kind: AssetKind; url: string; thumbnailUrl: string; width?: number; height?: number; hasMetadata?: boolean; selected: boolean; candidate: boolean }
@@ -525,6 +534,8 @@ export interface RpcMethods {
 
   /* chat state window (AM "accumulated state of the current chat") */
   "chatState.get": { params: { chatId: string }; result: { actorState: CurrentActorState } };
+  "personaForm.get": { params: { chatId: string }; result: PersonaFormSelection };
+  "personaForm.set": { params: { chatId: string; personaId: string; formId: string | null }; result: PersonaFormSelection };
   "chatState.clear": { params: { chatId: string; actorKeys?: string[] }; result: { actorState: CurrentActorState } };
   /** Save an edited actor state (AM per-tag deselect + save). `baseRevision` = `actorState.revision` the UI edited (mismatch -> conflict). */
   "chatState.set": { params: { chatId: string; actorState: CurrentActorState; baseRevision: number }; result: { actorState: CurrentActorState } };
@@ -629,7 +640,7 @@ export const RPC_METHODS = [
   "generation.start", "generation.cancel", "generation.retry", "generation.restart", "generation.dismiss", "generation.listActive", "generation.regenerateSlot",
   "history.get", "history.selectEntry", "history.selectRevision", "history.deleteEntry", "history.prepareSlotDeletion", "history.deleteSlot", "history.retryCleanup",
   "zoom.getDetails", "zoom.saveDraft", "zoom.clearDraft", "zoom.importViewed", "zoom.requestAiPromptEdit", "zoom.applyAiPromptEdit",
-  "chatState.get", "chatState.clear", "chatState.set",
+  "chatState.get", "chatState.clear", "chatState.set", "personaForm.get", "personaForm.set",
   "chatDom.getMessageStates",
   "webtoon.get", "webtoon.rerollPanel", "webtoon.editText", "webtoon.selectTake",
   "puppet.get", "puppet.rig", "puppet.setEnabled",

@@ -5,6 +5,7 @@ import { RUNTIME_CORNER_OPTIONS, type RuntimeCorner, type RuntimeCornerPreferenc
 import { LAUNCHER_LABELS as L } from "./labels.js";
 import { useStore, type FrontendStore } from "./store.js";
 import { Button, Select, SettingsIcon, Switch, cn } from "./ui/index.js";
+import { PersonaFormControl } from "./persona-form-control.js";
 
 export type LauncherPanelProps = {
   app: AppController;
@@ -71,6 +72,7 @@ function LauncherBody({ app, store, onOpen, onOpenSettings, corner: cornerPrefer
           <Switch aria-label={L.autoGeneration} checked={chatSettings.autoGenerationEnabled} onCheckedChange={(checked) => void app.setChatImageGeneration({ ...chatSettings, autoGenerationEnabled: checked })} />
         </label>
       ) : null}
+      {status?.activeChatId ? <PersonaFormControl key={status.activeChatId} app={app} chatId={status.activeChatId} /> : null}
       <div class="flex items-center justify-between gap-3 rounded-md bg-card px-3 py-2">
         <span class="text-xs font-bold" id="ii-launcher-runtime-corner">{L.runtimeCorner}</span>
         <div class="w-36">

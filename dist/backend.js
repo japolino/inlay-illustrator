@@ -4385,7 +4385,19 @@ function checkParts(raw, chatId) {
   const a = validateCurrentActorState(raw.actorState);
   if (!a.ok)
     issues.push(...a.issues.map(fromStoreIssue("actorState")));
-  return { issues, store, history, plans, plansValid, actorState: a.ok ? a.state : null };
+  const selections = {};
+  if (raw.personaFormSelections !== undefined) {
+    if (!isRecord2(raw.personaFormSelections))
+      issues.push({ part: "document", code: "persona-form-selections", path: "$.personaFormSelections", message: "Persona form selections must be an object." });
+    else
+      for (const [personaId, formId] of Object.entries(raw.personaFormSelections)) {
+        if (!personaId.trim() || typeof formId !== "string" || !formId.trim() || personaId !== personaId.trim() || formId !== formId.trim())
+          issues.push({ part: "document", code: "persona-form-selection", path: `$.personaFormSelections.${personaId}`, message: "Persona and form ids must be nonempty strings." });
+        else
+          Object.defineProperty(selections, personaId, { value: formId, enumerable: true, writable: true, configurable: true });
+      }
+  }
+  return { issues, store, history, plans, plansValid, actorState: a.ok ? a.state : null, ...Object.keys(selections).length ? { personaFormSelections: selections } : {} };
 }
 function normalizeChatData(value, chatId, now = new Date().toISOString()) {
   const id = text(chatId);
@@ -4428,7 +4440,8 @@ function normalizeChatData(value, chatId, now = new Date().toISOString()) {
       store,
       history,
       plans: parts.plans,
-      actorState: parts.actorState ?? createEmptyActorState()
+      actorState: parts.actorState ?? createEmptyActorState(),
+      ...parts.personaFormSelections ? { personaFormSelections: parts.personaFormSelections } : {}
     },
     issues,
     repaired: issues.length > 0
@@ -5482,6 +5495,8 @@ var RPC_METHODS = [
   "chatState.get",
   "chatState.clear",
   "chatState.set",
+  "personaForm.get",
+  "personaForm.set",
   "chatDom.getMessageStates",
   "webtoon.get",
   "webtoon.rerollPanel",
@@ -64487,6 +64502,25 @@ function labelError(code, label, extra = {}) {
   return rpcError(code, label.en, { messageKo: label.ko, ...extra });
 }
 
+// src/backend/pipeline/persona-form-selection.ts
+function applyPersonaFormSelection(inputs, personaId, formId) {
+  const key = `persona::${personaId}`;
+  const candidate = inputs.v5PersonaCatalogCandidates.find((c) => c.key === key);
+  const form = candidate?.appearanceForms.find((f) => f.formId === formId);
+  if (inputs.analyzerPersonaPromptKey !== key || !form)
+    fail2("bad-request", "The selected persona form is unavailable. Choose an existing form or Auto in Inlay's Persona form selector.");
+  const restrict = (candidates) => candidates.map((c) => c.key === key ? { ...c, defaultFormId: formId, appearanceForms: [form] } : c);
+  const outfits = (candidates) => candidates.filter((c) => c.lorebook_prompt_key !== key || (c.form_id || "form_default") === formId);
+  return {
+    ...inputs,
+    analyzerPersonaCandidates: restrict(inputs.analyzerPersonaCandidates),
+    v5PersonaCatalogCandidates: restrict(inputs.v5PersonaCatalogCandidates),
+    analyzerOutfitCandidates: outfits(inputs.analyzerOutfitCandidates),
+    v5OutfitCatalogCandidates: outfits(inputs.v5OutfitCatalogCandidates),
+    analyzerPersonaDefaultOutfitId: form.defaultOutfitId
+  };
+}
+
 // src/backend/pipeline/generate.ts
 var rec4 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 var str4 = (v) => v == null ? "" : String(v).trim();
@@ -64690,7 +64724,7 @@ async function generateMessageIllustrations(deps, req) {
   const markups = detectNativeAssetMarkups2(req.clean, { customImageTokenDetectors: detectors });
   const assetHints = assetHintsFrom(tokens, markups);
   const sourceWithCustom = withCustomCharacterMembers(source, customCharacters);
-  const ft = buildAnalyzerContextInputs2({
+  let ft = buildAnalyzerContextInputs2({
     config: amConfig,
     getConfig,
     continuity: hr,
@@ -64704,6 +64738,9 @@ async function generateMessageIllustrations(deps, req) {
     personaRecords
   });
   const profile = str4(rec4(runtime.novelai).analysisProfile);
+  const selectedPersonaForm = active && Object.hasOwn(req.chatData.personaFormSelections ?? {}, active.personaId) ? req.chatData.personaFormSelections[active.personaId] : undefined;
+  if (profile === "v5-hybrid" && active && selectedPersonaForm)
+    ft = applyPersonaFormSelection(ft, active.personaId, selectedPersonaForm);
   const freeCharacters = profile === "v5-hybrid" && ne.freeCharacterGenerationEnabled && !!auto;
   if (!(profile === "v5-hybrid" || ft.analyzerIdentityCandidates.length > 0 || ft.analyzerPersonaCandidates.length > 0 || freeCharacters))
     return { ...empty(PIPELINE_TEXT.noCandidates), assetHints };
@@ -72463,14 +72500,70 @@ var workspaceHandlers = {
   "outfitImage.save": (p, ctx) => analysis(ctx).outfitImages.save(p)
 };
 
+// src/backend/rpc/handlers/persona-form.ts
+function need2(value, name) {
+  if (typeof value !== "string" || !value.trim())
+    fail2("bad-request", `${name} is required.`);
+  return value.trim();
+}
+async function selection(chatId, ctx) {
+  await ctx.sources.getChat(chatId);
+  const [persona, config, doc, settings] = await Promise.all([
+    ctx.sources.getActivePersona(chatId),
+    ctx.storage.loadConfig(),
+    ctx.storage.loadChatData(chatId),
+    ctx.storage.loadChatImageGenerationSettings()
+  ]);
+  const forms = persona ? resolvePersonaForms(config.characterPrompt.personaSettings, config.characterPrompt.personaGender, persona.personaId).forms : [];
+  const selectedFormId = persona && Object.hasOwn(doc.personaFormSelections ?? {}, persona.personaId) ? doc.personaFormSelections[persona.personaId] : null;
+  return {
+    chatId,
+    personaId: persona?.personaId ?? null,
+    personaName: persona?.name ?? "",
+    forms: forms.map((f) => ({ id: f.id, label: f.label || f.id })),
+    selectedFormId,
+    missingForm: !!selectedFormId && !forms.some((f) => f.id === selectedFormId),
+    supported: config.novelai.analysisProfile === "v5-hybrid" && !settings.webtoonMode
+  };
+}
+var personaFormHandlers = {
+  "personaForm.get": (params, ctx) => selection(need2(params.chatId, "chatId"), ctx),
+  async "personaForm.set"(params, ctx) {
+    const chatId = need2(params.chatId, "chatId");
+    const personaId = need2(params.personaId, "personaId");
+    if (params.formId !== null && (typeof params.formId !== "string" || !params.formId.trim()))
+      fail2("bad-request", "formId must be a form id or null (Auto).");
+    const formId = params.formId === null ? null : params.formId.trim();
+    await ctx.storage.updateChatData(chatId, async (doc) => {
+      const current = await selection(chatId, ctx);
+      if (current.personaId !== personaId)
+        fail2("conflict", "The chat's persona changed. Reload the form selector and try again.");
+      if (formId && !current.supported)
+        fail2("unsupported", "Manual persona forms require V5 illustration analysis.");
+      if (formId && !current.forms.some((f) => f.id === formId))
+        fail2("not-found", "That persona form no longer exists. Choose another form or Auto.");
+      const selections = { ...doc.personaFormSelections };
+      if (formId)
+        Object.defineProperty(selections, personaId, { value: formId, enumerable: true, writable: true, configurable: true });
+      else
+        delete selections[personaId];
+      const { personaFormSelections: _old, ...rest } = doc;
+      return { ...rest, ...Object.keys(selections).length ? { personaFormSelections: selections } : {} };
+    });
+    ctx.events.emit("chatData.changed", { chatId, messageKeys: [] });
+    return selection(chatId, ctx);
+  }
+};
+
 // src/backend/rpc/handlers/index.ts
 var HANDLER_GROUPS = Object.freeze({
   core: coreHandlers,
   chat: chatHandlers,
-  workspace: workspaceHandlers
+  workspace: workspaceHandlers,
+  personaForm: personaFormHandlers
 });
 function allHandlers() {
-  return { ...coreHandlers, ...chatHandlers, ...workspaceHandlers };
+  return { ...coreHandlers, ...chatHandlers, ...workspaceHandlers, ...personaFormHandlers };
 }
 
 // src/backend/services/events.ts

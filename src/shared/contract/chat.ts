@@ -1234,6 +1234,8 @@ export interface ChatDataDocument {
   history: HistoryTree;
   plans: Record<string, IllustrationPlan>;
   actorState: CurrentActorState;
+  /** Explicit form per persona in this chat. An absent entry means Auto. */
+  personaFormSelections?: Record<string, string>;
 }
 
 export interface ChatDataIssue {
@@ -1280,6 +1282,7 @@ interface CheckedParts {
   plans: Record<string, IllustrationPlan>;
   plansValid: boolean;
   actorState: CurrentActorState | null;
+  personaFormSelections?: Record<string, string>;
 }
 
 function checkParts(raw: Record<string, unknown>, chatId: string): CheckedParts {
@@ -1314,7 +1317,17 @@ function checkParts(raw: Record<string, unknown>, chatId: string): CheckedParts 
     }
   const a = validateCurrentActorState(raw.actorState);
   if (!a.ok) issues.push(...a.issues.map(fromStoreIssue("actorState")));
-  return { issues, store, history, plans, plansValid, actorState: a.ok ? a.state : null };
+  const selections: Record<string, string> = {};
+  if (raw.personaFormSelections !== undefined) {
+    if (!isRecord(raw.personaFormSelections))
+      issues.push({ part: "document", code: "persona-form-selections", path: "$.personaFormSelections", message: "Persona form selections must be an object." });
+    else for (const [personaId, formId] of Object.entries(raw.personaFormSelections)) {
+      if (!personaId.trim() || typeof formId !== "string" || !formId.trim() || personaId !== personaId.trim() || formId !== formId.trim())
+        issues.push({ part: "document", code: "persona-form-selection", path: `$.personaFormSelections.${personaId}`, message: "Persona and form ids must be nonempty strings." });
+      else Object.defineProperty(selections, personaId, { value: formId, enumerable: true, writable: true, configurable: true });
+    }
+  }
+  return { issues, store, history, plans, plansValid, actorState: a.ok ? a.state : null, ...(Object.keys(selections).length ? { personaFormSelections: selections } : {}) };
 }
 
 export type ChatDataValidationResult = { ok: true; data: ChatDataDocument } | { ok: false; issues: ChatDataIssue[] };
@@ -1330,7 +1343,7 @@ export function validateChatData(value: unknown, chatId?: string): ChatDataValid
     issues.push({ part: "document", code: "chat-id", path: "$.chatId", message: "chatId must match the chat that owns the document." });
   if (typeof value.updatedAt !== "string" || Number.isNaN(Date.parse(value.updatedAt)))
     issues.push({ part: "document", code: "updated-at", path: "$.updatedAt", message: "updatedAt must be an ISO date string." });
-  const extra = Object.keys(value).filter((k) => !["schema", "version", "chatId", "updatedAt", "store", "history", "plans", "actorState"].includes(k));
+  const extra = Object.keys(value).filter((k) => !["schema", "version", "chatId", "updatedAt", "store", "history", "plans", "actorState", "personaFormSelections"].includes(k));
   for (const k of extra) issues.push({ part: "document", code: "unexpected-field", path: `$.${k}`, message: "Unknown document field." });
   if (!id) return { ok: false, issues };
   const parts = checkParts(value, id);
@@ -1347,6 +1360,7 @@ export function validateChatData(value: unknown, chatId?: string): ChatDataValid
       history: parts.history,
       plans: parts.plans,
       actorState: parts.actorState,
+      ...(parts.personaFormSelections ? { personaFormSelections: parts.personaFormSelections } : {}),
     },
   };
 }
@@ -1403,6 +1417,7 @@ export function normalizeChatData(value: unknown, chatId: string, now: string = 
       history,
       plans: parts.plans,
       actorState: parts.actorState ?? createEmptyActorState(),
+      ...(parts.personaFormSelections ? { personaFormSelections: parts.personaFormSelections } : {}),
     },
     issues,
     repaired: issues.length > 0,

@@ -40,6 +40,18 @@ The count toggle above the composer sets how many images a message gets. Its exp
 illustrates the latest reply (or rerolls it when it has images). The drawer tab sets the screen corner of the toggle and
 its toast stack.
 
+### Choose a persona form for one chat
+
+With **Inlay V5** illustration analysis, open the **Inlay Illustrator** drawer tab and use **Persona form**. Select
+**Auto** to keep normal scene-based selection, or choose a registered form to restrict this chat's active persona to
+that form and its outfits during the next scene analysis. This is separate from the form dropdown used to edit
+appearances in the workspace. Choices are saved separately for each chat and persona; global defaults stay unchanged.
+
+To apply a new choice to an existing reply, reroll the whole reply's illustrations. Regenerating an individual image
+reuses its saved prompt, including its original form and any prompt edits. Selection does not require an offscreen
+persona to appear. If a selected form is deleted, choose another form or Auto before generating. Manual selection
+is unavailable for V4.5 analysis and experimental webtoon mode.
+
 ## Known gaps
 
 - Unique tag search (Danbooru) and community preset sharing are not available.

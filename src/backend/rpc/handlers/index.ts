@@ -10,13 +10,15 @@ import type { HandlerGroup } from "../types.js";
 import { coreHandlers } from "./core.js";
 import { chatHandlers } from "./chat.js";
 import { workspaceHandlers } from "./workspace.js";
+import { personaFormHandlers } from "./persona-form.js";
 
 export const HANDLER_GROUPS: Readonly<Record<string, HandlerGroup>> = Object.freeze({
   core: coreHandlers,
   chat: chatHandlers,
   workspace: workspaceHandlers,
+  personaForm: personaFormHandlers,
 });
 
 export function allHandlers(): HandlerGroup {
-  return { ...coreHandlers, ...chatHandlers, ...workspaceHandlers };
+  return { ...coreHandlers, ...chatHandlers, ...workspaceHandlers, ...personaFormHandlers };
 }

@@ -69,6 +69,7 @@ import { openAutoGeneration, type AutoGeneration } from "./auto.js";
 import type { ChatMessageView } from "./host-chat.js";
 import { cleanMessageContent } from "./markup.js";
 import { formatLabel, PIPELINE_TEXT } from "./labels.js";
+import { applyPersonaFormSelection } from "./persona-form-selection.js";
 
 type Rec = Record<string, unknown>;
 const rec = (v: unknown): Rec => (v && typeof v === "object" && !Array.isArray(v) ? (v as Rec) : {});
@@ -436,7 +437,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
   const assetHints = assetHintsFrom(tokens, markups);
 
   const sourceWithCustom = withCustomCharacterMembers(source, customCharacters as unknown[]);
-  const ft = buildAnalyzerContextInputs({
+  let ft = buildAnalyzerContextInputs({
     config: amConfig,
     getConfig,
     continuity: hr as unknown as ContextContinuityState,
@@ -452,6 +453,9 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
 
   // Readiness (AM d1t 168807). Free character generation: V5 profile + per-character setting + the store (E1t 169564).
   const profile = str(rec(runtime.novelai).analysisProfile);
+  const selectedPersonaForm = active && Object.hasOwn(req.chatData.personaFormSelections ?? {}, active.personaId) ? req.chatData.personaFormSelections![active.personaId] : undefined;
+  if (profile === "v5-hybrid" && active && selectedPersonaForm)
+    ft = applyPersonaFormSelection(ft, active.personaId, selectedPersonaForm);
   const freeCharacters = profile === "v5-hybrid" && ne.freeCharacterGenerationEnabled && !!auto;
   if (!(profile === "v5-hybrid" || ft.analyzerIdentityCandidates.length > 0 || ft.analyzerPersonaCandidates.length > 0 || freeCharacters))
     return { ...empty(PIPELINE_TEXT.noCandidates), assetHints };
