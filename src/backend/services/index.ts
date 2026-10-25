@@ -10,6 +10,7 @@ import { createRunLog } from "./run-log.js";
 import { createSourcesService } from "./sources.js";
 import { createStorageService } from "./storage.js";
 import { createDecisionService } from "./decisions.js";
+import { shareArtists } from "./shared-artists.js";
 import type { BackendServices, SpindleHost } from "./types.js";
 
 export * from "./types.js";
@@ -21,6 +22,7 @@ export { createRunLog } from "./run-log.js";
 export { createSourcesService } from "./sources.js";
 export { createStorageService } from "./storage.js";
 export { createDecisionService } from "./decisions.js";
+export { sharedArtistsChannel, sharedArtistsValue, shareArtists } from "./shared-artists.js";
 
 export function createServices(host: SpindleHost, userId: string | undefined): BackendServices {
   const events = createEventBus(host, userId);
@@ -32,6 +34,7 @@ export function createServices(host: SpindleHost, userId: string | undefined): B
   const images = createImageService({ host, userId, loadConfig, log });
   const sources = createSourcesService({ host, userId, imageBytes, storage, log });
   const decisions = createDecisionService(host, log, userId);
+  shareArtists(host, userId, loadConfig);
   return { host, userId, storage, llm, images, imageBytes, sources, events, log, decisions };
 }
 

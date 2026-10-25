@@ -74836,6 +74836,46 @@ function createDecisionService(host, log, defaultUserId) {
   };
 }
 
+// src/backend/services/shared-artists.ts
+var SHARED_ARTISTS_CHANNEL = "artists";
+var SHARED_ARTISTS_VERSION = 1;
+var OWNER_CHANNEL = "owner";
+var CHANNEL_SEGMENT = /^[a-z0-9][a-z0-9_-]*$/u;
+function sharedArtistsChannel(userId) {
+  const key = (userId ?? "").trim().toLowerCase();
+  return `${SHARED_ARTISTS_CHANNEL}.${key && CHANNEL_SEGMENT.test(key) ? key : OWNER_CHANNEL}`;
+}
+function sharedArtistsValue(config) {
+  const novelai = listNovelAIArtists(config.characterPrompt.artistPrompts).filter((artist) => artist.id !== NO_ARTIST_ID).map((artist) => ({
+    id: artist.id,
+    title: artist.displayTitle || artist.title,
+    prompt: artist.prompt,
+    negativePrompt: artist.negativePrompt,
+    ...artist.novelAIOverrides ? { novelAIOverrides: { ...artist.novelAIOverrides } } : {},
+    builtIn: !artist.userDefined
+  }));
+  const ids = new Set(novelai.map((artist) => artist.id));
+  const defaultArtistId = ids.has(config.characterPrompt.defaultArtistId) ? config.characterPrompt.defaultArtistId : NO_ARTIST_ID;
+  const anima = config.animaArtists.entries.map((entry) => ({ id: entry.id, title: entry.title, text: entry.text }));
+  return { version: SHARED_ARTISTS_VERSION, defaultArtistId, novelai, anima };
+}
+function shareArtists(host, userId, loadConfig) {
+  const pool = host.rpcPool;
+  if (!pool?.handle)
+    return () => {};
+  const channel = sharedArtistsChannel(userId);
+  try {
+    pool.handle(channel, async () => sharedArtistsValue(await loadConfig()), { requires: ["image_gen"] });
+  } catch {
+    return () => {};
+  }
+  return () => {
+    try {
+      pool.unregister(channel);
+    } catch {}
+  };
+}
+
 // src/backend/services/index.ts
 function createServices(host, userId) {
   const events = createEventBus(host, userId);
@@ -74847,6 +74887,7 @@ function createServices(host, userId) {
   const images = createImageService({ host, userId, loadConfig, log });
   const sources = createSourcesService({ host, userId, imageBytes, storage, log });
   const decisions = createDecisionService(host, log, userId);
+  shareArtists(host, userId, loadConfig);
   return { host, userId, storage, llm, images, imageBytes, sources, events, log, decisions };
 }
 function createServicesRegistry(host, factory = createServices) {
