@@ -17,6 +17,11 @@ replaces the old Lightboard pipeline of 0.9.x.
   artist presets, per-character settings.
 - **Count panel** in the chat: how many images per reply (fixed, range or automatic) and the scene preset.
 
+V5 scene analysis includes active-persona identity guidance: source-supported pronouns and nicknames should keep using
+the registered persona and its allowed form instead of creating a replacement actor. This does not force the persona
+into absent or POV scenes, or assign unrelated NPCs to the persona. Identity selection still depends on the analyzer
+model; existing images and duplicate roster entries are not rewritten.
+
 ## Setup
 
 1. Install the extension and grant its permissions. `app_manipulation` is a privileged permission: an admin must

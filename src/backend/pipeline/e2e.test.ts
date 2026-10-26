@@ -10,6 +10,7 @@ import type { LlmCompleteRequest } from "../services/types.js";
 import { cleanMessageContent } from "./markup.js";
 import { createPipelineModule } from "./index.js";
 import { CHAT_ID, createPipelineFixture, finished, STORY, waitFor } from "./testing/fixtures.js";
+import { PERSONA_IDENTITY_POLICY } from "./persona-identity.js";
 
 /** Scripted analyzer: one illustration for the first slot with the first actor candidate (AM v2 response schema). */
 function scriptedAnalyzer(request: LlmCompleteRequest): string {
@@ -46,6 +47,7 @@ function scriptedV5Analyzer(request: LlmCompleteRequest): string {
   const last = request.messages[request.messages.length - 1]!;
   const text = typeof last.content === "string" ? last.content : last.content.map((p) => (p.type === "text" ? p.text : "")).join("");
   const json = JSON.parse(text.slice(text.indexOf("{")));
+  expect(json.response_contract.analysis_policy.actors.active_persona_identity).toEqual(PERSONA_IDENTITY_POLICY);
   const slot = Number(/<slot_number: (\d+)>/u.exec(json.scene)![1]);
   return JSON.stringify({
     illustrations: [

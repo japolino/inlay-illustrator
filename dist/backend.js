@@ -71290,6 +71290,75 @@ function repairBatchItems(items, index, onRepair) {
   });
 }
 
+// src/backend/pipeline/persona-identity.ts
+var record = (value) => !!value && typeof value === "object" && !Array.isArray(value);
+var PERSONA_IDENTITY_POLICY = {
+  matching: "When current scene evidence identifies the user-controlled participant, resolve first-person actions, second-person references, pronouns and established nicknames to active_persona_candidate_key. Omission of the proper name does not establish a new identity.",
+  appearance: "Use the matched candidate's allowed registered form. Do not invent a replacement appearance or generated_actor_proposal for the same participant because a name is omitted, clothing changes, or a descriptive nickname is used.",
+  continuity: "Use prior identity references only when the current scene supports the same participant; continuity alone does not establish presence.",
+  presence: "Select the persona only when visibly present under the current presentation rules. An absent, mentioned-only or off-camera persona, including a POV viewer without a visible body, does not require an Actor.",
+  distinct_actors: "Other named or unnamed participants retain their own identities. Gender, pronouns or visual similarity alone do not prove that an NPC is the user persona. Truly unmatched participants may still use generated_actor_proposals."
+};
+function augmentPayload(text) {
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!record(payload) || typeof payload.scene !== "string" || !Array.isArray(payload.actor_candidates))
+    return null;
+  const key = payload.active_persona_candidate_key;
+  if (typeof key !== "string" || !key.trim())
+    return null;
+  const overlay = Array.isArray(payload.actor_candidate_overlay) ? payload.actor_candidate_overlay : [];
+  if (![...payload.actor_candidates, ...overlay].some((candidate) => record(candidate) && candidate.candidateKey === key))
+    return null;
+  const contract = payload.response_contract;
+  if (!record(contract) || !record(contract.analysis_policy) || !record(contract.analysis_policy.actors))
+    return null;
+  contract.analysis_policy.actors.active_persona_identity ??= PERSONA_IDENTITY_POLICY;
+  return JSON.stringify(payload);
+}
+function augmentPersonaIdentityMessages(messages) {
+  let changed = false;
+  const output = messages.map((message) => {
+    if (message.role !== "user")
+      return message;
+    if (typeof message.content === "string") {
+      const text = augmentPayload(message.content);
+      if (text === null)
+        return message;
+      changed = true;
+      return { ...message, content: text };
+    }
+    if (!Array.isArray(message.content))
+      return message;
+    let partChanged = false;
+    const content = message.content.map((part) => {
+      if (!record(part) || part.type !== "text" || typeof part.text !== "string")
+        return part;
+      const text = augmentPayload(part.text);
+      if (text === null)
+        return part;
+      partChanged = true;
+      return { ...part, text };
+    });
+    if (!partChanged)
+      return message;
+    changed = true;
+    return { ...message, content };
+  });
+  return changed ? output : null;
+}
+function withPersonaIdentity(client) {
+  return {
+    complete(config, messages, options) {
+      return client.complete(config, augmentPersonaIdentityMessages(messages) ?? messages, options);
+    }
+  };
+}
+
 // src/backend/pipeline/engine-port.ts
 function createEnginePort(services, options = {}) {
   const registry = new ProviderRunRegistry;
@@ -71312,7 +71381,7 @@ function createEnginePort(services, options = {}) {
       return current.engine;
     current?.engine.dispose();
     const engine = createAssetMaidEngine({
-      analyzerClient: withOutfitAwareness(services.llm.analyzerClient({ purpose: "analyzer" }), outfitRuns, (n) => services.log.append("info", "pipeline", `Analyzer request: outfit parts of ${n} registered outfit(s) added.`)),
+      analyzerClient: withOutfitAwareness(withPersonaIdentity(services.llm.analyzerClient({ purpose: "analyzer" })), outfitRuns, (n) => services.log.append("info", "pipeline", `Analyzer request: outfit parts of ${n} registered outfit(s) added.`)),
       imageProviders: adapters,
       comfyUIReferences: references,
       getRetryCount: () => snapshot?.runtime.generationAutoRetryCount ?? 5,
@@ -71417,7 +71486,7 @@ function createPipelineModule(services, getModules, options = {}) {
 }
 
 // src/backend/rpc/router.ts
-function record(value) {
+function record2(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
 function createRouter(options) {
@@ -71432,7 +71501,7 @@ function createRouter(options) {
       return Object.keys(handlers).filter(isRpcMethod);
     },
     async handleFrontendMessage(payload, userId, frontendSessionId) {
-      const message = record(payload);
+      const message = record2(payload);
       if (!message || message.type !== RPC_MESSAGE_TYPE || message.kind !== "request")
         return false;
       const requestId = typeof message.requestId === "string" ? message.requestId : "";
@@ -71459,7 +71528,7 @@ function createRouter(options) {
         reply(rpcError("unsupported", `${method} is not available in this version.`));
         return true;
       }
-      const params = record(message.params);
+      const params = record2(message.params);
       if (!params) {
         reply(rpcError("bad-request", "Request params must be an object."));
         return true;

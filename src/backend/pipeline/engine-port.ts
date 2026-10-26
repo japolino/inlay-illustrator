@@ -14,6 +14,7 @@ import type { BackendServices } from "../services/types.js";
 import { createComfyReferencePreparer, createImageProviderAdapters, ProviderRunRegistry, type ProviderRunContext } from "./providers.js";
 import { OutfitIndexRegistry, withOutfitAwareness, type RunOutfitIndex } from "./outfit-awareness.js";
 import { repairBatchItems } from "./outfit-visibility.js";
+import { withPersonaIdentity } from "./persona-identity.js";
 
 export type { OrchestratorRunInputLike, OrchestratorRunResult } from "../../engine/index.js";
 
@@ -69,7 +70,7 @@ export function createEnginePort(services: BackendServices, options: EnginePortO
     if (current && current.raw === raw) return current.engine;
     current?.engine.dispose();
     const engine = createAssetMaidEngine({
-      analyzerClient: withOutfitAwareness(services.llm.analyzerClient({ purpose: "analyzer" }), outfitRuns, (n) =>
+      analyzerClient: withOutfitAwareness(withPersonaIdentity(services.llm.analyzerClient({ purpose: "analyzer" })), outfitRuns, (n) =>
         services.log.append("info", "pipeline", `Analyzer request: outfit parts of ${n} registered outfit(s) added.`),
       ) as never,
       imageProviders: adapters,
