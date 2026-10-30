@@ -51,7 +51,7 @@ import { clothingSentences } from "./outfit-evidence.js";
 import type { JobContext, JobOutcome } from "./jobs.js";
 import { projectRoster } from "./workspace.js";
 
-export const AUTOPICK_PATH = (characterId: string) => `${STORAGE_PATHS.characterDir(characterId)}autopick.json`;
+export const AUTOPICK_PATH = STORAGE_PATHS.characterAutoPick;
 
 const SAMPLE_NAMES = 150;
 const MIN_COVERAGE = 0.8;
@@ -96,6 +96,23 @@ async function writeAutoPickState(services: BackendServices, characterId: string
   const next = { ...state, updatedAt: new Date().toISOString() };
   await services.storage.writeJson(AUTOPICK_PATH(characterId), next);
   return next;
+}
+
+/** Drop `appliedOutfitId` once that outfit is gone from the character document (deleted on the Prompts tab, character reset). */
+async function withLiveOutfits(services: BackendServices, characterId: string, groups: AutoPickGroup[]): Promise<AutoPickGroup[]> {
+  if (!groups.some((g) => g.appliedOutfitId)) return groups;
+  // A missing document has no outfits (resolving it would invent a default outfit with a reused id).
+  const doc = (await services.storage.hasCharacterDocument(characterId)) ? await services.storage.loadCharacterDocument(characterId) : null;
+  const ids = new Map<string, Set<string>>();
+  const live = (promptKey: string) => {
+    if (!ids.has(promptKey)) ids.set(promptKey, new Set(doc ? resolveCharacterForms(doc.characterPrompt, promptKey).forms.flatMap((f) => f.outfits.map((o) => o.id)) : []));
+    return ids.get(promptKey)!;
+  };
+  return groups.map((g) => {
+    if (!g.appliedOutfitId || live(g.promptKey).has(g.appliedOutfitId)) return g;
+    const { appliedOutfitId: _gone, ...rest } = g;
+    return rest;
+  });
 }
 
 const norm = (s: string) => s.toLowerCase().replace(/[_.\-()]+/g, " ").replace(/\s+/g, " ").trim();
@@ -159,14 +176,17 @@ interface SchemeResult { scheme: AutoPickScheme; matches: Map<string, Record<str
 
 function compileScheme(regex: unknown): RegExp | null {
   if (typeof regex !== "string" || !regex.trim() || regex.length > 4000) return null;
-  try {
-    const re = new RegExp(regex, "iu");
-    const groups = [...regex.matchAll(/\(\?<([A-Za-z_]\w*)>/g)].map((m) => m[1]!);
-    if (!groups.length || groups.some((g) => !GROUP_NAMES.has(g))) return null;
-    return re;
-  } catch {
-    return null;
+  const groups = [...regex.matchAll(/\(\?<([A-Za-z_]\w*)>/g)].map((m) => m[1]!);
+  if (!groups.length || groups.some((g) => !GROUP_NAMES.has(g))) return null;
+  // Unicode mode keeps `\p{L}`; plain mode still takes the identity escapes (`\_`, `\'`) that unicode mode rejects.
+  for (const flags of ["iu", "i"]) {
+    try {
+      return new RegExp(regex, flags);
+    } catch {
+      /* next mode */
+    }
   }
+  return null;
 }
 
 function applyScheme(re: RegExp, stems: string[]): { matches: Map<string, Record<string, string>>; unmatched: string[] } {
@@ -338,7 +358,7 @@ async function runPlan(ctx: JobContext, delays: readonly number[] = RETRY_DELAYS
   if (!result.scheme.regex || result.scheme.coverage < 0.3) {
     return { status: "no-evidence", message: `Could not read the asset naming scheme (${Math.round(result.scheme.coverage * 100)}% of names matched).` };
   }
-  const groups = groupAssets(assets, result, roster, previous);
+  const groups = await withLiveOutfits(ctx.services, ctx.characterId, groupAssets(assets, result, roster, previous));
   const state = await writeAutoPickState(ctx.services, ctx.characterId, { version: 1, scheme: result.scheme, groups, unmatched: sampleNames(result.unmatched, 30), updatedAt: "" });
   const characters = new Set(state.groups.filter((g) => g.promptKey).map((g) => g.promptKey)).size;
   const message = `${state.groups.length} outfit group(s) for ${characters} character(s) from ${assets.length} images (${Math.round(result.scheme.coverage * 100)}% of names matched, ${result.scheme.calls} call(s)).`;
@@ -489,7 +509,8 @@ export async function runOutfitAutoPick(ctx: JobContext, params: AnalysisStartPa
  * ---------------------------------------------------------------------------------------------- */
 
 export async function getAutoPick(services: BackendServices, params: { characterId: string; chatId?: string }): Promise<{ state: AutoPickState; seenPromptKeys: string[] }> {
-  const state = await readAutoPickState(services, params.characterId);
+  const stored = await readAutoPickState(services, params.characterId);
+  const state = { ...stored, groups: await withLiveOutfits(services, params.characterId, stored.groups) };
   const seen = new Set<string>();
   if (params.chatId) {
     const sidecar = await readSidecar(services.storage, params.chatId).catch(() => null);
@@ -545,7 +566,8 @@ export async function applyAutoPick(services: BackendServices, params: { charact
     { expectedUpdatedAt: base.updatedAt, reason: "outfit-autopick" },
   );
   const current = await readAutoPickState(services, characterId);
-  const next = await writeAutoPickState(services, characterId, { ...current, groups: current.groups.map((g) => (applied.has(g.id) ? { ...g, appliedOutfitId: applied.get(g.id)! } : g)) });
+  const groups = current.groups.map((g) => (applied.has(g.id) ? { ...g, appliedOutfitId: applied.get(g.id)! } : g));
+  const next = await writeAutoPickState(services, characterId, { ...current, groups: await withLiveOutfits(services, characterId, groups) });
   services.log.append("info", "outfit-autopick", `Added ${added} outfit(s) with reference images; ${skipped} already present or skipped.`);
   return { added, skipped, state: next };
 }

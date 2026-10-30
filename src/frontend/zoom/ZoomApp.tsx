@@ -280,6 +280,7 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
   const stage = (
     <Stage
       url={details?.url ?? ""}
+      pending={!details && session.loading}
       alt={details?.assetName ?? ""}
       width={details?.width ?? 832}
       height={details?.height ?? 1216}

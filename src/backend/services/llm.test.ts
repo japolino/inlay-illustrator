@@ -64,6 +64,21 @@ describe("llm service", () => {
     expect((fake.generateCalls[2]!.input.parameters as Record<string, unknown>).response_format).toBeUndefined();
   });
 
+  test("a 400 that doesn't name JSON mode is resent without it once but not remembered; image errors are not JSON mode", async () => {
+    const { fake, llm } = setup();
+    const responseFormat = (i: number) => (fake.generateCalls[i]!.input.parameters as Record<string, unknown>).response_format;
+    fake.scriptLlm(new Error("Google generate failed (400): Request contains an invalid argument."), { content: "{}" }, { content: "{}" });
+    expect((await llm.complete({ purpose: "t", messages: [], responseMode: "json", retries: 0 })).jsonMode).toBe(false);
+    expect((await llm.complete({ purpose: "t", messages: [], responseMode: "json", retries: 0 })).jsonMode).toBe(true);
+    expect(responseFormat(2)).toEqual({ type: "json_object" });
+
+    const messages = [{ role: "user" as const, content: [{ type: "text" as const, text: "look" }, { type: "image" as const, data: "AAAA", mime_type: "image/avif" }] }];
+    fake.scriptLlm(new Error("OpenAI generate failed (400): You uploaded an unsupported image. Please make sure your image has of one the following formats: ['png', 'jpeg']."), { content: "{}" });
+    const r = await llm.complete({ purpose: "t", messages, responseMode: "json", retries: 0 });
+    expect(r).toMatchObject({ imagesDropped: true, jsonMode: true });
+    expect(responseFormat(4)).toEqual({ type: "json_object" });
+  });
+
   test("retries retryable errors with a fixed 100 ms delay, stops on non-retryable", async () => {
     const { fake, llm, sleeps } = setup({ runtime: { generationAutoRetryCount: 2 } });
     fake.scriptLlm(new Error("failed (503): overloaded"), { content: "" }, { content: "not json" });
@@ -112,6 +127,18 @@ describe("llm service", () => {
     expect(r2.imagesDropped).toBe(true);
     expect(s2.fake.generateCalls).toHaveLength(2);
     expect(await s2.llm.supportsVision()).toBe(false);
+  });
+
+  test("supportsVision rejects with the connection error instead of answering 'no vision'", async () => {
+    await expect(setup({ analysis: { connectionId: "zz" } }).llm.supportsVision()).rejects.toMatchObject({ error: { code: "bad-request", detailCode: "ANALYZER_CONNECTION_MISSING" } });
+    const { fake, llm } = setup({ analysis: { connectionId: "oa" } });
+    const get = fake.host.connections.get;
+    fake.host.connections.get = (async () => {
+      throw new Error("host socket reset");
+    }) as typeof get;
+    await expect(llm.supportsVision()).rejects.toMatchObject({ error: { code: "provider-error" } });
+    fake.host.connections.get = get;
+    expect(await llm.supportsVision()).toBe(true);
   });
 
   test("analyzerClient throws engine AnalyzerClientError with code and does not retry by default", async () => {

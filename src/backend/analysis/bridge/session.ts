@@ -5,7 +5,7 @@
  */
 import { RpcFailure } from "../../rpc/errors.js";
 import type { AmSource, BackendServices, LlmMessage } from "../../services/types.js";
-import type { AssetRef, RpcError } from "../../../shared/contract/index.js";
+import { randomUuid, type AssetRef, type CropReference, type RpcError } from "../../../shared/contract/index.js";
 import { AM, amFn } from "../core/index.js";
 import { AmConfigStore } from "./config-store.js";
 import { createAmPriorityAssets, type AmPriorityAssets } from "./asset-index.js";
@@ -36,8 +36,14 @@ export async function buildRuntimeSource(services: BackendServices, characterId:
 /** userStorage-backed assets (uploads / reference crops) use keys `storage:<path>`. */
 export const STORAGE_ASSET_PREFIX = "storage:";
 
-/** Bytes of an asset: `storage:` keys from userStorage, everything else through ImageBytesService. */
+/** Bytes of an asset (its crop when it carries one): `storage:` keys from userStorage, everything else through ImageBytesService. */
 export async function readAssetBytes(services: BackendServices, asset: AssetRef): Promise<{ data: Uint8Array; mimeType: string }> {
+  // AM `$mt`: the crop's own image first, the source asset when it cannot be read.
+  const cropKey = (asset.cropReference as CropReference | undefined)?.assetKey;
+  if (cropKey?.startsWith(STORAGE_ASSET_PREFIX)) {
+    const crop = await services.storage.readBinary(cropKey.slice(STORAGE_ASSET_PREFIX.length));
+    if (crop) return { data: crop, mimeType: "image/png" };
+  }
   if (asset.key?.startsWith(STORAGE_ASSET_PREFIX)) {
     const data = await services.storage.readBinary(asset.key.slice(STORAGE_ASSET_PREFIX.length));
     if (!data) throw new RpcFailure({ code: "not-found", message: `Image not found: ${asset.name || asset.key}`, messageKo: `이미지를 읽지 못했습니다: ${asset.name || asset.key}` });
@@ -126,6 +132,10 @@ export interface AnalysisSession {
 
 export async function openAnalysisSession(services: BackendServices, characterId: string, options: { chatId?: string; reason?: string } = {}): Promise<AnalysisSession> {
   const store = await AmConfigStore.open(services, characterId, options.reason ?? "analysis");
+  // AM keeps the vision-support flag (`$me`) by provider/format/endpoint/model; AnalyzerSettings has no provider, format or
+  // endpoint, so every connection of every user would share one flag. A session endpoint (never persisted) keeps it to this run.
+  const analysis = { ...store.getCurrentSnapshot().analysis, endpoint: `inlay-session:${randomUuid()}` };
+  store.getCurrentSnapshot().analysis = analysis;
   let source = await buildRuntimeSource(services, characterId, store, options);
   let persona: Any = { records: [], activePersona: null, selectedPersona: null, boundPersona: null, selectedPersonaIndex: -1, boundPersonaId: "" };
   const snapshot = () => ({ currentSourceId: characterId, currentMemberKey: source.members[0]?.key ?? "", sources: [source], persona });
@@ -177,6 +187,7 @@ export async function openAnalysisSession(services: BackendServices, characterId
     },
     dispose() {
       void metadata.dispose?.();
+      AM.$me.delete(amFn("Bme")(analysis));
     },
   } as AnalysisSession;
 }

@@ -1,6 +1,6 @@
 /** Analysis settings page (Asset Maid `R0t` 141557, `jwe` 141579, `Ewe` 141657, `Nwe` 141681). All changes save at once. */
 import type { FunctionComponent } from "preact";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { V5_ANALYZER_SIZE_IDS, type AnalysisProfile, type CustomImageSize, type V5DirectionPreset, type V5DirectionSetting, type V5UserDirections } from "../../../shared/contract/config.js";
 import { Button, TextArea, TextField, TrashIcon, XIcon, cn } from "../ui/index.js";
 import { useConfigForm } from "./config-form.js";
@@ -136,9 +136,11 @@ export function DirectionEditor({ kind, settingKey, title, saved, customImageSiz
   const hasCustomSizes = sizes.some((size) => size.custom);
   const sizeUsable = kind !== "aspect-ratio" || hasUsableSize(sizes, shown?.allowedSizeIds);
 
+  // A failed save rolls `saved` back to this setting: its error stays when that rollback re-runs the reset below.
+  const failedSave = useRef<V5DirectionSetting | null>(null);
   useEffect(() => {
     if (!editing && customText === null) {
-      setError("");
+      if (saved !== failedSave.current) setError("");
       setDeleteArmed(false);
     }
   }, [editing, customText, saved]);
@@ -163,6 +165,7 @@ export function DirectionEditor({ kind, settingKey, title, saved, customImageSiz
       setDeleteArmed(false);
       return true;
     } catch (caught) {
+      failedSave.current = saved;
       setError(caught instanceof Error ? caught.message : String(caught));
       return false;
     } finally {

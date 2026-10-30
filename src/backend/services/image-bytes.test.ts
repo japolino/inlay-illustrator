@@ -81,6 +81,17 @@ describe("image bytes", () => {
     expect(await bytes.getAsset({ ...ref, cropReference: crop })).toEqual({ data: bytesToBase64(new Uint8Array([7, 8])), mimeType: "image/png" });
     expect((await bytes.getAsset({ ...ref, cropReference: { ...crop, assetKey: "storage:characters/c1/reference-crops/gone.png" } })).mimeType).toBe("image/gif");
   });
+
+  test("assets: a crop of a storage-backed upload reads the crop image, else the upload", async () => {
+    const { storage, bytes } = setup();
+    const path = STORAGE_PATHS.characterReferenceCrop("c1", "__asset_maid_crop_3");
+    await storage.writeBinary(path, new Uint8Array([7, 8]));
+    await storage.writeBinary(STORAGE_PATHS.upload("u2", "png"), new Uint8Array([9]));
+    const upload = { name: "ref.png", key: `storage:${STORAGE_PATHS.upload("u2", "png")}`, extension: "png", sourceType: "upload", moduleId: "", moduleName: "" };
+    const crop = { version: 1, assetName: "__asset_maid_crop_3.png", assetKey: `storage:${path}`, extension: "png", cropRect: { x: 0, y: 0, width: 1, height: 1 }, sourceSize: { width: 2, height: 2 } };
+    expect(await bytes.getAsset({ ...upload, cropReference: crop })).toEqual({ data: bytesToBase64(new Uint8Array([7, 8])), mimeType: "image/png" });
+    expect(await bytes.getAsset({ ...upload, cropReference: { ...crop, assetKey: "storage:characters/c1/reference-crops/gone.png" } })).toEqual({ data: bytesToBase64(new Uint8Array([9])), mimeType: "image/png" });
+  });
 });
 
 describe("JSON fetch bridge", () => {

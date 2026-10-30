@@ -34,6 +34,8 @@ export function draftKeyForPersona(personaId: string): string {
 
 export class FormDraftStore {
   readonly store = new Store<Record<string, DraftEntry>>({});
+  /** Last immediate save per key; the next `commit` waits for it. */
+  private readonly queues = new Map<string, Promise<boolean>>();
 
   entry(key: string): DraftEntry | undefined {
     return this.store.get()[key];
@@ -102,25 +104,34 @@ export class FormDraftStore {
 
   /**
    * Immediate change (AM debounced row toggles): applied to base and draft, then saved at once.
-   * When the draft is clean only the base path is used.
+   * When the draft is clean only the base path is used. Saves of one key run one at a time, each built on the
+   * base the previous one left, so a quick second toggle does not send a stale base revision.
    */
   async commit(key: string, source: FormCollection, fn: (value: FormCollection) => FormCollection, saver: DraftSaver): Promise<boolean> {
     this.sync(key, source);
     const e = this.entry(key)!;
     const dirty = !same(e.base, e.value);
-    const nextBase = fn(e.base);
-    const nextValue = dirty ? fn(e.value) : nextBase;
-    this.put(key, { ...e, value: nextValue });
-    try {
-      const result = await saver(key, nextBase, formCollectionRevision(e.base));
-      const now = this.entry(key)!;
-      this.put(key, { ...now, base: result.collection, value: same(now.value, nextBase) ? result.collection : now.value, conflict: false });
-      return true;
-    } catch (error) {
-      const now = this.entry(key)!;
-      this.put(key, { ...now, value: dirty ? now.value : now.base, error: error instanceof Error ? error.message : String(error) });
-      return false;
-    }
+    this.put(key, { ...e, value: dirty ? fn(e.value) : fn(e.base) });
+    const run = (this.queues.get(key) ?? Promise.resolve(true)).then(async () => {
+      const base = this.entry(key)!.base;
+      try {
+        const nextBase = fn(base);
+        const result = await saver(key, nextBase, formCollectionRevision(base));
+        const now = this.entry(key)!;
+        // A value still at the old base (an earlier queued save failed and reset it) has no edits of its own: it follows too.
+        const follows = same(now.value, nextBase) || same(now.value, base);
+        this.put(key, { ...now, base: result.collection, value: follows ? result.collection : now.value, conflict: false });
+        return true;
+      } catch (error) {
+        const now = this.entry(key)!;
+        this.put(key, { ...now, value: dirty ? now.value : now.base, error: error instanceof Error ? error.message : String(error) });
+        return false;
+      }
+    });
+    this.queues.set(key, run);
+    const ok = await run;
+    if (this.queues.get(key) === run) this.queues.delete(key);
+    return ok;
   }
 
   /**

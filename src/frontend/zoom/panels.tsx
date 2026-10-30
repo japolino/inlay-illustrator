@@ -465,6 +465,7 @@ export function ChatStatePanel({ app, chatId, actorNames }: { app: AppController
       const { actorState } = await app.call("chatState.clear", { chatId, ...(actorKeys ? { actorKeys } : {}) });
       setState(actorState);
       setDeselected(new Set());
+      setError(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {

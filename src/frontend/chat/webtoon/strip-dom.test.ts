@@ -1,10 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
+import type { SpindleFrontendContext } from "lumiverse-spindle-types";
+import type { ChatMessageUiState } from "../../../shared/contract/chat-dom.js";
 import type { WebtoonStripView } from "../../../shared/contract/webtoon.js";
+import type { AppController } from "../../state/app-state.js";
 import { layoutStrip, type PanelImage } from "../../../backend/webtoon/layout.js";
 import type { Storyboard } from "../../../backend/webtoon/storyboard-schema.js";
 import fixture from "../../../backend/webtoon/__fixtures__/storyboard-a2.json" with { type: "json" };
 import { renderStrip, TOOL_SIZE, toolsSpot } from "./strip-dom.js";
+import { createWebtoonStrips } from "./strip-controller.js";
 
 const win = new Window({ url: "http://localhost/" });
 const doc = win.document as unknown as Document;
@@ -95,5 +99,24 @@ describe("webtoon strip DOM", () => {
 
   test("no layout yet -> nothing to draw", () => {
     expect(renderStrip(doc, { ...view(), layout: null }, { onReroll() {}, onSelectTake() {}, onEditText() {} }, { busyPanels: new Set(), stripBusy: true, labels })).toBeNull();
+  });
+});
+
+describe("webtoon strips in the chat", () => {
+  test("a failed webtoon.get is retried (after a backoff) until the strip shows", async () => {
+    const bubble = doc.createElement("div");
+    doc.body.appendChild(bubble);
+    const ctx = { dom: { inject: (target: Element) => target.appendChild(doc.createElement("div")), uninject: (el: Element) => el.remove() } } as unknown as SpindleFrontendContext;
+    let gets = 0;
+    const app = { call: () => (++gets === 1 ? Promise.reject(new Error("Request timed out")) : Promise.resolve({ strip: view() })) } as unknown as AppController;
+    const state = { chatId: "c", messageKey: "illustration:m@0", busy: false, webtoon: { revision: 3, status: "generating" } } as unknown as ChatMessageUiState;
+    const sync = () => strips.sync("c", [{ messageId: "m", element: bubble, state }], {});
+    const strips = createWebtoonStrips(ctx, app, { doc, notice: () => {}, schedule: () => setTimeout(sync, 0) });
+    sync();
+    const deadline = Date.now() + 3000;
+    while (!bubble.querySelector(".ii-wt-canvas") && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(gets).toBe(2);
+    expect(bubble.querySelector(".ii-wt-strip")!.getAttribute("data-ii-wt-status")).toBe("generating");
+    strips.destroy();
   });
 });

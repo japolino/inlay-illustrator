@@ -1,6 +1,7 @@
 /**
  * RPC router: validates request envelopes from the frontend, dispatches to the handler table and sends exactly one response
- * envelope per request (`okResponse` / `errorResponse`) with `host.sendToFrontend(envelope, userId)`.
+ * envelope per request (`okResponse` / `errorResponse`) with `host.sendToFrontend(envelope, userId, { frontendSessionId })`:
+ * only the tab that asked receives it (every tab of the user when the host names no frontend session).
  *
  * - Non-RPC messages (other `type`) return false so the caller can route them elsewhere (fetch bridge).
  * - Wrong protocol -> `protocol-mismatch`; unknown method -> `unknown-method`; method without handler -> `unsupported`;
@@ -52,9 +53,9 @@ function record(value: unknown): Record<string, unknown> | null {
 export function createRouter(options: RouterOptions): Router {
   const { host, handlers } = options;
 
-  function send(userId: string, envelope: RpcResponseEnvelope): void {
+  function send(userId: string, frontendSessionId: string | undefined, envelope: RpcResponseEnvelope): void {
     try {
-      host.sendToFrontend(envelope, userId);
+      host.sendToFrontend(envelope, userId, frontendSessionId ? { frontendSessionId } : undefined);
     } catch {
       /* frontend gone: nothing to do */
     }
@@ -73,7 +74,7 @@ export function createRouter(options: RouterOptions): Router {
       const method = rawMethod as RpcMethod;
       const meta: RequestMeta = { method, requestId, frontendSessionId };
       const reply = (error: RpcError, logged = false) => {
-        send(userId, errorResponse({ requestId, method }, error));
+        send(userId, frontendSessionId, errorResponse({ requestId, method }, error));
         if (!logged) options.onError?.(error, { ...meta, userId });
       };
 
@@ -101,7 +102,7 @@ export function createRouter(options: RouterOptions): Router {
       try {
         ctx = await options.getContext(userId, meta);
         const result = await handler(params, ctx);
-        send(userId, okResponse({ requestId, method }, (result ?? { ok: true }) as never));
+        send(userId, frontendSessionId, okResponse({ requestId, method }, (result ?? { ok: true }) as never));
       } catch (error) {
         const rpc = toRpcError(error);
         let logged = false;

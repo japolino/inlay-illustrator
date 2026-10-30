@@ -538,8 +538,11 @@ export function createOutfitImageController(services: BackendServices): OutfitIm
       const partsOf = { head: draft.head, top: draft.top, bottom: draft.bottom, legs: draft.legs, feet: draft.feet, ...(draft.description !== undefined ? { description: draft.description } : {}) };
       const apply = (collection: FormCollection): FormCollection => {
         let next = normalizeFormCollection(collection);
+        const form = next.forms.find((f) => f.id === params.formId);
+        const outfitId = params.outfitId ?? form?.defaultOutfitId ?? "";
+        // The dock edits a draft: a form or outfit that is not saved yet has nowhere to take the image.
+        if (!form || (params.mode === "replace" && !form.outfits.some((o) => o.id === outfitId))) fail("not-found", "The target form or outfit is not saved yet. Save the outfit list first.");
         if (params.mode === "replace") {
-          const outfitId = params.outfitId ?? next.forms.find((f) => f.id === params.formId)?.defaultOutfitId ?? "";
           const stored = toStoredAssetRef(assetFor(chosen[0]!));
           next = patchOutfit(next, params.formId, outfitId, { ...partsOf, label: draft.label, ...(persona ? { imageAsset: stored } : { referenceAsset: stored, referenceEnabled: true }) } as Any);
         } else {

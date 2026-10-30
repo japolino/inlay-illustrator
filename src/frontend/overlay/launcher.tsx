@@ -1,8 +1,9 @@
 /** Drawer-tab launcher + status panel: backend status, running jobs, quick settings, open buttons. */
 import { useState } from "preact/hooks";
-import { AppContext, useAppState, type AppController } from "../state/app-state.js";
+import { AppContext, useAppState, useRpcQuery, type AppController } from "../state/app-state.js";
 import { RUNTIME_CORNER_OPTIONS, type RuntimeCorner, type RuntimeCornerPreference } from "../chat/corner.js";
 import { LAUNCHER_LABELS as L } from "./labels.js";
+import { resolveImageConnection } from "./settings/image-model.js";
 import { useStore, type FrontendStore } from "./store.js";
 import { Button, Select, SettingsIcon, Switch, cn } from "./ui/index.js";
 
@@ -40,7 +41,10 @@ function LauncherBody({ app, store, onOpen, onOpenSettings, corner: cornerPrefer
   const generationJobs = useAppState((s) => Object.values(s.generationJobs));
   const analysisJobs = useAppState((s) => Object.values(s.analysisJobs).filter((job) => !job.finishedAt));
   const chatSettings = useAppState((s) => s.chatImageGeneration);
-  const imageConnected = useAppState((s) => !!s.config?.image.connectionId);
+  // "" is the Lumiverse default connection: connected when some connection resolves (unknown until the list loads).
+  const connectionId = useAppState((s) => s.config?.image.connectionId);
+  const imageConnections = useRpcQuery("connections.listImage", connection === "ready" ? {} : null, [connectionId]).data?.connections;
+  const imageConnected = connectionId === undefined || !imageConnections || !!resolveImageConnection(imageConnections, connectionId);
   const [corner, setCorner] = useState<RuntimeCorner>(cornerPreference.get());
 
   const connectionText = connection === "ready" ? L.ready : connection === "error" ? `${L.error}: ${connectionError?.message ?? ""}` : L.connecting;

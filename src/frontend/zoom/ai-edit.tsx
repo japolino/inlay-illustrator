@@ -49,10 +49,11 @@ export function AiEditPanel({ seed, seedFixed, canRegenerate, i2iAvailable, cand
 
   const suggestions = useMemo(() => (trigger && !dismissed && focused && !running ? filterMentions(candidates, trigger.query) : []), [trigger, dismissed, focused, running, candidates]);
   const listOpen = suggestions.length > 0;
-  // Escape: first closes the mention list, then the panel (not while running).
+  // Escape: first closes the mention list, then the panel (not while running). The layer stays while the panel does.
   useLayer(true, () => {
     if (listOpen) setDismissed(true);
-    else if (!running) onClose();
+    else if (!running) return onClose();
+    return false;
   });
   useLayer(listOpen, () => setDismissed(true));
 

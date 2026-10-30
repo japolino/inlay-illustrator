@@ -12,6 +12,9 @@ import { AppController } from "../state/app-state.js";
 import { RpcClient } from "../rpc/client.js";
 import { createMockBackend } from "../dev/mock-backend.js";
 import { coreMockHandlers } from "../dev/mock/core.js";
+import { createMockDb, type MockDb } from "../dev/mock/fixtures.js";
+import { render } from "preact";
+import { LAUNCHER_LABELS } from "./labels.js";
 
 // A private happy-dom window: other test files install minimal DOM fakes on globalThis.
 const win = new Window({ url: "http://localhost/" });
@@ -133,8 +136,8 @@ describe("Escape handling", () => {
     doc.body.appendChild(root);
     const layers = new LayerStack();
     const closed: string[] = [];
-    const popLower = layers.push(() => closed.push("lower"));
-    layers.push(() => closed.push("upper"));
+    const popLower = layers.push(() => { closed.push("lower"); });
+    layers.push(() => { closed.push("upper"); });
     const state = { open: true, root, layers, closeOverlay: () => closed.push("overlay") };
 
     const first = keyEvent(inner);
@@ -144,6 +147,32 @@ describe("Escape handling", () => {
     popLower();
     expect(handleOverlayEscape(keyEvent(doc.body).event, state)).toBe(true);
     expect(closed).toEqual(["upper", "overlay"]);
+  });
+
+  test("a layer that stays open (busy) keeps Escape and its place on the stack", () => {
+    const root = doc.createElement("div");
+    doc.body.appendChild(root);
+    const layers = new LayerStack();
+    const closed: string[] = [];
+    let busy = true;
+    layers.push(() => { closed.push("lower"); });
+    layers.push(() => {
+      if (busy) return false;
+      closed.push("upper");
+    });
+    const state = { open: true, root, layers, closeOverlay: () => closed.push("overlay") };
+
+    // Escape while busy is handled (the overlay stays open) and the layer is still there afterwards.
+    expect(handleOverlayEscape(keyEvent(root).event, state)).toBe(true);
+    expect({ closed, size: layers.size }).toEqual({ closed: [], size: 2 });
+    busy = false;
+    handleOverlayEscape(keyEvent(root).event, state);
+    handleOverlayEscape(keyEvent(root).event, state);
+    expect(closed).toEqual(["upper", "lower"]);
+    // Closing the host empties the stack even when a layer would stay.
+    layers.push(() => false);
+    layers.closeAll();
+    expect(layers.size).toBe(0);
   });
 
   test("ignores other keys, closed overlays and events from outside the overlay", () => {
@@ -197,6 +226,31 @@ describe("overlay controller", () => {
     expect(doc.querySelector(`.${OVERLAY_ROOT_CLASS}`)).toBeNull();
   });
 
+  test("Escape in a search field clears the query before it closes the overlay", async () => {
+    const { createOverlayController } = await import("./controller.js");
+    const { FrontendStore } = await import("./store.js");
+    const settle = async () => { for (let i = 0; i < 8; i += 1) await new Promise((resolve) => setTimeout(resolve, 5)); };
+    const app = testApp();
+    await app.init();
+    const controller = createOverlayController(fakeCtx({ calls: [], visible: [] }), { store: new FrontendStore(), app, doc });
+    controller.open();
+    await settle();
+    const search = () => doc.querySelector<HTMLInputElement>('input[aria-label="Sidebar person search"]')!;
+    const escape = () => search().dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }) as unknown as Event);
+    search().focus();
+    search().value = "ari";
+    search().dispatchEvent(new win.Event("input", { bubbles: true }) as unknown as Event);
+    // The very next task, before any paint: the field's layer is registered when the render commits.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    escape();
+    await settle();
+    expect({ open: controller.isOpen(), query: search().value }).toEqual({ open: true, query: "" });
+    escape();
+    expect(controller.isOpen()).toBe(false);
+    controller.destroy();
+  });
+
   test("opens the settings area with the Asset Maid navigation", async () => {
     const { createOverlayController } = await import("./controller.js");
     const { FrontendStore } = await import("./store.js");
@@ -221,6 +275,56 @@ describe("overlay open options", () => {
     expect(app.state.selectedCharacterId).toBe("char-b");
     expect(doc.querySelector('[data-workspace-header] [role="tab"][aria-selected="true"]')?.textContent).toBe("Prompts");
     controller.destroy();
+  });
+
+  test("a settings request asks before dropping the custom character editor's unsaved edits", async () => {
+    const { createOverlayController } = await import("./controller.js");
+    const { FrontendStore } = await import("./store.js");
+    const settle = async () => { for (let i = 0; i < 8; i += 1) await new Promise((resolve) => setTimeout(resolve, 5)); };
+    const app = testApp();
+    await app.init();
+    const controller = createOverlayController(fakeCtx({ calls: [], visible: [] }), { store: new FrontendStore(), app, doc });
+    controller.open();
+    await settle();
+    doc.querySelector<HTMLButtonElement>('button[aria-label="Shadow figure person menu"]')!.click();
+    await settle();
+    [...doc.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((b) => b.textContent?.includes("Edit person"))!.click();
+    await settle();
+    const title = doc.querySelector<HTMLInputElement>("#character-editor-title")!;
+    title.value = "Renamed";
+    title.dispatchEvent(new win.Event("input", { bubbles: true }) as unknown as Event);
+    await settle();
+
+    controller.open({ settings: "system" });
+    await settle();
+    expect(doc.querySelector("[data-editor-guard]")).not.toBeNull();
+    expect(doc.querySelector("[data-settings-navigation-item]")).toBeNull();
+    expect(doc.querySelector<HTMLInputElement>("#character-editor-title")?.value).toBe("Renamed");
+    controller.destroy();
+  });
+});
+
+describe("drawer launcher", () => {
+  test("the default image connection (\"\") counts as connected; a warning only when none resolves", async () => {
+    const { LauncherPanel } = await import("./launcher.js");
+    const { FrontendStore } = await import("./store.js");
+    const imageStatus = async (edit: (db: MockDb) => void) => {
+      const db = createMockDb();
+      db.config = { ...db.config, image: { ...db.config.image, connectionId: "" } };
+      edit(db);
+      const app = new AppController(new RpcClient(createMockBackend({ db, handlers: [coreMockHandlers()] }).transport));
+      await app.init();
+      const root = doc.createElement("div");
+      doc.body.appendChild(root);
+      render(<LauncherPanel app={app} store={new FrontendStore()} onOpen={() => undefined} onOpenSettings={() => undefined} corner={{ get: () => "bottom-right", set: () => undefined }} />, root as unknown as Element);
+      for (let i = 0; i < 5; i += 1) await new Promise((resolve) => setTimeout(resolve, 5));
+      const row = [...root.querySelectorAll('section[role="status"] > div')].find((r) => r.firstElementChild?.textContent === LAUNCHER_LABELS.imageProvider);
+      const value = row?.lastElementChild?.textContent;
+      render(null, root as unknown as Element);
+      return value;
+    };
+    expect(await imageStatus(() => undefined)).toBe("novelai");
+    expect(await imageStatus((db) => { db.imageConnections = []; })).toBe(LAUNCHER_LABELS.notConnected);
   });
 });
 

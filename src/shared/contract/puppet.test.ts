@@ -66,6 +66,12 @@ describe("sanitizePuppetRig", () => {
     }
   });
 
+  test("keeps the parent of a part that only hangs from a parent cycle", () => {
+    // Item 0 hangs from forearm 1; forearm 1 <-> item 2 is the loop.
+    const result = parts({ parts: [{ label: "item", box_2d: [300, 600, 500, 700], attached_to: 1 }, { label: "forearm", box_2d: [400, 500, 700, 700], attached_to: 2 }, { label: "item", box_2d: [500, 700, 700, 800], attached_to: 1 }] });
+    expect(result.map((p) => p.parent)).toEqual([1, -1, 1]);
+  });
+
   test("keeps one torso per character and the most visible parts when there are too many", () => {
     const many = [
       { label: "torso", character: 0, box_2d: [300, 0, 1000, 500] },

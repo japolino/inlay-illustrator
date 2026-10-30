@@ -34,14 +34,31 @@ export interface BackendRuntimeOptions {
 interface Disposable { dispose?: () => void }
 
 export function createBackendRuntime(options: BackendRuntimeOptions): BackendRuntime {
-  const registry = createServicesRegistry(options.host, options.createServices);
+  const servicesByUser = createServicesRegistry(options.host, options.createServices);
   const modulesByUser = new Map<string, BackendModules>();
 
+  // User-scoped installs: host events carry no userId (the owner) and frontend messages the installer's real userId. The
+  // first real userId seen is taken as that owner: both share whichever runtime was built first ("" when a host event
+  // came before any frontend message), so one host event never runs two pipelines for the same person.
+  let first: string | undefined | null = null;
+  let owner: string | undefined;
+  const runtimeUser = (userId: string | undefined): string | undefined => {
+    if (first === null) first = userId;
+    owner ??= userId;
+    return userId === undefined || userId === owner ? first : userId;
+  };
+  const registry: ServicesRegistry = {
+    get: (userId) => servicesByUser.get(runtimeUser(userId)),
+    acceptFrontendMessage: (payload, userId) => servicesByUser.acceptFrontendMessage(payload, runtimeUser(userId)),
+    all: () => servicesByUser.all(),
+  };
+
   const modules = (userId: string | undefined): BackendModules => {
-    const key = userId ?? "";
+    const user = runtimeUser(userId);
+    const key = user ?? "";
     let current = modulesByUser.get(key);
     if (current) return current;
-    const services = registry.get(userId);
+    const services = servicesByUser.get(user);
     current = {} as BackendModules;
     modulesByUser.set(key, current);
     const get = () => modulesByUser.get(key)!;

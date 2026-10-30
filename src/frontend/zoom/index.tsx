@@ -110,7 +110,7 @@ export function createZoomViewer(ctx: SpindleFrontendContext, app: AppController
       if (!open) return;
       open = false;
       win.removeEventListener("keydown", onKeyDown, true);
-      while (layers.size > 0) layers.closeTop();
+      layers.closeAll();
       target = null;
       renderApp();
       if (root) {

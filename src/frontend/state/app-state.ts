@@ -115,6 +115,8 @@ export function mergePatch<T>(base: T, patch: unknown): T {
 }
 
 const FINISHED_JOB_TTL_MS = 30_000;
+/** Failed analysis jobs wait for their error to be dismissed; beyond this many the oldest are dropped. */
+const MAX_UNDISMISSED_ANALYSIS_ERRORS = 10;
 
 export class AppController {
   readonly client: RpcClient;
@@ -360,6 +362,14 @@ export class AppController {
     }
   }
 
+  /** The user closed a failed job's error: drops the job (failed jobs are not cleaned up on their own). */
+  dismissAnalysisJob(jobId: string): void {
+    if (!(jobId in this.state.analysisJobs)) return;
+    const jobs = { ...this.state.analysisJobs };
+    delete jobs[jobId];
+    this.store.patch({ analysisJobs: jobs });
+  }
+
   /** Running analysis jobs (optionally of one kind / character). */
   activeAnalysis(filter: { kind?: AnalysisKind; characterId?: string } = {}): AnalysisJobState[] {
     return Object.values(this.state.analysisJobs).filter((job) =>
@@ -411,6 +421,16 @@ export class AppController {
     }, FINISHED_JOB_TTL_MS);
   }
 
+  private dropOldAnalysisErrors(): void {
+    const errors = Object.values(this.state.analysisJobs)
+      .filter((job) => job.finishedAt !== undefined && job.status === "error")
+      .sort((a, b) => (a.finishedAt ?? 0) - (b.finishedAt ?? 0));
+    if (errors.length <= MAX_UNDISMISSED_ANALYSIS_ERRORS) return;
+    const jobs = { ...this.state.analysisJobs };
+    for (const job of errors.slice(0, errors.length - MAX_UNDISMISSED_ANALYSIS_ERRORS)) delete jobs[job.jobId];
+    this.store.patch({ analysisJobs: jobs });
+  }
+
   private bump(field: "chatDataRevision" | "documentRevision", key: string): void {
     const map = this.state[field];
     this.store.patch({ [field]: { ...map, [key]: (map[key] ?? 0) + 1 } } as Partial<AppState>);
@@ -448,7 +468,9 @@ export class AppController {
         startedAt: existing?.startedAt ?? Date.now(),
         finishedAt: Date.now()
       });
-      this.scheduleJobCleanup("analysisJobs", payload.jobId);
+      // A failed job stays until its error modal is dismissed (the overlay may be closed, or an older error open).
+      if (payload.status === "error") this.dropOldAnalysisErrors();
+      else this.scheduleJobCleanup("analysisJobs", payload.jobId);
       // Some analyses write only the metadata cache or global persona settings (no document.changed).
       if (payload.characterId) this.documentChanged(payload.characterId);
     });
@@ -503,33 +525,36 @@ export interface QueryState<T> {
 /**
  * Runs an RPC query when `params` changes (by JSON identity). `params === null` skips the call.
  * `deps` adds extra re-run triggers (e.g. a document revision).
+ * Data and error are kept with the params they belong to: other params (or null) never show them.
  */
 export function useRpcQuery<M extends ClientMethod>(method: M, params: ClientParams<M> | null, deps: unknown[] = []): QueryState<ClientResult<M>> {
   const app = useApp();
-  const [data, setDataState] = useState<ClientResult<M> | undefined>(undefined);
-  const [error, setError] = useState<RpcError | null>(null);
+  const [result, setResult] = useState<{ key: string | null; data?: ClientResult<M>; error: RpcError | null }>({ key: null, error: null });
   const [loading, setLoading] = useState(params !== null);
   const key = params === null ? null : JSON.stringify(params);
   const run = useRef(0);
   const paramsRef = useRef(params);
   paramsRef.current = params;
+  const keyRef = useRef(key);
+  keyRef.current = key;
 
   const reload = useCallback(async () => {
     const current = paramsRef.current;
+    const currentKey = keyRef.current;
+    // Counted even when skipped, so an answer still in flight for the previous params is dropped.
+    const id = ++run.current;
     if (current === null) {
       setLoading(false);
       return;
     }
-    const id = ++run.current;
     setLoading(true);
     try {
-      const result = await app.call(method, current);
+      const data = await app.call(method, current);
       if (id !== run.current) return;
-      setDataState(() => result);
-      setError(null);
+      setResult({ key: currentKey, data, error: null });
     } catch (caught) {
       if (id !== run.current) return;
-      setError(toRpcError(caught));
+      setResult((previous) => ({ key: currentKey, data: previous.key === currentKey ? previous.data : undefined, error: toRpcError(caught) }));
     } finally {
       if (id === run.current) setLoading(false);
     }
@@ -540,10 +565,15 @@ export function useRpcQuery<M extends ClientMethod>(method: M, params: ClientPar
   }, [key, reload, ...deps]);
 
   const setData = useCallback((next: ClientResult<M> | ((previous: ClientResult<M> | undefined) => ClientResult<M>)) => {
-    setDataState((previous) => (typeof next === "function" ? (next as (p: ClientResult<M> | undefined) => ClientResult<M>)(previous) : next));
+    const target = keyRef.current;
+    setResult((previous) => {
+      const own = previous.key === target ? previous : { key: target, error: null };
+      return { ...own, data: typeof next === "function" ? (next as (p: ClientResult<M> | undefined) => ClientResult<M>)(own.data) : next };
+    });
   }, []);
 
-  return { data, error, loading, reload, setData };
+  const own = result.key === key;
+  return { data: own ? result.data : undefined, error: own ? result.error : null, loading: loading || (key !== null && !own), reload, setData };
 }
 
 export interface MutationState<M extends ClientMethod> {

@@ -1,5 +1,18 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { Window } from "happy-dom";
+import type { SpindleFrontendContext } from "lumiverse-spindle-types";
+import { h, render, type ComponentChild } from "preact";
 import type { ChatMessageUiState } from "../../shared/contract/chat-dom.js";
+import { createFullMockBackend } from "../dev/mock/index.js";
+import { MockRpcError } from "../dev/mock-backend.js";
+import { ConfirmProvider } from "../overlay/ui/index.js";
+import { RpcClient } from "../rpc/client.js";
+import { AppController } from "../state/app-state.js";
+import { createZoomViewer, type ZoomViewer } from "./index.js";
+import { AI_EDIT_LABELS, ZOOM_LABELS } from "./labels.js";
+import { ChatStatePanel } from "./panels.js";
+import { useZoomSession, type ZoomSession, type ZoomTarget } from "./session.js";
+import { Stage } from "./stage.js";
 import {
   aiChoiceZoneTop,
   buildImageGroups,
@@ -157,5 +170,180 @@ describe("coordinate board geometry", () => {
   test("download file name", () => {
     expect(downloadName("scene.__am__.chat.123", "/api/v1/image-gen/results/x")).toBe("scene.png");
     expect(downloadName("a/b", "data:image/svg+xml;utf8,x")).toBe("a_b.svg");
+  });
+});
+
+describe("viewer components (DOM, dev mock)", () => {
+  // Private desktop-size happy-dom window; preact/hooks schedules effects with requestAnimationFrame, so pin a complete pair.
+  const win = new Window({ url: "http://localhost/", width: 1440, height: 900 });
+  const doc = win.document as unknown as Document;
+  const frames = globalThis as { requestAnimationFrame?: unknown; cancelAnimationFrame?: unknown };
+  const savedFrames = { request: frames.requestAnimationFrame, cancel: frames.cancelAnimationFrame };
+  beforeAll(() => {
+    frames.requestAnimationFrame = (callback: (time: number) => void) => setTimeout(() => callback(Date.now()), 0);
+    frames.cancelAnimationFrame = (handle: ReturnType<typeof setTimeout>) => clearTimeout(handle);
+  });
+  afterAll(() => {
+    frames.requestAnimationFrame = savedFrames.request;
+    frames.cancelAnimationFrame = savedFrames.cancel;
+    win.happyDOM.abort();
+  });
+  const roots: HTMLElement[] = [];
+  const viewers: ZoomViewer[] = [];
+  afterEach(() => {
+    for (const root of roots.splice(0)) render(null, root);
+    for (const viewer of viewers.splice(0)) viewer.destroy();
+    doc.body.replaceChildren();
+  });
+
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  async function until<T>(read: () => T | null | undefined | false): Promise<T> {
+    const started = Date.now();
+    for (;;) {
+      const value = read();
+      if (value) return value;
+      if (Date.now() - started > 3000) throw new Error("until: timed out");
+      await sleep(5);
+    }
+  }
+  function mount(node: ComponentChild): HTMLElement {
+    const root = doc.createElement("div");
+    doc.body.appendChild(root);
+    roots.push(root);
+    render(node, root);
+    return root;
+  }
+  async function mockApp() {
+    const mock = createFullMockBackend({ timeScale: 0, latencyMs: 0 });
+    const app = new AppController(new RpcClient(mock.transport));
+    await app.init();
+    const handlers = mock.handlers as Record<string, (params: never, ctx: never) => unknown>;
+    const fail = (method: string) => {
+      handlers[method] = () => { throw new MockRpcError("internal", "host load failed"); };
+    };
+    /** Holds every `method` call until `release()`, then fails it. */
+    const hold = (method: string) => {
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const held = { calls: 0, release };
+      handlers[method] = async () => {
+        held.calls += 1;
+        await gate;
+        throw new MockRpcError("busy", "held request failed");
+      };
+      return held;
+    };
+    return { mock, app, fail, hold };
+  }
+
+  const TARGET: ZoomTarget = { chatId: "chat-1", slotId: "illustration:msg-2@0:slot:0", messageKey: "illustration:msg-2@0" };
+  function openViewer(app: AppController): ZoomViewer {
+    // No host DOM API: the viewer falls back to doc.createElement for its root.
+    const viewer = createZoomViewer({} as SpindleFrontendContext, app, { doc });
+    viewers.push(viewer);
+    viewer.open(TARGET);
+    return viewer;
+  }
+  const q = <T extends HTMLElement = HTMLElement>(selector: string) => doc.querySelector<T>(selector);
+  const enabled = <T extends HTMLButtonElement | HTMLTextAreaElement = HTMLButtonElement>(selector: string) => {
+    const element = q<T>(selector);
+    return element && !element.disabled ? element : null;
+  };
+  /** A real keydown that reaches the viewer's capture listener on window; true when the viewer handled it. */
+  function pressEscape(target: Element): boolean {
+    const event = new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }) as unknown as KeyboardEvent;
+    target.dispatchEvent(event);
+    return event.defaultPrevented;
+  }
+
+  test("the stage shows a loading status, not an error, while its url is pending", async () => {
+    const props = { url: "", alt: "", width: 832, height: 1216, canStep: false, onStep: () => undefined };
+    const root = mount(h(Stage, { ...props, pending: true }));
+    await sleep(20);
+    expect({ status: !!root.querySelector('[role="status"]'), error: root.textContent?.includes(ZOOM_LABELS.cannotLoad) }).toEqual({ status: true, error: false });
+    render(h(Stage, { ...props, pending: false }), root);
+    await until(() => root.textContent?.includes(ZOOM_LABELS.cannotLoad));
+  });
+
+  test("the viewer's stage is loading until its first details answer, and an error only once they fail", async () => {
+    const { app, hold } = await mockApp();
+    const details = hold("zoom.getDetails");
+    openViewer(app);
+    const stage = await until(() => details.calls === 1 && q("[data-ii-zoom-stage]"));
+    await sleep(50);
+    expect({ status: !!stage.querySelector('[role="status"]'), error: stage.textContent?.includes(ZOOM_LABELS.cannotLoad) }).toEqual({ status: true, error: false });
+    details.release();
+    await until(() => stage.textContent?.includes(ZOOM_LABELS.cannotLoad));
+    expect(stage.querySelector('[role="status"]')).toBeNull();
+  });
+
+  test("stepping the revision keeps the chat image list when reloading it fails", async () => {
+    const { mock, app, fail } = await mockApp();
+    let session!: ZoomSession;
+    function Harness() {
+      session = useZoomSession(app, TARGET, () => undefined, doc);
+      return null;
+    }
+    mount(h(Harness, null));
+    await until(() => session.details && session.groups.length === 2);
+    fail("chatDom.getMessageStates");
+    await session.stepRevision(session.groups[0]!, -1);
+    await sleep(50);
+    expect(mock.calls.some((c) => c.method === "history.selectRevision")).toBe(true);
+    expect(session.groups.map((g) => g.messageKey)).toEqual(["illustration:msg-2@0", "illustration:msg-5@0"]);
+  });
+
+  test("a successful chat state clear drops an earlier error", async () => {
+    const { app, fail } = await mockApp();
+    const root = mount(h(ConfirmProvider, null, h(ChatStatePanel, { app, chatId: "chat-1" })));
+    await until(() => root.querySelector("[data-ii-zoom-state-tag]"));
+    fail("chatState.get");
+    root.querySelector<HTMLButtonElement>(`button[aria-label="${ZOOM_LABELS.refreshState}"]`)!.click();
+    await until(() => root.querySelector('[role="alert"]'));
+    [...root.querySelectorAll<HTMLButtonElement>("footer button")].find((b) => b.textContent?.includes(ZOOM_LABELS.clearAll))!.click();
+    const dialog = await until(() => root.querySelector('[role="alertdialog"]'));
+    [...dialog.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.includes(ZOOM_LABELS.clearAll))!.click();
+    await until(() => root.textContent?.includes(ZOOM_LABELS.stateEmpty));
+    expect(root.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  test("Escape while an AI edit runs keeps the panel's layer: after the failure, Escape closes the panel, not the viewer", async () => {
+    const { app, hold } = await mockApp();
+    const viewer = openViewer(app);
+    await until(() => enabled("[data-ii-zoom-delete-slot]"));
+    if (!q("[data-ii-zoom-info]")) q("[data-ii-zoom-info-toggle]")!.click();
+    (await until(() => enabled("[data-ii-zoom-ai-toggle]"))).click();
+    const area = await until(() => q<HTMLTextAreaElement>("[data-ii-zoom-ai-instruction]"));
+    const edit = hold("zoom.requestAiPromptEdit");
+    area.value = "make the sky red";
+    area.dispatchEvent(new win.Event("input", { bubbles: true }) as unknown as Event);
+    (await until(() => enabled(`[data-ii-zoom-ai-panel] button[aria-label="${AI_EDIT_LABELS.submit}"]`))).click();
+    await until(() => edit.calls === 1 && q<HTMLTextAreaElement>("[data-ii-zoom-ai-instruction]")?.disabled);
+
+    expect(pressEscape(q("[data-ii-zoom-ai-panel]")!)).toBe(true);
+    edit.release();
+    await until(() => enabled<HTMLTextAreaElement>("[data-ii-zoom-ai-instruction]"));
+    expect({ viewer: viewer.isOpen(), panel: !!q("[data-ii-zoom-ai-panel]") }).toEqual({ viewer: true, panel: true });
+    pressEscape(q("[data-ii-zoom-ai-panel]")!);
+    await sleep(20);
+    expect({ viewer: viewer.isOpen(), panel: !!q("[data-ii-zoom-ai-panel]") }).toEqual({ viewer: true, panel: false });
+  });
+
+  test("Escape while a slot delete runs keeps the dialog's layer: after the failure, Escape closes the dialog, not the viewer", async () => {
+    const { app, hold } = await mockApp();
+    const viewer = openViewer(app);
+    (await until(() => enabled("[data-ii-zoom-delete-slot]"))).click();
+    const confirm = await until(() => q<HTMLButtonElement>("[data-ii-zoom-slot-confirm]"));
+    const del = hold("history.deleteSlot");
+    confirm.click();
+    await until(() => del.calls === 1 && q("[data-ii-zoom-slot-confirm]")?.textContent?.includes(ZOOM_LABELS.deleting));
+
+    expect(pressEscape(q("[data-ii-zoom-slot-confirm]")!)).toBe(true);
+    del.release();
+    await until(() => enabled("[data-ii-zoom-slot-confirm]"));
+    expect({ viewer: viewer.isOpen(), dialog: !!q("[data-ii-zoom-slot-confirm]") }).toEqual({ viewer: true, dialog: true });
+    pressEscape(q("[data-ii-zoom-slot-confirm]")!);
+    await sleep(20);
+    expect({ viewer: viewer.isOpen(), dialog: !!q("[data-ii-zoom-slot-confirm]") }).toEqual({ viewer: true, dialog: false });
   });
 });

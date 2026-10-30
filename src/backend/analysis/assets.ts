@@ -195,10 +195,10 @@ export async function saveCrop(services: BackendServices, params: RpcParams<"ass
   return { asset: { ...normalizeAssetRef(params.asset), cropReference } };
 }
 
-/** URL for an asset: host image URL, or a data URL for extension-storage assets. */
+/** URL for an asset (the source image, also for a crop): host image URL, or a data URL for extension-storage assets. */
 export async function assetUrl(services: BackendServices, asset: AssetRef): Promise<{ url: string }> {
   if (asset.key?.startsWith(STORAGE_ASSET_PREFIX)) {
-    const bytes = await readAssetBytes(services, asset);
+    const bytes = await readAssetBytes(services, { ...asset, cropReference: undefined });
     return { url: `data:${bytes.mimeType};base64,${bytesToBase64(bytes.data)}` };
   }
   try {

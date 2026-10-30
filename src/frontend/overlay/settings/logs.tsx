@@ -1,7 +1,7 @@
 /** Run log viewer (Asset Maid `Ywt` 138206), developer mode only. Live entries come from `log.appended`. */
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { RuntimeLogEntry } from "../../../shared/contract/rpc.js";
-import { useApp } from "../../state/app-state.js";
+import { useApp, useAppState } from "../../state/app-state.js";
 import { toRpcError } from "../../rpc/client.js";
 import { Button, CheckIcon, IconButton, Select, TrashIcon, cn, type SelectOption } from "../ui/index.js";
 import { CopyIcon, SpinnerIcon } from "./icons.js";
@@ -51,6 +51,8 @@ const LEVEL_TONES: Record<RuntimeLogEntry["level"], BadgeTone> = { debug: "neutr
 
 export function LogsPage() {
   const app = useApp();
+  const resyncCount = useAppState((state) => state.resyncCount);
+  const mountedAtResync = useRef(resyncCount);
   const [entries, setEntries] = useState<RuntimeLogEntry[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
@@ -59,13 +61,16 @@ export function LogsPage() {
   const [clearing, setClearing] = useState(false);
   const [copied, setCopied] = useState<number | "all" | null>(null);
 
+  useEffect(() => app.client.on("log.appended", ({ entry }) => setEntries((current) => mergeLogEntries(current, [entry]))), [app]);
+  // Listed again after a reconnect (`resync`): entries sent meanwhile were lost, and a restarted backend counts from
+  // seq 1 again, so that list replaces the page's entries instead of merging into them.
   useEffect(() => {
     let alive = true;
-    const off = app.client.on("log.appended", ({ entry }) => setEntries((current) => mergeLogEntries(current, [entry])));
+    const replace = resyncCount !== mountedAtResync.current;
     app.call("logs.list", { limit: MAX_LOG_ENTRIES })
       .then((result) => {
         if (!alive) return;
-        setEntries((current) => mergeLogEntries(current, result.entries));
+        setEntries((current) => mergeLogEntries(replace ? [] : current, result.entries));
         setStatus("ready");
       })
       .catch((caught) => {
@@ -75,9 +80,8 @@ export function LogsPage() {
       });
     return () => {
       alive = false;
-      off();
     };
-  }, [app]);
+  }, [app, resyncCount]);
 
   const scopes = useMemo(() => {
     const counts = new Map<string, number>();

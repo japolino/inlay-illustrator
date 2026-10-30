@@ -8,7 +8,10 @@ import { RpcClient } from "../../rpc/client.js";
 import { AppContext, AppController } from "../../state/app-state.js";
 import { WorkspaceUiContext, WorkspaceUiStore } from "../workspace-ui.js";
 import type { WorkspaceTab } from "../labels.js";
+import { normalizeAssetRef } from "../../../shared/contract/character.js";
 import { useWorkspaceTabView } from "./index.js";
+import { AssetImage, seedAssetUrls, useAssetUrl } from "./parts.js";
+import { sessionStoreFor } from "./session.js";
 
 // Private happy-dom window (other test files install DOM fakes on globalThis).
 const win = new Window({ url: "http://localhost/" });
@@ -177,6 +180,35 @@ describe("prompts tab", () => {
     expect(outfit.referenceAsset?.name).toBe(group.candidates[0]!.asset.name);
     unmount();
   });
+
+  test("auto-pick: Add leaves out the hidden groups of a character that is not chosen", async () => {
+    const { root, mock, characterId, unmount } = await mount("prompts");
+    const buttons = () => [...root.querySelectorAll<HTMLButtonElement>("button")];
+    const addButton = () => buttons().find((b) => /^Add \d+ outfits?$/.test(b.textContent?.trim() ?? ""));
+    byLabel(root, "Auto-pick outfits from card images").click();
+    (await until(() => buttons().find((b) => b.textContent?.trim() === "Scan image names"), "scan button")).click();
+    await until(() => root.querySelector("[data-autopick-character]"), "character section");
+    const state = workspaceMockState(mock.db).autopick[characterId]!;
+    // Every group tagged (a finished tag job), then reopen: tagged groups start checked.
+    state.groups = state.groups.map((g) => ({ ...g, tags: { candidate: 0, framing: "cowboy shot", nude: false, explicit: false, legsVisible: true, feetVisible: true, label: g.outfit, outfit: { head: "", top: "white blouse", bottom: "navy skirt", legs: "", feet: "" }, textLegs: "", textFeet: "", taggedAt: "" } }));
+    buttons().find((b) => b.textContent?.trim() === "Close")!.click();
+    await wait();
+    byLabel(root, "Auto-pick outfits from card images").click();
+    const shown = await until(() => {
+      const sections = [...root.querySelectorAll("[data-autopick-character]")].filter((s) => s.querySelector("[data-autopick-group]"));
+      return sections.length >= 2 ? sections : null;
+    }, "two chosen characters");
+    const leftOut = shown.at(-1)!;
+    const key = leftOut.getAttribute("data-autopick-character")!;
+    leftOut.querySelector<HTMLButtonElement>('[role="checkbox"]')!.click();
+    await until(() => !leftOut.querySelector("[data-autopick-group]"), "cards hidden");
+    const checked = root.querySelectorAll('[data-autopick-group] [role="checkbox"][aria-label="Add"][aria-checked="true"]').length;
+    expect(addButton()?.textContent?.trim()).toBe(`Add ${checked} outfit${checked === 1 ? "" : "s"}`);
+    addButton()!.click();
+    await until(() => state.groups.some((g) => g.appliedOutfitId), "applied");
+    expect(state.groups.filter((g) => g.promptKey === key && g.appliedOutfitId)).toEqual([]);
+    unmount();
+  });
 });
 
 describe("persona tab", () => {
@@ -185,6 +217,18 @@ describe("persona tab", () => {
     const list = await until(() => root.querySelector("[data-persona-list]"), "persona list");
     expect(list.textContent).toContain("Joon");
     expect(list.textContent).toContain("Active in current chat");
+    unmount();
+  });
+
+  test("outfit pane: Analyze on reference-less outfits follows the Persona reclass mode, not the Prompts one", async () => {
+    const { root, app, characterId, unmount } = await mount("persona");
+    await until(() => root.querySelector("[data-persona-list]")?.textContent?.includes("Joon"), "persona list");
+    byLabel(root, "Switch to AI reclassification").click();
+    byLabel(root, "Joon outfit edit").click();
+    const analyze = () => [...root.querySelectorAll<HTMLButtonElement>("[data-outfit-panel='persona::persona-1'] [data-outfit-card] [role='checkbox'][aria-label='Analyze']")];
+    await until(() => analyze().length === 2 && analyze().every((b) => !b.disabled), "analyzable in persona reclass");
+    sessionStoreFor(app).update(characterId, { reclass: { prompts: true, persona: false } });
+    await until(() => analyze().every((b) => b.disabled), "locked in prompts reclass");
     unmount();
   });
 });
@@ -199,5 +243,19 @@ describe("artists tab", () => {
     expect(documentFor(mock.db, characterId).characterPrompt.selectedArtistId).toBe("comic_page_illustration_style");
     expect(root.querySelector('[data-artist-card="comic_page_illustration_style"]')!.getAttribute("data-selected")).toBe("true");
     unmount();
+  });
+});
+
+describe("asset URL cache", () => {
+  test("picker seeds keep the full-size URL for useAssetUrl (crop, viewers) and the thumbnail for AssetImage tiles", () => {
+    const app = { async call(method: string) { throw new Error(`unexpected ${method}`); } } as unknown as AppController;
+    const asset = normalizeAssetRef({ name: "alice_ref.png", key: "ref1" });
+    seedAssetUrls(app, [{ asset, url: "/api/v1/images/ref1", thumbnailUrl: "/api/v1/images/ref1?size=sm" }]);
+    const Full = () => <span data-full={useAssetUrl(asset) ?? ""} />;
+    const root = doc.createElement("div");
+    render(<AppContext.Provider value={app}><Full /><AssetImage asset={asset} alt="" /></AppContext.Provider>, root as unknown as Element);
+    expect(root.querySelector("[data-full]")!.getAttribute("data-full")).toBe("/api/v1/images/ref1");
+    expect(root.querySelector("img")!.getAttribute("src")).toBe("/api/v1/images/ref1?size=sm");
+    render(null, root as unknown as Element);
   });
 });

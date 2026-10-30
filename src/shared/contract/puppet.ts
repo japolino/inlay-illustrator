@@ -173,12 +173,15 @@ export function sanitizePuppetRig(raw: unknown): { parts: PuppetPart[] } | { fai
     if (p.parent === i || (p.parent >= 0 && parts[p.parent]!.label === "torso")) p.parent = -1;
   });
   parts.forEach((p, i) => {
+    // Cut only a part the walk comes back to; a part merely hanging from a loop keeps its parent (the loop's
+    // lowest-index member still sees it intact on its own turn and cuts it).
     const seen = new Set([i]);
     for (let at = p.parent; at >= 0; at = parts[at]!.parent) {
-      if (seen.has(at)) {
+      if (at === i) {
         p.parent = -1;
         break;
       }
+      if (seen.has(at)) break;
       seen.add(at);
     }
   });

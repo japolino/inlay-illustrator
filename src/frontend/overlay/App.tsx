@@ -135,8 +135,13 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
     if (!navigation.requestId) return;
     const target = navigation.characterId;
     if (navigation.settings) {
-      setSection(navigation.settings);
-      setSettingsOpen(true);
+      const settings = navigation.settings;
+      guarded(() => {
+        setSection(settings);
+        setSettingsOpen(true);
+        setDrawerOpen(false);
+        setPickerOpen(false);
+      });
     } else if (target && target !== characterId) {
       setSettingsOpen(false);
       guarded(() => {

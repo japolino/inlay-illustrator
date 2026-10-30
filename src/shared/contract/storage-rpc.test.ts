@@ -11,6 +11,7 @@ describe("storage layout", () => {
     expect(() => safePathSegment("..")).toThrow();
     expect(() => safePathSegment("")).toThrow();
     expect(characterResetPaths("c")).toContain("characters/c/asset-maid.json");
+    expect(characterResetPaths("c")).toContain("characters/c/autopick.json");
     expect(storagePathForAssetMaidKey("asset_maid:v1:config:model")).toBe("config/model.json");
     expect(storagePathForAssetMaidKey("asset_maid:v1:local:metadata-cache:src%201")).toBe("characters/src%201/metadata-cache.json");
     expect(storagePathForAssetMaidKey("asset_maid:v1:active-instance")).toBeNull();

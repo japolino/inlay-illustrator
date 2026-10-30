@@ -230,6 +230,23 @@ describe("chat side (DOM, dev mock)", () => {
     expect((call.params as { messageIds: string[] }).messageIds).toEqual(expect.arrayContaining(["msg-2", "msg-4", "msg-5"]));
   });
 
+  test("a slot regeneration that ended while disconnected stops spinning after a resync", async () => {
+    const r = rig();
+    await r.app.init();
+    const chat = mockChat(r.mock.db);
+    chat.holdJobs = true;
+    const edge = '.ii-am-chat-edge[data-ii-slot-id="illustration:msg-2@0:slot:0"]';
+    (await until(() => q(`${edge} [data-ii-action="regenerate"]`))).click();
+    const job = await until(() => Object.values(chat.jobs).find((j) => r.app.state.generationJobs[j.snapshot.jobId]?.status === "running"));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(q(edge)?.getAttribute("data-ii-busy")).toBe("true");
+    // The job ends without its generation.finished reaching the page (lost while the socket was down).
+    job.snapshot.status = "success";
+    await r.app.resync();
+    await until(() => q(`${edge}[data-ii-busy="false"] [data-ii-action="regenerate"]`));
+    chat.holdJobs = false;
+  });
+
   test("backend error events open the runtime error dialog", async () => {
     const r = rig();
     await until(() => q(".ii-am-chat-footer"));

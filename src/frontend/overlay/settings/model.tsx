@@ -51,6 +51,12 @@ export function ModelSettingsPage() {
   const jevConnectionId = config?.jevConnection.connectionId ?? "";
   const resolvedDecision = decisionList.find((c) => c.id === jevConnectionId) ?? (jevConnectionId ? undefined : decisionList.find((c) => c.isDefault));
   const [jevTest, setJevTest] = useState<{ status: "idle" | "loading" | "success" | "error"; text?: string }>({ status: "idle" });
+  /** Counts tests and connection changes: a result that arrives after either is dropped. */
+  const jevTestRun = useRef(0);
+  const resetJevTest = () => {
+    jevTestRun.current += 1;
+    setJevTest({ status: "idle" });
+  };
 
   const ids = {
     connection: useFieldId("ii-model-connection"),
@@ -63,12 +69,14 @@ export function ModelSettingsPage() {
 
   const runJevTest = async () => {
     if (jevTest.status === "loading" || !config) return;
+    const run = ++jevTestRun.current;
     setJevTest({ status: "loading" });
     try {
       const result = await app.call("decision.testConnection", {
         connectionId: config.jevConnection.connectionId || undefined,
         model: config.jevConnection.model || undefined
       });
+      if (run !== jevTestRun.current) return;
       if (result.ok) {
         setJevTest({ status: "success", text: M.jevConnected(result.latencyMs) });
       } else {
@@ -76,6 +84,7 @@ export function ModelSettingsPage() {
         setJevTest({ status: "error", text: errorMsg });
       }
     } catch (caught) {
+      if (run !== jevTestRun.current) return;
       setJevTest({ status: "error", text: toRpcError(caught).message || M.jevTestFailed });
     }
   };
@@ -147,7 +156,7 @@ export function ModelSettingsPage() {
                 options={decisionConnectionOptions(decisionList, config.jevConnection.connectionId ?? "")}
                 disabled={decisionConnections.loading && !decisionList.length}
                 onValueChange={(value) => {
-                  setJevTest({ status: "idle" });
+                  resetJevTest();
                   void form.apply({ jevConnection: { connectionId: value } });
                 }} />
             </Field>
@@ -157,7 +166,7 @@ export function ModelSettingsPage() {
               <TextField id={ids.jevModel} className="bg-surface-prompt-field" value={config.jevConnection.model}
                 placeholder={resolvedDecision?.model || DEFAULT_JEV_MODEL} aria-label={M.jevModelAria}
                 onInput={(event) => {
-                  setJevTest({ status: "idle" });
+                  resetJevTest();
                   form.draft({ jevConnection: { model: (event.currentTarget as HTMLInputElement).value } });
                 }} />
             </Field>

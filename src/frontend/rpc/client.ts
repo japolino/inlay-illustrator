@@ -67,6 +67,8 @@ export const DEFAULT_RPC_TIMEOUT_MS = 60_000;
 
 export class RpcClient {
   readonly clientId: string;
+  /** clientId plus a per-client token: tabs built with the same clientId never share request ids. */
+  private readonly requestIdPrefix: string;
   private readonly transport: RpcTransport;
   private readonly timeoutMs: number;
   private readonly pending = new Map<string, Pending>();
@@ -80,6 +82,7 @@ export class RpcClient {
   constructor(transport: RpcTransport, options: RpcClientOptions = {}) {
     this.transport = transport;
     this.clientId = options.clientId ?? `ui-${Math.random().toString(36).slice(2, 8)}`;
+    this.requestIdPrefix = `${this.clientId}.${Math.random().toString(36).slice(2, 8)}`;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_RPC_TIMEOUT_MS;
     this.unsubscribe = transport.subscribe((message) => this.receive(message));
   }
@@ -87,7 +90,7 @@ export class RpcClient {
   /** Sends a request and resolves with its result (rejects with {@link RpcCallError}). */
   call<M extends ClientMethod>(method: M, params: ClientParams<M>, options: CallOptions = {}): Promise<ClientResult<M>> {
     if (this.destroyed) return Promise.reject(new RpcCallError(method, rpcError("cancelled", "The client was closed.")));
-    const requestId = createRequestId(this.clientId);
+    const requestId = createRequestId(this.requestIdPrefix);
     return new Promise<ClientResult<M>>((resolve, reject) => {
       const timeoutMs = options.timeoutMs ?? this.timeoutMs;
       const onAbort = () => this.settle(requestId, false, rpcError("cancelled", "The request was cancelled."));

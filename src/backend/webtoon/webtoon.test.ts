@@ -193,6 +193,24 @@ describe("webtoon mode (controller over a fake engine)", () => {
     pipeline.dispose();
   });
 
+  test("a cancel during the 429 lock wait ends the draw at once, not when the wait runs out", async () => {
+    const { fx, engine, pipeline } = await setup();
+    fx.llmReplies.push(STORYBOARD);
+    const run = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0 });
+    await waitFor(() => finished(fx, run.jobId).length > 0);
+    const controller = new AbortController();
+    engine.dispatch = async () => {
+      setTimeout(() => controller.abort(), 10);
+      throw new Error("NovelAI image generate failed (429): Concurrent generation is locked");
+    };
+    const config = await fx.services.storage.loadConfig();
+    const started = Date.now();
+    const reroll = rerollWebtoonPanel({ services: fx.services, engine, lockWaitMs: 60_000 }, { chatId: CHAT_ID, historyId: "m1@0", panelId: "3", config, signal: controller.signal, onChanged: () => {} });
+    await expect(reroll).rejects.toMatchObject({ name: "AbortError" });
+    expect(Date.now() - started).toBeLessThan(1000);
+    pipeline.dispose();
+  });
+
   test("a planner without a usable storyboard fails the job after 3 calls", async () => {
     const { fx, engine, pipeline } = await setup();
     fx.llmReplies.push({ panels: [] }, { panels: [] }, new Error("boom"));

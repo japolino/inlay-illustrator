@@ -124,6 +124,12 @@ describe("custom characters", () => {
     expect((error2 as RpcFailure).error.messageKo).toBe("인식 키를 하나 이상 입력해주세요.");
   });
 
+  test("roster content is the appearance description", async () => {
+    const fx = createAnalysisFixture();
+    const c = await createCustomCharacterEntry(fx.services, CHAR, { title: "Carol", recognitionKeys: "carol", appearanceDescription: "A red scarf." });
+    expect((await snapshot(fx)).roster.find((r) => r.promptKey === c.id)).toMatchObject({ kind: "custom", content: "A red scarf." });
+  });
+
   test("revision guard on create", async () => {
     const fx = createAnalysisFixture();
     await createCustomCharacterEntry(fx.services, CHAR, { title: "A", recognitionKeys: "a" });

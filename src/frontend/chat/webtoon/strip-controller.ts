@@ -17,6 +17,8 @@ import { renderStrip, setStripScale } from "./strip-dom.js";
 const WRAPPER_ATTR = "data-ii-chat-wrapper";
 /** Wait for the resize to settle before laying the strip out again. */
 const RELAYOUT_DELAY_MS = 250;
+/** A failed `webtoon.get` is retried after 1 s, 2 s, 4 s … up to this. */
+const RETRY_MAX_MS = 30_000;
 
 interface StripEntry {
   messageKey: string;
@@ -27,6 +29,10 @@ interface StripEntry {
   view: WebtoonStripView | null;
   fetched: number;
   fetching: boolean;
+  /** Failed `webtoon.get` calls in a row; the next one waits until `retryAt`. */
+  failures: number;
+  retryAt: number;
+  retryTimer?: ReturnType<typeof setTimeout>;
   signature: string;
   editing: string | null;
   resize?: ResizeObserver;
@@ -56,6 +62,7 @@ export function createWebtoonStrips(ctx: SpindleFrontendContext, app: AppControl
     if (!entry) return;
     entry.resize?.disconnect();
     clearTimeout(entry.relayoutTimer);
+    clearTimeout(entry.retryTimer);
     try {
       ctx.dom.uninject(entry.wrapper);
     } catch {
@@ -78,10 +85,17 @@ export function createWebtoonStrips(ctx: SpindleFrontendContext, app: AppControl
       if (forChat !== chatId) return;
       entry.view = strip;
       entry.fetched = Math.max(revision, strip?.revision ?? revision);
+      entry.failures = 0;
+      entry.retryAt = 0;
       entry.signature = "";
       again = staleWidth(entry);
     } catch (error) {
-      entry.fetched = revision;
+      // Not fetched: `sync` asks again once the backoff has passed (the timer reconciles even if nothing else does).
+      entry.failures += 1;
+      const delay = Math.min(RETRY_MAX_MS, 1_000 * 2 ** (entry.failures - 1));
+      entry.retryAt = Date.now() + delay;
+      clearTimeout(entry.retryTimer);
+      entry.retryTimer = setTimeout(options.schedule, delay);
       console.warn("[Inlay Illustrator] webtoon.get failed:", error);
     } finally {
       entry.fetching = false;
@@ -214,7 +228,7 @@ export function createWebtoonStrips(ctx: SpindleFrontendContext, app: AppControl
           const frame = doc.createElement("div");
           frame.className = "ii-wt-strip";
           wrapper.appendChild(frame);
-          entry = { messageKey: state.messageKey, manga: false, wrapper, frame, view: null, fetched: -1, fetching: false, signature: "", editing: null };
+          entry = { messageKey: state.messageKey, manga: false, wrapper, frame, view: null, fetched: -1, fetching: false, failures: 0, retryAt: 0, signature: "", editing: null };
           const Observer = (doc.defaultView as unknown as { ResizeObserver?: typeof ResizeObserver } | null)?.ResizeObserver;
           if (Observer) {
             const e = entry;
@@ -232,7 +246,7 @@ export function createWebtoonStrips(ctx: SpindleFrontendContext, app: AppControl
         }
         live.add(messageId);
         entry.manga = state.webtoon.format === "manga";
-        if (entry.fetched < state.webtoon.revision) void fetchStrip(entry, state.webtoon.revision);
+        if (entry.fetched < state.webtoon.revision && Date.now() >= entry.retryAt) void fetchStrip(entry, state.webtoon.revision);
         render(entry, jobs, state);
       }
       for (const id of [...entries.keys()]) if (!live.has(id)) remove(id);

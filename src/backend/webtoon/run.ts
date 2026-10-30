@@ -10,6 +10,7 @@
 import { rpcError, type ChatDataDocument, type ComicFormat, type InlayConfig, type RpcError, type WebtoonPanelCheck, type WebtoonPanelTake, type WebtoonStripView } from "../../shared/contract/index.js";
 import { isAbortLike, RpcFailure, toRpcError } from "../rpc/errors.js";
 import type { BackendServices, ChatInfo } from "../services/types.js";
+import { sleep } from "../services/util.js";
 import type { BackendModules } from "../rpc/types.js";
 import { openAutoGeneration, type AutoGeneration } from "../pipeline/auto.js";
 import type { EnginePort } from "../pipeline/engine-port.js";
@@ -107,8 +108,10 @@ async function waitOutLock<T>(deps: WebtoonDeps, signal: AbortSignal, run: () =>
       return await run();
     } catch (error) {
       if (signal.aborted || attempt >= LOCK_RETRIES || !CONCURRENT_LOCK.test(toRpcError(error).message)) throw error;
-      await new Promise((resolve) => setTimeout(resolve, deps.lockWaitMs ?? LOCK_WAIT_MS));
-      if (signal.aborted) throw aborted();
+      // A cancel ends the wait at once (sleep only rejects on abort).
+      await sleep(deps.lockWaitMs ?? LOCK_WAIT_MS, signal).catch(() => {
+        throw aborted();
+      });
     }
   }
 }
@@ -370,11 +373,11 @@ async function redrawIdentity(v: VisionRun, input: PanelInput, panel: ImagePanel
 export async function runWebtoonStrip(deps: WebtoonDeps, req: WebtoonRunRequest): Promise<WebtoonRunResult> {
   const { services } = deps;
   const now = deps.now ?? Date.now;
-  const write = async (mutate: (doc: WebtoonStripDocument) => void) => {
+  // `mutate` edits the stored strip in place, or returns a whole new document that replaces it.
+  const write = async (mutate: (doc: WebtoonStripDocument) => WebtoonStripDocument | void) => {
     const doc = await updateStrip(services.storage, req.chatId, req.historyId, (current) => {
       const next = current ?? createStripDocument({ chatId: req.chatId, messageKey: req.planKey, historyId: req.historyId, characterId: "", sourceLength: req.source.length, now: now() });
-      mutate(next);
-      return next;
+      return mutate(next) ?? next;
     }, now);
     req.onChanged();
     return doc;
@@ -408,10 +411,11 @@ export async function runWebtoonStrip(deps: WebtoonDeps, req: WebtoonRunRequest)
       characterId = context.characterId;
       // Manga follows the artist style's colour: a greyscale / monochrome style strips colour words from every prompt part.
       const mono = manga && isMonochromeStyle(style.style);
-      doc = await write((d) => {
-        Object.assign(d, createStripDocument({ chatId: req.chatId, messageKey: req.planKey, historyId: req.historyId, characterId, sourceLength: req.source.length, now: now(), revision: previous?.revision ?? 0 }));
-        if (manga) Object.assign(d, { format: "manga", mono });
-      });
+      // A fresh document: nothing of the previous strip (its format, mono or error) carries over into the new plan.
+      doc = await write(() => ({
+        ...createStripDocument({ chatId: req.chatId, messageKey: req.planKey, historyId: req.historyId, characterId, sourceLength: req.source.length, now: now(), revision: previous?.revision ?? 0 }),
+        ...(manga ? { format: "manga" as const, mono } : {}),
+      }));
       // Free character generation (normal mode's rule): the per-character setting and the autoCharacter store.
       const auto = context.knownIdentities ? await openAuto(deps, characterId) : null;
       try {

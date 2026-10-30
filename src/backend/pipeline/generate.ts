@@ -386,464 +386,468 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       /* ignore */
     }
   }
-  /** Characters generated in this run (AM E1t `jt` 169540): merged into `characterForms` of the live config. */
-  let generatedForms: Rec = {};
+  try {
+    /** Characters generated in this run (AM E1t `jt` 169540): merged into `characterForms` of the live config. */
+    let generatedForms: Rec = {};
 
-  // Runtime config (AM merged Y0 shape) + engine provider.
-  const otherPrompts = memberIds.slice(1).map((id) => rec(docs.get(id)?.characterPrompt));
-  const decorate = (base: Rec): Rec => {
-    const runtime = jsonClone(base);
-    const novelai = rec(runtime.novelai);
-    runtime.novelai = { ...novelai, naiModel: imageTarget.model, characterReferenceEnabled: imageTarget.isNovelAIV5 ? false : novelai.characterReferenceEnabled };
-    const cp = mergeCharacterPrompts(rec(runtime.characterPrompt), otherPrompts);
-    runtime.characterPrompt = { ...cp, characterForms: { ...rec(cp.characterForms), ...generatedForms } };
-    runtime.runtime = { ...rec(runtime.runtime), generationProvider: engineProvider };
-    runtime.chatImageGenerationSettings = jsonClone(req.settings);
-    return runtime;
-  };
-  const runtime = decorate(auto ? (auto.store.getCurrentSnapshot() as Rec) : (buildRuntimeConfig(config, primaryDoc, { resolvedImageModel: imageTarget.model }) as unknown as Rec));
-  const getConfig = () => (auto ? decorate(auto.store.getCurrentSnapshot() as Rec) : runtime) as unknown as AssetMaidConfig;
-  const amConfig = runtime as unknown as AssetMaidConfig;
-  const sourceId = primaryId;
-  const ne = resolveSourceGenerationSettings(amConfig, sourceId);
+    // Runtime config (AM merged Y0 shape) + engine provider.
+    const otherPrompts = memberIds.slice(1).map((id) => rec(docs.get(id)?.characterPrompt));
+    const decorate = (base: Rec): Rec => {
+      const runtime = jsonClone(base);
+      const novelai = rec(runtime.novelai);
+      runtime.novelai = { ...novelai, naiModel: imageTarget.model, characterReferenceEnabled: imageTarget.isNovelAIV5 ? false : novelai.characterReferenceEnabled };
+      const cp = mergeCharacterPrompts(rec(runtime.characterPrompt), otherPrompts);
+      runtime.characterPrompt = { ...cp, characterForms: { ...rec(cp.characterForms), ...generatedForms } };
+      runtime.runtime = { ...rec(runtime.runtime), generationProvider: engineProvider };
+      runtime.chatImageGenerationSettings = jsonClone(req.settings);
+      return runtime;
+    };
+    const runtime = decorate(auto ? (auto.store.getCurrentSnapshot() as Rec) : (buildRuntimeConfig(config, primaryDoc, { resolvedImageModel: imageTarget.model }) as unknown as Rec));
+    const getConfig = () => (auto ? decorate(auto.store.getCurrentSnapshot() as Rec) : runtime) as unknown as AssetMaidConfig;
+    const amConfig = runtime as unknown as AssetMaidConfig;
+    const sourceId = primaryId;
+    const ne = resolveSourceGenerationSettings(amConfig, sourceId);
 
-  // Persona.
-  const personas = await services.sources.listPersonas();
-  const active = await services.sources.getActivePersona(req.chatId);
-  const personaRecords = personas.map(personaRecord);
-  const activePersona = active ? personaRecord(active) : null;
+    // Persona.
+    const personas = await services.sources.listPersonas();
+    const active = await services.sources.getActivePersona(req.chatId);
+    const personaRecords = personas.map(personaRecord);
+    const activePersona = active ? personaRecord(active) : null;
 
-  // Request messages before the target (AM `dq` 169008), stripped of our markup.
-  const requestMessages = req.messages.slice(0, req.target).flatMap((m) => {
-    if (m.role === "system") return [];
-    const content = cleanMessageContent(m.content);
-    return content.trim() ? [{ role: m.role === "assistant" ? "assistant" : "user", content, ...(m.name ? { name: m.name } : {}) }] : [];
-  });
+    // Request messages before the target (AM `dq` 169008), stripped of our markup.
+    const requestMessages = req.messages.slice(0, req.target).flatMap((m) => {
+      if (m.role === "system") return [];
+      const content = cleanMessageContent(m.content);
+      return content.trim() ? [{ role: m.role === "assistant" ? "assistant" : "user", content, ...(m.name ? { name: m.name } : {}) }] : [];
+    });
 
-  // Continuity basis at the target message (AM 169508-169524: `ooe` + current actor state `Lne`).
-  const chatKey = chatKeyForChat(req.chatId);
-  const liveIds = continuityLookbackIds(req.messages, req.target, req.historyId);
-  const store = req.chatData.store as unknown as ContinuityChatStore;
-  const hr: ContinuityState = rebuildContinuityAtMessage(store, chatKey, liveIds, req.historyId);
-  hr.characters[chatKey] = mergeLocalLoreActorState((hr.characters[chatKey] ?? {}) as never, req.chatData.actorState as never) as never;
-  // Actor-state revision the run starts from (AM `candidate.basisRevision`).
-  const basisRevision = req.chatData.actorState.revision;
+    // Continuity basis at the target message (AM 169508-169524: `ooe` + current actor state `Lne`).
+    const chatKey = chatKeyForChat(req.chatId);
+    const liveIds = continuityLookbackIds(req.messages, req.target, req.historyId);
+    const store = req.chatData.store as unknown as ContinuityChatStore;
+    const hr: ContinuityState = rebuildContinuityAtMessage(store, chatKey, liveIds, req.historyId);
+    hr.characters[chatKey] = mergeLocalLoreActorState((hr.characters[chatKey] ?? {}) as never, req.chatData.actorState as never) as never;
+    // Actor-state revision the run starts from (AM `candidate.basisRevision`).
+    const basisRevision = req.chatData.actorState.revision;
 
-  // Image tokens + asset hints (AM 169527-169530).
-  const detectors = nativeDetectorsFor(primaryId, character.name, primaryDoc, memberIds);
-  const tokens = detectImageTokens(req.clean, { customImageTokenDetectors: detectors });
-  const markups = detectNativeAssetMarkups(req.clean, { customImageTokenDetectors: detectors });
-  const assetHints = assetHintsFrom(tokens, markups);
+    // Image tokens + asset hints (AM 169527-169530).
+    const detectors = nativeDetectorsFor(primaryId, character.name, primaryDoc, memberIds);
+    const tokens = detectImageTokens(req.clean, { customImageTokenDetectors: detectors });
+    const markups = detectNativeAssetMarkups(req.clean, { customImageTokenDetectors: detectors });
+    const assetHints = assetHintsFrom(tokens, markups);
 
-  const sourceWithCustom = withCustomCharacterMembers(source, customCharacters as unknown[]);
-  const ft = buildAnalyzerContextInputs({
-    config: amConfig,
-    getConfig,
-    continuity: hr as unknown as ContextContinuityState,
-    chatKey,
-    messages: requestMessages,
-    content: req.clean,
-    imageTokens: tokens.map((t) => toPlannerImageToken(t)),
-    character: { name: character.name, description: character.description },
-    source: sourceWithCustom,
-    activePersona,
-    personaRecords,
-  });
+    const sourceWithCustom = withCustomCharacterMembers(source, customCharacters as unknown[]);
+    const ft = buildAnalyzerContextInputs({
+      config: amConfig,
+      getConfig,
+      continuity: hr as unknown as ContextContinuityState,
+      chatKey,
+      messages: requestMessages,
+      content: req.clean,
+      imageTokens: tokens.map((t) => toPlannerImageToken(t)),
+      character: { name: character.name, description: character.description },
+      source: sourceWithCustom,
+      activePersona,
+      personaRecords,
+    });
 
-  // Readiness (AM d1t 168807). Free character generation: V5 profile + per-character setting + the store (E1t 169564).
-  const profile = str(rec(runtime.novelai).analysisProfile);
-  const freeCharacters = profile === "v5-hybrid" && ne.freeCharacterGenerationEnabled && !!auto;
-  if (!(profile === "v5-hybrid" || ft.analyzerIdentityCandidates.length > 0 || ft.analyzerPersonaCandidates.length > 0 || freeCharacters))
-    return { ...empty(PIPELINE_TEXT.noCandidates), assetHints };
+    // Readiness (AM d1t 168807). Free character generation: V5 profile + per-character setting + the store (E1t 169564).
+    const profile = str(rec(runtime.novelai).analysisProfile);
+    const freeCharacters = profile === "v5-hybrid" && ne.freeCharacterGenerationEnabled && !!auto;
+    if (!(profile === "v5-hybrid" || ft.analyzerIdentityCandidates.length > 0 || ft.analyzerPersonaCandidates.length > 0 || freeCharacters))
+      return { ...empty(PIPELINE_TEXT.noCandidates), assetHints };
 
-  const evidence = await resolveIdentityEvidence({
-    candidates: ft.analyzerIdentityCandidates,
-    slots: req.slots,
-    originalAssetTokens: tokens as never,
-    source,
-    previousMessageParticipantKeys: [
-      ...(ft.visualContinuity.previous_message_participants?.character_keys ?? []),
-      ...(ft.visualContinuity.previous_message_participants?.persona_keys ?? []),
-    ],
-    signal: req.signal,
-  });
-  const candidateSlots = buildCandidateSlots(req.slots, evidence);
-  // Outfits allocated by earlier runs of the same message (AM E1t `_` map, 169534-169536 / 169791-169794).
-  const operationKey = `${chatKey}:${req.historyId}`;
-  const replayKey = JSON.stringify([primaryId, operationKey]);
-  const replayOutfits = [...(deps.replayOutfits?.get(replayKey)?.values() ?? [])];
-  const assembled = assembleAnalyzerInput({
-    config: amConfig,
-    sourceId,
-    inputs: ft,
-    candidateSlots,
-    targetImageCount: W.max,
-    imageCountConstraint: W,
-    checkpoint: { chatKey, messageIndex: targetMessage?.index ?? req.target, messageId: req.historyId },
-    modelType: "illustration-generation",
-    replayGeneratedOutfits: replayOutfits as never,
-    ...(req.splitAnalysis ? { splitAnalysis: req.splitAnalysis as never } : {}),
-    ...(req.revision ? { revisionDirection: req.revision.direction, revisionPromptChannels: req.revision.currentPrompt as never, revisionEvidenceKey: req.revision.evidenceKey } : {}),
-  });
-  assembled.context.freeCharacterGenerationEnabled = freeCharacters;
-  // Inlay outfit layer: registered outfit parts for the analyzer request and the image-prompt repair.
-  const outfitIndex = config.runtime.outfitAwarenessDisabled ? undefined : createRunOutfitIndex(assembled.context);
-  const revisionImage = req.revision?.image && (await services.llm.supportsVision().catch(() => false)) ? [await req.revision.image()] : [];
-  if (req.signal.aborted) throw new DOMException("Image generation preparation was cancelled.", "AbortError");
+    const evidence = await resolveIdentityEvidence({
+      candidates: ft.analyzerIdentityCandidates,
+      slots: req.slots,
+      originalAssetTokens: tokens as never,
+      source,
+      previousMessageParticipantKeys: [
+        ...(ft.visualContinuity.previous_message_participants?.character_keys ?? []),
+        ...(ft.visualContinuity.previous_message_participants?.persona_keys ?? []),
+      ],
+      signal: req.signal,
+    });
+    const candidateSlots = buildCandidateSlots(req.slots, evidence);
+    // Outfits allocated by earlier runs of the same message (AM E1t `_` map, 169534-169536 / 169791-169794).
+    const operationKey = `${chatKey}:${req.historyId}`;
+    const replayKey = JSON.stringify([primaryId, operationKey]);
+    const replayOutfits = [...(deps.replayOutfits?.get(replayKey)?.values() ?? [])];
+    const assembled = assembleAnalyzerInput({
+      config: amConfig,
+      sourceId,
+      inputs: ft,
+      candidateSlots,
+      targetImageCount: W.max,
+      imageCountConstraint: W,
+      checkpoint: { chatKey, messageIndex: targetMessage?.index ?? req.target, messageId: req.historyId },
+      modelType: "illustration-generation",
+      replayGeneratedOutfits: replayOutfits as never,
+      ...(req.splitAnalysis ? { splitAnalysis: req.splitAnalysis as never } : {}),
+      ...(req.revision ? { revisionDirection: req.revision.direction, revisionPromptChannels: req.revision.currentPrompt as never, revisionEvidenceKey: req.revision.evidenceKey } : {}),
+    });
+    assembled.context.freeCharacterGenerationEnabled = freeCharacters;
+    // Inlay outfit layer: registered outfit parts for the analyzer request and the image-prompt repair.
+    const outfitIndex = config.runtime.outfitAwarenessDisabled ? undefined : createRunOutfitIndex(assembled.context);
+    const revisionImage = req.revision?.image && (await services.llm.supportsVision().catch(() => false)) ? [await req.revision.image()] : [];
+    if (req.signal.aborted) throw new DOMException("Image generation preparation was cancelled.", "AbortError");
 
-  // Results collected by the callbacks.
-  const origin = originForAttempt(req.attemptKind);
-  const entries: IllustrationPlanEntry[] = [];
-  const records: GenerationRecord[] = [];
-  let error = "";
-  let errorKo: string | undefined;
-  let failure: unknown;
-  let cancelled = false;
-  let analyzerCompleted = false;
-  let commitContinuity: ContinuityCommit | undefined;
-  const skipSlotIndexes = req.attemptKind === "retry" ? [...new Set([...req.existingEntries.map((e) => e.slotIndex), ...req.deletedSlotIndices])] : [];
-  // AM 170590: continuity is persisted for automatic runs and for manual runs on the latest assistant message.
-  const lastAssistant = req.messages.map((m, i) => (m.role === "assistant" ? i : -1)).filter((i) => i >= 0).at(-1) ?? -1;
-  const persistContinuity = req.automatic || !(req.target >= 0 && req.target < lastAssistant);
-  const continuityMessageId = `id:${req.historyId}`;
-  const messageIndex = targetMessage?.index ?? req.target;
+    // Results collected by the callbacks.
+    const origin = originForAttempt(req.attemptKind);
+    const entries: IllustrationPlanEntry[] = [];
+    const records: GenerationRecord[] = [];
+    let error = "";
+    let errorKo: string | undefined;
+    let failure: unknown;
+    let cancelled = false;
+    let analyzerCompleted = false;
+    let commitContinuity: ContinuityCommit | undefined;
+    const skipSlotIndexes = req.attemptKind === "retry" ? [...new Set([...req.existingEntries.map((e) => e.slotIndex), ...req.deletedSlotIndices])] : [];
+    // AM 170590: continuity is persisted for automatic runs and for manual runs on the latest assistant message.
+    const lastAssistant = req.messages.map((m, i) => (m.role === "assistant" ? i : -1)).filter((i) => i >= 0).at(-1) ?? -1;
+    const persistContinuity = req.automatic || !(req.target >= 0 && req.target < lastAssistant);
+    const continuityMessageId = `id:${req.historyId}`;
+    const messageIndex = targetMessage?.index ?? req.target;
 
-  const commitWith = (apply: (info: { historyRevisionId: string; historyRevisionOrder: number }) => ContinuityState): ContinuityCommit =>
-    async (doc, info) => {
-      if (!persistContinuity) return;
-      const chatObj = continuityChat(req.messages, { index: req.target, historyId: req.historyId }, doc.actorState);
-      // AM 0.9.89 computes the next state from the basis (`_Ye` / `rYe`) and stores only this revision's checkpoint
-      // (`gIe` 209136-209151); checkpoints of other messages and revisions stay as they are.
-      const next = apply(info);
-      const outcome = commitContinuityCheckpoint(doc.store as unknown as ContinuityChatStore, chatObj, next, chatKey, req.historyId, info.historyRevisionId, basisRevision);
-      if (outcome === "skipped") services.log.append("info", "pipeline", "The chat state changed during the run; this run's continuity was not saved.");
-      const actorState = readLocalLoreActorState(chatObj);
-      doc.actorState = { revision: actorState.revision, actors: actorState.actors } as unknown as CurrentActorState;
+    const commitWith = (apply: (info: { historyRevisionId: string; historyRevisionOrder: number }) => ContinuityState): ContinuityCommit =>
+      async (doc, info) => {
+        if (!persistContinuity) return;
+        const chatObj = continuityChat(req.messages, { index: req.target, historyId: req.historyId }, doc.actorState);
+        // AM 0.9.89 computes the next state from the basis (`_Ye` / `rYe`) and stores only this revision's checkpoint
+        // (`gIe` 209136-209151); checkpoints of other messages and revisions stay as they are.
+        const next = apply(info);
+        const outcome = commitContinuityCheckpoint(doc.store as unknown as ContinuityChatStore, chatObj, next, chatKey, req.historyId, info.historyRevisionId, basisRevision);
+        if (outcome === "skipped") services.log.append("info", "pipeline", "The chat state changed during the run; this run's continuity was not saved.");
+        const actorState = readLocalLoreActorState(chatObj);
+        doc.actorState = { revision: actorState.revision, actors: actorState.actors } as unknown as CurrentActorState;
+      };
+
+    const idLabel = (key: string): string => {
+      if (key.startsWith("persona::")) return personas.find((p) => p.personaId === key.slice(9))?.name ?? "";
+      for (const m of sourceWithCustom?.members ?? []) {
+        if (m.key === key) return m.name;
+        for (const l of m.lorebooks) if ((l.runtimePromptKey || `${m.key}::lore::${l.id}`) === key) return l.title;
+      }
+      return "";
     };
 
-  const idLabel = (key: string): string => {
-    if (key.startsWith("persona::")) return personas.find((p) => p.personaId === key.slice(9))?.name ?? "";
-    for (const m of sourceWithCustom?.members ?? []) {
-      if (m.key === key) return m.name;
-      for (const l of m.lorebooks) if ((l.runtimePromptKey || `${m.key}::lore::${l.id}`) === key) return l.title;
-    }
-    return "";
-  };
+    const comfyTimeout = Number(rec(runtime.runtime).comfyuiCompletionTimeoutMs) || 600000;
 
-  const comfyTimeout = Number(rec(runtime.runtime).comfyuiCompletionTimeoutMs) || 600000;
-
-  // Free outfit generation (AM E1t 169652-169656, 169783-169796): v4-5 after preset/analysis validation, v5 per actor.
-  const creationMode = auto?.imagesAvailable ? resolveOutfitCreationMode(amConfig) : "tags-only";
-  const prepareRoutePlan = auto
-    ? (routePlan: unknown, signal?: AbortSignal) => auto!.autoOutfit.prepare({ routePlan, source: sourceWithCustom, sourceId, signal, creationMode })
-    : undefined;
-  const prepareOutfits = auto
-    ? async ({ actors, signal }: { actors: unknown[]; signal?: AbortSignal }) => {
-        const requested = outfitIndex
-          ? reuseSameOutfits(outfitIndex, withoutAbsenceProposals(actors), (r) =>
-              services.log.append("info", "pipeline", `Outfit reuse: proposal "${r.proposal}" for ${r.identityKey} matches "${r.reused}"; no new outfit.`),
-            )
-          : actors;
-        const prepared = await auto!.autoOutfit.prepareActors({
-          actors: requested,
-          source: sourceWithCustom,
-          sourceId,
-          signal,
-          creationMode,
-          onOutfitAllocated: (o: Rec) => {
-            if (!deps.replayOutfits) return;
-            const map = deps.replayOutfits.get(replayKey) ?? new Map<string, unknown>();
-            map.set(JSON.stringify([o.promptKey, o.formId, o.outfitId]), o);
-            deps.replayOutfits.set(replayKey, map);
-            while (deps.replayOutfits.size > 64) deps.replayOutfits.delete(deps.replayOutfits.keys().next().value!);
-          },
-        });
-        if (outfitIndex) recordPreparedOutfits(outfitIndex, requested, prepared.preparedOutfits);
-        return prepared;
-      }
-    : undefined;
-  // Free character generation (AM E1t 169768-169782): generated forms join the live config (`jt`).
-  // AM 0.9.89.5 (170958-170963) keys the allocations by the request object (`requestOwner`); here that is `req`.
-  const knownIdentities = freeCharacters ? buildKnownIdentities(withCustomCharacterMembers(source, customCharacters as unknown[], "all"), personaRecords) : [];
-  const prepareCharacters = freeCharacters
-    ? async (input: Rec) => {
-        const prepared = await auto!.autoCharacter.prepare({ ...input, sourceId, owner: req, knownIdentities });
-        generatedForms = Object.fromEntries(prepared.flatMap((p) => (p.forms ? [[p.identityKey, p.forms]] : [])));
-        return prepared;
-      }
-    : undefined;
-  const input: Rec = {
-    automaticRetryManaged: true,
-    imageRetryCount: config.runtime.generationAutoRetryCount,
-    generationType: generationTypeFor(origin, !req.automatic, !!req.revision),
-    sessionContext: {
-      chatKey,
-      responseKey: req.jobId,
-      messageIndex,
-      messageId: continuityMessageId,
-      displayName: req.activityLabel,
-      slotIds: req.slots.map((s) => s.slotId),
-      targetImageCount: W.max,
-      matchedAssetCount: W.min,
-      totalAssetCount: W.max,
-    },
-    analysisConfig: config.analysis,
-    novelAIConfig: { ...resolveNovelAIRunConfig(amConfig, { sourceId }), apiKey: "lumiverse-connection" },
-    ...(req.revision
-      ? {
-          revisionDirection: req.revision.direction,
-          revisionPromptChannels: req.revision.currentPrompt,
-          revisionEvidenceKey: req.revision.evidenceKey,
-          ...(req.revision.imageToImage
-            ? { novelAIImageToImage: req.revision.imageToImage, novelAIImageToImageStrength: req.revision.imageToImageStrength, novelAIImageToImageNoise: req.revision.imageToImageNoise }
-            : {}),
+    // Free outfit generation (AM E1t 169652-169656, 169783-169796): v4-5 after preset/analysis validation, v5 per actor.
+    const creationMode = auto?.imagesAvailable ? resolveOutfitCreationMode(amConfig) : "tags-only";
+    const prepareRoutePlan = auto
+      ? (routePlan: unknown, signal?: AbortSignal) => auto!.autoOutfit.prepare({ routePlan, source: sourceWithCustom, sourceId, signal, creationMode })
+      : undefined;
+    const prepareOutfits = auto
+      ? async ({ actors, signal }: { actors: unknown[]; signal?: AbortSignal }) => {
+          const requested = outfitIndex
+            ? reuseSameOutfits(outfitIndex, withoutAbsenceProposals(actors), (r) =>
+                services.log.append("info", "pipeline", `Outfit reuse: proposal "${r.proposal}" for ${r.identityKey} matches "${r.reused}"; no new outfit.`),
+              )
+            : actors;
+          const prepared = await auto!.autoOutfit.prepareActors({
+            actors: requested,
+            source: sourceWithCustom,
+            sourceId,
+            signal,
+            creationMode,
+            onOutfitAllocated: (o: Rec) => {
+              if (!deps.replayOutfits) return;
+              const map = deps.replayOutfits.get(replayKey) ?? new Map<string, unknown>();
+              map.set(JSON.stringify([o.promptKey, o.formId, o.outfitId]), o);
+              deps.replayOutfits.set(replayKey, map);
+              while (deps.replayOutfits.size > 64) deps.replayOutfits.delete(deps.replayOutfits.keys().next().value!);
+            },
+          });
+          if (outfitIndex) recordPreparedOutfits(outfitIndex, requested, prepared.preparedOutfits);
+          return prepared;
         }
-      : {}),
-    generationProvider: engineProvider,
-    ...(ne.fixedResolution.enabled
-      ? { requestedSizeId: ne.fixedResolution.sizeId, requestedSize: resolveImageSize(ne.fixedResolution.sizeId, (config.runtime.customImageSizes ?? []) as never) }
-      : {}),
-    // AM 0.9.89.3+: custom sizes are image-ratio candidates (resolveV5UserDirections `xbt`).
-    customImageSizes: config.runtime.customImageSizes ?? [],
-    forceAiChoiceCoordinates: ne.forceAiChoiceCoordinates,
-    forceNsfwPrefix: ne.nsfwAlwaysEnabled,
-    stateAccumulationEnabled: ne.stateAccumulationEnabled,
-    comfyUI: {
-      transport: "direct-workflow",
-      chanServerRequestUrl: "",
-      chanServerApiKey: "",
-      endpoint: "",
-      workflowProfileId: BUNDLED_COMFY_WORKFLOW_PROFILE.id,
-      completionTimeoutMs: comfyTimeout,
-      animaPositivePrefix: ne.animaPositivePrompt,
-      animaNegativePrefix: ne.animaNegativePrompt,
-    },
-    analyzerInput: {
-      executionMode: engine.executionMode(config),
-      checkpointPolicy: checkpointPolicyFor(req.attemptKind),
-      ...assembled,
-      ...(revisionImage.length ? { imageParts: revisionImage } : {}),
-      ...(prepareRoutePlan
+      : undefined;
+    // Free character generation (AM E1t 169768-169782): generated forms join the live config (`jt`).
+    // AM 0.9.89.5 (170958-170963) keys the allocations by the request object (`requestOwner`); here that is `req`.
+    const knownIdentities = freeCharacters ? buildKnownIdentities(withCustomCharacterMembers(source, customCharacters as unknown[], "all"), personaRecords) : [];
+    const prepareCharacters = freeCharacters
+      ? async (input: Rec) => {
+          const prepared = await auto!.autoCharacter.prepare({ ...input, sourceId, owner: req, knownIdentities });
+          generatedForms = Object.fromEntries(prepared.flatMap((p) => (p.forms ? [[p.identityKey, p.forms]] : [])));
+          return prepared;
+        }
+      : undefined;
+    const input: Rec = {
+      automaticRetryManaged: true,
+      imageRetryCount: config.runtime.generationAutoRetryCount,
+      generationType: generationTypeFor(origin, !req.automatic, !!req.revision),
+      sessionContext: {
+        chatKey,
+        responseKey: req.jobId,
+        messageIndex,
+        messageId: continuityMessageId,
+        displayName: req.activityLabel,
+        slotIds: req.slots.map((s) => s.slotId),
+        targetImageCount: W.max,
+        matchedAssetCount: W.min,
+        totalAssetCount: W.max,
+      },
+      analysisConfig: config.analysis,
+      novelAIConfig: { ...resolveNovelAIRunConfig(amConfig, { sourceId }), apiKey: "lumiverse-connection" },
+      ...(req.revision
         ? {
-            afterPresetValidated: prepareRoutePlan,
-            afterAnalysisValidated: ({ routePlan }: { routePlan: unknown }, signal?: AbortSignal) => prepareRoutePlan(routePlan, signal),
+            revisionDirection: req.revision.direction,
+            revisionPromptChannels: req.revision.currentPrompt,
+            revisionEvidenceKey: req.revision.evidenceKey,
+            ...(req.revision.imageToImage
+              ? { novelAIImageToImage: req.revision.imageToImage, novelAIImageToImageStrength: req.revision.imageToImageStrength, novelAIImageToImageNoise: req.revision.imageToImageNoise }
+              : {}),
           }
         : {}),
-    },
-    ...(prepareCharacters ? { prepareCharacters } : {}),
-    ...(prepareOutfits ? { prepareOutfits } : {}),
-    ...(outfitIndex ? { outfitIndex } : {}),
-    promptInputs: ft.promptInputs,
-    v5PromptContext: ft.v5PromptContext,
-    references: ft.references,
-    outfitReference: ft.outfitReference,
-    characterReference: ft.characterReference,
-    seedSetting: req.revision ? () => ({ seed: str(req.revision!.seed), fixed: !!(req.revision!.seedFixed && str(req.revision!.seed)) }) : ft.seedSetting,
-    previousCharacterStateMap: ft.previousCharacterStateMap,
-    previousContinuitySnapshot: getLatestContinuityCheckpointSnapshot(hr, chatKey, "novelai-v5"),
-    previousGlobalModifierRefs: previousGlobalModifierRefs(ft.visualContinuity),
-    advanceContinuityTurn: !req.revision,
-    assertAssetPersistenceAvailable: async () => undefined,
-    applyContinuity: async (result: VisualContinuityResult) => {
-      await req.assertTarget();
-      const outfitReferences = ft.outfitContinuityReferences(result.plan.images);
-      commitContinuity = commitWith((info) =>
-        computeDeferredVisualContinuity({
-          basisState: hr,
-          continuity: result,
-          chatKey,
-          chatIndex: 0,
-          messageIndex,
-          messageId: continuityMessageId,
-          historyRevisionId: info.historyRevisionId,
-          historyRevisionOrder: info.historyRevisionOrder,
-          outfitReferences,
-        }),
-      );
-    },
-    applyV5Continuity: async (state: unknown) => {
-      await req.assertTarget();
-      commitContinuity = commitWith((info) =>
-        persistV5ContinuityState({
-          basisState: hr,
-          continuity: state,
-          chatKey,
-          chatIndex: 0,
-          messageIndex,
-          messageId: continuityMessageId,
-          historyRevisionId: info.historyRevisionId,
-          historyRevisionOrder: info.historyRevisionOrder,
-        }) as ContinuityState,
-      );
-    },
-    persistGeneratedImage: async (image: Rec) => {
-      await req.assertTarget();
-      const decision = rec(image.decision);
-      const slotNumber = Number(decision.slot_number ?? decision.slotNumber);
-      const slot = Number.isInteger(slotNumber) ? req.slots.find((s) => s.index === slotNumber) : undefined;
-      if (!slot) throw new Error(PIPELINE_TEXT.slotMismatch.en);
-      const generation = rec(image.generation);
-      const meta = rec(generation.providerMetadata);
-      const imageId = str(meta.imageId) || str(generation.requestId);
-      if (!imageId) throw new Error("The image provider returned no image id.");
-      const actors = (Array.isArray(image.actors) ? image.actors : []).map(rec);
-      const key = str(actors.find((a) => str(a.identityKey))?.identityKey) || str(decision.lorebook_prompt_key);
-      const label = idLabel(key) || str(actors[0]?.identityName) || character.name;
-      const assetName = createGeneratedAssetName({ label, kind: "chat", ...(UUID_RE.test(imageId) ? { id: imageId } : {}) });
-      const width = Math.max(0, Math.round(Number(generation.width) || 0));
-      const height = Math.max(0, Math.round(Number(generation.height) || 0));
-      const entry: IllustrationPlanEntry = {
-        slotId: slot.slotId,
-        sourceImageToken: slot.sourceImageToken,
-        slotIndex: slot.index,
-        assetName,
-        savedPath: imageResultUrl(imageId),
-        extension: str(generation.extension) || "png",
-        entryId: `generated:${assetName}`,
-        ...(width ? { width } : {}),
-        ...(height ? { height } : {}),
-        generationOrigin: origin,
-        ...(req.revision?.sourceEntryId ? { parentEntryId: req.revision.sourceEntryId } : {}),
-      };
-      const providerPrompt = rec(image.providerPrompt);
-      const record = rec(image.generationRecord);
-      const recordRequest = rec(record.request);
-      const plan = rec(image.promptPlan);
-      const novelAIConfig = image.novelAIConfig ? { ...rec(image.novelAIConfig) } : undefined;
-      if (novelAIConfig) delete novelAIConfig.apiKey;
-      records.push({
-        entryId: entry.entryId,
-        imageId,
-        assetName,
-        messageKey: req.planKey,
-        slotId: slot.slotId,
-        revisionId: req.revisionId,
-        createdAt: Date.now(),
-        engineProvider,
-        lumiverseProvider: str(meta.lumiverseProvider) || imageTarget.lumiverseProvider,
-        model: str(meta.model) || imageTarget.model,
-        seed: str(generation.seed),
-        seedFixed: image.seedFixed === true,
-        width,
-        height,
-        sizeId: Number(plan.sizeId) || 0,
-        positivePrompt: str(recordRequest.positive) || str(providerPrompt.positivePrompt),
-        negativePrompt: str(recordRequest.negative) || str(providerPrompt.negativePrompt),
-        characters: (Array.isArray(recordRequest.characters) ? recordRequest.characters : Array.isArray(providerPrompt.characterPrompts) ? providerPrompt.characterPrompts : []).map((c) => {
-          const r = rec(c);
-          return {
-            prompt: str(r.prompt),
-            negativePrompt: str(r.negativePrompt ?? r.uc),
-            ...(Number.isFinite(Number(r.actorIndex)) ? { actorIndex: Number(r.actorIndex) } : {}),
-            ...(Number.isFinite(Number(r.centerX)) ? { centerX: Number(r.centerX), centerY: Number(r.centerY) } : {}),
-          };
-        }),
-        ...(novelAIConfig ? { novelAIConfig } : {}),
-        actors: actors.map((a) => ({
-          identityKey: str(a.identityKey),
-          identityName: str(a.identityName),
-          kind: str(a.kind),
-          actorIndex: Number(a.actorIndex) || 0,
-          ...(str(a.selectedFormId) ? { selectedFormId: str(a.selectedFormId) } : {}),
-          ...(str(a.selectedOutfitId) ? { selectedOutfitId: str(a.selectedOutfitId) } : {}),
-        })),
-        ...(str(plan.artistId) ? { artistId: str(plan.artistId) } : {}),
-        promptKey: key,
-        presetId: str(decision.preset_id ?? decision.composition_id),
-        analyzerText: str(decision.reason ?? decision.body_action),
-        sentParameters: rec(meta.sentParameters),
-        generationOrigin: origin,
-        ...(entry.parentEntryId ? { parentEntryId: entry.parentEntryId } : {}),
-      });
-      entries.push(entry);
-    },
-    skipSlotNumbers: skipSlotIndexes,
-    cancelPrevious: true,
-    signal: req.signal,
-    onEvent(e: Rec) {
-      if (e.type === "jev-selection") {
-        req.onJevSelection?.(jevSelectionProgress(rec(e.jevSelection)));
-        return;
-      }
-      if (e.type === "retry-errors") {
-        const retry = rec(e.imageRetry);
-        const imageRetry = Number(retry.attempt) > 0 ? { attempt: Number(retry.attempt), total: Number(retry.total) || 0 } : undefined;
-        req.onRetryErrors?.((Array.isArray(e.retryErrors) ? e.retryErrors : []) as GenerationRetryError[], imageRetry);
-        return;
-      }
-      const imageCount = Number.isFinite(Number(e.imageCount)) ? Number(e.imageCount) + skipSlotIndexes.length : undefined;
-      if (imageCount !== undefined && (e.phase === "planning" || (e.analysisComplete === false && e.phase === "analyzing-preset"))) {
-        resolvedCount = imageCount;
-        req.onResolvedCount?.(imageCount);
-      }
-      const phase =
-        e.analysisComplete === false || e.phase === "analyzing-preset"
-          ? "analyzing-preset"
-          : e.phase === "analyzing-modifiers"
-            ? "analyzing-modifiers"
-            : e.phase === "planning"
-              ? "planning"
-              : e.phase === "generating" || e.phase === "saving"
-                ? "generating"
-                : e.phase === "applying-continuity" || e.phase === "complete"
-                  ? "committing"
-                  : null;
-      if (phase === "planning" || phase === "generating" || phase === "committing") analyzerCompleted = true;
-      const session = rec(e.session);
-      const progress = rec(session.progress);
-      if (phase)
-        req.onPhase?.(phase, {
-          imageIndex: Number.isFinite(Number(e.imageIndex)) ? Number(e.imageIndex) : undefined,
-          imageCount: imageCount ?? (Number.isFinite(Number(progress.imageCount)) ? Number(progress.imageCount) : undefined),
-          providerStage: str(progress.providerStage) || undefined,
+      generationProvider: engineProvider,
+      ...(ne.fixedResolution.enabled
+        ? { requestedSizeId: ne.fixedResolution.sizeId, requestedSize: resolveImageSize(ne.fixedResolution.sizeId, (config.runtime.customImageSizes ?? []) as never) }
+        : {}),
+      // AM 0.9.89.3+: custom sizes are image-ratio candidates (resolveV5UserDirections `xbt`).
+      customImageSizes: config.runtime.customImageSizes ?? [],
+      forceAiChoiceCoordinates: ne.forceAiChoiceCoordinates,
+      forceNsfwPrefix: ne.nsfwAlwaysEnabled,
+      stateAccumulationEnabled: ne.stateAccumulationEnabled,
+      comfyUI: {
+        transport: "direct-workflow",
+        chanServerRequestUrl: "",
+        chanServerApiKey: "",
+        endpoint: "",
+        workflowProfileId: BUNDLED_COMFY_WORKFLOW_PROFILE.id,
+        completionTimeoutMs: comfyTimeout,
+        animaPositivePrefix: ne.animaPositivePrompt,
+        animaNegativePrefix: ne.animaNegativePrompt,
+      },
+      analyzerInput: {
+        executionMode: engine.executionMode(config),
+        checkpointPolicy: checkpointPolicyFor(req.attemptKind),
+        ...assembled,
+        ...(revisionImage.length ? { imageParts: revisionImage } : {}),
+        ...(prepareRoutePlan
+          ? {
+              afterPresetValidated: prepareRoutePlan,
+              afterAnalysisValidated: ({ routePlan }: { routePlan: unknown }, signal?: AbortSignal) => prepareRoutePlan(routePlan, signal),
+            }
+          : {}),
+      },
+      ...(prepareCharacters ? { prepareCharacters } : {}),
+      ...(prepareOutfits ? { prepareOutfits } : {}),
+      ...(outfitIndex ? { outfitIndex } : {}),
+      promptInputs: ft.promptInputs,
+      v5PromptContext: ft.v5PromptContext,
+      references: ft.references,
+      outfitReference: ft.outfitReference,
+      characterReference: ft.characterReference,
+      seedSetting: req.revision ? () => ({ seed: str(req.revision!.seed), fixed: !!(req.revision!.seedFixed && str(req.revision!.seed)) }) : ft.seedSetting,
+      previousCharacterStateMap: ft.previousCharacterStateMap,
+      previousContinuitySnapshot: getLatestContinuityCheckpointSnapshot(hr, chatKey, "novelai-v5"),
+      previousGlobalModifierRefs: previousGlobalModifierRefs(ft.visualContinuity),
+      advanceContinuityTurn: !req.revision,
+      assertAssetPersistenceAvailable: async () => undefined,
+      applyContinuity: async (result: VisualContinuityResult) => {
+        await req.assertTarget();
+        const outfitReferences = ft.outfitContinuityReferences(result.plan.images);
+        commitContinuity = commitWith((info) =>
+          computeDeferredVisualContinuity({
+            basisState: hr,
+            continuity: result,
+            chatKey,
+            chatIndex: 0,
+            messageIndex,
+            messageId: continuityMessageId,
+            historyRevisionId: info.historyRevisionId,
+            historyRevisionOrder: info.historyRevisionOrder,
+            outfitReferences,
+          }),
+        );
+      },
+      applyV5Continuity: async (state: unknown) => {
+        await req.assertTarget();
+        commitContinuity = commitWith((info) =>
+          persistV5ContinuityState({
+            basisState: hr,
+            continuity: state,
+            chatKey,
+            chatIndex: 0,
+            messageIndex,
+            messageId: continuityMessageId,
+            historyRevisionId: info.historyRevisionId,
+            historyRevisionOrder: info.historyRevisionOrder,
+          }) as ContinuityState,
+        );
+      },
+      persistGeneratedImage: async (image: Rec) => {
+        await req.assertTarget();
+        const decision = rec(image.decision);
+        const slotNumber = Number(decision.slot_number ?? decision.slotNumber);
+        const slot = Number.isInteger(slotNumber) ? req.slots.find((s) => s.index === slotNumber) : undefined;
+        if (!slot) throw new Error(PIPELINE_TEXT.slotMismatch.en);
+        const generation = rec(image.generation);
+        const meta = rec(generation.providerMetadata);
+        const imageId = str(meta.imageId) || str(generation.requestId);
+        if (!imageId) throw new Error("The image provider returned no image id.");
+        const actors = (Array.isArray(image.actors) ? image.actors : []).map(rec);
+        const key = str(actors.find((a) => str(a.identityKey))?.identityKey) || str(decision.lorebook_prompt_key);
+        const label = idLabel(key) || str(actors[0]?.identityName) || character.name;
+        const assetName = createGeneratedAssetName({ label, kind: "chat", ...(UUID_RE.test(imageId) ? { id: imageId } : {}) });
+        const width = Math.max(0, Math.round(Number(generation.width) || 0));
+        const height = Math.max(0, Math.round(Number(generation.height) || 0));
+        const entry: IllustrationPlanEntry = {
+          slotId: slot.slotId,
+          sourceImageToken: slot.sourceImageToken,
+          slotIndex: slot.index,
+          assetName,
+          savedPath: imageResultUrl(imageId),
+          extension: str(generation.extension) || "png",
+          entryId: `generated:${assetName}`,
+          ...(width ? { width } : {}),
+          ...(height ? { height } : {}),
+          generationOrigin: origin,
+          ...(req.revision?.sourceEntryId ? { parentEntryId: req.revision.sourceEntryId } : {}),
+        };
+        const providerPrompt = rec(image.providerPrompt);
+        const record = rec(image.generationRecord);
+        const recordRequest = rec(record.request);
+        const plan = rec(image.promptPlan);
+        const novelAIConfig = image.novelAIConfig ? { ...rec(image.novelAIConfig) } : undefined;
+        if (novelAIConfig) delete novelAIConfig.apiKey;
+        records.push({
+          entryId: entry.entryId,
+          imageId,
+          assetName,
+          messageKey: req.planKey,
+          slotId: slot.slotId,
+          revisionId: req.revisionId,
+          createdAt: Date.now(),
+          engineProvider,
+          lumiverseProvider: str(meta.lumiverseProvider) || imageTarget.lumiverseProvider,
+          model: str(meta.model) || imageTarget.model,
+          seed: str(generation.seed),
+          seedFixed: image.seedFixed === true,
+          width,
+          height,
+          sizeId: Number(plan.sizeId) || 0,
+          positivePrompt: str(recordRequest.positive) || str(providerPrompt.positivePrompt),
+          negativePrompt: str(recordRequest.negative) || str(providerPrompt.negativePrompt),
+          characters: (Array.isArray(recordRequest.characters) ? recordRequest.characters : Array.isArray(providerPrompt.characterPrompts) ? providerPrompt.characterPrompts : []).map((c) => {
+            const r = rec(c);
+            return {
+              prompt: str(r.prompt),
+              negativePrompt: str(r.negativePrompt ?? r.uc),
+              ...(Number.isFinite(Number(r.actorIndex)) ? { actorIndex: Number(r.actorIndex) } : {}),
+              ...(Number.isFinite(Number(r.centerX)) ? { centerX: Number(r.centerX), centerY: Number(r.centerY) } : {}),
+            };
+          }),
+          ...(novelAIConfig ? { novelAIConfig } : {}),
+          actors: actors.map((a) => ({
+            identityKey: str(a.identityKey),
+            identityName: str(a.identityName),
+            kind: str(a.kind),
+            actorIndex: Number(a.actorIndex) || 0,
+            ...(str(a.selectedFormId) ? { selectedFormId: str(a.selectedFormId) } : {}),
+            ...(str(a.selectedOutfitId) ? { selectedOutfitId: str(a.selectedOutfitId) } : {}),
+          })),
+          ...(str(plan.artistId) ? { artistId: str(plan.artistId) } : {}),
+          promptKey: key,
+          presetId: str(decision.preset_id ?? decision.composition_id),
+          analyzerText: str(decision.reason ?? decision.body_action),
+          sentParameters: rec(meta.sentParameters),
+          generationOrigin: origin,
+          ...(entry.parentEntryId ? { parentEntryId: entry.parentEntryId } : {}),
         });
-    },
-  };
+        entries.push(entry);
+      },
+      skipSlotNumbers: skipSlotIndexes,
+      cancelPrevious: true,
+      signal: req.signal,
+      onEvent(e: Rec) {
+        if (e.type === "jev-selection") {
+          req.onJevSelection?.(jevSelectionProgress(rec(e.jevSelection)));
+          return;
+        }
+        if (e.type === "retry-errors") {
+          const retry = rec(e.imageRetry);
+          const imageRetry = Number(retry.attempt) > 0 ? { attempt: Number(retry.attempt), total: Number(retry.total) || 0 } : undefined;
+          req.onRetryErrors?.((Array.isArray(e.retryErrors) ? e.retryErrors : []) as GenerationRetryError[], imageRetry);
+          return;
+        }
+        const imageCount = Number.isFinite(Number(e.imageCount)) ? Number(e.imageCount) + skipSlotIndexes.length : undefined;
+        if (imageCount !== undefined && (e.phase === "planning" || (e.analysisComplete === false && e.phase === "analyzing-preset"))) {
+          resolvedCount = imageCount;
+          req.onResolvedCount?.(imageCount);
+        }
+        const phase =
+          e.analysisComplete === false || e.phase === "analyzing-preset"
+            ? "analyzing-preset"
+            : e.phase === "analyzing-modifiers"
+              ? "analyzing-modifiers"
+              : e.phase === "planning"
+                ? "planning"
+                : e.phase === "generating" || e.phase === "saving"
+                  ? "generating"
+                  : e.phase === "applying-continuity" || e.phase === "complete"
+                    ? "committing"
+                    : null;
+        if (phase === "planning" || phase === "generating" || phase === "committing") analyzerCompleted = true;
+        const session = rec(e.session);
+        const progress = rec(session.progress);
+        if (phase)
+          req.onPhase?.(phase, {
+            imageIndex: Number.isFinite(Number(e.imageIndex)) ? Number(e.imageIndex) : undefined,
+            imageCount: imageCount ?? (Number.isFinite(Number(progress.imageCount)) ? Number(progress.imageCount) : undefined),
+            providerStage: str(progress.providerStage) || undefined,
+          });
+      },
+    };
 
-  try {
-    await engine.run(input as never, {
-      engineProvider,
-      purpose: req.revision ? "regenerate" : "chat",
-      connectionId: imageTarget.connectionId,
-      model: imageTarget.model,
-      ownerChatId: req.chatId,
-      ownerCharacterId: primaryId,
-      comfyuiWorkflowId: imageTarget.comfyuiWorkflowId,
-      forceNsfwPrefix: () => ne.nsfwAlwaysEnabled,
-    }, config);
-    await req.assertTarget();
-  } catch (e) {
-    if (isCancellation(e) || req.signal.aborted) cancelled = true;
-    else {
-      error = e instanceof Error ? e.message : String(e);
-      failure = e;
+    try {
+      await engine.run(input as never, {
+        engineProvider,
+        purpose: req.revision ? "regenerate" : "chat",
+        connectionId: imageTarget.connectionId,
+        model: imageTarget.model,
+        ownerChatId: req.chatId,
+        ownerCharacterId: primaryId,
+        comfyuiWorkflowId: imageTarget.comfyuiWorkflowId,
+        forceNsfwPrefix: () => ne.nsfwAlwaysEnabled,
+      }, config);
+      await req.assertTarget();
+    } catch (e) {
+      if (isCancellation(e) || req.signal.aborted) cancelled = true;
+      else {
+        error = e instanceof Error ? e.message : String(e);
+        failure = e;
+      }
     }
-  }
 
-  if (auto) {
-    // Pending document writes of generated characters / outfits finish before the job commits (AM `settle`).
-    await auto.autoCharacter.settle().catch(() => undefined);
-    await auto.store.settle().catch(() => undefined);
-    auto.dispose();
-  }
+    if (auto) {
+      // Pending document writes of generated characters / outfits finish before the job commits (AM `settle`).
+      await auto.autoCharacter.settle().catch(() => undefined);
+      await auto.store.settle().catch(() => undefined);
+    }
 
-  const done = new Set([...(req.attemptKind === "retry" ? req.existingEntries : []), ...entries].map((e) => e.slotId));
-  const missing = Math.max(0, resolvedCount - done.size - (req.attemptKind === "retry" ? req.deletedSlotIndices.length : 0));
-  if (!cancelled && !error && missing) {
-    const label = formatLabel(PIPELINE_TEXT.failedCount, { n: missing });
-    error = label.en;
-    errorKo = label.ko;
+    const done = new Set([...(req.attemptKind === "retry" ? req.existingEntries : []), ...entries].map((e) => e.slotId));
+    const missing = Math.max(0, resolvedCount - done.size - (req.attemptKind === "retry" ? req.deletedSlotIndices.length : 0));
+    if (!cancelled && !error && missing) {
+      const label = formatLabel(PIPELINE_TEXT.failedCount, { n: missing });
+      error = label.en;
+      errorKo = label.ko;
+    }
+    return {
+      entries,
+      records,
+      assetHints,
+      resolvedCount,
+      error: cancelled ? "" : error,
+      ...(errorKo && !cancelled ? { errorKo } : {}),
+      ...(failure ? { failure } : {}),
+      ...(analyzerCompleted ? { analyzerCompleted: true } : {}),
+      ...(cancelled ? { cancelled: true } : {}),
+      ...(commitContinuity ? { commitContinuity } : {}),
+    };
+  } finally {
+    // Every exit (early result, cancellation, failure) releases this run's share of the character's free-generation stores.
+    auto?.dispose();
   }
-  return {
-    entries,
-    records,
-    assetHints,
-    resolvedCount,
-    error: cancelled ? "" : error,
-    ...(errorKo && !cancelled ? { errorKo } : {}),
-    ...(failure ? { failure } : {}),
-    ...(analyzerCompleted ? { analyzerCompleted: true } : {}),
-    ...(cancelled ? { cancelled: true } : {}),
-    ...(commitContinuity ? { commitContinuity } : {}),
-  };
 }

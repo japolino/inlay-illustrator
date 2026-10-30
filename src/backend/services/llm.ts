@@ -5,8 +5,8 @@
  *   `input.model` verbatim for raw calls and does not merge preset parameters (lumiverse-host §2).
  * - Reasoning: `config.analysis.reasoning` -> Lumiverse reasoning DTO (inherit / off / custom + effort). Replaces AM `vk`/`iEe`.
  * - JSON mode: `response_format: {type:"json_object"}` for OpenAI-compatible / Gemini / DeepSeek providers (AM forced JSON mode
- *   where the provider had one, Claude got none, spec/llm.md §0.2). A 400-style rejection is remembered per provider/model and the
- *   call is resent once without it (not counted as a retry).
+ *   where the provider had one, Claude got none, spec/llm.md §0.2). A rejection is resent once without it (not counted as a
+ *   retry) and remembered per provider/model only when the error names JSON mode.
  * - Parsing: the engine's lenient parser (AM `iQe` @79678) -> ANALYZER_JSON_PARSE with `analyzerRaw`.
  * - Vision: `analysis.vision` auto/supported/unsupported + connection metadata + a per connection/model cache (AM `Rde` @81538).
  *   An image-unsupported error (AM `oP` @81557) marks the model unsupported and the call is repeated text-only.
@@ -186,9 +186,14 @@ export function unsupportedVisionError(error: unknown): boolean {
   ].some((pattern) => pattern.test(message));
 }
 
+/** A rejection that names JSON mode: remembered per provider/model. */
 function isJsonModeRejection(error: unknown): boolean {
-  const message = errorMessage(error);
-  return /response_format|json_object|json mode|structured output/i.test(message) || (httpStatusOf(error) === 400 && /format|invalid.*(?:argument|parameter)/i.test(message));
+  return /response_format|json_object|json[ _-]?mode|response_?mime_?type|structured output/i.test(errorMessage(error));
+}
+
+/** A 400 that may be about JSON mode without naming it (Gemini's "invalid argument"): resent once without it, not remembered. */
+function mayBeJsonModeRejection(error: unknown): boolean {
+  return httpStatusOf(error) === 400 && /format|invalid.*(?:argument|parameter)/i.test(errorMessage(error));
 }
 
 /** HTTP status of a host/provider error (`status` field or "(429)" / "HTTP 429" in the message). */
@@ -446,18 +451,20 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
             break;
           } catch (error) {
             if (isAbortLike(error) || error instanceof AnalyzerClientErrorClass) throw error;
-            if (jsonMode && isJsonModeRejection(error)) {
-              jsonModeRejected.add(capKey);
-              jsonMode = false;
-              log("warn", `JSON mode rejected by ${connection.provider}/${model}; resending without it.`, errorMessage(error));
-              continue;
-            }
+            // Image errors first: their wording ("unsupported image ... formats") must not read as a JSON mode rejection.
             if (!imagesDropped && hasImages(messages) && unsupportedVisionError(error)) {
               visionCache.set(visionKey(connection, model), false);
               if (request.visionFallback === "fail") throw makeAnalyzerError("The selected analyzer model cannot read images.", { code: "ANALYZER_VISION_UNSUPPORTED", cause: error });
               messages = dropImages(messages);
               imagesDropped = true;
               log("warn", `${model} rejected images; resending text-only (${request.purpose}).`, errorMessage(error));
+              continue;
+            }
+            if (jsonMode && (isJsonModeRejection(error) || mayBeJsonModeRejection(error))) {
+              const named = isJsonModeRejection(error);
+              if (named) jsonModeRejected.add(capKey);
+              jsonMode = false;
+              log("warn", `${named ? "JSON mode rejected" : "Possible JSON mode rejection"} by ${connection.provider}/${model}; resending without it.`, errorMessage(error));
               continue;
             }
             throw classifyLlmError(error);
@@ -534,12 +541,9 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
     async supportsVision(overrides) {
       const { settings } = await effectiveSettings(overrides);
       if (settings.vision !== "auto") return settings.vision === "supported";
-      try {
-        const connection = await resolveConnection(settings.connectionId);
-        return visionFor(settings, connection, settings.model || connection.model);
-      } catch {
-        return false;
-      }
+      // A connection that can't be read rejects with that error: it says nothing about vision.
+      const connection = await resolveConnection(settings.connectionId);
+      return visionFor(settings, connection, settings.model || connection.model);
     },
 
     async listConnections() {

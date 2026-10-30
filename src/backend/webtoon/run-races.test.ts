@@ -187,6 +187,18 @@ describe("webtoon: races and recovery", () => {
     pipeline.dispose();
   });
 
+  test("a new plan starts from a fresh document: a stored manga strip's format and mono do not carry over into a webtoon plan", async () => {
+    const { fx, pipeline } = await setup();
+    await updateStrip(fx.services.storage, CHAT_ID, "m1@0", () => ({ ...createStripDocument({ chatId: CHAT_ID, messageKey: "illustration:m1@0", historyId: "m1@0", characterId: "char-1", sourceLength: 1, now: 1 }), format: "manga", mono: true }));
+    fx.llmReplies.push(STORYBOARD);
+    const run = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0 });
+    await waitFor(() => finished(fx, run.jobId).length > 0);
+    const strip = (await readStrip(fx.services.storage, CHAT_ID, "m1@0"))!;
+    expect(strip.status).toBe("complete");
+    expect({ format: strip.format, mono: strip.mono }).toEqual({ format: undefined, mono: undefined });
+    pipeline.dispose();
+  });
+
   test("recover() turns an interrupted webtoon strip into an error instead of planning forever", async () => {
     const { fx, pipeline } = await setup();
     await updateStrip(fx.services.storage, CHAT_ID, "m1@0", () => createStripDocument({ chatId: CHAT_ID, messageKey: "illustration:m1@0", historyId: "m1@0", characterId: "char-1", sourceLength: 1, now: 1 }));

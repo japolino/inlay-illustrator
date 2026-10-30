@@ -94,7 +94,7 @@ export function projectRoster(source: AmSource, document: CharacterDocument, opt
         primaryKeys: [...lore.primaryKeys],
         secondaryKeys: [...lore.secondaryKeys],
         recognitionKeys: custom ? [...custom.recognitionKeys] : effectiveRecognitionKeys([...lore.primaryKeys, ...lore.secondaryKeys], cp.customLorebookKeys[promptKey]),
-        content: lore.content,
+        content: custom ? custom.appearanceDescription : lore.content,
         score: lore.score,
         registered: state.registered,
         workspaceEnabled: state.workspaceEnabled,

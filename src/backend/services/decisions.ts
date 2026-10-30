@@ -4,6 +4,8 @@
 import type { DecisionImagesInput, DecisionImagesResult, SpindleHost, RunLog } from "./types.js";
 import { rpcError, type DecisionConnectionSummary, type ModelOption, type RpcError } from "../../shared/contract/index.js";
 import type { JevConnectionSettings } from "../../shared/contract/config.js";
+import { httpStatusOf } from "./llm.js";
+import { errorMessage } from "./util.js";
 
 export interface DecisionTestResult {
   ok: boolean;
@@ -34,6 +36,17 @@ export interface DecisionService {
     };
     getConfig: () => JevConnectionSettings & { apiKey: string };
   };
+}
+
+/** HTTP status for a failed host decision request, as AM's JEV client classifies it (401/403 auth, 429 rate limit, 5xx server, else http). */
+function jevErrorStatus(error: unknown): number {
+  const status = httpStatusOf(error);
+  if (status >= 400) return status;
+  const message = errorMessage(error);
+  if (message.startsWith("PERMISSION_DENIED:")) return 403;
+  if (/rate.?limit|too many requests/i.test(message)) return 429;
+  if (/not found|no longer exists|invalid/i.test(message)) return 400;
+  return 502;
 }
 
 export function createDecisionService(host: SpindleHost, log: RunLog, defaultUserId?: string): DecisionService {
@@ -127,25 +140,34 @@ export function createDecisionService(host: SpindleHost, log: RunLog, defaultUse
         // and reads `{model, answers, usage}`. The port answers that request through the Lumiverse decisions API.
         network: {
           // Property form: Lumiverse's backend scan flags `fetch(` call/method syntax as direct fetch usage.
+          // AM reports anything this throws as a network failure, so host errors come back as a TypeSafe-style error status.
           fetch: async (_url, init) => {
-            const api = (host as any).decisions;
-            if (!api?.evaluate) {
-              throw new Error("JEV_UNAVAILABLE: Lumiverse decisions API is not available on this host.");
+            try {
+              const api = (host as any).decisions;
+              if (!api?.evaluate) {
+                throw new Error("JEV_UNAVAILABLE: Lumiverse decisions API is not available on this host.");
+              }
+              const body = JSON.parse(String(init.body)) as { model: string; state: unknown; questions: Record<string, unknown> };
+              const currentCfg = getConfig();
+              const effectiveUserId = adapterOptions.userId ?? defaultUserId;
+              const res = await api.evaluate(
+                {
+                  connection_id: currentCfg.connectionId || undefined,
+                  model: body.model,
+                  state: body.state as any,
+                  questions: body.questions as any,
+                  ...(effectiveUserId ? { userId: effectiveUserId } : {}),
+                },
+                { signal: init.signal },
+              );
+              return new Response(JSON.stringify({ model: res.model, answers: res.answers, usage: res.usage ?? {} }), { status: 200 });
+            } catch (err) {
+              // AM's own cancel / timeout handling owns aborted requests.
+              if (init.signal?.aborted) throw err;
+              const message = errorMessage(err);
+              log.append("error", "decision", `JEV decision request failed: ${message}`);
+              return new Response(JSON.stringify({ error: message }), { status: jevErrorStatus(err) });
             }
-            const body = JSON.parse(String(init.body)) as { model: string; state: unknown; questions: Record<string, unknown> };
-            const currentCfg = getConfig();
-            const effectiveUserId = adapterOptions.userId ?? defaultUserId;
-            const res = await api.evaluate(
-              {
-                connection_id: currentCfg.connectionId || undefined,
-                model: body.model,
-                state: body.state as any,
-                questions: body.questions as any,
-                ...(effectiveUserId ? { userId: effectiveUserId } : {}),
-              },
-              { signal: init.signal },
-            );
-            return new Response(JSON.stringify({ model: res.model, answers: res.answers, usage: res.usage ?? {} }), { status: 200 });
           },
         },
         // AM checks `connection.apiKey` before a JEV run; the key stays in the Lumiverse connection, so pass a placeholder.

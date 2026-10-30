@@ -23,4 +23,13 @@ describe("text-match", () => {
     expect(matchRank("ㅁㅇ", "민아")).toBe(2);
     expect(matchRank("zz", "Mina")).toBe(-1);
   });
+  test("dotted capital I (İ) matches a plain i", () => {
+    expect(matchRank("ip", "İpek")).toBe(0);
+    expect(matchesQuery("ipek", ["İpek Yılmaz"])).toBe(true);
+  });
+  test("dotless i (ı) and plain i match each other", () => {
+    expect(matchesQuery("ırmak", ["Irmak"])).toBe(true);
+    expect(matchRank("ış", "Işıl")).toBe(0);
+    expect(matchesQuery("yilmaz", ["İpek Yılmaz"])).toBe(true);
+  });
 });

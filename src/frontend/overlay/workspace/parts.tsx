@@ -328,10 +328,17 @@ function urlCache(owner: object): Map<string, Promise<string | null> | string | 
   if (!cache) urlCaches.set(owner, (cache = new Map()));
   return cache;
 }
-/** Seeds known URLs (from `assets.list`). */
+/**
+ * Seeds known URLs (from `assets.list`). The identity entry stays the full-size URL `assets.getUrl` answers (crop,
+ * viewers); the `?size=sm` thumbnail is kept apart under `thumb:<identity>` for small tiles (`AssetImage`).
+ */
 export function seedAssetUrls(owner: object, items: { asset: AssetRef; url: string; thumbnailUrl?: string }[]): void {
   const cache = urlCache(owner);
-  for (const item of items) cache.set(assetIdentity(item.asset), item.thumbnailUrl || item.url);
+  for (const item of items) {
+    const id = assetIdentity(item.asset);
+    cache.set(id, item.url);
+    if (item.thumbnailUrl) cache.set(`thumb:${id}`, item.thumbnailUrl);
+  }
 }
 
 export function useAssetUrl(asset: AssetRef | null | undefined): string | null {
@@ -355,10 +362,13 @@ export function useAssetUrl(asset: AssetRef | null | undefined): string | null {
   return url;
 }
 
-/** Image of an asset ref (object-cover). */
+/** Image of an asset ref (object-cover): a seeded thumbnail when known, else the full-size URL. */
 export function AssetImage({ asset, url: explicit, alt, className }: { asset?: AssetRef | null; url?: string | null; alt: string; className?: string }) {
-  const resolved = useAssetUrl(explicit ? null : asset);
-  const url = explicit ?? resolved;
+  const app = useApp();
+  const thumb = asset ? urlCache(app).get(`thumb:${assetIdentity(asset)}`) : undefined;
+  const seeded = typeof thumb === "string" ? thumb : null;
+  const resolved = useAssetUrl(explicit || seeded ? null : asset);
+  const url = explicit ?? seeded ?? resolved;
   return url
     ? <img src={url} alt={alt} loading="lazy" decoding="async" draggable={false} class={cn("size-full object-cover", className)} />
     : <span class={cn("block size-full animate-pulse bg-surface-control", className)} aria-hidden="true" />;

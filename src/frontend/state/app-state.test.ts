@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { Window } from "happy-dom";
+import { h, render } from "preact";
 import { createMockBackend } from "../dev/mock-backend.js";
 import { coreMockHandlers } from "../dev/mock/core.js";
-import { RpcClient } from "../rpc/client.js";
-import { AppController, mergePatch } from "./app-state.js";
+import { RpcClient, type ClientResult } from "../rpc/client.js";
+import { AppContext, AppController, mergePatch, useRpcQuery, type QueryState } from "./app-state.js";
 
 function setup() {
   const mock = createMockBackend({ latencyMs: 0, timeScale: 0, handlers: [coreMockHandlers()] });
@@ -126,7 +128,67 @@ describe("AppController", () => {
     expect(app.activeAnalysis({ characterId: "char-seoyeon" }).map((j) => j.jobId)).toEqual(["a1"]);
   });
 
+  test("a failed analysis job outlives the finished-job TTL until its error is dismissed", async () => {
+    const { app, mock } = setup();
+    await app.init();
+    const realSetTimeout = globalThis.setTimeout;
+    // The 30 s finished-job TTL runs at once.
+    globalThis.setTimeout = ((handler: () => void, delay?: number) => realSetTimeout(handler, delay === 30_000 ? 0 : delay)) as typeof setTimeout;
+    try {
+      mock.emit("analysis.finished", { jobId: "ok", kind: "persona", characterId: "char-seoyeon", status: "success", message: "Done" });
+      mock.emit("analysis.finished", { jobId: "bad", kind: "persona", characterId: "char-seoyeon", status: "error", message: "Failed", error: { code: "internal", message: "boom" } });
+      await tick();
+      await tick();
+    } finally {
+      globalThis.setTimeout = realSetTimeout;
+    }
+    expect(app.state.analysisJobs.ok).toBeUndefined();
+    expect(app.state.analysisJobs.bad?.error?.message).toBe("boom");
+    app.dismissAnalysisJob("bad");
+    expect(app.state.analysisJobs.bad).toBeUndefined();
+  });
+
   test("mergePatch deep-merges objects and replaces arrays", () => {
     expect(mergePatch({ a: { b: 1, c: [1, 2] }, d: 1 }, { a: { c: [3] } })).toEqual({ a: { b: 1, c: [3] }, d: 1 });
+  });
+});
+
+describe("useRpcQuery", () => {
+  test("never returns the data of other params: on a switch, a failure, null params or a late answer", async () => {
+    const { app, mock } = setup();
+    const win = new Window();
+    const root = win.document.createElement("div") as unknown as Element;
+    let releaseLate: () => void = () => undefined;
+    mock.handlers["connections.listImageModels"] = async ({ connectionId }, ctx) => {
+      if (connectionId === "offline") ctx.fail("provider-error", "offline");
+      if (connectionId === "late") await new Promise<void>((resolve) => (releaseLate = resolve));
+      return { models: [{ id: `${connectionId}-model`, label: connectionId }] };
+    };
+    let query!: QueryState<ClientResult<"connections.listImageModels">>;
+    function Probe({ connectionId }: { connectionId: string | null }) {
+      query = useRpcQuery("connections.listImageModels", connectionId ? { connectionId } : null);
+      return null;
+    }
+    const show = (connectionId: string | null) => render(h(AppContext.Provider, { value: app }, h(Probe, { connectionId })), root);
+    try {
+      show("a");
+      while (!query.data) await tick();
+      show("offline");
+      expect(query.data).toBeUndefined();
+      expect(query.loading).toBe(true);
+      while (!query.error) await tick();
+      expect(query.data).toBeUndefined();
+      // Params turn null while "late" is in flight: its answer must not land.
+      show("late");
+      while (!mock.calls.some((call) => (call.params as { connectionId?: string }).connectionId === "late")) await tick();
+      show(null);
+      while (query.loading) await tick();
+      releaseLate();
+      await tick();
+      expect(query.data).toBeUndefined();
+    } finally {
+      render(null, root);
+      win.happyDOM.abort();
+    }
   });
 });

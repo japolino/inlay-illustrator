@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createDefaultConfig } from "../../../shared/contract/config.js";
-import { addOutfit, deleteOutfit, normalizeFormCollection, patchOutfit } from "../../../shared/contract/character.js";
+import { addOutfit, deleteOutfit, formCollectionRevision, normalizeFormCollection, patchOutfit } from "../../../shared/contract/character.js";
 import {
   FILTER_GROUPS,
   evidenceStatusText,
@@ -193,6 +193,36 @@ describe("form drafts", () => {
     expect(analysisStates(e.value).every((v) => !v)).toBe(true);
     expect(analysisStates(e.base).every((v) => !v)).toBe(true);
     expect(e.base.defaultFormId).toBe("form_default");
+  });
+  test("overlapping immediate commits save in order, each on the base the previous one left", async () => {
+    const store = new FormDraftStore();
+    let server = collection;
+    const saver = async (_k: string, c: typeof collection, rev: string) => {
+      if (rev !== formCollectionRevision(server)) throw Object.assign(new Error("conflict"), { error: { code: "conflict" } });
+      server = c;
+      return { collection: c, revision: formCollectionRevision(c) };
+    };
+    const first = store.commit("k", collection, (c) => patchOutfit(c, "form_default", "outfit_default", { candidateEnabled: false }), saver);
+    const second = store.commit("k", collection, (c) => patchOutfit(c, "form_cat", "o1", { candidateEnabled: false }), saver);
+    expect(await Promise.all([first, second])).toEqual([true, true]);
+    expect(server.forms.map((f) => f.outfits[0]!.candidateEnabled)).toEqual([false, false]);
+    expect(store.isDirty("k")).toBe(false);
+  });
+  test("a queued commit that saves after an earlier one failed leaves the draft clean", async () => {
+    const store = new FormDraftStore();
+    let server = collection;
+    let calls = 0;
+    const saver = async (_k: string, c: typeof collection) => {
+      if (++calls === 1) throw new Error("offline");
+      server = c;
+      return { collection: c, revision: formCollectionRevision(c) };
+    };
+    const first = store.commit("k", collection, (c) => patchOutfit(c, "form_default", "outfit_default", { candidateEnabled: false }), saver);
+    const second = store.commit("k", collection, (c) => patchOutfit(c, "form_cat", "o1", { candidateEnabled: false }), saver);
+    expect(await Promise.all([first, second])).toEqual([false, true]);
+    expect(server.forms.map((f) => f.outfits[0]!.candidateEnabled)).toEqual([true, false]);
+    expect(store.isDirty("k")).toBe(false);
+    expect(store.entry("k")!.value).toEqual(server);
   });
   test("structural changes save at once unless the form has unsaved outfit edits (AM QC)", async () => {
     const store = new FormDraftStore();

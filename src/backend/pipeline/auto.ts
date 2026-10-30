@@ -9,9 +9,10 @@
  *   clash rule (NFKC title / recognition keys), forms in `characterPrompt.characterForms[id]`;
  * - outfit image generator (AM boot `Ee`): from the analysis module when it exposes one, else creation mode
  *   "tags-only" (AM's own mode for providers without references).
+ * Overlapping runs of one character share these stores and controllers, as AM has one of each for the open charx.
  */
 import { normalizeFormCollection, type CharacterDocument, type CustomCharacter } from "../../shared/contract/index.js";
-import { AmConfigStore, type AmConfig } from "../analysis/bridge/config-store.js";
+import { AmConfigStore, loadAmConfigParts, type AmConfig } from "../analysis/bridge/config-store.js";
 import type { BackendModules } from "../rpc/types.js";
 import type { BackendServices } from "../services/types.js";
 import { N1t as createAutoOutfit, QOt as createAutoCharacter, ejt as createInitialOutfit } from "./core/auto-core";
@@ -35,7 +36,7 @@ export interface AutoCharacterApi {
 
 export interface AutoGeneration {
   /** AM config store used by the late prompt callbacks (`getConfig`), so generated outfits / forms are visible. */
-  store: AmConfigStore;
+  store: Pick<AmConfigStore, "getCurrentSnapshot" | "settle">;
   autoOutfit: AutoOutfitApi;
   autoCharacter: AutoCharacterApi;
   /** False when no outfit image generator is available (creation mode is forced to "tags-only"). */
@@ -45,41 +46,60 @@ export interface AutoGeneration {
 
 const fold = (s: string) => s.normalize("NFKC").trim().toLocaleLowerCase().replace(/\s+/gu, " ");
 
-/** Store wrapper with the extra AM config-store methods the verbatim code calls. */
-function amConfigStoreAdapter(store: AmConfigStore) {
+/**
+ * AM config store with the extra methods the verbatim code calls, over an `AmConfigStore` that `reload` replaces with a
+ * fresh read. Reloads and commits run one at a time; each commit re-reads first, so a store shared by overlapping runs
+ * also sees edits saved outside them (Prompts tab) before it reuses, counts or allocates outfits.
+ */
+function amConfigStoreAdapter(services: BackendServices, characterId: string, onReload: (document: CharacterDocument) => void) {
   type Mutator = (config: AmConfig) => AmConfig;
-  const adapter = Object.create(store) as AmConfigStore & {
-    getSavedSnapshot(): AmConfig;
-    commitExternalUpdate(fn: () => Promise<Mutator | void> | Mutator | void, options?: { domains?: string[] }): Promise<void>;
-    commitUpdate(fn: (current: AmConfig, saved: AmConfig) => { persisted: AmConfig } | null, options?: { domains?: string[] }): Promise<void>;
-    subscribeDomain(domain: string, listener: () => void): () => void;
+  let store: AmConfigStore | undefined;
+  let queue: Promise<unknown> = Promise.resolve();
+  const serialize = <T>(task: () => Promise<T>): Promise<T> => {
+    const run = queue.then(task);
+    queue = run.catch(() => undefined);
+    return run;
   };
-  adapter.getSavedSnapshot = () => store.getCurrentSnapshot();
-  adapter.commitExternalUpdate = async (fn, options = {}) => {
-    const mutate = await fn();
-    if (typeof mutate === "function") store.update(mutate, options);
-    await store.flushSave();
+  const reload = async () => {
+    const parts = await loadAmConfigParts(services, characterId);
+    store = new AmConfigStore(services, characterId, parts, "chat-generation");
+    onReload(parts.document);
   };
-  // The port keeps one snapshot (current = saved), so AM's `rebase` of the current snapshot is the persisted value itself.
-  adapter.commitUpdate = async (fn, options = {}) => {
-    const snapshot = store.getCurrentSnapshot();
-    const result = fn(snapshot, snapshot);
-    if (!result) return;
-    store.update(() => result.persisted, options);
-    await store.flushSave();
+  const commit = (apply: (store: AmConfigStore) => Promise<void> | void) =>
+    serialize(async () => {
+      await reload();
+      await apply(store!);
+      await store!.flushSave();
+    });
+  return {
+    reload: () => serialize(reload),
+    /** Waits for the commits queued so far. */
+    settle: () => serialize(async () => {}),
+    getCurrentSnapshot: () => store!.getCurrentSnapshot(),
+    getSavedSnapshot: () => store!.getCurrentSnapshot(),
+    commitExternalUpdate: (fn: () => Promise<Mutator | void> | Mutator | void, options: { domains?: string[] } = {}) =>
+      commit(async (s) => {
+        const mutate = await fn();
+        if (typeof mutate === "function") s.update(mutate, options);
+      }),
+    // The port keeps one snapshot (current = saved), so AM's `rebase` of the current snapshot is the persisted value itself.
+    commitUpdate: (fn: (current: AmConfig, saved: AmConfig) => { persisted: AmConfig } | null, options: { domains?: string[] } = {}) =>
+      commit((s) => {
+        const snapshot = s.getCurrentSnapshot();
+        const result = fn(snapshot, snapshot);
+        if (result) s.update(() => result.persisted, options);
+      }),
+    // AM re-checks running outfit tasks on "workspace" changes (source switch); a character's store never switches source.
+    subscribeDomain: (_domain: string, _listener: () => void) => () => {},
   };
-  // AM re-checks running outfit tasks on "workspace" changes (source switch); a run's store never switches source.
-  adapter.subscribeDomain = () => () => {};
-  // Methods of the prototype must run with the real store as `this`.
-  for (const name of ["getCurrentSnapshot", "update", "flushSave", "settle", "getDomainRevision", "getPersistenceSnapshot", "subscribePersistence"] as const)
-    (adapter as unknown as Rec)[name] = (store[name] as (...a: unknown[]) => unknown).bind(store);
-  return adapter;
 }
 
 /** AM `A5e` custom character store over the character document (only what `gOt` uses). */
-function customCharacterStore(services: BackendServices, characterId: string, initial: CharacterDocument) {
-  let entries: CustomCharacter[] = [...initial.customCharacters];
+function customCharacterStore(services: BackendServices, characterId: string) {
+  let entries: CustomCharacter[] = [];
   return {
+    /** Entries of a fresh document read (config store reload). */
+    reset: (next: CustomCharacter[]) => void (entries = [...next]),
     getSnapshot: () => ({ sourceId: characterId, entries }),
     /** AM `createProfiles` 37691: existing enabled entries are reused; new ones whose title/keys clash are skipped. */
     async createProfiles(sourceId: string, profiles: Array<{ entry: CustomCharacter; forms: unknown }>, check: () => void) {
@@ -127,33 +147,85 @@ function outfitGeneratorFrom(getModules: (() => BackendModules) | undefined, cha
   }
 }
 
+/** Free-generation stores and controllers of one character, shared by its overlapping runs. */
+interface SharedGeneration {
+  refs: number;
+  config: ReturnType<typeof amConfigStoreAdapter>;
+  characters: ReturnType<typeof customCharacterStore>;
+  /** autoOutfit / autoCharacter by outfit image availability. */
+  controllers: Map<boolean, Pick<AutoGeneration, "autoOutfit" | "autoCharacter"> & { dispose(): void }>;
+}
+
+const sharedGenerations = new WeakMap<BackendServices, Map<string, SharedGeneration>>();
+
+function sharedGeneration(services: BackendServices, characterId: string): SharedGeneration {
+  const characters = customCharacterStore(services, characterId);
+  const config = amConfigStoreAdapter(services, characterId, (document) => characters.reset(document.customCharacters));
+  return { refs: 0, config, characters, controllers: new Map() };
+}
+
+/**
+ * Opens the free-generation stores of a character for one run (chat message, webtoon strip). Overlapping runs of the
+ * same character share them, so outfit reuse (`ane`), the 24-outfit cap and new outfit ids see the outfits of every run,
+ * and an identical outfit proposal joins the running image task (N1t task map). The last run's `dispose` disposes them.
+ */
 export async function openAutoGeneration(services: BackendServices, getModules: (() => BackendModules) | undefined, characterId: string): Promise<AutoGeneration> {
-  const store = await AmConfigStore.open(services, characterId, "chat-generation");
-  const config = amConfigStoreAdapter(store);
-  const document = await services.storage.loadCharacterDocument(characterId);
-  const generator = outfitGeneratorFrom(getModules, characterId);
-  const log = (message: string) => {
-    try {
-      services.log.append("info", "pipeline", message);
-    } catch {
-      /* ignore */
-    }
+  const open = sharedGenerations.get(services) ?? new Map<string, SharedGeneration>();
+  sharedGenerations.set(services, open);
+  const shared = open.get(characterId) ?? sharedGeneration(services, characterId);
+  open.set(characterId, shared);
+  shared.refs += 1;
+  let released = false;
+  const dispose = () => {
+    if (released) return;
+    released = true;
+    if ((shared.refs -= 1) > 0) return;
+    if (open.get(characterId) === shared) open.delete(characterId);
+    for (const controllers of shared.controllers.values()) controllers.dispose();
   };
-  const autoOutfit = createAutoOutfit({ config, generator, sourceCatalog: { refreshCharacter: async () => null }, activity: undefined, log }) as AutoOutfitApi;
-  const autoCharacter = createAutoCharacter({
-    config,
-    characters: customCharacterStore(services, characterId, document),
-    isCurrentSource: (id: string) => id === characterId,
-    activity: undefined,
-    ...(generator
-      ? { prepareInitialOutfit: createInitialOutfit({ config, generator, resolveTarget: (id: string) => ({ chaId: id, indexHint: 0 }), refresh: async () => undefined, log }) }
-      : {}),
-  }) as AutoCharacterApi & { dispose(): void };
+  try {
+    // A run joining a shared store re-reads the stored config too, so it sees edits saved since the first run opened it.
+    await shared.config.reload();
+  } catch (error) {
+    dispose();
+    throw error;
+  }
+  const generator = outfitGeneratorFrom(getModules, characterId);
+  let controllers = shared.controllers.get(!!generator);
+  if (!controllers) {
+    const { config, characters } = shared;
+    const log = (message: string) => {
+      try {
+        services.log.append("info", "pipeline", message);
+      } catch {
+        /* ignore */
+      }
+    };
+    const autoOutfit = createAutoOutfit({ config, generator, sourceCatalog: { refreshCharacter: async () => null }, activity: undefined, log }) as AutoOutfitApi & { dispose(): void };
+    const autoCharacter = createAutoCharacter({
+      config,
+      characters,
+      isCurrentSource: (id: string) => id === characterId,
+      activity: undefined,
+      ...(generator
+        ? { prepareInitialOutfit: createInitialOutfit({ config, generator, resolveTarget: (id: string) => ({ chaId: id, indexHint: 0 }), refresh: async () => undefined, log }) }
+        : {}),
+    }) as AutoCharacterApi & { dispose(): void };
+    controllers = {
+      autoOutfit,
+      autoCharacter,
+      dispose: () => {
+        autoOutfit.dispose();
+        autoCharacter.dispose();
+      },
+    };
+    shared.controllers.set(!!generator, controllers);
+  }
   return {
-    store,
-    autoOutfit,
-    autoCharacter,
+    store: shared.config,
+    autoOutfit: controllers.autoOutfit,
+    autoCharacter: controllers.autoCharacter,
     imagesAvailable: !!generator,
-    dispose: () => autoCharacter.dispose(),
+    dispose,
   };
 }

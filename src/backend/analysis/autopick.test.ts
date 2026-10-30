@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createEmptyCharacterDocument, proposedParts, resolveCharacterForms, type AutoPickTags } from "../../shared/contract/index.js";
+import { createEmptyCharacterDocument, deleteOutfit, proposedParts, resolveCharacterForms, type AutoPickTags } from "../../shared/contract/index.js";
 import type { AmSource, CharacterImageAsset, LlmCompleteRequest } from "../services/types.js";
 import { AnalysisJobs } from "./jobs.js";
 import { AUTOPICK_PATH, applyAutoPick, dedupeParts, getAutoPick, namedAssets, outfitText, readAutoPickState, representativeScore, runOutfitAutoPick } from "./autopick.js";
@@ -97,6 +97,33 @@ describe("outfit auto-picker: plan", () => {
     expect(second.previous_attempt.problem).toMatch(/matched 18%/);
     expect(second.previous_attempt.unmatched_sample).toContain("alice_uniform_neutral");
     expect((await readAutoPickState(fx.services, CHAR)).scheme?.calls).toBe(2);
+  });
+
+  test("a regex with escaped underscores, which unicode mode rejects, still groups the images", async () => {
+    const regex = SCHEME.regex.replaceAll("_", String.raw`\_`);
+    expect(() => new RegExp(regex, "iu")).toThrow();
+    expect(() => new RegExp(regex, "i")).not.toThrow();
+    const fx = fixture();
+    fx.llmReplies.push({ ...SCHEME, regex });
+    const out = await run(fx, { autopick: { phase: "plan" } });
+    expect(out.status).toBe("success");
+    expect(fx.llmRequests).toHaveLength(1);
+    const state = await readAutoPickState(fx.services, CHAR);
+    expect(state.scheme?.regex).toBe(regex);
+    expect(state.scheme?.coverage).toBeCloseTo(9 / 11);
+    expect(state.groups.map((g) => g.outfit).sort()).toEqual(["dress", "nude", "suit", "uniform"]);
+  });
+
+  test("a regex with an escaped apostrophe (Kael'is-style names) still groups the images", async () => {
+    const regex = String.raw`^(?<character>[\w\']+)\.(?<outfit>\w+)\.(?<expression>\w+)$`;
+    expect(() => new RegExp(regex, "iu")).toThrow();
+    const fx = fixture(["Al'ice.uniform.neutral.webp", "Al'ice.uniform.bored.webp", "Al'ice.nude.bored.webp", "Bo'b.suit.neutral.webp"]);
+    fx.llmReplies.push({ ...SCHEME, regex, character_aliases: { "al'ice": ALICE, "bo'b": BOB } });
+    const out = await run(fx, { autopick: { phase: "plan" } });
+    expect(out.status).toBe("success");
+    const state = await readAutoPickState(fx.services, CHAR);
+    expect(state.scheme?.coverage).toBe(1);
+    expect(state.groups.map((g) => `${g.promptKey === ALICE ? "alice" : "bob"}/${g.outfit}`).sort()).toEqual(["alice/nude", "alice/uniform", "bob/suit"]);
   });
 
   test("an unusable scheme is no-evidence; 429s are retried", async () => {
@@ -237,6 +264,24 @@ describe("outfit auto-picker: apply and get", () => {
     expect(got.seenPromptKeys).toEqual([BOB]);
     expect(got.state.groups.length).toBe(4);
     expect((await getAutoPick(fx.services, { characterId: CHAR })).seenPromptKeys).toEqual([]);
+  });
+
+  test("an added outfit that is gone from the document (deleted, character reset) is no longer reported as added", async () => {
+    const { fx, state } = await planned();
+    const uniform = state.groups.find((g) => g.outfit === "uniform")!;
+    const dress = state.groups.find((g) => g.outfit === "dress")!;
+    const parts = { head: "", top: "white sailor shirt", bottom: "navy skirt", legs: "", feet: "" };
+    const first = await applyAutoPick(fx.services, { characterId: CHAR, items: [{ groupId: uniform.id, candidate: 0, label: "Sailor Uniform", parts }, { groupId: dress.id, candidate: 0, label: "", parts }] });
+    const ids = Object.fromEntries(first.state.groups.map((g) => [g.id, g.appliedOutfitId]));
+    await fx.services.storage.updateCharacterDocument(CHAR, (doc) => {
+      const collection = resolveCharacterForms(doc.characterPrompt, ALICE);
+      return { ...doc, characterPrompt: { ...doc.characterPrompt, characterForms: { [ALICE]: deleteOutfit(collection, collection.forms[0]!.id, ids[dress.id]!) } } };
+    });
+    const applied = async () => Object.fromEntries((await getAutoPick(fx.services, { characterId: CHAR })).state.groups.filter((g) => g.id === uniform.id || g.id === dress.id).map((g) => [g.outfit, g.appliedOutfitId ?? null]));
+    expect(await applied()).toEqual({ uniform: ids[uniform.id]!, dress: null });
+    // Without the document no outfit exists, even when an autopick.json was left behind.
+    await fx.services.storage.resetCharacter(CHAR);
+    expect(await applied()).toEqual({ uniform: null, dress: null });
   });
 
   test("nothing to add is a bad request", async () => {

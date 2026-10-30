@@ -1,5 +1,5 @@
 /** Image generation model settings page (Asset Maid `axt` panel "image-model" 144098; provider boxes 144108-144577). */
-import { useState } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
 import {
   CHARACTER_REFERENCE_TYPES,
   IMAGE_SIZE_PRESETS,
@@ -60,6 +60,8 @@ export function ImageModelSettingsPage() {
   const resolved = config ? resolveImageConnection(list, config.image.connectionId) : undefined;
   const models = useRpcQuery("connections.listImageModels", resolved ? { connectionId: resolved.id } : null);
   const [test, setTest] = useState<{ status: "idle" | "loading" | "success" | "error"; text?: string; title?: string }>({ status: "idle" });
+  /** Counts tests and connection changes: a result that arrives after either is dropped. */
+  const testRun = useRef(0);
   const connectionFieldId = useFieldId("ii-image-connection");
 
   const actions = <SaveActions dirty={form.dirty} saving={form.saving} error={form.error} onSave={() => void form.save()} />;
@@ -78,13 +80,21 @@ export function ImageModelSettingsPage() {
   if (config.image.model && !modelList.some((m) => m.id === config.image.model)) modelOptions.splice(1, 0, { value: config.image.model, label: C.existingValue(config.image.model) });
 
   const runTest = async () => {
+    const run = ++testRun.current;
     setTest({ status: "loading" });
     try {
       const result = await app.call("image.testConnection", { connectionId: resolved?.id });
+      if (run !== testRun.current) return;
       setTest(result.ok ? { status: "success", text: I.connected(result.latencyMs) } : { status: "error", text: I.connectionFailed, title: result.error?.message });
     } catch (caught) {
+      if (run !== testRun.current) return;
       setTest({ status: "error", text: I.connectionFailed, title: toRpcError(caught).message });
     }
+  };
+  const chooseConnection = (connectionId: string) => {
+    testRun.current += 1;
+    setTest({ status: "idle" });
+    void form.apply(connectionPatch(list, connectionId));
   };
 
   return (
@@ -95,7 +105,7 @@ export function ImageModelSettingsPage() {
           return (
             <ChoiceCard key={option.value} selected={kind === option.value} label={I.providerKinds[option.value].label} description={I.providerKinds[option.value].description}
               gradient={option.gradient} disabled={!first && kind !== option.value}
-              onSelect={() => { if (kind !== option.value && first) { setTest({ status: "idle" }); void form.apply(connectionPatch(list, first.id)); } }}
+              onSelect={() => { if (kind !== option.value && first) chooseConnection(first.id); }}
               data-image-generation-provider-option={option.value} />
           );
         })}
@@ -106,7 +116,7 @@ export function ImageModelSettingsPage() {
             <div class="flex min-w-0 items-center gap-1.5">
               <div class="min-w-0 flex-1">
                 <Select id={connectionFieldId} aria-label={I.connection} value={config.image.connectionId} options={connectionOptions}
-                  onValueChange={(value) => { setTest({ status: "idle" }); void form.apply(connectionPatch(list, value)); }} />
+                  onValueChange={chooseConnection} />
               </div>
               <IconButton label={I.testConnection} disabled={!resolved || test.status === "loading"} onClick={() => void runTest()}
                 className={cn(test.status === "success" && "text-success", test.status === "error" && "text-destructive")} title={test.title ?? I.testConnection}>

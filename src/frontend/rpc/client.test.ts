@@ -34,6 +34,15 @@ describe("RpcClient", () => {
     expect(client.pendingCount()).toBe(0);
   });
 
+  test("clients built with the same clientId (one per tab) never share request ids", () => {
+    const a = loopback(), b = loopback();
+    void new RpcClient(a.transport, { clientId: "ui" }).call("session.getStatus", {}, { timeoutMs: 0 });
+    void new RpcClient(b.transport, { clientId: "ui" }).call("session.getStatus", {}, { timeoutMs: 0 });
+    // Each tab has its own request counter and may call in the same millisecond: the client part must differ.
+    const clientPart = (t: { sent: any[] }) => t.sent[0].requestId.split(":")[0];
+    expect(clientPart(a)).not.toBe(clientPart(b));
+  });
+
   test("times out and ignores late answers", async () => {
     const t = loopback();
     const client = new RpcClient(t.transport, { timeoutMs: 10 });

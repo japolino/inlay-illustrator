@@ -1,25 +1,25 @@
 /**
  * Analyzer error notices (Asset Maid `_xt` 145828 -> modal `ape` 96220). Shows the first finished analysis job with an
- * error; closing dismisses that job's notice. Rendered globally by the shell (export only; the shell mounts it).
+ * error; closing dismisses that job (the app state keeps failed jobs until then). Rendered globally by the shell
+ * (export only; the shell mounts it).
  */
-import { useState } from "preact/hooks";
-import { useAppState, type AnalysisJobState } from "../../state/app-state.js";
+import { useApp, useAppState, type AnalysisJobState } from "../../state/app-state.js";
 import { Button, Dialog } from "../ui/index.js";
 import { ANALYZER_ERROR_LABELS as E } from "./labels.js";
 
 /** First job that should open the modal (status error, not dismissed). */
-export function pickAnalyzerError(jobs: Record<string, AnalysisJobState>, dismissed: ReadonlySet<string>): AnalysisJobState | null {
+export function pickAnalyzerError(jobs: Record<string, AnalysisJobState>, dismissed: ReadonlySet<string> = new Set()): AnalysisJobState | null {
   return Object.values(jobs)
     .filter((job) => job.finishedAt && E.errorStatuses.includes(job.status) && !dismissed.has(job.jobId))
     .sort((a, b) => (a.finishedAt ?? 0) - (b.finishedAt ?? 0))[0] ?? null;
 }
 
 export function AnalyzerErrorNotices() {
+  const app = useApp();
   const jobs = useAppState((state) => state.analysisJobs);
-  const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
-  const job = pickAnalyzerError(jobs, dismissed);
+  const job = pickAnalyzerError(jobs);
   const close = () => {
-    if (job) setDismissed((current) => new Set(current).add(job.jobId));
+    if (job) app.dismissAnalysisJob(job.jobId);
   };
   const message = job?.error?.message || job?.message || E.unknown;
   return (

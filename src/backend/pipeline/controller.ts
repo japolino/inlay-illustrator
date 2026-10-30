@@ -539,12 +539,13 @@ export function createChatPipelineController(services: BackendServices, engine: 
     const countPolicy = split ? fixedCountPolicy(runSettings.splitAnalysis.totalCount ?? 1) : runSettings.countPolicy;
     if (attemptKind !== "retry") analyzerCompleted.delete(skey);
 
-    const errorRevision =
-      attemptKind === "retry"
-        ? plan.revisions.find(
-            (r) => r.revisionId === plan.activeRevisionId && r.status === "error" && (distinctSlotCount(r.entries) < expectedSlotCount(plan) || !!r.deletedSlotIndices?.length),
-          )
-        : undefined;
+    // A retry continues the revision it failed on: a split run's own revision (even if the pager moved since), else the active one.
+    const retryId = attemptKind === "retry" && !opts.revision ? splitRevisions.get(skey) || plan.activeRevisionId : "";
+    const errorRevision = retryId
+      ? plan.revisions.find(
+          (r) => r.revisionId === retryId && r.status === "error" && (distinctSlotCount(r.entries) < expectedSlotCount(plan) || !!r.deletedSlotIndices?.length),
+        )
+      : undefined;
     const revisionTarget = opts.revision
       ? plan.revisions.find((r) => r.revisionId === opts.revision!.revisionId && r.entries.some((e) => e.slotId === opts.revision!.slotId))
       : undefined;
@@ -640,15 +641,19 @@ export function createChatPipelineController(services: BackendServices, engine: 
 
       job.snapshot.completedSlots = result.entries.length;
       setPhase(job, "committing", { imageCount: requestedCount, imageIndex: requestedCount });
-      const merged = revisionTarget ? mergeEntries(revisionTarget.entries, result.entries) : attemptKind === "retry" ? mergeEntries(existingEntries, result.entries) : result.entries;
       const assetHints = result.assetHints.length ? result.assetHints : plan.assetHints;
       let finalPlan = plan;
       let errorText = "";
       let errorKo: string | undefined;
       const written = await services.storage.updateChatData(chatId, async (doc) => {
         const base = reconcilePlanWithTree(plan, doc.history);
+        // The revision this run adds to, as it is now: entries picked and slots deleted while the run was in flight are kept.
+        const current = base.revisions.find((r) => r.revisionId === revisionId);
+        const merged = revisionTarget || attemptKind === "retry" ? mergeEntries(current?.entries ?? revisionTarget?.entries ?? existingEntries, result.entries) : result.entries;
         const resolved = revisionTarget ? Math.min(base.slots.length, distinctSlotCount(merged)) : Math.min(base.slots.length, Math.max(1, result.resolvedCount));
-        const missing = Math.max(0, resolved - distinctSlotCount(merged));
+        // A retry's resolved count includes the revision's deleted slots (generate.ts skips them), which stay empty.
+        const deleted = (current?.deletedSlotIndices ?? []).filter((i) => !merged.some((e) => e.slotIndex === i)).length;
+        const missing = Math.max(0, resolved - distinctSlotCount(merged) - deleted);
         const status = missing > 0 || result.error ? "error" : "complete";
         if (missing > 0 || result.error) {
           if (result.error) {
@@ -663,11 +668,11 @@ export function createChatPipelineController(services: BackendServices, engine: 
         const createdAt = now();
         let next: IllustrationPlan;
         const patchRevision = (id: string, patch: Partial<IllustrationPlanRevision>) => base.revisions.map((r) => (r.revisionId === id ? { ...r, ...patch } : r));
-        if (attemptKind === "retry" && errorRevision && base.revisions.some((r) => r.revisionId === errorRevision.revisionId)) {
+        if (current && attemptKind === "retry") {
           // The retried revision stays active even if the pager moved meanwhile, so its images and checkpoint land on it.
-          next = { ...base, status, requestedCount: resolved, entries: merged, assetHints, revisions: patchRevision(errorRevision.revisionId, { requestedCount: resolved, status, entries: merged, error: errorText }), activeRevisionId: errorRevision.revisionId, error: errorText };
-        } else if (revisionTarget && base.revisions.some((r) => r.revisionId === revisionTarget.revisionId)) {
-          next = { ...base, status, entries: merged, assetHints, revisions: patchRevision(revisionTarget.revisionId, { status, entries: merged, error: errorText }), activeRevisionId: revisionTarget.revisionId, error: errorText };
+          next = { ...base, status, requestedCount: resolved, entries: merged, assetHints, revisions: patchRevision(revisionId, { requestedCount: resolved, status, entries: merged, error: errorText }), activeRevisionId: revisionId, error: errorText };
+        } else if (current && revisionTarget) {
+          next = { ...base, status, entries: merged, assetHints, revisions: patchRevision(revisionId, { status, entries: merged, error: errorText }), activeRevisionId: revisionId, error: errorText };
         } else if (!merged.length) {
           next = { ...base, status, requestedCount: resolved, assetHints, error: errorText };
         } else {
@@ -704,7 +709,8 @@ export function createChatPipelineController(services: BackendServices, engine: 
       if (published === "missing") log("warn", "The illustrated message could not be resolved for publishing.", { chatId, planKey });
       emitChanged(chatId, [planKey]);
       if (finalPlan.status === "complete") return { kind: "completed" };
-      job.snapshot.failedSlots = Math.max(0, expectedSlotCount(finalPlan) - distinctSlotCount(finalPlan.entries));
+      const active = finalPlan.revisions.find((r) => r.revisionId === finalPlan.activeRevisionId);
+      job.snapshot.failedSlots = Math.max(0, expectedSlotCount(finalPlan) - distinctSlotCount(finalPlan.entries) - (active?.deletedSlotIndices?.length ?? 0));
       return {
         kind: "failed",
         error: rpcError("provider-error", errorText || PIPELINE_TEXT.generationIncomplete.en, { ...(errorKo ? { messageKo: errorKo } : {}), retryable: true }),
@@ -919,7 +925,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
    * overrides, AM `jY`), and each actor's outfit part tags are swapped for the selected outfit's tags.
    */
   const applyArtistAndOutfits = async (chatId: string, record: GenerationRecord, overrides: RegenerationOverrides | undefined) => {
-    const out = { positive: record.positivePrompt, negative: record.negativePrompt, characters: charactersOf(record), configPatch: {} as Rec, artistId: record.artistId, actors: record.actors.map((a) => ({ ...a })) };
+    const out = { positive: record.positivePrompt, negative: record.negativePrompt, characters: charactersOf(record), configPatch: {} as Rec, artistId: record.artistId, actors: record.actors.map((a) => ({ ...a })), trackedArtist: undefined as Rec | undefined };
     if (!overrides) return out;
     const config = await services.storage.loadConfig();
     if (overrides.artistId && overrides.artistId !== record.artistId) {
@@ -927,9 +933,12 @@ export function createChatPipelineController(services: BackendServices, engine: 
         const list = listNovelAIArtists(config.characterPrompt.artistPrompts);
         const next = list.find((a) => a.id === overrides.artistId) ?? fail("not-found", `Artist not found: ${overrides.artistId}`);
         const old = list.find((a) => a.id === record.artistId);
+        // The tracked segment is the record's own artist part, except on records regenerated before it followed the artist.
         const tracked = rec(rec(record.novelAIConfig).nonArtistPromptWeightArtist);
-        out.positive = replaceSegment(out.positive, str(tracked.positive) || str(old?.prompt), str(next.prompt));
-        out.negative = replaceSegment(out.negative, str(tracked.negative) || str(old?.negativePrompt), str(next.negativePrompt));
+        const own = str(tracked.id) === str(record.artistId) || out.positive.includes(str(tracked.positive));
+        out.positive = replaceSegment(out.positive, (own && str(tracked.positive)) || str(old?.prompt), str(next.prompt));
+        out.negative = replaceSegment(out.negative, (own && str(tracked.negative)) || str(old?.negativePrompt), str(next.negativePrompt));
+        out.trackedArtist = { id: next.id, name: next.title, positive: str(next.prompt), negative: str(next.negativePrompt) };
         const o = rec(next.novelAIOverrides);
         for (const key of ["steps", "scale", "cfgRescale"]) if (Number.isFinite(Number(o[key]))) out.configPatch[key] = Number(o[key]);
       } else {
@@ -1022,6 +1031,24 @@ export function createChatPipelineController(services: BackendServices, engine: 
     } as Rec & { provider: "novelai" };
   };
 
+  /** A zoom draft after a regeneration without the `excluded` characters: its per-character fields follow the compacted list. */
+  const compactDraft = (draft: RegenerationOverrides, count: number, excluded: ReadonlySet<number>): RegenerationOverrides => {
+    const kept = [...Array(count).keys()].filter((i) => !excluded.has(i));
+    const next = { ...draft };
+    delete next.excludedCharacterIndexes;
+    const centers = draft.centers && kept.filter((i) => i < draft.centers!.length).map((i) => draft.centers![i] ?? null);
+    if (centers?.length) next.centers = centers;
+    else delete next.centers;
+    const sections = draft.sections?.flatMap((s) => {
+      const actor = /^actor:(\d+)$/u.exec(s.id);
+      const at = actor ? kept.indexOf(Number(actor[1])) : -1;
+      return !actor ? [s] : at < 0 ? [] : [{ ...s, id: `actor:${at}` }];
+    });
+    if (sections?.length) next.sections = sections;
+    else delete next.sections;
+    return next;
+  };
+
   const runRegenerate = async (job: JobRecord): Promise<void> => {
     const { chatId } = job.target;
     const slotId = job.slotId!;
@@ -1104,7 +1131,23 @@ export function createChatPipelineController(services: BackendServices, engine: 
         return d;
       });
       const finalized = rec(result.finalizedPrompt);
+      // The new record's NovelAI config follows the request: the new artist's tracked segment (a later artist change looks
+      // for it in the prompt) and only the characters sent. The slot's zoom draft follows those characters' new positions.
+      const excluded = new Set(overrides?.excludedCharacterIndexes ?? []);
+      const cfg = rec(record.novelAIConfig);
+      const novelAIConfig = record.novelAIConfig && {
+        ...cfg,
+        ...rebuilt.configPatch,
+        ...(rebuilt.trackedArtist ? { nonArtistPromptWeightArtist: rebuilt.trackedArtist } : {}),
+        ...(Array.isArray(cfg.characterPrompts) ? { characterPrompts: cfg.characterPrompts.filter((_c, i) => !excluded.has(i)) } : {}),
+      };
       await updateSidecar(services.storage, chatId, (s) => {
+        const draft = s.drafts[slotId]?.overrides;
+        if (draft && excluded.size) {
+          const next = compactDraft(draft, record.characters.length, excluded);
+          if (Object.keys(next).length) s.drafts[slotId] = { overrides: next, updatedAt: now() };
+          else delete s.drafts[slotId];
+        }
         s.records[entry.entryId] = {
           ...record,
           entryId: entry.entryId,
@@ -1123,6 +1166,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
           parentEntryId: source.entryId,
           actors: rebuilt.actors,
           ...(rebuilt.artistId ? { artistId: rebuilt.artistId } : {}),
+          ...(novelAIConfig ? { novelAIConfig } : {}),
           characters: (request.config && Array.isArray((request.config as Rec).characterPrompts) ? ((request.config as Rec).characterPrompts as Rec[]) : []).map((ch, i) => ({
             prompt: str(ch.prompt),
             negativePrompt: str(ch.uc),
@@ -1265,11 +1309,11 @@ export function createChatPipelineController(services: BackendServices, engine: 
           id: `actor:${i}`,
           target: "actor",
           actorIndex: i,
-          label: record.actors.find((a) => a.actorIndex === i)?.identityName || `Character ${i + 1}`,
+          label: record.actors.find((a) => a.actorIndex === c.actorIndex)?.identityName || `Character ${i + 1}`,
           ...pick(`actor:${i}`, c.prompt, c.uc),
           centerX: center ? center.x : c.centerX,
           centerY: center ? center.y : c.centerY,
-          ...outfitOf(i),
+          ...outfitOf(c.actorIndex),
         };
       }),
     ];
@@ -1336,7 +1380,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
 
   const channelsOf = (record: GenerationRecord) => [
     { id: "main", kind: "main", label: "Main prompt", positive: record.positivePrompt, negative: record.negativePrompt },
-    ...charactersOf(record).map((c, i) => ({ id: `actor:${i}`, kind: "actor", label: record.actors.find((a) => a.actorIndex === i)?.identityName || `Character ${i + 1}`, actorIndex: i, positive: c.prompt, negative: c.uc })),
+    ...charactersOf(record).map((c, i) => ({ id: `actor:${i}`, kind: "actor", label: record.actors.find((a) => a.actorIndex === c.actorIndex)?.identityName || `Character ${i + 1}`, actorIndex: i, positive: c.prompt, negative: c.uc })),
   ];
 
   /* ---------------------------------------------------------------- host events */

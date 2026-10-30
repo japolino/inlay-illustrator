@@ -6,6 +6,7 @@ import { runAnalysis } from "./runs.js";
 import { currentForms, saveForms, setRosterRegistered } from "./workspace.js";
 import { ALICE, CHAR, NAI_PNG, asset, createAnalysisFixture } from "./testing/fixtures.js";
 import { coreHandlers } from "../rpc/handlers/core.js";
+import { TINY_PNG_BASE64 } from "../testing/fake-host.js";
 import { buildAmConfig, loadAmConfigParts, persistAmConfigChange } from "./bridge/config-store.js";
 
 const userJson = (r: LlmCompleteRequest) => {
@@ -165,6 +166,34 @@ describe("analysis runs: cancel and concurrent edits", () => {
     const titles = fx.config.value.characterPrompt.artistPrompts.map((a) => a.title);
     expect(titles).toContain("Foo style");
     expect(titles).toContain("User artist");
+  });
+
+  test("another user's text-only connection analysing meanwhile does not switch off image analysis for a vision-capable run", async () => {
+    let atMetadata!: () => void;
+    const readingMetadata = new Promise<void>((r) => (atMetadata = r));
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    // B (vision-capable connection) pauses while reading image metadata; there is none, so it falls back to the image.
+    const b = await setup({
+      userId: "user-b",
+      imageBytes: {
+        async getAsset() {
+          atMetadata();
+          await gate;
+          return { data: TINY_PNG_BASE64, mimeType: "image/png" };
+        },
+      },
+    });
+    b.llmReplies.push(analyzeReply, resolveAllToDefault);
+    const runB = new AnalysisJobs(b.services).start("character-prompts", CHAR, (ctx) => runAnalysis(ctx, { kind: "character-prompts", characterId: CHAR, evidenceMode: "metadata" }));
+    await readingMetadata;
+    // A (another user, text-only connection) runs a whole image analysis meanwhile.
+    const a = await setup({ userId: "user-a" });
+    a.visionSupported.value = false;
+    await new AnalysisJobs(a.services).start("character-prompts", CHAR, (ctx) => runAnalysis(ctx, { kind: "character-prompts", characterId: CHAR, evidenceMode: "image" })).done;
+    release();
+    const sentImage = (r: LlmCompleteRequest) => r.messages.some((m) => typeof m.content !== "string" && m.content.some((p) => p.type === "image"));
+    expect({ status: (await runB.done).status, sentImage: b.llmRequests.some(sentImage) }).toEqual({ status: "success", sentImage: true });
   });
 
   test("a run's persona profile write keeps other personas' profiles saved meanwhile", async () => {

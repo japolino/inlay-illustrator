@@ -105,6 +105,19 @@ describe("outfit image controller", () => {
     expect(def.referenceAsset?.key).toBe(results[1]!.imageId);
   });
 
+  test("save to an outfit that exists only in the editor draft is rejected, not reported as saved", async () => {
+    const fx = createAnalysisFixture();
+    fx.config.value = { ...fx.config.value, image: { ...fx.config.value.image, provider: "novelai", model: "nai-diffusion-4-5-full" } };
+    await withForms(fx);
+    const controller = createOutfitImageController(fx.services);
+    const { jobId } = await controller.generate({ target, formId: "form_default", outfitId: "outfit_draft", draft: draft() });
+    for (let k = 0; k < 50 && !fx.events.some((e) => e.event === "outfitImage.finished" && (e.payload as { jobId: string }).jobId === jobId); k += 1) await new Promise((r) => setTimeout(r, 5));
+    const { results } = await controller.history({ target, formId: "form_default", outfitId: "outfit_draft" });
+    await expect(controller.save({ target, formId: "form_default", outfitId: "outfit_draft", resultIds: [results[0]!.resultId], mode: "replace", draft: draft() })).rejects.toThrow(/not saved yet/);
+    const outfits = fx.documents.get(CHAR)!.characterPrompt.characterForms[ALICE]!.forms[0]!.outfits;
+    expect(outfits.some((o) => o.referenceAsset?.key === results[0]!.imageId)).toBe(false);
+  });
+
   test("cancel emits a cancelled finish", async () => {
     const fx = createAnalysisFixture({ images: { generate: (_r, o) => new Promise((_res, rej) => o?.signal?.addEventListener("abort", () => rej(new DOMException("x", "AbortError")))) } });
     await withForms(fx);

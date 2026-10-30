@@ -363,4 +363,49 @@ describe("settings pages (DOM)", () => {
     expect(doc.querySelector("[data-log-entry]")?.textContent).toContain("live");
     controller.destroy();
   });
+
+  test("logs page: after a backend restart and reconnect, the new run replaces the old entries", async () => {
+    const { mock, app, controller } = await openSettings("logs", (m) => { m.db.config.ui.developerModeEnabled = true; });
+    await until(() => doc.querySelectorAll("[data-log-entry]").length === 8);
+    const { appendMockLog } = await import("../../dev/mock/settings.js");
+    // The restarted backend's run log is empty and counts from seq 1 again.
+    mock.db.logs = [];
+    expect(appendMockLog(mock.db, mock, { level: "info", scope: "chat-image", message: "after restart" }).seq).toBe(1);
+    await app.resync();
+    await until(() => doc.querySelectorAll("[data-log-entry]").length === 1);
+    expect(doc.querySelector("[data-log-entry]")?.textContent).toContain("after restart");
+    controller.destroy();
+  });
+
+  test("analysis page: a failed preset choice keeps its inline error after the rollback", async () => {
+    const { mock, controller } = await openSettings("analysis-profile");
+    const scene = '[data-v5-direction="scene"]';
+    const comic = (await until(() => doc.querySelector(`${scene} [data-v5-preset="scene-comic"]`))) as HTMLButtonElement;
+    mock.handlers["config.update"] = async (_params, ctx) => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      return ctx.fail("internal", "config write failed");
+    };
+    comic.click();
+    await until(() => comic.getAttribute("aria-checked") === "true");
+    await until(() => comic.getAttribute("aria-checked") === "false");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(doc.querySelector(`${scene} [role="alert"]`)?.textContent).toBe("config write failed");
+    controller.destroy();
+  });
+
+  test("model page: a JEV test result that arrives after the settings changed is dropped", async () => {
+    const { mock, controller } = await openSettings("model");
+    let answer: (result: { ok: boolean; latencyMs: number }) => void = () => undefined;
+    mock.handlers["decision.testConnection"] = () => new Promise((resolve) => (answer = resolve));
+    const card = await until(() => doc.querySelector("[data-model-jev]"));
+    const testButton = await until(() => [...card.querySelectorAll("button")].find((b) => b.textContent?.includes("Test connection")));
+    testButton.click();
+    await until(() => card.textContent?.includes("Testing connection…"));
+    input(card.querySelector('[aria-label="Decision model"]')!, "another-model");
+    await until(() => !card.textContent?.includes("Testing connection…"));
+    answer({ ok: true, latencyMs: 850 });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(card.textContent).not.toContain("Connected (850ms)");
+    controller.destroy();
+  });
 });

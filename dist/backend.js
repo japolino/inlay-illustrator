@@ -5300,6 +5300,7 @@ var STORAGE_PATHS = {
   characterDocument: (characterId) => `characters/${safePathSegment(characterId)}/asset-maid.json`,
   characterMetadataCache: (characterId) => `characters/${safePathSegment(characterId)}/metadata-cache.json`,
   characterReferenceCrop: (characterId, cropName) => `characters/${safePathSegment(characterId)}/reference-crops/${safePathSegment(cropName)}.png`,
+  characterAutoPick: (characterId) => `characters/${safePathSegment(characterId)}/autopick.json`,
   characterDir: (characterId) => `characters/${safePathSegment(characterId)}/`,
   chatData: (chatId) => `chats/${safePathSegment(chatId)}/chat-data.json`,
   chatDir: (chatId) => `chats/${safePathSegment(chatId)}/`,
@@ -5308,7 +5309,12 @@ var STORAGE_PATHS = {
 };
 var STORAGE_RESET_PREFIXES = ["config/", "characters/", "chats/", "uploads/", "puppets/", STORAGE_SCHEMA_PATH];
 function characterResetPaths(characterId) {
-  return [STORAGE_PATHS.characterDocument(characterId), STORAGE_PATHS.characterMetadataCache(characterId), `${STORAGE_PATHS.characterDir(characterId)}reference-crops/`];
+  return [
+    STORAGE_PATHS.characterDocument(characterId),
+    STORAGE_PATHS.characterMetadataCache(characterId),
+    `${STORAGE_PATHS.characterDir(characterId)}reference-crops/`,
+    STORAGE_PATHS.characterAutoPick(characterId)
+  ];
 }
 var STORAGE_FILE_VERSIONS = Object.freeze({
   "config-model": CONFIG_VERSION,
@@ -5771,10 +5777,12 @@ function sanitizePuppetRig(raw) {
   parts.forEach((p, i) => {
     const seen = new Set([i]);
     for (let at = p.parent;at >= 0; at = parts[at].parent) {
-      if (seen.has(at)) {
+      if (at === i) {
         p.parent = -1;
         break;
       }
+      if (seen.has(at))
+        break;
       seen.add(at);
     }
   });
@@ -58690,6 +58698,12 @@ async function buildRuntimeSource(services, characterId, store, options = {}) {
 }
 var STORAGE_ASSET_PREFIX = "storage:";
 async function readAssetBytes(services, asset) {
+  const cropKey = asset.cropReference?.assetKey;
+  if (cropKey?.startsWith(STORAGE_ASSET_PREFIX)) {
+    const crop = await services.storage.readBinary(cropKey.slice(STORAGE_ASSET_PREFIX.length));
+    if (crop)
+      return { data: crop, mimeType: "image/png" };
+  }
   if (asset.key?.startsWith(STORAGE_ASSET_PREFIX)) {
     const data = await services.storage.readBinary(asset.key.slice(STORAGE_ASSET_PREFIX.length));
     if (!data)
@@ -58747,6 +58761,8 @@ function createAmAnalyzer(services, info) {
 }
 async function openAnalysisSession(services, characterId, options = {}) {
   const store = await AmConfigStore.open(services, characterId, options.reason ?? "analysis");
+  const analysis = { ...store.getCurrentSnapshot().analysis, endpoint: `inlay-session:${randomUuid()}` };
+  store.getCurrentSnapshot().analysis = analysis;
   let source = await buildRuntimeSource(services, characterId, store, options);
   let persona = { records: [], activePersona: null, selectedPersona: null, boundPersona: null, selectedPersonaIndex: -1, boundPersonaId: "" };
   const snapshot = () => ({ currentSourceId: characterId, currentMemberKey: source.members[0]?.key ?? "", sources: [source], persona });
@@ -58795,6 +58811,7 @@ async function openAnalysisSession(services, characterId, options = {}) {
     },
     dispose() {
       metadata.dispose?.();
+      AM.$me.delete(amFn("Bme")(analysis));
     }
   };
 }
@@ -59156,8 +59173,11 @@ function createOutfitImageController(services) {
       const partsOf = { head: draft.head, top: draft.top, bottom: draft.bottom, legs: draft.legs, feet: draft.feet, ...draft.description !== undefined ? { description: draft.description } : {} };
       const apply = (collection) => {
         let next = normalizeFormCollection(collection);
+        const form = next.forms.find((f) => f.id === params.formId);
+        const outfitId = params.outfitId ?? form?.defaultOutfitId ?? "";
+        if (!form || params.mode === "replace" && !form.outfits.some((o) => o.id === outfitId))
+          fail2("not-found", "The target form or outfit is not saved yet. Save the outfit list first.");
         if (params.mode === "replace") {
-          const outfitId = params.outfitId ?? next.forms.find((f) => f.id === params.formId)?.defaultOutfitId ?? "";
           const stored = toStoredAssetRef(assetFor(chosen[0]));
           next = patchOutfit(next, params.formId, outfitId, { ...partsOf, label: draft.label, ...persona ? { imageAsset: stored } : { referenceAsset: stored, referenceEnabled: true } });
         } else {
@@ -59946,7 +59966,7 @@ function projectRoster(source, document2, options = {}) {
         primaryKeys: [...lore.primaryKeys],
         secondaryKeys: [...lore.secondaryKeys],
         recognitionKeys: custom ? [...custom.recognitionKeys] : effectiveRecognitionKeys([...lore.primaryKeys, ...lore.secondaryKeys], cp.customLorebookKeys[promptKey]),
-        content: lore.content,
+        content: custom ? custom.appearanceDescription : lore.content,
         score: lore.score,
         registered: state.registered,
         workspaceEnabled: state.workspaceEnabled,
@@ -60238,7 +60258,7 @@ async function applyUniqueTags(services, characterId, choices) {
 }
 
 // src/backend/analysis/autopick.ts
-var AUTOPICK_PATH = (characterId) => `${STORAGE_PATHS.characterDir(characterId)}autopick.json`;
+var AUTOPICK_PATH = STORAGE_PATHS.characterAutoPick;
 var SAMPLE_NAMES = 150;
 var MIN_COVERAGE = 0.8;
 var CANDIDATES_PER_GROUP = 3;
@@ -60273,6 +60293,23 @@ async function writeAutoPickState(services, characterId, state) {
   const next = { ...state, updatedAt: new Date().toISOString() };
   await services.storage.writeJson(AUTOPICK_PATH(characterId), next);
   return next;
+}
+async function withLiveOutfits(services, characterId, groups) {
+  if (!groups.some((g) => g.appliedOutfitId))
+    return groups;
+  const doc = await services.storage.hasCharacterDocument(characterId) ? await services.storage.loadCharacterDocument(characterId) : null;
+  const ids = new Map;
+  const live = (promptKey) => {
+    if (!ids.has(promptKey))
+      ids.set(promptKey, new Set(doc ? resolveCharacterForms(doc.characterPrompt, promptKey).forms.flatMap((f) => f.outfits.map((o) => o.id)) : []));
+    return ids.get(promptKey);
+  };
+  return groups.map((g) => {
+    if (!g.appliedOutfitId || live(g.promptKey).has(g.appliedOutfitId))
+      return g;
+    const { appliedOutfitId: _gone, ...rest } = g;
+    return rest;
+  });
 }
 var norm = (s) => s.toLowerCase().replace(/[_.\-()]+/g, " ").replace(/\s+/g, " ").trim();
 var squash = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
@@ -60321,15 +60358,15 @@ The regex must also work on names you have not seen: prefer general patterns ove
 function compileScheme(regex) {
   if (typeof regex !== "string" || !regex.trim() || regex.length > 4000)
     return null;
-  try {
-    const re = new RegExp(regex, "iu");
-    const groups = [...regex.matchAll(/\(\?<([A-Za-z_]\w*)>/g)].map((m) => m[1]);
-    if (!groups.length || groups.some((g) => !GROUP_NAMES.has(g)))
-      return null;
-    return re;
-  } catch {
+  const groups = [...regex.matchAll(/\(\?<([A-Za-z_]\w*)>/g)].map((m) => m[1]);
+  if (!groups.length || groups.some((g) => !GROUP_NAMES.has(g)))
     return null;
+  for (const flags of ["iu", "i"]) {
+    try {
+      return new RegExp(regex, flags);
+    } catch {}
   }
+  return null;
 }
 function applyScheme(re, stems) {
   const matches = new Map;
@@ -60510,7 +60547,7 @@ async function runPlan(ctx, delays = RETRY_DELAYS_MS) {
   if (!result.scheme.regex || result.scheme.coverage < 0.3) {
     return { status: "no-evidence", message: `Could not read the asset naming scheme (${Math.round(result.scheme.coverage * 100)}% of names matched).` };
   }
-  const groups = groupAssets(assets, result, roster, previous);
+  const groups = await withLiveOutfits(ctx.services, ctx.characterId, groupAssets(assets, result, roster, previous));
   const state = await writeAutoPickState(ctx.services, ctx.characterId, { version: 1, scheme: result.scheme, groups, unmatched: sampleNames(result.unmatched, 30), updatedAt: "" });
   const characters = new Set(state.groups.filter((g) => g.promptKey).map((g) => g.promptKey)).size;
   const message = `${state.groups.length} outfit group(s) for ${characters} character(s) from ${assets.length} images (${Math.round(result.scheme.coverage * 100)}% of names matched, ${result.scheme.calls} call(s)).`;
@@ -60645,7 +60682,8 @@ async function runOutfitAutoPick(ctx, params, options = {}) {
   return phase === "tag" ? runTag(ctx, params.autopick?.sheets ?? [], options.retryDelaysMs) : runPlan(ctx, options.retryDelaysMs);
 }
 async function getAutoPick(services, params) {
-  const state = await readAutoPickState(services, params.characterId);
+  const stored = await readAutoPickState(services, params.characterId);
+  const state = { ...stored, groups: await withLiveOutfits(services, params.characterId, stored.groups) };
   const seen = new Set;
   if (params.chatId) {
     const sidecar = await readSidecar(services.storage, params.chatId).catch(() => null);
@@ -60701,7 +60739,8 @@ async function applyAutoPick(services, params) {
     return { ...doc, characterPrompt: { ...doc.characterPrompt, characterForms: forms } };
   }, { expectedUpdatedAt: base.updatedAt, reason: "outfit-autopick" });
   const current = await readAutoPickState(services, characterId);
-  const next = await writeAutoPickState(services, characterId, { ...current, groups: current.groups.map((g) => applied.has(g.id) ? { ...g, appliedOutfitId: applied.get(g.id) } : g) });
+  const groups = current.groups.map((g) => applied.has(g.id) ? { ...g, appliedOutfitId: applied.get(g.id) } : g);
+  const next = await writeAutoPickState(services, characterId, { ...current, groups: await withLiveOutfits(services, characterId, groups) });
   services.log.append("info", "outfit-autopick", `Added ${added} outfit(s) with reference images; ${skipped} already present or skipped.`);
   return { added, skipped, state: next };
 }
@@ -64118,31 +64157,49 @@ function ejt(e) {
 
 // src/backend/pipeline/auto.ts
 var fold = (s) => s.normalize("NFKC").trim().toLocaleLowerCase().replace(/\s+/gu, " ");
-function amConfigStoreAdapter(store) {
-  const adapter = Object.create(store);
-  adapter.getSavedSnapshot = () => store.getCurrentSnapshot();
-  adapter.commitExternalUpdate = async (fn, options = {}) => {
-    const mutate = await fn();
-    if (typeof mutate === "function")
-      store.update(mutate, options);
-    await store.flushSave();
-  };
-  adapter.commitUpdate = async (fn, options = {}) => {
-    const snapshot = store.getCurrentSnapshot();
-    const result = fn(snapshot, snapshot);
-    if (!result)
+function amConfigStoreAdapter(services, characterId, onReload) {
+  let store;
+  let queue = Promise.resolve();
+  const serialize = (task) => {
+    const run = queue.then(task);
+    queue = run.catch(() => {
       return;
-    store.update(() => result.persisted, options);
-    await store.flushSave();
+    });
+    return run;
   };
-  adapter.subscribeDomain = () => () => {};
-  for (const name of ["getCurrentSnapshot", "update", "flushSave", "settle", "getDomainRevision", "getPersistenceSnapshot", "subscribePersistence"])
-    adapter[name] = store[name].bind(store);
-  return adapter;
-}
-function customCharacterStore(services, characterId, initial) {
-  let entries = [...initial.customCharacters];
+  const reload = async () => {
+    const parts = await loadAmConfigParts(services, characterId);
+    store = new AmConfigStore(services, characterId, parts, "chat-generation");
+    onReload(parts.document);
+  };
+  const commit = (apply) => serialize(async () => {
+    await reload();
+    await apply(store);
+    await store.flushSave();
+  });
   return {
+    reload: () => serialize(reload),
+    settle: () => serialize(async () => {}),
+    getCurrentSnapshot: () => store.getCurrentSnapshot(),
+    getSavedSnapshot: () => store.getCurrentSnapshot(),
+    commitExternalUpdate: (fn, options = {}) => commit(async (s) => {
+      const mutate = await fn();
+      if (typeof mutate === "function")
+        s.update(mutate, options);
+    }),
+    commitUpdate: (fn, options = {}) => commit((s) => {
+      const snapshot = s.getCurrentSnapshot();
+      const result = fn(snapshot, snapshot);
+      if (result)
+        s.update(() => result.persisted, options);
+    }),
+    subscribeDomain: (_domain, _listener) => () => {}
+  };
+}
+function customCharacterStore(services, characterId) {
+  let entries = [];
+  return {
+    reset: (next) => void (entries = [...next]),
     getSnapshot: () => ({ sourceId: characterId, entries }),
     async createProfiles(sourceId, profiles, check) {
       const created = [];
@@ -64186,32 +64243,71 @@ function outfitGeneratorFrom(getModules, characterId) {
     return null;
   }
 }
+var sharedGenerations = new WeakMap;
+function sharedGeneration(services, characterId) {
+  const characters = customCharacterStore(services, characterId);
+  const config = amConfigStoreAdapter(services, characterId, (document2) => characters.reset(document2.customCharacters));
+  return { refs: 0, config, characters, controllers: new Map };
+}
 async function openAutoGeneration(services, getModules, characterId) {
-  const store = await AmConfigStore.open(services, characterId, "chat-generation");
-  const config = amConfigStoreAdapter(store);
-  const document2 = await services.storage.loadCharacterDocument(characterId);
-  const generator = outfitGeneratorFrom(getModules, characterId);
-  const log = (message) => {
-    try {
-      services.log.append("info", "pipeline", message);
-    } catch {}
-  };
-  const autoOutfit = N1t({ config, generator, sourceCatalog: { refreshCharacter: async () => null }, activity: undefined, log });
-  const autoCharacter = QOt({
-    config,
-    characters: customCharacterStore(services, characterId, document2),
-    isCurrentSource: (id) => id === characterId,
-    activity: undefined,
-    ...generator ? { prepareInitialOutfit: ejt({ config, generator, resolveTarget: (id) => ({ chaId: id, indexHint: 0 }), refresh: async () => {
+  const open = sharedGenerations.get(services) ?? new Map;
+  sharedGenerations.set(services, open);
+  const shared = open.get(characterId) ?? sharedGeneration(services, characterId);
+  open.set(characterId, shared);
+  shared.refs += 1;
+  let released = false;
+  const dispose = () => {
+    if (released)
       return;
-    }, log }) } : {}
-  });
+    released = true;
+    if ((shared.refs -= 1) > 0)
+      return;
+    if (open.get(characterId) === shared)
+      open.delete(characterId);
+    for (const controllers of shared.controllers.values())
+      controllers.dispose();
+  };
+  try {
+    await shared.config.reload();
+  } catch (error) {
+    dispose();
+    throw error;
+  }
+  const generator = outfitGeneratorFrom(getModules, characterId);
+  let controllers = shared.controllers.get(!!generator);
+  if (!controllers) {
+    const { config, characters } = shared;
+    const log = (message) => {
+      try {
+        services.log.append("info", "pipeline", message);
+      } catch {}
+    };
+    const autoOutfit = N1t({ config, generator, sourceCatalog: { refreshCharacter: async () => null }, activity: undefined, log });
+    const autoCharacter = QOt({
+      config,
+      characters,
+      isCurrentSource: (id) => id === characterId,
+      activity: undefined,
+      ...generator ? { prepareInitialOutfit: ejt({ config, generator, resolveTarget: (id) => ({ chaId: id, indexHint: 0 }), refresh: async () => {
+        return;
+      }, log }) } : {}
+    });
+    controllers = {
+      autoOutfit,
+      autoCharacter,
+      dispose: () => {
+        autoOutfit.dispose();
+        autoCharacter.dispose();
+      }
+    };
+    shared.controllers.set(!!generator, controllers);
+  }
   return {
-    store,
-    autoOutfit,
-    autoCharacter,
+    store: shared.config,
+    autoOutfit: controllers.autoOutfit,
+    autoCharacter: controllers.autoCharacter,
     imagesAvailable: !!generator,
-    dispose: () => autoCharacter.dispose()
+    dispose
   };
 }
 
@@ -64652,419 +64748,422 @@ async function generateMessageIllustrations(deps, req) {
       services.log.append("warn", "pipeline", "Free character/outfit generation is unavailable for this run.", { error: e instanceof Error ? e.message : String(e) });
     } catch {}
   }
-  let generatedForms = {};
-  const otherPrompts = memberIds.slice(1).map((id) => rec4(docs.get(id)?.characterPrompt));
-  const decorate = (base) => {
-    const runtime = jsonClone(base);
-    const novelai = rec4(runtime.novelai);
-    runtime.novelai = { ...novelai, naiModel: imageTarget.model, characterReferenceEnabled: imageTarget.isNovelAIV5 ? false : novelai.characterReferenceEnabled };
-    const cp = mergeCharacterPrompts(rec4(runtime.characterPrompt), otherPrompts);
-    runtime.characterPrompt = { ...cp, characterForms: { ...rec4(cp.characterForms), ...generatedForms } };
-    runtime.runtime = { ...rec4(runtime.runtime), generationProvider: engineProvider };
-    runtime.chatImageGenerationSettings = jsonClone(req.settings);
-    return runtime;
-  };
-  const runtime = decorate(auto ? auto.store.getCurrentSnapshot() : buildRuntimeConfig(config, primaryDoc, { resolvedImageModel: imageTarget.model }));
-  const getConfig = () => auto ? decorate(auto.store.getCurrentSnapshot()) : runtime;
-  const amConfig = runtime;
-  const sourceId = primaryId;
-  const ne = resolveSourceGenerationSettings2(amConfig, sourceId);
-  const personas = await services.sources.listPersonas();
-  const active = await services.sources.getActivePersona(req.chatId);
-  const personaRecords = personas.map(personaRecord);
-  const activePersona = active ? personaRecord(active) : null;
-  const requestMessages = req.messages.slice(0, req.target).flatMap((m) => {
-    if (m.role === "system")
-      return [];
-    const content = cleanMessageContent(m.content);
-    return content.trim() ? [{ role: m.role === "assistant" ? "assistant" : "user", content, ...m.name ? { name: m.name } : {} }] : [];
-  });
-  const chatKey = chatKeyForChat(req.chatId);
-  const liveIds = continuityLookbackIds(req.messages, req.target, req.historyId);
-  const store = req.chatData.store;
-  const hr = rebuildContinuityAtMessage2(store, chatKey, liveIds, req.historyId);
-  hr.characters[chatKey] = mergeLocalLoreActorState2(hr.characters[chatKey] ?? {}, req.chatData.actorState);
-  const basisRevision = req.chatData.actorState.revision;
-  const detectors = nativeDetectorsFor(primaryId, character.name, primaryDoc, memberIds);
-  const tokens = detectImageTokens(req.clean, { customImageTokenDetectors: detectors });
-  const markups = detectNativeAssetMarkups2(req.clean, { customImageTokenDetectors: detectors });
-  const assetHints = assetHintsFrom(tokens, markups);
-  const sourceWithCustom = withCustomCharacterMembers(source, customCharacters);
-  const ft = buildAnalyzerContextInputs2({
-    config: amConfig,
-    getConfig,
-    continuity: hr,
-    chatKey,
-    messages: requestMessages,
-    content: req.clean,
-    imageTokens: tokens.map((t) => toPlannerImageToken(t)),
-    character: { name: character.name, description: character.description },
-    source: sourceWithCustom,
-    activePersona,
-    personaRecords
-  });
-  const profile = str4(rec4(runtime.novelai).analysisProfile);
-  const freeCharacters = profile === "v5-hybrid" && ne.freeCharacterGenerationEnabled && !!auto;
-  if (!(profile === "v5-hybrid" || ft.analyzerIdentityCandidates.length > 0 || ft.analyzerPersonaCandidates.length > 0 || freeCharacters))
-    return { ...empty(PIPELINE_TEXT.noCandidates), assetHints };
-  const evidence = await resolveIdentityEvidence({
-    candidates: ft.analyzerIdentityCandidates,
-    slots: req.slots,
-    originalAssetTokens: tokens,
-    source,
-    previousMessageParticipantKeys: [
-      ...ft.visualContinuity.previous_message_participants?.character_keys ?? [],
-      ...ft.visualContinuity.previous_message_participants?.persona_keys ?? []
-    ],
-    signal: req.signal
-  });
-  const candidateSlots = buildCandidateSlots(req.slots, evidence);
-  const operationKey = `${chatKey}:${req.historyId}`;
-  const replayKey = JSON.stringify([primaryId, operationKey]);
-  const replayOutfits = [...deps.replayOutfits?.get(replayKey)?.values() ?? []];
-  const assembled = assembleAnalyzerInput({
-    config: amConfig,
-    sourceId,
-    inputs: ft,
-    candidateSlots,
-    targetImageCount: W.max,
-    imageCountConstraint: W,
-    checkpoint: { chatKey, messageIndex: targetMessage?.index ?? req.target, messageId: req.historyId },
-    modelType: "illustration-generation",
-    replayGeneratedOutfits: replayOutfits,
-    ...req.splitAnalysis ? { splitAnalysis: req.splitAnalysis } : {},
-    ...req.revision ? { revisionDirection: req.revision.direction, revisionPromptChannels: req.revision.currentPrompt, revisionEvidenceKey: req.revision.evidenceKey } : {}
-  });
-  assembled.context.freeCharacterGenerationEnabled = freeCharacters;
-  const outfitIndex = config.runtime.outfitAwarenessDisabled ? undefined : createRunOutfitIndex(assembled.context);
-  const revisionImage = req.revision?.image && await services.llm.supportsVision().catch(() => false) ? [await req.revision.image()] : [];
-  if (req.signal.aborted)
-    throw new DOMException("Image generation preparation was cancelled.", "AbortError");
-  const origin = originForAttempt(req.attemptKind);
-  const entries = [];
-  const records = [];
-  let error = "";
-  let errorKo;
-  let failure;
-  let cancelled = false;
-  let analyzerCompleted = false;
-  let commitContinuity;
-  const skipSlotIndexes = req.attemptKind === "retry" ? [...new Set([...req.existingEntries.map((e) => e.slotIndex), ...req.deletedSlotIndices])] : [];
-  const lastAssistant = req.messages.map((m, i) => m.role === "assistant" ? i : -1).filter((i) => i >= 0).at(-1) ?? -1;
-  const persistContinuity = req.automatic || !(req.target >= 0 && req.target < lastAssistant);
-  const continuityMessageId = `id:${req.historyId}`;
-  const messageIndex = targetMessage?.index ?? req.target;
-  const commitWith = (apply) => async (doc, info) => {
-    if (!persistContinuity)
-      return;
-    const chatObj = continuityChat(req.messages, { index: req.target, historyId: req.historyId }, doc.actorState);
-    const next = apply(info);
-    const outcome = commitContinuityCheckpoint(doc.store, chatObj, next, chatKey, req.historyId, info.historyRevisionId, basisRevision);
-    if (outcome === "skipped")
-      services.log.append("info", "pipeline", "The chat state changed during the run; this run's continuity was not saved.");
-    const actorState = readLocalLoreActorState2(chatObj);
-    doc.actorState = { revision: actorState.revision, actors: actorState.actors };
-  };
-  const idLabel = (key) => {
-    if (key.startsWith("persona::"))
-      return personas.find((p) => p.personaId === key.slice(9))?.name ?? "";
-    for (const m of sourceWithCustom?.members ?? []) {
-      if (m.key === key)
-        return m.name;
-      for (const l of m.lorebooks)
-        if ((l.runtimePromptKey || `${m.key}::lore::${l.id}`) === key)
-          return l.title;
-    }
-    return "";
-  };
-  const comfyTimeout = Number(rec4(runtime.runtime).comfyuiCompletionTimeoutMs) || 600000;
-  const creationMode = auto?.imagesAvailable ? resolveOutfitCreationMode(amConfig) : "tags-only";
-  const prepareRoutePlan = auto ? (routePlan, signal) => auto.autoOutfit.prepare({ routePlan, source: sourceWithCustom, sourceId, signal, creationMode }) : undefined;
-  const prepareOutfits = auto ? async ({ actors, signal }) => {
-    const requested = outfitIndex ? reuseSameOutfits(outfitIndex, withoutAbsenceProposals(actors), (r) => services.log.append("info", "pipeline", `Outfit reuse: proposal "${r.proposal}" for ${r.identityKey} matches "${r.reused}"; no new outfit.`)) : actors;
-    const prepared = await auto.autoOutfit.prepareActors({
-      actors: requested,
-      source: sourceWithCustom,
-      sourceId,
-      signal,
-      creationMode,
-      onOutfitAllocated: (o) => {
-        if (!deps.replayOutfits)
-          return;
-        const map = deps.replayOutfits.get(replayKey) ?? new Map;
-        map.set(JSON.stringify([o.promptKey, o.formId, o.outfitId]), o);
-        deps.replayOutfits.set(replayKey, map);
-        while (deps.replayOutfits.size > 64)
-          deps.replayOutfits.delete(deps.replayOutfits.keys().next().value);
-      }
-    });
-    if (outfitIndex)
-      recordPreparedOutfits(outfitIndex, requested, prepared.preparedOutfits);
-    return prepared;
-  } : undefined;
-  const knownIdentities = freeCharacters ? buildKnownIdentities(withCustomCharacterMembers(source, customCharacters, "all"), personaRecords) : [];
-  const prepareCharacters = freeCharacters ? async (input) => {
-    const prepared = await auto.autoCharacter.prepare({ ...input, sourceId, owner: req, knownIdentities });
-    generatedForms = Object.fromEntries(prepared.flatMap((p) => p.forms ? [[p.identityKey, p.forms]] : []));
-    return prepared;
-  } : undefined;
-  const input = {
-    automaticRetryManaged: true,
-    imageRetryCount: config.runtime.generationAutoRetryCount,
-    generationType: generationTypeFor(origin, !req.automatic, !!req.revision),
-    sessionContext: {
-      chatKey,
-      responseKey: req.jobId,
-      messageIndex,
-      messageId: continuityMessageId,
-      displayName: req.activityLabel,
-      slotIds: req.slots.map((s) => s.slotId),
-      targetImageCount: W.max,
-      matchedAssetCount: W.min,
-      totalAssetCount: W.max
-    },
-    analysisConfig: config.analysis,
-    novelAIConfig: { ...resolveNovelAIRunConfig2(amConfig, { sourceId }), apiKey: "lumiverse-connection" },
-    ...req.revision ? {
-      revisionDirection: req.revision.direction,
-      revisionPromptChannels: req.revision.currentPrompt,
-      revisionEvidenceKey: req.revision.evidenceKey,
-      ...req.revision.imageToImage ? { novelAIImageToImage: req.revision.imageToImage, novelAIImageToImageStrength: req.revision.imageToImageStrength, novelAIImageToImageNoise: req.revision.imageToImageNoise } : {}
-    } : {},
-    generationProvider: engineProvider,
-    ...ne.fixedResolution.enabled ? { requestedSizeId: ne.fixedResolution.sizeId, requestedSize: resolveImageSize2(ne.fixedResolution.sizeId, config.runtime.customImageSizes ?? []) } : {},
-    customImageSizes: config.runtime.customImageSizes ?? [],
-    forceAiChoiceCoordinates: ne.forceAiChoiceCoordinates,
-    forceNsfwPrefix: ne.nsfwAlwaysEnabled,
-    stateAccumulationEnabled: ne.stateAccumulationEnabled,
-    comfyUI: {
-      transport: "direct-workflow",
-      chanServerRequestUrl: "",
-      chanServerApiKey: "",
-      endpoint: "",
-      workflowProfileId: BUNDLED_COMFY_WORKFLOW_PROFILE.id,
-      completionTimeoutMs: comfyTimeout,
-      animaPositivePrefix: ne.animaPositivePrompt,
-      animaNegativePrefix: ne.animaNegativePrompt
-    },
-    analyzerInput: {
-      executionMode: engine.executionMode(config),
-      checkpointPolicy: checkpointPolicyFor(req.attemptKind),
-      ...assembled,
-      ...revisionImage.length ? { imageParts: revisionImage } : {},
-      ...prepareRoutePlan ? {
-        afterPresetValidated: prepareRoutePlan,
-        afterAnalysisValidated: ({ routePlan }, signal) => prepareRoutePlan(routePlan, signal)
-      } : {}
-    },
-    ...prepareCharacters ? { prepareCharacters } : {},
-    ...prepareOutfits ? { prepareOutfits } : {},
-    ...outfitIndex ? { outfitIndex } : {},
-    promptInputs: ft.promptInputs,
-    v5PromptContext: ft.v5PromptContext,
-    references: ft.references,
-    outfitReference: ft.outfitReference,
-    characterReference: ft.characterReference,
-    seedSetting: req.revision ? () => ({ seed: str4(req.revision.seed), fixed: !!(req.revision.seedFixed && str4(req.revision.seed)) }) : ft.seedSetting,
-    previousCharacterStateMap: ft.previousCharacterStateMap,
-    previousContinuitySnapshot: getLatestContinuityCheckpointSnapshot2(hr, chatKey, "novelai-v5"),
-    previousGlobalModifierRefs: previousGlobalModifierRefs(ft.visualContinuity),
-    advanceContinuityTurn: !req.revision,
-    assertAssetPersistenceAvailable: async () => {
-      return;
-    },
-    applyContinuity: async (result) => {
-      await req.assertTarget();
-      const outfitReferences = ft.outfitContinuityReferences(result.plan.images);
-      commitContinuity = commitWith((info) => computeDeferredVisualContinuity2({
-        basisState: hr,
-        continuity: result,
-        chatKey,
-        chatIndex: 0,
-        messageIndex,
-        messageId: continuityMessageId,
-        historyRevisionId: info.historyRevisionId,
-        historyRevisionOrder: info.historyRevisionOrder,
-        outfitReferences
-      }));
-    },
-    applyV5Continuity: async (state) => {
-      await req.assertTarget();
-      commitContinuity = commitWith((info) => persistV5ContinuityState({
-        basisState: hr,
-        continuity: state,
-        chatKey,
-        chatIndex: 0,
-        messageIndex,
-        messageId: continuityMessageId,
-        historyRevisionId: info.historyRevisionId,
-        historyRevisionOrder: info.historyRevisionOrder
-      }));
-    },
-    persistGeneratedImage: async (image) => {
-      await req.assertTarget();
-      const decision = rec4(image.decision);
-      const slotNumber = Number(decision.slot_number ?? decision.slotNumber);
-      const slot = Number.isInteger(slotNumber) ? req.slots.find((s) => s.index === slotNumber) : undefined;
-      if (!slot)
-        throw new Error(PIPELINE_TEXT.slotMismatch.en);
-      const generation = rec4(image.generation);
-      const meta = rec4(generation.providerMetadata);
-      const imageId = str4(meta.imageId) || str4(generation.requestId);
-      if (!imageId)
-        throw new Error("The image provider returned no image id.");
-      const actors = (Array.isArray(image.actors) ? image.actors : []).map(rec4);
-      const key = str4(actors.find((a) => str4(a.identityKey))?.identityKey) || str4(decision.lorebook_prompt_key);
-      const label = idLabel(key) || str4(actors[0]?.identityName) || character.name;
-      const assetName = createGeneratedAssetName({ label, kind: "chat", ...UUID_RE.test(imageId) ? { id: imageId } : {} });
-      const width = Math.max(0, Math.round(Number(generation.width) || 0));
-      const height = Math.max(0, Math.round(Number(generation.height) || 0));
-      const entry = {
-        slotId: slot.slotId,
-        sourceImageToken: slot.sourceImageToken,
-        slotIndex: slot.index,
-        assetName,
-        savedPath: imageResultUrl(imageId),
-        extension: str4(generation.extension) || "png",
-        entryId: `generated:${assetName}`,
-        ...width ? { width } : {},
-        ...height ? { height } : {},
-        generationOrigin: origin,
-        ...req.revision?.sourceEntryId ? { parentEntryId: req.revision.sourceEntryId } : {}
-      };
-      const providerPrompt = rec4(image.providerPrompt);
-      const record = rec4(image.generationRecord);
-      const recordRequest = rec4(record.request);
-      const plan = rec4(image.promptPlan);
-      const novelAIConfig = image.novelAIConfig ? { ...rec4(image.novelAIConfig) } : undefined;
-      if (novelAIConfig)
-        delete novelAIConfig.apiKey;
-      records.push({
-        entryId: entry.entryId,
-        imageId,
-        assetName,
-        messageKey: req.planKey,
-        slotId: slot.slotId,
-        revisionId: req.revisionId,
-        createdAt: Date.now(),
-        engineProvider,
-        lumiverseProvider: str4(meta.lumiverseProvider) || imageTarget.lumiverseProvider,
-        model: str4(meta.model) || imageTarget.model,
-        seed: str4(generation.seed),
-        seedFixed: image.seedFixed === true,
-        width,
-        height,
-        sizeId: Number(plan.sizeId) || 0,
-        positivePrompt: str4(recordRequest.positive) || str4(providerPrompt.positivePrompt),
-        negativePrompt: str4(recordRequest.negative) || str4(providerPrompt.negativePrompt),
-        characters: (Array.isArray(recordRequest.characters) ? recordRequest.characters : Array.isArray(providerPrompt.characterPrompts) ? providerPrompt.characterPrompts : []).map((c) => {
-          const r = rec4(c);
-          return {
-            prompt: str4(r.prompt),
-            negativePrompt: str4(r.negativePrompt ?? r.uc),
-            ...Number.isFinite(Number(r.actorIndex)) ? { actorIndex: Number(r.actorIndex) } : {},
-            ...Number.isFinite(Number(r.centerX)) ? { centerX: Number(r.centerX), centerY: Number(r.centerY) } : {}
-          };
-        }),
-        ...novelAIConfig ? { novelAIConfig } : {},
-        actors: actors.map((a) => ({
-          identityKey: str4(a.identityKey),
-          identityName: str4(a.identityName),
-          kind: str4(a.kind),
-          actorIndex: Number(a.actorIndex) || 0,
-          ...str4(a.selectedFormId) ? { selectedFormId: str4(a.selectedFormId) } : {},
-          ...str4(a.selectedOutfitId) ? { selectedOutfitId: str4(a.selectedOutfitId) } : {}
-        })),
-        ...str4(plan.artistId) ? { artistId: str4(plan.artistId) } : {},
-        promptKey: key,
-        presetId: str4(decision.preset_id ?? decision.composition_id),
-        analyzerText: str4(decision.reason ?? decision.body_action),
-        sentParameters: rec4(meta.sentParameters),
-        generationOrigin: origin,
-        ...entry.parentEntryId ? { parentEntryId: entry.parentEntryId } : {}
-      });
-      entries.push(entry);
-    },
-    skipSlotNumbers: skipSlotIndexes,
-    cancelPrevious: true,
-    signal: req.signal,
-    onEvent(e) {
-      if (e.type === "jev-selection") {
-        req.onJevSelection?.(jevSelectionProgress(rec4(e.jevSelection)));
-        return;
-      }
-      if (e.type === "retry-errors") {
-        const retry = rec4(e.imageRetry);
-        const imageRetry = Number(retry.attempt) > 0 ? { attempt: Number(retry.attempt), total: Number(retry.total) || 0 } : undefined;
-        req.onRetryErrors?.(Array.isArray(e.retryErrors) ? e.retryErrors : [], imageRetry);
-        return;
-      }
-      const imageCount = Number.isFinite(Number(e.imageCount)) ? Number(e.imageCount) + skipSlotIndexes.length : undefined;
-      if (imageCount !== undefined && (e.phase === "planning" || e.analysisComplete === false && e.phase === "analyzing-preset")) {
-        resolvedCount = imageCount;
-        req.onResolvedCount?.(imageCount);
-      }
-      const phase = e.analysisComplete === false || e.phase === "analyzing-preset" ? "analyzing-preset" : e.phase === "analyzing-modifiers" ? "analyzing-modifiers" : e.phase === "planning" ? "planning" : e.phase === "generating" || e.phase === "saving" ? "generating" : e.phase === "applying-continuity" || e.phase === "complete" ? "committing" : null;
-      if (phase === "planning" || phase === "generating" || phase === "committing")
-        analyzerCompleted = true;
-      const session = rec4(e.session);
-      const progress = rec4(session.progress);
-      if (phase)
-        req.onPhase?.(phase, {
-          imageIndex: Number.isFinite(Number(e.imageIndex)) ? Number(e.imageIndex) : undefined,
-          imageCount: imageCount ?? (Number.isFinite(Number(progress.imageCount)) ? Number(progress.imageCount) : undefined),
-          providerStage: str4(progress.providerStage) || undefined
-        });
-    }
-  };
   try {
-    await engine.run(input, {
-      engineProvider,
-      purpose: req.revision ? "regenerate" : "chat",
-      connectionId: imageTarget.connectionId,
-      model: imageTarget.model,
-      ownerChatId: req.chatId,
-      ownerCharacterId: primaryId,
-      comfyuiWorkflowId: imageTarget.comfyuiWorkflowId,
-      forceNsfwPrefix: () => ne.nsfwAlwaysEnabled
-    }, config);
-    await req.assertTarget();
-  } catch (e) {
-    if (isCancellation(e) || req.signal.aborted)
-      cancelled = true;
-    else {
-      error = e instanceof Error ? e.message : String(e);
-      failure = e;
+    let generatedForms = {};
+    const otherPrompts = memberIds.slice(1).map((id) => rec4(docs.get(id)?.characterPrompt));
+    const decorate = (base) => {
+      const runtime = jsonClone(base);
+      const novelai = rec4(runtime.novelai);
+      runtime.novelai = { ...novelai, naiModel: imageTarget.model, characterReferenceEnabled: imageTarget.isNovelAIV5 ? false : novelai.characterReferenceEnabled };
+      const cp = mergeCharacterPrompts(rec4(runtime.characterPrompt), otherPrompts);
+      runtime.characterPrompt = { ...cp, characterForms: { ...rec4(cp.characterForms), ...generatedForms } };
+      runtime.runtime = { ...rec4(runtime.runtime), generationProvider: engineProvider };
+      runtime.chatImageGenerationSettings = jsonClone(req.settings);
+      return runtime;
+    };
+    const runtime = decorate(auto ? auto.store.getCurrentSnapshot() : buildRuntimeConfig(config, primaryDoc, { resolvedImageModel: imageTarget.model }));
+    const getConfig = () => auto ? decorate(auto.store.getCurrentSnapshot()) : runtime;
+    const amConfig = runtime;
+    const sourceId = primaryId;
+    const ne = resolveSourceGenerationSettings2(amConfig, sourceId);
+    const personas = await services.sources.listPersonas();
+    const active = await services.sources.getActivePersona(req.chatId);
+    const personaRecords = personas.map(personaRecord);
+    const activePersona = active ? personaRecord(active) : null;
+    const requestMessages = req.messages.slice(0, req.target).flatMap((m) => {
+      if (m.role === "system")
+        return [];
+      const content = cleanMessageContent(m.content);
+      return content.trim() ? [{ role: m.role === "assistant" ? "assistant" : "user", content, ...m.name ? { name: m.name } : {} }] : [];
+    });
+    const chatKey = chatKeyForChat(req.chatId);
+    const liveIds = continuityLookbackIds(req.messages, req.target, req.historyId);
+    const store = req.chatData.store;
+    const hr = rebuildContinuityAtMessage2(store, chatKey, liveIds, req.historyId);
+    hr.characters[chatKey] = mergeLocalLoreActorState2(hr.characters[chatKey] ?? {}, req.chatData.actorState);
+    const basisRevision = req.chatData.actorState.revision;
+    const detectors = nativeDetectorsFor(primaryId, character.name, primaryDoc, memberIds);
+    const tokens = detectImageTokens(req.clean, { customImageTokenDetectors: detectors });
+    const markups = detectNativeAssetMarkups2(req.clean, { customImageTokenDetectors: detectors });
+    const assetHints = assetHintsFrom(tokens, markups);
+    const sourceWithCustom = withCustomCharacterMembers(source, customCharacters);
+    const ft = buildAnalyzerContextInputs2({
+      config: amConfig,
+      getConfig,
+      continuity: hr,
+      chatKey,
+      messages: requestMessages,
+      content: req.clean,
+      imageTokens: tokens.map((t) => toPlannerImageToken(t)),
+      character: { name: character.name, description: character.description },
+      source: sourceWithCustom,
+      activePersona,
+      personaRecords
+    });
+    const profile = str4(rec4(runtime.novelai).analysisProfile);
+    const freeCharacters = profile === "v5-hybrid" && ne.freeCharacterGenerationEnabled && !!auto;
+    if (!(profile === "v5-hybrid" || ft.analyzerIdentityCandidates.length > 0 || ft.analyzerPersonaCandidates.length > 0 || freeCharacters))
+      return { ...empty(PIPELINE_TEXT.noCandidates), assetHints };
+    const evidence = await resolveIdentityEvidence({
+      candidates: ft.analyzerIdentityCandidates,
+      slots: req.slots,
+      originalAssetTokens: tokens,
+      source,
+      previousMessageParticipantKeys: [
+        ...ft.visualContinuity.previous_message_participants?.character_keys ?? [],
+        ...ft.visualContinuity.previous_message_participants?.persona_keys ?? []
+      ],
+      signal: req.signal
+    });
+    const candidateSlots = buildCandidateSlots(req.slots, evidence);
+    const operationKey = `${chatKey}:${req.historyId}`;
+    const replayKey = JSON.stringify([primaryId, operationKey]);
+    const replayOutfits = [...deps.replayOutfits?.get(replayKey)?.values() ?? []];
+    const assembled = assembleAnalyzerInput({
+      config: amConfig,
+      sourceId,
+      inputs: ft,
+      candidateSlots,
+      targetImageCount: W.max,
+      imageCountConstraint: W,
+      checkpoint: { chatKey, messageIndex: targetMessage?.index ?? req.target, messageId: req.historyId },
+      modelType: "illustration-generation",
+      replayGeneratedOutfits: replayOutfits,
+      ...req.splitAnalysis ? { splitAnalysis: req.splitAnalysis } : {},
+      ...req.revision ? { revisionDirection: req.revision.direction, revisionPromptChannels: req.revision.currentPrompt, revisionEvidenceKey: req.revision.evidenceKey } : {}
+    });
+    assembled.context.freeCharacterGenerationEnabled = freeCharacters;
+    const outfitIndex = config.runtime.outfitAwarenessDisabled ? undefined : createRunOutfitIndex(assembled.context);
+    const revisionImage = req.revision?.image && await services.llm.supportsVision().catch(() => false) ? [await req.revision.image()] : [];
+    if (req.signal.aborted)
+      throw new DOMException("Image generation preparation was cancelled.", "AbortError");
+    const origin = originForAttempt(req.attemptKind);
+    const entries = [];
+    const records = [];
+    let error = "";
+    let errorKo;
+    let failure;
+    let cancelled = false;
+    let analyzerCompleted = false;
+    let commitContinuity;
+    const skipSlotIndexes = req.attemptKind === "retry" ? [...new Set([...req.existingEntries.map((e) => e.slotIndex), ...req.deletedSlotIndices])] : [];
+    const lastAssistant = req.messages.map((m, i) => m.role === "assistant" ? i : -1).filter((i) => i >= 0).at(-1) ?? -1;
+    const persistContinuity = req.automatic || !(req.target >= 0 && req.target < lastAssistant);
+    const continuityMessageId = `id:${req.historyId}`;
+    const messageIndex = targetMessage?.index ?? req.target;
+    const commitWith = (apply) => async (doc, info) => {
+      if (!persistContinuity)
+        return;
+      const chatObj = continuityChat(req.messages, { index: req.target, historyId: req.historyId }, doc.actorState);
+      const next = apply(info);
+      const outcome = commitContinuityCheckpoint(doc.store, chatObj, next, chatKey, req.historyId, info.historyRevisionId, basisRevision);
+      if (outcome === "skipped")
+        services.log.append("info", "pipeline", "The chat state changed during the run; this run's continuity was not saved.");
+      const actorState = readLocalLoreActorState2(chatObj);
+      doc.actorState = { revision: actorState.revision, actors: actorState.actors };
+    };
+    const idLabel = (key) => {
+      if (key.startsWith("persona::"))
+        return personas.find((p) => p.personaId === key.slice(9))?.name ?? "";
+      for (const m of sourceWithCustom?.members ?? []) {
+        if (m.key === key)
+          return m.name;
+        for (const l of m.lorebooks)
+          if ((l.runtimePromptKey || `${m.key}::lore::${l.id}`) === key)
+            return l.title;
+      }
+      return "";
+    };
+    const comfyTimeout = Number(rec4(runtime.runtime).comfyuiCompletionTimeoutMs) || 600000;
+    const creationMode = auto?.imagesAvailable ? resolveOutfitCreationMode(amConfig) : "tags-only";
+    const prepareRoutePlan = auto ? (routePlan, signal) => auto.autoOutfit.prepare({ routePlan, source: sourceWithCustom, sourceId, signal, creationMode }) : undefined;
+    const prepareOutfits = auto ? async ({ actors, signal }) => {
+      const requested = outfitIndex ? reuseSameOutfits(outfitIndex, withoutAbsenceProposals(actors), (r) => services.log.append("info", "pipeline", `Outfit reuse: proposal "${r.proposal}" for ${r.identityKey} matches "${r.reused}"; no new outfit.`)) : actors;
+      const prepared = await auto.autoOutfit.prepareActors({
+        actors: requested,
+        source: sourceWithCustom,
+        sourceId,
+        signal,
+        creationMode,
+        onOutfitAllocated: (o) => {
+          if (!deps.replayOutfits)
+            return;
+          const map = deps.replayOutfits.get(replayKey) ?? new Map;
+          map.set(JSON.stringify([o.promptKey, o.formId, o.outfitId]), o);
+          deps.replayOutfits.set(replayKey, map);
+          while (deps.replayOutfits.size > 64)
+            deps.replayOutfits.delete(deps.replayOutfits.keys().next().value);
+        }
+      });
+      if (outfitIndex)
+        recordPreparedOutfits(outfitIndex, requested, prepared.preparedOutfits);
+      return prepared;
+    } : undefined;
+    const knownIdentities = freeCharacters ? buildKnownIdentities(withCustomCharacterMembers(source, customCharacters, "all"), personaRecords) : [];
+    const prepareCharacters = freeCharacters ? async (input) => {
+      const prepared = await auto.autoCharacter.prepare({ ...input, sourceId, owner: req, knownIdentities });
+      generatedForms = Object.fromEntries(prepared.flatMap((p) => p.forms ? [[p.identityKey, p.forms]] : []));
+      return prepared;
+    } : undefined;
+    const input = {
+      automaticRetryManaged: true,
+      imageRetryCount: config.runtime.generationAutoRetryCount,
+      generationType: generationTypeFor(origin, !req.automatic, !!req.revision),
+      sessionContext: {
+        chatKey,
+        responseKey: req.jobId,
+        messageIndex,
+        messageId: continuityMessageId,
+        displayName: req.activityLabel,
+        slotIds: req.slots.map((s) => s.slotId),
+        targetImageCount: W.max,
+        matchedAssetCount: W.min,
+        totalAssetCount: W.max
+      },
+      analysisConfig: config.analysis,
+      novelAIConfig: { ...resolveNovelAIRunConfig2(amConfig, { sourceId }), apiKey: "lumiverse-connection" },
+      ...req.revision ? {
+        revisionDirection: req.revision.direction,
+        revisionPromptChannels: req.revision.currentPrompt,
+        revisionEvidenceKey: req.revision.evidenceKey,
+        ...req.revision.imageToImage ? { novelAIImageToImage: req.revision.imageToImage, novelAIImageToImageStrength: req.revision.imageToImageStrength, novelAIImageToImageNoise: req.revision.imageToImageNoise } : {}
+      } : {},
+      generationProvider: engineProvider,
+      ...ne.fixedResolution.enabled ? { requestedSizeId: ne.fixedResolution.sizeId, requestedSize: resolveImageSize2(ne.fixedResolution.sizeId, config.runtime.customImageSizes ?? []) } : {},
+      customImageSizes: config.runtime.customImageSizes ?? [],
+      forceAiChoiceCoordinates: ne.forceAiChoiceCoordinates,
+      forceNsfwPrefix: ne.nsfwAlwaysEnabled,
+      stateAccumulationEnabled: ne.stateAccumulationEnabled,
+      comfyUI: {
+        transport: "direct-workflow",
+        chanServerRequestUrl: "",
+        chanServerApiKey: "",
+        endpoint: "",
+        workflowProfileId: BUNDLED_COMFY_WORKFLOW_PROFILE.id,
+        completionTimeoutMs: comfyTimeout,
+        animaPositivePrefix: ne.animaPositivePrompt,
+        animaNegativePrefix: ne.animaNegativePrompt
+      },
+      analyzerInput: {
+        executionMode: engine.executionMode(config),
+        checkpointPolicy: checkpointPolicyFor(req.attemptKind),
+        ...assembled,
+        ...revisionImage.length ? { imageParts: revisionImage } : {},
+        ...prepareRoutePlan ? {
+          afterPresetValidated: prepareRoutePlan,
+          afterAnalysisValidated: ({ routePlan }, signal) => prepareRoutePlan(routePlan, signal)
+        } : {}
+      },
+      ...prepareCharacters ? { prepareCharacters } : {},
+      ...prepareOutfits ? { prepareOutfits } : {},
+      ...outfitIndex ? { outfitIndex } : {},
+      promptInputs: ft.promptInputs,
+      v5PromptContext: ft.v5PromptContext,
+      references: ft.references,
+      outfitReference: ft.outfitReference,
+      characterReference: ft.characterReference,
+      seedSetting: req.revision ? () => ({ seed: str4(req.revision.seed), fixed: !!(req.revision.seedFixed && str4(req.revision.seed)) }) : ft.seedSetting,
+      previousCharacterStateMap: ft.previousCharacterStateMap,
+      previousContinuitySnapshot: getLatestContinuityCheckpointSnapshot2(hr, chatKey, "novelai-v5"),
+      previousGlobalModifierRefs: previousGlobalModifierRefs(ft.visualContinuity),
+      advanceContinuityTurn: !req.revision,
+      assertAssetPersistenceAvailable: async () => {
+        return;
+      },
+      applyContinuity: async (result) => {
+        await req.assertTarget();
+        const outfitReferences = ft.outfitContinuityReferences(result.plan.images);
+        commitContinuity = commitWith((info) => computeDeferredVisualContinuity2({
+          basisState: hr,
+          continuity: result,
+          chatKey,
+          chatIndex: 0,
+          messageIndex,
+          messageId: continuityMessageId,
+          historyRevisionId: info.historyRevisionId,
+          historyRevisionOrder: info.historyRevisionOrder,
+          outfitReferences
+        }));
+      },
+      applyV5Continuity: async (state) => {
+        await req.assertTarget();
+        commitContinuity = commitWith((info) => persistV5ContinuityState({
+          basisState: hr,
+          continuity: state,
+          chatKey,
+          chatIndex: 0,
+          messageIndex,
+          messageId: continuityMessageId,
+          historyRevisionId: info.historyRevisionId,
+          historyRevisionOrder: info.historyRevisionOrder
+        }));
+      },
+      persistGeneratedImage: async (image) => {
+        await req.assertTarget();
+        const decision = rec4(image.decision);
+        const slotNumber = Number(decision.slot_number ?? decision.slotNumber);
+        const slot = Number.isInteger(slotNumber) ? req.slots.find((s) => s.index === slotNumber) : undefined;
+        if (!slot)
+          throw new Error(PIPELINE_TEXT.slotMismatch.en);
+        const generation = rec4(image.generation);
+        const meta = rec4(generation.providerMetadata);
+        const imageId = str4(meta.imageId) || str4(generation.requestId);
+        if (!imageId)
+          throw new Error("The image provider returned no image id.");
+        const actors = (Array.isArray(image.actors) ? image.actors : []).map(rec4);
+        const key = str4(actors.find((a) => str4(a.identityKey))?.identityKey) || str4(decision.lorebook_prompt_key);
+        const label = idLabel(key) || str4(actors[0]?.identityName) || character.name;
+        const assetName = createGeneratedAssetName({ label, kind: "chat", ...UUID_RE.test(imageId) ? { id: imageId } : {} });
+        const width = Math.max(0, Math.round(Number(generation.width) || 0));
+        const height = Math.max(0, Math.round(Number(generation.height) || 0));
+        const entry = {
+          slotId: slot.slotId,
+          sourceImageToken: slot.sourceImageToken,
+          slotIndex: slot.index,
+          assetName,
+          savedPath: imageResultUrl(imageId),
+          extension: str4(generation.extension) || "png",
+          entryId: `generated:${assetName}`,
+          ...width ? { width } : {},
+          ...height ? { height } : {},
+          generationOrigin: origin,
+          ...req.revision?.sourceEntryId ? { parentEntryId: req.revision.sourceEntryId } : {}
+        };
+        const providerPrompt = rec4(image.providerPrompt);
+        const record = rec4(image.generationRecord);
+        const recordRequest = rec4(record.request);
+        const plan = rec4(image.promptPlan);
+        const novelAIConfig = image.novelAIConfig ? { ...rec4(image.novelAIConfig) } : undefined;
+        if (novelAIConfig)
+          delete novelAIConfig.apiKey;
+        records.push({
+          entryId: entry.entryId,
+          imageId,
+          assetName,
+          messageKey: req.planKey,
+          slotId: slot.slotId,
+          revisionId: req.revisionId,
+          createdAt: Date.now(),
+          engineProvider,
+          lumiverseProvider: str4(meta.lumiverseProvider) || imageTarget.lumiverseProvider,
+          model: str4(meta.model) || imageTarget.model,
+          seed: str4(generation.seed),
+          seedFixed: image.seedFixed === true,
+          width,
+          height,
+          sizeId: Number(plan.sizeId) || 0,
+          positivePrompt: str4(recordRequest.positive) || str4(providerPrompt.positivePrompt),
+          negativePrompt: str4(recordRequest.negative) || str4(providerPrompt.negativePrompt),
+          characters: (Array.isArray(recordRequest.characters) ? recordRequest.characters : Array.isArray(providerPrompt.characterPrompts) ? providerPrompt.characterPrompts : []).map((c) => {
+            const r = rec4(c);
+            return {
+              prompt: str4(r.prompt),
+              negativePrompt: str4(r.negativePrompt ?? r.uc),
+              ...Number.isFinite(Number(r.actorIndex)) ? { actorIndex: Number(r.actorIndex) } : {},
+              ...Number.isFinite(Number(r.centerX)) ? { centerX: Number(r.centerX), centerY: Number(r.centerY) } : {}
+            };
+          }),
+          ...novelAIConfig ? { novelAIConfig } : {},
+          actors: actors.map((a) => ({
+            identityKey: str4(a.identityKey),
+            identityName: str4(a.identityName),
+            kind: str4(a.kind),
+            actorIndex: Number(a.actorIndex) || 0,
+            ...str4(a.selectedFormId) ? { selectedFormId: str4(a.selectedFormId) } : {},
+            ...str4(a.selectedOutfitId) ? { selectedOutfitId: str4(a.selectedOutfitId) } : {}
+          })),
+          ...str4(plan.artistId) ? { artistId: str4(plan.artistId) } : {},
+          promptKey: key,
+          presetId: str4(decision.preset_id ?? decision.composition_id),
+          analyzerText: str4(decision.reason ?? decision.body_action),
+          sentParameters: rec4(meta.sentParameters),
+          generationOrigin: origin,
+          ...entry.parentEntryId ? { parentEntryId: entry.parentEntryId } : {}
+        });
+        entries.push(entry);
+      },
+      skipSlotNumbers: skipSlotIndexes,
+      cancelPrevious: true,
+      signal: req.signal,
+      onEvent(e) {
+        if (e.type === "jev-selection") {
+          req.onJevSelection?.(jevSelectionProgress(rec4(e.jevSelection)));
+          return;
+        }
+        if (e.type === "retry-errors") {
+          const retry = rec4(e.imageRetry);
+          const imageRetry = Number(retry.attempt) > 0 ? { attempt: Number(retry.attempt), total: Number(retry.total) || 0 } : undefined;
+          req.onRetryErrors?.(Array.isArray(e.retryErrors) ? e.retryErrors : [], imageRetry);
+          return;
+        }
+        const imageCount = Number.isFinite(Number(e.imageCount)) ? Number(e.imageCount) + skipSlotIndexes.length : undefined;
+        if (imageCount !== undefined && (e.phase === "planning" || e.analysisComplete === false && e.phase === "analyzing-preset")) {
+          resolvedCount = imageCount;
+          req.onResolvedCount?.(imageCount);
+        }
+        const phase = e.analysisComplete === false || e.phase === "analyzing-preset" ? "analyzing-preset" : e.phase === "analyzing-modifiers" ? "analyzing-modifiers" : e.phase === "planning" ? "planning" : e.phase === "generating" || e.phase === "saving" ? "generating" : e.phase === "applying-continuity" || e.phase === "complete" ? "committing" : null;
+        if (phase === "planning" || phase === "generating" || phase === "committing")
+          analyzerCompleted = true;
+        const session = rec4(e.session);
+        const progress = rec4(session.progress);
+        if (phase)
+          req.onPhase?.(phase, {
+            imageIndex: Number.isFinite(Number(e.imageIndex)) ? Number(e.imageIndex) : undefined,
+            imageCount: imageCount ?? (Number.isFinite(Number(progress.imageCount)) ? Number(progress.imageCount) : undefined),
+            providerStage: str4(progress.providerStage) || undefined
+          });
+      }
+    };
+    try {
+      await engine.run(input, {
+        engineProvider,
+        purpose: req.revision ? "regenerate" : "chat",
+        connectionId: imageTarget.connectionId,
+        model: imageTarget.model,
+        ownerChatId: req.chatId,
+        ownerCharacterId: primaryId,
+        comfyuiWorkflowId: imageTarget.comfyuiWorkflowId,
+        forceNsfwPrefix: () => ne.nsfwAlwaysEnabled
+      }, config);
+      await req.assertTarget();
+    } catch (e) {
+      if (isCancellation(e) || req.signal.aborted)
+        cancelled = true;
+      else {
+        error = e instanceof Error ? e.message : String(e);
+        failure = e;
+      }
     }
+    if (auto) {
+      await auto.autoCharacter.settle().catch(() => {
+        return;
+      });
+      await auto.store.settle().catch(() => {
+        return;
+      });
+    }
+    const done = new Set([...req.attemptKind === "retry" ? req.existingEntries : [], ...entries].map((e) => e.slotId));
+    const missing = Math.max(0, resolvedCount - done.size - (req.attemptKind === "retry" ? req.deletedSlotIndices.length : 0));
+    if (!cancelled && !error && missing) {
+      const label = formatLabel(PIPELINE_TEXT.failedCount, { n: missing });
+      error = label.en;
+      errorKo = label.ko;
+    }
+    return {
+      entries,
+      records,
+      assetHints,
+      resolvedCount,
+      error: cancelled ? "" : error,
+      ...errorKo && !cancelled ? { errorKo } : {},
+      ...failure ? { failure } : {},
+      ...analyzerCompleted ? { analyzerCompleted: true } : {},
+      ...cancelled ? { cancelled: true } : {},
+      ...commitContinuity ? { commitContinuity } : {}
+    };
+  } finally {
+    auto?.dispose();
   }
-  if (auto) {
-    await auto.autoCharacter.settle().catch(() => {
-      return;
-    });
-    await auto.store.settle().catch(() => {
-      return;
-    });
-    auto.dispose();
-  }
-  const done = new Set([...req.attemptKind === "retry" ? req.existingEntries : [], ...entries].map((e) => e.slotId));
-  const missing = Math.max(0, resolvedCount - done.size - (req.attemptKind === "retry" ? req.deletedSlotIndices.length : 0));
-  if (!cancelled && !error && missing) {
-    const label = formatLabel(PIPELINE_TEXT.failedCount, { n: missing });
-    error = label.en;
-    errorKo = label.ko;
-  }
-  return {
-    entries,
-    records,
-    assetHints,
-    resolvedCount,
-    error: cancelled ? "" : error,
-    ...errorKo && !cancelled ? { errorKo } : {},
-    ...failure ? { failure } : {},
-    ...analyzerCompleted ? { analyzerCompleted: true } : {},
-    ...cancelled ? { cancelled: true } : {},
-    ...commitContinuity ? { commitContinuity } : {}
-  };
 }
 
 // src/backend/pipeline/host-chat.ts
@@ -65154,6 +65253,152 @@ class HostGenerationTracker {
   }
 }
 
+// src/backend/services/util.ts
+function asRecord3(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+function asArray2(value) {
+  return Array.isArray(value) ? value : [];
+}
+function str5(value) {
+  return typeof value === "string" ? value.trim() : typeof value === "number" && Number.isFinite(value) ? String(value) : "";
+}
+function errorMessage(error) {
+  if (error instanceof Error)
+    return error.message;
+  if (typeof error === "string")
+    return error;
+  const message = asRecord3(error).message;
+  return typeof message === "string" ? message : String(error ?? "Unknown error");
+}
+function abortError(reason) {
+  return new DOMException(typeof reason === "string" && reason ? reason : "The operation was aborted.", "AbortError");
+}
+function throwIfAborted(signal) {
+  if (signal?.aborted)
+    throw abortError(signal.reason);
+}
+function sleep2(ms, signal) {
+  if (ms <= 0) {
+    throwIfAborted(signal);
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted)
+      return reject(abortError(signal.reason));
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(abortError(signal?.reason));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+function raceAbort(promise, signal) {
+  if (!signal)
+    return promise;
+  if (signal.aborted) {
+    promise.catch(() => {
+      return;
+    });
+    return Promise.reject(abortError(signal.reason));
+  }
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(abortError(signal.reason));
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then((value) => {
+      signal.removeEventListener("abort", onAbort);
+      resolve(value);
+    }, (error) => {
+      signal.removeEventListener("abort", onAbort);
+      reject(error);
+    });
+  });
+}
+
+class KeyedQueue {
+  tails = new Map;
+  run(key, task) {
+    const previous = this.tails.get(key) ?? Promise.resolve();
+    const operation = previous.then(task);
+    const tail = operation.then(() => {
+      return;
+    }, () => {
+      return;
+    });
+    this.tails.set(key, tail);
+    tail.then(() => {
+      if (this.tails.get(key) === tail)
+        this.tails.delete(key);
+    });
+    return operation;
+  }
+  get size() {
+    return this.tails.size;
+  }
+}
+
+class TtlCache {
+  ttlMs;
+  max;
+  now;
+  map = new Map;
+  constructor(ttlMs, max = 128, now = Date.now) {
+    this.ttlMs = ttlMs;
+    this.max = max;
+    this.now = now;
+  }
+  get(key) {
+    const hit = this.map.get(key);
+    if (!hit)
+      return;
+    if (this.now() - hit.at > this.ttlMs) {
+      this.map.delete(key);
+      return;
+    }
+    return hit.value;
+  }
+  set(key, value) {
+    if (this.map.size >= this.max && !this.map.has(key)) {
+      const oldest = this.map.keys().next().value;
+      if (oldest !== undefined)
+        this.map.delete(oldest);
+    }
+    this.map.set(key, { at: this.now(), value });
+    return value;
+  }
+  delete(key) {
+    this.map.delete(key);
+  }
+  clear(prefix) {
+    if (prefix === undefined)
+      this.map.clear();
+    else
+      for (const key of [...this.map.keys()])
+        if (key.startsWith(prefix))
+          this.map.delete(key);
+  }
+}
+function deepMergePatch(base, patch) {
+  if (patch === undefined)
+    return base;
+  if (!patch || typeof patch !== "object" || Array.isArray(patch) || !base || typeof base !== "object" || Array.isArray(base))
+    return patch;
+  const out = { ...base };
+  for (const [key, value] of Object.entries(patch)) {
+    if (key === "__proto__" || key === "constructor" || key === "prototype" || value === undefined)
+      continue;
+    out[key] = deepMergePatch(out[key], value);
+  }
+  return out;
+}
+function jsonClone2(value) {
+  return value === undefined ? value : JSON.parse(JSON.stringify(value));
+}
+
 // src/backend/pipeline/providers.ts
 var SCOPE_PREFIX = "inlay-run:";
 
@@ -65181,7 +65426,7 @@ class ProviderRunRegistry {
   }
 }
 var rec5 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
-var str5 = (v) => v == null ? "" : String(v).trim();
+var str6 = (v) => v == null ? "" : String(v).trim();
 var num2 = (v, fallback, min, max) => {
   const n = Number(v);
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
@@ -65215,9 +65460,9 @@ function toImageBytes(value, fallbackMime = "image/png") {
     return value.length ? { data: bytesToBase642(value), mimeType: fallbackMime } : null;
   const r = rec5(value);
   if (typeof r.data === "string" && r.data)
-    return { data: r.data, mimeType: str5(r.mimeType) || str5(r.mime_type) || fallbackMime };
+    return { data: r.data, mimeType: str6(r.mimeType) || str6(r.mime_type) || fallbackMime };
   if (r.bytes instanceof Uint8Array && r.bytes.length)
-    return { data: bytesToBase642(r.bytes), mimeType: str5(r.mimeType) || fallbackMime };
+    return { data: bytesToBase642(r.bytes), mimeType: str6(r.mimeType) || fallbackMime };
   if (r.image !== undefined)
     return toImageBytes(r.image, fallbackMime);
   return null;
@@ -65284,11 +65529,11 @@ function normalizeCharacterPrompts(value) {
   return (Array.isArray(value) ? value : []).map((raw) => {
     const r = rec5(raw);
     return {
-      prompt: str5(r.prompt),
-      uc: str5(r.uc),
+      prompt: str6(r.prompt),
+      uc: str6(r.uc),
       centerX: num2(r.centerX, 0.5, 0, 1),
       centerY: num2(r.centerY, 0.5, 0, 1),
-      actorSlot: str5(r.actorSlot) || undefined,
+      actorSlot: str6(r.actorSlot) || undefined,
       coordinateMode: r.coordinateMode === "automatic" ? "automatic" : "fixed"
     };
   }).filter((c) => c.prompt || c.uc);
@@ -65298,10 +65543,10 @@ function buildNovelAIRequest(request, ctx, extras = {}) {
   const force = request.forceNsfwPrefix ?? ctx.forceNsfwPrefix();
   const prompt = force && rawPrompt.trim() ? prependNsfwTag2(rawPrompt) : rawPrompt;
   const config = { ...rec5(request.config), width: request.width, height: request.height, negativePrompt: request.negativePrompt, seed: request.seed };
-  const input = str5(prompt);
+  const input = str6(prompt);
   if (!input)
     throw Object.assign(new Error("NovelAI prompt is empty."), { code: "NOVELAI_PROMPT_EMPTY", retryable: false });
-  const model = str5(ctx.model) || str5(config.naiModel) || "nai-diffusion-5-full";
+  const model = str6(ctx.model) || str6(config.naiModel) || "nai-diffusion-5-full";
   const v4 = /^nai-diffusion-(?:4|5)(?:-|$)/u.test(model);
   const v5Profile = config.analysisProfile === "v5-hybrid";
   if (v5Profile && !v4)
@@ -65310,7 +65555,7 @@ function buildNovelAIRequest(request, ctx, extras = {}) {
   const characters = normalizeCharacterPrompts(config.characterPrompts);
   const anyFixed = characters.some((c) => c.coordinateMode !== "automatic");
   const useCoords = forced ? characters.length > 0 && anyFixed : v5Profile ? !!config.useCoords && characters.length > 0 && anyFixed : !!config.useCoords && characters.length > 1 && anyFixed;
-  const negative = str5(config.negativePrompt);
+  const negative = str6(config.negativePrompt);
   const parameters = { negative_prompt: negative };
   if (v4) {
     parameters.v4_prompt = { caption: { base_caption: input, char_captions: toNovelAICharacterCaptions2(characters, "prompt", v5Profile || forced) }, use_coords: useCoords, use_order: config.useOrder !== false };
@@ -65323,8 +65568,8 @@ function buildNovelAIRequest(request, ctx, extras = {}) {
   const pos = body.parameters.v4_prompt?.caption.char_captions ?? [];
   const neg = body.parameters.v4_negative_prompt?.caption.char_captions ?? [];
   const novelai = {
-    sampler: str5(config.sampler) || "k_euler_ancestral",
-    noiseSchedule: str5(config.noiseSchedule) || "karras",
+    sampler: str6(config.sampler) || "k_euler_ancestral",
+    noiseSchedule: str6(config.noiseSchedule) || "karras",
     steps: Math.round(num2(config.steps, 28, 1, 50)),
     scale: Number(config.scale) || 6,
     cfgRescale: Number.isFinite(Number(config.cfgRescale)) ? Number(config.cfgRescale) : 0.5,
@@ -65371,7 +65616,7 @@ async function prepareReferences(services, refs, signal) {
     const asset = withCrop(r);
     try {
       const prepared = toImageBytes(r.image) ?? await services.imageBytes.getAsset(asset, { signal });
-      const type = str5(r.type);
+      const type = str6(r.type);
       references.push({
         ...prepared,
         strength: num2(r.strength, 0.6, 0, 1),
@@ -65381,7 +65626,7 @@ async function prepareReferences(services, refs, signal) {
     } catch (error) {
       if (signal?.aborted)
         throw error;
-      failures.push({ asset: str5(asset.key) || str5(asset.name), error: error instanceof Error ? error.message : String(error) });
+      failures.push({ asset: str6(asset.key) || str6(asset.name), error: error instanceof Error ? error.message : String(error) });
     }
   }
   return { references, failures };
@@ -65396,7 +65641,7 @@ function createNovelAIAdapter(services, registry) {
       const signal = request.signal ?? options.signal;
       onEvent?.({ type: "stage", provider: "novelai", requestId: "", stage: "queued" });
       const refs = Array.isArray(request.references) ? request.references : [];
-      const refModel = str5(ctx.model) || str5(rec5(request.config).naiModel);
+      const refModel = str6(ctx.model) || str6(rec5(request.config).naiModel);
       const sendsRefs = rec5(request.config).characterReferenceEnabled !== false && /^nai-diffusion-4-5/u.test(refModel);
       const prepared = refs.length && sendsRefs ? await prepareReferences(services, refs, signal) : { references: [], failures: [] };
       const i2iRaw = rec5(request.imageToImage);
@@ -65433,8 +65678,8 @@ function createComfyAdapter(services, registry) {
       const seedText = normalizeSeed(request.seed);
       const result = await generateImage(services, {
         purpose: ctx.purpose,
-        prompt: str5(request.prompt),
-        negativePrompt: str5(request.negativePrompt),
+        prompt: str6(request.prompt),
+        negativePrompt: str6(request.negativePrompt),
         width: Math.max(1, Math.round(Number(request.width) || 832)),
         height: Math.max(1, Math.round(Number(request.height) || 1216)),
         seed: seedText ? Number(seedText) : randomSeed2(),
@@ -65459,8 +65704,8 @@ function createGenericAdapter(services, registry) {
       const seedText = normalizeSeed(request.seed);
       const result = await generateImage(services, {
         purpose: ctx.purpose,
-        prompt: str5(request.prompt),
-        negativePrompt: str5(request.negativePrompt),
+        prompt: str6(request.prompt),
+        negativePrompt: str6(request.negativePrompt),
         width: Math.max(1, Math.round(Number(request.width) || 832)),
         height: Math.max(1, Math.round(Number(request.height) || 1216)),
         seed: seedText ? Number(seedText) : randomSeed2(),
@@ -66692,7 +66937,7 @@ function takeOf(imageId, seed, width, height, createdAt) {
 
 // src/backend/webtoon/looks.ts
 var rec6 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
-var str6 = (v) => typeof v === "string" ? v.trim() : "";
+var str7 = (v) => typeof v === "string" ? v.trim() : "";
 var PARTS = ["head", "top", "bottom", "legs", "feet"];
 var fold2 = (s) => s.normalize("NFKC").trim().toLocaleLowerCase().replace(/\s+/gu, " ");
 var EXPLICIT = /genital|pubic|labia|vagin|vulva|penis|nipple|areola|breast|\bbust\b|\b[a-k][- ]?cup\b|\banus\b|clitor|testic|\bnude\b|naked|\bbra\b|panties|lingerie|underwear|\bnsfw\b|\bsex/iu;
@@ -66730,16 +66975,16 @@ var escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 function cleanTags(value, names, max) {
   const banned = names.filter((n) => n.trim().length > 1).map((n) => new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(fold2(n))}(?![\\p{L}\\p{N}])`, "u"));
   const seen = new Set;
-  return str6(value).split(/[,\n]/u).map((t) => t.replace(/[{}[\]]|::/gu, " ").replace(/_/gu, " ").replace(/\s+/gu, " ").trim().toLocaleLowerCase()).filter((t) => TAG.test(t) && t.split(" ").length <= 5 && !COUNT.test(t) && !EXPLICIT.test(t) && !banned.some((b) => b.test(t)) && !seen.has(t) && (seen.add(t), true)).slice(0, max);
+  return str7(value).split(/[,\n]/u).map((t) => t.replace(/[{}[\]]|::/gu, " ").replace(/_/gu, " ").replace(/\s+/gu, " ").trim().toLocaleLowerCase()).filter((t) => TAG.test(t) && t.split(" ").length <= 5 && !COUNT.test(t) && !EXPLICIT.test(t) && !banned.some((b) => b.test(t)) && !seen.has(t) && (seen.add(t), true)).slice(0, max);
 }
 function parseLook(value, otherNames) {
   const v = rec6(value);
-  const name = str6(v.name);
+  const name = str7(v.name);
   if (!name)
     return null;
   const tags = cleanTags(v.identity, otherNames, 16);
   const genderTag = tags.find((t) => t === "female" || t === "male");
-  const g = str6(v.gender).toLowerCase();
+  const g = str7(v.gender).toLowerCase();
   const gender = g === "female" || g === "male" ? g : genderTag ?? (g ? "other" : "");
   const o = rec6(v.outfit);
   const outfit = {};
@@ -66748,7 +66993,7 @@ function parseLook(value, otherNames) {
     if (t.length)
       outfit[part] = t.join(", ");
   }
-  return { name, gender, identity: tags.filter((t) => !GENDER_WORD.test(t)), outfitLabel: str6(o.label ?? o.name).slice(0, 60), outfit };
+  return { name, gender, identity: tags.filter((t) => !GENDER_WORD.test(t)), outfitLabel: str7(o.label ?? o.name).slice(0, 60), outfit };
 }
 var identityOf = (gender, tags) => [gender === "female" || gender === "male" ? gender : "", ...tags].filter(Boolean).join(", ");
 var hasOutfit = (o) => PARTS.some((p) => o[p]);
@@ -66758,7 +67003,7 @@ function resolveLooks(raw, roster, known) {
   const allNames = roster.map((r) => r.name);
   const byName = new Map;
   for (const item of list) {
-    const name = str6(rec6(item).name);
+    const name = str7(rec6(item).name);
     const look = parseLook(item, allNames.filter((n) => fold2(n) !== fold2(name)));
     if (look && !byName.has(fold2(look.name)))
       byName.set(fold2(look.name), look);
@@ -67341,18 +67586,18 @@ var ANCHORS = ["top-left", "top-right", "top", "left", "right", "bottom-left", "
 var FRAMINGS = ["portrait", "upper body", "cowboy shot", "lower body", "full body", "hands only"];
 var TEXT_TYPES = ["speech", "thought", "narration", "sfx"];
 var GRID = [0.1, 0.3, 0.5, 0.7, 0.9];
-var str7 = { type: "string" };
+var str8 = { type: "string" };
 var num3 = { type: "number" };
 var textItem = {
   type: "object",
-  properties: { type: { type: "string", enum: [...TEXT_TYPES] }, speaker: { type: ["string", "null"] }, text: str7, anchor: { type: "string", enum: [...ANCHORS] } },
+  properties: { type: { type: "string", enum: [...TEXT_TYPES] }, speaker: { type: ["string", "null"] }, text: str8, anchor: { type: "string", enum: [...ANCHORS] } },
   required: ["type", "text", "anchor"]
 };
 var STORYBOARD_JSON_SCHEMA = {
   type: "object",
   properties: {
-    title: str7,
-    key_props: { type: "array", items: str7 },
+    title: str8,
+    key_props: { type: "array", items: str8 },
     panels: {
       type: "array",
       items: {
@@ -67361,30 +67606,30 @@ var STORYBOARD_JSON_SCHEMA = {
           id: { type: "integer" },
           kind: { type: "string", enum: ["image", "text_beat"] },
           beat: { type: "string", enum: [...BEATS] },
-          moment: str7,
-          shot: str7,
+          moment: str8,
+          shot: str8,
           size: { type: "string", enum: [...IMAGE_SIZES] },
           layout: { type: "string", enum: [...LAYOUTS] },
           scene_change: { type: "boolean" },
           pause: { type: "boolean" },
           frame_break: { type: "boolean" },
-          balloon_space: str7,
+          balloon_space: str8,
           nai: {
             type: "object",
             properties: {
-              base: str7,
+              base: str8,
               characters: {
                 type: "array",
                 items: {
                   type: "object",
                   properties: {
-                    name: str7,
+                    name: str8,
                     x: num3,
                     y: num3,
                     framing: { type: "string", enum: [...FRAMINGS] },
                     shoes_off: { type: "boolean" },
-                    drop_outfit: { type: "array", items: str7 },
-                    prompt: str7
+                    drop_outfit: { type: "array", items: str8 },
+                    prompt: str8
                   },
                   required: ["name", "x", "y", "framing", "prompt"]
                 }
@@ -68010,7 +68255,7 @@ function validateMangaStoryboard(raw, roster, source) {
 
 // src/backend/webtoon/roster.ts
 var rec7 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
-var str8 = (v) => v == null ? "" : String(v).trim();
+var str9 = (v) => v == null ? "" : String(v).trim();
 var PARTS4 = ["head", "top", "bottom", "legs", "feet"];
 var escapeRe2 = (s) => s.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 function mentions(text, names) {
@@ -68021,17 +68266,17 @@ function rosterEntry(candidate, currentOutfitId) {
   const form = forms.find((f) => f.formId === candidate.defaultFormId) ?? forms[0];
   if (!form)
     return null;
-  const gender = str8(form.gender) || str8(candidate.gender);
-  const outfits = (form.outfits ?? []).map((o) => ({ ...rec7(o), id: str8(rec7(o).outfitId ?? rec7(o).id), label: str8(o.label) })).filter((o) => o.id && PARTS4.some((p) => str8(o[p])));
+  const gender = str9(form.gender) || str9(candidate.gender);
+  const outfits = (form.outfits ?? []).map((o) => ({ ...rec7(o), id: str9(rec7(o).outfitId ?? rec7(o).id), label: str9(o.label) })).filter((o) => o.id && PARTS4.some((p) => str9(o[p])));
   const ids = outfits.map((o) => o.id);
-  const current = currentOutfitId && ids.includes(currentOutfitId) ? currentOutfitId : ids.includes(str8(form.defaultOutfitId)) ? str8(form.defaultOutfitId) : ids[0] ?? "";
+  const current = currentOutfitId && ids.includes(currentOutfitId) ? currentOutfitId : ids.includes(str9(form.defaultOutfitId)) ? str9(form.defaultOutfitId) : ids[0] ?? "";
   const main = compileMainPrompt(form.basePromptGroups, gender);
   return {
     key: candidate.key,
     name: candidate.characterName.trim(),
     gender,
-    formLabel: str8(form.label),
-    outfits: outfits.map((o) => ({ id: o.id, label: o.label, outfit: Object.fromEntries(PARTS4.flatMap((p) => str8(o[p]) ? [[p, str8(o[p])]] : [])) })),
+    formLabel: str9(form.label),
+    outfits: outfits.map((o) => ({ id: o.id, label: o.label, outfit: Object.fromEntries(PARTS4.flatMap((p) => str9(o[p]) ? [[p, str9(o[p])]] : [])) })),
     currentOutfitId: current,
     identity: [gender === "female" || gender === "male" ? gender : "", main].filter(Boolean).join(", ")
   };
@@ -68113,7 +68358,7 @@ async function loadWebtoonContext(services, input) {
   const all = candidates.flatMap((c) => {
     if (c.key.startsWith(PERSONA_PROMPT_KEY_PREFIX) && !personaProfiles[c.key.slice(PERSONA_PROMPT_KEY_PREFIX.length)])
       return [];
-    const entry = rosterEntry(c, previous.get(str8(c.lorebookPromptKey) || c.key) ?? previous.get(c.key));
+    const entry = rosterEntry(c, previous.get(str9(c.lorebookPromptKey) || c.key) ?? previous.get(c.key));
     return entry && entry.name ? [{ entry, names: [c.characterName, ...c.aliases ?? []] }] : [];
   });
   const looks = await latestLooks(services.storage, input.chatId);
@@ -68160,7 +68405,7 @@ async function loadWebtoonContext(services, input) {
     roster.unshift(primary);
   const names = new Set;
   roster = roster.filter((r) => names.has(fold2(r.name)) ? false : (names.add(fold2(r.name)), true));
-  const profile = str8(rec7(runtime.novelai).analysisProfile);
+  const profile = str9(rec7(runtime.novelai).analysisProfile);
   const free = profile === "v5-hybrid" && resolveSourceGenerationSettings2(amConfig, primaryId).freeCharacterGenerationEnabled;
   const knownIdentities = free ? buildKnownIdentities(withCustomCharacterMembers(source, custom, "all"), personas.map(personaRecord2)) : null;
   const prompts = ft.promptInputs({ actors: {} });
@@ -68174,8 +68419,8 @@ async function loadWebtoonContext(services, input) {
     roster,
     knownIdentities,
     style: {
-      style: [prompts.artistPrompt, prompts.fixedPositivePrompt].map(str8).filter(Boolean).join(", "),
-      negative: dedupeTags([prompts.artistNegativePrompt, prompts.negativePrompt, input.format === "manga" ? MANGA_NEGATIVE : WEBTOON_NEGATIVE].map(str8).filter(Boolean).join(", ")),
+      style: [prompts.artistPrompt, prompts.fixedPositivePrompt].map(str9).filter(Boolean).join(", "),
+      negative: dedupeTags([prompts.artistNegativePrompt, prompts.negativePrompt, input.format === "manga" ? MANGA_NEGATIVE : WEBTOON_NEGATIVE].map(str9).filter(Boolean).join(", ")),
       params,
       framingWeights: rec7(cp.outfitPartFramingWeights)
     }
@@ -68726,9 +68971,9 @@ async function waitOutLock(deps, signal, run) {
     } catch (error) {
       if (signal.aborted || attempt >= LOCK_RETRIES || !CONCURRENT_LOCK.test(toRpcError(error).message))
         throw error;
-      await new Promise((resolve) => setTimeout(resolve, deps.lockWaitMs ?? LOCK_WAIT_MS));
-      if (signal.aborted)
+      await sleep2(deps.lockWaitMs ?? LOCK_WAIT_MS, signal).catch(() => {
         throw aborted();
+      });
     }
   }
 }
@@ -68945,8 +69190,7 @@ async function runWebtoonStrip(deps, req) {
   const write = async (mutate) => {
     const doc = await updateStrip(services.storage, req.chatId, req.historyId, (current) => {
       const next = current ?? createStripDocument({ chatId: req.chatId, messageKey: req.planKey, historyId: req.historyId, characterId: "", sourceLength: req.source.length, now: now() });
-      mutate(next);
-      return next;
+      return mutate(next) ?? next;
     }, now);
     req.onChanged();
     return doc;
@@ -68977,11 +69221,10 @@ async function runWebtoonStrip(deps, req) {
       style = context.style;
       characterId = context.characterId;
       const mono = manga && isMonochromeStyle(style.style);
-      doc = await write((d) => {
-        Object.assign(d, createStripDocument({ chatId: req.chatId, messageKey: req.planKey, historyId: req.historyId, characterId, sourceLength: req.source.length, now: now(), revision: previous?.revision ?? 0 }));
-        if (manga)
-          Object.assign(d, { format: "manga", mono });
-      });
+      doc = await write(() => ({
+        ...createStripDocument({ chatId: req.chatId, messageKey: req.planKey, historyId: req.historyId, characterId, sourceLength: req.source.length, now: now(), revision: previous?.revision ?? 0 }),
+        ...manga ? { format: "manga", mono } : {}
+      }));
       const auto = context.knownIdentities ? await openAuto(deps, characterId) : null;
       try {
         const freeCharacters = !!auto;
@@ -69180,8 +69423,8 @@ async function editWebtoonText(deps, req) {
 
 // src/backend/pipeline/controller.ts
 var rec8 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
-var str9 = (v) => v == null ? "" : String(v).trim();
-var sleep2 = (ms, signal) => new Promise((resolve) => {
+var str10 = (v) => v == null ? "" : String(v).trim();
+var sleep3 = (ms, signal) => new Promise((resolve) => {
   const t = setTimeout(done, ms);
   function done() {
     clearTimeout(t);
@@ -69388,7 +69631,7 @@ function createChatPipelineController(services, engine, options = {}) {
     if (retryable === false)
       return false;
     const status = Number(r.httpStatus ?? r.status ?? rec8(inner.details).status);
-    const code = str9(r.code) || str9(inner.detailCode);
+    const code = str10(r.code) || str10(inner.detailCode);
     return retryable === true || error instanceof TypeError || status === 408 || status === 429 || status >= 500 && status < 600 || ["ANALYZER_JSON_PARSE", "ANALYZER_EMPTY_RESPONSE", "ANALYZER_TIMEOUT", "REQUEST_TIMEOUT", "CHAN_SERVER_TIMEOUT", "CHAN_SERVER_NETWORK", "V5_ANALYZER_NO_USABLE_ILLUSTRATION"].includes(code) || error instanceof RpcFailure && error.error.code === "timeout";
   };
   const errorOf = (e, label) => {
@@ -69415,7 +69658,7 @@ function createChatPipelineController(services, engine, options = {}) {
       emitProgress(job);
       const deadline = now() + STREAM_WAIT_MAX_MS;
       while (tracker.isStreaming(chatId) && !signal.aborted && now() < deadline)
-        await sleep2(STREAM_WAIT_POLL_MS, signal);
+        await sleep3(STREAM_WAIT_POLL_MS, signal);
       if (signal.aborted)
         return { kind: "cancelled" };
       if (opts.automatic) {
@@ -69453,7 +69696,8 @@ function createChatPipelineController(services, engine, options = {}) {
     const countPolicy = split ? fixedCountPolicy(runSettings.splitAnalysis.totalCount ?? 1) : runSettings.countPolicy;
     if (attemptKind !== "retry")
       analyzerCompleted.delete(skey);
-    const errorRevision = attemptKind === "retry" ? plan.revisions.find((r) => r.revisionId === plan.activeRevisionId && r.status === "error" && (distinctSlotCount(r.entries) < expectedSlotCount(plan) || !!r.deletedSlotIndices?.length)) : undefined;
+    const retryId = attemptKind === "retry" && !opts.revision ? splitRevisions.get(skey) || plan.activeRevisionId : "";
+    const errorRevision = retryId ? plan.revisions.find((r) => r.revisionId === retryId && r.status === "error" && (distinctSlotCount(r.entries) < expectedSlotCount(plan) || !!r.deletedSlotIndices?.length)) : undefined;
     const revisionTarget = opts.revision ? plan.revisions.find((r) => r.revisionId === opts.revision.revisionId && r.entries.some((e) => e.slotId === opts.revision.slotId)) : undefined;
     if (opts.revision && !revisionTarget)
       return { kind: "blocked", error: labelError("not-found", PIPELINE_TEXT.messageMissing) };
@@ -69547,15 +69791,17 @@ function createChatPipelineController(services, engine, options = {}) {
         throw new RpcFailure(labelError("provider-error", PIPELINE_TEXT.revisionMissing));
       job.snapshot.completedSlots = result.entries.length;
       setPhase(job, "committing", { imageCount: requestedCount, imageIndex: requestedCount });
-      const merged = revisionTarget ? mergeEntries(revisionTarget.entries, result.entries) : attemptKind === "retry" ? mergeEntries(existingEntries, result.entries) : result.entries;
       const assetHints = result.assetHints.length ? result.assetHints : plan.assetHints;
       let finalPlan = plan;
       let errorText = "";
       let errorKo;
       const written = await services.storage.updateChatData(chatId, async (doc) => {
         const base = reconcilePlanWithTree(plan, doc.history);
+        const current = base.revisions.find((r) => r.revisionId === revisionId);
+        const merged = revisionTarget || attemptKind === "retry" ? mergeEntries(current?.entries ?? revisionTarget?.entries ?? existingEntries, result.entries) : result.entries;
         const resolved = revisionTarget ? Math.min(base.slots.length, distinctSlotCount(merged)) : Math.min(base.slots.length, Math.max(1, result.resolvedCount));
-        const missing = Math.max(0, resolved - distinctSlotCount(merged));
+        const deleted = (current?.deletedSlotIndices ?? []).filter((i) => !merged.some((e) => e.slotIndex === i)).length;
+        const missing = Math.max(0, resolved - distinctSlotCount(merged) - deleted);
         const status = missing > 0 || result.error ? "error" : "complete";
         if (missing > 0 || result.error) {
           if (result.error) {
@@ -69570,10 +69816,10 @@ function createChatPipelineController(services, engine, options = {}) {
         const createdAt = now();
         let next;
         const patchRevision = (id, patch) => base.revisions.map((r) => r.revisionId === id ? { ...r, ...patch } : r);
-        if (attemptKind === "retry" && errorRevision && base.revisions.some((r) => r.revisionId === errorRevision.revisionId)) {
-          next = { ...base, status, requestedCount: resolved, entries: merged, assetHints, revisions: patchRevision(errorRevision.revisionId, { requestedCount: resolved, status, entries: merged, error: errorText }), activeRevisionId: errorRevision.revisionId, error: errorText };
-        } else if (revisionTarget && base.revisions.some((r) => r.revisionId === revisionTarget.revisionId)) {
-          next = { ...base, status, entries: merged, assetHints, revisions: patchRevision(revisionTarget.revisionId, { status, entries: merged, error: errorText }), activeRevisionId: revisionTarget.revisionId, error: errorText };
+        if (current && attemptKind === "retry") {
+          next = { ...base, status, requestedCount: resolved, entries: merged, assetHints, revisions: patchRevision(revisionId, { requestedCount: resolved, status, entries: merged, error: errorText }), activeRevisionId: revisionId, error: errorText };
+        } else if (current && revisionTarget) {
+          next = { ...base, status, entries: merged, assetHints, revisions: patchRevision(revisionId, { status, entries: merged, error: errorText }), activeRevisionId: revisionId, error: errorText };
         } else if (!merged.length) {
           next = { ...base, status, requestedCount: resolved, assetHints, error: errorText };
         } else {
@@ -69613,7 +69859,8 @@ function createChatPipelineController(services, engine, options = {}) {
       emitChanged(chatId, [planKey]);
       if (finalPlan.status === "complete")
         return { kind: "completed" };
-      job.snapshot.failedSlots = Math.max(0, expectedSlotCount(finalPlan) - distinctSlotCount(finalPlan.entries));
+      const active = finalPlan.revisions.find((r) => r.revisionId === finalPlan.activeRevisionId);
+      job.snapshot.failedSlots = Math.max(0, expectedSlotCount(finalPlan) - distinctSlotCount(finalPlan.entries) - (active?.deletedSlotIndices?.length ?? 0));
       return {
         kind: "failed",
         error: rpcError("provider-error", errorText || PIPELINE_TEXT.generationIncomplete.en, { ...errorKo ? { messageKo: errorKo } : {}, retryable: true }),
@@ -69727,7 +69974,7 @@ function createChatPipelineController(services, engine, options = {}) {
           return finishJob(job, "failed", outcome.partial ? "partial" : "error", outcome.error);
         job.snapshot.progress = phaseProgress("planned", { retry: { attempt: attempt + 1, total: retries } });
         emitProgress(job);
-        await sleep2(AUTO_RETRY_DELAY_MS, job.controller.signal);
+        await sleep3(AUTO_RETRY_DELAY_MS, job.controller.signal);
         current = { ...current, automatic: false, attemptKind: current.revision ? current.attemptKind : "retry", settings: undefined, waitForChat: true };
       }
     } catch (e) {
@@ -69819,7 +70066,7 @@ function createChatPipelineController(services, engine, options = {}) {
     return next.replace(/,\s*,/gu, ",").replace(/^\s*,\s*|\s*,\s*$/gu, "").trim();
   };
   const applyArtistAndOutfits = async (chatId, record, overrides) => {
-    const out = { positive: record.positivePrompt, negative: record.negativePrompt, characters: charactersOf(record), configPatch: {}, artistId: record.artistId, actors: record.actors.map((a) => ({ ...a })) };
+    const out = { positive: record.positivePrompt, negative: record.negativePrompt, characters: charactersOf(record), configPatch: {}, artistId: record.artistId, actors: record.actors.map((a) => ({ ...a })), trackedArtist: undefined };
     if (!overrides)
       return out;
     const config = await services.storage.loadConfig();
@@ -69829,8 +70076,10 @@ function createChatPipelineController(services, engine, options = {}) {
         const next = list.find((a) => a.id === overrides.artistId) ?? fail2("not-found", `Artist not found: ${overrides.artistId}`);
         const old = list.find((a) => a.id === record.artistId);
         const tracked = rec8(rec8(record.novelAIConfig).nonArtistPromptWeightArtist);
-        out.positive = replaceSegment(out.positive, str9(tracked.positive) || str9(old?.prompt), str9(next.prompt));
-        out.negative = replaceSegment(out.negative, str9(tracked.negative) || str9(old?.negativePrompt), str9(next.negativePrompt));
+        const own = str10(tracked.id) === str10(record.artistId) || out.positive.includes(str10(tracked.positive));
+        out.positive = replaceSegment(out.positive, own && str10(tracked.positive) || str10(old?.prompt), str10(next.prompt));
+        out.negative = replaceSegment(out.negative, own && str10(tracked.negative) || str10(old?.negativePrompt), str10(next.negativePrompt));
+        out.trackedArtist = { id: next.id, name: next.title, positive: str10(next.prompt), negative: str10(next.negativePrompt) };
         const o = rec8(next.novelAIOverrides);
         for (const key of ["steps", "scale", "cfgRescale"])
           if (Number.isFinite(Number(o[key])))
@@ -69838,7 +70087,7 @@ function createChatPipelineController(services, engine, options = {}) {
       } else {
         const entries = config.animaArtists.entries;
         const next = entries.find((a) => a.id === overrides.artistId) ?? fail2("not-found", `Artist not found: ${overrides.artistId}`);
-        out.positive = replaceSegment(out.positive, str9(entries.find((a) => a.id === record.artistId)?.text), str9(next.text));
+        out.positive = replaceSegment(out.positive, str10(entries.find((a) => a.id === record.artistId)?.text), str10(next.text));
       }
       out.artistId = overrides.artistId;
     }
@@ -69893,7 +70142,7 @@ function createChatPipelineController(services, engine, options = {}) {
         ...keepCoords ? kept ? { centerX: kept.x, centerY: kept.y, coordinateMode: "fixed" } : { coordinateMode: "automatic" } : {}
       };
     }).filter((_c, i) => !excluded.has(i));
-    const seed = keepSeed ? str9(o.seed) || record.seed : "";
+    const seed = keepSeed ? str10(o.seed) || record.seed : "";
     const provider = record.engineProvider === "comfy-ui" ? "comfy-ui" : record.engineProvider === "chan-server" ? "chan-server" : "novelai";
     if (provider !== "novelai")
       return { provider, prompt: positive, negativePrompt: negative, seed, width, height };
@@ -69920,6 +70169,26 @@ function createChatPipelineController(services, engine, options = {}) {
       references: [],
       queueMeta: { kind: "generation", source: "regenerate", sourceImageToken: `slot:${slotId}` }
     };
+  };
+  const compactDraft = (draft, count, excluded) => {
+    const kept = [...Array(count).keys()].filter((i) => !excluded.has(i));
+    const next = { ...draft };
+    delete next.excludedCharacterIndexes;
+    const centers = draft.centers && kept.filter((i) => i < draft.centers.length).map((i) => draft.centers[i] ?? null);
+    if (centers?.length)
+      next.centers = centers;
+    else
+      delete next.centers;
+    const sections = draft.sections?.flatMap((s) => {
+      const actor = /^actor:(\d+)$/u.exec(s.id);
+      const at = actor ? kept.indexOf(Number(actor[1])) : -1;
+      return !actor ? [s] : at < 0 ? [] : [{ ...s, id: `actor:${at}` }];
+    });
+    if (sections?.length)
+      next.sections = sections;
+    else
+      delete next.sections;
+    return next;
   };
   const runRegenerate = async (job) => {
     const { chatId } = job.target;
@@ -69975,7 +70244,7 @@ function createChatPipelineController(services, engine, options = {}) {
         throw new DOMException("Regeneration was cancelled.", "AbortError");
       await targetGuard(job.target)();
       const meta = rec8(result.providerMetadata);
-      const imageId = str9(meta.imageId) || str9(result.requestId);
+      const imageId = str10(meta.imageId) || str10(result.requestId);
       if (!imageId)
         throw new Error("The image provider returned no image id.");
       const sourceLabel = /^(.+?)\.__am__\./u.exec(source.assetName ?? "")?.[1] ?? "";
@@ -69989,7 +70258,7 @@ function createChatPipelineController(services, engine, options = {}) {
         kind: "generated",
         assetName,
         savedPath: imageResultUrl(imageId),
-        extension: str9(result.extension) || "png",
+        extension: str10(result.extension) || "png",
         createdAt: now(),
         width,
         height,
@@ -70004,28 +70273,45 @@ function createChatPipelineController(services, engine, options = {}) {
         return d;
       });
       const finalized = rec8(result.finalizedPrompt);
+      const excluded = new Set(overrides?.excludedCharacterIndexes ?? []);
+      const cfg = rec8(record.novelAIConfig);
+      const novelAIConfig = record.novelAIConfig && {
+        ...cfg,
+        ...rebuilt.configPatch,
+        ...rebuilt.trackedArtist ? { nonArtistPromptWeightArtist: rebuilt.trackedArtist } : {},
+        ...Array.isArray(cfg.characterPrompts) ? { characterPrompts: cfg.characterPrompts.filter((_c, i) => !excluded.has(i)) } : {}
+      };
       await updateSidecar(services.storage, chatId, (s) => {
+        const draft = s.drafts[slotId]?.overrides;
+        if (draft && excluded.size) {
+          const next = compactDraft(draft, record.characters.length, excluded);
+          if (Object.keys(next).length)
+            s.drafts[slotId] = { overrides: next, updatedAt: now() };
+          else
+            delete s.drafts[slotId];
+        }
         s.records[entry.entryId] = {
           ...record,
           entryId: entry.entryId,
           imageId,
           assetName,
           createdAt: entry.createdAt,
-          seed: str9(result.seed),
+          seed: str10(result.seed),
           seedFixed: keepSeed,
           width,
           height,
           sizeId: overrides?.sizeId ?? record.sizeId,
-          positivePrompt: str9(result.effectivePrompt) || str9(finalized.positivePrompt) || String(request.prompt ?? ""),
+          positivePrompt: str10(result.effectivePrompt) || str10(finalized.positivePrompt) || String(request.prompt ?? ""),
           negativePrompt: String(request.negativePrompt ?? ""),
           sentParameters: rec8(meta.sentParameters),
           generationOrigin: "regenerate",
           parentEntryId: source.entryId,
           actors: rebuilt.actors,
           ...rebuilt.artistId ? { artistId: rebuilt.artistId } : {},
+          ...novelAIConfig ? { novelAIConfig } : {},
           characters: (request.config && Array.isArray(request.config.characterPrompts) ? request.config.characterPrompts : []).map((ch, i) => ({
-            prompt: str9(ch.prompt),
-            negativePrompt: str9(ch.uc),
+            prompt: str10(ch.prompt),
+            negativePrompt: str10(ch.uc),
             actorIndex: Number.isFinite(Number(ch.actorIndex)) ? Number(ch.actorIndex) : i,
             centerX: Number(ch.centerX ?? 0.5),
             centerY: Number(ch.centerY ?? 0.5),
@@ -70151,11 +70437,11 @@ function createChatPipelineController(services, engine, options = {}) {
           id: `actor:${i}`,
           target: "actor",
           actorIndex: i,
-          label: record.actors.find((a) => a.actorIndex === i)?.identityName || `Character ${i + 1}`,
+          label: record.actors.find((a) => a.actorIndex === c.actorIndex)?.identityName || `Character ${i + 1}`,
           ...pick(`actor:${i}`, c.prompt, c.uc),
           centerX: center ? center.x : c.centerX,
           centerY: center ? center.y : c.centerY,
-          ...outfitOf(i)
+          ...outfitOf(c.actorIndex)
         };
       })
     ];
@@ -70224,7 +70510,7 @@ function createChatPipelineController(services, engine, options = {}) {
   };
   const channelsOf = (record) => [
     { id: "main", kind: "main", label: "Main prompt", positive: record.positivePrompt, negative: record.negativePrompt },
-    ...charactersOf(record).map((c, i) => ({ id: `actor:${i}`, kind: "actor", label: record.actors.find((a) => a.actorIndex === i)?.identityName || `Character ${i + 1}`, actorIndex: i, positive: c.prompt, negative: c.uc }))
+    ...charactersOf(record).map((c, i) => ({ id: `actor:${i}`, kind: "actor", label: record.actors.find((a) => a.actorIndex === c.actorIndex)?.identityName || `Character ${i + 1}`, actorIndex: i, positive: c.prompt, negative: c.uc }))
   ];
   const forgetMessageState = (chatId, fate) => {
     const prefix = k(chatId, "");
@@ -70330,11 +70616,11 @@ function createChatPipelineController(services, engine, options = {}) {
     tracker.ended(payload);
     if (disposed || payload.error)
       return;
-    const chatId = str9(payload.chatId);
-    const messageId = str9(payload.messageId);
+    const chatId = str10(payload.chatId);
+    const messageId = str10(payload.messageId);
     if (!chatId || !messageId)
       return;
-    if (!AUTO_GENERATION_TYPES.has(str9(payload.generationType).toLowerCase()))
+    if (!AUTO_GENERATION_TYPES.has(str10(payload.generationType).toLowerCase()))
       return;
     try {
       const [settings, config] = await Promise.all([services.storage.loadChatImageGenerationSettings(), services.storage.loadConfig()]);
@@ -70358,7 +70644,7 @@ function createChatPipelineController(services, engine, options = {}) {
   };
   const handleHostEvent = async (event, raw) => {
     const payload = rec8(raw);
-    const chatId = str9(payload.chatId) || str9(rec8(payload.message).chat_id);
+    const chatId = str10(payload.chatId) || str10(rec8(payload.message).chat_id);
     switch (event) {
       case "GENERATION_STARTED":
         tracker.started(payload);
@@ -70369,7 +70655,7 @@ function createChatPipelineController(services, engine, options = {}) {
       case "GENERATION_ENDED":
         return handleGenerationEnded(raw);
       case "MESSAGE_DELETED": {
-        const ids = [str9(payload.messageId), str9(rec8(payload.message).id), ...Array.isArray(payload.messageIds) ? payload.messageIds.map(str9) : []].filter(Boolean);
+        const ids = [str10(payload.messageId), str10(rec8(payload.message).id), ...Array.isArray(payload.messageIds) ? payload.messageIds.map(str10) : []].filter(Boolean);
         for (const id of ids)
           if (chatId)
             await dropMessageData(chatId, id).catch((e) => log("warn", "Message data cleanup failed", toRpcError(e)));
@@ -70377,14 +70663,14 @@ function createChatPipelineController(services, engine, options = {}) {
       }
       case "MESSAGE_SWIPED": {
         const message = rec8(payload.message);
-        if (payload.action === "deleted" && chatId && str9(message.id) && Number.isSafeInteger(payload.swipeId))
-          await dropMessageData(chatId, str9(message.id), Number(payload.swipeId)).catch((e) => log("warn", "Swipe data cleanup failed", toRpcError(e)));
+        if (payload.action === "deleted" && chatId && str10(message.id) && Number.isSafeInteger(payload.swipeId))
+          await dropMessageData(chatId, str10(message.id), Number(payload.swipeId)).catch((e) => log("warn", "Swipe data cleanup failed", toRpcError(e)));
         else if (chatId)
           emitChanged(chatId, []);
         return;
       }
       case "CHARACTER_EDITED": {
-        const id = str9(payload.characterId) || str9(payload.id) || str9(rec8(payload.character).id);
+        const id = str10(payload.characterId) || str10(payload.id) || str10(rec8(payload.character).id);
         services.sources.invalidate(id || undefined);
         return;
       }
@@ -70449,8 +70735,8 @@ function createChatPipelineController(services, engine, options = {}) {
     async start(params) {
       if (disposed)
         fail2("unsupported", "The pipeline was disposed.");
-      const chatId = str9(params.chatId);
-      const messageId = str9(params.messageId);
+      const chatId = str10(params.chatId);
+      const messageId = str10(params.messageId);
       const swipeIndex = Number(params.swipeIndex);
       if (!chatId || !messageId || !Number.isSafeInteger(swipeIndex) || swipeIndex < 0)
         fail2("bad-request", "chatId, messageId and swipeIndex are required.");
@@ -70514,7 +70800,7 @@ function createChatPipelineController(services, engine, options = {}) {
       return [...jobs.values()].filter((j) => !j.dismissed && (!chatId || j.target.chatId === chatId) && (j.snapshot.status === "queued" || j.snapshot.status === "running" || j.snapshot.canRetry)).map((j) => jsonClone(j.snapshot));
     },
     async regenerateSlot(params) {
-      const chatId = str9(params.chatId);
+      const chatId = str10(params.chatId);
       const doc = await services.storage.loadChatData(chatId);
       const resolved = resolveHistorySlot(doc.history, { slotId: params.slotId, messageKey: params.messageKey });
       if (!resolved)
@@ -70749,7 +71035,7 @@ function createChatPipelineController(services, engine, options = {}) {
       return zoomDetails(chatId, slotId);
     },
     async requestAiPromptEdit(chatId, slotId, entryId, request) {
-      const instruction = str9(request.instruction);
+      const instruction = str10(request.instruction);
       if (!instruction)
         throw new RpcFailure(labelError("bad-request", PIPELINE_TEXT.editInstructionEmpty));
       if (instruction.length > 2000)
@@ -70930,7 +71216,7 @@ function createChatPipelineController(services, engine, options = {}) {
 // src/backend/pipeline/outfit-visibility.ts
 var rec9 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 var arr3 = (v) => Array.isArray(v) ? v : [];
-var str10 = (v) => typeof v === "string" ? v : "";
+var str11 = (v) => typeof v === "string" ? v : "";
 var WEIGHT_PREFIX = /^(-?\d+(?:\.\d+)?)::/;
 function chunkAt(segment, pos, chunk) {
   const done = (end) => end === segment.length || segment.startsWith(", ", end);
@@ -71223,12 +71509,12 @@ function repairBatchItems(items, index, onRepair) {
     const replacements = [];
     const nextCharacters = characters.map((c, i) => {
       const actor = actors.find((a) => Number(a.actorIndex) === i) ?? actors[i] ?? {};
-      const parts = index.parts(str10(actor.identityKey) || str10(c.identityKey), str10(actor.selectedFormId), str10(actor.selectedOutfitId) || str10(c.selectedOutfitId));
+      const parts = index.parts(str11(actor.identityKey) || str11(c.identityKey), str11(actor.selectedFormId), str11(actor.selectedOutfitId) || str11(c.selectedOutfitId));
       const key = `actor_${i + 1}`;
       const span = rec9(outfits[key]);
       const segment = Number.isInteger(span.start) && Number.isInteger(span.end) ? { start: Number(span.start), end: Number(span.end) } : undefined;
-      const prompt = str10(c.prompt);
-      const repair = prompt ? repairActorPrompt({ prompt, segment, parts, framing: str10(plan.selectedFraming), globalPositive: str10(plan.globalPositive) }) : null;
+      const prompt = str11(c.prompt);
+      const repair = prompt ? repairActorPrompt({ prompt, segment, parts, framing: str11(plan.selectedFraming), globalPositive: str11(plan.globalPositive) }) : null;
       if (!repair)
         return c;
       replacements.push([prompt, repair.prompt]);
@@ -71236,7 +71522,7 @@ function repairBatchItems(items, index, onRepair) {
         outfits[key] = Object.freeze({ ...repair.segment });
       else
         delete outfits[key];
-      onRepair?.({ sourceImageToken: str10(it.sourceImageToken), actorId: str10(actor.actorId) || key, changes: repair.changes });
+      onRepair?.({ sourceImageToken: str11(it.sourceImageToken), actorId: str11(actor.actorId) || key, changes: repair.changes });
       return Object.freeze({ ...c, prompt: repair.prompt });
     });
     if (!replacements.length)
@@ -71385,9 +71671,9 @@ function record(value) {
 }
 function createRouter(options) {
   const { host, handlers } = options;
-  function send(userId, envelope) {
+  function send(userId, frontendSessionId, envelope) {
     try {
-      host.sendToFrontend(envelope, userId);
+      host.sendToFrontend(envelope, userId, frontendSessionId ? { frontendSessionId } : undefined);
     } catch {}
   }
   return {
@@ -71405,7 +71691,7 @@ function createRouter(options) {
       const method = rawMethod;
       const meta = { method, requestId, frontendSessionId };
       const reply = (error, logged = false) => {
-        send(userId, errorResponse({ requestId, method }, error));
+        send(userId, frontendSessionId, errorResponse({ requestId, method }, error));
         if (!logged)
           options.onError?.(error, { ...meta, userId });
       };
@@ -71433,7 +71719,7 @@ function createRouter(options) {
       try {
         ctx = await options.getContext(userId, meta);
         const result = await handler(params, ctx);
-        send(userId, okResponse({ requestId, method }, result ?? { ok: true }));
+        send(userId, frontendSessionId, okResponse({ requestId, method }, result ?? { ok: true }));
       } catch (error) {
         const rpc = toRpcError(error);
         let logged = false;
@@ -71450,157 +71736,11 @@ function createRouter(options) {
   };
 }
 
-// src/backend/services/util.ts
-function asRecord3(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-}
-function asArray2(value) {
-  return Array.isArray(value) ? value : [];
-}
-function str11(value) {
-  return typeof value === "string" ? value.trim() : typeof value === "number" && Number.isFinite(value) ? String(value) : "";
-}
-function errorMessage(error) {
-  if (error instanceof Error)
-    return error.message;
-  if (typeof error === "string")
-    return error;
-  const message = asRecord3(error).message;
-  return typeof message === "string" ? message : String(error ?? "Unknown error");
-}
-function abortError(reason) {
-  return new DOMException(typeof reason === "string" && reason ? reason : "The operation was aborted.", "AbortError");
-}
-function throwIfAborted(signal) {
-  if (signal?.aborted)
-    throw abortError(signal.reason);
-}
-function sleep3(ms, signal) {
-  if (ms <= 0) {
-    throwIfAborted(signal);
-    return Promise.resolve();
-  }
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted)
-      return reject(abortError(signal.reason));
-    const timer = setTimeout(() => {
-      signal?.removeEventListener("abort", onAbort);
-      resolve();
-    }, ms);
-    const onAbort = () => {
-      clearTimeout(timer);
-      reject(abortError(signal?.reason));
-    };
-    signal?.addEventListener("abort", onAbort, { once: true });
-  });
-}
-function raceAbort(promise, signal) {
-  if (!signal)
-    return promise;
-  if (signal.aborted) {
-    promise.catch(() => {
-      return;
-    });
-    return Promise.reject(abortError(signal.reason));
-  }
-  return new Promise((resolve, reject) => {
-    const onAbort = () => reject(abortError(signal.reason));
-    signal.addEventListener("abort", onAbort, { once: true });
-    promise.then((value) => {
-      signal.removeEventListener("abort", onAbort);
-      resolve(value);
-    }, (error) => {
-      signal.removeEventListener("abort", onAbort);
-      reject(error);
-    });
-  });
-}
-
-class KeyedQueue {
-  tails = new Map;
-  run(key, task) {
-    const previous = this.tails.get(key) ?? Promise.resolve();
-    const operation = previous.then(task);
-    const tail = operation.then(() => {
-      return;
-    }, () => {
-      return;
-    });
-    this.tails.set(key, tail);
-    tail.then(() => {
-      if (this.tails.get(key) === tail)
-        this.tails.delete(key);
-    });
-    return operation;
-  }
-  get size() {
-    return this.tails.size;
-  }
-}
-
-class TtlCache {
-  ttlMs;
-  max;
-  now;
-  map = new Map;
-  constructor(ttlMs, max = 128, now = Date.now) {
-    this.ttlMs = ttlMs;
-    this.max = max;
-    this.now = now;
-  }
-  get(key) {
-    const hit = this.map.get(key);
-    if (!hit)
-      return;
-    if (this.now() - hit.at > this.ttlMs) {
-      this.map.delete(key);
-      return;
-    }
-    return hit.value;
-  }
-  set(key, value) {
-    if (this.map.size >= this.max && !this.map.has(key)) {
-      const oldest = this.map.keys().next().value;
-      if (oldest !== undefined)
-        this.map.delete(oldest);
-    }
-    this.map.set(key, { at: this.now(), value });
-    return value;
-  }
-  delete(key) {
-    this.map.delete(key);
-  }
-  clear(prefix) {
-    if (prefix === undefined)
-      this.map.clear();
-    else
-      for (const key of [...this.map.keys()])
-        if (key.startsWith(prefix))
-          this.map.delete(key);
-  }
-}
-function deepMergePatch(base, patch) {
-  if (patch === undefined)
-    return base;
-  if (!patch || typeof patch !== "object" || Array.isArray(patch) || !base || typeof base !== "object" || Array.isArray(base))
-    return patch;
-  const out = { ...base };
-  for (const [key, value] of Object.entries(patch)) {
-    if (key === "__proto__" || key === "constructor" || key === "prototype" || value === undefined)
-      continue;
-    out[key] = deepMergePatch(out[key], value);
-  }
-  return out;
-}
-function jsonClone2(value) {
-  return value === undefined ? value : JSON.parse(JSON.stringify(value));
-}
-
 // src/backend/rpc/handlers/core.ts
 var EXTENSION_VERSION = "0.10.0";
 var REQUIRED_PERMISSIONS = ["generation", "image_gen", "chat_mutation", "chats", "characters", "personas", "world_books", "images", "interceptor", "app_manipulation"];
 function requireId(value, name) {
-  const id = str11(value);
+  const id = str5(value);
   if (!id)
     fail2("bad-request", `${name} is required.`);
   return id;
@@ -71786,7 +71926,7 @@ var coreHandlers = {
   },
   async "artists.list"(params, ctx) {
     const config = await ctx.storage.loadConfig();
-    const characterId = str11(params.characterId);
+    const characterId = str5(params.characterId);
     const doc = characterId ? await ctx.storage.loadCharacterDocument(characterId) : null;
     const anima = normalizeAnimaArtists(config.animaArtists);
     if (characterId && doc?.animaArtistId)
@@ -71806,20 +71946,20 @@ var coreHandlers = {
     let saved;
     await ctx.storage.updateConfig((config) => {
       const list = [...config.characterPrompt.artistPrompts];
-      const preset = DEFAULT_ARTIST_PRESETS.find((p) => p.id === str11(input.id));
+      const preset = DEFAULT_ARTIST_PRESETS.find((p) => p.id === str5(input.id));
       if (preset?.id === NO_ARTIST_ID)
         fail2("bad-request", "The 'no artist' entry cannot be edited.");
-      const taken = new Set(list.map((e) => str11(e.id)).concat(DEFAULT_ARTIST_PRESETS.map((p) => p.id)));
-      const id = str11(input.id) || prefixedId("artist", taken);
+      const taken = new Set(list.map((e) => str5(e.id)).concat(DEFAULT_ARTIST_PRESETS.map((p) => p.id)));
+      const id = str5(input.id) || prefixedId("artist", taken);
       if (preset) {
         saved = { id, title: preset.title, prompt: preset.prompt, ...input.novelAIOverrides ? { novelAIOverrides: input.novelAIOverrides } : {}, ...input.nonArtistPromptWeight ? { nonArtistPromptWeight: input.nonArtistPromptWeight } : {} };
       } else {
-        const title = str11(input.title);
+        const title = str5(input.title);
         if (!title)
           fail2("bad-request", "The artist title is required.", { messageKo: "작가 이름을 입력해주세요." });
-        saved = { ...input, id, title, prompt: str11(input.prompt), ...input.negativePrompt !== undefined ? { negativePrompt: str11(input.negativePrompt) } : {} };
+        saved = { ...input, id, title, prompt: str5(input.prompt), ...input.negativePrompt !== undefined ? { negativePrompt: str5(input.negativePrompt) } : {} };
       }
-      const index = list.findIndex((e) => str11(e.id) === id);
+      const index = list.findIndex((e) => str5(e.id) === id);
       if (index >= 0)
         list[index] = saved;
       else
@@ -71832,20 +71972,20 @@ var coreHandlers = {
     const id = requireId(params.id, "id");
     await ctx.storage.updateConfig((config) => ({
       ...config,
-      characterPrompt: { ...config.characterPrompt, artistPrompts: config.characterPrompt.artistPrompts.filter((e) => str11(e.id) !== id), defaultArtistId: config.characterPrompt.defaultArtistId === id ? NO_ARTIST_ID : config.characterPrompt.defaultArtistId }
+      characterPrompt: { ...config.characterPrompt, artistPrompts: config.characterPrompt.artistPrompts.filter((e) => str5(e.id) !== id), defaultArtistId: config.characterPrompt.defaultArtistId === id ? NO_ARTIST_ID : config.characterPrompt.defaultArtistId }
     }));
     return { ok: true };
   },
   async "artists.upsertAnima"(params, ctx) {
     const input = asRecord3(params.entry);
-    const text = str11(input.text);
+    const text = str5(input.text);
     if (!text)
       fail2("bad-request", "The artist prompt text is required.");
     let saved;
     await ctx.storage.updateConfig((config) => {
       const entries = [...config.animaArtists.entries];
-      const id = str11(input.id) && str11(input.id) !== NO_ARTIST_ID ? str11(input.id) : prefixedId("anima", new Set(entries.map((e) => e.id)));
-      saved = { id, title: str11(input.title) || id, text, ...str11(input.portableOrigin) ? { portableOrigin: str11(input.portableOrigin) } : {} };
+      const id = str5(input.id) && str5(input.id) !== NO_ARTIST_ID ? str5(input.id) : prefixedId("anima", new Set(entries.map((e) => e.id)));
+      saved = { id, title: str5(input.title) || id, text, ...str5(input.portableOrigin) ? { portableOrigin: str5(input.portableOrigin) } : {} };
       const index = entries.findIndex((e) => e.id === id);
       if (index >= 0)
         entries[index] = saved;
@@ -71861,8 +72001,8 @@ var coreHandlers = {
     return { ok: true };
   },
   async "artists.select"(params, ctx) {
-    const artistId = str11(params.artistId);
-    const characterId = str11(params.characterId);
+    const artistId = str5(params.artistId);
+    const characterId = str5(params.characterId);
     const config = await ctx.storage.loadConfig();
     if (params.list === "novelai") {
       const followGlobal = !artistId && !!characterId;
@@ -71888,7 +72028,7 @@ var coreHandlers = {
   async "personas.list"(params, ctx) {
     const [config, personas, active, chat] = await Promise.all([ctx.storage.loadConfig(), ctx.sources.listPersonas(), ctx.sources.getActivePersona(), ctx.sources.getActiveChat()]);
     const settings = normalizePersonaSettings(config.characterPrompt.personaSettings);
-    const characterId = str11(params.characterId);
+    const characterId = str5(params.characterId);
     const boundId = chat && (!characterId || chat.characterId === characterId || chat.groupCharacterIds.includes(characterId)) ? chat.personaId : null;
     return {
       personas: personas.map((p) => ({
@@ -71909,7 +72049,7 @@ var coreHandlers = {
     await ctx.storage.updateConfig((config) => {
       const settings = normalizePersonaSettings(config.characterPrompt.personaSettings);
       const current = resolvePersonaForms(settings, config.characterPrompt.personaGender, personaId);
-      if (formCollectionRevision(current) !== str11(params.baseRevision)) {
+      if (formCollectionRevision(current) !== str5(params.baseRevision)) {
         fail2("conflict", "The persona appearance was changed elsewhere. Reload it, then apply your edit again.", { detailCode: "FORM_COLLECTION_BASE_CHANGED", details: { expected: params.baseRevision, actual: formCollectionRevision(current) } });
       }
       collection = normalizeFormCollection(params.collection, { fallbackGender: config.characterPrompt.personaGender === "female" ? "female" : "male" });
@@ -72329,7 +72469,7 @@ async function saveCrop(services, params) {
 }
 async function assetUrl(services, asset) {
   if (asset.key?.startsWith(STORAGE_ASSET_PREFIX)) {
-    const bytes = await readAssetBytes(services, asset);
+    const bytes = await readAssetBytes(services, { ...asset, cropReference: undefined });
     return { url: `data:${bytes.mimeType};base64,${bytesToBase64(bytes.data)}` };
   }
   try {
@@ -72615,30 +72755,30 @@ function createImageBytesService(deps) {
   const service = {
     pendingCount: () => pending.size,
     async getImage(ref, options = {}) {
-      const url = str11(ref.url);
-      const imageId = url ? imageIdFromUrl(url) : str11(ref.imageId);
+      const url = str5(ref.url);
+      const imageId = url ? imageIdFromUrl(url) : str5(ref.imageId);
       if (!imageId)
         fail2("bad-request", url ? `Not a Lumiverse image URL: "${url.slice(0, 120)}".` : "No image id or URL given.", { detailCode: "IMAGE_REF_INVALID" });
       return readImage(imageId, options.signal);
     },
     async getAsset(raw, options = {}) {
       const asset = normalizeAssetRef(raw);
-      if (asset.key.startsWith(STORAGE_KEY_PREFIX))
-        return fromStorageKey(asset.key);
       const crop = asRecord3(asset.cropReference);
-      const cropKey = str11(crop.assetKey);
+      const cropKey = str5(crop.assetKey);
       if (cropKey.startsWith(STORAGE_KEY_PREFIX)) {
         try {
           return await fromStorageKey(cropKey);
         } catch {}
       }
-      const characterId = str11(asset.characterTarget?.chaId);
+      if (asset.key.startsWith(STORAGE_KEY_PREFIX))
+        return fromStorageKey(asset.key);
+      const characterId = str5(asset.characterTarget?.chaId);
       if ((Object.keys(crop).length || asset.name.startsWith(CROP_ASSET_NAME_PREFIX)) && characterId) {
         const cropName = (asset.name || asset.key).replace(/\.png$/i, "");
         const bytes = await fromStorage(STORAGE_PATHS.characterReferenceCrop(characterId, cropName), "png");
         if (bytes)
           return bytes;
-        const sourceKey = str11(crop.assetKey);
+        const sourceKey = str5(crop.assetKey);
         if (sourceKey.startsWith(STORAGE_KEY_PREFIX))
           return fromStorageKey(sourceKey);
         if (sourceKey)
@@ -72660,10 +72800,10 @@ function createImageBytesService(deps) {
       const type = message?.type;
       if (type !== FETCH_BRIDGE_RESPONSE)
         return false;
-      const entry = finish(str11(message.requestId));
+      const entry = finish(str5(message.requestId));
       if (!entry)
         return true;
-      const error = str11(message.error);
+      const error = str5(message.error);
       if (error) {
         const status = Number(message.status);
         entry.reject(new RpcFailure({ code: status === 404 ? "not-found" : status === 401 || status === 403 ? "permission-denied" : "provider-error", message: error, detailCode: "FETCH_BRIDGE_ERROR", ...Number.isFinite(status) && status ? { details: { status } } : {} }));
@@ -72732,7 +72872,7 @@ function randomSeed3() {
   return buf[0];
 }
 function parseSeed(value) {
-  const s = typeof value === "number" ? Number.isSafeInteger(value) ? String(value) : "" : str11(value);
+  const s = typeof value === "number" ? Number.isSafeInteger(value) ? String(value) : "" : str5(value);
   if (!/^\d+$/.test(s))
     return null;
   const n = Number(s);
@@ -72741,8 +72881,8 @@ function parseSeed(value) {
 function readComfyConfig(metadata, workflowId) {
   const record = asRecord3(metadata);
   const library = asArray2(record.comfyui_workflows);
-  const selected = str11(workflowId) || str11(record.comfyui_active_workflow_id);
-  const comfy = (selected ? library.find((entry) => str11(entry?.id) === selected)?.config : undefined) ?? record.comfyui;
+  const selected = str5(workflowId) || str5(record.comfyui_active_workflow_id);
+  const comfy = (selected ? library.find((entry) => str5(entry?.id) === selected)?.config : undefined) ?? record.comfyui;
   const config = asRecord3(comfy);
   const workflow = config.workflow_api_json || config.workflow_json;
   if (!workflow || typeof workflow !== "object" || !Array.isArray(config.field_mappings))
@@ -72797,7 +72937,7 @@ function buildNovelAIParameters(request, config, target, connectionDefaults = {}
   const scale = Number.isFinite(Number(o.scale ?? nai.scale)) ? Number(o.scale ?? nai.scale) || 6 : 6;
   const cfgRescale = clampNum(o.cfgRescale ?? nai.cfgRescale, 0, 1, 0.5);
   const sampler = normalizeNovelAiSampler(o.sampler ?? nai.sampler) ?? "k_euler_ancestral";
-  const noiseSchedule = str11(o.noiseSchedule ?? nai.noiseSchedule) || "karras";
+  const noiseSchedule = str5(o.noiseSchedule ?? nai.noiseSchedule) || "karras";
   const qualityToggle = (o.qualityToggle ?? nai.qualityToggle) !== false;
   const useOrder = (o.useOrder ?? nai.useOrder) !== false;
   const useCoords = o.useCoords === true;
@@ -72864,7 +73004,7 @@ function buildComfyParameters(request, config, target, connectionMetadata, seedS
   const width = clampInt2(request.width, 64, 4096, 832);
   const height = clampInt2(request.height, 64, 4096, 1216);
   const seed = parseSeed(request.seed) ?? seedSource();
-  const workflowId = str11(request.comfy?.workflowId) || target.comfyuiWorkflowId;
+  const workflowId = str5(request.comfy?.workflowId) || target.comfyuiWorkflowId;
   const parameters = { ...config.image.parameters, width, height, seed, negativePrompt: String(request.negativePrompt ?? "") };
   delete parameters.rawRequestOverride;
   if (workflowId)
@@ -72991,7 +73131,7 @@ class GapQueue {
 function createImageService(deps) {
   const { host, userId } = deps;
   const now = deps.now ?? Date.now;
-  const wait = deps.sleep ?? sleep3;
+  const wait = deps.sleep ?? sleep2;
   const seedSource = deps.seedSource ?? randomSeed3;
   const cache = new TtlCache(5000, 32, now);
   const queues = new Map;
@@ -73000,10 +73140,10 @@ function createImageService(deps) {
     const r = asRecord3(dto);
     const defaults = r.default_parameters;
     return {
-      id: str11(r.id),
-      name: str11(r.name),
-      provider: str11(r.provider),
-      model: str11(r.model),
+      id: str5(r.id),
+      name: str5(r.name),
+      provider: str5(r.provider),
+      model: str5(r.model),
       isDefault: r.is_default === true,
       defaultParameters: asRecord3(defaults),
       defaultParametersReadable: !!defaults && typeof defaults === "object" && !Array.isArray(defaults),
@@ -73034,7 +73174,7 @@ function createImageService(deps) {
   }
   function targetOf(config, info, modelOverride) {
     const generationProvider = generationProviderFromLumiverse(info.provider);
-    const model = str11(modelOverride) || config.image.model || info.model;
+    const model = str5(modelOverride) || config.image.model || info.model;
     return {
       connectionId: info.id,
       connectionName: info.name,
@@ -73056,7 +73196,7 @@ function createImageService(deps) {
   const service = {
     async resolveTarget(overrides = {}) {
       const config = await deps.loadConfig();
-      const info = await connection(str11(overrides.connectionId) || config.image.connectionId);
+      const info = await connection(str5(overrides.connectionId) || config.image.connectionId);
       return targetOf(config, info, overrides.model);
     },
     async generate(request, options = {}) {
@@ -73064,7 +73204,7 @@ function createImageService(deps) {
       if (signal?.aborted)
         throw abortError(signal.reason);
       const config = normalizeConfig(await deps.loadConfig());
-      const info = await connection(str11(request.connectionId) || config.image.connectionId);
+      const info = await connection(str5(request.connectionId) || config.image.connectionId);
       const target = targetOf(config, info, request.model);
       const prompt = String(request.prompt ?? "").trim();
       if (!prompt)
@@ -73090,7 +73230,7 @@ function createImageService(deps) {
       const callOnce = async () => {
         if (config.runtime.devPromptOnly) {
           const stored = asRecord3(await host.images.uploadFromDataUrl(PROMPT_ONLY_PLACEHOLDER, "inlay-prompt-only.png", userId));
-          return { imageId: str11(stored.id), provider: "prompt-only", model: target.model };
+          return { imageId: str5(stored.id), provider: "prompt-only", model: target.model };
         }
         await queue?.whenFree(signal);
         const pending = host.imageGen.generate(input);
@@ -73098,7 +73238,7 @@ function createImageService(deps) {
         let settled = false;
         pending.then((late) => {
           settled = true;
-          const id = str11(asRecord3(late).imageId);
+          const id = str5(asRecord3(late).imageId);
           if (abandoned && id)
             host.images.delete(id, userId).catch(() => {
               return;
@@ -73132,7 +73272,7 @@ function createImageService(deps) {
           onProgress?.({ label: attempt === 1 ? "Generating image" : `Generating image (retry ${attempt - 1}/${retries})`, labelKo: "이미지 생성 중", ...attempt > 1 ? { retry: { attempt: attempt - 1, total: retries }, retryCount: `${attempt - 1}/${retries}` } : {} });
           try {
             const result = await callOnce();
-            if (!str11(result.imageId) && !str11(result.imageDataUrl))
+            if (!str5(result.imageId) && !str5(result.imageDataUrl))
               throw new RpcFailure({ code: "provider-error", message: "The image provider returned no image.", retryable: true, detailCode: "IMAGE_EMPTY_RESULT" });
             return { result, attempts: attempt };
           } catch (error) {
@@ -73154,17 +73294,17 @@ function createImageService(deps) {
         }
       };
       const { result, attempts } = !queue ? await attemptLoop() : await queue.run(gapMs, attemptLoop, signal, (position, depth) => onProgress?.({ label: "Waiting for the image queue", labelKo: "이미지 생성 대기 중", queue: { position, depth } }));
-      const imageId = str11(result.imageId);
+      const imageId = str5(result.imageId);
       const data = mimeOfDataUrl(result.imageDataUrl);
       const out = {
         imageId,
-        url: str11(result.imageUrl) || (imageId ? `/api/v1/image-gen/results/${imageId}` : ""),
+        url: str5(result.imageUrl) || (imageId ? `/api/v1/image-gen/results/${imageId}` : ""),
         width: built.width,
         height: built.height,
         seed: built.seed === null ? "" : String(built.seed),
         provider: target.generationProvider,
-        lumiverseProvider: str11(result.provider) || target.lumiverseProvider,
-        model: str11(result.model) || target.model,
+        lumiverseProvider: str5(result.provider) || target.lumiverseProvider,
+        model: str5(result.model) || target.model,
         mimeType: data?.mimeType ?? "image/png",
         sentParameters: stripBase64ForRecord(built.parameters),
         attempts
@@ -73176,7 +73316,7 @@ function createImageService(deps) {
     async deleteImages(imageIds) {
       const out = [];
       for (const imageId of imageIds) {
-        if (!str11(imageId))
+        if (!str5(imageId))
           continue;
         try {
           out.push({ imageId, status: await host.images.delete(imageId, userId) ? "removed" : "unknown" });
@@ -73198,10 +73338,10 @@ function createImageService(deps) {
       }
     },
     async listModels(connectionId) {
-      const info = await connection(str11(connectionId));
+      const info = await connection(str5(connectionId));
       try {
         const list = asArray2(await host.imageGen.getModels(info.id, userId));
-        const models = list.map((m) => ({ id: str11(m.id), label: str11(m.label) || str11(m.id) })).filter((m) => m.id);
+        const models = list.map((m) => ({ id: str5(m.id), label: str5(m.label) || str5(m.id) })).filter((m) => m.id);
         if (info.model && !models.some((m) => m.id === info.model))
           models.unshift({ id: info.model, label: info.model });
         return models;
@@ -73214,7 +73354,7 @@ function createImageService(deps) {
       try {
         const config = await deps.loadConfig();
         cache.clear();
-        const info = await connection(str11(connectionId) || config.image.connectionId);
+        const info = await connection(str5(connectionId) || config.image.connectionId);
         await host.imageGen.getModels(info.id, userId);
         return { ok: true, latencyMs: now() - started };
       } catch (error) {
@@ -73312,7 +73452,7 @@ function declaredVisionSupport(metadata) {
   const nested = pick(capabilities, ["vision", "image", "images", "multimodal"]);
   if (nested !== null)
     return nested;
-  const modalities = [record.input_modalities, record.inputModalities, capabilities.input_modalities, capabilities.inputModalities].flatMap((v) => asArray2(v).map((x) => str11(x).toLowerCase()));
+  const modalities = [record.input_modalities, record.inputModalities, capabilities.input_modalities, capabilities.inputModalities].flatMap((v) => asArray2(v).map((x) => str5(x).toLowerCase()));
   if (modalities.includes("image") || modalities.includes("vision"))
     return true;
   if (modalities.length > 0 && modalities.every((v) => v === "text"))
@@ -73333,8 +73473,10 @@ function unsupportedVisionError(error) {
   ].some((pattern) => pattern.test(message));
 }
 function isJsonModeRejection(error) {
-  const message = errorMessage(error);
-  return /response_format|json_object|json mode|structured output/i.test(message) || httpStatusOf(error) === 400 && /format|invalid.*(?:argument|parameter)/i.test(message);
+  return /response_format|json_object|json[ _-]?mode|response_?mime_?type|structured output/i.test(errorMessage(error));
+}
+function mayBeJsonModeRejection(error) {
+  return httpStatusOf(error) === 400 && /format|invalid.*(?:argument|parameter)/i.test(errorMessage(error));
 }
 function httpStatusOf(error) {
   const r = asRecord3(error);
@@ -73358,7 +73500,7 @@ function makeAnalyzerError(message, extra) {
 function classifyLlmError(error) {
   if (error instanceof AnalyzerClientErrorClass)
     return error;
-  const code = str11(asRecord3(error).code);
+  const code = str5(asRecord3(error).code);
   if (/^ANALYZER_/.test(code))
     return makeAnalyzerError(errorMessage(error), { code, httpStatus: httpStatusOf(error), cause: error });
   const status = httpStatusOf(error);
@@ -73427,7 +73569,7 @@ function toLlmMessage(message) {
     const p = asRecord3(raw);
     if (p.type === "image") {
       const data = String(p.data ?? "").replace(/^data:[^;,]+;base64,/, "");
-      const mime = str11(p.mime_type) || str11(p.mimeType) || "image/png";
+      const mime = str5(p.mime_type) || str5(p.mimeType) || "image/png";
       if (data)
         parts.push({ type: "image", data, mime_type: mime });
     } else if (typeof p.text === "string")
@@ -73446,7 +73588,7 @@ function createLlmService(deps) {
   const connectionCache = new TtlCache(5000, 32);
   const jsonModeRejected = new Set;
   const visionCache = new Map;
-  const wait = deps.sleep ?? sleep3;
+  const wait = deps.sleep ?? sleep2;
   const log = (level, message, details) => deps.log?.append(level, "llm", message, details);
   async function resolveConnection(connectionId) {
     const key = connectionId || "\x00default";
@@ -73464,14 +73606,14 @@ function createLlmService(deps) {
     } catch (error) {
       throw new RpcFailure({ code: "provider-error", message: `Could not read the LLM connection: ${errorMessage(error)}`, detailCode: "ANALYZER_CONNECTION_MISSING" });
     }
-    if (!dto || !str11(dto.id)) {
+    if (!dto || !str5(dto.id)) {
       throw new RpcFailure({
         code: "bad-request",
         message: connectionId ? "The selected LLM connection no longer exists. Select another connection in the model settings." : "No LLM connection is configured. Add one in Lumiverse and select it in the model settings.",
         detailCode: "ANALYZER_CONNECTION_MISSING"
       });
     }
-    return connectionCache.set(key, { id: str11(dto.id), name: str11(dto.name), provider: str11(dto.provider), model: str11(dto.model), metadata: asRecord3(dto.metadata) });
+    return connectionCache.set(key, { id: str5(dto.id), name: str5(dto.name), provider: str5(dto.provider), model: str5(dto.model), metadata: asRecord3(dto.metadata) });
   }
   async function effectiveSettings(overrides) {
     const config = await deps.loadConfig();
@@ -73581,12 +73723,6 @@ function createLlmService(deps) {
           } catch (error) {
             if (isAbortLike(error) || error instanceof AnalyzerClientErrorClass)
               throw error;
-            if (jsonMode && isJsonModeRejection(error)) {
-              jsonModeRejected.add(capKey);
-              jsonMode = false;
-              log("warn", `JSON mode rejected by ${connection.provider}/${model}; resending without it.`, errorMessage(error));
-              continue;
-            }
             if (!imagesDropped && hasImages(messages) && unsupportedVisionError(error)) {
               visionCache.set(visionKey(connection, model), false);
               if (request.visionFallback === "fail")
@@ -73594,6 +73730,14 @@ function createLlmService(deps) {
               messages = dropImages(messages);
               imagesDropped = true;
               log("warn", `${model} rejected images; resending text-only (${request.purpose}).`, errorMessage(error));
+              continue;
+            }
+            if (jsonMode && (isJsonModeRejection(error) || mayBeJsonModeRejection(error))) {
+              const named = isJsonModeRejection(error);
+              if (named)
+                jsonModeRejected.add(capKey);
+              jsonMode = false;
+              log("warn", `${named ? "JSON mode rejected" : "Possible JSON mode rejection"} by ${connection.provider}/${model}; resending without it.`, errorMessage(error));
               continue;
             }
             throw classifyLlmError(error);
@@ -73649,7 +73793,7 @@ function createLlmService(deps) {
           const timeoutMs = Number(o.timeoutMs);
           const maxOutputTokens = Number(o.maxOutputTokens ?? o.maxTokens);
           const result = await run({
-            purpose: str11(o.purpose) || clientOptions.purpose || "analyzer",
+            purpose: str5(o.purpose) || clientOptions.purpose || "analyzer",
             messages: messages.map(toLlmMessage),
             responseMode: o.responseMode === "text" ? "text" : "json",
             ...o.structuredOutputSchema && typeof o.structuredOutputSchema === "object" ? { schema: o.structuredOutputSchema } : {},
@@ -73669,23 +73813,19 @@ function createLlmService(deps) {
       const { settings } = await effectiveSettings(overrides);
       if (settings.vision !== "auto")
         return settings.vision === "supported";
-      try {
-        const connection = await resolveConnection(settings.connectionId);
-        return visionFor(settings, connection, settings.model || connection.model);
-      } catch {
-        return false;
-      }
+      const connection = await resolveConnection(settings.connectionId);
+      return visionFor(settings, connection, settings.model || connection.model);
     },
     async listConnections() {
       try {
         const list = asArray2(await host.connections.list(userId));
-        return list.map((c) => ({ id: str11(c.id), name: str11(c.name), provider: str11(c.provider), model: str11(c.model), isDefault: c.is_default === true, hasApiKey: c.has_api_key === true }));
+        return list.map((c) => ({ id: str5(c.id), name: str5(c.name), provider: str5(c.provider), model: str5(c.model), isDefault: c.is_default === true, hasApiKey: c.has_api_key === true }));
       } catch (error) {
         throw new RpcFailure({ code: "provider-error", message: `Could not list LLM connections: ${errorMessage(error)}` });
       }
     },
     async listModels(connectionId) {
-      const connection = await resolveConnection(str11(connectionId));
+      const connection = await resolveConnection(str5(connectionId));
       const out = [];
       const seen = new Set;
       const add = (id, label = id) => {
@@ -73704,7 +73844,7 @@ function createLlmService(deps) {
           const labels = asRecord3(result.model_labels);
           for (const id of asArray2(result.models))
             if (typeof id === "string")
-              add(id, str11(labels[id]) || id);
+              add(id, str5(labels[id]) || id);
         }
       } catch (error) {
         log("warn", `Model list of ${connection.name || connection.id} unavailable.`, errorMessage(error));
@@ -73714,7 +73854,7 @@ function createLlmService(deps) {
     async testMessage(text, settings) {
       const started = Date.now();
       try {
-        const result = await run({ purpose: "message-test", messages: [{ role: "user", content: str11(text) || DEFAULT_TEST_MESSAGE }], responseMode: "text", retries: 0, ...settings ? { settings } : {} }, {}, 0);
+        const result = await run({ purpose: "message-test", messages: [{ role: "user", content: str5(text) || DEFAULT_TEST_MESSAGE }], responseMode: "text", retries: 0, ...settings ? { settings } : {} }, {}, 0);
         return { ok: true, latencyMs: Date.now() - started, reply: result.raw };
       } catch (error) {
         const rpc = isAbortLike(error) ? { code: "cancelled", message: "The test was cancelled." } : error instanceof RpcFailure ? error.error : llmErrorToRpc(classifyLlmError(error));
@@ -73814,13 +73954,13 @@ var UUID_RE2 = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/iu;
 var CHARACTER_WORDS = ["character", "profile", "identity", "persona", "appearance", "personality", "speech", "body", "face", "hair", "eyes"];
 var WORLD_WORDS = ["world", "setting", "location", "school", "system", "rule", "rules", "scenario", "background", "plot"];
 function lowerSpace(value) {
-  return str11(value).toLocaleLowerCase().replace(/\s+/g, " ").trim();
+  return str5(value).toLocaleLowerCase().replace(/\s+/g, " ").trim();
 }
 function uniqueTrimmed(values) {
-  return [...new Set(values.map(str11).filter(Boolean))];
+  return [...new Set(values.map(str5).filter(Boolean))];
 }
 function displayName(name, fallback) {
-  const n = str11(name) || fallback;
+  const n = str5(name) || fallback;
   return UUID_RE2.test(n) ? fallback : n;
 }
 function memberAliases(values) {
@@ -73835,23 +73975,23 @@ function memberAliases(values) {
   return [...out].filter((a) => a.length >= 2);
 }
 function sourceSummary(c) {
-  const d = str11(c.description);
+  const d = str5(c.description);
   return [
     d ? `Description:
 ${d.slice(0, 1200)}` : "",
     c.personality ? `Personality:
-${str11(c.personality).slice(0, 800)}` : "",
+${str5(c.personality).slice(0, 800)}` : "",
     c.scenario ? `Scenario:
-${str11(c.scenario).slice(0, 800)}` : "",
+${str5(c.scenario).slice(0, 800)}` : "",
     c.creatorNotes ? `Notes:
-${str11(c.creatorNotes).slice(0, 800)}` : ""
+${str5(c.creatorNotes).slice(0, 800)}` : ""
   ].filter(Boolean).join(`
 
 `);
 }
 function splitLoreKeys2(values) {
   const list = Array.isArray(values) ? values : [values];
-  return uniqueTrimmed(list.flatMap((v) => str11(v).split(/[,;\n|]+/g)));
+  return uniqueTrimmed(list.flatMap((v) => str5(v).split(/[,;\n|]+/g)));
 }
 function loreScore(entry, aliases) {
   const title = lowerSpace([entry.comment, entry.keys.join(","), entry.secondaryKeys.join(",")].filter(Boolean).join(" "));
@@ -73870,19 +74010,19 @@ function loreScore(entry, aliases) {
     score += 1;
   if (WORLD_WORDS.some((w) => title.includes(w)) && !aliases.some((a) => both.includes(a)))
     score -= 3;
-  if (!str11(entry.content))
+  if (!str5(entry.content))
     score -= 2;
   return score;
 }
 function isAssetMaidOwned(entry) {
-  const comment = str11(entry.comment);
+  const comment = str5(entry.comment);
   return comment === "__ASSET_MAID_DATA__" || comment === "__ASSET_MAID_BACKUP__" || entry.entryId === "asset-maid:data" || entry.entryId.startsWith("asset-maid:quarantine:");
 }
 function loreRecordsOf(entries, aliases, source) {
   return entries.flatMap((entry, index) => {
     if (entry.disabled || isAssetMaidOwned(entry))
       return [];
-    const content = str11(entry.content);
+    const content = str5(entry.content);
     if (!content)
       return [];
     const primaryKeys = splitLoreKeys2(entry.keys);
@@ -73893,7 +74033,7 @@ function loreRecordsOf(entries, aliases, source) {
         kind: "lorebook",
         id,
         selectionId: id,
-        title: str11(entry.comment) || primaryKeys.join(", ") || `Lore ${index + 1}`,
+        title: str5(entry.comment) || primaryKeys.join(", ") || `Lore ${index + 1}`,
         keys: uniqueTrimmed([...primaryKeys, ...secondaryKeys]),
         primaryKeys,
         secondaryKeys,
@@ -73911,7 +74051,7 @@ function loreRecordsOf(entries, aliases, source) {
   }).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 }
 function descriptionLore(name, description) {
-  const content = str11(description);
+  const content = str5(description);
   if (!content)
     return null;
   const keys = uniqueTrimmed([name]);
@@ -73930,7 +74070,7 @@ function dedupe(...lists) {
 function assetGenerationSignature(sourceId, activeModuleIds, shared, members, chatAssets) {
   let h = 2166136261;
   const feed = (value) => {
-    const s = str11(value);
+    const s = str5(value);
     for (let i = 0;i < s.length; i += 1) {
       h ^= s.charCodeAt(i);
       h = Math.imul(h, 16777619);
@@ -73971,7 +74111,7 @@ function extensionOf2(name, mime) {
   const fromName = name.includes(".") ? name.split(".").at(-1).toLowerCase() : "";
   if (IMAGE_EXTENSIONS.has(fromName))
     return fromName;
-  const m = str11(mime).toLowerCase();
+  const m = str5(mime).toLowerCase();
   if (m.includes("jpeg") || m.includes("jpg"))
     return "jpg";
   if (m.includes("webp"))
@@ -74020,14 +74160,14 @@ function createSourcesService(deps) {
   }
   function toCharacterInfo(dto) {
     return {
-      characterId: str11(dto.id),
-      name: str11(dto.name),
+      characterId: str5(dto.id),
+      name: str5(dto.name),
       description: String(dto.description ?? ""),
       personality: String(dto.personality ?? ""),
       scenario: String(dto.scenario ?? ""),
       creatorNotes: String(dto.creator_notes ?? ""),
-      tags: asArray2(dto.tags).map(str11).filter(Boolean),
-      avatarImageId: str11(dto.image_id) || null,
+      tags: asArray2(dto.tags).map(str5).filter(Boolean),
+      avatarImageId: str5(dto.image_id) || null,
       worldBookIds: uniqueTrimmed(asArray2(dto.world_book_ids)),
       extensions: asRecord3(dto.extensions)
     };
@@ -74036,21 +74176,21 @@ function createSourcesService(deps) {
     const metadata = asRecord3(dto.metadata);
     const group = metadata.group === true || metadata.group === 1;
     return {
-      chatId: str11(dto.id),
-      characterId: str11(dto.character_id),
+      chatId: str5(dto.id),
+      characterId: str5(dto.character_id),
       groupCharacterIds: group ? uniqueTrimmed(asArray2(metadata.character_ids)) : [],
-      personaId: str11(metadata.persona_id) || null,
+      personaId: str5(metadata.persona_id) || null,
       metadata
     };
   }
   function toPersonaInfo(dto) {
     return {
-      personaId: str11(dto.id),
-      name: str11(dto.name),
+      personaId: str5(dto.id),
+      name: str5(dto.name),
       description: String(dto.description ?? ""),
-      avatarImageId: str11(dto.image_id) || null,
+      avatarImageId: str5(dto.image_id) || null,
       isDefault: dto.is_default === true,
-      attachedWorldBookId: str11(dto.attached_world_book_id) || null,
+      attachedWorldBookId: str5(dto.attached_world_book_id) || null,
       metadata: asRecord3(dto.metadata)
     };
   }
@@ -74080,17 +74220,17 @@ function createSourcesService(deps) {
     return cached(`wb:${worldBookId}`, async () => {
       try {
         const dto = asRecord3(await host.world_books.get(worldBookId, userId));
-        if (!str11(dto.id))
+        if (!str5(dto.id))
           return null;
         const raw = await paged((offset) => host.world_books.entries.list(worldBookId, { limit: PAGE2, offset, ...userId ? { userId } : {} }));
         const entries = raw.map((e) => {
           const r = asRecord3(e);
           return {
             worldBookId,
-            entryId: str11(r.id),
+            entryId: str5(r.id),
             comment: String(r.comment ?? ""),
-            keys: asArray2(r.key).map(str11).filter(Boolean),
-            secondaryKeys: asArray2(r.keysecondary).map(str11).filter(Boolean),
+            keys: asArray2(r.key).map(str5).filter(Boolean),
+            secondaryKeys: asArray2(r.keysecondary).map(str5).filter(Boolean),
             content: String(r.content ?? ""),
             disabled: r.disabled === true,
             constant: r.constant === true,
@@ -74099,7 +74239,7 @@ function createSourcesService(deps) {
             order: Number(r.order_value) || 0
           };
         });
-        return { name: str11(dto.name) || worldBookId, entries: entries.filter((e) => e.entryId) };
+        return { name: str5(dto.name) || worldBookId, entries: entries.filter((e) => e.entryId) };
       } catch (error) {
         log("warn", `World book ${worldBookId} unavailable.`, errorMessage(error));
         return null;
@@ -74131,12 +74271,12 @@ function createSourcesService(deps) {
       const list = await cached("characters", () => paged((offset) => host.characters.list({ limit: PAGE2, offset, ...userId ? { userId } : {} })));
       const rows = list.map((c) => asRecord3(c));
       return mapLimit(rows, 8, async (dto) => {
-        const characterId = str11(dto.id);
+        const characterId = str5(dto.id);
         const [chatCount, hasDocument] = await Promise.all([chatCountOf(characterId), deps.storage ? deps.storage.hasCharacterDocument(characterId).catch(() => false) : Promise.resolve(false)]);
         return {
           characterId,
           name: displayName(dto.name, "Character"),
-          avatarUrl: str11(dto.image_id) ? `/api/v1/characters/${encodeURIComponent(characterId)}/avatar?size=sm` : null,
+          avatarUrl: str5(dto.image_id) ? `/api/v1/characters/${encodeURIComponent(characterId)}/avatar?size=sm` : null,
           hasDocument,
           chatCount,
           worldBookIds: uniqueTrimmed(asArray2(dto.world_book_ids))
@@ -74144,7 +74284,7 @@ function createSourcesService(deps) {
       });
     },
     async getCharacter(characterId) {
-      return toCharacterInfo(await getCharacterDto(str11(characterId)));
+      return toCharacterInfo(await getCharacterDto(str5(characterId)));
     },
     async getActiveChat() {
       try {
@@ -74154,7 +74294,7 @@ function createSourcesService(deps) {
         return null;
       }
     },
-    getChat: (chatId) => chatInfo(str11(chatId)),
+    getChat: (chatId) => chatInfo(str5(chatId)),
     async loadWorldBooks(characterId, document2, options = {}) {
       const character = await service.getCharacter(characterId);
       const order = [];
@@ -74175,13 +74315,13 @@ function createSourcesService(deps) {
           chat = active;
       }
       for (const id of asArray2(chat?.metadata.chat_world_book_ids))
-        push(str11(id), "chat");
+        push(str5(id), "chat");
       try {
         for (const id of asArray2(await host.world_books.getGlobal(userId)))
-          push(str11(id), "global");
+          push(str5(id), "global");
       } catch {}
       for (const id of document2.characterPrompt.activeModules[characterId] ?? [])
-        push(str11(id), "extra");
+        push(str5(id), "extra");
       const books = await mapLimit(order, 6, async ({ id, scope }) => {
         const book = await worldBook(id);
         return book ? { worldBookId: id, name: book.name, scope, entries: book.entries } : null;
@@ -74196,7 +74336,7 @@ function createSourcesService(deps) {
         const all = await cached("worldbooks", () => paged((offset) => host.world_books.list({ limit: PAGE2, offset, ...userId ? { userId } : {} })));
         for (const raw of all) {
           const dto = asRecord3(raw);
-          const id = str11(dto.id);
+          const id = str5(dto.id);
           if (!id || out.some((s) => s.worldBookId === id))
             continue;
           const total = await cached(`wbcount:${id}`, async () => {
@@ -74206,7 +74346,7 @@ function createSourcesService(deps) {
               return 0;
             }
           });
-          out.push({ worldBookId: id, name: str11(dto.name) || id, attached: false, connected: connected.has(id), entryCount: total, scope: "extra" });
+          out.push({ worldBookId: id, name: str5(dto.name) || id, attached: false, connected: connected.has(id), entryCount: total, scope: "extra" });
         }
       } catch (error) {
         log("warn", "World book list unavailable.", errorMessage(error));
@@ -74308,7 +74448,7 @@ function createSourcesService(deps) {
         const add = (origin, imageId, name, extra = {}) => {
           if (!imageId || seen.has(imageId))
             return;
-          const cleanName = str11(name) || imageId;
+          const cleanName = str5(name) || imageId;
           if (cleanName.startsWith(CROP_ASSET_NAME_PREFIX))
             return;
           seen.add(imageId);
@@ -74334,7 +74474,7 @@ function createSourcesService(deps) {
             const gallery = viaBridge ? asArray2(await deps.imageBytes.getJson(`/api/v1/characters/${encodeURIComponent(characterId)}/gallery`, { timeoutMs: 15000 })) : await host.characters.getGallery(characterId, userId);
             for (const raw of gallery) {
               const g = asRecord3(raw);
-              add("gallery", str11(g.image_id), str11(g.caption) || str11(g.reference) || `gallery-${str11(g.id)}`, { mime: str11(g.mime_type), width: Number(g.width) || null, height: Number(g.height) || null });
+              add("gallery", str5(g.image_id), str5(g.caption) || str5(g.reference) || `gallery-${str5(g.id)}`, { mime: str5(g.mime_type), width: Number(g.width) || null, height: Number(g.height) || null });
             }
           } catch (error) {
             log("warn", `Gallery of ${characterId} unavailable${viaBridge ? " (the overlay must be open to read it)" : ""}.`, errorMessage(error));
@@ -74342,18 +74482,18 @@ function createSourcesService(deps) {
         }
         const expressions = asRecord3(asRecord3(character.extensions.expressions).mappings);
         for (const [label, imageId] of Object.entries(expressions))
-          add("expression", str11(imageId), label);
+          add("expression", str5(imageId), label);
         const risu = asRecord3(character.extensions.risu_asset_map);
         for (const [assetName, imageId] of Object.entries(risu))
-          add("risu-asset", str11(imageId), assetName);
+          add("risu-asset", str5(imageId), assetName);
         if (options.includeGenerated !== false) {
           try {
             const generated = await paged((offset) => host.images.list({ characterId, onlyOwned: true, limit: PAGE2, offset, ...userId ? { userId } : {} }));
             for (const raw of generated) {
               const img = asRecord3(raw);
-              add("generated", str11(img.id), str11(img.original_filename) || str11(img.id), { mime: str11(img.mime_type), width: Number(img.width) || null, height: Number(img.height) || null, generated: true });
+              add("generated", str5(img.id), str5(img.original_filename) || str5(img.id), { mime: str5(img.mime_type), width: Number(img.width) || null, height: Number(img.height) || null, generated: true });
               const last = out.at(-1);
-              if (last && last.imageId === str11(img.id) && last.kind === "outfit" && str11(img.owner_chat_id) && assetKindOfName(last.name) === "original")
+              if (last && last.imageId === str5(img.id) && last.kind === "outfit" && str5(img.owner_chat_id) && assetKindOfName(last.name) === "original")
                 last.kind = "chat";
             }
           } catch (error) {
@@ -74729,6 +74869,19 @@ function createStorageService(host, userId, options = {}) {
 }
 
 // src/backend/services/decisions.ts
+function jevErrorStatus(error) {
+  const status = httpStatusOf(error);
+  if (status >= 400)
+    return status;
+  const message = errorMessage(error);
+  if (message.startsWith("PERMISSION_DENIED:"))
+    return 403;
+  if (/rate.?limit|too many requests/i.test(message))
+    return 429;
+  if (/not found|no longer exists|invalid/i.test(message))
+    return 400;
+  return 502;
+}
 function createDecisionService(host, log, defaultUserId) {
   return {
     async listConnections(options = {}) {
@@ -74813,21 +74966,29 @@ function createDecisionService(host, log, defaultUserId) {
       return {
         network: {
           fetch: async (_url, init) => {
-            const api = host.decisions;
-            if (!api?.evaluate) {
-              throw new Error("JEV_UNAVAILABLE: Lumiverse decisions API is not available on this host.");
+            try {
+              const api = host.decisions;
+              if (!api?.evaluate) {
+                throw new Error("JEV_UNAVAILABLE: Lumiverse decisions API is not available on this host.");
+              }
+              const body = JSON.parse(String(init.body));
+              const currentCfg = getConfig();
+              const effectiveUserId = adapterOptions.userId ?? defaultUserId;
+              const res = await api.evaluate({
+                connection_id: currentCfg.connectionId || undefined,
+                model: body.model,
+                state: body.state,
+                questions: body.questions,
+                ...effectiveUserId ? { userId: effectiveUserId } : {}
+              }, { signal: init.signal });
+              return new Response(JSON.stringify({ model: res.model, answers: res.answers, usage: res.usage ?? {} }), { status: 200 });
+            } catch (err) {
+              if (init.signal?.aborted)
+                throw err;
+              const message = errorMessage(err);
+              log.append("error", "decision", `JEV decision request failed: ${message}`);
+              return new Response(JSON.stringify({ error: message }), { status: jevErrorStatus(err) });
             }
-            const body = JSON.parse(String(init.body));
-            const currentCfg = getConfig();
-            const effectiveUserId = adapterOptions.userId ?? defaultUserId;
-            const res = await api.evaluate({
-              connection_id: currentCfg.connectionId || undefined,
-              model: body.model,
-              state: body.state,
-              questions: body.questions,
-              ...effectiveUserId ? { userId: effectiveUserId } : {}
-            }, { signal: init.signal });
-            return new Response(JSON.stringify({ model: res.model, answers: res.answers, usage: res.usage ?? {} }), { status: 200 });
           }
         },
         getConfig: () => ({ ...getConfig(), apiKey: "lumiverse" })
@@ -74912,14 +75073,28 @@ function createServicesRegistry(host, factory = createServices) {
 
 // src/backend/runtime.ts
 function createBackendRuntime(options) {
-  const registry = createServicesRegistry(options.host, options.createServices);
+  const servicesByUser = createServicesRegistry(options.host, options.createServices);
   const modulesByUser = new Map;
+  let first = null;
+  let owner;
+  const runtimeUser = (userId) => {
+    if (first === null)
+      first = userId;
+    owner ??= userId;
+    return userId === undefined || userId === owner ? first : userId;
+  };
+  const registry = {
+    get: (userId) => servicesByUser.get(runtimeUser(userId)),
+    acceptFrontendMessage: (payload, userId) => servicesByUser.acceptFrontendMessage(payload, runtimeUser(userId)),
+    all: () => servicesByUser.all()
+  };
   const modules = (userId) => {
-    const key = userId ?? "";
+    const user = runtimeUser(userId);
+    const key = user ?? "";
     let current = modulesByUser.get(key);
     if (current)
       return current;
-    const services = registry.get(userId);
+    const services = servicesByUser.get(user);
     current = {};
     modulesByUser.set(key, current);
     const get = () => modulesByUser.get(key);

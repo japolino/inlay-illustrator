@@ -600,6 +600,8 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
     // After a disconnect (AppController.resync) every shown message state is re-read: its events may have been lost.
     if (s.resyncCount !== lastResync) {
       lastResync = s.resyncCount;
+      // A regeneration that left the job list ended meanwhile (its generation.finished was lost): stop its spinner.
+      for (const jobId of [...regenJobs.keys()]) if (!s.generationJobs[jobId]) regenJobs.delete(jobId);
       void fetchStates([...new Set([...states.keys(), ...listBubbles().map((b) => b.messageId)])]);
     }
     if (s.generationJobs !== lastJobs || s.chatImageGeneration !== lastSettings) {

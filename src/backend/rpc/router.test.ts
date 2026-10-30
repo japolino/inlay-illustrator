@@ -30,6 +30,23 @@ describe("rpc router", () => {
     expect(contexts[1]!.meta).toEqual({ method: "session.hello", requestId: "r2", frontendSessionId: "s1", clientId: "c9" });
   });
 
+  test("addresses the response to the frontend session that sent the request", async () => {
+    const sent: Array<{ requestId: string; userId?: string; options?: { frontendSessionId?: string } }> = [];
+    const router = createRouter({
+      host: { sendToFrontend: (payload: any, userId?: string, options?: { frontendSessionId?: string }) => void sent.push({ requestId: payload.requestId, userId, options }) },
+      getContext: () => ({ ...createFakeServices().services, modules: {} }) as RpcContext,
+      handlers: { "logs.clear": () => ({ ok: true as const }) },
+    });
+    await router.handleFrontendMessage(createRequest("logs.clear", {}, "r1"), "u1", "tab-2");
+    await router.handleFrontendMessage(createRequest("logs.list", {}, "r2"), "u1", "tab-1");
+    await router.handleFrontendMessage(createRequest("logs.clear", {}, "r3"), "u1");
+    expect(sent).toEqual([
+      { requestId: "r1", userId: "u1", options: { frontendSessionId: "tab-2" } },
+      { requestId: "r2", userId: "u1", options: { frontendSessionId: "tab-1" } },
+      { requestId: "r3", userId: "u1", options: undefined },
+    ]);
+  });
+
   test("ignores non-RPC payloads", async () => {
     const { router, sent } = setup({});
     expect(await router.handleFrontendMessage({ type: "get_state" }, "u1")).toBe(false);

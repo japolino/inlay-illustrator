@@ -81,4 +81,32 @@ describe("DecisionService", () => {
     expect(await res.json()).toEqual({ model: "typesafe/jev-latest", answers: { q1: { type: "noul", noul: 1 } }, usage: { input_tokens: 3, output_tokens: 1 } });
     expect(capturedInput).toMatchObject({ connection_id: "dec-1", model: "typesafe/jev-latest", userId: "test-user-789" });
   });
+
+  test("createJevAdapter answers host decision errors with a TypeSafe-style status and logs the host message", async () => {
+    const fake = createFakeHost({ userId: "test-user-789" });
+    let hostError: unknown;
+    (fake.host.decisions as any).evaluate = async () => {
+      throw hostError;
+    };
+    const log = createRunLog({ events: createEventBus(fake.host, fake.userId), host: fake.host });
+    const adapter = createDecisionService(fake.host, log, fake.userId).createJevAdapter(() => ({ connectionId: "dec-1", model: "typesafe/jev-latest", rosterSelectionDefault: true }));
+    const send = (signal?: AbortSignal) => adapter.network.fetch("https://api.typesafe.ai/v1/systemone", { method: "POST", headers: {}, body: JSON.stringify({ model: "m", state: "s", questions: {} }), signal });
+
+    const statusOf = async (error: unknown) => {
+      hostError = error;
+      return (await send()).status;
+    };
+    expect(await statusOf(new Error("TypeSafe decision request failed (401): Unauthorized"))).toBe(401);
+    expect(await statusOf(new Error("PERMISSION_DENIED: decisions - Decision model permission not granted"))).toBe(403);
+    expect(await statusOf(new Error("Rate limit exceeded"))).toBe(429);
+    expect(await statusOf(new Error("Decision connection not found"))).toBe(400);
+    expect(await statusOf(new Error("socket closed"))).toBe(502);
+    expect(log.list().map((e) => e.message)).toContain("JEV decision request failed: PERMISSION_DENIED: decisions - Decision model permission not granted");
+
+    // An aborted request still throws, so AM reports its own cancel / timeout.
+    const controller = new AbortController();
+    controller.abort();
+    hostError = new DOMException("aborted", "AbortError");
+    await expect(send(controller.signal)).rejects.toThrow("aborted");
+  });
 });

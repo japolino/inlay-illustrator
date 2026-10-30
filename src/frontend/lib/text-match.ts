@@ -25,7 +25,9 @@ function conjoiningToCompat(char: string): string {
 }
 
 export function normalizeSearchText(value: string): string {
-  const nfkc = value.normalize("NFKC").toLocaleLowerCase();
+  // Locale-independent lower case; "İ" lower-cases to "i" + U+0307 and dotless "ı" stays, so fold both to a plain "i"
+  // ("ırmak" typed on a Turkish keyboard finds "Irmak", "yilmaz" finds "Yılmaz").
+  const nfkc = value.normalize("NFKC").toLowerCase().replace(/i\u0307|\u0131/gu, "i");
   return /[\u1100-\u11ff]/u.test(nfkc) ? Array.from(nfkc, conjoiningToCompat).join("") : nfkc;
 }
 

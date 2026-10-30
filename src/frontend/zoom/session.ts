@@ -103,13 +103,15 @@ export function useZoomSession(app: AppController, initial: ZoomTarget, onClose:
     }
   }, [app]);
 
-  const loadGroups = useCallback(async (chatId: string) => {
+  const loadGroups = useCallback(async (chatId: string): Promise<ZoomImageGroup[] | null> => {
     try {
       const { messages } = await app.call("chatDom.getMessageStates", { chatId });
-      setGroups(buildImageGroups(messages));
+      const next = buildImageGroups(messages);
+      setGroups(next);
       setGroupsLoaded(true);
+      return next;
     } catch {
-      // keep the previous list
+      return null; // keep the previous list
     }
   }, [app]);
 
@@ -194,10 +196,8 @@ export function useZoomSession(app: AppController, initial: ZoomTarget, onClose:
       if (!revisionId || busy) return;
       const ok = await run("revision", () => app.call("history.selectRevision", { chatId: target.chatId, messageKey: group.messageKey, revisionId }), ZOOM_LABELS.saveDraftFailed);
       if (ok === undefined) return;
-      const { messages } = await app.call("chatDom.getMessageStates", { chatId: target.chatId }).catch(() => ({ messages: [] }));
-      const nextGroups = buildImageGroups(messages);
-      setGroups(nextGroups);
-      const group2 = nextGroups.find((g) => g.messageKey === group.messageKey);
+      const nextGroups = await loadGroups(target.chatId);
+      const group2 = nextGroups?.find((g) => g.messageKey === group.messageKey);
       const current = group.items.find((i) => i.slotId === target.slotId);
       const same = group2?.items.find((i) => current && i.slotIndex === current.slotIndex) ?? group2?.items[0];
       if (same) select(same);

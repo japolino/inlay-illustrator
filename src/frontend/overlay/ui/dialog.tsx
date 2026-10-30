@@ -13,7 +13,7 @@ export type DialogProps = {
   /** Footer row (buttons), right-aligned. */
   footer?: ComponentChildren;
   showCloseButton?: boolean;
-  /** Close on backdrop click (default true). */
+  /** Close on backdrop click and Escape (default true). */
   dismissible?: boolean;
   className?: string;
   role?: "dialog" | "alertdialog";
@@ -30,7 +30,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descriptionId = useId();
-  useLayer(open, () => onOpenChange(false));
+  useLayer(open, () => (dismissible ? onOpenChange(false) : false));
   useFocusTrap(panel, open, initialFocus);
   if (!open) return null;
   return (

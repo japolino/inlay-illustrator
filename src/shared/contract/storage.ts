@@ -53,6 +53,8 @@ export const STORAGE_PATHS = {
   characterMetadataCache: (characterId: string) => `characters/${safePathSegment(characterId)}/metadata-cache.json`,
   /** Cropped reference PNGs (AM `__asset_maid_crop_*` assets). */
   characterReferenceCrop: (characterId: string, cropName: string) => `characters/${safePathSegment(characterId)}/reference-crops/${safePathSegment(cropName)}.png`,
+  /** Outfit auto-picker state: naming scheme, groups, tags, applied outfits (Inlay addition, contract autopick.ts). */
+  characterAutoPick: (characterId: string) => `characters/${safePathSegment(characterId)}/autopick.json`,
   characterDir: (characterId: string) => `characters/${safePathSegment(characterId)}/`,
   /** Per-chat data: messages/jobs store + Image History + plans + actor state (AM chat localLore entries). */
   chatData: (chatId: string) => `chats/${safePathSegment(chatId)}/chat-data.json`,
@@ -65,9 +67,14 @@ export const STORAGE_PATHS = {
 
 /** Prefixes listed for a full reset (AM factory reset deletes every `asset_maid:v1:*` key). */
 export const STORAGE_RESET_PREFIXES = ["config/", "characters/", "chats/", "uploads/", "puppets/", STORAGE_SCHEMA_PATH] as const;
-/** Per-character reset (AM "reset current charx"): character document, metadata cache, crops. Chats and images stay. */
+/** Per-character reset (AM "reset current charx"): character document, metadata cache, crops, auto-pick state. Chats and images stay. */
 export function characterResetPaths(characterId: string): string[] {
-  return [STORAGE_PATHS.characterDocument(characterId), STORAGE_PATHS.characterMetadataCache(characterId), `${STORAGE_PATHS.characterDir(characterId)}reference-crops/`];
+  return [
+    STORAGE_PATHS.characterDocument(characterId),
+    STORAGE_PATHS.characterMetadataCache(characterId),
+    `${STORAGE_PATHS.characterDir(characterId)}reference-crops/`,
+    STORAGE_PATHS.characterAutoPick(characterId),
+  ];
 }
 
 /**

@@ -1,33 +1,43 @@
 import { createContext, createPortal, type ComponentChildren } from "preact";
-import { useContext, useEffect, useRef } from "preact/hooks";
+import { useContext, useEffect, useLayoutEffect, useRef } from "preact/hooks";
+
+/** Closes an Escape layer; returning false keeps it open and on the stack (e.g. while it is busy). */
+export type LayerClose = () => void | false;
 
 /**
  * Escape layers inside the overlay. The top-most layer closes first; the
  * overlay itself is closed only when the stack is empty.
  */
 export class LayerStack {
-  private readonly layers: Array<{ id: number; close: () => void }> = [];
+  private readonly layers: Array<{ id: number; close: LayerClose }> = [];
   private nextId = 1;
 
-  push(close: () => void): () => void {
+  push(close: LayerClose): () => void {
     const id = this.nextId++;
     this.layers.push({ id, close });
-    return () => {
-      const index = this.layers.findIndex((layer) => layer.id === id);
-      if (index >= 0) this.layers.splice(index, 1);
-    };
+    return () => this.remove(id);
   }
 
   get size(): number {
     return this.layers.length;
   }
 
-  /** Closes the top-most layer. Returns false when the stack is empty. */
+  /** Closes the top-most layer (a layer that stays open still takes the key). Returns false when the stack is empty. */
   closeTop(): boolean {
-    const top = this.layers.pop();
+    const top = this.layers[this.layers.length - 1];
     if (!top) return false;
-    top.close();
+    if (top.close() !== false) this.remove(top.id);
     return true;
+  }
+
+  /** Closes every layer, top first, including those that would stay open (their host is going away). */
+  closeAll(): void {
+    for (let top = this.layers.pop(); top; top = this.layers.pop()) top.close();
+  }
+
+  private remove(id: number): void {
+    const index = this.layers.findIndex((layer) => layer.id === id);
+    if (index >= 0) this.layers.splice(index, 1);
   }
 }
 
@@ -45,12 +55,15 @@ export function useOverlayEnvironment(): OverlayEnvironment {
   return useContext(OverlayEnvironmentContext);
 }
 
-/** Registers an Escape layer while `active` is true. */
-export function useLayer(active: boolean, onClose: () => void): void {
+/**
+ * Registers an Escape layer while `active` is true; `onClose` returns false to stay open. A layout effect
+ * keeps the stack in step with the commit, so an Escape pressed before the next paint already sees it.
+ */
+export function useLayer(active: boolean, onClose: LayerClose): void {
   const { layers } = useOverlayEnvironment();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!active) return undefined;
     return layers.push(() => closeRef.current());
   }, [active, layers]);

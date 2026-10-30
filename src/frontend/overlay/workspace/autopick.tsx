@@ -145,7 +145,8 @@ export function AutoPickDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   const jobs = useMemo(() => planSheets(state?.groups ?? [], picked, (g) => value(g).candidate), [state, chosen, edits]);
   const sheetCount = jobs.reduce((n, job) => n + job.length, 0);
   const tileCount = jobs.reduce((n, job) => n + job.reduce((m, sheet) => m + sheet.length, 0), 0);
-  const toAdd = (state?.groups ?? []).filter((g) => g.promptKey && value(g).checked);
+  // Only the chosen characters' cards are shown: a hidden card cannot be reviewed or unchecked.
+  const toAdd = (state?.groups ?? []).filter((g) => g.promptKey && picked.has(g.promptKey) && value(g).checked);
   const busy = !!running || !!tagging || applying;
 
   const edit = (id: string, patch: Edit) => setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch, parts: { ...prev[id]?.parts, ...patch.parts } } }));

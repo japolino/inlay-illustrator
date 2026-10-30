@@ -28,6 +28,8 @@ export interface CoordinateBoardState {
 
 export interface StageProps {
   url: string;
+  /** The url is not known yet (details still loading): an empty url is not an error. */
+  pending?: boolean;
   alt: string;
   width: number;
   height: number;
@@ -41,7 +43,7 @@ export interface StageProps {
   children?: ComponentChildren;
 }
 
-export function Stage({ url, alt, width, height, canStep, onStep, compact, onTap, board, bottomInset = 0, children }: StageProps) {
+export function Stage({ url, pending, alt, width, height, canStep, onStep, compact, onTap, board, bottomInset = 0, children }: StageProps) {
   const stage = useRef<HTMLElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [rect, setRect] = useState<Rect | null>(null);
@@ -49,8 +51,8 @@ export function Stage({ url, alt, width, height, canStep, onStep, compact, onTap
   const natural = useRef({ w: width, h: height });
 
   useEffect(() => {
-    setStatus(url ? "loading" : "error");
-  }, [url]);
+    setStatus(url || pending ? "loading" : "error");
+  }, [url, pending]);
 
   useLayoutEffect(() => {
     const el = stage.current;
@@ -92,7 +94,7 @@ export function Stage({ url, alt, width, height, canStep, onStep, compact, onTap
           onError={() => setStatus("error")}
         />
       ) : null}
-      {status === "loading" && url ? (
+      {status === "loading" && (url || pending) ? (
         <div class="absolute inset-0 grid place-items-center text-muted-foreground" role="status" aria-label={ZOOM_LABELS.loadingImage}><LoaderIcon className="size-6" /></div>
       ) : null}
       {status === "error" ? (

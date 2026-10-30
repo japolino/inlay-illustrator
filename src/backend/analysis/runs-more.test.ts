@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { LlmCompleteRequest } from "../services/types.js";
-import { inspectMetadata } from "./assets.js";
+import { assetUrl, inspectMetadata, saveCrop } from "./assets.js";
+import { base64ToBytes, openAnalysisSession } from "./bridge/session.js";
 import { AnalysisJobs } from "./jobs.js";
 import { runAnalysis } from "./runs.js";
 import { setRosterRegistered } from "./workspace.js";
-import { ALICE, CHAR, NAI_PNG, asset, createAnalysisFixture } from "./testing/fixtures.js";
+import { ALICE, CHAR, NAI_PNG, asset, createAnalysisFixture, pngWithText } from "./testing/fixtures.js";
 import { readFileSync } from "node:fs";
 
 const data = (f: string) => readFileSync(new URL(`./data/${f}`, import.meta.url), "utf8");
@@ -90,6 +91,18 @@ describe("metadata + artist + matching (AM Int / Mvt / $vt / Uwt)", () => {
     const out = await jobs.start("references", CHAR, (ctx) => runAnalysis(ctx, { kind: "references", characterId: CHAR, evidenceMode: "image", promptKeys: [ALICE] })).done;
     expect(["success", "partial"]).toContain(out.status);
     expect(fx.documents.get(CHAR)!.characterPrompt.characterForms[ALICE]!.forms[0]!.basePromptGroups["hair.color"]).toEqual(["red hair"]);
+  });
+
+  test("analysis reads the saved crop of a storage-backed upload; its URL stays the upload", async () => {
+    const fx = fixture();
+    const [full, cropped] = [pngWithText({ Note: "upload" }), pngWithText({ Note: "crop" })];
+    await fx.services.storage.writeBinary("uploads/u1.png", base64ToBytes(full));
+    const upload = { name: "ref.png", key: "storage:uploads/u1.png", extension: "png", sourceType: "upload", moduleId: "", moduleName: "" };
+    const { asset: crop } = await saveCrop(fx.services, { characterId: CHAR, asset: upload, cropRect: { x: 0, y: 0, width: 1, height: 1 }, sourceSize: { width: 2, height: 2 }, dataBase64: cropped });
+    const session = await openAnalysisSession(fx.services, CHAR);
+    const loaded = await session.images.load([crop]).finally(() => session.dispose());
+    expect(loaded.evidence.map((e: { data: string }) => e.data)).toEqual([cropped]);
+    expect((await assetUrl(fx.services, crop)).url).toBe(`data:image/png;base64,${full}`);
   });
 });
 

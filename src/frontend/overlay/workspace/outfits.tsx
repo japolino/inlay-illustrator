@@ -159,12 +159,14 @@ function OutfitCard({ model, ctx, owner, formId, outfit, index, active, onActiva
   const pickerTarget = owner.kind === "character"
     ? { kind: "character-outfit" as const, promptKey: owner.promptKey, formId, outfitId: outfit.id }
     : { kind: "persona" as const, personaId: owner.personaId, formId, outfitId: outfit.id };
+  // Each tab has its own reclass mode: the persona pane follows the Persona tab's.
+  const reclass = owner.kind === "persona" ? ctx.session.reclass.persona : ctx.session.reclass.prompts;
   return (
     <article ref={ref} class={cn("grid gap-2 rounded-lg bg-surface-workbench p-2.5 transition-colors", active && "bg-surface-workbench-active ring-1 ring-primary/40")} onPointerDownCapture={onActivate} onFocusCapture={onActivate} data-outfit-card={outfit.id} data-state={active ? "active" : "inactive"}>
       <div class="flex min-w-0 items-center gap-1.5">
         {!isDefault ? <LabeledCheckbox label={COMMON_LABELS.active} background="card" checked={outfit.candidateEnabled} onCheckedChange={(v) => model.setCandidates(formId, (c) => patchOutfit(c, formId, outfit.id, { candidateEnabled: v }))} /> : null}
         {ctx.provider.referenceUiVisible ? (
-          <LabeledCheckbox label={COMMON_LABELS.analyze} background="card" disabled={!outfit.referenceAsset && !ctx.session.reclass.prompts}
+          <LabeledCheckbox label={COMMON_LABELS.analyze} background="card" disabled={!outfit.referenceAsset && !reclass}
             checked={outfit.referenceAnalysisEnabled !== false} onCheckedChange={(v) => model.commit((c) => patchOutfit(c, formId, outfit.id, { referenceAnalysisEnabled: v }))} />
         ) : null}
         <span class="min-w-0 flex-1" />

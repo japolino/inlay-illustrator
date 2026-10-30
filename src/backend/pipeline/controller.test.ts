@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { fixedCountPolicy } from "../../shared/contract/index.js";
 import { cleanMessageContent } from "./markup.js";
 import { createPipelineModule } from "./index.js";
 import { CHAT_ID, createFakeEngine, createPipelineFixture, finished, STORY, waitFor } from "./testing/fixtures.js";
@@ -184,6 +185,56 @@ describe("manual generation, locks, cancel, retry", () => {
     expect(finished(fx, retry.jobId)[0]!.result).toBe("completed");
     expect(fx.chatData.get(CHAT_ID)!.plans["illustration:m1@0"]!.status).toBe("complete");
   });
+
+  test("retry after deleting a slot of the errored revision completes once the other slots are filled", async () => {
+    const { fx, engine, pipeline } = setup({ messages: [{ id: "m1", content: `${STORY}\n\nThe bell rang across the courtyard as they ran inside.` }] });
+    // Run 1 plans slots 0..2; slot 1's image is never saved.
+    engine.beforeImages = (n, input) => {
+      if (n !== 1) return;
+      const persist = input.persistGeneratedImage as (img: Record<string, any>) => Promise<void>;
+      input.persistGeneratedImage = async (img: Record<string, any>) => (img.decision.slot_number === 1 ? undefined : persist(img));
+    };
+    const first = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0, countPolicy: fixedCountPolicy(3) });
+    await waitFor(() => finished(fx, first.jobId).length > 0);
+    const preview = await pipeline.prepareSlotDeletion(CHAT_ID, "illustration:m1@0", "illustration:m1@0:slot:2");
+    await pipeline.deleteSlot(preview.previewToken);
+    engine.imageCount = 1;
+    const retry = await pipeline.retry(first.jobId);
+    await waitFor(() => finished(fx, retry.jobId).length > 0);
+    expect(finished(fx, retry.jobId)[0]!.result).toBe("completed");
+    const plan = fx.chatData.get(CHAT_ID)!.plans["illustration:m1@0"]!;
+    expect(plan.entries.map((e) => e.slotIndex)).toEqual([0, 1]);
+    expect(plan.status).toBe("complete");
+  });
+
+  test("split-mode retry after paging back to an earlier revision commits its images to the failed revision", async () => {
+    const { fx, engine, pipeline } = setup();
+    const key = "illustration:m1@0";
+    const settings = await fx.services.storage.loadChatImageGenerationSettings();
+    await fx.services.storage.saveChatImageGenerationSettings({ ...settings, analysisMode: "split", splitAnalysis: { totalCount: 2, batchSize: 1 } });
+    const first = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0 });
+    await waitFor(() => finished(fx, first.jobId).length > 0);
+    // Run 2 saves its first image, then fails non-retryably: its revision R1 ends partial.
+    engine.beforeImages = (n, input) => {
+      if (n !== 2) return;
+      const persist = input.persistGeneratedImage as (img: unknown) => Promise<void>;
+      let calls = 0;
+      input.persistGeneratedImage = async (img: unknown) => {
+        if ((calls += 1) > 1) throw Object.assign(new Error("Provider rejected the prompt"), { retryable: false });
+        await persist(img);
+      };
+    };
+    const second = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0 });
+    await waitFor(() => finished(fx, second.jobId).length > 0);
+    const [r0, r1] = fx.chatData.get(CHAT_ID)!.history.messagesByKey[key]!.revisions.map((r) => r.revisionId);
+    await pipeline.selectRevision(CHAT_ID, key, r0!);
+    const retry = await pipeline.retry(second.jobId);
+    await waitFor(() => finished(fx, retry.jobId).length > 0);
+    const message = fx.chatData.get(CHAT_ID)!.history.messagesByKey[key]!;
+    expect(message.revisions.map((r) => r.revisionId)).toEqual([r0!, r1!]);
+    expect(message.activeRevisionId).toBe(r1!);
+    expect(Object.keys(message.revisions[1]!.slotsById).length).toBe(2);
+  });
 });
 
 describe("history, regenerate, delete", () => {
@@ -291,6 +342,86 @@ describe("history, regenerate, delete", () => {
     const record = (fx.json.get("chats/chat-1/pipeline.json") as any).records[regen.entryId];
     expect(record.artistId).toBe(artistB!.id);
     expect(record.actors[0].selectedOutfitId).toBe("o2");
+  });
+
+  test("a regenerated NovelAI image tracks its new artist, so the artist can be changed again", async () => {
+    const { fx, engine, pipeline } = await generated();
+    const { listNovelAIArtists } = await import("../../shared/contract/index.js");
+    const [, artistA, artistB] = listNovelAIArtists([]);
+    const slotId = "illustration:m1@0:slot:0";
+    const entryId = Object.values(fx.chatData.get(CHAT_ID)!.history.entriesById).find((e) => e.slotId === slotId)!.entryId;
+    const sidecar = fx.json.get("chats/chat-1/pipeline.json") as any;
+    const tracked = (a: typeof artistA) => ({ id: a!.id, name: a!.title, positive: a!.prompt, negative: a!.negativePrompt });
+    // An artist-A record saved by an older regeneration that left artist B's segment tracked.
+    Object.assign(sidecar.records[entryId], {
+      artistId: artistA!.id,
+      positivePrompt: `1boy, ${artistA!.prompt}`,
+      negativePrompt: artistA!.negativePrompt,
+      novelAIConfig: { ...sidecar.records[entryId].novelAIConfig, nonArtistPromptWeightArtist: tracked(artistB) },
+    });
+    fx.json.set("chats/chat-1/pipeline.json", sidecar);
+    for (const artist of [artistB!, artistA!]) {
+      await pipeline.saveDraft(CHAT_ID, slotId, { artistId: artist.id });
+      const { jobId } = await pipeline.regenerateSlot({ chatId: CHAT_ID, messageKey: "illustration:m1@0", slotId, overrides: { seedFixed: false, excludedCharacterIndexes: [] } });
+      await waitFor(() => finished(fx, jobId).length > 0);
+      expect(finished(fx, jobId)[0]!.result).toBe("completed");
+      expect(engine.dispatches.at(-1)!.request.prompt).toBe(`1boy, ${artist.prompt}`);
+    }
+    const latest = (await pipeline.getZoomDetails(CHAT_ID, slotId)).entryId;
+    expect((fx.json.get("chats/chat-1/pipeline.json") as any).records[latest].novelAIConfig.nonArtistPromptWeightArtist).toEqual(tracked(artistA));
+  });
+
+  test("a character excluded in zoom stays out of later regenerations without hiding the others", async () => {
+    const { fx, engine, pipeline } = await generated();
+    const slotId = "illustration:m1@0:slot:0";
+    const entryId = Object.values(fx.chatData.get(CHAT_ID)!.history.entriesById).find((e) => e.slotId === slotId)!.entryId;
+    const sidecar = fx.json.get("chats/chat-1/pipeline.json") as any;
+    Object.assign(sidecar.records[entryId], {
+      actors: [
+        { identityKey: "persona::persona-1", identityName: "Shouta", kind: "persona", actorIndex: 0 },
+        { identityKey: "persona::persona-2", identityName: "Alice", kind: "persona", actorIndex: 1 },
+      ],
+      characters: [
+        { prompt: "1boy", negativePrompt: "bad", actorIndex: 0 },
+        { prompt: "1girl", negativePrompt: "bad", actorIndex: 1 },
+      ],
+      novelAIConfig: { ...sidecar.records[entryId].novelAIConfig, characterPrompts: [{ prompt: "1boy", uc: "bad" }, { prompt: "1girl", uc: "bad" }] },
+    });
+    fx.json.set("chats/chat-1/pipeline.json", sidecar);
+    await pipeline.saveDraft(CHAT_ID, slotId, { excludedCharacterIndexes: [0] });
+    // The chat regenerate button twice: the draft's exclusion applies to the first image only.
+    for (let n = 0; n < 2; n += 1) {
+      const { jobId } = await pipeline.regenerateSlot({ chatId: CHAT_ID, messageKey: "illustration:m1@0", slotId });
+      await waitFor(() => finished(fx, jobId).length > 0);
+      expect((engine.dispatches.at(-1)!.request as any).config.characterPrompts.map((c: any) => c.prompt)).toEqual(["1girl"]);
+    }
+    const details = await pipeline.getZoomDetails(CHAT_ID, slotId);
+    expect(details.excludedCharacterIndexes).toEqual([]);
+    expect(details.sections.filter((s) => s.target === "actor").map((s) => [s.label, s.value])).toEqual([["Alice", "1girl"]]);
+  });
+
+  test("an AI-edit run keeps a history pick made on another slot while it ran", async () => {
+    const { fx, engine, pipeline } = await generated();
+    const [slot0, slot1] = ["illustration:m1@0:slot:0", "illustration:m1@0:slot:1"];
+    const entries = () => Object.values(fx.chatData.get(CHAT_ID)!.history.entriesById);
+    const g1 = entries().find((e) => e.slotId === slot0)!;
+    const g2 = entries().find((e) => e.slotId === slot1)!;
+    const regen = await pipeline.regenerateSlot({ chatId: CHAT_ID, messageKey: "illustration:m1@0", slotId: slot1 });
+    await waitFor(() => finished(fx, regen.jobId).length > 0);
+    const { proposalId } = await pipeline.requestAiPromptEdit(CHAT_ID, slot0, g1.entryId, { instruction: "smile", imageToImage: false });
+    let release: (() => void) | undefined;
+    engine.imageCount = undefined;
+    engine.beforeImages = () => new Promise<void>((r) => (release = r));
+    const edit = await pipeline.applyAiPromptEdit(CHAT_ID, slot0, proposalId);
+    await waitFor(() => !!release);
+    // While the edit runs, slot 1 goes back from its regenerated image to G2.
+    await pipeline.selectEntry(CHAT_ID, slot1, g2.entryId);
+    release!();
+    await waitFor(() => finished(fx, edit.jobId).length > 0);
+    expect(finished(fx, edit.jobId)[0]!.result).toBe("completed");
+    const slots = fx.chatData.get(CHAT_ID)!.history.messagesByKey["illustration:m1@0"]!.revisions[0]!.slotsById;
+    expect(slots[slot0]!.defaultEntryId).not.toBe(g1.entryId);
+    expect(slots[slot1]!.defaultEntryId).toBe(g2.entryId);
   });
 
   test("deleteEntry falls back and deletes the unreferenced image", async () => {

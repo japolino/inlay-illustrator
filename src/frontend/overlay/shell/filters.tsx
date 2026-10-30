@@ -4,7 +4,7 @@
  */
 import { useMemo, useRef, useState } from "preact/hooks";
 import { matchesQuery } from "../../lib/text-match.js";
-import { Button, FilterIcon, IconButton, Popover, RefreshIcon, ResetIcon, SearchIcon, XIcon, cn } from "../ui/index.js";
+import { Button, FilterIcon, IconButton, Popover, RefreshIcon, ResetIcon, SearchIcon, XIcon, cn, useLayer } from "../ui/index.js";
 
 export const FILTER_LABELS = {
   displayFilter: "Display filter", // 표시 필터
@@ -19,6 +19,9 @@ export const FILTER_LABELS = {
 /** Search input with clear button; Escape clears (not during IME composition). */
 export function SearchField({ value, onChange, label, placeholder = FILTER_LABELS.searchPeople, className }: { value: string; onChange: (value: string) => void; label: string; placeholder?: string; className?: string }) {
   const input = useRef<HTMLInputElement>(null);
+  const [focused, setFocused] = useState(false);
+  // The overlay takes Escape in the capture phase: a focused field with a query is the top layer, so Escape clears it.
+  useLayer(focused && !!value, () => onChange(""));
   return (
     <div class={cn("relative flex min-w-0 items-center", className)} data-search-field="">
       <SearchIcon className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground" />
@@ -29,13 +32,8 @@ export function SearchField({ value, onChange, label, placeholder = FILTER_LABEL
         placeholder={placeholder}
         value={value}
         onInput={(event) => onChange((event.currentTarget as HTMLInputElement).value)}
-        onKeyDown={(event) => {
-          if (event.key === "Escape" && !event.isComposing && value) {
-            event.preventDefault();
-            event.stopPropagation();
-            onChange("");
-          }
-        }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         class="h-8 w-full min-w-0 rounded-md bg-input pr-8 pl-8 text-xs font-semibold text-foreground outline-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring/55 max-md:h-11 max-md:text-sm [&::-webkit-search-cancel-button]:hidden"
       />
       {value ? (
