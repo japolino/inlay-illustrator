@@ -165,11 +165,52 @@ export function loreRecordsOf(entries: WorldBookEntryInfo[], aliases: string[], 
     .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 }
 
-/** AM `xrt` 86177. */
-export function descriptionLore(name: string, description: string): AmLoreRecord | null {
-  const content = str(description);
-  if (!content) return null;
-  const keys = uniqueTrimmed([name]);
+/** `{{char}}` / `{{user}}` filled in; other macros left as they are. */
+export function fillCardMacros(text: string, vars: { char: string; user: string }): string {
+  return text.replace(/\{\{\s*char\s*\}\}/giu, vars.char).replace(/\{\{\s*user\s*\}\}/giu, vars.user);
+}
+
+const NAME_HEADING = /\b(?:names?|nicknames?|aliases|aka|titles?)\b/iu;
+const SECTION_HEADING = /^\s*(?:#{1,6}\s+\S|\[[^\]]+\]\s*$|<\/?[\p{L}_ -]+>\s*$|\*\*[^*]+\*\*:?\s*$|[\p{L}][\p{L} &/'-]{1,40}:\s*$)/u;
+const NAME_KEY_MAX = 48;
+const NAME_KEYS_MAX = 12;
+
+/**
+ * Names a card declares for `{{char}}` (port addition): `{{char}}=Name` / `{{char}}: Name` lines and the bullets of a
+ * Names / Nicknames / Aliases / Titles section. Labels (`Given Name:`) and parentheticals (`(by friends)`) are dropped.
+ * (`{{char}}=Name` only: `{{char}}:` is too often a sentence.)
+ */
+export function declaredCharacterNames(description: string): string[] {
+  const out: string[] = [];
+  const add = (raw: string) => {
+    for (const part of raw.split(/[,;/|]+/u)) {
+      const v = part.replace(/\([^)]*\)/gu, "").replace(/[*_`"“”]+/gu, "").replace(/\s+/gu, " ").trim();
+      if (v.length >= 2 && v.length <= NAME_KEY_MAX && /\p{L}/u.test(v)) out.push(v);
+    }
+  };
+  let inNames = false;
+  for (const line of description.split(/\r?\n/u)) {
+    const declared = /^\W*\{\{\s*char\s*\}\}\s*=\s*(.+)$/iu.exec(line);
+    if (declared && !/\{\{/u.test(declared[1]!)) add(declared[1]!);
+    if (SECTION_HEADING.test(line)) {
+      inNames = NAME_HEADING.test(line);
+      continue;
+    }
+    if (!inNames) continue;
+    const bullet = /^\s*(?:[-*•]|\d+[.)])\s+(.+)$/u.exec(line);
+    if (!bullet) continue;
+    const labelled = /^[^:]{1,40}:\s*(.+)$/u.exec(bullet[1]!);
+    add(labelled ? labelled[1]! : bullet[1]!);
+  }
+  return uniqueTrimmed(out).slice(0, NAME_KEYS_MAX);
+}
+
+/** AM `xrt` 86177; port: card macros filled in and declared names added as keys. */
+export function descriptionLore(name: string, description: string, user = "{{user}}"): AmLoreRecord | null {
+  const raw = str(description);
+  if (!raw) return null;
+  const content = fillCardMacros(raw, { char: name, user });
+  const keys = uniqueTrimmed([name, ...declaredCharacterNames(raw)]);
   return { kind: "character-description", id: CHARACTER_DESCRIPTION_LORE_ID, selectionId: CHARACTER_DESCRIPTION_LORE_ID, title: name, keys, primaryKeys: keys, secondaryKeys: [], selective: false, useRegex: false, content, score: 0, alwaysActive: false, sourceType: "character", sourceName: "" };
 }
 
@@ -505,7 +546,8 @@ export function createSourcesService(deps: SourcesServiceDeps): SourcesService {
       const modules = books.filter((b) => b.scope !== "character" && activeModuleIds.includes(b.worldBookId));
       const characterLore = loreRecordsOf(attached.flatMap((b) => b.entries), aliases, { sourceType: "character" });
       const moduleLore = modules.flatMap((b) => loreRecordsOf(b.entries, aliases, { sourceType: "module", sourceName: b.name }));
-      const desc = descriptionLore(memberName, character.description);
+      const user = (await activePersona())?.name || "{{user}}";
+      const desc = descriptionLore(memberName, character.description, user);
       const seen = new Set<string>();
       const lorebooks = [...characterLore, ...(desc ? [desc] : []), ...moduleLore].filter((l) => !(!l.id || seen.has(l.id)) && (seen.add(l.id), true));
 
@@ -532,7 +574,7 @@ export function createSourcesService(deps: SourcesServiceDeps): SourcesService {
         key: characterId,
         name: memberName,
         aliases,
-        sourceSummary: sourceSummary(character),
+        sourceSummary: sourceSummary({ ...character, description: fillCardMacros(str(character.description), { char: memberName, user }) }),
         lorebooks,
         originalAssets: preview ? dedupe([preview], original) : original,
         outfitGeneratedAssets: outfit,

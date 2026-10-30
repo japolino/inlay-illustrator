@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createEmptyCharacterDocument } from "../../shared/contract/index.js";
 import { answerFetchBridge, createFakeHost } from "../testing/fake-host.js";
 import { createImageBytesService } from "./image-bytes.js";
-import { createSourcesService, loreRecordsOf, loreScore, memberAliases, splitLoreKeys } from "./sources.js";
+import { createSourcesService, declaredCharacterNames, descriptionLore, loreRecordsOf, loreScore, memberAliases, splitLoreKeys } from "./sources.js";
 import { createStorageService } from "./storage.js";
 
 const GALLERY_ITEM = { id: "g", image_id: "gal1", caption: "", reference: "beach.webp", sort_order: 0, created_at: 0, mime_type: "image/webp", width: 10, height: 20 };
@@ -58,6 +58,29 @@ describe("AM source helpers", () => {
     const records = loreRecordsOf(entries, ["alice"], { sourceType: "module", sourceName: "Book" });
     expect(records.map((r) => [r.id, r.title, r.score])).toEqual([["w:b", "Alice", 5], ["w:a", "k1", 0]]);
     expect(records[1]).toMatchObject({ selective: false, alwaysActive: true, sourceType: "module", sourceName: "Book", selectionId: "w:a" });
+  });
+
+  test("description lore: card macros filled, declared names become keys", () => {
+    const card = [
+      "<knight>",
+      "# {{char}}=Rowan",
+      "## {{char}} Titles/Nicknames",
+      "- Given Name: Rowan Vale",
+      "- Sir Rowan",
+      "- Ro (by friends)",
+      "## Appearance",
+      "- Hair: short red hair",
+      "{{char}}: likes tea with {{user}}.",
+    ].join("\n");
+    expect(declaredCharacterNames(card)).toEqual(["Rowan", "Rowan Vale", "Sir Rowan", "Ro"]);
+    const lore = descriptionLore("Rowan - Oathbound", card, "Mira")!;
+    expect(lore.keys).toEqual(["Rowan - Oathbound", "Rowan", "Rowan Vale", "Sir Rowan", "Ro"]);
+    expect(lore.primaryKeys).toEqual(lore.keys);
+    expect(lore.content).toContain("# Rowan - Oathbound=Rowan");
+    expect(lore.content).toContain("Rowan - Oathbound: likes tea with Mira.");
+    expect(lore.content).not.toContain("{{");
+    expect(descriptionLore("Ann", "{{char}} smiles at {{user}}.")!.content).toBe("Ann smiles at {{user}}.");
+    expect(descriptionLore("Ann", "  ")).toBeNull();
   });
 });
 

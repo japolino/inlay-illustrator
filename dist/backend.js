@@ -74072,11 +74072,47 @@ function loreRecordsOf(entries, aliases, source) {
     ];
   }).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 }
-function descriptionLore(name, description) {
-  const content = str11(description);
-  if (!content)
+function fillCardMacros(text, vars) {
+  return text.replace(/\{\{\s*char\s*\}\}/giu, vars.char).replace(/\{\{\s*user\s*\}\}/giu, vars.user);
+}
+var NAME_HEADING = /\b(?:names?|nicknames?|aliases|aka|titles?)\b/iu;
+var SECTION_HEADING = /^\s*(?:#{1,6}\s+\S|\[[^\]]+\]\s*$|<\/?[\p{L}_ -]+>\s*$|\*\*[^*]+\*\*:?\s*$|[\p{L}][\p{L} &/'-]{1,40}:\s*$)/u;
+var NAME_KEY_MAX = 48;
+var NAME_KEYS_MAX = 12;
+function declaredCharacterNames(description) {
+  const out = [];
+  const add = (raw) => {
+    for (const part of raw.split(/[,;/|]+/u)) {
+      const v = part.replace(/\([^)]*\)/gu, "").replace(/[*_`"“”]+/gu, "").replace(/\s+/gu, " ").trim();
+      if (v.length >= 2 && v.length <= NAME_KEY_MAX && /\p{L}/u.test(v))
+        out.push(v);
+    }
+  };
+  let inNames = false;
+  for (const line of description.split(/\r?\n/u)) {
+    const declared = /^\W*\{\{\s*char\s*\}\}\s*=\s*(.+)$/iu.exec(line);
+    if (declared && !/\{\{/u.test(declared[1]))
+      add(declared[1]);
+    if (SECTION_HEADING.test(line)) {
+      inNames = NAME_HEADING.test(line);
+      continue;
+    }
+    if (!inNames)
+      continue;
+    const bullet = /^\s*(?:[-*•]|\d+[.)])\s+(.+)$/u.exec(line);
+    if (!bullet)
+      continue;
+    const labelled = /^[^:]{1,40}:\s*(.+)$/u.exec(bullet[1]);
+    add(labelled ? labelled[1] : bullet[1]);
+  }
+  return uniqueTrimmed(out).slice(0, NAME_KEYS_MAX);
+}
+function descriptionLore(name, description, user = "{{user}}") {
+  const raw = str11(description);
+  if (!raw)
     return null;
-  const keys = uniqueTrimmed([name]);
+  const content = fillCardMacros(raw, { char: name, user });
+  const keys = uniqueTrimmed([name, ...declaredCharacterNames(raw)]);
   return { kind: "character-description", id: CHARACTER_DESCRIPTION_LORE_ID, selectionId: CHARACTER_DESCRIPTION_LORE_ID, title: name, keys, primaryKeys: keys, secondaryKeys: [], selective: false, useRegex: false, content, score: 0, alwaysActive: false, sourceType: "character", sourceName: "" };
 }
 function dedupe(...lists) {
@@ -74386,7 +74422,8 @@ function createSourcesService(deps) {
       const modules = books.filter((b) => b.scope !== "character" && activeModuleIds.includes(b.worldBookId));
       const characterLore = loreRecordsOf(attached.flatMap((b) => b.entries), aliases, { sourceType: "character" });
       const moduleLore = modules.flatMap((b) => loreRecordsOf(b.entries, aliases, { sourceType: "module", sourceName: b.name }));
-      const desc = descriptionLore(memberName, character.description);
+      const user = (await activePersona())?.name || "{{user}}";
+      const desc = descriptionLore(memberName, character.description, user);
       const seen = new Set;
       const lorebooks = [...characterLore, ...desc ? [desc] : [], ...moduleLore].filter((l) => !(!l.id || seen.has(l.id)) && (seen.add(l.id), true));
       const images = await service.listCharacterImages(characterId, { includeGenerated: true });
@@ -74413,7 +74450,7 @@ function createSourcesService(deps) {
         key: characterId,
         name: memberName,
         aliases,
-        sourceSummary: sourceSummary(character),
+        sourceSummary: sourceSummary({ ...character, description: fillCardMacros(str11(character.description), { char: memberName, user }) }),
         lorebooks,
         originalAssets: preview ? dedupe([preview], original) : original,
         outfitGeneratedAssets: outfit,
