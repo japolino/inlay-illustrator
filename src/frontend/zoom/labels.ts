@@ -33,6 +33,7 @@ export const ZOOM_LABELS = {
   delete: "Delete", // 삭제
   cancel: "Cancel", // 취소
   original: "Original", // 원본
+  otherProvider: "Other provider (no longer supported)", // (port) removed Chan Server / generic providers
   generated: "Generated", // 생성
   promptSourceBadge: "TAG", // TAG
   imageSaved: "Image saved.", // 이미지를 저장했습니다.
@@ -92,6 +93,37 @@ export const ZOOM_LABELS = {
   copyAnalysis: "Copy analysis text", // 분석 텍스트 복사
   copied: "Copied", // 복사 완료
   noAnalyzer: "No Analyzer data.", // Analyzer 데이터가 없습니다.
+  /* AI selection history (AM 0.9.90 `yvt`) */
+  selectionHistory: "Selection history", // 선택 내역
+  openSelectionHistory: "Open selection history", // 선택 내역 열기
+  closeSelectionHistory: "Close selection history", // 선택 내역 닫기
+  backToInfo: "Back to info", // 기존 Info로 돌아가기
+  selectionScenes: "Scene definitions", // 장면정의
+  selectionDefined: "Defined", // 정의
+  selectionFree: "Free", // 자유
+  selectionFreeTitle: "Composed by the AI without a scene definition", // (port) 장면정의 없이 AI가 구성
+  selectionInteractions: "Interactions", // 상호작용
+  selectionCount: "{n}", // {n}개
+  selectionDetails: "Detail choices", // 세부 선택
+  selectionIncomplete: "Participants not linked", // 참여 인물 연결 미완료
+  selectionMutual: "mutual", // (port) 상호
+  selectionPanels: "Panels: {list}", // (port) 패널: {list}
+  selectionNoInteractions: "No interactions were selected.", // 선택된 상호작용이 없습니다.
+  selectionElements: "Expression elements", // 표현요소
+  selectionRange: "Expression elements shown", // 표현요소 표시 범위
+  selectionRecorded: "Recorded", // 기록됨
+  selectionAll: "All", // 전체
+  selectionRangeNote: "Shows only the lists saved at generation time. Records without a list show only the entries that still have values.", // 생성 당시 저장된 목록만 표시합니다. 목록이 없는 기록은 값이 남아 있는 항목만 표시합니다.
+  selectionTagGroup: "Tag group", // 태그그룹
+  selectionFreeTags: "Free tags", // 자유태그
+  selectionText: "Natural language", // 자연어
+  selectionEmpty: "No content", // 내용 없음
+  selectionNotRecorded: "Not recorded", // 기록 없음
+  selectionNone: "None selected", // 선택 없음
+  selectionNoElements: "No expression element records to show.", // 표시할 표현요소 기록이 없습니다.
+  selectionOmitted: "The selection history of this image was left out because of the storage size limit.", // 저장 용량 제한으로 선택 내역이 생략된 이미지입니다.
+  selectionMissing: "This image has no stored selection history.", // 이 이미지에는 저장된 선택 내역이 없습니다.
+  selectionLoading: "Loading the selection history.", // 선택 내역을 불러오는 중입니다.
   /* coordinate board */
   coordinateBoard: "Character coordinate edit board", // 캐릭터 좌표 편집 보드
   setCoordinates: "Set coordinates", // 좌표지정
@@ -119,24 +151,6 @@ export const ZOOM_LABELS = {
   dockPrompt: "Prompt", // 프롬프트
   dockSettings: "Settings", // 설정
   closePanel: "Close panel", // 패널 닫기
-  /* chat state */
-  chatState: "Accumulated state of the current chat", // 현재 채팅의 누적 상태
-  chatStateShort: "Chat state", // (port) 채팅 상태
-  loadingState: "Loading state", // 상태 불러오는 중
-  refreshState: "Refresh state", // 상태 새로고침
-  refresh: "Refresh", // 새로고침
-  clearActor: "Clear {actor}", // (port) {actor} 상태 지우기
-  clearAll: "Clear all state", // (port) 모든 상태 지우기
-  clearConfirm: "Clear the accumulated state?", // (port)
-  clearConfirmDescription: "Stored tags are removed from this chat. New replies can add them again.", // (port)
-  stateEmpty: "No state stored for this chat yet.", // (port) 저장된 상태가 없습니다.
-  groupCum: "Fluid location", // 사정 위치
-  groupInjury: "Injury", // 부상
-  stateCount: "{n} turns", // (port)
-  saveState: "Save selected state", // 선택한 상태 저장
-  savingState: "Saving state", // 상태 저장 중
-  save: "Save", // 저장
-  stateConflict: "State changed. Refresh and select again.", // 상태가 변경되었습니다. 새로고침 후 다시 선택해 주세요.
   /* errors */
   noTarget: "The image slot no longer exists.", // (port)
   regenerateFailed: "Image regeneration failed", // 이미지 재생성 실패

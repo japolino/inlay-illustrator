@@ -7,39 +7,11 @@ import { describe, expect, test } from "bun:test";
 import { setEngineEnv } from "../../engine/index.js";
 import { seededEnv } from "../../engine/testing/env.js";
 import type { LlmCompleteRequest } from "../services/types.js";
+import { PRESET_FORMAT } from "../../shared/contract/index.js";
+import { atelierServiceOf } from "../services/atelier.js";
 import { cleanMessageContent } from "./markup.js";
 import { createPipelineModule } from "./index.js";
 import { CHAT_ID, createPipelineFixture, finished, STORY, waitFor } from "./testing/fixtures.js";
-
-/** Scripted analyzer: one illustration for the first slot with the first actor candidate (AM v2 response schema). */
-function scriptedAnalyzer(request: LlmCompleteRequest): string {
-  const last = request.messages[request.messages.length - 1]!;
-  const text = typeof last.content === "string" ? last.content : last.content.map((p) => (p.type === "text" ? p.text : "")).join("");
-  const json = JSON.parse(text.slice(text.indexOf("{")));
-  const candidate = json.actor_candidates[0];
-  const slot = Number(/<slot_number: (\d+)>/u.exec(json.scene)![1]);
-  const outfit = (json.outfit_candidates ?? []).find((o: { candidate_key: string }) => o.candidate_key === candidate.candidate_key);
-  return JSON.stringify({
-    schema: "asset_maid_analyzer_illustration_response_v2",
-    illustrations: [
-      {
-        slot_number: slot,
-        preset_id: candidate.gender === "female" ? "1girl_solo.general.free" : "1boy_solo.general.free",
-        actors: [
-          {
-            candidate_key: candidate.candidate_key,
-            form_ref: candidate.default_form_ref,
-            ...(outfit ? { outfit_id: outfit.id } : {}),
-            modifiers: { "expression.general": ["light_smile"], "gaze.direction": ["looking_at_viewer"] },
-          },
-        ],
-        body_action: "He runs to the school gate.",
-        modifiers: { "scene.environment": ["outdoors"], "scene.time": ["day"], "scene.location": ["school gate"] },
-        reason: "교문 장면",
-      },
-    ],
-  });
-}
 
 /** Scripted V5 analyzer (scene graph response) with the active persona as the only actor. */
 function scriptedV5Analyzer(request: LlmCompleteRequest): string {
@@ -106,40 +78,7 @@ function scriptedFreeCharacterAnalyzer(request: LlmCompleteRequest): string {
   });
 }
 
-/** v4-5 analyzer that proposes a new outfit for the first actor (free outfit generation, AM outfit_proposals). */
-function scriptedOutfitProposalAnalyzer(request: LlmCompleteRequest): string {
-  const base = JSON.parse(scriptedAnalyzer(request));
-  const actor = base.illustrations[0].actors[0];
-  delete actor.outfit_id;
-  actor.outfit_proposal_id = "proposal_1";
-  base.outfit_proposals = [
-    { id: "proposal_1", candidate_key: actor.candidate_key, form_ref: actor.form_ref, name: "Red Track Suit", head: "", top: "red track jacket", bottom: "red track pants", legs: "", feet: "white sneakers", reason: "running", confidence: 0.9 },
-  ];
-  return JSON.stringify(base);
-}
-
 describe("pipeline end to end over the real engine", () => {
-  test("v4-5 free outfit generation saves the proposed outfit (tags only) and uses it", async () => {
-    setEngineEnv(seededEnv(3));
-    try {
-      const fx = createPipelineFixture({
-        config: { image: { provider: "novelai", model: "nai-diffusion-4-5-full", connectionId: "img-1" }, novelai: { analysisProfile: "v4-5" }, runtime: { generationAutoRetryCount: 0 } },
-      });
-      fx.llmReplies.push((request: LlmCompleteRequest) => scriptedOutfitProposalAnalyzer(request));
-      const { pipeline } = createPipelineModule(fx.services);
-      await pipeline.handleGenerationEnded({ chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
-      await waitFor(() => finished(fx).length > 0, 20000);
-      expect(finished(fx)[0]!.error).toBeUndefined();
-      expect(finished(fx)[0]!.result).toBe("completed");
-      const profile = (fx.config.value.characterPrompt.personaSettings.profiles as Record<string, any>)["persona-1"];
-      expect(JSON.stringify(profile)).toContain("red track jacket");
-      expect(JSON.stringify(fx.imageRequests[0])).toContain("red track jacket");
-      pipeline.dispose();
-    } finally {
-      setEngineEnv(null);
-    }
-  }, 30000);
-
   test("V5 free character generation persists the generated character into the character document", async () => {
     setEngineEnv(seededEnv(5));
     try {
@@ -169,6 +108,43 @@ describe("pipeline end to end over the real engine", () => {
     }
   }, 30000);
 
+  test("chest other and the typed other-tags order reach the generated prompt through the engine compile", async () => {
+    setEngineEnv(seededEnv(9));
+    try {
+      const basePromptGroups = {
+        "hair.color": ["black hair"],
+        "body.skin": ["dark skin"],
+        "body.breast_size": ["large breasts"],
+        "body.breast_other": ["cleavage"],
+        "marks.distinctive": ["mole under eye"],
+        custom: ["scar"],
+        // Typed order of the "other" tags (AM 0.9.90 otherOrder): the custom tag first, then the skin and the mark.
+        otherOrder: ["scar", "dark skin", "mole under eye"],
+      };
+      const form = { id: "form_default", label: "Default", gender: "female", humanlike: true, basePromptGroups, outfits: [] };
+      const fx = createPipelineFixture({
+        config: {
+          image: { provider: "novelai", model: "nai-diffusion-5-full", connectionId: "img-1" },
+          novelai: { analysisProfile: "v5-hybrid" },
+          runtime: { generationAutoRetryCount: 0 },
+          characterPrompt: { personaSettings: { selectedPersonaKey: "", sourceScopes: {}, profiles: { "persona-1": { forms: { defaultFormId: "form_default", forms: [form] } } } } },
+        },
+      });
+      fx.llmReplies.push((request: LlmCompleteRequest) => scriptedV5Analyzer(request));
+      const { pipeline } = createPipelineModule(fx.services);
+      await pipeline.handleGenerationEnded({ chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
+      await waitFor(() => finished(fx).length > 0, 20000);
+      expect(finished(fx)[0]!.error).toBeUndefined();
+      const prompt = fx.imageRequests[0]!.novelai?.characters?.[0]?.prompt ?? "";
+      // Same as the AM 0.9.90 compile (p120 `Mc` 20961, checked against the slice): the "other" tags fill their own slots in the typed order, the chest
+      // size and chest other stay in place right after each other.
+      expect(prompt).toContain("black hair, scar, large breasts, cleavage, dark skin, mole under eye");
+      pipeline.dispose();
+    } finally {
+      setEngineEnv(null);
+    }
+  }, 30000);
+
   test("V5 profile: scene graph analyzer -> NovelAI V5 request -> History + V5 continuity", async () => {
     setEngineEnv(seededEnv(9));
     try {
@@ -191,6 +167,63 @@ describe("pipeline end to end over the real engine", () => {
       expect(doc.plans["illustration:m1@0"]!.status).toBe("complete");
       expect(doc.store.messages["m1@0"]!.generations[0]!.continuity).toBeDefined();
       expect(fx.message("m1").content).toContain("fake-image-1");
+      pipeline.dispose();
+    } finally {
+      setEngineEnv(null);
+    }
+  }, 30000);
+
+  test("Maid Atelier: a non-default active preset and a user directing guideline change the analyzer request; the AI selection history is kept", async () => {
+    setEngineEnv(seededEnv(9));
+    try {
+      const fx = createPipelineFixture({
+        config: {
+          image: { provider: "novelai", model: "nai-diffusion-5-full", connectionId: "img-1" },
+          novelai: { analysisProfile: "v5-hybrid" },
+          runtime: { generationAutoRetryCount: 0 },
+        },
+      });
+      const atelier = atelierServiceOf(fx.services);
+      const preset = JSON.stringify({
+        format: PRESET_FORMAT,
+        title: "Weather pack",
+        content: { definitions: [{ id: "custom.weather", description: "Zebra weather marker", scope: ["scene"], order: 900, options: [{ id: "drizzle", description: "light rain", prompt: "drizzle" }] }] },
+      });
+      const state = await atelier.getState();
+      const imported = await atelier.importDocument({ baseRevision: state.revision, fileName: "weather.json", json: preset });
+      const { id } = await atelier.createGuideline({ kind: "scene" });
+      await atelier.saveGuidelines({ kind: "scene", edits: [
+        { id, field: "name", before: "New guideline", value: "Rooftop" },
+        { id, field: "instruction", before: "", value: "Quokka guideline: frame every scene from a rooftop." },
+      ] });
+      await atelier.selectGuideline({ kind: "scene", id });
+      expect((await atelier.getState()).catalog.activeId).toBe(imported.id);
+
+      const requests: string[] = [];
+      fx.llmReplies.push((request: LlmCompleteRequest) => {
+        requests.push(request.messages.map((m) => (typeof m.content === "string" ? m.content : m.content.map((p) => (p.type === "text" ? p.text : "")).join(""))).join(" "));
+        return scriptedV5Analyzer(request);
+      });
+      const { pipeline } = createPipelineModule(fx.services);
+      await pipeline.handleGenerationEnded({ chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
+      await waitFor(() => finished(fx).length > 0, 20000);
+      expect(finished(fx)[0]!.error).toBeUndefined();
+      expect(finished(fx)[0]!.result).toBe("completed");
+      expect(requests.length).toBe(1);
+      // The preset's own tag group is offered in the analyzer catalog; the selected guideline is the custom instruction.
+      expect(requests[0]).toMatch(/custom\.weather[\\"]*,[\\"]*options[\\"]*:\[[\\"]*drizzle/u);
+      expect(requests[0]).toContain("Quokka guideline: frame every scene from a rooftop.");
+
+      // AI selection history: stored with the generation record and summarized for the zoom viewer.
+      const sidecar = fx.json.get("chats/chat-1/pipeline.json") as { records: Record<string, { analysis?: { profile: string; record: unknown } }> };
+      const [entryId, record] = Object.entries(sidecar.records)[0]!;
+      expect(record.analysis?.profile).toBe("v5-hybrid");
+      expect(record.analysis?.record).toBeTruthy();
+      const slotId = Object.values(fx.chatData.get(CHAT_ID)!.history.entriesById).find((e) => e.entryId === entryId)!.slotId;
+      const zoom = await pipeline.getZoomDetails(CHAT_ID, slotId, entryId);
+      expect(zoom.selectionSummary?.status).toBe("ready");
+      expect(zoom.selectionSummary!.sections.map((s) => s.title)).toContain("Scene");
+      expect(JSON.stringify(zoom.selectionSummary)).not.toMatch(/[가-힣]/u);
       pipeline.dispose();
     } finally {
       setEngineEnv(null);
@@ -230,17 +263,18 @@ describe("pipeline end to end over the real engine", () => {
     }
   }, 30000);
 
-  test("GENERATION_ENDED -> analyzer -> NovelAI request -> History + baked message + continuity", async () => {
+  test("GENERATION_ENDED -> V5 analyzer -> NovelAI V4.5 model request -> History + baked message + continuity", async () => {
     setEngineEnv(seededEnv(7));
     try {
       const fx = createPipelineFixture({
         config: {
           image: { provider: "novelai", model: "nai-diffusion-4-5-full", connectionId: "img-1" },
+          // A stored V4.5 analysis profile runs as V5 (AM 0.9.90); the NovelAI V4.5 image model stays usable.
           novelai: { analysisProfile: "v4-5" },
           runtime: { generationAutoRetryCount: 0 },
         },
       });
-      fx.llmReplies.push((request: LlmCompleteRequest) => scriptedAnalyzer(request));
+      fx.llmReplies.push((request: LlmCompleteRequest) => scriptedV5Analyzer(request));
       const { pipeline } = createPipelineModule(fx.services);
       await pipeline.handleGenerationEnded({ chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
       await waitFor(() => finished(fx).length > 0, 20000);
@@ -273,9 +307,14 @@ describe("pipeline end to end over the real engine", () => {
       const generation = doc.store.messages["m1@0"]!.generations[0]!;
       expect(generation.id).toBe(plan.activeRevisionId);
       expect(generation.continuity).toBeDefined();
-      expect(Object.keys((generation.continuity as { characters: object }).characters)).toEqual(["__persona__"]);
-      expect(doc.actorState.revision).toBe(1);
-      expect(Object.keys(doc.actorState.actors)).toEqual(["__persona__"]);
+      // 0.9.90 checkpoint (`rxt` compact form): scene + modifier refs + participants. The persona has no persistent
+      // continuity groups (the 0.9.89 accumulation counters are gone), so the checkpoint stores no character state.
+      const continuity = generation.continuity as { scene?: { backgroundTags: string[] }; characters?: object; participants?: { personaKeys?: string[] } };
+      expect(continuity.scene?.backgroundTags).toEqual(["school_gate"]);
+      expect(continuity.participants?.personaKeys).toEqual(["persona::persona-1"]);
+      expect(continuity.characters).toBeUndefined();
+      // AM 0.9.90: no accumulated actor state is kept next to the checkpoints.
+      expect("actorState" in doc).toBe(false);
       // baked block in the first gap, strip restores the reply
       const content = fx.message("m1").content;
       expect(content).toContain('data-inlay-illustrator-image-id="fake-image-1"');
@@ -284,10 +323,10 @@ describe("pipeline end to end over the real engine", () => {
       const details = await pipeline.getZoomDetails(CHAT_ID, entry.slotId);
       expect(details.generationProvider).toBe("novelai");
       expect(details.positivePrompt).toBe(img.prompt);
-      expect(details.coordinateGrid).toBe("v4-5");
+      expect(details.coordinateGrid).toBe("v5");
 
       // Next turn: the analyzer sees the committed visual continuity of the previous message.
-      fx.llmReplies.push((request: LlmCompleteRequest) => scriptedAnalyzer(request));
+      fx.llmReplies.push((request: LlmCompleteRequest) => scriptedV5Analyzer(request));
       const list = fx.fakeHost!.messages.get(CHAT_ID)!;
       const base = list[list.length - 1]!;
       list.push({ ...base, id: "u2", index_in_chat: 2, is_user: true, content: "We walk inside.", swipes: ["We walk inside."], swipe_id: 0 });
@@ -296,8 +335,8 @@ describe("pipeline end to end over the real engine", () => {
       await waitFor(() => finished(fx).length > 1, 20000);
       expect(finished(fx)[1]!.result).toBe("completed");
       const second = JSON.stringify(fx.llmRequests[1]!.messages);
-      expect(second).toContain("visual_continuity");
-      expect(second).toContain("school gate");
+      expect(second).toContain("scene_modifier_continuity");
+      expect(second).toContain("school_gate");
       pipeline.dispose();
     } finally {
       setEngineEnv(null);

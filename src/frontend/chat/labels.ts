@@ -130,26 +130,6 @@ export const RETRY_STAGE_LABELS: Record<string, string> = {
 export const RETRY_DETAIL_STAGE_LABEL = "Detail {n} analysis";
 
 /** Generation-count panel (spec/ui.md §6.2.4). */
-/** Webtoon strip in the chat (experimental; no Asset Maid original). */
-export const WEBTOON_LABELS = {
-  reroll: "Redraw this panel",
-  previousTake: "Previous drawing",
-  nextTake: "Next drawing",
-  drawing: "Drawing…",
-  pending: "Not drawn yet",
-  failed: "Webtoon failed",
-  panelFailed: "This panel failed",
-  planning: "Planning the webtoon storyboard…",
-  cancelled: "Webtoon generation was cancelled.",
-  edit: "Click to edit the text",
-  editText: "Text",
-  save: "Save",
-  cancel: "Cancel",
-  editFailed: "Could not save the text",
-  rerollFailed: "Could not redraw the panel",
-  takeFailed: "Could not switch the drawing",
-} as const;
-
 export const COUNT_LABELS = {
   section: "Global chat image generation settings", // 전역 채팅 이미지 생성 설정
   expand: "Expand global image generation settings", // 전역 이미지 생성 설정 펼치기
@@ -166,12 +146,6 @@ export const COUNT_LABELS = {
   fixed: "Fixed", // 고정
   range: "Range", // 범위
   split: "Split", // 분할
-  webtoon: "Webtoon", // 웹툰
-  webtoonNote: "4–14 panels", // 4~14컷 (webtoon mode: follows the message length)
-  webtoonNoteTitle: "Webtoon mode: one strip per message, about one panel per 1,000 characters (4 to 14).", // 웹툰 모드: 메시지마다 웹툰 한 편, 1,000자당 약 1컷(4~14컷).
-  manga: "Manga", // 만화
-  mangaNoteTitle: "Manga mode: manga pages per message, read right to left, about one panel per 1,000 characters (4 to 14).", // 만화 모드: 메시지마다 만화 페이지, 오른쪽에서 왼쪽으로, 1,000자당 약 1컷(4~14컷).
-  splitUnsupported: "Split analysis is supported on V5. Select fixed or range.", // 분할 분석은 V5에서 지원합니다. 고정 또는 범위를 선택하세요.
   count: "Generation count", // 생성 장수
   countDecrease: "Decrease generation count", // 생성 장수 감소
   countIncrease: "Increase generation count", // 생성 장수 증가
@@ -197,7 +171,13 @@ export const COUNT_LABELS = {
   dragHint: "Drag to move", // (port) 끌어서 이동
   generateLatest: "Generate images for the latest message", // (port) replaces the removed floating button
   noEligibleMessage: "No assistant message to illustrate.", // (port)
-  openOverview: "Open this character in Inlay Illustrator" // (port)
+  openOverview: "Open this character in Inlay Illustrator", // (port)
+  resolution: "Generation resolution", // 생성 해상도
+  resolutionButton: "Generation resolution: {value}", // 생성 해상도: {value}
+  resolutionMenu: "Generation resolution", // 생성 해상도
+  resolutionAuto: "Auto", // 자동
+  aiCoordinates: "AI coordinates", // AI 좌표 지정
+  aiCoordinatesTitle: "On: the analysis AI places each character. Off: NovelAI places characters." // (port) 켜면 분석 AI가 캐릭터 좌표를 지정, 끄면 NovelAI 자동 배치
 } as const;
 
 /** Runtime error dialog (spec/ui.md §6.4). */

@@ -3,9 +3,7 @@ import {
   commitContinuityCheckpoint,
   createEmptyContinuityState,
   pushContinuityCheckpoint,
-  readLocalLoreActorState,
   rebuildContinuityAtMessage,
-  writeLocalLoreActorState,
   type ContinuityChatStore,
   type ContinuityState,
 } from "../../engine/continuity/index.js";
@@ -33,7 +31,7 @@ function nextState(messageId: string, revisionId: string, messageIndex: number):
   return next;
 }
 
-describe("continuity commit (AM gIe)", () => {
+describe("continuity commit (AM 0.9.90 bwe)", () => {
   test("writes only the committed revision's checkpoint and keeps the others", () => {
     const store: any = {
       messages: {
@@ -42,37 +40,27 @@ describe("continuity commit (AM gIe)", () => {
         "m5@0": { kind: "illustration", generations: [generation("r5")] },
       },
     };
-    const chat: any = { message: [], localLore: [] };
-    expect(commitContinuityCheckpoint(store as ContinuityChatStore, chat, nextState("m5@0", "r5", 5), chatKey, "m5@0", "r5", 0)).toBe("committed");
+    expect(commitContinuityCheckpoint(store as ContinuityChatStore, nextState("m5@0", "r5", 5), chatKey, "m5@0", "r5")).toBe("committed");
     expect(store.messages["m1@0"].generations[0].continuity.scene.backgroundTags).toEqual(["one"]);
     expect(store.messages["m3@0"].generations.map((g: any) => g.continuity.scene.backgroundTags[0])).toEqual(["three", "three-b"]);
     expect(store.messages["m5@0"].generations[0].continuity.scene.backgroundTags).toEqual(["five"]);
-    const state = readLocalLoreActorState(chat);
-    expect(state.revision).toBe(1);
-    expect(Object.keys(state.actors)).toEqual(["alice"]);
-    expect(store.messages["m5@0"].generations[0].stateCommitRevision).toBe(1);
+    // 0.9.90 has no accumulated actor state: no actor-state revision marks on the generation.
+    expect(store.messages["m5@0"].generations[0]).not.toHaveProperty("stateCommitRevision");
   });
 
-  test("a revision commits its state once; a later commit of the same revision writes nothing", () => {
+  test("a revision commits its checkpoint once; a later commit of the same revision writes nothing", () => {
     const store: any = { messages: { "m5@0": { kind: "illustration", generations: [generation("r5")] } } };
-    const chat: any = { message: [], localLore: [] };
-    expect(commitContinuityCheckpoint(store, chat, nextState("m5@0", "r5", 5), chatKey, "m5@0", "r5", 0)).toBe("committed");
-    expect(commitContinuityCheckpoint(store, chat, nextState("m5@0", "r5", 5), chatKey, "m5@0", "r5", 1)).toBe("already-committed");
-    expect(readLocalLoreActorState(chat).revision).toBe(1);
+    expect(commitContinuityCheckpoint(store, nextState("m5@0", "r5", 5), chatKey, "m5@0", "r5")).toBe("committed");
+    const first = structuredClone(store.messages["m5@0"].generations[0].continuity);
+    expect(commitContinuityCheckpoint(store, nextState("m5@0", "r5", 6), chatKey, "m5@0", "r5")).toBe("already-committed");
+    expect(store.messages["m5@0"].generations[0].continuity).toEqual(first);
   });
 
-  test("an actor state edited during the run is kept: the commit is skipped and marked", () => {
-    const store: any = { messages: { "m3@0": { kind: "illustration", generations: [generation("r3")] }, "m5@0": { kind: "illustration", generations: [generation("r5")] } } };
-    const chat: any = { message: [], localLore: [] };
-    commitContinuityCheckpoint(store, chat, nextState("m3@0", "r3", 3), chatKey, "m3@0", "r3", 0);
-    // The user edits the chat state (revision 1 -> 2) while the next run, started from revision 1, is still going.
-    const edited = readLocalLoreActorState(chat);
-    writeLocalLoreActorState(chat, { revision: 2, actors: { renamed: edited.actors.alice! } });
-    expect(commitContinuityCheckpoint(store, chat, nextState("m5@0", "r5", 5), chatKey, "m5@0", "r5", 1)).toBe("skipped");
-    expect(readLocalLoreActorState(chat)).toMatchObject({ revision: 2 });
-    expect(Object.keys(readLocalLoreActorState(chat).actors)).toEqual(["renamed"]);
+  test("a missing generation or checkpoint commits nothing", () => {
+    const store: any = { messages: { "m5@0": { kind: "illustration", generations: [generation("r5")] } } };
+    expect(commitContinuityCheckpoint(store, nextState("m5@0", "r5", 5), chatKey, "m5@0", "other")).toBe("missing");
+    expect(commitContinuityCheckpoint(store, nextState("m4@0", "r5", 5), chatKey, "m5@0", "r5")).toBe("missing");
     expect(store.messages["m5@0"].generations[0].continuity).toBeUndefined();
-    expect(store.messages["m5@0"].generations[0].stateCommitSkipped).toBe(true);
   });
 });
 

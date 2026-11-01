@@ -34,7 +34,7 @@ describe("shared artists", () => {
     expect(sharedArtistsChannel("user.with.dots")).toBe("artists.owner");
   });
 
-  test("lists built-in and own NovelAI artists without none, with overrides and the global default", () => {
+  test("lists the own NovelAI artists without none, with overrides and the global default", () => {
     const value = sharedArtistsValue(configWith([
       { id: "artist_a", title: "Webtoon", prompt: "0.6::artist:a ::,   year 2025", negativePrompt: "lowres", novelAIOverrides: { steps: 18, scale: 7, cfgRescale: 0 } },
       { id: "artist_b", title: "Manga", prompt: "artist:b" },
@@ -42,7 +42,8 @@ describe("shared artists", () => {
     expect(value.version).toBe(1);
     expect(value.defaultArtistId).toBe("artist_a");
     expect(value.novelai.some((artist) => artist.id === "none")).toBe(false);
-    expect(value.novelai.filter((artist) => artist.builtIn).length).toBeGreaterThan(0);
+    // AM 0.9.90: "none" is the only built-in, so no shared artist is built in.
+    expect(value.novelai.filter((artist) => artist.builtIn)).toEqual([]);
     const own = value.novelai.filter((artist) => !artist.builtIn);
     expect(own).toEqual([
       { id: "artist_a", title: "Webtoon", prompt: "0.6::artist:a ::,   year 2025", negativePrompt: "lowres", novelAIOverrides: { steps: 18, scale: 7, cfgRescale: 0 }, builtIn: false },

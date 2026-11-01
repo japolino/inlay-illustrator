@@ -5,7 +5,7 @@ import { CHAT_ID, createFakeEngine, createPipelineFixture, finished, waitFor } f
 import type { RpcContext } from "../types.js";
 import { chatHandlers } from "./chat.js";
 
-const OWNED = /^(generation|history|zoom|chatState|chatDom|webtoon|puppet)\./u;
+const OWNED = /^(generation|history|zoom|chatDom|puppet)\./u;
 
 function context() {
   const fx = createPipelineFixture();

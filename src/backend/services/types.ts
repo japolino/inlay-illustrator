@@ -23,6 +23,7 @@ import type {
   InlayConfig,
   LlmConnectionSummary,
   ModelOption,
+  NovelAISampling,
   ProgressInfo,
   PromptCodecId,
   RosterSource,
@@ -235,6 +236,8 @@ export interface NovelAIImageOptions {
   imageToImage?: ImageBytes & { strength: number; noise: number };
   /** Already-final body fields to merge into rawRequestOverride (escape hatch). */
   rawOverride?: Record<string, unknown>;
+  /** V5 Full High / Medium for this request (regenerate forces the recorded one); absent = `config.novelai.effort`. */
+  effort?: "high" | "medium";
 }
 
 export interface ComfyImageOptions {
@@ -279,6 +282,8 @@ export interface ImageGenerateResult {
   dataBase64?: string;
   /** Parameters actually sent (for the zoom view / regeneration). */
   sentParameters: Record<string, unknown>;
+  /** NovelAI: the sampling actually used (AM 0.9.90 `novelaiSampling`), so a Medium image rerolls as Medium. */
+  sampling?: NovelAISampling;
   attempts: number;
 }
 
@@ -482,4 +487,6 @@ export interface BackendServices {
   events: EventBus;
   log: RunLog;
   decisions: DecisionService;
+  /** Maid Atelier store (`config/atelier.json`); absent in hand-built test services (see `atelierServiceOf`). */
+  atelier?: import("./atelier.js").AtelierService;
 }

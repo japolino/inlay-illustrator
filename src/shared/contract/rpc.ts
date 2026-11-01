@@ -23,14 +23,26 @@ import type {
   ResolvedNovelAIArtist,
   StoredAssetRef,
 } from "./character.js";
-import type { CountPolicy, CurrentActorState, IllustrationPlan } from "./chat.js";
+import type { CountPolicy, IllustrationPlan } from "./chat.js";
 import type { AnalyzerSettings, ChatImageGenerationSettings, CharxSettingsPatch, EffectiveCharxSettings, GenerationProvider, InlayConfig, PromptCodecId, UiState } from "./config.js";
 import type { CharxSettingField } from "./character.js";
 import type { GenerationOrigin, HistoryTree } from "./history.js";
 import type { ChatMessageUiState } from "./chat-dom.js";
-import type { WebtoonStripView } from "./webtoon.js";
 import type { AutoPickApplyItem, AutoPickSheet, AutoPickState } from "./autopick.js";
 import type { PuppetState } from "./puppet.js";
+import type {
+  AtelierChangedEvent,
+  AtelierDocumentSelection,
+  AtelierExecutionPatch,
+  AtelierGuidelineEdit,
+  AtelierState,
+  GuidelineKind,
+  OutputMode,
+  PresetDiagnostic,
+  SceneInstruction,
+  SceneSystem,
+  SelectionSummary,
+} from "./atelier.js";
 
 export const RPC_PROTOCOL_VERSION = 1;
 /** Message `type` used on the Spindle frontend/backend channel. */
@@ -44,7 +56,8 @@ export type DeepPartial<T> = T extends readonly (infer _U)[] ? T : T extends obj
 
 export interface LlmConnectionSummary { id: string; name: string; provider: string; model: string; isDefault: boolean; hasApiKey: boolean }
 export interface DecisionConnectionSummary { id: string; name: string; provider: string; model: string; isDefault: boolean; hasApiKey: boolean }
-export interface ImageConnectionSummary { id: string; name: string; provider: string; model: string; isDefault: boolean; generationProvider: GenerationProvider; promptCodec: PromptCodecId }
+/** `generationProvider` / `promptCodec` are null for providers other than NovelAI and ComfyUI (not supported). */
+export interface ImageConnectionSummary { id: string; name: string; provider: string; model: string; isDefault: boolean; generationProvider: GenerationProvider | null; promptCodec: PromptCodecId | null }
 export interface ModelOption { id: string; label: string }
 
 export interface BackendStatus {
@@ -134,7 +147,6 @@ export type AnalysisKind =
   | "metadata-check" // AM analyzeMetadata
   | "artist-extraction" // AM Mvt.extractArtistPrompt
   | "reclassification" // AM prompt partitions (ope session)
-  | "unique-tag-search" // AM Oct session (Danbooru character tag)
   | "representative-pick" // AM sve (no LLM)
   | "charx-regex" // AM charxRegexAnalysis (detect asset tokens in the character's regex scripts)
   | "outfit-autopick"; // Inlay addition: outfits with reference images from the card's asset names (autopick.ts)
@@ -309,12 +321,14 @@ export interface ZoomDetails {
   sizeId: number;
   seed: string;
   seedFixed: boolean;
-  generationProvider: GenerationProvider | "original";
+  /** "other": a record of a removed provider (Chan Server or a former generic Lumiverse provider); viewable, not regenerable. */
+  generationProvider: GenerationProvider | "original" | "other";
   promptCodec: PromptCodecId | null;
   positivePrompt: string;
   negativePrompt: string;
   sections: ZoomPromptSection[];
-  coordinateGrid: "v4-5" | "v5" | null;
+  /** NovelAI records: always "v5" (AM 0.9.90 shows V4.5-era coordinates on the V5 grid). */
+  coordinateGrid: "v5" | null;
   excludedCharacterIndexes: number[];
   promptDraftActive: boolean;
   coordinateDraftActive: boolean;
@@ -324,6 +338,11 @@ export interface ZoomDetails {
   canDelete: boolean;
   canRegenerate: boolean;
   canDeleteSlot: boolean;
+  /**
+   * AI selection history of the analyzer decision (AM 0.9.90 `fye`, English labels); `status: "missing"` when the
+   * record has none (older images, other providers).
+   */
+  selectionSummary?: SelectionSummary;
   /** Other entries of the slot (history strip). */
   history: { entryId: string; kind: "original" | "generated"; assetName: string; url: string; createdAt: number; selected: boolean }[];
 }
@@ -452,17 +471,18 @@ export interface RpcMethods {
   "autopick.get": { params: { characterId: string; chatId?: string }; result: { state: AutoPickState; seenPromptKeys: string[] } };
   /** Add accepted groups as outfits (reference image = the chosen candidate) to their prompt key's default form. */
   "autopick.apply": { params: { characterId: string; items: AutoPickApplyItem[] }; result: { added: number; skipped: number; state: AutoPickState } };
-  /** Unique tag search: write the chosen Danbooru tag into `identity.character_tag`. */
-  "uniqueTags.apply": { params: { characterId: string; choices: { promptKey: string; formId: string; tag: string }[] }; result: Ok };
 
   /* artists tab */
   /** `selectedNovelAIId` is the effective artist (own artist, else `globalNovelAIId`); without `characterId` it is the global preset. */
-  "artists.list": { params: { characterId?: string }; result: { novelai: ResolvedNovelAIArtist[]; anima: AnimaArtistList; selectedNovelAIId: string; globalNovelAIId: string; followsGlobalNovelAI: boolean; selectedAnimaId: string } };
+  "artists.list": { params: { characterId?: string }; result: { novelai: ResolvedNovelAIArtist[]; anima: AnimaArtistList; selectedNovelAIId: string; globalNovelAIId: string; followsGlobalNovelAI: boolean; selectedAnimaId: string; globalAnimaId: string; followsGlobalAnima: boolean } };
   "artists.upsertNovelAI": { params: { entry: ArtistEntry }; result: { entry: ArtistEntry } };
   "artists.deleteNovelAI": { params: { id: string }; result: Ok };
   "artists.upsertAnima": { params: { entry: AnimaArtistEntry }; result: { entry: AnimaArtistEntry } };
   "artists.deleteAnima": { params: { id: string }; result: Ok };
-  /** Select for a character (`characterId`) or the global default. NovelAI `artistId` "" with `characterId` = follow the global preset. */
+  /**
+   * Select for a character (`characterId`) or the global default (the star, AM 0.9.90 `A$$990`; "none" clears it).
+   * `artistId` "" with `characterId` = the character follows the default again (NovelAI and Anima).
+   */
   "artists.select": { params: { list: "novelai" | "anima"; artistId: string; characterId?: string }; result: Ok };
 
   /* persona tab */
@@ -523,12 +543,6 @@ export interface RpcMethods {
   "zoom.requestAiPromptEdit": { params: { chatId: string; slotId: string; entryId: string; request: AiPromptEditRequest }; result: AiPromptEditProposal };
   "zoom.applyAiPromptEdit": { params: { chatId: string; slotId: string; proposalId: string }; result: { jobId: string } };
 
-  /* chat state window (AM "accumulated state of the current chat") */
-  "chatState.get": { params: { chatId: string }; result: { actorState: CurrentActorState } };
-  "chatState.clear": { params: { chatId: string; actorKeys?: string[] }; result: { actorState: CurrentActorState } };
-  /** Save an edited actor state (AM per-tag deselect + save). `baseRevision` = `actorState.revision` the UI edited (mismatch -> conflict). */
-  "chatState.set": { params: { chatId: string; actorState: CurrentActorState; baseRevision: number }; result: { actorState: CurrentActorState } };
-
   /* chat DOM (footers / edge controls, see chat-dom.ts) */
   /**
    * Per-message UI state for the injected chat controls. `messageIds` = Lumiverse message ids (state of the active swipe).
@@ -536,21 +550,40 @@ export interface RpcMethods {
    */
   "chatDom.getMessageStates": { params: { chatId: string; messageIds?: string[] }; result: { messages: ChatMessageUiState[] } };
 
-  /* experimental webtoon mode (strip per message swipe, see webtoon.ts) */
-  /** `width`: layout width in strip px (`stripLayoutWidth` of the shown width; default 690). */
   /* image puppet (Inlay addition, contract puppet.ts): animate toggle over chat images */
   /** Stored states of up to PUPPET_GET_MAX_IDS images (status "none" when never rigged). */
   "puppet.get": { params: { imageIds: string[] }; result: { states: Record<string, PuppetState> } };
   /** Rig the image with the analysis model (one vision call; reused when stored unless `force`) and turn its animation on. */
   "puppet.rig": { params: { imageId: string; force?: boolean }; result: { state: PuppetState } };
   "puppet.setEnabled": { params: { imageId: string; enabled: boolean }; result: { state: PuppetState } };
-  "webtoon.get": { params: { chatId: string; messageKey: string; width?: number }; result: { strip: WebtoonStripView | null } };
-  /** New image for one panel (new seed), as a regenerate job; the strip is laid out again when it finishes. */
-  "webtoon.rerollPanel": { params: { chatId: string; messageKey: string; panelId: string }; result: { jobId: string } };
-  /** Replace the text of one text item (`textIndex` into the panel's text list) and lay the strip out again. */
-  "webtoon.editText": { params: { chatId: string; messageKey: string; panelId: string; textIndex: number; text: string; width?: number }; result: { strip: WebtoonStripView } };
-  /** Show another take of one panel (`take` indexes the panel's takes) and lay the strip out again. */
-  "webtoon.selectTake": { params: { chatId: string; messageKey: string; panelId: string; take: number; width?: number }; result: { strip: WebtoonStripView } };
+
+  /* Maid Atelier (AM 0.9.90; contract atelier.ts, spec atelier-rpc.md). Document methods take `baseRevision`. */
+  "atelier.get": { params: Empty; result: { state: AtelierState } };
+  "atelier.getBaseline": { params: Empty; result: { document: Record<string, unknown>; builtInJson: string; normalizedRawConfig: Record<string, unknown> } };
+  "atelier.validateDocument": { params: { json: string }; result: { valid: boolean; diagnostics: PresetDiagnostic[]; json?: string; title?: string; bundled?: { names: string[]; count: number } } };
+  "atelier.documents.create": { params: { baseRevision: number; name: string; duplicateOf?: string; json?: string }; result: { state: AtelierState; id: string } };
+  "atelier.documents.import": { params: { baseRevision: number; fileName: string; json: string; activate?: boolean }; result: { state: AtelierState; id: string; merged: Record<"scene" | "imageRatio" | "character" | "outfit", string[]> } };
+  "atelier.documents.save": { params: { baseRevision: number; id: string; json: string }; result: { state: AtelierState } };
+  "atelier.documents.rename": { params: { baseRevision: number; id: string; name: string }; result: { state: AtelierState } };
+  "atelier.documents.delete": { params: { baseRevision: number; id: string }; result: { state: AtelierState } };
+  "atelier.documents.resetBuiltIn": { params: { baseRevision: number }; result: { state: AtelierState } };
+  "atelier.documents.activate": { params: { baseRevision: number; id: string }; result: { state: AtelierState } };
+  "atelier.documents.export": { params: { id: string; json?: string; selection?: AtelierDocumentSelection }; result: { fileName: string; json: string } };
+  "atelier.documents.rawSource": { params: { id: string }; result: { fileName: string; json: string } };
+  "atelier.instructions.select": { params: { kind: GuidelineKind; id: string }; result: { state: AtelierState } };
+  "atelier.instructions.create": { params: { kind: GuidelineKind; copyOf?: string }; result: { state: AtelierState; id: string } };
+  "atelier.instructions.remove": { params: { kind: GuidelineKind; id: string }; result: { state: AtelierState } };
+  "atelier.instructions.save": { params: { kind: GuidelineKind; edits: AtelierGuidelineEdit[] }; result: { state: AtelierState } };
+  "atelier.instructions.setOutputMode": { params: { id: string; mode: OutputMode }; result: { state: AtelierState } };
+  "atelier.instructions.setSystems": { params: { systems: Record<string, SceneSystem> }; result: { state: AtelierState; incomplete: string[] } };
+  "atelier.instructions.setOption": { params: { id: string; optionId: string; value: boolean }; result: { state: AtelierState } };
+  "atelier.instructions.setSizes": { params: { id: string; allowedSizeIds: number[]; customSizes?: Array<{ id: number; width: number; height: number }> }; result: { state: AtelierState } };
+  "atelier.instructions.restore": { params: { id: string; expected: SceneInstruction }; result: { state: AtelierState } };
+  "atelier.instructions.importLegacyDirections": { params: { baseRevision: number }; result: { state: AtelierState; created: { scene: string[]; imageRatio: string[] } } };
+  "atelier.execution.set": { params: { patch: AtelierExecutionPatch }; result: { state: AtelierState } };
+  "atelier.execution.setMode": { params: { mode: "default" | "comic" }; result: { state: AtelierState } };
+  /** Reset an unreadable part (the stored file is kept in `config/legacy/`). */
+  "atelier.repair": { params: { part: "catalog" | "library" | "freeGeneration"; confirm: true }; result: { state: AtelierState } };
 }
 
 export type RpcMethod = keyof RpcMethods;
@@ -577,6 +610,8 @@ export interface RpcEvents {
   /** Non-fatal notice / toast (AM runtime toast). */
   notice: { tone: "info" | "success" | "warning" | "danger"; message: string; messageKo?: string; key?: string };
   error: { error: RpcError; context?: string };
+  /** After every write of `config/atelier.json`. */
+  "atelier.changed": AtelierChangedEvent;
 }
 export type RpcEventName = keyof RpcEvents;
 
@@ -620,7 +655,7 @@ export const RPC_METHODS = [
   "customCharacters.create", "customCharacters.update", "customCharacters.remove", "customCharacters.setRosterRegistered", "customCharacters.setWorkspaceEnabled", "customCharacters.promote",
   "prompts.saveForms", "prompts.setReferenceEnabled", "prompts.setAnalyzeEnabled", "prompts.setSeed", "prompts.setFramingWeights",
   "assets.list", "assets.setSelection", "assets.clearSelections", "assets.setReference", "assets.inspectMetadata", "assets.clearMetadataRecords", "assets.upload", "assets.saveCrop", "assets.getUrl",
-  "analysis.start", "analysis.cancel", "analysis.listActive", "autopick.get", "autopick.apply", "uniqueTags.apply",
+  "analysis.start", "analysis.cancel", "analysis.listActive", "autopick.get", "autopick.apply",
   "artists.list", "artists.upsertNovelAI", "artists.deleteNovelAI", "artists.upsertAnima", "artists.deleteAnima", "artists.select",
   "personas.list", "personas.saveForms", "personas.setSettings",
   "outfitImage.generate", "outfitImage.history", "outfitImage.save",
@@ -629,16 +664,18 @@ export const RPC_METHODS = [
   "generation.start", "generation.cancel", "generation.retry", "generation.restart", "generation.dismiss", "generation.listActive", "generation.regenerateSlot",
   "history.get", "history.selectEntry", "history.selectRevision", "history.deleteEntry", "history.prepareSlotDeletion", "history.deleteSlot", "history.retryCleanup",
   "zoom.getDetails", "zoom.saveDraft", "zoom.clearDraft", "zoom.importViewed", "zoom.requestAiPromptEdit", "zoom.applyAiPromptEdit",
-  "chatState.get", "chatState.clear", "chatState.set",
   "chatDom.getMessageStates",
-  "webtoon.get", "webtoon.rerollPanel", "webtoon.editText", "webtoon.selectTake",
   "puppet.get", "puppet.rig", "puppet.setEnabled",
+  "atelier.get", "atelier.getBaseline", "atelier.validateDocument",
+  "atelier.documents.create", "atelier.documents.import", "atelier.documents.save", "atelier.documents.rename", "atelier.documents.delete", "atelier.documents.resetBuiltIn", "atelier.documents.activate", "atelier.documents.export", "atelier.documents.rawSource",
+  "atelier.instructions.select", "atelier.instructions.create", "atelier.instructions.remove", "atelier.instructions.save", "atelier.instructions.setOutputMode", "atelier.instructions.setSystems", "atelier.instructions.setOption", "atelier.instructions.setSizes", "atelier.instructions.restore", "atelier.instructions.importLegacyDirections",
+  "atelier.execution.set", "atelier.execution.setMode", "atelier.repair",
 ] as const satisfies readonly RpcMethod[];
 
 export const RPC_EVENTS = [
   "status.changed", "config.changed", "chatImageGeneration.changed", "document.changed", "chatData.changed",
   "generation.progress", "generation.finished", "analysis.progress", "analysis.finished", "outfitImage.progress", "outfitImage.finished",
-  "log.appended", "notice", "error",
+  "log.appended", "notice", "error", "atelier.changed",
 ] as const satisfies readonly RpcEventName[];
 
 // Compile-time completeness checks: every method / event is listed exactly in the runtime arrays.

@@ -11,9 +11,9 @@ import {
   splitParagraphSlots as coreSplitParagraphSlots,
   stripAssetMaidMarkup as coreStripAssetMaidMarkup,
   buildCharxAssetRegexDetectors as coreBuildCharxAssetRegexDetectors,
-  YE as isGeneratedAssetNameCore,
-  oP as detectImageTokensCore,
-  KIe as splitParagraphSlotsWithoutMarkupsCore,
+  HO as isGeneratedAssetNameCore,
+  l_ as detectImageTokensCore,
+  cke as splitParagraphSlotsWithoutMarkupsCore,
 } from "../core/asset-maid-core";
 
 /** A charx / manual regex detector (`{scriptName, regex}`, built by `sH` @120727). */

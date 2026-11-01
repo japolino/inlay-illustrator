@@ -1,5 +1,5 @@
-// Generator: cd C:/Users/eme4/asset-maid-port/scratch/engine/engine && bun gen-e2e.mjs
-// (runs the ORIGINAL bundle wired like Asset Maid's boot code, LOt 180731-180783, with the same driver).
+// Generator: bun S/engine-build/gen/engine-e2e.mjs (S = the am990 scratch dir)
+// (runs the ORIGINAL 0.9.90 bundle wired like Asset Maid's boot code, p120 @185030-185085, with the same driver).
 import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";

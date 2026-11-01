@@ -75,8 +75,7 @@
        "targetActorId": "actor_1",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [],
-       "participantDetails": []
+       "modifiers": []
       }
      ],
      "location": {
@@ -88,15 +87,9 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "indoors"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
         ]
        }
       ],
@@ -143,27 +136,32 @@
          "options": [
           "exhausted"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
        "actorId": "actor_2",
        "placementIndex": 1,
        "actions": [],
-       "modifiers": [],
-       "freeTags": [],
-       "penetratingInjuries": [],
+       "modifiers": [
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -383,7 +381,7 @@
    "actor.m0ais.6ynrym": "lore:bob",
    "actor.1fmv888.fk4pvw": "persona::p1"
   },
-  "requestPayload": "fnv1a64-c477efcd5bc77823",
+  "requestPayload": "fnv1a64-420a363b97613771",
   "localProjection": {
    "allowedSizeIds": [
     1,
@@ -392,7 +390,7 @@
    ],
    "characterCoordinates": "fixed"
   },
-  "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+  "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
  },
  "plans": [
   {
@@ -437,27 +435,41 @@
      "sex": "male",
      "centerX": 0.3,
      "centerY": 0.5,
-     "negativePrompt": ""
+     "negativePrompt": "",
+     "outfitPartWeights": {
+      "head": 1,
+      "top": 1,
+      "bottom": 1,
+      "legs": 1,
+      "feet": 0
+     }
     },
     {
      "tags": [
       "male",
       "black hair",
-      "source#arm around shoulder",
       "grey suit jacket",
       "white shirt",
       "blue necktie",
-      "grey suit pants"
+      "grey suit pants",
+      "source#arm around shoulder"
      ],
      "instructions": [],
-     "serializedPrompt": "male, black hair, source#arm around shoulder, grey suit jacket, white shirt, blue necktie, grey suit pants",
+     "serializedPrompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, source#arm around shoulder",
      "actorId": "actor_2",
      "placementIndex": 1,
      "candidateKey": "actor.m0ais.6ynrym",
      "sex": "male",
      "centerX": 0.7,
      "centerY": 0.5,
-     "negativePrompt": ""
+     "negativePrompt": "",
+     "outfitPartWeights": {
+      "head": 1,
+      "top": 1,
+      "bottom": 1,
+      "legs": 1,
+      "feet": 0
+     }
     }
    ],
    "ledger": [
@@ -488,6 +500,9 @@
      "order": 0,
      "sourceKind": "actor-roster",
      "sourceId": "actor-roster:actor_2:sex",
+     "outputOrigin": {
+      "path": "base.sex"
+     },
      "weight": 1,
      "id": "ledger:00001",
      "semanticKey": "male",
@@ -495,6 +510,9 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "base"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -512,6 +530,9 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "base"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -529,6 +550,9 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "base"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -556,12 +580,18 @@
      "order": 1,
      "sourceKind": "generated-actor",
      "sourceId": "generated-actor:free_1",
+     "outputOrigin": {
+      "path": "base"
+     },
      "id": "ledger:00005",
      "semanticKey": "stooped posture holding a broom",
      "inputIndex": 5,
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "base.hair.color"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -580,6 +610,9 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "base.marks.distinctive"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -587,7 +620,7 @@
      },
      "semanticId": "base.marks.distinctive",
      "value": "old man",
-     "order": 10100,
+     "order": 10200,
      "sourceKind": "external-identity",
      "sourceId": "free_1:marks.distinctive:0",
      "placementIndex": 0,
@@ -598,6 +631,9 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "base.marks.distinctive"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -605,7 +641,7 @@
      },
      "semanticId": "base.marks.distinctive",
      "value": "grey hair",
-     "order": 10101,
+     "order": 10201,
      "sourceKind": "external-identity",
      "sourceId": "free_1:marks.distinctive:1",
      "placementIndex": 0,
@@ -616,6 +652,9 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "base.marks.distinctive"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -623,7 +662,7 @@
      },
      "semanticId": "base.marks.distinctive",
      "value": "blue overalls",
-     "order": 10102,
+     "order": 10202,
      "sourceKind": "external-identity",
      "sourceId": "free_1:marks.distinctive:2",
      "placementIndex": 0,
@@ -698,90 +737,9 @@
      "status": "applied"
     },
     {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_2"
+     "outputOrigin": {
+      "path": "outfit.top"
      },
-     "semanticId": "interaction.arm_around_shoulder.directed.source",
-     "value": "source#arm around shoulder",
-     "order": 41,
-     "sourceKind": "closed",
-     "sourceId": "interaction:interaction:0",
-     "weight": 1,
-     "id": "ledger:00006",
-     "semanticKey": "arm around shoulder",
-     "inputIndex": 6,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "interaction.arm_around_shoulder.directed.target",
-     "value": "target#arm around shoulder",
-     "order": 42,
-     "sourceKind": "closed",
-     "sourceId": "interaction:interaction:0",
-     "weight": 1,
-     "id": "ledger:00007",
-     "semanticKey": "arm around shoulder",
-     "inputIndex": 7,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "expression.general.exhausted",
-     "value": "exhausted",
-     "order": 4040,
-     "sourceKind": "closed",
-     "sourceId": "actor-detail:actor_1:expression.general.exhausted",
-     "weight": 1,
-     "placementIndex": 0,
-     "id": "ledger:00008",
-     "semanticKey": "exhausted",
-     "inputIndex": 8,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "global"
-     },
-     "semanticId": "scene.environment.indoors",
-     "value": "indoors",
-     "order": 6060,
-     "sourceKind": "closed",
-     "sourceId": "scene-location:scene.environment:scene.environment.indoors",
-     "weight": 1,
-     "id": "ledger:00009",
-     "semanticKey": "indoors",
-     "inputIndex": 9,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "global"
-     },
-     "semanticId": "scene.location.free.hallway",
-     "value": "hallway",
-     "order": 0,
-     "sourceKind": "recovered-free",
-     "sourceId": "scene-location",
-     "weight": 1,
-     "id": "ledger:00010",
-     "semanticKey": "hallway",
-     "inputIndex": 10,
-     "status": "applied"
-    },
-    {
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -800,6 +758,92 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "interaction": "interaction:0",
+      "path": "interaction.arm_around_shoulder"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "interaction.arm_around_shoulder.directed.target",
+     "value": "target#arm around shoulder",
+     "order": 42,
+     "sourceKind": "closed",
+     "sourceId": "interaction:interaction:0",
+     "weight": 1,
+     "id": "ledger:00007",
+     "semanticKey": "arm around shoulder",
+     "inputIndex": 7,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.expression.general",
+      "option": "exhausted"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "expression.general.exhausted",
+     "value": "exhausted",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:expression.general.exhausted",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00008",
+     "semanticKey": "exhausted",
+     "inputIndex": 8,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.environment.setting",
+      "option": "indoors"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "environment.setting.indoors",
+     "value": "indoors",
+     "order": 6060,
+     "sourceKind": "closed",
+     "sourceId": "scene-location:environment.setting:environment.setting.indoors",
+     "weight": 1,
+     "id": "ledger:00009",
+     "semanticKey": "indoors",
+     "inputIndex": 9,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "free.location",
+      "group": "scene.free.location"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.free.hallway",
+     "value": "hallway",
+     "order": 0,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "weight": 1,
+     "id": "ledger:00010",
+     "semanticKey": "hallway",
+     "inputIndex": 10,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -818,6 +862,9 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -836,6 +883,9 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "outfit.bottom"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -854,6 +904,30 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "interaction": "interaction:0",
+      "path": "interaction.arm_around_shoulder"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "interaction.arm_around_shoulder.directed.source",
+     "value": "source#arm around shoulder",
+     "order": 41,
+     "sourceKind": "closed",
+     "sourceId": "interaction:interaction:0",
+     "weight": 1,
+     "id": "ledger:00006",
+     "semanticKey": "arm around shoulder",
+     "inputIndex": 6,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.feet"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -927,7 +1001,7 @@
      },
      {
       "actorSlot": "actor_2",
-      "prompt": "male, black hair, source#arm around shoulder, grey suit jacket, white shirt, blue necktie, grey suit pants",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, source#arm around shoulder",
       "uc": "",
       "centerX": 0.7,
       "centerY": 0.5,
@@ -935,6 +1009,7 @@
      }
     ]
    },
+   "forceRating": false,
    "references": [],
    "queueMeta": {
     "kind": "generation",
@@ -974,7 +1049,7 @@
      "selectedFormId": "form_default",
      "selectedOutfitId": "outfit_1",
      "identitySuppressed": false,
-     "prompt": "male, black hair, source#arm around shoulder, grey suit jacket, white shirt, blue necktie, grey suit pants",
+     "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, source#arm around shoulder",
      "negativePrompt": ""
     }
    ],
@@ -989,16 +1064,16 @@
     },
     "outfits": {
      "actor_2": {
-      "start": 46,
-      "end": 106
+      "start": 18,
+      "end": 78
      }
     }
    },
    "analysisMetadata": {
-    "hash": "fnv1a64-414038b94295fbaf"
+    "hash": "fnv1a64-9ef26c1ddda962e0"
    },
    "decision": {
-    "hash": "fnv1a64-49afa26f8d5284b8"
+    "hash": "fnv1a64-1666da1079db9eee"
    },
    "analyzerContinuity": {
     "previous_modifiers": {
@@ -1045,7 +1120,7 @@
       "actorIndex": 1,
       "placementIndex": 1,
       "selectedOutfitId": "outfit_1",
-      "prompt": "male, black hair, source#arm around shoulder, grey suit jacket, white shirt, blue necktie, grey suit pants",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, source#arm around shoulder",
       "uc": "",
       "identityKey": "lore:bob",
       "identity": {
@@ -1059,7 +1134,6 @@
     "width": 1216,
     "height": 832,
     "sizeId": 2,
-    "selectedFraming": "",
     "selectedVariantId": "",
     "artistId": "detail_anime_illustration_style",
     "artistName": "v5 style",
@@ -1106,7 +1180,7 @@
      },
      {
       "actorSlot": "actor_2",
-      "prompt": "male, black hair, source#arm around shoulder, grey suit jacket, white shirt, blue necktie, grey suit pants",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, source#arm around shoulder",
       "uc": "",
       "centerX": 0.7,
       "centerY": 0.5,
@@ -1139,7 +1213,7 @@
      {
       "actorId": "actor_2",
       "actorIndex": 1,
-      "prompt": "male, black hair, source#arm around shoulder, grey suit jacket, white shirt, blue necktie, grey suit pants",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, source#arm around shoulder",
       "negativePrompt": "",
       "centerX": 0.7,
       "centerY": 0.5
@@ -1165,7 +1239,7 @@
     }
    },
    "generationRecord": {
-    "hash": "fnv1a64-bb09f221c833782c"
+    "hash": "fnv1a64-db3f8c7bae475282"
    }
   }
  ],
@@ -1180,7 +1254,7 @@
     "characterName": "",
     "groups": {},
     "counters": {},
-    "turn": 1,
+    "turn": 0,
     "expires": {},
     "passthrough": {}
    }
@@ -1194,18 +1268,58 @@
    ]
   },
   "modifierRefs": {
+   "referenceOnly": true,
+   "actors": {},
    "global": {
-    "scene.environment": [
+    "environment.setting": [
      "indoors"
+    ],
+    "scene.free.location": [
+     "hallway"
     ]
+   },
+   "interactionReferences": {
+    "records": {},
+    "actors": {
+     "lore:bob": false
+    }
+   },
+   "referenceExclusions": {
+    "catalog": "fnv1a64-554a124a78533747",
+    "actors": {
+     "lore:bob": []
+    },
+    "scene": []
    }
   },
   "outfitRefs": {
    "actors": {
     "lore:bob": {
-     "formId": "form_default",
      "outfitId": "outfit_1",
-     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
     }
    }
   }
@@ -1219,24 +1333,53 @@
     "hallway"
    ]
   },
-  "characters": {
-   "lore:bob": {
-    "_continuity_turn": 1
-   }
-  },
   "modifierRefs": {
+   "referenceOnly": true,
    "global": {
-    "scene.environment": [
+    "environment.setting": [
      "indoors"
+    ],
+    "scene.free.location": [
+     "hallway"
     ]
+   },
+   "interactionReferences": {
+    "actors": {
+     "lore:bob": false
+    }
+   },
+   "referenceExclusions": {
+    "catalog": "fnv1a64-554a124a78533747"
    }
   },
   "outfitRefs": {
    "actors": {
     "lore:bob": {
-     "formId": "form_default",
      "outfitId": "outfit_1",
-     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
     }
    }
   }

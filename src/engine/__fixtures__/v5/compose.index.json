@@ -11,11 +11,6 @@
    "provider": "comfy-ui",
    "seed": 41
   },
-  "default.chan-server": {
-   "response": "default",
-   "provider": "chan-server",
-   "seed": 41
-  },
   "pov.novelai": {
    "response": "pov",
    "directions": "pov",
@@ -35,18 +30,23 @@
    "provider": "comfy-ui",
    "seed": 44
   },
-  "routing.novelai-nsfw-prefix": {
+  "routing.novelai-rating-nsfw": {
    "response": "routing",
    "provider": "novelai",
    "seed": 45,
-   "forceNsfwPrefix": true
+   "forceRating": "nsfw"
+  },
+  "default.comfy-ui-rating-sfw": {
+   "response": "default",
+   "provider": "comfy-ui",
+   "seed": 45,
+   "forceRating": "sfw"
   },
   "continuity.turn2": {
    "response": "continuity",
    "provider": "novelai",
    "seed": 46,
-   "previous": "default.novelai",
-   "stateAccumulationEnabled": true
+   "previous": "default.novelai"
   },
   "revision.novelai": {
    "response": "default",
@@ -68,6 +68,12 @@
    "provider": "novelai",
    "seed": 49,
    "freechar": true
+  },
+  "prepared-analysis.novelai": {
+   "response": "default",
+   "provider": "novelai",
+   "seed": 50,
+   "prepared": "stored"
   }
  },
  "comfyProfileId": "asset-maid-comfy-ui-workflow-v1"

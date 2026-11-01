@@ -1,22 +1,23 @@
+// Hand-written checks of the split-analysis multi-depiction units (0.9.89.5 names l5/eve/Fyt/$yt/Kyt = 0.9.90 B4/Jxe/abt/ibt/obt).
 import { describe, expect, test } from "bun:test";
 import {
-  l5,
-  eve,
-  Fyt,
-  $yt,
-  Kyt,
+  B4,
+  Jxe,
+  abt,
+  ibt,
+  obt,
 } from "../core/asset-maid-core.js";
 
 describe("Domain 3: Split Analysis Pipeline & Multi-Depiction", () => {
   test("Split analysis contract version is bumped to 8", () => {
-    expect(eve.version).toBe(8);
+    expect(Jxe.version).toBe(8);
   });
 
   test("Split detail preamble uses universal multi-depiction fyt text", () => {
-    expect(Fyt).toContain(
+    expect(abt).toContain(
       "Preserve locked actor_roster entries; append distinct actorIds only for additional depictions of locked candidateKey/form/outfit definitions.",
     );
-    expect(Fyt).toContain(
+    expect(abt).toContain(
       "In every preset, additional depictions in one image, one panel or across panels may repeat the same identity and effective outfit",
     );
   });
@@ -69,7 +70,7 @@ describe("Domain 3: Split Analysis Pipeline & Multi-Depiction", () => {
       ],
     };
 
-    const resolved = l5(detailResponse, [candidateAlice], lockedPlan, false);
+    const resolved = B4(detailResponse, [candidateAlice], lockedPlan, false);
     expect(resolved.actor_roster.length).toBe(2);
     expect(resolved.actor_roster[0].actorId).toBe("actor_1");
     expect(resolved.actor_roster[0].candidateKey).toBe("alice");
@@ -101,7 +102,7 @@ describe("Domain 3: Split Analysis Pipeline & Multi-Depiction", () => {
       actor_detail: [{ placementIndex: 0 }],
     };
 
-    expect(() => l5(detailResponse, [candidateAlice], lockedPlan, false)).toThrow(
+    expect(() => B4(detailResponse, [candidateAlice], lockedPlan, false)).toThrow(
       "확정 등장 개체 참조가 모호합니다: alice",
     );
   });
@@ -140,7 +141,7 @@ describe("Domain 3: Split Analysis Pipeline & Multi-Depiction", () => {
       actor_detail: [{ placementIndex: 0 }, { placementIndex: 1 }, { placementIndex: 2 }],
     };
 
-    expect(() => l5(detailResponse, [candidateAliceMultiForm], lockedPlan, false)).toThrow(
+    expect(() => B4(detailResponse, [candidateAliceMultiForm], lockedPlan, false)).toThrow(
       "추가 등장 개체의 폼·의상 상속이 모호합니다.",
     );
   });
@@ -167,7 +168,7 @@ describe("Domain 3: Split Analysis Pipeline & Multi-Depiction", () => {
       actor_detail: [{ actorId: "actor_1", placementIndex: 0 }],
     };
 
-    expect(() => l5(detailResponse, [candidateAlice, candidateBob], lockedPlan, false)).toThrow(
+    expect(() => B4(detailResponse, [candidateAlice, candidateBob], lockedPlan, false)).toThrow(
       "확정 인물 목록의 coverage 불일치",
     );
   });
@@ -202,7 +203,7 @@ describe("Domain 3: Split Analysis Pipeline & Multi-Depiction", () => {
     };
 
     // With locked plan, interaction pass-through (P = true) preserves "unmatched_stranger"
-    const resolved = l5(detailResponse, [candidateAlice], lockedPlan, false);
+    const resolved = B4(detailResponse, [candidateAlice], lockedPlan, false);
     expect(resolved.interaction.items[0].sourceActorId).toBe("actor_1");
     expect(resolved.interaction.items[0].targetActorId).toBe("unmatched_stranger");
   });
@@ -249,7 +250,7 @@ describe("Domain 3: Split Analysis Pipeline & Multi-Depiction", () => {
       ],
     };
 
-    const result = $yt(detailPayload, { plan, assignedSlots: [1] } as any, false, candidateRoster as any);
+    const result = ibt(detailPayload, { plan, assignedSlots: [1] } as any, false, candidateRoster as any);
     expect(result.illustrations.length).toBe(1);
     expect(result.illustrations[0].actor_roster.length).toBe(2);
     expect(result.illustrations[0].actor_roster[1].actorId).toBe("actor_2");

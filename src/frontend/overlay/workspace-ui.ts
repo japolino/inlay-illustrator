@@ -8,7 +8,7 @@ import { useContext } from "preact/hooks";
 import { Store, useSelector } from "../state/store.js";
 import type { WorkspaceTab } from "./labels.js";
 
-export type SecondaryMode = "asset-picker" | "outfit" | "character-tags";
+export type SecondaryMode = "asset-picker" | "outfit";
 export type NavigationView = "characters" | "lorebooks" | "custom" | "modules";
 
 /** What the asset picker is choosing for (AM picker context kinds `Cit` 97611). */

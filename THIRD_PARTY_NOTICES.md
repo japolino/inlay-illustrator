@@ -13,15 +13,6 @@ Inlay Illustrator is a port of the RisuAI plugin **Asset Maid** to Lumiverse (po
 - Preact (https://preactjs.com), MIT license. Bundled into `dist/frontend.js`.
 - Tailwind CSS (https://tailwindcss.com), MIT license. Used at build time; its generated utility CSS is bundled into `dist/frontend.js`.
 
-## Bundled fonts
-
-Subset (Latin-1 + punctuation) WOFF copies are bundled into `dist/frontend.js` for the experimental webtoon strip
-(`src/frontend/chat/webtoon/fonts-data.ts`). All three are licensed under the SIL Open Font License 1.1 (https://openfontlicense.org):
-
-- Comic Neue Bold (Craig Rozynski, Hrant Papazian), https://github.com/crozynski/comicneue
-- Patrick Hand (Patrick Wagesreiter), https://fonts.google.com/specimen/Patrick+Hand
-- Bangers (Vernon Adams), https://fonts.google.com/specimen/Bangers
-
 ## Removed material
 
 Earlier versions bundled material derived from Lightboard 4.5.3 (CC BY-NC-SA 4.0) and used `@toon-format/toon` (MIT). Both were removed with the Lightboard pipeline in 0.10.0.

@@ -21,7 +21,6 @@ import { LumiverseError } from "./client.js";
 import { cleanNarrative, extractInlayBlocks, hasInlayMarkup, inferInlayStatus } from "./inlay-markers.js";
 import {
   inlayDescribeConfig,
-  inlayGetCharacterTags,
   inlayGetImageDetails,
   inlayGetResult,
   inlayMetadata,
@@ -258,14 +257,6 @@ describe("Inlay extension state and stored image details", () => {
     const reset = await inlayResetConfig(context(client, fakeClock()), { fields: ["enabled"] });
     expect((reset.after as InlayConfig).enabled).toBe(DEFAULT_CONFIG.enabled);
     await expect(inlayResetConfig(context(client, fakeClock()), { all: true })).rejects.toThrow("confirm_all=true");
-  });
-
-  test("returns the accumulated actor state of a chat", async () => {
-    const actorState = { revision: 2, actors: { a: { name: "Miyoko" } } };
-    const client = stubClient({ extensionMessage: rpcStub((method, params) => (method === "chatState.get" && params.chatId === "chat1" ? { actorState } : null)) });
-    const state: DriverState = { characterId: "c1", chatId: "chat1" };
-    const result = await inlayGetCharacterTags(context(client, fakeClock(), state), {});
-    expect(result).toEqual({ chat_id: "chat1", actor_state: actorState });
   });
 
   test("RPC errors surface as tool errors", async () => {

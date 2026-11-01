@@ -197,6 +197,54 @@ describe("chat side (DOM, dev mock)", () => {
     await until(() => q(".ii-am-chat-count__toggle")?.textContent?.includes("2"));
   });
 
+  test("toolbar resolution and AI coordinates: seeded from the CharX values, saved globally (AM 0.9.90)", async () => {
+    const r = rig();
+    const defaults = r.mock.db.config.characterPrompt.charxGenerationDefaults;
+    defaults.fixedResolution = { enabled: true, sizeId: 2 };
+    defaults.forceAiChoiceCoordinates = false;
+    await r.app.init();
+    (await until(() => q(".ii-am-chat-count__toggle"))).click();
+    const resolution = await until(() => q('[data-am-action="toggle-resolution"][aria-label="Generation resolution: 1216 × 832"]'));
+    const coordinates = await until(() => q('[data-am-action="toggle-coordinates"][aria-pressed="true"]'));
+    coordinates.click();
+    await until(() => q('[data-am-action="toggle-coordinates"][aria-pressed="false"]'));
+    await until(() => calls(r, "config.update").length === 1);
+    expect((calls(r, "config.update")[0]!.params as { patch: unknown }).patch).toEqual({ runtime: { analysisExecution: { resolution: { id: 2, width: 1216, height: 832 }, aiCoordinates: false } } });
+    resolution.click();
+    (await until(() => q('[data-am-action="select-resolution"][data-am-resolution="auto"]'))).click();
+    await until(() => calls(r, "config.update").length === 2);
+    expect((calls(r, "config.update")[1]!.params as { patch: unknown }).patch).toEqual({ runtime: { analysisExecution: { resolution: null, aiCoordinates: false } } });
+    await until(() => q('[data-am-action="toggle-resolution"][aria-label="Generation resolution: Auto"]'));
+    expect(r.mock.db.config.runtime.analysisExecution).toEqual({ resolution: null, aiCoordinates: false });
+  });
+
+  test("toolbar scene menu lists the Maid Atelier directing guidelines and selects through the Atelier", async () => {
+    const r = rig();
+    await r.app.init();
+    (await until(() => q(".ii-am-chat-count__toggle"))).click();
+    const sceneButton = await until(() => q(".ii-am-chat-count__scene-button"));
+    expect(sceneButton.textContent).toBe("Illustration");
+    sceneButton.click();
+    const menu = await until(() => q(".ii-am-chat-count__scene-menu"));
+    const items = [...menu.querySelectorAll('[role="menuitemradio"]')];
+    expect(items.map((i) => i.textContent)).toEqual(["Illustration", "POV", "Ensemble", "Comic"]);
+    (items[1] as HTMLElement).click();
+    await until(() => calls(r, "atelier.instructions.select").length === 1);
+    expect(calls(r, "atelier.instructions.select")[0]!.params).toEqual({ kind: "scene", id: "system-pov" });
+    await until(() => q(".ii-am-chat-count__scene-button")?.textContent === "POV");
+    expect(calls(r, "config.update").length).toBe(0);
+  });
+
+  test("toolbar: the AI coordinates toggle is NovelAI-only; the resolution menu stays", async () => {
+    const r = rig();
+    r.mock.db.config.image.connectionId = "img-comfy";
+    r.mock.db.config.image.provider = "comfyui";
+    await r.app.init();
+    (await until(() => q(".ii-am-chat-count__toggle"))).click();
+    await until(() => q('[data-am-action="toggle-resolution"]'));
+    expect(q('[data-am-action="toggle-coordinates"]')).toBeNull();
+  });
+
   test("the runtime host follows the corner preference live (saved under the old floating-button key)", async () => {
     const saved = new Map([["inlay-illustrator:fab-corner", "top-left"]]);
     const corner = runtimeCornerPreference({ getItem: (key) => saved.get(key) ?? null, setItem: (key, value) => void saved.set(key, value) });
@@ -369,27 +417,6 @@ describe("zoom viewer (DOM, dev mock)", () => {
     await until(() => q("[data-ii-zoom-artist-select] button")?.textContent?.includes("Clean lineart"));
   });
 
-  test("chat state window: deselect a tag and save through chatState.set", async () => {
-    const r = rig();
-    await r.app.init();
-    await openZoom(r);
-    q("[data-ii-zoom-state-toggle]")!.click();
-    const chip = await until(() => q('[data-ii-zoom-state-tag="cum_on_hair"]'));
-    expect(chip.getAttribute("aria-pressed")).toBe("true");
-    expect(q("[data-ii-zoom-state-save]")!.hasAttribute("disabled")).toBe(true);
-    chip.click();
-    await until(() => q('[data-ii-zoom-state-tag="cum_on_hair"][aria-pressed="false"]'));
-    (await until(() => { const b = q("[data-ii-zoom-state-save]"); return b && !b.hasAttribute("disabled") && b; })).click();
-    await until(() => calls(r, "chatState.set").length === 1);
-    const params = calls(r, "chatState.set")[0]!.params as { baseRevision: number; actorState: { actors: Record<string, { groups: Record<string, string[]>; ttl: Record<string, number> }> } };
-    expect(params.baseRevision).toBe(3);
-    expect(params.actorState.actors.mina!.groups["state.fluid.cum.location"]).toEqual([]);
-    expect(params.actorState.actors.mina!.ttl).toEqual({});
-    expect(params.actorState.actors.seoyeon!.groups["actor.injury"]).toEqual(["bandage_on_arm", "scraped_knee"]);
-    await until(() => !q('[data-ii-zoom-state-tag="cum_on_hair"]'));
-    expect(mockChat(r.mock.db).actorState.revision).toBe(4);
-  });
-
   test("a slot removed elsewhere moves the viewer to another image (no polling of a dead slot)", async () => {
     const r = rig();
     await r.app.init();
@@ -402,6 +429,41 @@ describe("zoom viewer (DOM, dev mock)", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(calls(r, "zoom.getDetails").filter((c) => (c.params as { slotId: string }).slotId.includes("msg-2")).length).toBe(before);
     expect(r.zoom.isOpen()).toBe(true);
+  });
+
+  test("selection history: shown instead of the analyzer outside developer mode, with scenes, interactions and the range filter", async () => {
+    const r = rig();
+    await r.app.init();
+    await openZoom(r);
+    expect(q("[data-ii-zoom-analyzer-toggle]")).toBeNull();
+    (await until(() => q("[data-ii-zoom-selection-toggle]"))).click();
+    const panel = await until(() => q("[data-selection-history]"));
+    expect(panel.querySelector('[data-selection-scene="panel.group/library"]')?.textContent).toContain("Defined");
+    expect(panel.querySelector('[data-selection-scene="free"]')?.textContent).toContain("Free");
+    expect(panel.querySelector('[data-selection-interaction="handhold"] [data-selection-incomplete]')).not.toBeNull();
+    const shown = () => [...panel.querySelectorAll("[data-selection-group]")].map((g) => g.getAttribute("data-selection-group"));
+    expect(shown()).not.toContain("environment.weather");
+    (panel.querySelector('[data-selection-range="all"]') as HTMLElement).click();
+    await until(() => shown().includes("environment.weather"));
+    q("[data-ii-zoom-back-to-info]")!.click();
+    await until(() => q("[data-ii-zoom-info]"));
+  });
+
+  test("selection history: omitted and missing records; developer mode keeps the analyzer with a switch", async () => {
+    const r = rig();
+    r.mock.db.config.ui.developerModeEnabled = true;
+    const original = r.mock.handlers["zoom.getDetails"]!;
+    let status: "omitted" | "missing" = "omitted";
+    r.mock.handlers["zoom.getDetails"] = async (params, ctx) => ({ ...(await original(params, ctx)), selectionSummary: { status, scenes: [], interactions: [], sections: [], inventoryRecorded: false } });
+    await r.app.init();
+    await openZoom(r);
+    expect(q("[data-ii-zoom-selection-toggle]")).toBeNull();
+    (await until(() => q("[data-ii-zoom-analyzer-toggle]"))).click();
+    (await until(() => q("[data-ii-zoom-selection-switch]"))).click();
+    await until(() => q('[data-selection-state="omitted"]'));
+    status = "missing";
+    q('[data-ii-zoom-history-entry="entry-3"]')!.click();
+    await until(() => q('[data-selection-state="missing"]'));
   });
 
   test("AI edit: $ mention list and insertion", async () => {

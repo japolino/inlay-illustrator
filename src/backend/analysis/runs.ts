@@ -15,7 +15,6 @@
  * | reclassification    | `dhe` L98781 with the prompts adapter `Ddt` L107990 (personas: `oIt` L149087) | Prompts tab L154235 |
  * | charx-regex         | `h0t.analyzeRegex` L138174, scripts = Lumiverse regex scripts | settings                  |
  * | outfit-autopick     | Inlay addition (autopick.ts): naming scheme + contact sheets, no AM controller | Prompts tab |
- * | unique-tag-search   | dropped (Danbooru HF space, PORT-PLAN) -> unsupported     |                               |
  */
 import { rpcError, type AnalysisStartParams, type JobStatus, type ProgressInfo, type RowNotice } from "../../shared/contract/index.js";
 import { fail } from "../rpc/errors.js";
@@ -156,11 +155,11 @@ function outfitLore(session: AnalysisSession, loreFor: (promptKey: string) => st
 
 const sessionLore = (session: AnalysisSession) => outfitLore(session, (promptKey) => loreBodiesByPromptKey(session.source).get(promptKey));
 
-const promptKeysOf = (session: AnalysisSession): string[] => session.source.members.flatMap((m) => m.lorebooks.map((l) => amFn("Hs")(m, l) as string));
+const promptKeysOf = (session: AnalysisSession): string[] => session.source.members.flatMap((m) => m.lorebooks.map((l) => amFn("Is")(m, l) as string));
 
 export async function runCharacterPrompts(ctx: JobContext, params: AnalysisStartParams, explicit = false): Promise<JobOutcome> {
   const session = await open(ctx, "asset-analysis");
-  const controller = AM.Gwt({
+  const controller = AM.ptt({
     sourceCatalog: session.sourceCatalog,
     metadata: session.metadata,
     images: session.images,
@@ -191,7 +190,7 @@ export async function runCharacterPrompts(ctx: JobContext, params: AnalysisStart
 export async function runReferences(ctx: JobContext, params: AnalysisStartParams): Promise<JobOutcome> {
   if ((params.evidenceMode ?? "image") === "text") return runCharacterPrompts(ctx, params, true);
   const session = await open(ctx, "reference-analysis");
-  const controller = AM.f0t({
+  const controller = AM.Ntt({
     sourceCatalog: session.sourceCatalog,
     metadata: session.metadata,
     images: session.images,
@@ -216,7 +215,7 @@ export async function runPersona(ctx: JobContext, params: AnalysisStartParams): 
   await session.sourceCatalog.refreshPersonas();
   const personas = await ctx.services.sources.listPersonas().catch(() => []);
   const personaText = (key: string) => personas.find((p) => p.personaId === key.replace(/^persona:+/, ""))?.description;
-  const controller = AM.o0t({
+  const controller = AM.Att({
     sourceCatalog: session.sourceCatalog,
     metadata: session.metadata,
     images: session.images,
@@ -231,7 +230,7 @@ export async function runPersona(ctx: JobContext, params: AnalysisStartParams): 
 
 export async function runAssetMatching(ctx: JobContext, params: AnalysisStartParams): Promise<JobOutcome> {
   const session = await open(ctx, "asset-matching");
-  const controller = AM.C0t({ sourceCatalog: session.sourceCatalog, analyzer: analyzer(ctx, "asset-matching"), config: session.store, priorityAssets: session.priorityAssets });
+  const controller = AM.Hrt({ sourceCatalog: session.sourceCatalog, analyzer: analyzer(ctx, "asset-matching"), config: session.store, priorityAssets: session.priorityAssets });
   return driveAmController(ctx, session, controller, () =>
     controller.analyzeMatching({
       scope: "current-source",
@@ -245,7 +244,7 @@ export async function runAssetMatching(ctx: JobContext, params: AnalysisStartPar
 
 export async function runMetadataCheck(ctx: JobContext): Promise<JobOutcome> {
   const session = await open(ctx, "metadata-check");
-  const controller = AM.Pwt({ config: session.store, sourceCatalog: session.sourceCatalog, metadata: session.metadata, priorityAssets: session.priorityAssets });
+  const controller = AM.Vet({ config: session.store, sourceCatalog: session.sourceCatalog, metadata: session.metadata, priorityAssets: session.priorityAssets });
   return driveAmController(ctx, session, controller, () => controller.analyzeMetadata({ scope: "current-source", sourceId: ctx.characterId }));
 }
 
@@ -253,13 +252,13 @@ export async function runArtistExtraction(ctx: JobContext, params: AnalysisStart
   const session = await open(ctx, "artist-extraction");
   if (params.asset) {
     // Same write as the picker target `artist-reference` (AM `artistExtractionAssetBySourceId[sourceId]`).
-    const stored = amFn("sn")(params.asset);
+    const stored = amFn("cn")(params.asset);
     session.store.update(
       (c) => ({ ...c, characterPrompt: { ...c.characterPrompt, artistExtractionAssetBySourceId: { ...c.characterPrompt.artistExtractionAssetBySourceId, [ctx.characterId]: { ...stored, ext: stored.extension } } } }),
       { domains: ["asset-analysis"] },
     );
   }
-  const controller = AM.wwt({
+  const controller = AM.$et({
     sourceCatalog: session.sourceCatalog,
     metadata: session.metadata,
     analyzer: analyzer(ctx, "artist-extraction"),
@@ -276,11 +275,11 @@ export async function runRepresentativePick(ctx: JobContext, params: AnalysisSta
   try {
     ctx.signal.throwIfAborted();
     const wanted = params.promptKeys?.length ? new Set(params.promptKeys) : null;
-    const items = (amFn("SK")(session.source, session.store.getCurrentSnapshot().characterPrompt) as Any[]).filter((item) => !wanted || wanted.has(item.promptKey));
+    const items = (amFn("LF")(session.source, session.store.getCurrentSnapshot().characterPrompt) as Any[]).filter((item) => !wanted || wanted.has(item.promptKey));
     ctx.progress({ label: "Selecting representative images", labelKo: "캐릭터별 기본 의상 이미지 자동 선택", done: 0, total: items.length });
-    const result = AM.Fve({ priorityAssets: session.priorityAssets, config: session.store, sourceId: ctx.characterId, items });
+    const result = AM.Epe({ priorityAssets: session.priorityAssets, config: session.store, sourceId: ctx.characterId, items });
     await session.store.flushSave();
-    const toast = String(AM.ewt(result));
+    const toast = String(AM.iet(result));
     const { message, messageKo } = amMessage(toast);
     ctx.progress({ label: message, ...(messageKo ? { labelKo: messageKo } : {}), done: items.length, total: items.length, fraction: 1 });
     return { status: result.addedImages ? "success" : "no-evidence", message, ...(messageKo ? { messageKo } : {}) };
@@ -307,24 +306,24 @@ export async function runReclassification(ctx: JobContext, params: AnalysisStart
           [...new Set(r.targets.map((n: Any) => n.promptKey))].flatMap((key) => {
             const persona = personas.find((p: Any) => p.key === key);
             if (!persona) throw new Error("재분류할 페르소나를 찾지 못했습니다.");
-            const collection = AM.Pl(t, persona.key);
-            const enabled = (AM.RI(t, r.sourceId, persona, "reclassification") as Any[]).filter((x) => x.enabled);
-            const raw = AM.sO(AM.sO(t.characterPrompt.personaSettings.profiles[persona.key]).forms).forms;
+            const collection = AM.Il(t, persona.key);
+            const enabled = (AM.Ek(t, r.sourceId, persona, "reclassification") as Any[]).filter((x) => x.enabled);
+            const raw = AM.w_(AM.w_(t.characterPrompt.personaSettings.profiles[persona.key]).forms).forms;
             return collection.forms
               .map((form: Any) =>
-                AM.Zre(collection, raw, persona.key, form.id, {
+                AM.zte(collection, raw, persona.key, form.id, {
                   base: enabled.some((x) => x.formId === form.id && x.outfitId === null),
                   outfits: new Set(enabled.filter((x) => x.formId === form.id && x.outfitId !== null).map((x) => x.outfitId)),
                 }),
               )
               .filter((x: Any) => x.targets.length > 0);
           }),
-        collection: (t: Any, r: string) => AM.mF(AM.Pl(t, r), AM.sO(AM.sO(t.characterPrompt.personaSettings.profiles[r]).forms).forms),
-        store: (t: Any, r: string, n: Any) => AM.Df(t, r, AM.DA(AM.sO(t.characterPrompt.personaSettings.profiles[r]).forms, AM.Pl(t, r), n)),
+        collection: (t: Any, r: string) => AM.d7(AM.Il(t, r), AM.w_(AM.w_(t.characterPrompt.personaSettings.profiles[r]).forms).forms),
+        store: (t: Any, r: string, n: Any) => AM.vf(t, r, AM.N2(AM.w_(t.characterPrompt.personaSettings.profiles[r]).forms, AM.Il(t, r), n)),
         topics: () => ["reclassification"],
       }
-    : { domain: "prompts", capture: (t: Any, r: Any) => AM.E8e(t, r.targets), collection: AM.R8e, store: AM.fF, topics: () => ["reclassification"] };
-  const controller = AM.dhe({
+    : { domain: "prompts", capture: (t: Any, r: Any) => AM.tTe(t, r.targets), collection: AM.nTe, store: AM.l7, topics: () => ["reclassification"] };
+  const controller = AM.Bge({
     config: session.store,
     analyzer: analyzer(ctx, "prompt-reclassification"),
     blocked: () => false,

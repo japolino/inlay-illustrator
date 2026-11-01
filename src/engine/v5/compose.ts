@@ -2,11 +2,12 @@
  * NovelAI V5 post-analysis composition: prompt context (identity/outfit/artist/fixed entries), executed prompt
  * plans, NovelAI config, provider prompts, and a host-free run of the real V5 orchestrator.
  *
- * `composeV5Images` runs the verbatim `createV5Orchestrator` (`Ygt.run` 118774-119386) with
- *   - the real generation sessions (`nht`) and the real batch executor (`lht`),
- *   - an analyzer that is either the real V5 analyzer (`Egt`) over a caller-supplied LLM client, or a stub that
+ * `composeV5Images` runs the verbatim 0.9.90 `createV5Orchestrator` (`Ubt` @162706) with
+ *   - the real generation sessions (`fht`) and the real batch executor (`vht`),
+ *   - an analyzer that is either the real V5 analyzer (`c0e`) over a caller-supplied LLM client, or a stub that
  *     returns a precomputed analyzer result,
- *   - a capturing image dispatcher (`ye.generate`) that records every image request and returns an empty image.
+ *   - optionally a prepared analysis (`prepareAnalysis` → `{analysis, analyzer}`, applied by `qbt`),
+ *   - a capturing image dispatcher (`generate`) that records every image request and returns an empty image.
  * So everything between the analyzer response and the host image call is the original code.
  */
 import {
@@ -23,22 +24,23 @@ import {
   createV5Orchestrator,
   createGenerationSessions,
   createGenerationBatchExecutor,
-  applyNsfwPrefixPolicy,
+  applyRatingPolicy,
   attachActorIdsToCharacterPrompts,
-  F2 as BUNDLED_COMFY_PROFILE,
-  Cve as makeProviderRef,
+  BUNDLED_ANIMA_WORKFLOW_PROFILE as BUNDLED_COMFY_PROFILE,
+  Txe as makeProviderRef,
 } from "../core/asset-maid-core";
-import { createV5Analyzer, type V5AnalyzerClient, type V5AnalyzerResult } from "./analyzer";
+import { createV5Analyzer, type V5Analyzer, type V5AnalyzerClient, type V5AnalyzerResult, type V5ResolvedAnalysis } from "./analyzer";
 import { createV5RuleRuntime, toV5ContinuitySnapshot, type V5ContinuitySnapshot, type V5ContinuityState, type V5RuleRuntime } from "./runtime";
+import type { RatingTag } from "../compose/types";
 import type { V5ExternalEntry, V5ImageProviderId, V5PromptPlan, V5SceneGraph } from "./types";
 
-/** Outfit as projected for V5 (`M5` 167212): parts with non-empty prompts only. */
+/** Outfit as projected for V5 (`uT`): parts with non-empty prompts only. */
 export interface V5PromptOutfit {
   readonly id: string;
   readonly parts: readonly { readonly part: "head" | "top" | "bottom" | "legs" | "feet"; readonly prompt: string }[];
 }
 
-/** Appearance form in the V5 prompt context (`MAt.v5PromptContext` 167651). */
+/** Appearance form in the V5 prompt context (`gxt` v5PromptContext). */
 export interface V5PromptForm {
   readonly id: string;
   readonly prompt?: string;
@@ -62,7 +64,7 @@ export interface V5PromptIdentity {
 }
 
 /**
- * V5 prompt context returned by the run input's `v5PromptContext(identityKeys)` (`MAt` 167636-167690).
+ * V5 prompt context returned by the run input's `v5PromptContext(identityKeys)` (chat flow `gxt`).
  * Anima providers blank `fixedPositivePrompt` and `globalNegativePrompt` (host side, `Nc(provider)`).
  */
 export interface V5PromptContextSource {
@@ -76,7 +78,7 @@ export interface V5PromptContextSource {
   readonly globalNegativePrompt?: string;
 }
 
-/** Input of `buildV5PromptContext` (`Rgt` 117760). */
+/** Input of `buildV5PromptContext` (`_bt`). */
 export interface V5PromptContextInput {
   readonly graph: V5SceneGraph;
   /** candidateKey → identity key (analyzer `candidateSourceKeys`). */
@@ -89,7 +91,7 @@ export interface V5PromptContextInput {
   readonly preparedOutfitsByOccurrence?: Readonly<Record<string, V5PromptOutfit & { readonly formId?: string }>>;
 }
 
-/** Projected prompt context (`Rgt` result). */
+/** Projected prompt context (`_bt` result). */
 export interface V5PromptContext {
   readonly externalEntries: readonly V5ExternalEntry[];
   readonly globalNegativePrompt: string;
@@ -111,7 +113,7 @@ export interface V5PromptContext {
  * negatives. Comic dialogue/page mode removes the tag `text` from negatives.
  * Reads `context.identities[].{key,prompt,basePromptGroups,negativePrompt,outfits,defaultOutfitId,forms,defaultFormId}`,
  * `context.persona`, `artistId/artistName/artistPrompt/artistNegativePrompt`, `fixedPositivePrompt`, `globalNegativePrompt`.
- * Original: `Rgt` (buildV5PromptContext) @117760.
+ * Original: `_bt` (buildV5PromptContext) @161615.
  */
 export function buildV5PromptContext(input: V5PromptContextInput): V5PromptContext {
   return coreBuildV5PromptContext(input) as V5PromptContext;
@@ -120,7 +122,7 @@ export function buildV5PromptContext(input: V5PromptContextInput): V5PromptConte
 /**
  * Identity entries of one actor: `basePromptGroups` per appearance group (order `V0` + `custom`), tags
  * `base.<group>`, order `9000 + groupIndex*100 + i`, with `bodyParts` for mapped groups; fallback `prompt` → `base.custom`.
- * Original: `Ngt` (buildV5IdentityEntries) @117721.
+ * Original: `Abt` (buildV5IdentityEntries) @161568.
  */
 export function buildV5IdentityEntries(identity: V5PromptIdentity, actorId: string): readonly V5ExternalEntry[] {
   return coreBuildV5IdentityEntries(identity, actorId) as readonly V5ExternalEntry[];
@@ -136,7 +138,7 @@ export interface V5NovelAICharacterPrompt {
   readonly coordinateMode?: "automatic";
 }
 
-/** NovelAI request config produced for a V5 plan (`Wgt`): the run's `novelAIConfig` plus V5 fields. */
+/** NovelAI request config produced for a V5 plan (`Gbt`): the run's `novelAIConfig` plus V5 fields. */
 export type V5NovelAIConfig = Record<string, unknown> & {
   readonly analysisProfile: "v5-hybrid";
   readonly seed: string;
@@ -154,7 +156,7 @@ export type V5NovelAIConfig = Record<string, unknown> & {
  * @param seed Resolved seed string.
  * @param characterCoordinates `localProjection.characterCoordinates` ("fixed" | "automatic" | "persona-automatic").
  * @param activePersonaCandidateKey `requestPayload.active_persona_candidate_key` (persona-automatic coordinates).
- * Original: `Wgt` (createV5NovelAIConfig) @118751 (uses `c7` applyAiChoiceCoordinates).
+ * Original: `Gbt` (createV5NovelAIConfig) @162673 (uses `Vye` applyAiChoiceCoordinates).
  */
 export function createV5NovelAIConfig(
   run: { readonly novelAIConfig: Readonly<Record<string, unknown>>; readonly forceAiChoiceCoordinates?: boolean },
@@ -166,7 +168,7 @@ export function createV5NovelAIConfig(
   return coreCreateV5NovelAIConfig(run, plan, seed, characterCoordinates, activePersonaCandidateKey) as V5NovelAIConfig;
 }
 
-/** Provider prompt (`novelai-structured` for NovelAI, `anima` for Chan Server / ComfyUI). */
+/** Provider prompt (`novelai-v5-hybrid` for NovelAI, `anima` for ComfyUI). */
 export interface V5ProviderPrompt {
   readonly provider: V5ImageProviderId;
   readonly profileId: string;
@@ -182,7 +184,7 @@ export interface V5ProviderPrompt {
   readonly diagnostics: readonly unknown[];
 }
 
-/** Input of `prepareV5ProviderPrompt` (`sbe`). */
+/** Input of `prepareV5ProviderPrompt` (`d0e`). */
 export interface V5ProviderPromptInput {
   readonly plan: V5PromptPlan;
   readonly provider: V5ImageProviderId;
@@ -196,48 +198,48 @@ export interface V5ProviderPromptInput {
 }
 
 /**
- * Provider prompt for one plan: NovelAI → `zgt` (novelai-v5-hybrid request format); others → `g2` anima-flat.
- * Original: `sbe` (prepareV5ProviderPrompt) @118034.
+ * Provider prompt for one plan: NovelAI → `Pbt` (novelai-v5-hybrid request format); ComfyUI → `UG` anima-flat.
+ * Original: `d0e` (prepareV5ProviderPrompt) @161887.
  */
 export function prepareV5ProviderPrompt(input: V5ProviderPromptInput): V5ProviderPrompt {
   return corePrepareV5ProviderPrompt(input) as V5ProviderPrompt;
 }
 
-/** NovelAI V5 provider prompt (`zgt` formatV5NovelAIPrompt @118007). */
+/** NovelAI V5 provider prompt (`Pbt` formatV5NovelAIPrompt @161860). */
 export function formatV5NovelAIPrompt(input: { readonly plan: V5PromptPlan; readonly config: Readonly<Record<string, unknown>> }): V5ProviderPrompt {
   return coreFormatV5NovelAIPrompt(input) as V5ProviderPrompt;
 }
 
 /**
- * Provider prompt exactly as the batch executor sends it (`lht` 114091-114105): `prepareV5ProviderPrompt`, then the
- * NSFW prefix policy (`C7`: strips rating tags when there are 0 actors, prepends `nsfw` when forced), then actor ids
- * attached to character prompts (`cht`).
+ * Provider prompt exactly as the batch executor sends it (`vht`): `prepareV5ProviderPrompt`, then the rating policy
+ * (`XG`: strips rating tags when there are 0 actors; with a fixed rating, prepends it to the global/positive prompt and
+ * strips rating tags from character prompts), then actor ids attached to character prompts (`bht`).
  */
 export function finalizeV5ProviderPrompt(
-  input: V5ProviderPromptInput & { readonly forceNsfwPrefix?: boolean; readonly actors: readonly { readonly actorId: string; readonly actorIndex: number }[] },
+  input: V5ProviderPromptInput & { readonly forceRating?: RatingTag | false; readonly actors: readonly { readonly actorId: string; readonly actorIndex: number }[] },
 ): V5ProviderPrompt {
   return attachActorIdsToCharacterPrompts(
-    applyNsfwPrefixPolicy(prepareV5ProviderPrompt(input), input.forceNsfwPrefix === true, input.actors.length),
+    applyRatingPolicy(prepareV5ProviderPrompt(input), input.forceRating || false, input.actors.length),
     input.actors,
   ) as V5ProviderPrompt;
 }
 
-/** v4-5-shaped prompt view of an executed plan (`ibe` buildV5PromptView @117943). */
+/** Prompt view of an executed plan (`l0e` buildV5PromptView @161811). */
 export function buildV5PromptView(plan: V5PromptPlan, context: V5PromptContext): Record<string, unknown> {
   return coreBuildV5PromptView(plan, context) as Record<string, unknown>;
 }
 
-/** Artist / outfit prompt segment offsets (`Lgt` buildV5PromptSegments @118081); `undefined` when empty. */
+/** Artist / outfit prompt segment offsets (`Obt` buildV5PromptSegments @161934); `undefined` when empty. */
 export function buildV5PromptSegments(plan: V5PromptPlan, artistNegativePrompt = ""): Record<string, unknown> | undefined {
   return coreBuildV5PromptSegments(plan, artistNegativePrompt) as Record<string, unknown> | undefined;
 }
 
-/** Image actors of a prompt view (`Mgt` buildV5ImageActors @117921). */
+/** Image actors of a prompt view (`jbt` buildV5ImageActors @161789). */
 export function buildV5ImageActors(promptView: Record<string, unknown>): readonly V5ImageActor[] {
   return coreBuildV5ImageActors(promptView) as readonly V5ImageActor[];
 }
 
-/** Image actor record (`Mgt`). */
+/** Image actor record (`jbt`). */
 export interface V5ImageActor {
   readonly actorId: string;
   readonly actorIndex: number;
@@ -252,18 +254,18 @@ export interface V5ImageActor {
   readonly negativePrompt: string;
 }
 
-/** History decision with `v5_interaction_led` payload (`Bht` buildV5HistoryDecision @115128). */
+/** History decision with `v5_interaction_led` payload (`Kht` buildV5HistoryDecision @158960). */
 export function buildV5HistoryDecision(input: { baseDecision?: Record<string, unknown>; history: unknown; continuitySnapshot?: unknown }): Record<string, unknown> {
   return coreBuildV5HistoryDecision(input) as Record<string, unknown>;
 }
 
-/** ComfyUI workflow profile bundled with Asset Maid (`n2` @107747); `t7(id)` only accepts this id. */
+/** ComfyUI (Anima) workflow profile bundled with Asset Maid (`P4`); `CG(id)` resolves only this id. */
 export const V5_BUNDLED_COMFY_PROFILE = BUNDLED_COMFY_PROFILE as { readonly id: string; readonly revision: number; readonly [key: string]: unknown };
 
-/** Image request captured from the batch executor (`dmt` 110676) without `signal` / `session`. */
+/** Image request captured from the batch executor (`fgt` via `HG`) without `signal` / `session`. */
 export type V5ImageRequest = Record<string, unknown> & { readonly provider: V5ImageProviderId };
 
-/** Generated image record built by the batch executor (`lht` 114148-114166). */
+/** Generated image record built by the batch executor (`vht`). */
 export type V5GeneratedImage = Record<string, unknown> & {
   readonly sourceImageToken: string;
   readonly actors: readonly V5ImageActor[];
@@ -277,13 +279,13 @@ export type V5GeneratedImage = Record<string, unknown> & {
 export interface ComposedV5Image {
   /** Batch executor output (decision, actors, promptPlan view, novelAIConfig, providerPrompt, promptSegments, generationRecord, ...). */
   readonly image: V5GeneratedImage;
-  /** Executed prompt plan (`Dht.build`) that produced this image. */
+  /** Executed prompt plan (`Tht`) that produced this image. */
   readonly executedPromptPlan: V5PromptPlan;
-  /** Request handed to the image dispatcher (`ye.generate`). */
+  /** Request handed to the image dispatcher (`generate`). */
   readonly request: V5ImageRequest;
 }
 
-/** Orchestrator run input fields read by `Ygt.run` (pipeline spec §3.2). Unknown extra fields pass through. */
+/** Orchestrator run input fields read by `Ubt.run`. Unknown extra fields pass through. */
 export interface V5ComposeRunInput {
   readonly generationType?: string;
   readonly sessionContext: Readonly<Record<string, unknown>> & { readonly chatKey: string; readonly messageId?: string; readonly responseKey?: string };
@@ -295,9 +297,12 @@ export interface V5ComposeRunInput {
   readonly requestedSizeId?: number;
   readonly requestedSize?: { readonly id: number; readonly width: number; readonly height: number };
   readonly forceAiChoiceCoordinates?: boolean;
-  readonly forceNsfwPrefix?: boolean;
-  readonly stateAccumulationEnabled?: boolean;
+  /** Fixed rating tag of the source (`yS(sourceSettings)`); replaces 0.9.89 `forceNsfwPrefix`. */
+  readonly forceRating?: RatingTag | false;
   readonly comfyUI?: Readonly<Record<string, unknown>>;
+  /** Per-run analysis preparation (`{analysis: yAe(config), analyzer}`), overrides the orchestrator option. */
+  readonly prepareAnalysis?: () => Promise<{ analysis?: V5ResolvedAnalysis; analyzer?: V5Analyzer } | undefined> | { analysis?: V5ResolvedAnalysis; analyzer?: V5Analyzer } | undefined;
+  readonly imageRetryCount?: number;
   readonly revisionDirection?: string;
   readonly revisionPromptChannels?: readonly unknown[];
   readonly revisionEvidenceKey?: string;
@@ -331,6 +336,8 @@ export interface ComposeV5ImagesInput {
   readonly client?: V5AnalyzerClient;
   readonly analysis?: V5AnalyzerResult;
   readonly runtime?: V5RuleRuntime;
+  /** Resolved directing analysis applied to the run input (`qbt`), as `prepareAnalysis` does in Asset Maid. */
+  readonly preparedAnalysis?: V5ResolvedAnalysis;
   /** Result returned by the capturing dispatcher for each request (default: empty PNG with request size/seed). */
   readonly fakeResult?: (request: V5ImageRequest, index: number) => Record<string, unknown>;
 }
@@ -350,10 +357,10 @@ export interface ComposeV5ImagesResult {
 }
 
 /**
- * Run the V5 orchestrator (`Ygt.run`) without host calls and return per-image decision, actors, prompt plans,
+ * Run the V5 orchestrator (`Ubt.run`) without host calls and return per-image decision, actors, prompt plans,
  * NovelAI config, provider prompt and the captured image request.
  * `run.applyV5Continuity` is supplied internally (captures the continuity state); a caller value is ignored.
- * Original: `Ygt` (createV5Orchestrator) @118774 with `nht` @113736 and `lht` @113992.
+ * Original: `Ubt` (createV5Orchestrator) @162706 with `fht` and `vht` @158121.
  */
 export async function composeV5Images(input: ComposeV5ImagesInput): Promise<ComposeV5ImagesResult> {
   const runtime = input.runtime ?? createV5RuleRuntime();
@@ -393,13 +400,20 @@ export async function composeV5Images(input: ComposeV5ImagesInput): Promise<Comp
   };
   const executor = createGenerationBatchExecutor(dispatcher, sessions, { prepare: async () => undefined });
   const plans: V5PromptPlan[] = [];
-  const orchestrator = createV5Orchestrator(analyzer, sessions, executor, {
-    build: (x: unknown) => {
-      const plan = buildV5ExecutedPromptPlan(x) as V5PromptPlan;
-      plans.push(plan);
-      return plan;
+  const preparedAnalysis = input.preparedAnalysis;
+  const orchestrator = createV5Orchestrator(
+    analyzer,
+    sessions,
+    executor,
+    {
+      build: (x: unknown) => {
+        const plan = buildV5ExecutedPromptPlan(x) as V5PromptPlan;
+        plans.push(plan);
+        return plan;
+      },
     },
-  });
+    preparedAnalysis ? { prepareAnalysis: async () => ({ analysis: preparedAnalysis, analyzer }) } : {},
+  );
   const events: Record<string, unknown>[] = [];
   let continuity: V5ContinuityState | undefined;
   const userOnEvent = input.run.onEvent;

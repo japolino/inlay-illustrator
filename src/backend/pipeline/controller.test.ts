@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { fixedCountPolicy } from "../../shared/contract/index.js";
 import { cleanMessageContent } from "./markup.js";
+import { RpcFailure } from "../rpc/errors.js";
 import { createPipelineModule } from "./index.js";
+import type { StorageService } from "../services/types.js";
 import { CHAT_ID, createFakeEngine, createPipelineFixture, finished, STORY, waitFor } from "./testing/fixtures.js";
 
 function setup(options: Parameters<typeof createPipelineFixture>[0] = {}) {
@@ -10,6 +12,30 @@ function setup(options: Parameters<typeof createPipelineFixture>[0] = {}) {
   const { pipeline } = createPipelineModule(fx.services, undefined, { engine });
   return { fx, engine, pipeline };
 }
+
+describe("chat toolbar resolution / AI coordinates (AM 0.9.90 qbt$990)", () => {
+  const image = { provider: "novelai", model: "nai-diffusion-4-5-full", connectionId: "img-1" };
+  test("the global resolution wins over a disabled CharX fixed resolution; aiCoordinates off -> NovelAI places characters", async () => {
+    const { fx, engine, pipeline } = setup({ config: { image, runtime: { analysisExecution: { resolution: { id: 2, width: 1216, height: 832 }, aiCoordinates: false } } } });
+    await pipeline.handleGenerationEnded({ generationId: "g1", chatId: CHAT_ID, messageId: "m1", content: STORY, generationType: "normal" });
+    await waitFor(() => finished(fx).length > 0);
+    const input = engine.runs[0]!.input as Record<string, any>;
+    expect(input.requestedSizeId).toBe(2);
+    expect(input.requestedSize).toMatchObject({ width: 1216, height: 832 });
+    expect(input.forceAiChoiceCoordinates).toBe(true);
+  });
+  test("auto resolution sends no requested size; unseeded values fall back to the CharX settings", async () => {
+    const seeded = setup({ config: { image, characterPrompt: { charxGenerationDefaults: { fixedResolution: { enabled: true, sizeId: 3 }, forceAiChoiceCoordinates: false } } } });
+    await seeded.pipeline.handleGenerationEnded({ generationId: "g1", chatId: CHAT_ID, messageId: "m1", content: STORY, generationType: "normal" });
+    await waitFor(() => finished(seeded.fx).length > 0);
+    expect(seeded.engine.runs[0]!.input).toMatchObject({ requestedSizeId: 3, forceAiChoiceCoordinates: false });
+    const auto = setup({ config: { image, runtime: { analysisExecution: { resolution: null, aiCoordinates: true } }, characterPrompt: { charxGenerationDefaults: { fixedResolution: { enabled: true, sizeId: 3 } } } } });
+    await auto.pipeline.handleGenerationEnded({ generationId: "g1", chatId: CHAT_ID, messageId: "m1", content: STORY, generationType: "normal" });
+    await waitFor(() => finished(auto.fx).length > 0);
+    expect(auto.engine.runs[0]!.input).not.toHaveProperty("requestedSizeId");
+    expect((auto.engine.runs[0]!.input as Record<string, unknown>).forceAiChoiceCoordinates).toBe(false);
+  });
+});
 
 describe("automatic generation (GENERATION_ENDED)", () => {
   test("normal reply -> analyzer run -> chat data + baked message", async () => {
@@ -144,7 +170,7 @@ describe("manual generation, locks, cancel, retry", () => {
   test("retryable analyzer failure is retried automatically as a retry attempt", async () => {
     const { fx, engine, pipeline } = setup();
     engine.beforeImages = (n) => {
-      if (n === 1) throw Object.assign(new Error("Analyzer returned invalid JSON"), { code: "ANALYZER_JSON_PARSE" });
+      if (n === 1) throw Object.assign(new Error("Analyzer HTTP 502"), { code: "ANALYZER_HTTP", httpStatus: 502 });
     };
     const { jobId } = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0 });
     await waitFor(() => finished(fx, jobId).length > 0);
@@ -153,12 +179,44 @@ describe("manual generation, locks, cancel, retry", () => {
     expect((engine.runs[1]!.input as any).generationType).toBe("illustration-retry");
   });
 
+  test.each([
+    ["ANALYZER_TIMEOUT", () => Object.assign(new Error("Analyzer timed out"), { code: "ANALYZER_TIMEOUT" })],
+    ["ANALYZER_NETWORK as TypeError", () => new TypeError("fetch failed", { cause: Object.assign(new Error("fetch failed"), { code: "ANALYZER_NETWORK" }) })],
+    ["RpcFailure timeout", () => new RpcFailure({ code: "timeout", message: "Image generation timed out", detailCode: "REQUEST_TIMEOUT" })],
+    ["host RpcError HTTP 429", () => new RpcFailure({ code: "provider-error", message: "slow down", detailCode: "ANALYZER_HTTP", details: { httpStatus: 429 } })],
+  ])("transport failure %s is auto-retried (AM 0.9.90 `Not`)", async (_name, make) => {
+    const { fx, engine, pipeline } = setup();
+    engine.beforeImages = (n) => {
+      if (n === 1) throw make();
+    };
+    const { jobId } = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0 });
+    await waitFor(() => finished(fx, jobId).length > 0);
+    expect(finished(fx, jobId)[0]!.result).toBe("completed");
+    expect(engine.runs.length).toBe(2);
+  });
+
+  test.each([
+    ["ANALYZER_JSON_PARSE with retryable:true", () => new RpcFailure({ code: "provider-error", message: "Analyzer returned invalid JSON", detailCode: "ANALYZER_JSON_PARSE", retryable: true })],
+    ["ANALYZER_EMPTY_RESPONSE", () => Object.assign(new Error("The analyzer returned an empty response."), { code: "ANALYZER_EMPTY_RESPONSE" })],
+    ["V5_ANALYZER_NO_USABLE_ILLUSTRATION", () => Object.assign(new Error("No usable illustration"), { code: "V5_ANALYZER_NO_USABLE_ILLUSTRATION" })],
+    ["bare TypeError", () => new TypeError("x is undefined")],
+  ])("content error %s is not auto-retried (regression: AM 0.9.90 retries only network/server errors)", async (_name, make) => {
+    const { fx, engine, pipeline } = setup();
+    engine.beforeImages = (n) => {
+      if (n === 1) throw make();
+    };
+    const { jobId } = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0 });
+    await waitFor(() => finished(fx, jobId).length > 0);
+    expect(finished(fx, jobId)[0]!.result).toBe("failed");
+    expect(engine.runs.length).toBe(1);
+  });
+
   test("retry errors: engine image retries and failed runs reach the job snapshot (AM 0.9.89.5 retryErrors)", async () => {
     const { fx, engine, pipeline } = setup();
     const imageError = { attempt: 1, stage: "이미지 생성", occurredAt: 1, message: "HTTP 500", httpStatus: 500, provider: "novelai" };
     engine.beforeImages = (n, input) => {
       (input.onEvent as (e: unknown) => void)({ type: "retry-errors", imageRetry: { attempt: 1, total: 5 }, retryErrors: [imageError] });
-      if (n === 1) throw Object.assign(new Error("Analyzer returned invalid JSON (api_key=secret)"), { code: "ANALYZER_JSON_PARSE" });
+      if (n === 1) throw Object.assign(new Error("Analyzer timed out (api_key=secret)"), { code: "ANALYZER_TIMEOUT" });
     };
     const { jobId } = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0 });
     await waitFor(() => finished(fx, jobId).length > 0);
@@ -167,7 +225,7 @@ describe("manual generation, locks, cancel, retry", () => {
     expect(withErrors[0]!.retryErrors).toEqual([imageError]);
     expect(withErrors[0]!.progress.retryCount).toBe("1/5");
     const runRecord = withErrors.map((p) => p.retryErrors.find((r: any) => r.stage === "분석·생성")).find(Boolean);
-    expect(runRecord).toMatchObject({ attempt: 1, stage: "분석·생성", code: "ANALYZER_JSON_PARSE" });
+    expect(runRecord).toMatchObject({ attempt: 1, stage: "분석·생성", code: "ANALYZER_TIMEOUT" });
     expect(runRecord.message).not.toContain("secret");
   });
 
@@ -237,6 +295,18 @@ describe("manual generation, locks, cancel, retry", () => {
   });
 });
 
+/**
+ * Two user art styles (the bodies of the 0.9.89 built-ins, which 0.9.90 removed; removals §5) saved in the config.
+ * Returns the resolved [A, B].
+ */
+async function userStyles(fx: { services: { storage: StorageService } }, extra: Record<string, Record<string, unknown>> = {}) {
+  const { LEGACY_BUILTIN_ARTIST_PRESETS, listNovelAIArtists } = await import("../../shared/contract/index.js");
+  const entries = LEGACY_BUILTIN_ARTIST_PRESETS.map((p) => ({ ...p, ...(extra[p.id] ?? {}) }));
+  await fx.services.storage.updateConfig((config) => ({ ...config, characterPrompt: { ...config.characterPrompt, artistPrompts: entries } }));
+  const list = listNovelAIArtists(entries);
+  return LEGACY_BUILTIN_ARTIST_PRESETS.map((p) => list.find((a) => a.id === p.id)!);
+}
+
 describe("history, regenerate, delete", () => {
   async function generated() {
     const ctx = setup();
@@ -245,6 +315,36 @@ describe("history, regenerate, delete", () => {
     await waitFor(() => finished(ctx.fx).length > 0);
     return ctx;
   }
+
+  test("a zoom regenerate without coordinate drafts uses the toolbar AI coordinates setting (AM 0.9.90 uvt$990)", async () => {
+    for (const aiCoordinates of [true, false]) {
+      const ctx = setup({ config: { image: { provider: "novelai", model: "nai-diffusion-4-5-full", connectionId: "img-1" }, runtime: { analysisExecution: { resolution: null, aiCoordinates } } } });
+      ctx.engine.imageCount = 1;
+      await ctx.pipeline.handleGenerationEnded({ chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
+      await waitFor(() => finished(ctx.fx).length > 0);
+      const { jobId } = await ctx.pipeline.regenerateSlot({ chatId: CHAT_ID, messageKey: "illustration:m1@0", slotId: "illustration:m1@0:slot:0", overrides: { seedFixed: false, excludedCharacterIndexes: [] } });
+      await waitFor(() => finished(ctx.fx, jobId).length > 0);
+      const config = (ctx.engine.dispatches[0]!.request as any).config;
+      expect(config.forceCharacterCoordinates).toBeUndefined();
+      expect(config.useCoords).toBe(aiCoordinates);
+    }
+  });
+
+  test("a Medium image rerolls as Medium although the settings are High again; records without sampling are High (AM 0.9.90 hvt)", async () => {
+    const { fx, engine, pipeline } = await generated();
+    const slotId = "illustration:m1@0:slot:0";
+    const entries = Object.values(fx.chatData.get(CHAT_ID)!.history.entriesById).filter((e) => e.slotId === slotId);
+    const sidecar = fx.json.get("chats/chat-1/pipeline.json") as any;
+    expect((await fx.services.storage.loadConfig()).novelai.effort).toBe("high");
+    sidecar.records[entries[0]!.entryId].novelaiSampling = { model: "nai-diffusion-5-full-medium", effort: "medium", steps: 14, sampler: "k_euler_ancestral", scale: 6, cfgRescale: 0.5, noiseSchedule: "karras" };
+    const first = await pipeline.regenerateSlot({ chatId: CHAT_ID, messageKey: "illustration:m1@0", slotId, entryId: entries[0]!.entryId });
+    await waitFor(() => finished(fx, first.jobId).length > 0);
+    expect((engine.dispatches[0]!.request as any).config.effort).toBe("medium");
+    delete (fx.json.get("chats/chat-1/pipeline.json") as any).records[entries[0]!.entryId].novelaiSampling;
+    const second = await pipeline.regenerateSlot({ chatId: CHAT_ID, messageKey: "illustration:m1@0", slotId, entryId: entries[0]!.entryId });
+    await waitFor(() => finished(fx, second.jobId).length > 0);
+    expect((engine.dispatches[1]!.request as any).config.effort).toBe("high");
+  });
 
   test("regenerateSlot appends a regenerate entry, selects it and re-bakes; selectEntry goes back", async () => {
     const { fx, engine, pipeline } = await generated();
@@ -258,8 +358,8 @@ describe("history, regenerate, delete", () => {
     expect(finished(fx, jobId)[0]!.result).toBe("completed");
     expect(engine.dispatches[0]!.request.seed).toBe("");
     expect(engine.dispatches[0]!.request.prompt).toBe("pos 1");
-    // Chat regenerate leaves the NSFW prefix to the nsfwAlwaysEnabled setting (AM 0.9.89.3).
-    expect((engine.dispatches[0]!.request as any).forceNsfwPrefix).toBeUndefined();
+    // Chat regenerate leaves the rating to the source's fixed rating (the adapter's fallback, AM 0.9.90 `yS`).
+    expect((engine.dispatches[0]!.request as any).forceRating).toBeUndefined();
     // Chat regenerate keeps the original request's coordinates (AM 0.9.89.5 `Oht`).
     const regenConfig = (engine.dispatches[0]!.request as any).config;
     expect(regenConfig.forceCharacterCoordinates).toBe(true);
@@ -288,8 +388,7 @@ describe("history, regenerate, delete", () => {
 
   test("zoom artist + outfit selection rebuilds the prompts on regeneration", async () => {
     const { fx, engine, pipeline } = await generated();
-    const { listNovelAIArtists } = await import("../../shared/contract/index.js");
-    const [, artistA, artistB] = listNovelAIArtists([]);
+    const [artistA, artistB] = await userStyles(fx);
     await fx.services.storage.updateConfig((config) => {
       const profiles = { ...config.characterPrompt.personaSettings.profiles } as Record<string, unknown>;
       profiles["persona-1"] = {
@@ -335,8 +434,8 @@ describe("history, regenerate, delete", () => {
     const request = engine.dispatches.at(-1)!.request as any;
     expect(request.prompt).toContain(artistB!.prompt);
     expect(request.prompt).not.toContain(artistA!.prompt);
-    // Zoom regenerate never forces the NSFW prefix (AM 0.9.89.3).
-    expect(request.forceNsfwPrefix).toBe(false);
+    // Zoom regenerate never forces a rating tag (AM 0.9.90 `regenerate({forceRating: false})`).
+    expect(request.forceRating).toBe(false);
     expect(request.config.characterPrompts[0].prompt).toBe("1boy, black suit jacket, black pants, smile");
     const regen = Object.values(fx.chatData.get(CHAT_ID)!.history.entriesById).find((e) => e.generationOrigin === "regenerate")!;
     const record = (fx.json.get("chats/chat-1/pipeline.json") as any).records[regen.entryId];
@@ -346,11 +445,7 @@ describe("history, regenerate, delete", () => {
 
   test("a regenerated NovelAI image tracks its new artist, so the artist can be changed again", async () => {
     const { fx, engine, pipeline } = await generated();
-    const { listNovelAIArtists } = await import("../../shared/contract/index.js");
-    const [, artistA, artistB] = listNovelAIArtists([]);
-    await fx.services.storage.updateConfig((config) => ({ ...config, characterPrompt: { ...config.characterPrompt,
-      artistPrompts: [{ id: artistB!.id, title: "", prompt: "", novelAIOverrides: { sampler: "k_dpmpp_sde", noiseSchedule: "exponential" } }],
-    } }));
+    const [artistA, artistB] = await userStyles(fx, { comic_page_illustration_style: { novelAIOverrides: { sampler: "k_dpmpp_sde", noiseSchedule: "exponential" } } });
     const slotId = "illustration:m1@0:slot:0";
     const entryId = Object.values(fx.chatData.get(CHAT_ID)!.history.entriesById).find((e) => e.slotId === slotId)!.entryId;
     const sidecar = fx.json.get("chats/chat-1/pipeline.json") as any;
@@ -380,8 +475,7 @@ describe("history, regenerate, delete", () => {
 
   test("the artist can be changed on a record whose saved prompt the core cleaned up", async () => {
     const { fx, engine, pipeline } = await generated();
-    const { listNovelAIArtists } = await import("../../shared/contract/index.js");
-    const [, artistA, artistB] = listNovelAIArtists([]);
+    const [artistA, artistB] = await userStyles(fx);
     const slotId = "illustration:m1@0:slot:0";
     const entryId = Object.values(fx.chatData.get(CHAT_ID)!.history.entriesById).find((e) => e.slotId === slotId)!.entryId;
     const sidecar = fx.json.get("chats/chat-1/pipeline.json") as any;
@@ -412,6 +506,16 @@ describe("history, regenerate, delete", () => {
     const text = "1girl, 0.9::artist:junkzero ::, 1.5::realistic ::, park";
     const span = findPromptSegment(text, "0.9::artist:junkzero ::,\n1.5::realistic ::")!;
     expect(text.slice(span.start, span.end)).toBe("0.9::artist:junkzero ::, 1.5::realistic ::");
+  });
+
+  test("an artist segment matches with or without the space before the closing `::` (AM 0.9.90 `Uu` spacing)", async () => {
+    const { findPromptSegment } = await import("./controller.js");
+    const spaced = "1.1::artist:foo ::, masterpiece";
+    const a = findPromptSegment(spaced, "1.1::artist:foo::")!;
+    expect(spaced.slice(a.start, a.end)).toBe("1.1::artist:foo ::");
+    const tight = "1girl, 1.1::artist:foo::, 0.8::artist:bar2 ::, masterpiece";
+    const b = findPromptSegment(tight, "1.1::artist:foo ::, 0.8::artist:bar2::")!;
+    expect(tight.slice(b.start, b.end)).toBe("1.1::artist:foo::, 0.8::artist:bar2 ::");
   });
 
   test("a character excluded in zoom stays out of later regenerations without hiding the others", async () => {
@@ -616,20 +720,4 @@ describe("swipes, events, recovery", () => {
     expect(pipeline.stripForInterceptor([{ role: "assistant", content: "x" }])[0]!.content).toBe("x");
   });
 
-  test("chat state get / clear", async () => {
-    const { fx, pipeline } = setup();
-    await fx.services.storage.updateChatData(CHAT_ID, (doc) => {
-      doc.actorState = { revision: 2, actors: { "persona::persona-1": { groups: { "state.fluid.cum.location": [], "actor.injury": ["bandage"] }, count: 0, ttl: {} } } } as never;
-      return doc;
-    });
-    expect(Object.keys((await pipeline.getChatState(CHAT_ID)).actorState.actors)).toEqual(["persona::persona-1"]);
-    const cleared = await pipeline.clearChatState(CHAT_ID);
-    expect(cleared.actorState.actors).toEqual({});
-    const edited = { revision: cleared.actorState.revision, actors: { "persona::persona-1": { groups: { "state.fluid.cum.location": [], "actor.injury": ["scar"] }, count: 0, ttl: {} } } };
-    await expect(pipeline.setChatState(CHAT_ID, edited, cleared.actorState.revision - 1)).rejects.toMatchObject({ error: { code: "conflict" } });
-    const saved = await pipeline.setChatState(CHAT_ID, edited, cleared.actorState.revision);
-    expect(saved.actorState.revision).toBe(cleared.actorState.revision + 1);
-    expect(saved.actorState.actors["persona::persona-1"]!.groups["actor.injury"]).toEqual(["scar"]);
-    expect(fx.events.some((e) => e.event === "chatData.changed")).toBe(true);
-  });
 });

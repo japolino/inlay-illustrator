@@ -1,7 +1,7 @@
 /**
  * Lenient JSON extraction for LLM responses (spec/llm.md §4.2).
  */
-import { parseLenientJson as coreParseLenientJson, Yr as AnalyzerClientErrorCore } from "../core/asset-maid-core";
+import { parseLenientJson as coreParseLenientJson, AnalyzerClientError as AnalyzerClientErrorCore } from "../core/asset-maid-core";
 
 /** Error thrown when no JSON can be recovered. Original class `on` @79248 ("AnalyzerClientError"). */
 export interface AnalyzerClientError extends Error {

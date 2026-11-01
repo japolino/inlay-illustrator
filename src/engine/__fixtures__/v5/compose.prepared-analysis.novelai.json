@@ -1,0 +1,3296 @@
+{
+ "scenario": {
+  "response": "default",
+  "provider": "novelai",
+  "seed": 50,
+  "prepared": "stored"
+ },
+ "preparedAnalysis": {
+  "directions": {
+   "scene": {
+    "mode": "preset",
+    "selectedPresetId": "scene-default",
+    "presets": [
+     {
+      "id": "scene-default",
+      "name": "삽화",
+      "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.",
+      "customInstruction": {
+       "enabled": true,
+       "text": ""
+      },
+      "controlOverrides": {}
+     },
+     {
+      "id": "scene-pov",
+      "name": "pov 연출",
+      "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
+      "scenePresetId": "pov",
+      "customInstruction": {
+       "enabled": true,
+       "text": ""
+      },
+      "controlOverrides": {}
+     },
+     {
+      "id": "scene-ensemble",
+      "name": "다인 연출",
+      "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
+      "scenePresetId": "ensemble",
+      "customInstruction": {
+       "enabled": true,
+       "text": ""
+      },
+      "controlOverrides": {}
+     },
+     {
+      "id": "scene-comic",
+      "name": "카툰 연출",
+      "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+      "scenePresetId": "comic",
+      "customInstruction": {
+       "enabled": true,
+       "text": ""
+      },
+      "controlOverrides": {}
+     }
+    ],
+    "controlOverrides": {},
+    "customText": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+   },
+   "imageRatio": {
+    "mode": "preset",
+    "selectedPresetId": "image-ratio-default",
+    "presets": [
+     {
+      "id": "image-ratio-default",
+      "name": "기본",
+      "instruction": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+      "allowedSizeIds": [
+       1,
+       2,
+       5
+      ]
+     }
+    ],
+    "customText": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2."
+   },
+   "freeGenerationInstructions": {
+    "character": "Create a new character for each visibly present, distinct, unregistered entity that has an independent form in the scene, regardless of its origin, duration of appearance, activity, or body type. Do not restrict eligibility to particular entity types.\n\nWhen the scene establishes an entity as an independent participant, treat it as a character even if its name or material would ordinarily describe a surface or object.\n\nExclude an entity as an inanimate prop only when there is no evidence anywhere in the depicted scene of animation, agency, or participation as an actor.\n\nExclude entities that are only mentioned, depictions of entities rather than independently present participants, and background entities that cannot be individually distinguished.",
+    "outfit": "Compare only clothing supported by the source with existing outfits for the same character and form. Treat missing or unmentioned details as unknown, not as mismatches.\n\nWording differences and incidental variations alone do not establish a different outfit. Explicit differences in the main garments, their combination, or contextually distinguishing features do.\n\nPrefer the existing outfit best supported by the current clothing evidence. When the evidence does not distinguish between compatible outfits, retain the current outfit if available. Missing descriptions alone do not break outfit continuity, but explicit incompatible clothing evidence overrides it.\n\nFor a character eligible for outfit creation, propose a new outfit only when the source establishes what the character is wearing and no existing outfit in the selected form reasonably matches it. Do not infer a clothing change solely from a change of time, place, or activity."
+   },
+   "freeGenerationDesignInstructions": {
+    "character": "Design one complete, persistent visual identity from the scene context for consistent later depiction. Use only anatomy, structure, material, silhouette, surface, color, and persistent features applicable to this entity, without imposing human traits.\n\nCover the body plan and silhouette; scale and proportions; material, surface, and palette; head, face, and sensory structure; limbs, appendages, and locomotion; distinctive identity features; and persistent energy or mechanical effects. Develop each applicable area with concrete, repeatable visual detail. If a broad type or species alone does not sufficiently define the appearance, complete the distinguishing details.\n\nFor humanlike forms, creatively complete unspecified appearance from context rather than merely extracting observed facts. Prioritize features that help distinguish the identity.",
+    "outfit": "Design one complete outfit that can be depicted consistently across images. Preserve explicitly established clothing details and coherently complete unspecified details.\n\nSpecify each garment's color, concrete type, and defining length, cut, or silhouette, and each accessory's color or finish and concrete shape. Go beyond generic item types and complete the details that distinguish this outfit."
+   },
+   "systemExecution": {
+    "directionId": "default",
+    "rules": []
+   }
+  },
+  "customSizes": [],
+  "execution": {
+   "mode": "default",
+   "controls": {}
+  }
+ },
+ "analysis": {
+  "profile": "v5-hybrid",
+  "response": {
+   "illustrations": [
+    {
+     "slotNumber": 0,
+     "status": "recovered",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v",
+       "formId": "form_default",
+       "sex": "female",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.1fmv888.fk4pvw",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "persona_reference",
+        "value": "persona::p1"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "id": "arm_hug",
+       "mode": "directed",
+       "sourceActorId": "actor_1",
+       "targetActorId": "actor_2",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": []
+      },
+      {
+       "interactionRef": "interaction:1",
+       "id": "sleeve_grab",
+       "mode": "directed",
+       "sourceActorId": "actor_1",
+       "targetActorId": "actor_2",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": []
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "environment.setting",
+        "options": [
+         "outdoors"
+        ]
+       },
+       {
+        "id": "environment.time",
+        "options": [
+         "morning"
+        ]
+       }
+      ],
+      "freeTags": [
+       "school_gate",
+       "cherry_blossoms"
+      ],
+      "instruction": "Brick school gate with morning sunlight.",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 2,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.35,
+        "y": 0.5
+       },
+       "source": "analyzer",
+       "instruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "center": {
+        "x": 0.68,
+        "y": 0.52
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "gaze.direction",
+         "options": [
+          "looking_at_another"
+         ]
+        },
+        {
+         "id": "expression.general",
+         "options": [
+          "light_smile"
+         ]
+        },
+        {
+         "id": "expression.mouth.openness",
+         "options": [
+          "open_mouth"
+         ]
+        },
+        {
+         "id": "pose.body",
+         "options": [
+          "standing"
+         ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
+       "poseInstruction": "leaning forward slightly",
+       "objects": [],
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "surprised"
+         ]
+        },
+        {
+         "id": "pose.body",
+         "options": [
+          "standing"
+         ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
+       "poseInstruction": "",
+       "objects": [],
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [
+       {
+        "id": "camera.view",
+        "options": [
+         "from_side"
+        ]
+       }
+      ],
+      "instruction": "Eye-level camera at the gate facing both actors."
+     },
+     "diagnostics": [
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[0]",
+       "message": "Canonicalized a free tag to 'school_gate'."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[0].frame_placement.freeTags[1]",
+       "message": "Canonicalized a free tag to 'cherry_blossoms'."
+      }
+     ],
+     "systemDirection": {
+      "execution": {
+       "directionId": "default",
+       "rules": []
+      },
+      "persona": "actor.1fmv888.fk4pvw",
+      "roles": {},
+      "selectionLimits": {
+       "scene.rating": 1,
+       "environment.setting": 1,
+       "environment.time": 1,
+       "environment.weather": 1,
+       "environment.condition": 1,
+       "orientation.facing": 1,
+       "gaze.direction": 1,
+       "pose.body": 1,
+       "pose.refinement": null,
+       "expression.general": 1,
+       "expression.blush": 1,
+       "expression.tear": 1,
+       "expression.eye.reaction": 1,
+       "expression.eye.openness": 1,
+       "expression.mouth.detail": 1,
+       "state.hair.condition": null,
+       "state.body.surface": null,
+       "state.body.reaction": null,
+       "state.clothing.condition": null,
+       "state.clothing.arrangement": null,
+       "framing.crop": 1,
+       "framing.head_crop": 1,
+       "framing.presence": 2,
+       "camera.view": 2,
+       "pose.contact_surface": null,
+       "expression.mouth.openness": 1,
+       "effect.motion": 1
+      }
+     }
+    },
+    {
+     "slotNumber": 1,
+     "status": "degraded",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.m0ais.6ynrym",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "environment.setting",
+        "options": [
+         "indoors"
+        ]
+       }
+      ],
+      "freeTags": [
+       "staff_room",
+       "window"
+      ],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 1,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.5,
+        "y": 0.45
+       },
+       "facing": {
+        "id": "facing_away"
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "gaze.direction",
+         "options": [
+          "looking_down"
+         ]
+        },
+        {
+         "id": "expression.general",
+         "options": [
+          "exhausted"
+         ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
+       "poseInstruction": "hands on the window sill",
+       "objects": [],
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [],
+      "instruction": "Camera behind the actor looking out the window."
+     },
+     "diagnostics": [
+      {
+       "code": "modifier-stage-mismatch",
+       "impact": "degraded",
+       "path": "$.illustrations[1].frame_placement.modifiers[2]",
+       "message": "Omitted 'framing.crop' from 'frame_placement' because its compiled owner is 'actor_detail'."
+      },
+      {
+       "code": "tag-canonicalized",
+       "impact": "recovered",
+       "path": "$.illustrations[1].frame_placement.freeTags[0]",
+       "message": "Canonicalized a free tag to 'staff_room'."
+      }
+     ],
+     "systemDirection": {
+      "execution": {
+       "directionId": "default",
+       "rules": []
+      },
+      "persona": "actor.1fmv888.fk4pvw",
+      "roles": {},
+      "selectionLimits": {
+       "scene.rating": 1,
+       "environment.setting": 1,
+       "environment.time": 1,
+       "environment.weather": 1,
+       "environment.condition": 1,
+       "orientation.facing": 1,
+       "gaze.direction": 1,
+       "pose.body": 1,
+       "pose.refinement": null,
+       "expression.general": 1,
+       "expression.blush": 1,
+       "expression.tear": 1,
+       "expression.eye.reaction": 1,
+       "expression.eye.openness": 1,
+       "expression.mouth.detail": 1,
+       "state.hair.condition": null,
+       "state.body.surface": null,
+       "state.body.reaction": null,
+       "state.clothing.condition": null,
+       "state.clothing.arrangement": null,
+       "framing.crop": 1,
+       "framing.head_crop": 1,
+       "framing.presence": 2,
+       "camera.view": 2,
+       "pose.contact_surface": null,
+       "expression.mouth.openness": 1,
+       "effect.motion": 1
+      }
+     }
+    }
+   ],
+   "diagnostics": []
+  },
+  "attempts": 1,
+  "resumedFromCheckpoint": false,
+  "candidateBindings": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "identityReferences": [
+     "persona::p1",
+     "Shouta",
+     "p1"
+    ],
+    "sex": "male",
+    "continuityIdentity": {
+     "kind": "persona_reference",
+     "value": "persona::p1"
+    },
+    "outfitCandidateIds": [
+     "Casual hoodie"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "unknown_form_1",
+      "formId": "form_default",
+      "sex": "male",
+      "defaultOutfitRef": "Casual hoodie",
+      "outfits": [
+       {
+        "outfitRef": "Casual hoodie",
+        "outfitId": "outfit_1"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "unknown_form_1"
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "identityReferences": [
+     "lore:alice",
+     "Alice",
+     "Ally"
+    ],
+    "sex": "female",
+    "continuityIdentity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:alice"
+    },
+    "outfitCandidateIds": [
+     "Navy sailor school uniform",
+     "White summer sundress"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "silver_hair,_blue_eyes",
+      "formId": "form_default",
+      "sex": "female",
+      "defaultOutfitRef": "Navy sailor school uniform",
+      "outfits": [
+       {
+        "outfitRef": "Navy sailor school uniform",
+        "outfitId": "outfit_1"
+       },
+       {
+        "outfitRef": "White summer sundress",
+        "outfitId": "outfit_2"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "silver_hair,_blue_eyes"
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "identityReferences": [
+     "lore:bob",
+     "Bob"
+    ],
+    "sex": "male",
+    "continuityIdentity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:bob"
+    },
+    "outfitCandidateIds": [
+     "Grey business suit"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "black_hair,_tall",
+      "formId": "form_default",
+      "sex": "male",
+      "defaultOutfitRef": "Grey business suit",
+      "outfits": [
+       {
+        "outfitRef": "Grey business suit",
+        "outfitId": "outfit_1"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "black_hair,_tall"
+   }
+  ],
+  "candidateSourceKeys": {
+   "actor.g00nx3.1d3zc2v": "lore:alice",
+   "actor.m0ais.6ynrym": "lore:bob",
+   "actor.1fmv888.fk4pvw": "persona::p1"
+  },
+  "requestPayload": "fnv1a64-420a363b97613771",
+  "localProjection": {
+   "allowedSizeIds": [
+    1,
+    2,
+    5
+   ],
+   "characterCoordinates": "fixed"
+  },
+  "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
+ },
+ "plans": [
+  {
+   "format": "novelai-v5-interaction-led-prompt-v1",
+   "sizeId": 2,
+   "width": 1216,
+   "height": 832,
+   "global": {
+    "tags": [
+     "2::1girl::",
+     "2::1boy::",
+     "1.5::artist:hwansang ::",
+     "year 2025",
+     "masterpiece",
+     "best quality",
+     "from side",
+     "outdoors",
+     "morning",
+     "school gate",
+     "cherry blossoms",
+     "very aesthetic"
+    ],
+    "instructions": [
+     "Eye-level camera at the gate facing both actors.",
+     "Brick school gate with morning sunlight."
+    ],
+    "serializedPrompt": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nEye-level camera at the gate facing both actors. Brick school gate with morning sunlight."
+   },
+   "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+   "characters": [
+    {
+     "tags": [
+      "female",
+      "silver hair",
+      "blue eyes",
+      "white sailor shirt",
+      "navy sailor collar",
+      "red neckerchief",
+      "navy pleated skirt",
+      "black thighhighs",
+      "source#arm hug",
+      "source#sleeve grab",
+      "looking at another",
+      "light smile",
+      "open mouth",
+      "standing"
+     ],
+     "instructions": [
+      "leaning forward slightly."
+     ],
+     "serializedPrompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, source#arm hug, source#sleeve grab, looking at another, light smile, open mouth, standing\nleaning forward slightly.",
+     "actorId": "actor_1",
+     "placementIndex": 0,
+     "candidateKey": "actor.g00nx3.1d3zc2v",
+     "sex": "female",
+     "centerX": 0.35,
+     "centerY": 0.5,
+     "negativePrompt": "bad hands",
+     "outfitPartWeights": {
+      "head": 1,
+      "top": 1,
+      "bottom": 1,
+      "legs": 1,
+      "feet": 0
+     }
+    },
+    {
+     "tags": [
+      "male",
+      "1::kazehaya shouta::",
+      "black hoodie",
+      "jeans",
+      "target#arm hug",
+      "target#sleeve grab",
+      "surprised",
+      "standing"
+     ],
+     "instructions": [],
+     "serializedPrompt": "male, 1::kazehaya shouta::, black hoodie, jeans, target#arm hug, target#sleeve grab, surprised, standing",
+     "actorId": "actor_2",
+     "placementIndex": 1,
+     "candidateKey": "actor.1fmv888.fk4pvw",
+     "sex": "male",
+     "centerX": 0.68,
+     "centerY": 0.52,
+     "negativePrompt": "",
+     "outfitPartWeights": {
+      "head": 1,
+      "top": 1,
+      "bottom": 1,
+      "legs": 1,
+      "feet": 0
+     }
+    }
+   ],
+   "ledger": [
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "actor_roster.female.count",
+     "value": "1girl",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:female",
+     "weight": 2,
+     "id": "ledger:00000",
+     "semanticKey": "1girl",
+     "inputIndex": 0,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "actor_roster.male.count",
+     "value": "1boy",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:male",
+     "weight": 2,
+     "id": "ledger:00001",
+     "semanticKey": "1boy",
+     "inputIndex": 1,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.identity.sex",
+     "value": "female",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:actor_1:sex",
+     "outputOrigin": {
+      "path": "base.sex"
+     },
+     "weight": 1,
+     "id": "ledger:00002",
+     "semanticKey": "female",
+     "inputIndex": 2,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "actor.identity.sex",
+     "value": "male",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:actor_2:sex",
+     "outputOrigin": {
+      "path": "base.sex"
+     },
+     "weight": 1,
+     "id": "ledger:00003",
+     "semanticKey": "male",
+     "inputIndex": 3,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "base.hair.color"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.hair.color",
+     "value": "silver hair",
+     "order": 9100,
+     "sourceKind": "external-identity",
+     "sourceId": "lore:alice:hair.color:0",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00022",
+     "semanticKey": "silver hair",
+     "inputIndex": 22,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "base.eyes.color"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.eyes.color",
+     "value": "blue eyes",
+     "order": 9500,
+     "sourceKind": "external-identity",
+     "sourceId": "lore:alice:eyes.color:0",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00023",
+     "semanticKey": "blue eyes",
+     "inputIndex": 23,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "base.custom"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "base.custom",
+     "value": "1::kazehaya shouta::",
+     "order": 10400,
+     "sourceKind": "external-identity",
+     "sourceId": "persona::p1:custom:0",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00030",
+     "semanticKey": "kazehaya shouta",
+     "inputIndex": 30,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.1",
+     "value": "1.5::artist:hwansang ::",
+     "order": 9500,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00034",
+     "semanticKey": "artist hwansang",
+     "inputIndex": 34,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.2",
+     "value": "year 2025",
+     "order": 9501,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00035",
+     "semanticKey": "year 2025",
+     "inputIndex": 35,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.3",
+     "value": "masterpiece",
+     "order": 9502,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00036",
+     "semanticKey": "masterpiece",
+     "inputIndex": 36,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.4",
+     "value": "best quality",
+     "order": 9503,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00037",
+     "semanticKey": "best quality",
+     "inputIndex": 37,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.1",
+     "value": "white sailor shirt",
+     "order": 9100,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00024",
+     "semanticKey": "white sailor shirt",
+     "inputIndex": 24,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.top",
+     "value": "black hoodie",
+     "order": 9100,
+     "sourceKind": "external",
+     "sourceId": "outfit:persona::p1:outfit_1:top",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00031",
+     "semanticKey": "black hoodie",
+     "inputIndex": 31,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.2",
+     "value": "navy sailor collar",
+     "order": 9101,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00025",
+     "semanticKey": "navy sailor collar",
+     "inputIndex": 25,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.3",
+     "value": "red neckerchief",
+     "order": 9102,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00026",
+     "semanticKey": "red neckerchief",
+     "inputIndex": 26,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.bottom"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.bottom",
+     "value": "navy pleated skirt",
+     "order": 9200,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:bottom",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00027",
+     "semanticKey": "navy pleated skirt",
+     "inputIndex": 27,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.legs"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.legs",
+     "value": "black thighhighs",
+     "order": 9300,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:legs",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00028",
+     "semanticKey": "black thighhighs",
+     "inputIndex": 28,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.bottom"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.bottom",
+     "value": "jeans",
+     "order": 9200,
+     "sourceKind": "external",
+     "sourceId": "outfit:persona::p1:outfit_1:bottom",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00032",
+     "semanticKey": "jeans",
+     "inputIndex": 32,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "interaction": "interaction:0",
+      "path": "interaction.arm_hug"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "interaction.arm_hug.directed.target",
+     "value": "target#arm hug",
+     "order": 42,
+     "sourceKind": "closed",
+     "sourceId": "interaction:interaction:0",
+     "weight": 1,
+     "id": "ledger:00005",
+     "semanticKey": "arm hug",
+     "inputIndex": 5,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.camera.view",
+      "option": "from_side"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "camera.view.from_side",
+     "value": "from side",
+     "order": 5050,
+     "sourceKind": "closed",
+     "sourceId": "camera",
+     "weight": 1,
+     "id": "ledger:00020",
+     "semanticKey": "from side",
+     "inputIndex": 20,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.environment.setting",
+      "option": "outdoors"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "environment.setting.outdoors",
+     "value": "outdoors",
+     "order": 6060,
+     "sourceKind": "closed",
+     "sourceId": "scene-location:environment.setting:environment.setting.outdoors",
+     "weight": 1,
+     "id": "ledger:00015",
+     "semanticKey": "outdoors",
+     "inputIndex": 15,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.environment.time",
+      "option": "morning"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "environment.time.morning",
+     "value": "morning",
+     "order": 6262,
+     "sourceKind": "closed",
+     "sourceId": "scene-location:environment.time:environment.time.morning",
+     "weight": 1,
+     "id": "ledger:00016",
+     "semanticKey": "morning",
+     "inputIndex": 16,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "free.location",
+      "group": "scene.free.location"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.free.school_gate",
+     "value": "school gate",
+     "order": 0,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "weight": 1,
+     "id": "ledger:00017",
+     "semanticKey": "school gate",
+     "inputIndex": 17,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "free.location",
+      "group": "scene.free.location"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.free.cherry_blossoms",
+     "value": "cherry blossoms",
+     "order": 0,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "weight": 1,
+     "id": "ledger:00018",
+     "semanticKey": "cherry blossoms",
+     "inputIndex": 18,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "interaction": "interaction:0",
+      "path": "interaction.arm_hug"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "interaction.arm_hug.directed.source",
+     "value": "source#arm hug",
+     "order": 41,
+     "sourceKind": "closed",
+     "sourceId": "interaction:interaction:0",
+     "weight": 1,
+     "id": "ledger:00004",
+     "semanticKey": "arm hug",
+     "inputIndex": 4,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "interaction": "interaction:1",
+      "path": "interaction.sleeve_grab"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "interaction.free.directed.target.sleeve_grab",
+     "value": "target#sleeve grab",
+     "order": 100,
+     "sourceKind": "recovered-free",
+     "sourceId": "interaction:interaction:1",
+     "weight": 1,
+     "id": "ledger:00007",
+     "semanticKey": "sleeve grab",
+     "inputIndex": 7,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "text.camera",
+      "group": "scene.text.camera"
+     },
+     "lane": "instruction",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "camera.instruction",
+     "value": "Eye-level camera at the gate facing both actors.",
+     "order": 11000,
+     "sourceKind": "recovered-free",
+     "sourceId": "camera",
+     "id": "ledger:00021",
+     "semanticKey": "eye level camera at the gate facing both actors",
+     "inputIndex": 21,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "text.pose",
+      "group": "actor.text.pose"
+     },
+     "lane": "instruction",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.pose.instruction.actor_1",
+     "value": "leaning forward slightly",
+     "order": 10100,
+     "sourceKind": "recovered-free",
+     "sourceId": "actor-detail:actor_1",
+     "placementIndex": 0,
+     "id": "ledger:00012",
+     "semanticKey": "leaning forward slightly",
+     "inputIndex": 12,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "text.location",
+      "group": "scene.text.location"
+     },
+     "lane": "instruction",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.instruction",
+     "value": "Brick school gate with morning sunlight.",
+     "order": 9000,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "id": "ledger:00019",
+     "semanticKey": "brick school gate with morning sunlight",
+     "inputIndex": 19,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "interaction": "interaction:1",
+      "path": "interaction.sleeve_grab"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "interaction.free.directed.source.sleeve_grab",
+     "value": "source#sleeve grab",
+     "order": 100,
+     "sourceKind": "recovered-free",
+     "sourceId": "interaction:interaction:1",
+     "weight": 1,
+     "id": "ledger:00006",
+     "semanticKey": "sleeve grab",
+     "inputIndex": 6,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.expression.general",
+      "option": "surprised"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "expression.general.surprised",
+     "value": "surprised",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_2:expression.general.surprised",
+     "weight": 1,
+     "placementIndex": 1,
+     "id": "ledger:00013",
+     "semanticKey": "surprised",
+     "inputIndex": 13,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.gaze.direction",
+      "option": "looking_at_another"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "gaze.direction.looking_at_another",
+     "value": "looking at another",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:gaze.direction.looking_at_another",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00008",
+     "semanticKey": "looking at another",
+     "inputIndex": 8,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.expression.general",
+      "option": "light_smile"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "expression.general.light_smile",
+     "value": "light smile",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:expression.general.light_smile",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00009",
+     "semanticKey": "light smile",
+     "inputIndex": 9,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.expression.mouth.openness",
+      "option": "open_mouth"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "expression.mouth.openness.open_mouth",
+     "value": "open mouth",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:expression.mouth.openness.open_mouth",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00010",
+     "semanticKey": "open mouth",
+     "inputIndex": 10,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.pose.body",
+      "option": "standing"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "pose.body.standing",
+     "value": "standing",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_2:pose.body.standing",
+     "weight": 1,
+     "placementIndex": 1,
+     "id": "ledger:00014",
+     "semanticKey": "standing",
+     "inputIndex": 14,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.pose.body",
+      "option": "standing"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "pose.body.standing",
+     "value": "standing",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:pose.body.standing",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00011",
+     "semanticKey": "standing",
+     "inputIndex": 11,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.feet"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.feet",
+     "value": "sneakers",
+     "order": 9300,
+     "sourceKind": "external",
+     "sourceId": "outfit:persona::p1:outfit_1:feet",
+     "placementIndex": 1,
+     "weight": 0,
+     "suppressionReason": "visibility",
+     "id": "ledger:00033",
+     "semanticKey": "sneakers",
+     "inputIndex": 33,
+     "status": "suppressed"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.feet"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.feet",
+     "value": "brown loafers",
+     "order": 9400,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:feet",
+     "placementIndex": 0,
+     "weight": 0,
+     "suppressionReason": "visibility",
+     "id": "ledger:00029",
+     "semanticKey": "brown loafers",
+     "inputIndex": 29,
+     "status": "suppressed"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "fixed.positive",
+     "value": "very aesthetic",
+     "order": 10000,
+     "sourceKind": "external-fixed",
+     "sourceId": "character-generation-settings",
+     "weight": 1,
+     "id": "ledger:00038",
+     "semanticKey": "very aesthetic",
+     "inputIndex": 38,
+     "status": "applied"
+    }
+   ]
+  },
+  {
+   "format": "novelai-v5-interaction-led-prompt-v1",
+   "sizeId": 1,
+   "width": 832,
+   "height": 1216,
+   "global": {
+    "tags": [
+     "2::1boy::",
+     "1.5::artist:hwansang ::",
+     "year 2025",
+     "masterpiece",
+     "best quality",
+     "indoors",
+     "staff room",
+     "window",
+     "very aesthetic"
+    ],
+    "instructions": [
+     "Camera behind the actor looking out the window."
+    ],
+    "serializedPrompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window."
+   },
+   "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+   "characters": [
+    {
+     "tags": [
+      "male",
+      "black hair",
+      "grey suit jacket",
+      "white shirt",
+      "blue necktie",
+      "grey suit pants",
+      "2::facing away::",
+      "looking down",
+      "exhausted"
+     ],
+     "instructions": [
+      "hands on the window sill."
+     ],
+     "serializedPrompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, 2::facing away::, looking down, exhausted\nhands on the window sill.",
+     "actorId": "actor_1",
+     "placementIndex": 0,
+     "candidateKey": "actor.m0ais.6ynrym",
+     "sex": "male",
+     "centerX": 0.5,
+     "centerY": 0.45,
+     "negativePrompt": "",
+     "outfitPartWeights": {
+      "head": 1,
+      "top": 1,
+      "bottom": 1,
+      "legs": 1,
+      "feet": 0
+     }
+    }
+   ],
+   "ledger": [
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "actor_roster.male.count",
+     "value": "1boy",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:male",
+     "weight": 2,
+     "id": "ledger:00000",
+     "semanticKey": "1boy",
+     "inputIndex": 0,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.identity.sex",
+     "value": "male",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:actor_1:sex",
+     "outputOrigin": {
+      "path": "base.sex"
+     },
+     "weight": 1,
+     "id": "ledger:00001",
+     "semanticKey": "male",
+     "inputIndex": 1,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "base.hair.color"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.hair.color",
+     "value": "black hair",
+     "order": 9100,
+     "sourceKind": "external-identity",
+     "sourceId": "lore:bob:hair.color:0",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00010",
+     "semanticKey": "black hair",
+     "inputIndex": 10,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.1",
+     "value": "1.5::artist:hwansang ::",
+     "order": 9500,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00016",
+     "semanticKey": "artist hwansang",
+     "inputIndex": 16,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.2",
+     "value": "year 2025",
+     "order": 9501,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00017",
+     "semanticKey": "year 2025",
+     "inputIndex": 17,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.3",
+     "value": "masterpiece",
+     "order": 9502,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00018",
+     "semanticKey": "masterpiece",
+     "inputIndex": 18,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.4",
+     "value": "best quality",
+     "order": 9503,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00019",
+     "semanticKey": "best quality",
+     "inputIndex": 19,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.1",
+     "value": "grey suit jacket",
+     "order": 9100,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:top",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00011",
+     "semanticKey": "grey suit jacket",
+     "inputIndex": 11,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.2",
+     "value": "white shirt",
+     "order": 9101,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:top",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00012",
+     "semanticKey": "white shirt",
+     "inputIndex": 12,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.3",
+     "value": "blue necktie",
+     "order": 9102,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:top",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00013",
+     "semanticKey": "blue necktie",
+     "inputIndex": 13,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.environment.setting",
+      "option": "indoors"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "environment.setting.indoors",
+     "value": "indoors",
+     "order": 6060,
+     "sourceKind": "closed",
+     "sourceId": "scene-location:environment.setting:environment.setting.indoors",
+     "weight": 1,
+     "id": "ledger:00005",
+     "semanticKey": "indoors",
+     "inputIndex": 5,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "free.location",
+      "group": "scene.free.location"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.free.staff_room",
+     "value": "staff room",
+     "order": 0,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "weight": 1,
+     "id": "ledger:00006",
+     "semanticKey": "staff room",
+     "inputIndex": 6,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "free.location",
+      "group": "scene.free.location"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.free.window",
+     "value": "window",
+     "order": 0,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "weight": 1,
+     "id": "ledger:00007",
+     "semanticKey": "window",
+     "inputIndex": 7,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "text.pose",
+      "group": "actor.text.pose"
+     },
+     "lane": "instruction",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.pose.instruction.actor_1",
+     "value": "hands on the window sill",
+     "order": 10100,
+     "sourceKind": "recovered-free",
+     "sourceId": "actor-detail:actor_1",
+     "placementIndex": 0,
+     "id": "ledger:00004",
+     "semanticKey": "hands on the window sill",
+     "inputIndex": 4,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "text.camera",
+      "group": "scene.text.camera"
+     },
+     "lane": "instruction",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "camera.instruction",
+     "value": "Camera behind the actor looking out the window.",
+     "order": 11000,
+     "sourceKind": "recovered-free",
+     "sourceId": "camera",
+     "id": "ledger:00009",
+     "semanticKey": "camera behind the actor looking out the window",
+     "inputIndex": 9,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.bottom"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.bottom",
+     "value": "grey suit pants",
+     "order": 9200,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:bottom",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00014",
+     "semanticKey": "grey suit pants",
+     "inputIndex": 14,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.orientation.facing",
+      "option": "facing_away"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "orientation.facing.facing_away",
+     "value": "facing away",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "placement:actor_1:facing:orientation.facing.facing_away",
+     "weight": 2,
+     "placementIndex": 0,
+     "id": "ledger:00008",
+     "semanticKey": "facing away",
+     "inputIndex": 8,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.gaze.direction",
+      "option": "looking_down"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "gaze.direction.looking_down",
+     "value": "looking down",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:gaze.direction.looking_down",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00002",
+     "semanticKey": "looking down",
+     "inputIndex": 2,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.expression.general",
+      "option": "exhausted"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "expression.general.exhausted",
+     "value": "exhausted",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:expression.general.exhausted",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00003",
+     "semanticKey": "exhausted",
+     "inputIndex": 3,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.feet"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.feet",
+     "value": "black dress shoes",
+     "order": 9300,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:feet",
+     "placementIndex": 0,
+     "weight": 0,
+     "suppressionReason": "visibility",
+     "id": "ledger:00015",
+     "semanticKey": "black dress shoes",
+     "inputIndex": 15,
+     "status": "suppressed"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "fixed.positive",
+     "value": "very aesthetic",
+     "order": 10000,
+     "sourceKind": "external-fixed",
+     "sourceId": "character-generation-settings",
+     "weight": 1,
+     "id": "ledger:00020",
+     "semanticKey": "very aesthetic",
+     "inputIndex": 20,
+     "status": "applied"
+    }
+   ]
+  }
+ ],
+ "requests": [
+  {
+   "provider": "novelai",
+   "providerRef": {
+    "providerId": "novelai",
+    "queueScopeKey": "image-provider:novelai:global"
+   },
+   "prompt": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nEye-level camera at the gate facing both actors. Brick school gate with morning sunlight.",
+   "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+   "seed": "1234567",
+   "width": 1216,
+   "height": 832,
+   "maxAttempts": 1,
+   "config": {
+    "apiKey": "test-key",
+    "naiModel": "nai-diffusion-5-full",
+    "seed": "1234567",
+    "steps": 28,
+    "scale": 5,
+    "sampler": "k_euler_ancestral",
+    "analysisProfile": "v5-hybrid",
+    "v5UserDirections": {
+     "scene": {
+      "mode": "preset",
+      "selectedPresetId": "scene-default",
+      "presets": [
+       {
+        "id": "scene-default",
+        "name": "삽화",
+        "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       },
+       {
+        "id": "scene-pov",
+        "name": "pov 연출",
+        "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
+        "scenePresetId": "pov",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       },
+       {
+        "id": "scene-ensemble",
+        "name": "다인 연출",
+        "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
+        "scenePresetId": "ensemble",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       },
+       {
+        "id": "scene-comic",
+        "name": "카툰 연출",
+        "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+        "scenePresetId": "comic",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       }
+      ],
+      "controlOverrides": {},
+      "customText": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+     },
+     "imageRatio": {
+      "mode": "preset",
+      "selectedPresetId": "image-ratio-default",
+      "presets": [
+       {
+        "id": "image-ratio-default",
+        "name": "기본",
+        "instruction": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+        "allowedSizeIds": [
+         1,
+         2,
+         5
+        ]
+       }
+      ],
+      "customText": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2."
+     },
+     "freeGenerationInstructions": {
+      "character": "Create a new character for each visibly present, distinct, unregistered entity that has an independent form in the scene, regardless of its origin, duration of appearance, activity, or body type. Do not restrict eligibility to particular entity types.\n\nWhen the scene establishes an entity as an independent participant, treat it as a character even if its name or material would ordinarily describe a surface or object.\n\nExclude an entity as an inanimate prop only when there is no evidence anywhere in the depicted scene of animation, agency, or participation as an actor.\n\nExclude entities that are only mentioned, depictions of entities rather than independently present participants, and background entities that cannot be individually distinguished.",
+      "outfit": "Compare only clothing supported by the source with existing outfits for the same character and form. Treat missing or unmentioned details as unknown, not as mismatches.\n\nWording differences and incidental variations alone do not establish a different outfit. Explicit differences in the main garments, their combination, or contextually distinguishing features do.\n\nPrefer the existing outfit best supported by the current clothing evidence. When the evidence does not distinguish between compatible outfits, retain the current outfit if available. Missing descriptions alone do not break outfit continuity, but explicit incompatible clothing evidence overrides it.\n\nFor a character eligible for outfit creation, propose a new outfit only when the source establishes what the character is wearing and no existing outfit in the selected form reasonably matches it. Do not infer a clothing change solely from a change of time, place, or activity."
+     },
+     "freeGenerationDesignInstructions": {
+      "character": "Design one complete, persistent visual identity from the scene context for consistent later depiction. Use only anatomy, structure, material, silhouette, surface, color, and persistent features applicable to this entity, without imposing human traits.\n\nCover the body plan and silhouette; scale and proportions; material, surface, and palette; head, face, and sensory structure; limbs, appendages, and locomotion; distinctive identity features; and persistent energy or mechanical effects. Develop each applicable area with concrete, repeatable visual detail. If a broad type or species alone does not sufficiently define the appearance, complete the distinguishing details.\n\nFor humanlike forms, creatively complete unspecified appearance from context rather than merely extracting observed facts. Prioritize features that help distinguish the identity.",
+      "outfit": "Design one complete outfit that can be depicted consistently across images. Preserve explicitly established clothing details and coherently complete unspecified details.\n\nSpecify each garment's color, concrete type, and defining length, cut, or silhouette, and each accessory's color or finish and concrete shape. Go beyond generic item types and complete the details that distinguish this outfit."
+     },
+     "systemExecution": {
+      "directionId": "default",
+      "rules": []
+     }
+    },
+    "width": 1216,
+    "height": 832,
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "useCoords": false,
+    "characterPrompts": [
+     {
+      "actorSlot": "actor_1",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, source#arm hug, source#sleeve grab, looking at another, light smile, open mouth, standing\nleaning forward slightly.",
+      "uc": "bad hands",
+      "centerX": 0.35,
+      "centerY": 0.5,
+      "coordinateMode": "automatic"
+     },
+     {
+      "actorSlot": "actor_2",
+      "prompt": "male, 1::kazehaya shouta::, black hoodie, jeans, target#arm hug, target#sleeve grab, surprised, standing",
+      "uc": "",
+      "centerX": 0.68,
+      "centerY": 0.52,
+      "coordinateMode": "automatic"
+     }
+    ]
+   },
+   "forceRating": false,
+   "references": [],
+   "queueMeta": {
+    "kind": "generation",
+    "source": "novelai-v5-interaction-led",
+    "sourceImageToken": "slot:s1"
+   }
+  },
+  {
+   "provider": "novelai",
+   "providerRef": {
+    "providerId": "novelai",
+    "queueScopeKey": "image-provider:novelai:global"
+   },
+   "prompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window.",
+   "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+   "seed": "1234567",
+   "width": 832,
+   "height": 1216,
+   "maxAttempts": 1,
+   "config": {
+    "apiKey": "test-key",
+    "naiModel": "nai-diffusion-5-full",
+    "seed": "1234567",
+    "steps": 28,
+    "scale": 5,
+    "sampler": "k_euler_ancestral",
+    "analysisProfile": "v5-hybrid",
+    "v5UserDirections": {
+     "scene": {
+      "mode": "preset",
+      "selectedPresetId": "scene-default",
+      "presets": [
+       {
+        "id": "scene-default",
+        "name": "삽화",
+        "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       },
+       {
+        "id": "scene-pov",
+        "name": "pov 연출",
+        "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
+        "scenePresetId": "pov",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       },
+       {
+        "id": "scene-ensemble",
+        "name": "다인 연출",
+        "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
+        "scenePresetId": "ensemble",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       },
+       {
+        "id": "scene-comic",
+        "name": "카툰 연출",
+        "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+        "scenePresetId": "comic",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       }
+      ],
+      "controlOverrides": {},
+      "customText": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+     },
+     "imageRatio": {
+      "mode": "preset",
+      "selectedPresetId": "image-ratio-default",
+      "presets": [
+       {
+        "id": "image-ratio-default",
+        "name": "기본",
+        "instruction": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+        "allowedSizeIds": [
+         1,
+         2,
+         5
+        ]
+       }
+      ],
+      "customText": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2."
+     },
+     "freeGenerationInstructions": {
+      "character": "Create a new character for each visibly present, distinct, unregistered entity that has an independent form in the scene, regardless of its origin, duration of appearance, activity, or body type. Do not restrict eligibility to particular entity types.\n\nWhen the scene establishes an entity as an independent participant, treat it as a character even if its name or material would ordinarily describe a surface or object.\n\nExclude an entity as an inanimate prop only when there is no evidence anywhere in the depicted scene of animation, agency, or participation as an actor.\n\nExclude entities that are only mentioned, depictions of entities rather than independently present participants, and background entities that cannot be individually distinguished.",
+      "outfit": "Compare only clothing supported by the source with existing outfits for the same character and form. Treat missing or unmentioned details as unknown, not as mismatches.\n\nWording differences and incidental variations alone do not establish a different outfit. Explicit differences in the main garments, their combination, or contextually distinguishing features do.\n\nPrefer the existing outfit best supported by the current clothing evidence. When the evidence does not distinguish between compatible outfits, retain the current outfit if available. Missing descriptions alone do not break outfit continuity, but explicit incompatible clothing evidence overrides it.\n\nFor a character eligible for outfit creation, propose a new outfit only when the source establishes what the character is wearing and no existing outfit in the selected form reasonably matches it. Do not infer a clothing change solely from a change of time, place, or activity."
+     },
+     "freeGenerationDesignInstructions": {
+      "character": "Design one complete, persistent visual identity from the scene context for consistent later depiction. Use only anatomy, structure, material, silhouette, surface, color, and persistent features applicable to this entity, without imposing human traits.\n\nCover the body plan and silhouette; scale and proportions; material, surface, and palette; head, face, and sensory structure; limbs, appendages, and locomotion; distinctive identity features; and persistent energy or mechanical effects. Develop each applicable area with concrete, repeatable visual detail. If a broad type or species alone does not sufficiently define the appearance, complete the distinguishing details.\n\nFor humanlike forms, creatively complete unspecified appearance from context rather than merely extracting observed facts. Prioritize features that help distinguish the identity.",
+      "outfit": "Design one complete outfit that can be depicted consistently across images. Preserve explicitly established clothing details and coherently complete unspecified details.\n\nSpecify each garment's color, concrete type, and defining length, cut, or silhouette, and each accessory's color or finish and concrete shape. Go beyond generic item types and complete the details that distinguish this outfit."
+     },
+     "systemExecution": {
+      "directionId": "default",
+      "rules": []
+     }
+    },
+    "width": 832,
+    "height": 1216,
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "useCoords": false,
+    "characterPrompts": [
+     {
+      "actorSlot": "actor_1",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, 2::facing away::, looking down, exhausted\nhands on the window sill.",
+      "uc": "",
+      "centerX": 0.5,
+      "centerY": 0.45,
+      "coordinateMode": "automatic"
+     }
+    ]
+   },
+   "forceRating": false,
+   "references": [],
+   "queueMeta": {
+    "kind": "generation",
+    "source": "novelai-v5-interaction-led",
+    "sourceImageToken": "slot:s2"
+   }
+  }
+ ],
+ "images": [
+  {
+   "sourceImageToken": "slot:s1",
+   "providerRef": {
+    "providerId": "novelai",
+    "queueScopeKey": "image-provider:novelai:global"
+   },
+   "actors": [
+    {
+     "actorId": "actor_1",
+     "actorIndex": 0,
+     "kind": "character",
+     "gender": "",
+     "identityKey": "lore:alice",
+     "identityName": "",
+     "selectedFormId": "form_default",
+     "selectedOutfitId": "outfit_1",
+     "identitySuppressed": false,
+     "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, source#arm hug, source#sleeve grab, looking at another, light smile, open mouth, standing\nleaning forward slightly.",
+     "negativePrompt": "bad hands"
+    },
+    {
+     "actorId": "actor_2",
+     "actorIndex": 1,
+     "kind": "persona",
+     "gender": "",
+     "identityKey": "persona::p1",
+     "identityName": "",
+     "selectedFormId": "form_default",
+     "selectedOutfitId": "outfit_1",
+     "identitySuppressed": false,
+     "prompt": "male, 1::kazehaya shouta::, black hoodie, jeans, target#arm hug, target#sleeve grab, surprised, standing",
+     "negativePrompt": ""
+    }
+   ],
+   "promptSegments": {
+    "artistPositive": {
+     "start": 23,
+     "end": 84
+    },
+    "artistNegative": {
+     "start": 30,
+     "end": 57
+    },
+    "outfits": {
+     "actor_1": {
+      "start": 32,
+      "end": 125
+     },
+     "actor_2": {
+      "start": 28,
+      "end": 47
+     }
+    }
+   },
+   "analysisMetadata": {
+    "hash": "fnv1a64-b237c8b4163f53b7"
+   },
+   "decision": {
+    "hash": "fnv1a64-e496db90bb679d53"
+   },
+   "analyzerContinuity": {
+    "previous_modifiers": {
+     "global": {},
+     "actors": {
+      "primary": {},
+      "secondary": {},
+      "persona": {}
+     }
+    },
+    "previous_preset_refs": {
+     "actors": {
+      "primary": "",
+      "secondary": "",
+      "persona": ""
+     }
+    },
+    "previous_outfit_refs": {
+     "actors": {
+      "primary": null,
+      "secondary": null,
+      "persona": null
+     }
+    },
+    "previous_scene_tags": [],
+    "previous_background_tags": [],
+    "previous_scene_location_tags": []
+   },
+   "promptPlan": {
+    "globalPositive": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nEye-level camera at the gate facing both actors. Brick school gate with morning sunlight.",
+    "bodyAction": "",
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "characters": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "placementIndex": 0,
+      "selectedOutfitId": "outfit_1",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, source#arm hug, source#sleeve grab, looking at another, light smile, open mouth, standing\nleaning forward slightly.",
+      "uc": "bad hands",
+      "identityKey": "lore:alice",
+      "identity": {
+       "type": "character",
+       "key": "lore:alice",
+       "name": ""
+      }
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "placementIndex": 1,
+      "selectedOutfitId": "outfit_1",
+      "prompt": "male, 1::kazehaya shouta::, black hoodie, jeans, target#arm hug, target#sleeve grab, surprised, standing",
+      "uc": "",
+      "identityKey": "persona::p1",
+      "identity": {
+       "type": "persona",
+       "key": "persona::p1",
+       "name": ""
+      }
+     }
+    ],
+    "removeTags": [],
+    "width": 1216,
+    "height": 832,
+    "sizeId": 2,
+    "selectedVariantId": "",
+    "artistId": "detail_anime_illustration_style",
+    "artistName": "v5 style",
+    "matchedIdentityKeys": {
+     "actor_1": "lore:alice",
+     "actor_2": "persona::p1"
+    },
+    "selectedFormIds": {
+     "actor_1": "form_default",
+     "actor_2": "form_default"
+    },
+    "selectedOutfitIds": {
+     "actor_1": "outfit_1",
+     "actor_2": "outfit_1"
+    },
+    "actorIdentities": {
+     "actor_1": {
+      "type": "character",
+      "key": "lore:alice",
+      "name": ""
+     },
+     "actor_2": {
+      "type": "persona",
+      "key": "persona::p1",
+      "name": ""
+     }
+    },
+    "identitySuppressedActorSlots": []
+   },
+   "novelAIConfig": {
+    "apiKey": "test-key",
+    "naiModel": "nai-diffusion-5-full",
+    "seed": "1234567",
+    "steps": 28,
+    "scale": 5,
+    "sampler": "k_euler_ancestral",
+    "analysisProfile": "v5-hybrid",
+    "v5UserDirections": {
+     "scene": {
+      "mode": "preset",
+      "selectedPresetId": "scene-default",
+      "presets": [
+       {
+        "id": "scene-default",
+        "name": "삽화",
+        "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       },
+       {
+        "id": "scene-pov",
+        "name": "pov 연출",
+        "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
+        "scenePresetId": "pov",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       },
+       {
+        "id": "scene-ensemble",
+        "name": "다인 연출",
+        "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
+        "scenePresetId": "ensemble",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       },
+       {
+        "id": "scene-comic",
+        "name": "카툰 연출",
+        "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+        "scenePresetId": "comic",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       }
+      ],
+      "controlOverrides": {},
+      "customText": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+     },
+     "imageRatio": {
+      "mode": "preset",
+      "selectedPresetId": "image-ratio-default",
+      "presets": [
+       {
+        "id": "image-ratio-default",
+        "name": "기본",
+        "instruction": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+        "allowedSizeIds": [
+         1,
+         2,
+         5
+        ]
+       }
+      ],
+      "customText": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2."
+     },
+     "freeGenerationInstructions": {
+      "character": "Create a new character for each visibly present, distinct, unregistered entity that has an independent form in the scene, regardless of its origin, duration of appearance, activity, or body type. Do not restrict eligibility to particular entity types.\n\nWhen the scene establishes an entity as an independent participant, treat it as a character even if its name or material would ordinarily describe a surface or object.\n\nExclude an entity as an inanimate prop only when there is no evidence anywhere in the depicted scene of animation, agency, or participation as an actor.\n\nExclude entities that are only mentioned, depictions of entities rather than independently present participants, and background entities that cannot be individually distinguished.",
+      "outfit": "Compare only clothing supported by the source with existing outfits for the same character and form. Treat missing or unmentioned details as unknown, not as mismatches.\n\nWording differences and incidental variations alone do not establish a different outfit. Explicit differences in the main garments, their combination, or contextually distinguishing features do.\n\nPrefer the existing outfit best supported by the current clothing evidence. When the evidence does not distinguish between compatible outfits, retain the current outfit if available. Missing descriptions alone do not break outfit continuity, but explicit incompatible clothing evidence overrides it.\n\nFor a character eligible for outfit creation, propose a new outfit only when the source establishes what the character is wearing and no existing outfit in the selected form reasonably matches it. Do not infer a clothing change solely from a change of time, place, or activity."
+     },
+     "freeGenerationDesignInstructions": {
+      "character": "Design one complete, persistent visual identity from the scene context for consistent later depiction. Use only anatomy, structure, material, silhouette, surface, color, and persistent features applicable to this entity, without imposing human traits.\n\nCover the body plan and silhouette; scale and proportions; material, surface, and palette; head, face, and sensory structure; limbs, appendages, and locomotion; distinctive identity features; and persistent energy or mechanical effects. Develop each applicable area with concrete, repeatable visual detail. If a broad type or species alone does not sufficiently define the appearance, complete the distinguishing details.\n\nFor humanlike forms, creatively complete unspecified appearance from context rather than merely extracting observed facts. Prioritize features that help distinguish the identity.",
+      "outfit": "Design one complete outfit that can be depicted consistently across images. Preserve explicitly established clothing details and coherently complete unspecified details.\n\nSpecify each garment's color, concrete type, and defining length, cut, or silhouette, and each accessory's color or finish and concrete shape. Go beyond generic item types and complete the details that distinguish this outfit."
+     },
+     "systemExecution": {
+      "directionId": "default",
+      "rules": []
+     }
+    },
+    "width": 1216,
+    "height": 832,
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "useCoords": false,
+    "characterPrompts": [
+     {
+      "actorSlot": "actor_1",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, source#arm hug, source#sleeve grab, looking at another, light smile, open mouth, standing\nleaning forward slightly.",
+      "uc": "bad hands",
+      "centerX": 0.35,
+      "centerY": 0.5,
+      "coordinateMode": "automatic"
+     },
+     {
+      "actorSlot": "actor_2",
+      "prompt": "male, 1::kazehaya shouta::, black hoodie, jeans, target#arm hug, target#sleeve grab, surprised, standing",
+      "uc": "",
+      "centerX": 0.68,
+      "centerY": 0.52,
+      "coordinateMode": "automatic"
+     }
+    ]
+   },
+   "characterReferences": [],
+   "seedFixed": true,
+   "providerPrompt": {
+    "provider": "novelai",
+    "profileId": "nai-diffusion-5-full",
+    "profileRevision": 0,
+    "sourceFormat": "novelai-v5-interaction-led-prompt-v1",
+    "requestFormat": "novelai-v5-hybrid",
+    "formatterRevision": 1,
+    "globalPositivePrompt": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nEye-level camera at the gate facing both actors. Brick school gate with morning sunlight.",
+    "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "positivePrompt": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from side, outdoors, morning, school gate, cherry blossoms, very aesthetic\nEye-level camera at the gate facing both actors. Brick school gate with morning sunlight.",
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "characterPrompts": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, source#arm hug, source#sleeve grab, looking at another, light smile, open mouth, standing\nleaning forward slightly.",
+      "negativePrompt": "bad hands",
+      "centerX": 0.35,
+      "centerY": 0.5
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "male, 1::kazehaya shouta::, black hoodie, jeans, target#arm hug, target#sleeve grab, surprised, standing",
+      "negativePrompt": "",
+      "centerX": 0.68,
+      "centerY": 0.52
+     }
+    ],
+    "diagnostics": []
+   },
+   "generation": {
+    "provider": "novelai",
+    "bytes": {
+     "__bytes__": []
+    },
+    "mimeType": "image/png",
+    "extension": "png",
+    "seed": "1234567",
+    "width": 1216,
+    "height": 832,
+    "requestId": "fake-1",
+    "providerMetadata": {},
+    "providerRef": {
+     "providerId": "novelai",
+     "queueScopeKey": "image-provider:novelai:global"
+    }
+   },
+   "generationRecord": {
+    "hash": "fnv1a64-dfdfdb887623d3cb"
+   }
+  },
+  {
+   "sourceImageToken": "slot:s2",
+   "providerRef": {
+    "providerId": "novelai",
+    "queueScopeKey": "image-provider:novelai:global"
+   },
+   "actors": [
+    {
+     "actorId": "actor_1",
+     "actorIndex": 0,
+     "kind": "character",
+     "gender": "",
+     "identityKey": "lore:bob",
+     "identityName": "",
+     "selectedFormId": "form_default",
+     "selectedOutfitId": "outfit_1",
+     "identitySuppressed": false,
+     "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, 2::facing away::, looking down, exhausted\nhands on the window sill.",
+     "negativePrompt": ""
+    }
+   ],
+   "promptSegments": {
+    "artistPositive": {
+     "start": 11,
+     "end": 72
+    },
+    "artistNegative": {
+     "start": 30,
+     "end": 57
+    },
+    "outfits": {
+     "actor_1": {
+      "start": 18,
+      "end": 78
+     }
+    }
+   },
+   "analysisMetadata": {
+    "hash": "fnv1a64-dea121feac06958f"
+   },
+   "decision": {
+    "hash": "fnv1a64-0982d6c5234b2733"
+   },
+   "analyzerContinuity": {
+    "previous_modifiers": {
+     "global": {},
+     "actors": {
+      "primary": {},
+      "secondary": {},
+      "persona": {}
+     }
+    },
+    "previous_preset_refs": {
+     "actors": {
+      "primary": "",
+      "secondary": "",
+      "persona": ""
+     }
+    },
+    "previous_outfit_refs": {
+     "actors": {
+      "primary": null,
+      "secondary": null,
+      "persona": null
+     }
+    },
+    "previous_scene_tags": [],
+    "previous_background_tags": [],
+    "previous_scene_location_tags": []
+   },
+   "promptPlan": {
+    "globalPositive": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window.",
+    "bodyAction": "",
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "characters": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "placementIndex": 0,
+      "selectedOutfitId": "outfit_1",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, 2::facing away::, looking down, exhausted\nhands on the window sill.",
+      "uc": "",
+      "identityKey": "lore:bob",
+      "identity": {
+       "type": "character",
+       "key": "lore:bob",
+       "name": ""
+      }
+     }
+    ],
+    "removeTags": [],
+    "width": 832,
+    "height": 1216,
+    "sizeId": 1,
+    "selectedVariantId": "",
+    "artistId": "detail_anime_illustration_style",
+    "artistName": "v5 style",
+    "matchedIdentityKeys": {
+     "actor_1": "lore:bob"
+    },
+    "selectedFormIds": {
+     "actor_1": "form_default"
+    },
+    "selectedOutfitIds": {
+     "actor_1": "outfit_1"
+    },
+    "actorIdentities": {
+     "actor_1": {
+      "type": "character",
+      "key": "lore:bob",
+      "name": ""
+     }
+    },
+    "identitySuppressedActorSlots": []
+   },
+   "novelAIConfig": {
+    "apiKey": "test-key",
+    "naiModel": "nai-diffusion-5-full",
+    "seed": "1234567",
+    "steps": 28,
+    "scale": 5,
+    "sampler": "k_euler_ancestral",
+    "analysisProfile": "v5-hybrid",
+    "v5UserDirections": {
+     "scene": {
+      "mode": "preset",
+      "selectedPresetId": "scene-default",
+      "presets": [
+       {
+        "id": "scene-default",
+        "name": "삽화",
+        "instruction": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       },
+       {
+        "id": "scene-pov",
+        "name": "pov 연출",
+        "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
+        "scenePresetId": "pov",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       },
+       {
+        "id": "scene-ensemble",
+        "name": "다인 연출",
+        "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
+        "scenePresetId": "ensemble",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       },
+       {
+        "id": "scene-comic",
+        "name": "카툰 연출",
+        "instruction": "Render each requested illustration as one coherent manga page. Let the scene's action, emotion, timing, and reveal drive bold variation in panel scale, shape, overlap, camera, focus, spacing, and visual hierarchy instead of defaulting to a uniform row, column, stack, or grid. Panels and Actors may break, overlay, or span boundaries when that strengthens the presentation. Keep the reading flow unmistakable even when the page is asymmetric, layered, or non-linear. Use only as many meaningful panels as the scene needs, and do not force color or monochrome treatment.",
+        "scenePresetId": "comic",
+        "customInstruction": {
+         "enabled": true,
+         "text": ""
+        },
+        "controlOverrides": {}
+       }
+      ],
+      "controlOverrides": {},
+      "customText": "Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events."
+     },
+     "imageRatio": {
+      "mode": "preset",
+      "selectedPresetId": "image-ratio-default",
+      "presets": [
+       {
+        "id": "image-ratio-default",
+        "name": "기본",
+        "instruction": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.",
+        "allowedSizeIds": [
+         1,
+         2,
+         5
+        ]
+       }
+      ],
+      "customText": "Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2."
+     },
+     "freeGenerationInstructions": {
+      "character": "Create a new character for each visibly present, distinct, unregistered entity that has an independent form in the scene, regardless of its origin, duration of appearance, activity, or body type. Do not restrict eligibility to particular entity types.\n\nWhen the scene establishes an entity as an independent participant, treat it as a character even if its name or material would ordinarily describe a surface or object.\n\nExclude an entity as an inanimate prop only when there is no evidence anywhere in the depicted scene of animation, agency, or participation as an actor.\n\nExclude entities that are only mentioned, depictions of entities rather than independently present participants, and background entities that cannot be individually distinguished.",
+      "outfit": "Compare only clothing supported by the source with existing outfits for the same character and form. Treat missing or unmentioned details as unknown, not as mismatches.\n\nWording differences and incidental variations alone do not establish a different outfit. Explicit differences in the main garments, their combination, or contextually distinguishing features do.\n\nPrefer the existing outfit best supported by the current clothing evidence. When the evidence does not distinguish between compatible outfits, retain the current outfit if available. Missing descriptions alone do not break outfit continuity, but explicit incompatible clothing evidence overrides it.\n\nFor a character eligible for outfit creation, propose a new outfit only when the source establishes what the character is wearing and no existing outfit in the selected form reasonably matches it. Do not infer a clothing change solely from a change of time, place, or activity."
+     },
+     "freeGenerationDesignInstructions": {
+      "character": "Design one complete, persistent visual identity from the scene context for consistent later depiction. Use only anatomy, structure, material, silhouette, surface, color, and persistent features applicable to this entity, without imposing human traits.\n\nCover the body plan and silhouette; scale and proportions; material, surface, and palette; head, face, and sensory structure; limbs, appendages, and locomotion; distinctive identity features; and persistent energy or mechanical effects. Develop each applicable area with concrete, repeatable visual detail. If a broad type or species alone does not sufficiently define the appearance, complete the distinguishing details.\n\nFor humanlike forms, creatively complete unspecified appearance from context rather than merely extracting observed facts. Prioritize features that help distinguish the identity.",
+      "outfit": "Design one complete outfit that can be depicted consistently across images. Preserve explicitly established clothing details and coherently complete unspecified details.\n\nSpecify each garment's color, concrete type, and defining length, cut, or silhouette, and each accessory's color or finish and concrete shape. Go beyond generic item types and complete the details that distinguish this outfit."
+     },
+     "systemExecution": {
+      "directionId": "default",
+      "rules": []
+     }
+    },
+    "width": 832,
+    "height": 1216,
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "useCoords": false,
+    "characterPrompts": [
+     {
+      "actorSlot": "actor_1",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, 2::facing away::, looking down, exhausted\nhands on the window sill.",
+      "uc": "",
+      "centerX": 0.5,
+      "centerY": 0.45,
+      "coordinateMode": "automatic"
+     }
+    ]
+   },
+   "characterReferences": [],
+   "seedFixed": true,
+   "providerPrompt": {
+    "provider": "novelai",
+    "profileId": "nai-diffusion-5-full",
+    "profileRevision": 0,
+    "sourceFormat": "novelai-v5-interaction-led-prompt-v1",
+    "requestFormat": "novelai-v5-hybrid",
+    "formatterRevision": 1,
+    "globalPositivePrompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window.",
+    "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "positivePrompt": "2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, indoors, staff room, window, very aesthetic\nCamera behind the actor looking out the window.",
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "characterPrompts": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, 2::facing away::, looking down, exhausted\nhands on the window sill.",
+      "negativePrompt": "",
+      "centerX": 0.5,
+      "centerY": 0.45
+     }
+    ],
+    "diagnostics": []
+   },
+   "generation": {
+    "provider": "novelai",
+    "bytes": {
+     "__bytes__": []
+    },
+    "mimeType": "image/png",
+    "extension": "png",
+    "seed": "1234567",
+    "width": 832,
+    "height": 1216,
+    "requestId": "fake-2",
+    "providerMetadata": {},
+    "providerRef": {
+     "providerId": "novelai",
+     "queueScopeKey": "image-provider:novelai:global"
+    }
+   },
+   "generationRecord": {
+    "hash": "fnv1a64-ca5506623a767652"
+   }
+  }
+ ],
+ "continuity": {
+  "actors": {
+   "lore:alice": {
+    "identity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:alice"
+    },
+    "storageKey": "lore:alice",
+    "characterName": "",
+    "groups": {},
+    "counters": {},
+    "turn": 0,
+    "expires": {},
+    "passthrough": {
+     "naturalLanguage": {
+      "pose": "leaning forward slightly"
+     }
+    }
+   },
+   "persona:persona::p1": {
+    "identity": {
+     "kind": "persona_reference",
+     "value": "persona::p1"
+    },
+    "storageKey": "persona:persona::p1",
+    "characterName": "",
+    "groups": {},
+    "counters": {},
+    "turn": 0,
+    "expires": {},
+    "passthrough": {}
+   },
+   "lore:bob": {
+    "identity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:bob"
+    },
+    "storageKey": "lore:bob",
+    "characterName": "",
+    "groups": {},
+    "counters": {},
+    "turn": 0,
+    "expires": {},
+    "passthrough": {
+     "naturalLanguage": {
+      "pose": "hands on the window sill"
+     }
+    }
+   }
+  },
+  "scene": {
+   "backgroundTags": [
+    "staff_room",
+    "window"
+   ],
+   "locationTags": [
+    "staff_room"
+   ]
+  },
+  "modifierRefs": {
+   "referenceOnly": true,
+   "actors": {},
+   "interactionReferences": {
+    "records": {
+     "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+      "id": "arm_hug",
+      "mode": "directed",
+      "source": "lore:alice",
+      "target": "persona:persona::p1",
+      "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+      "slotNumber": 0,
+      "sourcePlacementIndex": 0,
+      "targetPlacementIndex": 1,
+      "groups": {}
+     },
+     "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+      "id": "sleeve_grab",
+      "mode": "directed",
+      "source": "lore:alice",
+      "target": "persona:persona::p1",
+      "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+      "slotNumber": 0,
+      "sourcePlacementIndex": 0,
+      "targetPlacementIndex": 1,
+      "groups": {}
+     }
+    },
+    "actors": {
+     "lore:alice": [
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+     ],
+     "persona:persona::p1": [
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+     ],
+     "lore:bob": false
+    }
+   },
+   "referenceExclusions": {
+    "catalog": "fnv1a64-554a124a78533747",
+    "actors": {
+     "lore:alice": [],
+     "persona:persona::p1": [],
+     "lore:bob": []
+    },
+    "scene": []
+   },
+   "global": {
+    "environment.setting": [
+     "indoors"
+    ],
+    "scene.free.location": [
+     "staff_room",
+     "window"
+    ]
+   }
+  },
+  "outfitRefs": {
+   "actors": {
+    "lore:alice": {
+     "outfitId": "outfit_1",
+     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
+    },
+    "persona::p1": {
+     "outfitId": "outfit_1",
+     "description": "black hoodie, jeans, sneakers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
+    },
+    "lore:bob": {
+     "outfitId": "outfit_1",
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
+    }
+   }
+  },
+  "sceneLayouts": [
+   {
+    "sizeId": 1,
+    "actors": [
+     {
+      "identity": {
+       "kind": "lorebook_prompt_key",
+       "value": "lore:bob"
+      },
+      "center": {
+       "x": 0.5,
+       "y": 0.45
+      },
+      "facing": {
+       "id": "facing_away"
+      }
+     }
+    ]
+   },
+   {
+    "sizeId": 2,
+    "actors": [
+     {
+      "identity": {
+       "kind": "lorebook_prompt_key",
+       "value": "lore:alice"
+      },
+      "center": {
+       "x": 0.35,
+       "y": 0.5
+      }
+     },
+     {
+      "identity": {
+       "kind": "persona_reference",
+       "value": "persona::p1"
+      },
+      "center": {
+       "x": 0.7,
+       "y": 0.5
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "snapshot": {
+  "scene": {
+   "backgroundTags": [
+    "staff_room",
+    "window"
+   ],
+   "locationTags": [
+    "staff_room"
+   ]
+  },
+  "characters": {
+   "lore:alice": {
+    "naturalLanguage": {
+     "pose": "leaning forward slightly"
+    }
+   },
+   "lore:bob": {
+    "naturalLanguage": {
+     "pose": "hands on the window sill"
+    }
+   }
+  },
+  "modifierRefs": {
+   "referenceOnly": true,
+   "interactionReferences": {
+    "records": {
+     "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+      "id": "arm_hug",
+      "mode": "directed",
+      "source": "lore:alice",
+      "target": "persona:persona::p1",
+      "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+      "slotNumber": 0,
+      "sourcePlacementIndex": 0,
+      "targetPlacementIndex": 1
+     },
+     "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+      "id": "sleeve_grab",
+      "mode": "directed",
+      "source": "lore:alice",
+      "target": "persona:persona::p1",
+      "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+      "slotNumber": 0,
+      "sourcePlacementIndex": 0,
+      "targetPlacementIndex": 1
+     }
+    },
+    "actors": {
+     "lore:alice": [
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+     ],
+     "persona:persona::p1": [
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+     ],
+     "lore:bob": false
+    }
+   },
+   "referenceExclusions": {
+    "catalog": "fnv1a64-554a124a78533747"
+   },
+   "global": {
+    "environment.setting": [
+     "indoors"
+    ],
+    "scene.free.location": [
+     "staff_room",
+     "window"
+    ]
+   }
+  },
+  "outfitRefs": {
+   "actors": {
+    "lore:alice": {
+     "outfitId": "outfit_1",
+     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
+    },
+    "persona::p1": {
+     "outfitId": "outfit_1",
+     "description": "black hoodie, jeans, sneakers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
+    },
+    "lore:bob": {
+     "outfitId": "outfit_1",
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
+    }
+   }
+  },
+  "participants": {
+   "sceneLayouts": [
+    {
+     "sizeId": 1,
+     "actors": [
+      {
+       "identity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "center": {
+        "x": 0.5,
+        "y": 0.45
+       },
+       "facing": {
+        "id": "facing_away"
+       }
+      }
+     ]
+    },
+    {
+     "sizeId": 2,
+     "actors": [
+      {
+       "identity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "center": {
+        "x": 0.35,
+        "y": 0.5
+       }
+      },
+      {
+       "identity": {
+        "kind": "persona_reference",
+        "value": "persona::p1"
+       },
+       "center": {
+        "x": 0.7,
+        "y": 0.5
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "events": [
+  {
+   "phase": "analyzing-preset"
+  },
+  {
+   "phase": "planning",
+   "imageCount": 2
+  },
+  {
+   "phase": "generating",
+   "imageIndex": 0,
+   "imageCount": 2
+  },
+  {
+   "phase": "generating",
+   "imageIndex": 1,
+   "imageCount": 2,
+   "sourceImageToken": "slot:s1"
+  },
+  {
+   "phase": "generating",
+   "imageIndex": 2,
+   "imageCount": 2,
+   "sourceImageToken": "slot:s2"
+  },
+  {
+   "phase": "applying-continuity"
+  },
+  {
+   "phase": "complete",
+   "imageIndex": 2,
+   "imageCount": 2
+  }
+ ]
+}

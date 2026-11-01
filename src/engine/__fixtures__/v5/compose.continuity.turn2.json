@@ -3,8 +3,7 @@
   "response": "continuity",
   "provider": "novelai",
   "seed": 46,
-  "previous": "default.novelai",
-  "stateAccumulationEnabled": true
+  "previous": "default.novelai"
  },
  "analysis": {
   "profile": "v5-hybrid",
@@ -12,7 +11,7 @@
    "illustrations": [
     {
      "slotNumber": 0,
-     "status": "exact",
+     "status": "degraded",
      "presentationMode": "single-frame",
      "actors": [
       {
@@ -36,12 +35,6 @@
         "id": "scene.rating",
         "options": [
          "sfw"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
         ]
        }
       ],
@@ -72,15 +65,9 @@
        "actions": [],
        "modifiers": [
         {
-         "id": "state.clothing.surface",
+         "id": "state.clothing.condition",
          "options": [
           "wet_clothes"
-         ]
-        },
-        {
-         "id": "state.fluid.saliva",
-         "options": [
-          "drooling"
          ]
         },
         {
@@ -88,16 +75,16 @@
          "options": [
           "tearing_up"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [
-        "cut on hand"
-       ],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -105,7 +92,14 @@
       "modifiers": [],
       "instruction": ""
      },
-     "diagnostics": []
+     "diagnostics": [
+      {
+       "code": "unknown-modifier-definition",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_detail[0].modifiers[1].id",
+       "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
+      }
+     ]
     }
    ],
    "diagnostics": []
@@ -225,7 +219,7 @@
    "actor.m0ais.6ynrym": "lore:bob",
    "actor.1fmv888.fk4pvw": "persona::p1"
   },
-  "requestPayload": "fnv1a64-681e5fc5e9432831",
+  "requestPayload": "fnv1a64-c344255f9cc7d66c",
   "localProjection": {
    "allowedSizeIds": [
     1,
@@ -234,7 +228,7 @@
    ],
    "characterCoordinates": "fixed"
   },
-  "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+  "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
  },
  "plans": [
   {
@@ -261,25 +255,30 @@
       "female",
       "silver hair",
       "blue eyes",
-      "wet clothes",
-      "drooling",
-      "tearing up",
-      "cut on hand",
       "white sailor shirt",
       "navy sailor collar",
       "red neckerchief",
       "navy pleated skirt",
-      "0.8::black thighhighs::"
+      "black thighhighs",
+      "wet clothes",
+      "tearing up"
      ],
      "instructions": [],
-     "serializedPrompt": "female, silver hair, blue eyes, wet clothes, drooling, tearing up, cut on hand, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, 0.8::black thighhighs::",
+     "serializedPrompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, wet clothes, tearing up",
      "actorId": "actor_1",
      "placementIndex": 0,
      "candidateKey": "actor.g00nx3.1d3zc2v",
      "sex": "female",
      "centerX": 0.5,
      "centerY": 0.5,
-     "negativePrompt": "bad hands"
+     "negativePrompt": "bad hands",
+     "outfitPartWeights": {
+      "head": 1,
+      "top": 1,
+      "bottom": 1,
+      "legs": 1,
+      "feet": 0
+     }
     }
    ],
    "ledger": [
@@ -310,6 +309,9 @@
      "order": 0,
      "sourceKind": "actor-roster",
      "sourceId": "actor-roster:actor_1:sex",
+     "outputOrigin": {
+      "path": "base.sex"
+     },
      "weight": 1,
      "id": "ledger:00001",
      "semanticKey": "female",
@@ -317,6 +319,9 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "base.hair.color"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -329,12 +334,15 @@
      "sourceId": "lore:alice:hair.color:0",
      "placementIndex": 0,
      "weight": 1,
-     "id": "ledger:00006",
+     "id": "ledger:00004",
      "semanticKey": "silver hair",
-     "inputIndex": 6,
+     "inputIndex": 4,
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "base.eyes.color"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -347,9 +355,9 @@
      "sourceId": "lore:alice:eyes.color:0",
      "placementIndex": 0,
      "weight": 1,
-     "id": "ledger:00007",
+     "id": "ledger:00005",
      "semanticKey": "blue eyes",
-     "inputIndex": 7,
+     "inputIndex": 5,
      "status": "applied"
     },
     {
@@ -363,9 +371,9 @@
      "sourceKind": "external-artist",
      "sourceId": "detail_anime_illustration_style",
      "weight": 1,
-     "id": "ledger:00014",
+     "id": "ledger:00012",
      "semanticKey": "artist hwansang",
-     "inputIndex": 14,
+     "inputIndex": 12,
      "status": "applied"
     },
     {
@@ -379,9 +387,9 @@
      "sourceKind": "external-artist",
      "sourceId": "detail_anime_illustration_style",
      "weight": 1,
-     "id": "ledger:00015",
+     "id": "ledger:00013",
      "semanticKey": "year 2025",
-     "inputIndex": 15,
+     "inputIndex": 13,
      "status": "applied"
     },
     {
@@ -395,9 +403,9 @@
      "sourceKind": "external-artist",
      "sourceId": "detail_anime_illustration_style",
      "weight": 1,
-     "id": "ledger:00016",
+     "id": "ledger:00014",
      "semanticKey": "masterpiece",
-     "inputIndex": 16,
+     "inputIndex": 14,
      "status": "applied"
     },
     {
@@ -411,84 +419,15 @@
      "sourceKind": "external-artist",
      "sourceId": "detail_anime_illustration_style",
      "weight": 1,
-     "id": "ledger:00017",
+     "id": "ledger:00015",
      "semanticKey": "best quality",
-     "inputIndex": 17,
+     "inputIndex": 15,
      "status": "applied"
     },
     {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
+     "outputOrigin": {
+      "path": "outfit.top"
      },
-     "semanticId": "state.clothing.surface.wet_clothes",
-     "value": "wet clothes",
-     "order": 4040,
-     "sourceKind": "closed",
-     "sourceId": "actor-detail:actor_1:state.clothing.surface.wet_clothes",
-     "weight": 1,
-     "placementIndex": 0,
-     "id": "ledger:00002",
-     "semanticKey": "wet clothes",
-     "inputIndex": 2,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "state.fluid.saliva.drooling",
-     "value": "drooling",
-     "order": 4040,
-     "sourceKind": "closed",
-     "sourceId": "actor-detail:actor_1:state.fluid.saliva.drooling",
-     "weight": 1,
-     "placementIndex": 0,
-     "id": "ledger:00003",
-     "semanticKey": "drooling",
-     "inputIndex": 3,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "expression.tear.tearing_up",
-     "value": "tearing up",
-     "order": 4040,
-     "sourceKind": "closed",
-     "sourceId": "actor-detail:actor_1:expression.tear.tearing_up",
-     "weight": 1,
-     "placementIndex": 0,
-     "id": "ledger:00004",
-     "semanticKey": "tearing up",
-     "inputIndex": 4,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "actor.injury.current.actor_1.0",
-     "value": "cut on hand",
-     "order": 10000,
-     "sourceKind": "recovered-free",
-     "sourceId": "actor-detail:actor_1:actor.injury",
-     "weight": 1,
-     "placementIndex": 0,
-     "id": "ledger:00005",
-     "semanticKey": "cut on hand",
-     "inputIndex": 5,
-     "status": "applied"
-    },
-    {
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -501,12 +440,15 @@
      "sourceId": "outfit:lore:alice:outfit_1:top",
      "placementIndex": 0,
      "weight": 1,
-     "id": "ledger:00008",
+     "id": "ledger:00006",
      "semanticKey": "white sailor shirt",
-     "inputIndex": 8,
+     "inputIndex": 6,
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -519,12 +461,15 @@
      "sourceId": "outfit:lore:alice:outfit_1:top",
      "placementIndex": 0,
      "weight": 1,
-     "id": "ledger:00009",
+     "id": "ledger:00007",
      "semanticKey": "navy sailor collar",
-     "inputIndex": 9,
+     "inputIndex": 7,
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -537,12 +482,15 @@
      "sourceId": "outfit:lore:alice:outfit_1:top",
      "placementIndex": 0,
      "weight": 1,
-     "id": "ledger:00010",
+     "id": "ledger:00008",
      "semanticKey": "red neckerchief",
-     "inputIndex": 10,
+     "inputIndex": 8,
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "outfit.bottom"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -555,12 +503,15 @@
      "sourceId": "outfit:lore:alice:outfit_1:bottom",
      "placementIndex": 0,
      "weight": 1,
-     "id": "ledger:00011",
+     "id": "ledger:00009",
      "semanticKey": "navy pleated skirt",
-     "inputIndex": 11,
+     "inputIndex": 9,
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "outfit.legs"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -572,13 +523,60 @@
      "sourceKind": "external",
      "sourceId": "outfit:lore:alice:outfit_1:legs",
      "placementIndex": 0,
-     "weight": 0.8,
-     "id": "ledger:00012",
+     "weight": 1,
+     "id": "ledger:00010",
      "semanticKey": "black thighhighs",
-     "inputIndex": 12,
+     "inputIndex": 10,
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "group.state.clothing.condition",
+      "option": "wet_clothes"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "state.clothing.condition.wet_clothes",
+     "value": "wet clothes",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:state.clothing.condition.wet_clothes",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00002",
+     "semanticKey": "wet clothes",
+     "inputIndex": 2,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.expression.tear",
+      "option": "tearing_up"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "expression.tear.tearing_up",
+     "value": "tearing up",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:expression.tear.tearing_up",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00003",
+     "semanticKey": "tearing up",
+     "inputIndex": 3,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.feet"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -592,9 +590,9 @@
      "placementIndex": 0,
      "weight": 0,
      "suppressionReason": "visibility",
-     "id": "ledger:00013",
+     "id": "ledger:00011",
      "semanticKey": "brown loafers",
-     "inputIndex": 13,
+     "inputIndex": 11,
      "status": "suppressed"
     },
     {
@@ -608,9 +606,9 @@
      "sourceKind": "external-fixed",
      "sourceId": "character-generation-settings",
      "weight": 1,
-     "id": "ledger:00018",
+     "id": "ledger:00016",
      "semanticKey": "very aesthetic",
-     "inputIndex": 18,
+     "inputIndex": 16,
      "status": "applied"
     }
    ]
@@ -644,7 +642,7 @@
     "characterPrompts": [
      {
       "actorSlot": "actor_1",
-      "prompt": "female, silver hair, blue eyes, wet clothes, drooling, tearing up, cut on hand, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, 0.8::black thighhighs::",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, wet clothes, tearing up",
       "uc": "bad hands",
       "centerX": 0.5,
       "centerY": 0.5,
@@ -652,6 +650,7 @@
      }
     ]
    },
+   "forceRating": false,
    "references": [],
    "queueMeta": {
     "kind": "generation",
@@ -678,7 +677,7 @@
      "selectedFormId": "form_default",
      "selectedOutfitId": "outfit_1",
      "identitySuppressed": false,
-     "prompt": "female, silver hair, blue eyes, wet clothes, drooling, tearing up, cut on hand, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, 0.8::black thighhighs::",
+     "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, wet clothes, tearing up",
      "negativePrompt": "bad hands"
     }
    ],
@@ -693,16 +692,16 @@
     },
     "outfits": {
      "actor_1": {
-      "start": 80,
-      "end": 180
+      "start": 32,
+      "end": 125
      }
     }
    },
    "analysisMetadata": {
-    "hash": "fnv1a64-639c1a71f8af2841"
+    "hash": "fnv1a64-7b6987c785eda10a"
    },
    "decision": {
-    "hash": "fnv1a64-731277eeb4957d7b"
+    "hash": "fnv1a64-58201da4b63ae7c2"
    },
    "analyzerContinuity": {
     "previous_modifiers": {
@@ -741,7 +740,7 @@
       "actorIndex": 0,
       "placementIndex": 0,
       "selectedOutfitId": "outfit_1",
-      "prompt": "female, silver hair, blue eyes, wet clothes, drooling, tearing up, cut on hand, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, 0.8::black thighhighs::",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, wet clothes, tearing up",
       "uc": "bad hands",
       "identityKey": "lore:alice",
       "identity": {
@@ -755,7 +754,6 @@
     "width": 832,
     "height": 1216,
     "sizeId": 1,
-    "selectedFraming": "",
     "selectedVariantId": "",
     "artistId": "detail_anime_illustration_style",
     "artistName": "v5 style",
@@ -792,7 +790,7 @@
     "characterPrompts": [
      {
       "actorSlot": "actor_1",
-      "prompt": "female, silver hair, blue eyes, wet clothes, drooling, tearing up, cut on hand, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, 0.8::black thighhighs::",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, wet clothes, tearing up",
       "uc": "bad hands",
       "centerX": 0.5,
       "centerY": 0.5,
@@ -817,7 +815,7 @@
      {
       "actorId": "actor_1",
       "actorIndex": 0,
-      "prompt": "female, silver hair, blue eyes, wet clothes, drooling, tearing up, cut on hand, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, 0.8::black thighhighs::",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, wet clothes, tearing up",
       "negativePrompt": "bad hands",
       "centerX": 0.5,
       "centerY": 0.5
@@ -843,7 +841,7 @@
     }
    },
    "generationRecord": {
-    "hash": "fnv1a64-a4072d032ff74620"
+    "hash": "fnv1a64-eb883e0218f7f0e9"
    }
   }
  ],
@@ -856,94 +854,113 @@
     },
     "storageKey": "lore:alice",
     "characterName": "",
-    "groups": {
-     "actor.injury": [
-      "cut on hand"
-     ],
-     "state.fluid.saliva": [
-      "drooling"
-     ]
-    },
+    "groups": {},
     "counters": {},
-    "turn": 2,
-    "expires": {
-     "state.fluid.saliva": {
-      "drooling": 4
-     }
-    },
+    "turn": 0,
+    "expires": {},
     "passthrough": {}
-   },
-   "persona:persona::p1": {
-    "identity": {
-     "kind": "persona_reference",
-     "value": "persona::p1"
-    },
-    "storageKey": "persona:persona::p1",
-    "characterName": "",
-    "groups": {},
-    "counters": {},
-    "turn": 1,
-    "expires": {},
-    "passthrough": {
-     "naturalLanguage": {
-      "action": "running toward the gate"
-     }
-    }
-   },
-   "lore:bob": {
-    "identity": {
-     "kind": "lorebook_prompt_key",
-     "value": "lore:bob"
-    },
-    "storageKey": "lore:bob",
-    "characterName": "",
-    "groups": {},
-    "counters": {},
-    "turn": 1,
-    "expires": {},
-    "passthrough": {
-     "naturalLanguage": {
-      "pose": "hands on the window sill",
-      "action": "sighing"
-     }
-    }
    }
-  },
-  "scene": {
-   "backgroundTags": [
-    "staff_room",
-    "window"
-   ],
-   "locationTags": [
-    "staff_room"
-   ]
   },
   "modifierRefs": {
-   "global": {
-    "scene.environment": [
-     "indoors"
-    ],
-    "scene.time": [
-     "morning"
-    ]
-   }
+   "referenceOnly": true,
+   "interactionReferences": {
+    "records": {},
+    "actors": {
+     "lore:alice": false
+    }
+   },
+   "referenceExclusions": {
+    "catalog": "fnv1a64-554a124a78533747",
+    "actors": {
+     "lore:alice": []
+    },
+    "scene": []
+   },
+   "actors": {},
+   "global": {}
   },
   "outfitRefs": {
    "actors": {
     "lore:alice": {
-     "formId": "form_default",
      "outfitId": "outfit_1",
-     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
     },
     "persona::p1": {
-     "formId": "form_default",
      "outfitId": "outfit_1",
-     "description": "black hoodie, jeans, sneakers"
+     "description": "black hoodie, jeans, sneakers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
     },
     "lore:bob": {
-     "formId": "form_default",
      "outfitId": "outfit_1",
-     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
     }
    }
   },
@@ -1056,70 +1073,99 @@
   ]
  },
  "snapshot": {
-  "scene": {
-   "backgroundTags": [
-    "staff_room",
-    "window"
-   ],
-   "locationTags": [
-    "staff_room"
-   ]
-  },
-  "characters": {
-   "lore:alice": {
-    "actor.injury": [
-     "cut on hand"
-    ],
-    "state.fluid.saliva": [
-     "drooling"
-    ],
-    "_continuity_turn": 2,
-    "_continuity_expires": {
-     "state.fluid.saliva": {
-      "drooling": 4
-     }
+  "modifierRefs": {
+   "referenceOnly": true,
+   "interactionReferences": {
+    "actors": {
+     "lore:alice": false
     }
    },
-   "persona:persona::p1": {
-    "naturalLanguage": {
-     "action": "running toward the gate"
-    },
-    "_continuity_turn": 1
-   },
-   "lore:bob": {
-    "naturalLanguage": {
-     "pose": "hands on the window sill",
-     "action": "sighing"
-    },
-    "_continuity_turn": 1
-   }
-  },
-  "modifierRefs": {
-   "global": {
-    "scene.environment": [
-     "indoors"
-    ],
-    "scene.time": [
-     "morning"
-    ]
+   "referenceExclusions": {
+    "catalog": "fnv1a64-554a124a78533747"
    }
   },
   "outfitRefs": {
    "actors": {
     "lore:alice": {
-     "formId": "form_default",
      "outfitId": "outfit_1",
-     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
     },
     "persona::p1": {
-     "formId": "form_default",
      "outfitId": "outfit_1",
-     "description": "black hoodie, jeans, sneakers"
+     "description": "black hoodie, jeans, sneakers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
     },
     "lore:bob": {
-     "formId": "form_default",
      "outfitId": "outfit_1",
-     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
     }
    }
   },

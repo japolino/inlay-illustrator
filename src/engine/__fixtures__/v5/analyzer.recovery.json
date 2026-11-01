@@ -47,8 +47,7 @@
        "targetActorId": "actor_2",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [],
-       "participantDetails": []
+       "modifiers": []
       },
       {
        "interactionRef": "interaction:1",
@@ -58,13 +57,7 @@
        "targetActorId": "actor_2",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [],
-       "participantDetails": [
-        {
-         "actorId": "actor_1",
-         "text": "fingers pinching the hoodie sleeve"
-        }
-       ]
+       "modifiers": []
       }
      ],
      "location": {
@@ -76,21 +69,15 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "outdoors"
         ]
        },
        {
-        "id": "scene.time",
+        "id": "environment.time",
         "options": [
          "morning"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
         ]
        }
       ],
@@ -114,7 +101,7 @@
         "y": 0.5
        },
        "source": "analyzer",
-       "instruction": "left of the gate pillar"
+       "instruction": ""
       },
       {
        "actorId": "actor_2",
@@ -146,24 +133,26 @@
          ]
         },
         {
-         "id": "expression.mouth",
+         "id": "expression.mouth.openness",
          "options": [
           "open_mouth"
          ]
         },
         {
-         "id": "actor.pose.body",
+         "id": "pose.body",
          "options": [
           "standing"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "leaning forward slightly",
-       "actionInstruction": "waving one hand high",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
@@ -178,18 +167,20 @@
          ]
         },
         {
-         "id": "actor.pose.body",
+         "id": "pose.body",
          "options": [
           "standing"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "running toward the gate",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -221,7 +212,7 @@
     },
     {
      "slotNumber": 1,
-     "status": "recovered",
+     "status": "degraded",
      "presentationMode": "single-frame",
      "actors": [
       {
@@ -248,15 +239,9 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "indoors"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "upper_body"
         ]
        }
       ],
@@ -303,16 +288,16 @@
          "options": [
           "exhausted"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [
-        "scar on face"
-       ],
-       "penetratingInjuries": [],
        "poseInstruction": "hands on the window sill",
-       "actionInstruction": "sighing",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -321,6 +306,12 @@
       "instruction": "Camera behind the actor looking out the window."
      },
      "diagnostics": [
+      {
+       "code": "modifier-stage-mismatch",
+       "impact": "degraded",
+       "path": "$.illustrations[1].frame_placement.modifiers[2]",
+       "message": "Omitted 'framing.crop' from 'frame_placement' because its compiled owner is 'actor_detail'."
+      },
       {
        "code": "tag-canonicalized",
        "impact": "recovered",
@@ -382,21 +373,15 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "outdoors"
         ]
        },
        {
-        "id": "scene.time",
+        "id": "environment.time",
         "options": [
          "morning"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
         ]
        }
       ],
@@ -455,27 +440,32 @@
          "options": [
           "light_blush"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "reaching toward the viewer",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
        "actorId": "actor_2",
        "placementIndex": 2,
        "actions": [],
-       "modifiers": [],
-       "freeTags": [],
-       "penetratingInjuries": [],
+       "modifiers": [
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -485,12 +475,6 @@
         "id": "camera.view",
         "options": [
          "pov"
-        ]
-       },
-       {
-        "id": "camera.pov",
-        "options": [
-         "pov_hands"
         ]
        }
       ],
@@ -594,8 +578,7 @@
        "targetActorId": "actor_2",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [],
-       "participantDetails": []
+       "modifiers": []
       },
       {
        "interactionRef": "interaction:1",
@@ -605,8 +588,7 @@
        "targetActorId": "actor_2",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [],
-       "participantDetails": []
+       "modifiers": []
       },
       {
        "interactionRef": "interaction:2",
@@ -616,17 +598,7 @@
        "targetActorId": "actor_3",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [],
-       "participantDetails": [
-        {
-         "actorId": "actor_1",
-         "text": "swinging the joined hands"
-        },
-        {
-         "actorId": "actor_3",
-         "text": "awkward grip"
-        }
-       ]
+       "modifiers": []
       },
       {
        "interactionRef": "interaction:3",
@@ -636,8 +608,7 @@
        "targetActorId": "actor_3",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [],
-       "participantDetails": []
+       "modifiers": []
       }
      ],
      "location": {
@@ -649,21 +620,15 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "indoors"
         ]
        },
        {
-        "id": "scene.weather",
+        "id": "environment.weather",
         "options": [
          "rain"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
         ]
        }
       ],
@@ -699,7 +664,7 @@
         "y": 0.5
        },
        "source": "analyzer",
-       "instruction": "between the two"
+       "instruction": ""
       },
       {
        "actorId": "actor_3",
@@ -728,7 +693,7 @@
          ]
         },
         {
-         "id": "state.clothing.surface",
+         "id": "state.clothing.condition",
          "options": [
           "wet_clothes"
          ]
@@ -738,16 +703,16 @@
          "options": [
           "wet_hair"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [
-        "bruise on arm"
-       ],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
@@ -766,14 +731,16 @@
          "options": [
           "blush"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "arms pinned to the sides",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
@@ -792,14 +759,16 @@
          "options": [
           "sweat"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -885,13 +854,7 @@
        "targetActorId": "actor_2",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [],
-       "participantDetails": [
-        {
-         "actorId": "actor_2",
-         "text": "stumbling half a step"
-        }
-       ]
+       "modifiers": []
       }
      ],
      "location": {
@@ -903,13 +866,13 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "outdoors"
         ]
        },
        {
-        "id": "scene.time",
+        "id": "environment.time",
         "options": [
          "morning"
         ]
@@ -938,6 +901,7 @@
        {
         "panelId": "p_wave",
         "id": "greeting_wave",
+        "selectedDefinitionId": null,
         "visibleActorIds": [
          "actor_1"
         ],
@@ -954,6 +918,7 @@
        {
         "panelId": "p_meet",
         "id": "arm_hug_meeting",
+        "selectedDefinitionId": null,
         "visibleActorIds": [
          "actor_1",
          "actor_2"
@@ -971,6 +936,7 @@
        {
         "panelId": "p_bell",
         "id": "school_bell",
+        "selectedDefinitionId": null,
         "visibleActorIds": [],
         "modifiers": [
          {
@@ -1054,18 +1020,14 @@
          ]
         },
         {
-         "id": "actor.framing.crop",
+         "id": "framing.crop",
          "options": [
           "upper_body"
          ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "waving",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": "speech bubble, text:You're late again!"
       },
       {
@@ -1077,24 +1039,20 @@
        "actions": [],
        "modifiers": [
         {
-         "id": "expression.mouth",
+         "id": "expression.mouth.openness",
          "options": [
           "open_mouth"
          ]
         },
         {
-         "id": "actor.framing.crop",
+         "id": "framing.crop",
          "options": [
           "cowboy_shot"
          ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
@@ -1107,14 +1065,16 @@
          "options": [
           "surprised"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -1183,27 +1143,7 @@
        "targetActorId": "actor_1",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [
-        {
-         "id": "interaction.sexual.penetration.route",
-         "options": [
-          "vaginal"
-         ]
-        },
-        {
-         "id": "interaction.penetration.instrument",
-         "options": [
-          "penis"
-         ]
-        },
-        {
-         "id": "interaction.sexual.penetration.progress",
-         "options": [
-          "deep_penetration"
-         ]
-        }
-       ],
-       "participantDetails": []
+       "modifiers": []
       }
      ],
      "location": {
@@ -1211,25 +1151,19 @@
        {
         "id": "scene.rating",
         "options": [
-         "nsfw"
+         "sfw"
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "indoors"
         ]
        },
        {
-        "id": "scene.time",
+        "id": "environment.time",
         "options": [
          "night"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
         ]
        }
       ],
@@ -1272,30 +1206,20 @@
        "actions": [],
        "modifiers": [
         {
-         "id": "actor.pose.body",
+         "id": "pose.body",
          "options": [
           "on_back"
          ]
         },
         {
-         "id": "state.clothing.coverage.lower",
+         "id": "framing.crop",
          "options": [
-          "no_panties"
-         ]
-        },
-        {
-         "id": "state.fluid.saliva",
-         "options": [
-          "drooling"
+          "cowboy_shot"
          ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
@@ -1308,14 +1232,16 @@
          "options": [
           "serious"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -1332,16 +1258,34 @@
      },
      "diagnostics": [
       {
-       "code": "modifier-option-limit-applied",
+       "code": "unknown-modifier-definition",
        "impact": "degraded",
-       "path": "$.illustrations[0].interaction.modifiers[2][0].options",
-       "message": "Applied the compiled maximum of 1 options for 'interaction.sexual.penetration.progress'."
+       "path": "$.illustrations[0].interaction.modifiers[0][0].id",
+       "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
       },
       {
-       "code": "scene-rating-upgraded",
-       "impact": "recovered",
-       "path": "$.illustrations[0].frame_placement.modifiers",
-       "message": "Normalized the scene rating to nsfw from a compiled closed Interaction declaration."
+       "code": "unknown-modifier-definition",
+       "impact": "degraded",
+       "path": "$.illustrations[0].interaction.modifiers[1][0].id",
+       "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
+      },
+      {
+       "code": "unknown-modifier-definition",
+       "impact": "degraded",
+       "path": "$.illustrations[0].interaction.modifiers[2][0].id",
+       "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
+      },
+      {
+       "code": "unknown-modifier-definition",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_detail[0].modifiers[1].id",
+       "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
+      },
+      {
+       "code": "unknown-modifier-definition",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_detail[0].modifiers[2].id",
+       "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
       }
      ]
     }
@@ -1400,13 +1344,7 @@
        "targetActorId": "actor_2",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [],
-       "participantDetails": [
-        {
-         "actorId": "actor_2",
-         "text": "stumbling half a step"
-        }
-       ]
+       "modifiers": []
       }
      ],
      "location": {
@@ -1418,13 +1356,13 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "outdoors"
         ]
        },
        {
-        "id": "scene.time",
+        "id": "environment.time",
         "options": [
          "morning"
         ]
@@ -1453,6 +1391,7 @@
        {
         "panelId": "p_wave",
         "id": "greeting_wave",
+        "selectedDefinitionId": null,
         "visibleActorIds": [
          "actor_1"
         ],
@@ -1469,6 +1408,7 @@
        {
         "panelId": "p_meet",
         "id": "arm_hug_meeting",
+        "selectedDefinitionId": null,
         "visibleActorIds": [
          "actor_1",
          "actor_2"
@@ -1486,6 +1426,7 @@
        {
         "panelId": "p_bell",
         "id": "school_bell",
+        "selectedDefinitionId": null,
         "visibleActorIds": [],
         "modifiers": [
          {
@@ -1569,18 +1510,14 @@
          ]
         },
         {
-         "id": "actor.framing.crop",
+         "id": "framing.crop",
          "options": [
           "upper_body"
          ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "waving",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": "speech bubble, text:You're late again!"
       },
       {
@@ -1592,24 +1529,20 @@
        "actions": [],
        "modifiers": [
         {
-         "id": "expression.mouth",
+         "id": "expression.mouth.openness",
          "options": [
           "open_mouth"
          ]
         },
         {
-         "id": "actor.framing.crop",
+         "id": "framing.crop",
          "options": [
           "cowboy_shot"
          ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
@@ -1622,14 +1555,16 @@
          "options": [
           "surprised"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -1684,16 +1619,10 @@
         "options": [
          "sfw"
         ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
-        ]
        }
       ],
       "freeTags": [],
-      "instruction": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "instruction": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
       "comicPageInstruction": "",
       "comicPageModifiers": [],
       "comicPanels": [],
@@ -1726,26 +1655,32 @@
        "actorId": "actor_1",
        "placementIndex": 0,
        "actions": [],
-       "modifiers": [],
-       "freeTags": [],
-       "penetratingInjuries": [],
+       "modifiers": [
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
        "actorId": "actor_1",
        "placementIndex": 1,
        "actions": [],
-       "modifiers": [],
-       "freeTags": [],
-       "penetratingInjuries": [],
+       "modifiers": [
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -1764,7 +1699,7 @@
        "code": "interaction-mode-recovered",
        "impact": "recovered",
        "path": "$.illustrations[0].interaction.items[0].mode",
-       "message": "Applied default mode 'directed' for Interaction 'kiss'."
+       "message": "Applied directed mode to a free Interaction whose mode was missing or invalid."
       },
       {
        "code": "interaction-binding-incomplete",
@@ -1794,7 +1729,7 @@
        "code": "instruction-truncated",
        "impact": "degraded",
        "path": "$.illustrations[0].frame_placement.instruction",
-       "message": "Truncated an instruction to the channel limit of 320 characters."
+       "message": "Truncated an instruction to the channel limit of 100 characters."
       },
       {
        "code": "scene-rating-defaulted",
@@ -1846,12 +1781,6 @@
         "id": "scene.rating",
         "options": [
          "sfw"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
         ]
        }
       ],
@@ -1928,16 +1857,10 @@
         "options": [
          "sfw"
         ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
-        ]
        }
       ],
       "freeTags": [],
-      "instruction": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "instruction": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
       "comicPageInstruction": "",
       "comicPageModifiers": [],
       "comicPanels": [],
@@ -1970,26 +1893,32 @@
        "actorId": "actor_1",
        "placementIndex": 0,
        "actions": [],
-       "modifiers": [],
-       "freeTags": [],
-       "penetratingInjuries": [],
+       "modifiers": [
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
        "actorId": "actor_1",
        "placementIndex": 1,
        "actions": [],
-       "modifiers": [],
-       "freeTags": [],
-       "penetratingInjuries": [],
+       "modifiers": [
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -2008,7 +1937,7 @@
        "code": "interaction-mode-recovered",
        "impact": "recovered",
        "path": "$.illustrations[0].interaction.items[0].mode",
-       "message": "Applied default mode 'directed' for Interaction 'kiss'."
+       "message": "Applied directed mode to a free Interaction whose mode was missing or invalid."
       },
       {
        "code": "interaction-binding-incomplete",
@@ -2038,7 +1967,7 @@
        "code": "instruction-truncated",
        "impact": "degraded",
        "path": "$.illustrations[0].frame_placement.instruction",
-       "message": "Truncated an instruction to the channel limit of 320 characters."
+       "message": "Truncated an instruction to the channel limit of 100 characters."
       },
       {
        "code": "scene-rating-defaulted",
@@ -2090,12 +2019,6 @@
         "id": "scene.rating",
         "options": [
          "sfw"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
         ]
        }
       ],
@@ -2174,15 +2097,9 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "indoors"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
         ]
        }
       ],
@@ -2219,14 +2136,16 @@
          "options": [
           "looking_down"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -2327,12 +2246,6 @@
         "id": "scene.rating",
         "options": [
          "sfw"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
         ]
        }
       ],
@@ -2471,8 +2384,7 @@
        "targetActorId": "actor_1",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [],
-       "participantDetails": []
+       "modifiers": []
       }
      ],
      "location": {
@@ -2484,15 +2396,9 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "indoors"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
         ]
        }
       ],
@@ -2539,27 +2445,32 @@
          "options": [
           "exhausted"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
        "actorId": "actor_2",
        "placementIndex": 1,
        "actions": [],
-       "modifiers": [],
-       "freeTags": [],
-       "penetratingInjuries": [],
+       "modifiers": [
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -2688,6 +2599,30 @@
        "candidateKey": "free_1",
        "sex": "male",
        "generated": {
+        "profile": {
+         "recognitionKeys": [
+          "School janitor"
+         ],
+         "humanlike": true,
+         "basePromptGroups": {
+          "marks.distinctive": [
+           "old man",
+           "grey hair",
+           "blue overalls"
+          ]
+         },
+         "defaultOutfit": {
+          "name": "기본 의상",
+          "description": "",
+          "head": "",
+          "top": "",
+          "bottom": "",
+          "legs": "",
+          "feet": "",
+          "reason": "",
+          "confidence": 0
+         }
+        },
         "label": "School janitor",
         "tags": [
          "old_man",
@@ -2720,8 +2655,7 @@
        "targetActorId": "actor_1",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [],
-       "participantDetails": []
+       "modifiers": []
       }
      ],
      "location": {
@@ -2733,15 +2667,9 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "indoors"
-        ]
-       },
-       {
-        "id": "framing.crop",
-        "options": [
-         "cowboy_shot"
         ]
        }
       ],
@@ -2788,27 +2716,32 @@
          "options": [
           "exhausted"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
        "actorId": "actor_2",
        "placementIndex": 1,
        "actions": [],
-       "modifiers": [],
-       "freeTags": [],
-       "penetratingInjuries": [],
+       "modifiers": [
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -2834,6 +2767,36 @@
        "impact": "recovered",
        "path": "$.generated_actor_proposals[0].tags[2]",
        "message": "Canonicalized a free tag to 'blue_overalls'."
+      },
+      {
+       "code": "generated-character-profile-reconstructed",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile",
+       "message": "Reconstructed the profile from the same generated Actor's identity evidence."
+      },
+      {
+       "code": "generated-character-recognition-key-meaning-recovered",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile.recognitionKeys",
+       "message": "Recovered recognition keys from the generated Actor identity."
+      },
+      {
+       "code": "generated-character-humanlike-defaulted",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile.humanlike",
+       "message": "Used the existing appearance-form default for an unspecified humanlike value."
+      },
+      {
+       "code": "generated-character-base-prompt-meaning-recovered",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile.basePromptGroups",
+       "message": "Recovered persistent appearance tags from the generated Actor identity tags."
+      },
+      {
+       "code": "generated-character-outfit-name-recovered",
+       "impact": "recovered",
+       "path": "$.generated_actor_proposals[0].profile.defaultOutfit.name",
+       "message": "Used the default outfit label because its name was missing."
       }
      ]
     }
@@ -2856,6 +2819,36 @@
      "impact": "recovered",
      "path": "$.generated_actor_proposals[0].tags[2]",
      "message": "Canonicalized a free tag to 'blue_overalls'."
+    },
+    {
+     "code": "generated-character-profile-reconstructed",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile",
+     "message": "Reconstructed the profile from the same generated Actor's identity evidence."
+    },
+    {
+     "code": "generated-character-recognition-key-meaning-recovered",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile.recognitionKeys",
+     "message": "Recovered recognition keys from the generated Actor identity."
+    },
+    {
+     "code": "generated-character-humanlike-defaulted",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile.humanlike",
+     "message": "Used the existing appearance-form default for an unspecified humanlike value."
+    },
+    {
+     "code": "generated-character-base-prompt-meaning-recovered",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile.basePromptGroups",
+     "message": "Recovered persistent appearance tags from the generated Actor identity tags."
+    },
+    {
+     "code": "generated-character-outfit-name-recovered",
+     "impact": "recovered",
+     "path": "$.generated_actor_proposals[0].profile.defaultOutfit.name",
+     "message": "Used the default outfit label because its name was missing."
     }
    ]
   }

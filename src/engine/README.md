@@ -1,150 +1,116 @@
-# src/engine — Asset Maid 0.9.89.6 core (pure, deterministic, parity-tested)
+# src/engine — Asset Maid 0.9.90 core (pure, deterministic, parity-tested)
 
-The engine is a faithful port of Asset Maid's pure core: NovelAI V5 and V4.5 catalogs and rule runtimes,
-analyzer request building and response recovery, prompt composition and provider prompt codecs, visual
-continuity, paragraph slots and the lenient JSON parser. It makes **no host calls**. Every effect (LLM call,
-image generation, storage, clock, randomness) is injected.
+The engine is a faithful port of Asset Maid's pure core: the NovelAI V5 catalog and Maid Atelier presets, the
+directing document, the V5 rule runtime, analyzer request building and response recovery, prompt composition and
+provider prompt codecs, V5 continuity, paragraph slots and the lenient JSON parser. It makes **no host calls**. Every
+effect (LLM call, image generation, storage, clock, randomness) is injected.
+
+0.9.90 removed V4.5 (`v4-5` profile, rule-IR prompt compiler, V4.5 catalog), local state accumulation, Chan Server and
+the NSFW prefix (replaced by a per-source fixed rating). The port follows: there is no `v45/` area any more.
 
 ## How the port is built (read this first)
 
-- `core/asset-maid-core.ts` is **generated**. It is a verbatim slice of the AM 0.9.89.6 bundle
-  (`E:/Asset-Maid-upstream/pretty-versions/0.9.89.6.as95.js`: the prettier 3.7.4 width-120 build with its top-level
-  identifiers renamed to their 0.9.89.5 names, so the roots, renames and every import of the core stay the same), made by
-  `core/tooling/slice.mjs` (acorn + eslint-scope). The slicer takes the root declarations listed in
-  `core/tooling/slice-config.json` and emits their full top-level dependency closure in original order.
-  The current slice has about 2450 declarations and about 54k lines, including the data literals (`vW`, `dg`, prompt texts).
-  So algorithms, prompt texts and data tables are byte-identical by construction.
-- Only top-level identifiers are renamed (about 145 roots and helpers, map in `core/names.json` → `renames`).
-  Local identifiers keep their minified names. Every declaration has the comment `// AM <origName> @<prettyLine>`,
-  so the spec line references (`spec/*.md`) still work.
+- `core/asset-maid-core.ts` is **generated**. It is a verbatim slice of the ORIGINAL AM 0.9.90 bundle
+  (`0.9.90.p120.js`: prettier 3.7.4, width 120, original minified names; there is no rename layer any more), made by
+  `core/tooling/slice.mjs` (acorn + eslint-scope) with `core/tooling/slice-config.json` (174 roots, 140 renames).
+  The slicer emits the full top-level dependency closure of the roots in original order: **1715 declarations,
+  36381 lines** (0.9.89.6: ~2450 / ~54k), including the data literals (`Gl`, `Od`, `nw`, prompt texts). Algorithms,
+  prompt texts and data tables are byte-identical by construction.
+- Only top-level identifiers listed in `renames` get readable names; the semantic names are the same as in the 0.9.89
+  port wherever the concept still exists. Every other unit is exported under its **p120 name**. Every declaration has the
+  comment `// AM <p120 name> @<p120 line>`. `core/names.json` lists every unit (`orig`, `name`, `line`).
+  Beware: p120 reuses short names for different functions than 0.9.89 did (e.g. `Vi` is now isAnimaFlat, `pbt` is now
+  the split detail payload) — always check `names.json` before importing a minified name.
 - `Date.now`, `Math.random`, `crypto.*` and `performance.now` in the slice are rewritten to `amEnv.*` (`core/env.ts`).
-  The defaults use the real globals. `setEngineEnv(source)` / `withEngineEnv(source, fn)` make runs deterministic.
-- The area folders (`context/ v5/ v45/ compose/ continuity/ text/`) are **typed facades** over the core. They mirror
-  Asset Maid's runtime shapes and field names (snake_case analyzer fields stay snake_case). They do not
-  re-implement algorithms.
-- Regenerate the core: `cd C:/Users/eme4/asset-maid-port/scratch/engine && bun slice95.mjs <config>` with
-  `core/tooling/slice-config.json` (the `out` path points at this file). The roots and renames were mapped from the 0.9.88
-  names by matching identical top-level units (`asset-maid-port/scratch/port-0.9.89.5/`). Do not edit `asset-maid-core.ts` by hand.
-- `continuity/storage-core.ts` is a second generated slice, from the **0.9.88** bundle (`core/tooling/slice-config.storage-core.json`).
-  AM 0.9.89 moved continuity persistence into its own chat lore document; the port keeps the 0.9.88 storage format
-  (chat-store checkpoints + local-lore actor state) in userStorage. Helpers that are identical in 0.9.89.6 are imported from the main core.
-- 0.9.89.6 port (`asset-maid-port/scratch/port-0.9.89.6/`): `units.mjs` + `map.py` align the top-level units of both builds
-  and map 0.9.89.6 names to 0.9.89.5 names (`namemap96to95.json`; new declarations keep their name with a `$96` suffix),
-  `rename.mjs` applies the map with eslint-scope (`0.9.89.6.as95.js`), and `semdiff.mjs` compares two generated cores
-  unit by unit with local identifiers alpha-renamed. 0.9.89.5 -> 0.9.89.6 changed 10 core units (POV hands control and
-  `camera.pov` modifier, `isPov`, `retryable === false` guard in `Ume`, split batch limit 10, Flex-only backoff `ZT$96`)
-  and added 5 (`ZT$96`, Flex settings helpers; Flex paths are inert in the port).
-- Golden fixtures are recorded from the original 0.9.89.6 bundle (`scratch/port-0.9.89.6/reslice/am_harness96.js`, generators in
-  `scratch/port-0.9.89.6/reslice/gen/engine/**`; they translate the 0.9.88 names they use to 0.9.89.5 names).
-- The `// AM <name> @<line>` tags in the core refer to 0.9.89.5 names and 0.9.89.6 `as95` lines. Most facade doc comments and `spec/*.md`
-  still cite the 0.9.88 names and lines (`core/names.json` has the current mapping).
+  `setEngineEnv(source)` / `withEngineEnv(source, fn)` make runs deterministic.
+- The area folders (`context/ v5/ compose/ continuity/ text/`) are **typed facades** over the core. They mirror Asset
+  Maid's runtime shapes and field names; they do not re-implement algorithms (the few compositions of core calls, e.g.
+  `buildV5AnalyzerRequest`, `planV5Scene`, `commitContinuityCheckpoint`, mirror inline code of the original and are
+  parity-tested against it).
+- `core/data/`: `v5-raw-config.json` (`Gl`, raw), `v5-normalized-raw-config.json` (`Od = L2e(Gl)`, the source of the
+  bundled catalog), `default-preset.json` (`{builtin: r2, document: nw}`).
+- Regenerate the core: `bun core/tooling/slice.mjs core/tooling/slice-config.json` (needs acorn + eslint-scope; the
+  `source` / `out` paths are absolute). Do not edit `asset-maid-core.ts` by hand.
+- Golden fixtures are recorded from the ORIGINAL 0.9.90 bundle through an eval harness (`am_harness990.js` = p120 with
+  the boot call replaced by an eval hook). Generators live in the scratch folder `S/engine-build/gen/**`
+  (S = `.../scratchpad/am990`); they use p120 names directly.
 
 ## Module map
 
 | Path | Content |
 |---|---|
 | `index.ts` | Public API: `createAssetMaidEngine`, env injection, area namespaces, convenience re-exports |
-| `engine.ts` | `createAssetMaidEngine(options)`: the original boot object graph (LOt 180714-180783) with injected transports |
-| `core/` | generated slice, `env.ts`, `names.json`, `data/v5-raw-config.json` (shipped built-in V5 raw config), `tooling/` |
-| `continuity/storage-core.ts` | generated 0.9.88 continuity storage bridge (see above) |
-| `context/` | analyzer context building `MAt` (+ `y_e`, `NAt`, `Sat`, `Ky`, `ki`, `UAt`, `rI`, `g1t`), `analyzerInput` assembly. **Field-read list: `context/README.md`** |
-| `v5/` | V5 raw config validate/compile/hashes, rule runtime + scene compiler + prompt projection, analyzer request/messages/recovery/split, composition (`Ygt`) |
-| `v45/` | V4.5 catalog (`vW`/`LLe`), staged analyzer (`Ttt`/`VQe`, `KQe`/`BQe`/`$et`), checkpoints, composition (`Tht`) |
-| `compose/` | rule-IR + legacy prompt compiler (`pyt`/`myt`), provider codecs `g2`/`wmt` (novelai-structured, anima-flat `p7`/`Oge`/`bmt`/`Hge`), weights `s2`/`Put`/`Cut`, NSFW `C7`/`d7`, coordinates `Mht`/`c7`/`hge`, size/count/seed, batch executor `lht` |
-| `continuity/` | `z9e` apply, `fKe`/`mKe` update, checkpoints `K8`/`Pte`, chat-store + local-lore storage adapter, v5 basis |
-| `text/` | paragraph slots `X0e`/`nIe`/`hSt`, markup strip/detect `fH`/`H2`/`sH`, lenient JSON `iQe` |
+| `engine.ts` | `createAssetMaidEngine(options)`: the original boot object graph (p120 @185030-185085) with injected transports |
+| `core/` | generated slice, `env.ts`, `names.json`, `data/*.json`, `tooling/` |
+| `context/` | analyzer context building `gxt` (+ `pxt`, `jwe`, `mxt`, `OYe`, `Sx`, `xi`, `pO`, ...), `analyzerInput` assembly. **Field-read list: `context/README.md`** |
+| `v5/` | V5 raw config + catalog + Atelier presets, directing document, rule runtime + scene compiler + prompt projection, analyzer request/messages/recovery/split, composition (`Ubt`) |
+| `compose/` | provider codecs (`UG`, novelai `ygt`, anima-flat `xgt`/`vgt`/`MG`), weights `x4`/`Bft`/`Hft`, fixed rating `XG`/`OG`/`yS`, coordinates `Vye`/`Wye`, size/count/seed, batch executor `vht`, retry records `dj`/`JG` |
+| `continuity/` | continuity document `UE`/`B3e`/`K3e`/`G3e`/`j3e`/`BE`, chat store `txt`/`gwe`/`Qyt`/`rxt` + history commit |
+| `text/` | paragraph slots `awe`/`lke`, markup strip/detect `fB`/`wM`/`Nme`, lenient JSON `afe` |
 | `testing/` | `toPlain` (fixture projection), seeded env, end-to-end driver |
-| `__fixtures__/` | golden outputs produced by running the ORIGINAL bundle (generators in `asset-maid-port/scratch/engine/**`) |
-
-Each area has its own README with the full API, the original names and line numbers, the inputs read, and its gaps.
+| `__fixtures__/` | golden outputs produced by running the ORIGINAL 0.9.90 bundle |
 
 ## Main API
 
-### 1. Whole pipeline: `createAssetMaidEngine(options)` → `{ run(input), cancel(session, reason), parts, dispose() }`
-This is the same graph as Asset Maid's boot code: `hlt` catalog source → `pyt` prompt compiler → `Ttt`+`VQe`
-V4.5 analyzer → `nht` sessions → `Iyt`+`Sbe` dispatcher → `lht` batch executor → `Tht` (v4-5) / `Ygt`+`Egt` (v5) →
-`Lht` profile switch (`novelAIConfig.analysisProfile === "v5-hybrid"`).
+### 1. Whole pipeline: `createAssetMaidEngine(options)` → `{ run(input), cancel(session, reason), prepareAnalysisFor(config), parts, dispose() }`
+Same graph as Asset Maid's boot code: `fht` sessions → `Oht`+`Lxe` dispatcher → `vht` batch executor → `c0e` analyzer →
+`Ubt` V5 orchestrator with `prepareAnalysis`.
 
 Options (injected host effects):
-- `analyzerClient.complete(config, messages, options) → {raw, parsed}`. This is the LLM transport (`CQe(...).complete`,
-  spec/llm.md §1.4). `parsed = options.responseMode === "text" ? raw : parseLenientJson(raw)`. Errors carry `code`
-  (`ANALYZER_JSON_PARSE` with `analyzerRaw`, `ANALYZER_EMPTY_RESPONSE`, `ANALYZER_REFUSAL`, HTTP `status`, ...). The V5
-  analyzer passes `options.structuredOutputSchema` (only Ollama used it in the original).
-- `imageProviders: { novelai?, "chan-server"?, "comfy-ui"? }`: adapters `{provider, serializesRequests?, generate(request, {signal, onEvent}) → result}`.
-  `request` is the `ImageRequest` union (`compose/types.ts`, spec/pipeline.md §3.9). `result` is `{provider, bytes, mimeType, extension, seed, width, height,
-  effectivePrompt?, requestId, providerMetadata}`. **The NovelAI adapter must still do what the original NovelAI client did
-  when it built the HTTP body**: apply the non-artist weight (`applyNonArtistWeightToRequest`, `Cut`) and `prependNsfwTag`
-  when `request.forceNsfwPrefix ?? nsfwAlwaysEnabled`. It also maps `config.characterPrompts` (+ `useCoords`, `coordinateMode`) to
-  v4 captions (`toNovelAICharacterCaptions`).
-- `comfyUIReferences.prepare(reference) → {bytes, mimeType, extension}` (original `smt`, reads asset bytes).
-- `getRetryCount` (runtime.generationAutoRetryCount, default 5), `getIntervalMs`, `rawCatalogJson` ("" = built-in rule IR),
-  `onAnalyzerDiagnostic`, `onSplitResumeState`, `resolveProfile`.
+- `analyzerClient.complete(config, messages, options) → {raw, parsed}` (LLM transport). The V5 analyzer passes
+  `options.structuredOutputSchema`, `cachePartition`, `cacheSourceId`, `purpose: "image-generation"`.
+- `imageProviders: { novelai?, "comfy-ui"? }`: adapters `{provider, serializesRequests?, generate(request, {signal, onEvent}) → result}`.
+  NovelAI request: `{provider, providerRef, prompt, negativePrompt, seed, width, height, maxAttempts, config, forceRating,
+  session, references, imageToImage?, queueMeta}`; ComfyUI adds `transport: "direct-workflow", endpoint, profile,
+  outfitReference, characterReference, completionTimeoutMs`. The NovelAI adapter must do what AM's NovelAI client does:
+  apply the non-artist weight (`applyNonArtistWeightToRequest`, `Hft`, which also returns `sampling`), prepend the fixed
+  rating (`prependRatingTag`, `OG`) when `request.forceRating`, and map `config.characterPrompts` to v4 captions
+  (`toNovelAICharacterCaptions`).
+- `comfyUIReferences.prepare(reference) → {bytes, mimeType, extension}`.
+- `getRetryCount`, `getIntervalMs`, `jev` (roster pre-pass), `onSplitResumeState`, `prepareBatchItems` (port addition).
+- **New**: `getConfig()` → the current AM config. Every run then does what AM's `rW` does: compile the active Atelier
+  preset `aZ(nZ(config.presetCatalog))` (cached by `kind + json`), use an analyzer over that catalog, check the directing
+  rules (`C8(zc(config), catalog, selected)`), and apply `yAe(config)` (directions, custom sizes, execution) to the run
+  input (`qbt`). `prepareAnalysis` overrides it. Without either, the bundled catalog and the run input's own
+  `novelAIConfig.v5UserDirections` are used.
+- Removed: `rawCatalogJson`, `resolveProfile` (no V4.5). `onAnalyzerDiagnostic` is accepted but unused.
 
-`run(input)` takes the `OrchestratorRunInput` (spec/pipeline.md §3.2). Build it with `context.buildAnalyzerContextInputs` +
-`context.assembleAnalyzerInput` + `context.resolveNovelAIRunConfig` / `resolveSourceGenerationSettings` (see `context/README.md`
-"Injection points" for the exact call order). The input also has the callbacks the backend implements:
-`persistGeneratedImage`, `applyContinuity` / `applyV5Continuity`, `onEvent`, `references`, `seedSetting`, ...
-It returns `{session, analyzer, continuity, images: GeneratedImage[]}`.
-Notes:
-- `novelAIConfig.apiKey` must be non-empty when a NovelAI image is planned (`assertNovelAIApiKey`, "NovelAI API 키가 설정되지 않았습니다.").
-  In Lumiverse the key stays in the host connection, so pass a placeholder.
-- Asset Maid blanks `fixedPositivePrompt` / `negativePrompt` for Anima providers inside `MAt`, so `buildAnalyzerContextInputs` already does it.
+`run(input)` takes the V5 orchestrator run input. Build it with `context.buildAnalyzerContextInputs` +
+`context.assembleAnalyzerInput` + `context.resolveNovelAIRunConfig` / `resolveSourceGenerationSettings`. Fixed rating:
+`forceRating = compose.resolveFixedRating(sourceSettings)` (`yS`). Callbacks: `persistGeneratedImage`,
+`applyV5Continuity`, `onEvent`, `references`, `seedSetting`, ... It returns `{session, analyzer, continuity, images}`.
+`parts`: `v5Analyzer`, `sessions`, `dispatcher`, `executor`, `v5`, `activePreset` (`{key, json, catalog, diagnostics}`).
 
-### 2. Step-by-step pure functions (no orchestrator)
+### 2. Step-by-step pure functions
 - Context: `buildAnalyzerContextInputs(input)`, `assembleAnalyzerInput(options)`.
-- V5 analyzer: `v5.buildV5AnalyzerRequest({context, continuitySnapshot, userDirections, ...})` → request build
-  (systemInstruction, payload, wire payload, structured schema, local recovery/projection). Then `buildV5AnalyzerMessages(build, imageParts,
-  revisionDirection, channels)` → `{messages, cachePartition, wirePayload}`. Then `recoverV5AnalyzerResponse(raw, build, options)` → recovered
-  illustrations (scene graphs, diagnostics, status). Directing modes come from `v5.resolveV5UserDirections` / `V5_ANALYSIS_PRESETS`
-  (default / pov / ensemble / comic with speech bubbles / landscape / minimum panels, image ratio, custom instruction). Split analysis:
+- Presets / directing: `v5.compileAtelierPreset(json)`, `compileActiveAtelierPresetCatalog(presetCatalog)`,
+  `resolveAnalysisDirections(config)`, `resolveAnalysisDocument(config)`, `assertDirectingRules`, `applyAnalysisToRunInput`.
+- V5 analyzer: `buildV5AnalyzerRequest({runtime, context, continuitySnapshot, userDirections, ...})` →
+  `buildV5AnalyzerMessages(request, options)` → `recoverV5AnalyzerResponse(raw, build, options)`. Split analysis:
   `planV5SplitBatches`, `renderV5SplitPhaseSystemInstruction`, `createV5SplitAnalysisRunner`.
-- V5 composition: `composeV5Images({run, client | analysis})` → per image `{decision, actors, promptPlan, executedPromptPlan,
-  novelAIConfig, providerPrompt, promptSegments, request}` + continuity state/snapshot. The parts are also exported: `buildV5PromptContext` (Rgt),
-  `buildV5IdentityEntries` (Ngt), `createV5NovelAIConfig` (Wgt), `prepareV5ProviderPrompt` (sbe), `planV5Scene`.
-- V4.5 analyzer: `buildV45SingleStageRequest(context)` / `buildV45PresetSelectionRequest`, `buildV45IllustrationMessages` (BQe), `buildV45StageMessages` (KQe),
-  the state machine `createV45AnalyzerEngine` (start / accept* / repair), and the runner `createV45AnalyzerRunner(engine, client)`.
-- V4.5 composition: `planV45Images` / `composeV45Images(input, {seed, provider})` → per image NovelAI config (`Mht` + `c7` coordinates) and the
-  provider prompt for `novelai` (novelai-structured) or `chan-server` / `comfy-ui` (anima-flat).
-- Codecs: `formatProviderPrompt` (g2), `applyNsfwPrefixPolicy` (C7), `createV45NovelAIConfig` (Mht), weight math, size/count:
-  `resolveImageSize`, `normalizeImageCountPolicy` (Gf), `resolveImageCountConstraint` (SW).
-- Continuity: `applyVisualContinuityToPlan` (z9e), `updateVisualContinuity` (fKe) / `computeDeferredVisualContinuity` (mKe),
-  `reconcileContinuityCheckpoints` (Pte), `readContinuityFromChat` / `writeContinuityToChat` (the boot storage adapter, built from verbatim pieces).
-- Text: `splitParagraphSlots(messageKey, text)` / `buildIllustrationSlots({messageKey, content, nativeAssetDetectors})` → slots
-  `{slotId: "<messageKey>:slot:<i>", sourceImageToken: "slot:<slotId>", index, beforeText, afterText}`. `parseLenientJson(raw)` strips fences
-  and takes the LAST balanced `{..}` / `[..]` that parses. Otherwise it throws `ANALYZER_JSON_PARSE` with `analyzerRaw`.
+- V5 composition: `composeV5Images({run, client | analysis, runtime?, preparedAnalysis?})`; parts `buildV5PromptContext`,
+  `createV5NovelAIConfig`, `prepareV5ProviderPrompt`, `finalizeV5ProviderPrompt`, `planV5Scene`.
+- Codecs: `formatProviderPrompt`, `applyRatingPolicy`, `prependRatingTag`, weight math, size/count.
+- Continuity: `persistV5ContinuityState`, `getLatestContinuityCheckpointSnapshot`, `rebuildContinuityAtMessage`,
+  `rebuildContinuityFromChatStore`, `commitContinuityCheckpoint`.
+- Text: `splitParagraphSlots`, `buildIllustrationSlots`, `parseLenientJson`.
 
-## Inputs the engine reads (summary)
-The engine reads Asset Maid shapes. The exact traced list of fields is in `context/README.md` ("Fields read"). Summary:
-- **config** (Asset Maid config, `extract/data/config-defaults*.json`): `characterPrompt.*` (lorebook prompts/genders/negatives, `characterForms`,
-  `basePromptGroups`, `outfitPrompts`, `personaSettings.profiles`, artist presets, `charxGenerationDefaults` + `charxSettings.overrides.<sourceId>`),
-  `animaArtists`, `novelai.*` (model, sampler, size, `analysisProfile`, `v5UserDirections`, `presetCatalog.rawJson`, character reference),
-  `runtime.generationProvider`, `customImageSizes`, `chatImageGenerationSettings.countPolicy`, and `analysis` (passed through to the client).
-- **source** (character source; Lumiverse: character + attached World Books): `members[].lorebooks[]` (`runtimePromptKey`, title, keys, content, comment),
-  member keys/names, custom characters (`rI`).
-- **character card**: `name` / `nickname`, `description` / `desc`.
-- **persona**: id, name, gender, persona profile (forms, outfits).
-- **chat**: messages `{role, content}`, current message text (paragraph slots), image tokens, continuity state (`ContinuityState`, spec/pipeline.md §3.7a).
-
-## Parity coverage (`bun test src/engine`: 273 tests, 1770 assertions)
-All golden fixtures come from the ORIGINAL bundle (`scratch/pipeline/analyzer/am_harness.js`). The seeded clock/RNG is installed on both sides.
-- core: built-in V5 raw config equals `extract/novelai/v5-raw-config.json`. The compiled catalog reproduces all 7 original hashes (built-in and from JSON).
-- engine e2e (6): `createAssetMaidEngine` against the original boot wiring. The tests use a scripted LLM client and capturing provider adapters for v4-5 (novelai,
-  comfy-ui, nsfw + fixed seed + fixed size) and v5 (novelai, chan-server, comfy-ui comic). They compare the exact analyzer messages sent, every ImageRequest,
-  the events, the persisted images, the continuity and the session.
-- v5 (82): broken/edited raw configs, canonical JSON/FNV, 12 scene compiles, 12 analyzer request variants (all directing modes), 13 fake-client analyzer
-  runs, 13 recoveries, split batching/phase prompts, 11 orchestrator compositions.
-- v45 + context: catalog hashes and fingerprints. 25 analyzer runs: single/two-stage, lenient JSON, retries, repair, checkpoint replay, revision with images.
-  3 compositions. 3 context scenarios with traced reads.
-- compose (79): 20 end-to-end v4-5 scenarios through the real Tht + lht + Iyt, unit fixtures for every codec and weight function, 40 rule-IR builds.
-- continuity (13): 6 multi-turn sequences (ttl, accumulate, counters, clears, persona, deferred, unstable ids, reconcile) with a storage round trip.
-- text: 19 tricky texts × 3 detector sets × 6 functions, and 26 lenient-JSON inputs.
+## Parity coverage (`bun test src/engine`: 207 tests, 1227 assertions)
+All golden fixtures come from the ORIGINAL 0.9.90 bundle with the seeded clock/RNG installed on both sides.
+- core (5): raw / normalized config dumps, bundled and default-preset catalog hashes + fingerprints, compiler `-v3`.
+- engine e2e (3): `createAssetMaidEngine` against the original boot wiring (v5 novelai, v5 comfy-ui comic, and a
+  config-driven run with a non-default active Atelier preset, a POV + portrait directing document and fixed rating `nsfw`).
+- v5 (111): catalog diagnostics/hashes/vectors + 7 Atelier preset compiles; 6 ratio + 4 directing-document configs;
+  10 scene plans + 2 compile edge cases; 12 request variants; 13 fake-client analyzer runs; 13 recoveries; split
+  batching/prompts/runner; 12 orchestrator compositions (incl. fixed ratings and a prepared analysis); split
+  multi-depiction unit checks.
+- compose (18), context (4), continuity (3: two-turn chat sequence through persist / commit / rebuild, checkpoint
+  push, normalization), text (63).
 
 ## Gaps / known limits
-- No golden fixture for the legacy (custom "Preset catalog v1" raw JSON) compile path. No sample ships, and 0.9.88 has no UI for it.
-- Not covered end to end: JEV TypeSafe roster pre-pass (dropped by PORT-PLAN), V5 split streaming inside `Ygt`, `prepareCharacters` / `prepareOutfits`
-  (free character/outfit generation callbacks), director / ComfyUI references and img2img with real bytes, the non-artist weight in the NovelAI body.
-- Only about 145 top-level identifiers have meaningful names. The other core internals keep their minified names (tagged with the original line).
-  The facades alias them at the import site.
-- The core is `// @ts-nocheck`. Types live in the area facades (`*/types.ts`), not in the generated file.
-- Original behaviour kept on purpose: V5 recovery (`PRe`) drops `framing.crop` / `head_crop` from frame_placement. One random seed is used per batch.
-  `novelAIConfig.seed` is ignored when `seedSetting` returns `seed:""`.
+- Fixture inputs reuse the 0.9.89 scenarios (context, prompt context, analyzer responses). Responses were translated to
+  the 0.9.90 catalog ids; sexual modifiers/interactions moved to downloadable presets, so recoveries drop them with
+  diagnostics. Classic / Comfy Atelier presets are not bundled and not fixture-tested.
+- Not covered end to end: JEV roster pre-pass, free character/outfit preparation callbacks, references/img2img with
+  real bytes, the NovelAI HTTP body (adapter side).
+- The core is `// @ts-nocheck`. Types live in the area facades.

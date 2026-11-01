@@ -173,38 +173,11 @@ export interface AnalyzerContext {
   [extra: string]: unknown;
 }
 
-/** `analyzerInput.checkpointContext` (E1t @169728). Key = `generationProvider:chatKey:messageId` (AM `K9`). */
+/** `analyzerInput.checkpointContext` (AM 0.9.90 `Vxt` @173612): chat key + message id without the `id:` prefix. */
 export interface AnalyzerCheckpointContext {
   chatKey: string;
-  messageIndex: number;
   messageId: string;
-  generationProvider: string;
   pendingKey?: string;
-}
-
-/** `analyzerInput.fingerprintInput` (E1t @169734). Part of the checkpoint fingerprint. */
-export interface AnalyzerFingerprintInput {
-  presetScope: PresetScope;
-  candidateSlots: { slotId: string; slotNumber: number; actorHints: string[] }[];
-  imageCountConstraint: ImageCountConstraint;
-  outfitCreationMode: "free-generation" | "existing-only";
-  outfitCandidateIds: [string, string][];
-  revisionDirection: string;
-  revisionPromptChannels: RevisionPromptChannel[];
-  revisionEvidenceKey: string;
-  [extra: string]: unknown;
-}
-
-/** `analyzerInput.validationOptions` (E1t @169754). */
-export interface AnalyzerValidationOptions {
-  identityCandidates: IdentityCandidate[];
-  personaCandidates: IdentityCandidate[];
-  outfitCandidates: OutfitCandidate[];
-  personaGender: string;
-  personaPromptKey: string;
-  personaDefaultOutfitId: string;
-  /** `NOVELAI_DEFAULTS.DEFAULT_IMAGE_SIZE_PRESET_ID` (1). */
-  defaultSizeId: number;
 }
 
 /** Revision prompt channel (AM `FQe` @81662 reads id, kind, label, actorIndex?, positive, negative). */

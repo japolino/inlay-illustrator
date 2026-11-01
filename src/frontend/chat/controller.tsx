@@ -21,8 +21,6 @@ import { CHAT_SIDE_CSS } from "./styles.js";
 import type { RuntimeToastModel } from "./toast-model.js";
 import type { RuntimeCornerPreference } from "./corner.js";
 import { ChatFooter, EdgeControls, revisionPosition, type EdgeAction, type FooterAction, type PuppetButton } from "./widgets.js";
-import { createWebtoonStrips } from "./webtoon/strip-controller.js";
-import { WEBTOON_CSS } from "./webtoon/styles.js";
 
 export interface ZoomOpenTarget { chatId: string; slotId: string; entryId?: string; messageKey?: string }
 
@@ -113,7 +111,6 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
   let puppetRenderer: PuppetRenderer | null = null;
 
   disposers.push(ctx.dom.addStyle(CHAT_SIDE_CSS));
-  disposers.push(ctx.dom.addStyle(WEBTOON_CSS));
 
   /* ---------------- runtime host (body level) ---------------- */
   let hostRoot: HTMLElement;
@@ -285,9 +282,6 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
     puppets.set(block.frame, { wrapper, imageId, rig, handle: r.attach({ canvas, image: block.image }, rig) });
   }
 
-  const strips = createWebtoonStrips(ctx, app, { doc, notice: (title, error) => chatError(title, error), schedule: () => schedule(0) });
-  disposers.push(() => strips.destroy());
-
   /* ---------------- reconcile ---------------- */
   function reconcile(): void {
     if (destroyed) return;
@@ -326,7 +320,6 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
         syncPuppet(block);
       }
     }
-    strips.sync(chatId, bubbles.map((b) => ({ ...b, state: isStreamingBubble(b.element) ? null : (states.get(b.messageId) ?? null) })), jobs);
     for (const [id, wrapper] of footers) {
       if (!liveFooters.has(id) || !wrapper.isConnected) {
         uninject(wrapper);

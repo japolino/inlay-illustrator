@@ -10,11 +10,10 @@ export const ARTISTS_LABELS = {
   settings: "Settings", // 설정
   delete: "Delete", // 삭제
   emptyPrompt: "Empty prompt", // 빈 프롬프트
-  presetTitles: { none: "None", detail_anime_illustration_style: "v5 verified style", comic_page_illustration_style: "Recommended comic style" } as Record<string, string>, // none / v5 검증 그림체 / 만화 추천 그림체
+  // AM 0.9.90: "none" is the only built-in; the former built-ins are user styles now (titles in their entries).
+  presetTitles: { none: "None" } as Record<string, string>, // none
   presetDescriptions: {
     none: "Does not apply an artist prompt.", // 작가 프롬프트를 적용하지 않습니다.
-    detail_anime_illustration_style: "Default style prompt for testing and verifying NovelAI V5.", // NovelAI V5 테스트와 검증을 위한 기본 그림체 프롬프트입니다.
-    comic_page_illustration_style: "Default style prompt suited to cartoon and comic page staging." // 카툰·만화 페이지 연출에 적합한 기본 그림체 프롬프트입니다.
   } as Record<string, string>,
   expand: "Expand artist input", // 작가 입력 펼치기
   collapse: "Collapse artist input", // 작가 입력 접기
@@ -63,7 +62,7 @@ export const ARTISTS_LABELS = {
   source: "Artist of this character",
   sourceGlobal: "Global preset",
   sourceOwn: "Own artist",
-  globalBadge: "Global",
-  setGlobal: "Set as global preset",
-  setGlobalOf: (title: string) => `${title} set as global preset`
+  setDefault: "Set as default style", // 기본 그림체로 지정
+  clearDefault: "Remove default style", // 기본 그림체 해제
+  defaultOf: (title: string, label: string) => `${title} ${label}`
 } as const;

@@ -50,16 +50,16 @@ export interface AmPriorityAssets {
 export type SourceLookup = (sourceId: string) => AmSource | null;
 
 export function createAmPriorityAssets(store: AmConfigStore, getSource: SourceLookup): AmPriorityAssets {
-  const X$e = amFn("X$e");
-  const Gt = amFn("Gt");
-  const Pi = amFn("Pi");
-  const Bn = amFn("Bn");
-  const uw = amFn("uw");
-  const t9e = amFn("t9e");
-  const kK = amFn("kK");
-  const MZ = (asset: Any) => amFn("oi")(asset) !== "original";
-  const GR = amFn("GR");
-  const matching = amFn("G2e")(store);
+  const X$e = amFn("qGe");
+  const Gt = amFn("tr");
+  const Pi = amFn("Ni");
+  const Bn = amFn("Un");
+  const uw = amFn("dx");
+  const t9e = amFn("ZGe");
+  const kK = amFn("FF");
+  const MZ = (asset: Any) => amFn("fi")(asset) !== "original";
+  const GR = amFn("CN");
+  const matching = amFn("pGe")(store);
   let matchingRevision = 0;
   let metadataRevision = 0;
   const indexes = new Map<string, { generation: string; index: Any }>();
@@ -99,7 +99,7 @@ export function createAmPriorityAssets(store: AmConfigStore, getSource: SourceLo
 
   const availability = (asset: Any, kind: string): Pick<AmAssetEntry, "hasMetadata" | "metadataState"> => {
     if (kind !== "original" && MZ(asset)) return { hasMetadata: true, metadataState: "with" };
-    const record = amFn("Ep")(store.getCurrentSnapshot().characterPrompt.assetMetadataAvailability).get(Gt(asset));
+    const record = amFn("Vm")(store.getCurrentSnapshot().characterPrompt.assetMetadataAvailability).get(Gt(asset));
     if (record?.checkedAt) return record.hasMetadata ? { hasMetadata: true, metadataState: "with" } : { hasMetadata: false, metadataState: "without" };
     return { hasMetadata: false, metadataState: "unknown" };
   };
@@ -174,7 +174,7 @@ export function createAmPriorityAssets(store: AmConfigStore, getSource: SourceLo
       for (const asset of list) {
         const i = found.index.findEntryIndex(memberKey, asset);
         const byName = i === null ? [...found.index.findEntryIndicesByNames(memberKey, [asset.name])].map((x: number) => found.index.getEntry(x)?.asset).filter(Boolean) : [];
-        const target = i === null ? (AM.f1(AM.OK(asset), byName) ?? asset) : (found.index.getEntry(i)?.asset ?? asset);
+        const target = i === null ? (AM.e5(AM.HF(asset), byName) ?? asset) : (found.index.getEntry(i)?.asset ?? asset);
         const key = Gt(target);
         if (key) resolved.set(key, target);
         const nm = GR(target.name);
@@ -218,5 +218,5 @@ export function createAmPriorityAssets(store: AmConfigStore, getSource: SourceLo
 
 /** AM `Fs` L85966 prompt key of a member lorebook. */
 export function amPromptKey(member: Any, lorebook: Any): string {
-  return amFn("Hs")(member, lorebook);
+  return amFn("Is")(member, lorebook);
 }

@@ -96,7 +96,7 @@
       "model": "jev-latest"
      },
      "novelai": {
-      "analysisProfile": "v4-5",
+      "analysisProfile": "v5-hybrid",
       "v5UserDirections": {
        "scene": {
         "mode": "preset",
@@ -478,8 +478,7 @@
        "overrides": {
         "char-123": {
          "fixedPositivePrompt": "absurdres",
-         "negativePrompt": "watermark",
-         "stateAccumulationEnabled": true
+         "negativePrompt": "watermark"
         }
        }
       },
@@ -487,8 +486,7 @@
        "nativeAssetVisibility": "hidden",
        "freeOutfitGeneration": true,
        "freeCharacterGeneration": true,
-       "stateAccumulationEnabled": false,
-       "nsfwAlwaysEnabled": false,
+       "nsfwAlwaysEnabled": true,
        "forceAiChoiceCoordinates": true,
        "autoRemoveConflictingRegex": false,
        "fixedResolution": {
@@ -498,7 +496,8 @@
        "fixedPositivePrompt": "",
        "negativePrompt": "",
        "animaPositivePrompt": "masterpiece, best quality, score_7, safe",
-       "animaNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration"
+       "animaNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+       "fixedRating": "nsfw"
       }
      },
      "runtime": {
@@ -865,27 +864,6 @@
     "chat-key": "<chatKey>",
     "scene-1": "<sceneId>"
    },
-   "decisions": [
-    {
-     "actors": {
-      "primary": {
-       "lorebook_prompt_key": "char-123::char-123::lore::lore:bob"
-      },
-      "secondary": null,
-      "persona": null
-     },
-     "lorebook_prompt_key": "char-123::char-123::lore::lore:bob"
-    },
-    {
-     "actors": {
-      "primary": null,
-      "secondary": null,
-      "persona": {
-       "lorebook_prompt_key": "persona::p1"
-      }
-     }
-    }
-   ],
    "v5Keys": [
     "persona::p1",
     "char-123::char-123::lore::lore:alice"
@@ -925,33 +903,6 @@
       "identitySuppressed": false
      }
     ]
-   ],
-   "images": [
-    {
-     "outfit_id": "",
-     "actors": {
-      "primary": {
-       "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
-       "form_id": "form_cat",
-       "outfit_id": "outfit_cat_1"
-      },
-      "secondary": {
-       "lorebook_prompt_key": "char-123::char-123::lore::lore:bob",
-       "outfit_id": "catalog:outfit:x"
-      },
-      "persona": null
-     }
-    },
-    {
-     "outfit_id": "outfit_summer",
-     "actors": {
-      "primary": {
-       "lorebook_prompt_key": "char-123::char-123::lore::lore:alice"
-      },
-      "secondary": null,
-      "persona": null
-     }
-    }
    ],
    "slots": [
     {
@@ -1094,7 +1045,7 @@
       "model": "jev-latest"
      },
      "novelai": {
-      "analysisProfile": "v4-5",
+      "analysisProfile": "v5-hybrid",
       "v5UserDirections": {
        "scene": {
         "mode": "preset",
@@ -1476,8 +1427,7 @@
        "overrides": {
         "char-123": {
          "fixedPositivePrompt": "absurdres",
-         "negativePrompt": "watermark",
-         "stateAccumulationEnabled": true
+         "negativePrompt": "watermark"
         }
        }
       },
@@ -1485,8 +1435,7 @@
        "nativeAssetVisibility": "hidden",
        "freeOutfitGeneration": true,
        "freeCharacterGeneration": true,
-       "stateAccumulationEnabled": false,
-       "nsfwAlwaysEnabled": false,
+       "nsfwAlwaysEnabled": true,
        "forceAiChoiceCoordinates": true,
        "autoRemoveConflictingRegex": false,
        "fixedResolution": {
@@ -1496,7 +1445,8 @@
        "fixedPositivePrompt": "",
        "negativePrompt": "",
        "animaPositivePrompt": "masterpiece, best quality, score_7, safe",
-       "animaNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration"
+       "animaNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+       "fixedRating": "sfw"
       }
      },
      "runtime": {
@@ -1740,27 +1690,6 @@
     "chat-key": "<chatKey>",
     "scene-1": "<sceneId>"
    },
-   "decisions": [
-    {
-     "actors": {
-      "primary": {
-       "lorebook_prompt_key": "char-123::char-123::lore::lore:bob"
-      },
-      "secondary": null,
-      "persona": null
-     },
-     "lorebook_prompt_key": "char-123::char-123::lore::lore:bob"
-    },
-    {
-     "actors": {
-      "primary": null,
-      "secondary": null,
-      "persona": {
-       "lorebook_prompt_key": "persona::p1"
-      }
-     }
-    }
-   ],
    "v5Keys": [
     "persona::p1",
     "char-123::char-123::lore::lore:alice"
@@ -1800,33 +1729,6 @@
       "identitySuppressed": false
      }
     ]
-   ],
-   "images": [
-    {
-     "outfit_id": "",
-     "actors": {
-      "primary": {
-       "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
-       "form_id": "form_cat",
-       "outfit_id": "outfit_cat_1"
-      },
-      "secondary": {
-       "lorebook_prompt_key": "char-123::char-123::lore::lore:bob",
-       "outfit_id": "catalog:outfit:x"
-      },
-      "persona": null
-     }
-    },
-    {
-     "outfit_id": "outfit_summer",
-     "actors": {
-      "primary": {
-       "lorebook_prompt_key": "char-123::char-123::lore::lore:alice"
-      },
-      "secondary": null,
-      "persona": null
-     }
-    }
    ],
    "slots": [
     {
@@ -2352,7 +2254,6 @@
         "char-123": {
          "fixedPositivePrompt": "absurdres",
          "negativePrompt": "watermark",
-         "stateAccumulationEnabled": true,
          "freeOutfitGeneration": false
         }
        }
@@ -2361,7 +2262,6 @@
        "nativeAssetVisibility": "hidden",
        "freeOutfitGeneration": true,
        "freeCharacterGeneration": true,
-       "stateAccumulationEnabled": false,
        "nsfwAlwaysEnabled": false,
        "forceAiChoiceCoordinates": true,
        "autoRemoveConflictingRegex": false,
@@ -2734,27 +2634,6 @@
     "chat-key": "<chatKey>",
     "scene-1": "<sceneId>"
    },
-   "decisions": [
-    {
-     "actors": {
-      "primary": {
-       "lorebook_prompt_key": "char-123::char-123::lore::lore:bob"
-      },
-      "secondary": null,
-      "persona": null
-     },
-     "lorebook_prompt_key": "char-123::char-123::lore::lore:bob"
-    },
-    {
-     "actors": {
-      "primary": null,
-      "secondary": null,
-      "persona": {
-       "lorebook_prompt_key": "persona::p1"
-      }
-     }
-    }
-   ],
    "v5Keys": [
     "persona::p1",
     "char-123::char-123::lore::lore:alice"
@@ -2794,33 +2673,6 @@
       "identitySuppressed": false
      }
     ]
-   ],
-   "images": [
-    {
-     "outfit_id": "",
-     "actors": {
-      "primary": {
-       "lorebook_prompt_key": "char-123::char-123::lore::lore:alice",
-       "form_id": "form_cat",
-       "outfit_id": "outfit_cat_1"
-      },
-      "secondary": {
-       "lorebook_prompt_key": "char-123::char-123::lore::lore:bob",
-       "outfit_id": "catalog:outfit:x"
-      },
-      "persona": null
-     }
-    },
-    {
-     "outfit_id": "outfit_summer",
-     "actors": {
-      "primary": {
-       "lorebook_prompt_key": "char-123::char-123::lore::lore:alice"
-      },
-      "secondary": null,
-      "persona": null
-     }
-    }
    ],
    "slots": [
     {

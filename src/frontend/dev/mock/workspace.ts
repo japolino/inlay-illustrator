@@ -141,7 +141,6 @@ const ANALYSIS_TEXT: Record<AnalysisKind, { running: string; done: string }> = {
   "metadata-check": { running: "Checking meta", done: "Meta check complete" },
   "artist-extraction": { running: "AI analyzing artist prompt", done: "Artist prompt extraction complete" },
   reclassification: { running: "AI reclassifying", done: "AI reclassification complete" },
-  "unique-tag-search": { running: "Searching unique tags", done: "Unique tag search complete" },
   "representative-pick": { running: "Picking representative images", done: "Representative images picked" },
   "charx-regex": { running: "Analyzing charx regex", done: "charx regex analysis complete" },
   "outfit-autopick": { running: "Auto-picking outfits", done: "Outfit auto-pick complete" }
@@ -421,17 +420,6 @@ export function workspaceMockHandlers(): MockHandlers {
       touchDoc(ctx, characterId, "outfit-autopick");
       return { added, skipped, state: current };
     },
-    "uniqueTags.apply": ({ characterId, choices }, ctx) => {
-      for (const choice of choices) {
-        const c = characterForms(ctx.db, characterId, choice.promptKey);
-        const form = c.forms.find((f) => f.id === choice.formId);
-        if (!form) continue;
-        setCharacterForms(ctx.db, characterId, choice.promptKey, patchForm(c, form.id, { basePromptGroups: { ...form.basePromptGroups, "identity.character_tag": choice.tag ? [choice.tag] : [] } }));
-      }
-      touchDoc(ctx, characterId, "unique-tags");
-      return { ok: true };
-    },
-
     /* prompts */
     "prompts.saveForms": ({ characterId, promptKey, collection, baseRevision }, ctx) => {
       const current = characterForms(ctx.db, characterId, promptKey);
@@ -472,7 +460,9 @@ export function workspaceMockHandlers(): MockHandlers {
         selectedNovelAIId: novelai.id,
         globalNovelAIId: novelai.globalId,
         followsGlobalNovelAI: novelai.followsGlobal,
-        selectedAnimaId: (characterId && (doc?.animaArtistId ?? anima.selection.bySourceId[characterId])) || anima.selection.defaultId
+        selectedAnimaId: (characterId && (doc?.animaArtistId ?? anima.selection.bySourceId[characterId])) || anima.selection.defaultId,
+        globalAnimaId: anima.selection.defaultId || "none",
+        followsGlobalAnima: !(characterId && (doc?.animaArtistId ?? anima.selection.bySourceId[characterId]))
       };
     },
     "artists.upsertNovelAI": ({ entry }, { db }) => {
@@ -512,9 +502,10 @@ export function workspaceMockHandlers(): MockHandlers {
         if (characterId) documentFor(ctx.db, characterId).characterPrompt.selectedArtistId = artistId;
         else ctx.db.config.characterPrompt.defaultArtistId = artistId;
       } else if (characterId) {
-        documentFor(ctx.db, characterId).animaArtistId = artistId;
-        ctx.db.config.animaArtists.selection.bySourceId[characterId] = artistId;
-      } else ctx.db.config.animaArtists.selection.defaultId = artistId;
+        documentFor(ctx.db, characterId).animaArtistId = artistId || null;
+        if (artistId) ctx.db.config.animaArtists.selection.bySourceId[characterId] = artistId;
+        else delete ctx.db.config.animaArtists.selection.bySourceId[characterId];
+      } else ctx.db.config.animaArtists.selection.defaultId = artistId || "none";
       return { ok: true };
     },
 

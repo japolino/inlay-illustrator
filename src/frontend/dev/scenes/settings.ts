@@ -20,7 +20,7 @@ const RAW_SCENES: Record<string, PreviewScene> = {
   "charx-override": async ({ doc }) => {
     await clickWhenReady(doc, '[data-charx-field="nsfwAlwaysEnabled"] [role="switch"]');
     await sleep(700);
-    await clickWhenReady(doc, '[data-charx-field="fixedResolution"] [role="switch"]');
+    await clickWhenReady(doc, '[data-charx-field="freeOutfitGeneration"] [role="switch"]');
     await sleep(700);
     await clickWhenReady(doc, '[data-charx-field="nativeAssetVisibility"] button[aria-pressed="false"]');
     await sleep(700);

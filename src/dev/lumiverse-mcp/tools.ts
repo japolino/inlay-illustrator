@@ -236,16 +236,6 @@ export async function inlayResetConfig(
   return { ...result, reset_fields: requested };
 }
 
-/** Accumulated actor state of a chat (Asset Maid "current chat state"; replaces the 0.9 character-memory tags). */
-export async function inlayGetCharacterTags(
-  ctx: ToolContext,
-  input: { chat_id?: string }
-): Promise<Record<string, unknown>> {
-  const chatId = requireChat(ctx, input.chat_id);
-  const { actorState } = await inlayRpc(ctx, "chatState.get", { chatId });
-  return { chat_id: chatId, actor_state: actorState };
-}
-
 /**
  * Stored prompt of a baked illustration (what the zoom viewer shows). Finds the baked block in the message content
  * (by image_index / image_id / image_url), then asks the backend for `zoom.getDetails` of its slot and entry.

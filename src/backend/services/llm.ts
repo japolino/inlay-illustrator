@@ -10,8 +10,9 @@
  * - Parsing: the engine's lenient parser (AM `iQe` @79678) -> ANALYZER_JSON_PARSE with `analyzerRaw`.
  * - Vision: `analysis.vision` auto/supported/unsupported + connection metadata + a per connection/model cache (AM `Rde` @81538).
  *   An image-unsupported error (AM `oP` @81557) marks the model unsupported and the call is repeated text-only.
- * - Retries: AM `hw` @81304 / `OQe` @81278: `runtime.generationAutoRetryCount` (0..10, default 5), fixed 100 ms delay (`jQe`),
- *   retryable = HTTP 408/429/5xx, timeout, empty response, JSON parse, provider interrupted, network errors.
+ * - Retries: AM `hw` @81304 / `Not` (0.9.90): `runtime.generationAutoRetryCount` (0..10, default 5), fixed 100 ms delay
+ *   (`jQe`). Only transport failures retry: HTTP 408/429/5xx, timeout, provider interrupted, network errors. Content errors
+ *   (empty response, JSON parse, ...) fail at once since 0.9.90.
  * - Timeout: our own per attempt (`analysis.timeoutMs`, 1000..300000), chained with the caller signal. Aborts never retry.
  *
  * `complete()` throws RpcFailure (`detailCode` = AM code, `cause` = the AnalyzerClientError). `analyzerClient()` throws the
@@ -228,14 +229,15 @@ export function classifyLlmError(error: unknown): AnalyzerClientError {
   return makeAnalyzerError(errorMessage(error) || "Analyzer request failed.", { code: "ANALYZER_ERROR", cause: error });
 }
 
-/** AM `OQe` @81278 (+ network errors, port addition for host transport failures). */
+/**
+ * AM 0.9.90 `Not` (N 97273): network/timeout/interrupted and HTTP 408/429/5xx only. Content errors (empty response, JSON
+ * parse, filtered, ...) are no longer retried (0.9.89 `OQe` @81278 retried empty responses and JSON parse errors).
+ */
 export function isRetryableLlmError(error: AnalyzerClientError): boolean {
   switch (error.code) {
     case "ANALYZER_HTTP":
       return error.httpStatus === 408 || error.httpStatus === 429 || error.httpStatus >= 500;
     case "ANALYZER_TIMEOUT":
-    case "ANALYZER_EMPTY_RESPONSE":
-    case "ANALYZER_JSON_PARSE":
     case "ANALYZER_PROVIDER_INTERRUPTED":
     case "ANALYZER_NETWORK":
       return true;
@@ -474,7 +476,7 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
         const raw = extractText(result);
         const finishReason = extractFinishReason(result);
         if (!raw.trim()) {
-          // AM checks the finish reason only for DeepSeek (`JUe` 80056); elsewhere an empty reply is a (retryable) empty response.
+          // AM checks the finish reason only for DeepSeek (`JUe` 80056); elsewhere an empty reply is an empty response (not retried).
           if (finishReason === "length" && /deepseek/i.test(connection.provider)) throw makeAnalyzerError("The analyzer response was truncated before any output.", { code: "ANALYZER_OUTPUT_TRUNCATED" });
           if (finishReason === "content_filter") throw makeAnalyzerError("The provider filtered the analyzer response.", { code: "ANALYZER_CONTENT_FILTERED" });
           throw makeAnalyzerError("The analyzer returned an empty response.", { code: "ANALYZER_EMPTY_RESPONSE" });

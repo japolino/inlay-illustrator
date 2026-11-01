@@ -3,7 +3,7 @@
  * Maps Asset Maid's stores (pluginStorage keys `asset_maid:v1:*`, the charx lore entry `asset-maid:data`,
  * the chat localLore entry `asset-maid:chat-data`) onto JSON files. Pure path + version helpers; no I/O.
  */
-import { CHARACTER_DOCUMENT_SCHEMA, CHARACTER_DOCUMENT_VERSION, DEFAULT_SELECTED_ARTIST_ID, normalizeAnimaArtists } from "./character.js";
+import { ARTISTS_GLOBAL_VERSION, CHARACTER_DOCUMENT_SCHEMA, CHARACTER_DOCUMENT_VERSION, LEGACY_DEFAULT_ARTIST_ID, migrateLegacyBuiltinArtists, normalizeAnimaArtists } from "./character.js";
 import { CHAT_DATA_SCHEMA, CHAT_DATA_VERSION } from "./chat.js";
 import { asRecord, isPlainObject, trimString } from "./common.js";
 import { CONFIG_VERSION } from "./config.js";
@@ -47,6 +47,12 @@ export const STORAGE_PATHS = {
   sourceSelection: "config/source-selection.json",
   /** AM `asset_maid:v1:metadata-tag`: `{version:1,sources:{<characterId>:"none"|"partial"|"available"|"deleted"}}`. */
   metadataTag: "config/metadata-tag.json",
+  /** Maid Atelier: preset documents, guideline library, free-generation guidelines, execution mode (`AtelierStoreDocument`). */
+  atelier: "config/atelier.json",
+  /** One-time backup of the dead V4.5 raw catalog `presetCatalog.rawJson` (`{movedAt, rawJson}`). */
+  legacyRawCatalog: "config/legacy/preset-raw-catalog.json",
+  /** Unreadable `config/atelier.json` kept before a reset (`<stamp>` = ISO time without `:`). */
+  legacyAtelier: (stamp: string) => `config/legacy/atelier-${stamp}.json`,
   /** Per-character document (AM charx lore entry `asset-maid:data`). */
   characterDocument: (characterId: string) => `characters/${safePathSegment(characterId)}/asset-maid.json`,
   /** Per-character metadata check cache (AM device-local `asset_maid:v1:local:metadata-cache:<sourceId>`). */
@@ -106,7 +112,7 @@ export type StorageFileKind =
 export const STORAGE_FILE_VERSIONS: Readonly<Record<StorageFileKind, number>> = Object.freeze({
   "config-model": CONFIG_VERSION,
   "config-settings": CONFIG_VERSION,
-  "artists-global": 1,
+  "artists-global": ARTISTS_GLOBAL_VERSION,
   "anima-artists": 1,
   "chat-image-generation-settings": 1,
   "ui-state": 1,
@@ -142,6 +148,11 @@ export const STORAGE_MIGRATIONS: StorageMigration[] = [
       return { ...list, selection: { ...list.selection, bySourceId: {} } };
     },
   },
+  // v1 -> v2: AM 0.9.90 removed the 2 built-in art styles; stored and referenced ones become user styles. The storage
+  // service runs `migrateLegacyBuiltinArtists` itself first (with the characters' own selections), so this hook only
+  // covers files migrated elsewhere.
+  { kind: "artists-global", from: 0, to: 2, migrate: (raw) => ({ ...raw, ...migrateLegacyBuiltinArtists(raw) }) },
+  { kind: "artists-global", from: 1, to: 2, migrate: (raw) => ({ ...raw, ...migrateLegacyBuiltinArtists(raw) }) },
   // v1 -> v2: v1 wrote the built-in default artist into every document, chosen or not; it now means "follow the global preset".
   {
     kind: "character-document",
@@ -149,7 +160,7 @@ export const STORAGE_MIGRATIONS: StorageMigration[] = [
     to: 2,
     migrate: (raw) => {
       const cp = asRecord(raw.characterPrompt);
-      return trimString(cp.selectedArtistId) === DEFAULT_SELECTED_ARTIST_ID ? { ...raw, characterPrompt: { ...cp, selectedArtistId: "" } } : raw;
+      return trimString(cp.selectedArtistId) === LEGACY_DEFAULT_ARTIST_ID ? { ...raw, characterPrompt: { ...cp, selectedArtistId: "" } } : raw;
     },
   },
 ];

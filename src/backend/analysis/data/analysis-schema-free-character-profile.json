@@ -1,26 +1,16 @@
 {
   "schema": "asset-maid.free-character-profile",
   "version": 1,
-  "derivation": "scene_context_visual_design",
   "fields": [
     "formLabel",
     "humanlike",
     "basePromptGroups",
     "defaultOutfit"
   ],
-  "formLabel": "Use a concise English label containing 2-4 distinguishing persistent traits (form/transformation, species, body structure, hair or eye traits). The label alone will identify the form during later scene selection. Prefer traits that distinguish this owner's forms; include a gender change when relevant. Never use generic or numbered labels such as Default or Form 2, clothing, pose, expression, camera, lighting, or style. Summarize the completed persistent visual design in this profile.",
+  "designInstruction": "Design one complete, persistent visual identity from the scene context for consistent later depiction. Use only anatomy, structure, material, silhouette, surface, color, and persistent features applicable to this entity, without imposing human traits.\n\nCover the body plan and silhouette; scale and proportions; material, surface, and palette; head, face, and sensory structure; limbs, appendages, and locomotion; distinctive identity features; and persistent energy or mechanical effects. Develop each applicable area with concrete, repeatable visual detail. If a broad type or species alone does not sufficiently define the appearance, complete the distinguishing details.\n\nFor humanlike forms, creatively complete unspecified appearance from context rather than merely extracting observed facts. Prioritize features that help distinguish the identity.",
+  "designScope": "Apply designInstruction only to persistent body appearance. Form naming directions embedded in that custom instruction do not govern formLabel; follow the fixed formLabel contract instead. Clothing or outfit directions embedded in that custom instruction do not govern defaultOutfit; follow the fixed defaultOutfit contract instead. Output format, group placement, and field ownership follow the fixed basePromptGroups contract, independently of custom design instructions.",
+  "formLabel": "Use a concise English label containing 2-4 distinguishing persistent traits (form/transformation, species, body structure, hair or eye traits). The label alone will identify the form during later scene selection. Prefer traits that distinguish this owner's forms; include a gender change when relevant. Never use generic or numbered labels such as Default or Form 2, clothing, pose, expression, camera, lighting, or style. Summarize the completed persistent visual design in this profile. These form naming requirements apply independently of custom design instructions and take precedence over conflicting naming directions within them.",
   "humanlike": "true only when ordinary human pose body-crop and wearable grammar applies directly to this form; decide by body plan rather than species",
-  "coverage": [
-    "body_plan_and_silhouette",
-    "scale_and_proportions",
-    "material_surface_and_palette",
-    "head_face_and_sensory_structure",
-    "limbs_appendages_and_locomotion",
-    "distinctive_identity_features",
-    "persistent_energy_or_mechanical_effects"
-  ],
-  "coverageRule": "complete_every_applicable_area_with_concrete_repeatable_visual_tags_omit_areas_that_do_not_apply",
-  "specificity": "a_broad_type_or_species_tag_alone_is_insufficient_when_more_renderable_identity_detail_is_needed",
   "basePromptGroups": {
     "keys": [
       "identity.character_tag",
@@ -34,15 +24,16 @@
       "body.build",
       "body.proportions",
       "body.breast_size",
+      "body.breast_other",
       "marks.distinctive",
       "nonhuman.features",
       "custom"
     ],
     "values": "arrays of normalized English visual prompt tags",
     "ownership": "persistent body identity construction and signature effects only",
+    "outputInstruction": "Write arrays of normalized English visual prompt tags in the declared groups. Place each visual fact once in its most specific group, without synonymous or broader duplicate tags. For humanlike forms, follow the declared humanlikeConvention group meanings, cardinalities, and allowed values; preserve all valid creation tags for nonhuman forms within the declared field ownership. Omit inapplicable groups. Keep subject or cast counts, sex or gender focus, composition, and outfit details out of the body groups; sex belongs to generated_actor_proposals[].sex. Exclude pose, expression, camera, background, lighting, temporary motion, and temporary effects from the persistent profile. These output-format, group-placement, and field-ownership rules take precedence over conflicting structural directions in custom design instructions.",
     "characterTag": "For identity.character_tag only, you may use model knowledge to return at most one known existing Danbooru character tag when the designated evidence or scene context clearly identifies that character. Preserve an explicit metadata character tag when applicable. Omit the tag when uncertain, ambiguous, or newly invented. Never fabricate a tag by translating a name, substitute a merely similar character or the character being cosplayed, or return a standalone copyright, artist, or style tag. This permission does not authorize inferring unobserved appearance, clothing, gender, or form differences during evidence analysis; a character tag alone is not physical appearance evidence.",
     "humanlikeConvention": {
-      "derivation": "creative_completion_with_character_analysis_group_meaning_and_cardinality_not_evidence_extraction",
       "groups": {
         "hair.color": {
           "meaning": "Return only persistent hair color and multicolor structure.",
@@ -100,6 +91,10 @@
             "gigantic breasts"
           ]
         },
+        "body.breast_other": {
+          "meaning": "Return only directly supported, persistent breast or chest traits other than size. Exclude clothing, pose, actions and temporary states. Do not infer hidden anatomy. Use body.breast_size for size and marks.distinctive for marks.",
+          "selection": "up_to_4_nonredundant_tags"
+        },
         "marks.distinctive": {
           "meaning": "Return persistent moles, freckles, scars, tattoos, and birthmarks on body parts other than the head.",
           "selection": "up_to_4_nonredundant_tags"
@@ -113,15 +108,6 @@
           "selection": "nonredundant_tags_only_when_no_specific_group_applies"
         }
       },
-      "tagOwnership": "place_each_visual_fact_once_in_its_most_specific_group",
-      "omit": [
-        "ordinary_or_default_anatomy_without_identity_value",
-        "subject_or_cast_count",
-        "sex_or_gender_focus",
-        "composition",
-        "outfit",
-        "synonymous_or_broader_duplicate_tags"
-      ],
       "sexOwner": "generated_actor_proposals[].sex"
     },
     "selectionLimits": "humanlike_uses_humanlikeConvention_group_cardinality_nonhuman_preserves_all_valid_creation_tags"
@@ -145,9 +131,8 @@
     "requiredFields": [
       "name"
     ],
-    "ownership": "one suitable initial outfit when wearables apply",
-    "nameInstruction": "Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim. Name the completed outfit design, including only details actually specified in its parts. Distinguish genuinely different outfits within the same form, but reuse an existing matching outfit's name and reference instead of renaming it. Wetness, stains, damage, or partial undressing alone must not create a new outfit name.",
-    "detailInstruction": "For consistent depiction across images, complete the outfit design directly in comma-separated English part tags. Specify each garment's color, concrete type, and defining length, cut, or silhouette; specify each accessory's color or finish and concrete shape or subtype. Preserve explicit facts and coherently choose unspecified design details. Bind every detail to its item; generic item names alone are insufficient. Complete the part tags before naming the outfit."
-  },
-  "exclude": "pose, expression, camera, background, lighting, temporary motion, and temporary effects"
+    "ownership": "initial worn items of this generated identity only",
+    "nameInstruction": "Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim. Name the completed outfit design, including only details actually specified in its parts. Distinguish genuinely different outfits within the same form, but reuse an existing matching outfit's name and reference instead of renaming it. Wetness, stains, damage, or partial undressing alone must not create a new outfit name. These naming requirements apply independently of custom design instructions and take precedence over conflicting naming directions within them.",
+    "detailInstruction": "Construct one reusable baseline outfit for this character when wearables apply. Preserve explicitly established clothing and choose unspecified items to suit the character, form, and scene context. Complete its wearable parts according to response_contract.outfit_design_contract.instruction, within that contract scope. Keep temporary wetness, stains, damage, and partial undressing separate from the baseline. Do not invent clothing when wearables do not apply. This initial outfit belongs to character creation and is independent of the additional-outfit creation toggle and creation criteria. Custom character design instructions do not replace these outfit requirements. Name the completed outfit according to nameInstruction."
+  }
 }

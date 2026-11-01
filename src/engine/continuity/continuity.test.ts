@@ -1,119 +1,97 @@
-// Fixtures: bun C:/Users/eme4/asset-maid-port/scratch/port-0.9.89.5/reslice/gen/engine/continuity/gen.mjs  (runs the ORIGINAL 0.9.89.5 bundle; storage bridge from 0.9.88)
+// Fixtures: bun S/engine-build/gen/continuity.mjs (ORIGINAL 0.9.90 bundle; S = the am990 scratch dir). The V5
+// continuity states of the two turns come from real orchestrator runs (v5/compose.default.novelai.json and
+// v5/compose.continuity.turn2.json).
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import * as core from "../core/asset-maid-core";
-import * as storageCore from "./storage-core";
-import { setEngineEnv } from "../core/env";
-import { seededEnv } from "../testing/env";
+import fixture from "../__fixtures__/continuity/sequence.json";
 import { toPlain } from "../testing/plain";
-import units from "../__fixtures__/continuity/units.json";
-import { runContinuitySequence, type ContinuityCoreFns, type ContinuitySequence } from "./testing/sequence";
 import {
+  commitContinuityCheckpoint,
   createEmptyContinuityState,
-  mergeActorContinuityState,
-  mergeLocalLoreActorState,
-  readLocalLoreActorState,
-  stripAccumulationState,
-  toLocalLoreActorEntry,
-  writeLocalLoreActorState,
-  readContinuityFromChat,
-  writeContinuityToChat,
+  createV5ContinuityBasis,
+  getLatestContinuityCheckpointSnapshot,
+  hasStoredContinuity,
+  isStableContinuityMessageId,
+  normalizeContinuityState,
+  persistV5ContinuityState,
+  pushContinuityCheckpoint,
+  readGenerationContinuityCheckpoint,
+  rebuildContinuityAtMessage,
+  rebuildContinuityFromChatStore,
+  type ContinuityChatStore,
+  type ContinuityState,
 } from "./index";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const fns: ContinuityCoreFns = {
-  createV45RuleRuntime: core.createV45RuleRuntime,
-  createEmptyContinuityState: core.createEmptyContinuityState,
-  applyVisualContinuityToPlan: core.applyVisualContinuityToPlan,
-  computeDeferredVisualContinuity: core.computeDeferredVisualContinuity,
-  buildVisualContinuityContext: core.buildVisualContinuityContext,
-  writeContinuityCheckpointsToChatStore: storageCore.writeContinuityCheckpointsToChatStore,
-  readContinuityCheckpointsFromChatStore: storageCore.readContinuityCheckpointsFromChatStore,
-  rebuildContinuityFromChatStore: core.rebuildContinuityFromChatStore,
-  rebuildContinuityAtMessage: core.rebuildContinuityAtMessage,
-  readLocalLoreActorState: storageCore.readLocalLoreActorState,
-  writeLocalLoreActorState: storageCore.writeLocalLoreActorState,
-  mergeLocalLoreActorState: core.mergeLocalLoreActorState,
-  toLocalLoreActorEntry: core.toLocalLoreActorEntry,
-  getLatestContinuityCheckpointSnapshot: core.getLatestContinuityCheckpointSnapshot,
-  createV5ContinuityBasis: core.createV5ContinuityBasis,
-  stripAccumulationState: core.stripAccumulationState,
-};
-const plain = (v: unknown) => JSON.parse(JSON.stringify(v));
-const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
-function capture(fn: () => unknown): unknown {
-  try {
-    return { ok: toPlain(fn()) };
-  } catch (e) {
-    const err = e as { name?: string; message?: string; code?: string };
-    return { error: { name: err?.name, message: err?.message, code: err?.code } };
-  }
-}
+const plain = (v: unknown) => JSON.parse(JSON.stringify(toPlain(v)));
+const seq = fixture.sequence as any;
+const exp = fixture.expected as any;
+const chatKey: string = seq.chatKey;
 
-describe("continuity sequences parity", () => {
-  const dir = join(import.meta.dir, "../__fixtures__/continuity");
-  for (const file of readdirSync(dir).filter((f) => f.startsWith("sequence-")).sort()) {
-    const fx = JSON.parse(readFileSync(join(dir, file), "utf8")) as { sequence: ContinuitySequence; expected: any };
-    test(fx.sequence.name, async () => {
-      setEngineEnv(seededEnv(fx.sequence.seed));
-      try {
-        const out = await runContinuitySequence(fns, fx.sequence);
-        const turns = out as any[];
-        // compare turn by turn for readable failures
-        expect(turns.length).toBe(fx.expected.ok.length);
-        turns.forEach((t, i) => expect(plain(t)).toEqual(fx.expected.ok[i]));
-      } finally {
-        setEngineEnv(null);
-      }
+describe("continuity chat sequence (0.9.90 chat-lore document + chat store)", () => {
+  test("two V5 turns: persist, snapshot, commit, rebuild", () => {
+    const s0 = createEmptyContinuityState();
+    expect(plain(s0)).toEqual(exp.empty);
+    const s1 = persistV5ContinuityState({ basisState: s0, chatKey, ...seq.turn1 });
+    expect(plain(s1)).toEqual(exp.s1);
+    const snap1 = getLatestContinuityCheckpointSnapshot(s1, chatKey, "novelai-v5");
+    expect(plain(snap1 ?? null)).toEqual(exp.snapshot1);
+    expect(plain(createV5ContinuityBasis(snap1))).toEqual(exp.basis1);
+    expect({ s0: hasStoredContinuity(s0, chatKey), s1: hasStoredContinuity(s1, chatKey), other: hasStoredContinuity(s1, "other-chat") }).toEqual(exp.hasStored);
+
+    const store: ContinuityChatStore = {
+      messages: { "msg-1": { kind: "inline", generations: [{ id: "rev-1" }, { id: "rev-1b" }] }, "msg-3": { kind: "inline", generations: [{ id: "rev-3" }] } },
+    } as any;
+    expect({
+      first: commitContinuityCheckpoint(store, s1, chatKey, "msg-1", "rev-1"),
+      again: commitContinuityCheckpoint(store, s1, chatKey, "msg-1", "rev-1"),
+      otherRevision: commitContinuityCheckpoint(store, s1, chatKey, "msg-1", "rev-1b"),
+      unknownMessage: commitContinuityCheckpoint(store, s1, chatKey, "msg-9", "rev-1"),
+    }).toEqual(exp.commit1);
+    expect(plain(store)).toEqual(exp.store1);
+    expect(
+      plain(readGenerationContinuityCheckpoint({ messageId: "id:msg-1", messageIndex: 1, generation: store.messages["msg-1"]!.generations[0]!, generationIndex: 0 }) ?? null),
+    ).toEqual(exp.readCheckpoint);
+
+    const rebuilt = rebuildContinuityFromChatStore(store, chatKey, seq.transcript.slice(0, 3));
+    expect(plain(rebuilt)).toEqual(exp.rebuiltFromTranscript);
+    const ids = seq.transcript.map((m: { chatId: string }) => "id:" + m.chatId);
+    expect(plain(rebuildContinuityAtMessage(store, chatKey, ids, "id:msg-3"))).toEqual(exp.rebuiltAtMsg3);
+    expect(plain(rebuildContinuityAtMessage(store, chatKey, ids, "id:msg-1"))).toEqual(exp.rebuiltAtMsg1);
+
+    const s2 = persistV5ContinuityState({ basisState: rebuilt, chatKey, ...seq.turn2 });
+    expect(plain(s2)).toEqual(exp.s2);
+    expect(plain(getLatestContinuityCheckpointSnapshot(s2, chatKey) ?? null)).toEqual(exp.snapshot2);
+    expect(commitContinuityCheckpoint(store, s2, chatKey, "msg-3", "rev-3")).toBe(exp.commit2);
+    expect(plain(store)).toEqual(exp.store2);
+    expect(plain(rebuildContinuityFromChatStore(store, chatKey, seq.transcript))).toEqual(exp.rebuiltFull);
+  });
+
+  test("checkpoint push: stable ids only, promotion", () => {
+    const s1 = persistV5ContinuityState({ basisState: createEmptyContinuityState(), chatKey, ...seq.turn1 });
+    const s2 = persistV5ContinuityState({ basisState: s1, chatKey, ...seq.turn2 });
+    const k = plain(s1) as ContinuityState;
+    const pushes: Record<string, boolean> = {};
+    for (const [name, id] of [["stable", "id:msg-5"], ["index", "index:5"], ["request", "request:abc"], ["response", "response-1"]] as const)
+      pushes[name] = pushContinuityCheckpoint(k, { chatKey, messageId: id, messageIndex: 5, historyRevisionId: "rev-5", historyRevisionOrder: 1, capturedAt: 1700000200000, participants: { actors: [] } });
+    pushes.promote = pushContinuityCheckpoint(k, {
+      chatKey,
+      messageId: "id:msg-6",
+      messageIndex: 6,
+      historyRevisionId: "rev-6",
+      capturedAt: 1700000300000,
+      sourceState: s2,
+      participants: {},
+      promoteToCurrentState: true,
     });
-  }
-});
+    expect(pushes).toEqual(exp.pushes);
+    expect(plain(k)).toEqual(exp.afterPushes);
+  });
 
-describe("continuity units parity", () => {
-  test("createEmptyContinuityState ($g)", () => expect(plain(toPlain(createEmptyContinuityState()))).toEqual(units.empty));
-  test("mergeActorContinuityState (iKe)", () => {
-    for (const c of units.merge as any[]) expect(plain(capture(() => mergeActorContinuityState(clone(c.input))))).toEqual(c.expected);
-  });
-  test("stripAccumulationState (TA)", () => {
-    for (const c of units.strip as any[]) expect(plain(capture(() => stripAccumulationState(clone(c.input))))).toEqual(c.expected);
-  });
-  test("writeLocalLoreActorState (Tne) + readLocalLoreActorState (Wv)", () => {
-    for (const c of units.lore as any[])
-      expect(
-        plain(
-          capture(() => {
-            const chat = clone(c.input.chat);
-            writeLocalLoreActorState(chat, clone(c.input.payload));
-            return { chat, read: readLocalLoreActorState(chat) };
-          }),
-        ),
-      ).toEqual(c.expected);
-    for (const c of units.badLore as any[]) expect(plain(capture(() => readLocalLoreActorState(clone(c.input))))).toEqual(c.expected);
-  });
-  test("mergeLocalLoreActorState (Lne)", () => {
-    for (const c of units.mergeLore as any[]) expect(plain(capture(() => mergeLocalLoreActorState(clone(c.input[0]), clone(c.input[1]))))).toEqual(c.expected);
-  });
-  test("toLocalLoreActorEntry (zne)", () => {
-    for (const c of units.toEntry as any[]) expect(plain(capture(() => toLocalLoreActorEntry(clone(c.input))))).toEqual(c.expected);
-  });
-});
-
-describe("continuity storage adapter (composed getItem/setItem) equals the driver's verbatim sequence", () => {
-  const fx = JSON.parse(readFileSync(join(import.meta.dir, "../__fixtures__/continuity/sequence-accumulate-enabled.json"), "utf8")) as { sequence: ContinuitySequence; expected: any };
-  const turns = fx.expected.ok.filter((t: any) => "turn" in t) as any[];
-  test("writeContinuityToChat + readContinuityFromChat", () => {
-    let previousLore: unknown[] = [];
-    turns.forEach((t: any, i: number) => {
-      const store = clone(t.storage.store);
-      for (const m of Object.values(store.messages) as any[]) for (const g of m.generations) delete g.continuity;
-      const chat: any = { message: fx.sequence.turns.slice(0, i + 1).map((turn) => ({ role: "char", data: "", chatId: turn.messageId.replace(/^id:/u, "") })), localLore: clone(previousLore) };
-      chat.message = chat.message.filter((m: any, idx: number, all: any[]) => all.findIndex((x) => x.chatId === m.chatId) === idx);
-      writeContinuityToChat(store, chat, clone(t.state), fx.sequence.chatKey);
-      expect(plain(store)).toEqual(t.storage.store);
-      expect(plain(chat.localLore)).toEqual(t.storage.localLore);
-      expect(plain(toPlain(readContinuityFromChat(store, chat, fx.sequence.chatKey)))).toEqual(t.storage.rebuilt);
-      previousLore = t.storage.localLore;
-    });
+  test("stable message ids and normalization", () => {
+    for (const [value, expected] of Object.entries(exp.stableIds as Record<string, boolean>))
+      expect(isStableContinuityMessageId(value === "7" ? 7 : value)).toBe(expected);
+    expect(plain(normalizeContinuityState({ version: 9, scenes: 3, characters: { "chat-key": { alice: { groups: { x: "bad" } } } } }))).toEqual(exp.normalized.garbage);
+    expect(plain(normalizeContinuityState(exp.s2))).toEqual(exp.normalized.s2);
+    expect(plain(normalizeContinuityState(null))).toEqual(exp.normalized.null);
   });
 });

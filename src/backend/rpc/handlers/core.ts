@@ -165,6 +165,14 @@ export const coreHandlers: HandlerGroup = {
   },
   async "config.update"(params, ctx) {
     const patch = asRecord(params.patch);
+    // The Maid Atelier has its own store and RPCs (atelier.*); these AM fields cannot be patched through the settings.
+    const runtimePatch = asRecord(patch.runtime);
+    const atelierFields = [
+      ...("presetCatalog" in patch ? ["presetCatalog"] : []),
+      ...["instructionChanges", "freeGenerationLibrary", "freeGenerationInstructions"].filter((k) => k in runtimePatch).map((k) => `runtime.${k}`),
+      ...["mode", "controls"].filter((k) => k in asRecord(runtimePatch.analysisExecution)).map((k) => `runtime.analysisExecution.${k}`),
+    ];
+    if (atelierFields.length) fail("bad-request", `${atelierFields.join(", ")} belong to the Maid Atelier; use the atelier.* methods.`, { detailCode: "atelier-field" });
     // Port addition: an image connection change refreshes `image.provider` (drives the codec / provider kind).
     let providerHint: string | null = null;
     const imagePatch = asRecord(patch.image);
@@ -278,6 +286,8 @@ export const coreHandlers: HandlerGroup = {
       globalNovelAIId: novelai.globalId,
       followsGlobalNovelAI: novelai.followsGlobal,
       selectedAnimaId: (doc?.animaArtistId ?? anima.selection.defaultId) || NO_ARTIST_ID,
+      globalAnimaId: anima.selection.defaultId || NO_ARTIST_ID,
+      followsGlobalAnima: !doc?.animaArtistId,
     };
   },
   async "artists.upsertNovelAI"(params, ctx) {
@@ -285,18 +295,13 @@ export const coreHandlers: HandlerGroup = {
     let saved!: ArtistEntry;
     await ctx.storage.updateConfig((config) => {
       const list = [...config.characterPrompt.artistPrompts];
-      const preset = DEFAULT_ARTIST_PRESETS.find((p) => p.id === str(input.id));
-      if (preset?.id === NO_ARTIST_ID) fail("bad-request", "The 'no artist' entry cannot be edited.");
+      // AM 0.9.90: "none" is the only built-in (the 2 built-in art styles are gone); every other entry is a user style.
+      if (DEFAULT_ARTIST_PRESETS.some((p) => p.id === str(input.id)) || str(input.id) === NO_ARTIST_ID) fail("bad-request", "The 'no artist' entry cannot be edited.");
       const taken = new Set(list.map((e) => str(e.id)).concat(DEFAULT_ARTIST_PRESETS.map((p) => p.id)));
       const id = str(input.id) || prefixedId("artist", taken);
-      if (preset) {
-        // Built-in presets only store their overrides (listNovelAIArtists reads nothing else).
-        saved = { id, title: preset.title, prompt: preset.prompt, ...(input.novelAIOverrides ? { novelAIOverrides: input.novelAIOverrides } : {}), ...(input.nonArtistPromptWeight ? { nonArtistPromptWeight: input.nonArtistPromptWeight } : {}) };
-      } else {
-        const title = str(input.title);
-        if (!title) fail("bad-request", "The artist title is required.", { messageKo: "작가 이름을 입력해주세요." });
-        saved = { ...input, id, title, prompt: str(input.prompt), ...(input.negativePrompt !== undefined ? { negativePrompt: str(input.negativePrompt) } : {}) };
-      }
+      const title = str(input.title);
+      if (!title) fail("bad-request", "The artist title is required.", { messageKo: "작가 이름을 입력해주세요." });
+      saved = { ...input, id, title, prompt: str(input.prompt), ...(input.negativePrompt !== undefined ? { negativePrompt: str(input.negativePrompt) } : {}) };
       const index = list.findIndex((e) => str(e.id) === id);
       if (index >= 0) list[index] = saved;
       else list.push(saved);
@@ -347,6 +352,11 @@ export const coreHandlers: HandlerGroup = {
       return { ok: true };
     }
     if (params.list !== "anima") fail("bad-request", `Unknown artist list: ${String(params.list)}`);
+    // "" + characterId: the character follows the default again (mirrors NovelAI; AM 0.9.90 resolves a missing entry to the default).
+    if (!artistId && characterId) {
+      await ctx.storage.updateCharacterDocument(characterId, (d) => ({ ...d, animaArtistId: null }), { reason: "artists" });
+      return { ok: true };
+    }
     const id = artistId || NO_ARTIST_ID;
     if (id !== NO_ARTIST_ID && !config.animaArtists.entries.some((e) => e.id === id)) fail("not-found", `Unknown artist: ${id}`);
     if (characterId) await ctx.storage.updateCharacterDocument(characterId, (d) => ({ ...d, animaArtistId: id }), { reason: "artists" });

@@ -17,7 +17,7 @@ const WORKSPACE_METHODS = [
   "customCharacters.create", "customCharacters.update", "customCharacters.remove", "customCharacters.setRosterRegistered", "customCharacters.setWorkspaceEnabled", "customCharacters.promote",
   "prompts.saveForms", "prompts.setReferenceEnabled", "prompts.setAnalyzeEnabled", "prompts.setSeed", "prompts.setFramingWeights",
   "assets.list", "assets.setSelection", "assets.clearSelections", "assets.setReference", "assets.inspectMetadata", "assets.clearMetadataRecords", "assets.upload", "assets.saveCrop", "assets.getUrl",
-  "analysis.start", "analysis.cancel", "analysis.listActive", "autopick.get", "autopick.apply", "uniqueTags.apply",
+  "analysis.start", "analysis.cancel", "analysis.listActive", "autopick.get", "autopick.apply",
   "outfitImage.generate", "outfitImage.history", "outfitImage.save", "charxRegex.setDetectors",
 ];
 
@@ -84,7 +84,7 @@ describe("workspace handler group", () => {
 
   test("analysis.start: unsupported kinds, job listing and finish event", async () => {
     const { ctx, fx, modules } = context();
-    const error = await (async () => h["analysis.start"]!({ kind: "unique-tag-search", characterId: CHAR }, ctx))().catch((e) => e);
+    const error = await (async () => h["analysis.start"]!({ kind: "unique-tag-search" as never, characterId: CHAR }, ctx))().catch((e) => e);
     expect((error as RpcFailure).error.code).toBe("unsupported");
     const { jobId } = await h["analysis.start"]!({ kind: "representative-pick", characterId: CHAR }, ctx);
     expect((await h["analysis.listActive"]!({} as never, ctx)).jobs.some((j) => j.jobId === jobId)).toBe(true);

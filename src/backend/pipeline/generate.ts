@@ -6,11 +6,15 @@
  * Lumiverse mapping (PORT-PLAN): source = `SourcesService.buildSource` (group chats: union of the members' sources and
  * documents, primary = speaking character), custom characters appended (`rI`), runtime config =
  * `buildRuntimeConfig(global, document)`, personas from Lumiverse, chat messages before the target (stripped of our
- * markup), continuity rebuilt from the chat data checkpoints at the target message + the current actor state.
+ * markup), continuity rebuilt from the chat data checkpoints at the target message (AM 0.9.90: no accumulated actor state).
  */
 import {
+  applyAtelierOverlay,
   buildRuntimeConfig,
+  type AtelierRuntimeOverlay,
+  type GenerationAnalysisRecord,
   chatKeyForChat,
+  effectiveAnalysisExecution,
   createGeneratedAssetName,
   imageResultUrl,
   jsonClone,
@@ -19,7 +23,8 @@ import {
   type ChatDataDocument,
   type ChatImageGenerationSettings,
   type CountPolicy,
-  type CurrentActorState,
+  type EffectiveCharxSettings,
+  type NovelAISampling,
   type GenerationOrigin,
   type IllustrationPlanAssetHint,
   type IllustrationPlanEntry,
@@ -35,7 +40,7 @@ import {
   resolveIdentityEvidence,
   resolveNovelAIRunConfig,
   resolveOutfitCreationMode,
-  buildKnownIdentities,
+  resolveSourceFixedRating,
   resolveSourceGenerationSettings,
   toPlannerImageToken,
   withCustomCharacterMembers,
@@ -44,22 +49,18 @@ import {
   type ContinuityState as ContextContinuityState,
   type PersonaRecord,
 } from "../../engine/context/index.js";
+import { atelierServiceOf } from "../services/atelier.js";
+import { analysisRecordOf } from "./selection-summary.js";
 import { BUNDLED_COMFY_WORKFLOW_PROFILE, resolveImageCountConstraint, resolveImageSize } from "../../engine/compose/index.js";
 import {
   commitContinuityCheckpoint,
-  computeDeferredVisualContinuity,
   getLatestContinuityCheckpointSnapshot,
-  mergeLocalLoreActorState,
-  readLocalLoreActorState,
+  persistV5ContinuityState,
   rebuildContinuityAtMessage,
-  writeLocalLoreActorState,
-  type ContinuityChat,
   type ContinuityChatStore,
   type ContinuityState,
-  type VisualContinuityResult,
 } from "../../engine/continuity/index.js";
 import { buildCharxAssetRegexDetectors, detectImageTokens, detectNativeAssetMarkups, type NativeAssetDetector } from "../../engine/text/index.js";
-import { persistV5ContinuityState } from "../../engine/core/asset-maid-core";
 import type { ImageProviderId } from "../../engine/index.js";
 import type { BackendServices, ChatInfo, PersonaInfo, ResolvedImageTarget } from "../services/types.js";
 import type { BackendModules } from "../rpc/types.js";
@@ -127,6 +128,8 @@ export interface GenerationRecord {
   characters: Array<{ prompt: string; negativePrompt: string; actorIndex?: number; centerX?: number; centerY?: number; coordinateMode?: string }>;
   /** Per-image NovelAI config (apiKey placeholder removed), needed to re-send through the NovelAI adapter. */
   novelAIConfig?: Rec;
+  /** NovelAI sampling actually used (AM 0.9.90 `analyzerDecision.novelaiSampling`): a Medium image rerolls as Medium. */
+  novelaiSampling?: NovelAISampling;
   actors: Array<{ identityKey: string; identityName: string; kind: string; actorIndex: number; selectedFormId?: string; selectedOutfitId?: string }>;
   /** Artist preset of the prompt plan (NovelAI `selectedArtistId` / Anima artist id). */
   artistId?: string;
@@ -136,6 +139,8 @@ export interface GenerationRecord {
   sentParameters: Rec;
   generationOrigin: GenerationOrigin;
   parentEntryId?: string;
+  /** AI selection history (AM 0.9.90 compact analyzer record), shown by the zoom viewer. */
+  analysis?: GenerationAnalysisRecord;
 }
 
 export interface GenerateMessageRequest {
@@ -260,9 +265,17 @@ function fnv(text: string): string {
   return (h >>> 0).toString(36);
 }
 
-/** Engine provider id for a resolved Lumiverse image target ("generic" -> "chan-server", anima-flat, no references). */
+/** Engine provider id for a resolved Lumiverse image target (only NovelAI and ComfyUI targets exist since AM 0.9.90). */
 export function engineProviderFor(target: Pick<ResolvedImageTarget, "generationProvider">): ImageProviderId {
-  return target.generationProvider === "novelai" ? "novelai" : target.generationProvider === "comfy-ui" ? "comfy-ui" : "chan-server";
+  return target.generationProvider === "comfy-ui" ? "comfy-ui" : "novelai";
+}
+
+/**
+ * Engine providers whose stored generation records can be regenerated. Records of the removed providers ("chan-server",
+ * the port's former "generic" Lumiverse providers) stay viewable but cannot be regenerated (AM 0.9.90 parity).
+ */
+export function isRegenerableEngineProvider(provider: unknown): provider is "novelai" | "comfy-ui" {
+  return provider === "novelai" || provider === "comfy-ui";
 }
 
 /** Native asset detectors for a character (AM `sH` 120727 over `charxAssetRegexAnalysis`). */
@@ -306,20 +319,6 @@ function mergeCharacterPrompts(primary: Rec, others: Rec[]): Rec {
 
 function personaRecord(p: PersonaInfo): PersonaRecord {
   return { key: p.personaId, id: p.personaId, name: p.name, ...(p.avatarImageId ? { imageAsset: { key: p.avatarImageId, name: p.name, sourceType: "persona" } } : {}) };
-}
-
-/** Chat object for the engine's continuity storage adapter (AM risu chat: `message[]` + `localLore[]`). */
-export function continuityChat(messages: readonly ChatMessageView[], target: { index: number; historyId: string } | null, actorState: CurrentActorState): ContinuityChat {
-  const chat: ContinuityChat = {
-    message: messages.map((m, i) => ({
-      role: m.role === "assistant" ? "char" : "user",
-      data: m.content,
-      chatId: target && i === target.index ? target.historyId : `${m.id}@${m.swipeId}`,
-    })),
-    localLore: [],
-  };
-  if (actorState.revision >= 1) writeLocalLoreActorState(chat, actorState as never);
-  return chat;
 }
 
 /**
@@ -390,6 +389,13 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
     /** Characters generated in this run (AM E1t `jt` 169540): merged into `characterForms` of the live config. */
     let generatedForms: Rec = {};
 
+    // Atelier snapshot taken at job start (AM `rW` reads the settings snapshot once per run).
+    let atelier: AtelierRuntimeOverlay | null = null;
+    try {
+      atelier = await atelierServiceOf(services).runtimeOverlay(config);
+    } catch (e) {
+      services.log.append("warn", "pipeline", "The Maid Atelier settings could not be read; this run uses the built-in preset.", { error: e instanceof Error ? e.message : String(e) });
+    }
     // Runtime config (AM merged Y0 shape) + engine provider.
     const otherPrompts = memberIds.slice(1).map((id) => rec(docs.get(id)?.characterPrompt));
     const decorate = (base: Rec): Rec => {
@@ -400,6 +406,8 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       runtime.characterPrompt = { ...cp, characterForms: { ...rec(cp.characterForms), ...generatedForms } };
       runtime.runtime = { ...rec(runtime.runtime), generationProvider: engineProvider };
       runtime.chatImageGenerationSettings = jsonClone(req.settings);
+      // Maid Atelier (config/atelier.json): active preset, guideline library, free-generation guidelines, execution.
+      if (atelier) applyAtelierOverlay(runtime as Rec & { runtime: unknown }, atelier, resolveSourceGenerationSettings(runtime as unknown as AssetMaidConfig, primaryId) as Pick<EffectiveCharxSettings, "fixedResolution" | "forceAiChoiceCoordinates">);
       return runtime;
     };
     const runtime = decorate(auto ? (auto.store.getCurrentSnapshot() as Rec) : (buildRuntimeConfig(config, primaryDoc, { resolvedImageModel: imageTarget.model }) as unknown as Rec));
@@ -407,6 +415,8 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
     const amConfig = runtime as unknown as AssetMaidConfig;
     const sourceId = primaryId;
     const ne = resolveSourceGenerationSettings(amConfig, sourceId);
+    const fixedRating = resolveSourceFixedRating(amConfig, sourceId);
+    const execution = effectiveAnalysisExecution(config.runtime, ne as Pick<EffectiveCharxSettings, "fixedResolution" | "forceAiChoiceCoordinates">);
 
     // Persona.
     const personas = await services.sources.listPersonas();
@@ -421,14 +431,11 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       return content.trim() ? [{ role: m.role === "assistant" ? "assistant" : "user", content, ...(m.name ? { name: m.name } : {}) }] : [];
     });
 
-    // Continuity basis at the target message (AM 169508-169524: `ooe` + current actor state `Lne`).
+    // Continuity basis at the target message (AM 169508-169524 `ooe`; 0.9.90 no longer merges the actor state `Lne`).
     const chatKey = chatKeyForChat(req.chatId);
     const liveIds = continuityLookbackIds(req.messages, req.target, req.historyId);
     const store = req.chatData.store as unknown as ContinuityChatStore;
     const hr: ContinuityState = rebuildContinuityAtMessage(store, chatKey, liveIds, req.historyId);
-    hr.characters[chatKey] = mergeLocalLoreActorState((hr.characters[chatKey] ?? {}) as never, req.chatData.actorState as never) as never;
-    // Actor-state revision the run starts from (AM `candidate.basisRevision`).
-    const basisRevision = req.chatData.actorState.revision;
 
     // Image tokens + asset hints (AM 169527-169530).
     const detectors = nativeDetectorsFor(primaryId, character.name, primaryDoc, memberIds);
@@ -451,11 +458,9 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       personaRecords,
     });
 
-    // Readiness (AM d1t 168807). Free character generation: V5 profile + per-character setting + the store (E1t 169564).
-    const profile = str(rec(runtime.novelai).analysisProfile);
-    const freeCharacters = profile === "v5-hybrid" && ne.freeCharacterGenerationEnabled && !!auto;
-    if (!(profile === "v5-hybrid" || ft.analyzerIdentityCandidates.length > 0 || ft.analyzerPersonaCandidates.length > 0 || freeCharacters))
-      return { ...empty(PIPELINE_TEXT.noCandidates), assetHints };
+    // Free character generation: per-character setting + the store (E1t 169564). The readiness check (AM d1t 168807)
+    // always passes with V5, the only analysis profile since AM 0.9.90.
+    const freeCharacters = ne.freeCharacterGenerationEnabled && !!auto;
 
     const evidence = await resolveIdentityEvidence({
       candidates: ft.analyzerIdentityCandidates,
@@ -480,7 +485,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       candidateSlots,
       targetImageCount: W.max,
       imageCountConstraint: W,
-      checkpoint: { chatKey, messageIndex: targetMessage?.index ?? req.target, messageId: req.historyId },
+      checkpoint: { chatKey, messageId: req.historyId },
       modelType: "illustration-generation",
       replayGeneratedOutfits: replayOutfits as never,
       ...(req.splitAnalysis ? { splitAnalysis: req.splitAnalysis as never } : {}),
@@ -512,14 +517,9 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
     const commitWith = (apply: (info: { historyRevisionId: string; historyRevisionOrder: number }) => ContinuityState): ContinuityCommit =>
       async (doc, info) => {
         if (!persistContinuity) return;
-        const chatObj = continuityChat(req.messages, { index: req.target, historyId: req.historyId }, doc.actorState);
-        // AM 0.9.89 computes the next state from the basis (`_Ye` / `rYe`) and stores only this revision's checkpoint
-        // (`gIe` 209136-209151); checkpoints of other messages and revisions stay as they are.
-        const next = apply(info);
-        const outcome = commitContinuityCheckpoint(doc.store as unknown as ContinuityChatStore, chatObj, next, chatKey, req.historyId, info.historyRevisionId, basisRevision);
-        if (outcome === "skipped") services.log.append("info", "pipeline", "The chat state changed during the run; this run's continuity was not saved.");
-        const actorState = readLocalLoreActorState(chatObj);
-        doc.actorState = { revision: actorState.revision, actors: actorState.actors } as unknown as CurrentActorState;
+        // AM 0.9.90 computes the next state from the basis (`G3e`) and the history save stores only this revision's
+        // checkpoint (`bwe` @171608-171614); checkpoints of other messages and revisions stay as they are.
+        commitContinuityCheckpoint(doc.store as unknown as ContinuityChatStore, apply(info), chatKey, req.historyId, info.historyRevisionId);
       };
 
     const idLabel = (key: string): string => {
@@ -533,11 +533,8 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
 
     const comfyTimeout = Number(rec(runtime.runtime).comfyuiCompletionTimeoutMs) || 600000;
 
-    // Free outfit generation (AM E1t 169652-169656, 169783-169796): v4-5 after preset/analysis validation, v5 per actor.
+    // Free outfit generation (AM 0.9.90 Vxt @173621-173638): per actor (V5; the V4.5 route-plan hooks are gone).
     const creationMode = auto?.imagesAvailable ? resolveOutfitCreationMode(amConfig) : "tags-only";
-    const prepareRoutePlan = auto
-      ? (routePlan: unknown, signal?: AbortSignal) => auto!.autoOutfit.prepare({ routePlan, source: sourceWithCustom, sourceId, signal, creationMode })
-      : undefined;
     const prepareOutfits = auto
       ? async ({ actors, signal }: { actors: unknown[]; signal?: AbortSignal }) => {
           const requested = outfitIndex
@@ -563,12 +560,12 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
           return prepared;
         }
       : undefined;
-    // Free character generation (AM E1t 169768-169782): generated forms join the live config (`jt`).
-    // AM 0.9.89.5 (170958-170963) keys the allocations by the request object (`requestOwner`); here that is `req`.
-    const knownIdentities = freeCharacters ? buildKnownIdentities(withCustomCharacterMembers(source, customCharacters as unknown[], "all"), personaRecords) : [];
+    // Free character generation (AM 0.9.90 Vxt @173614-173620): generated forms join the live config (`De`).
+    // AM keys the allocations and the save attempts by the request object (`requestOwner`); here that is `req`.
+    // 0.9.90 no longer sends known identities.
     const prepareCharacters = freeCharacters
       ? async (input: Rec) => {
-          const prepared = await auto!.autoCharacter.prepare({ ...input, sourceId, owner: req, knownIdentities });
+          const prepared = await auto!.autoCharacter.prepare({ ...input, sourceId, owner: req });
           generatedForms = Object.fromEntries(prepared.flatMap((p) => (p.forms ? [[p.identityKey, p.forms]] : [])));
           return prepared;
         }
@@ -601,18 +598,16 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
           }
         : {}),
       generationProvider: engineProvider,
-      ...(ne.fixedResolution.enabled
-        ? { requestedSizeId: ne.fixedResolution.sizeId, requestedSize: resolveImageSize(ne.fixedResolution.sizeId, (config.runtime.customImageSizes ?? []) as never) }
+      // AM 0.9.90 `qbt$990`: the chat toolbar's global resolution / AI coordinates (seeded from this CharX's old values).
+      ...(execution.resolution
+        ? { requestedSizeId: execution.resolution.id, requestedSize: resolveImageSize(execution.resolution.id, (config.runtime.customImageSizes ?? []) as never) ?? { ...execution.resolution } }
         : {}),
       // AM 0.9.89.3+: custom sizes are image-ratio candidates (resolveV5UserDirections `xbt`).
       customImageSizes: config.runtime.customImageSizes ?? [],
-      forceAiChoiceCoordinates: ne.forceAiChoiceCoordinates,
-      forceNsfwPrefix: ne.nsfwAlwaysEnabled,
-      stateAccumulationEnabled: ne.stateAccumulationEnabled,
+      forceAiChoiceCoordinates: execution.aiCoordinates !== true,
+      // AM 0.9.90 `forceRating: yS(ge)` (fixed rating of the source; replaces the NSFW prefix).
+      forceRating: fixedRating,
       comfyUI: {
-        transport: "direct-workflow",
-        chanServerRequestUrl: "",
-        chanServerApiKey: "",
         endpoint: "",
         workflowProfileId: BUNDLED_COMFY_WORKFLOW_PROFILE.id,
         completionTimeoutMs: comfyTimeout,
@@ -620,21 +615,13 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
         animaNegativePrefix: ne.animaNegativePrompt,
       },
       analyzerInput: {
-        executionMode: engine.executionMode(config),
         checkpointPolicy: checkpointPolicyFor(req.attemptKind),
         ...assembled,
         ...(revisionImage.length ? { imageParts: revisionImage } : {}),
-        ...(prepareRoutePlan
-          ? {
-              afterPresetValidated: prepareRoutePlan,
-              afterAnalysisValidated: ({ routePlan }: { routePlan: unknown }, signal?: AbortSignal) => prepareRoutePlan(routePlan, signal),
-            }
-          : {}),
       },
       ...(prepareCharacters ? { prepareCharacters } : {}),
       ...(prepareOutfits ? { prepareOutfits } : {}),
       ...(outfitIndex ? { outfitIndex } : {}),
-      promptInputs: ft.promptInputs,
       v5PromptContext: ft.v5PromptContext,
       references: ft.references,
       outfitReference: ft.outfitReference,
@@ -645,23 +632,6 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       previousGlobalModifierRefs: previousGlobalModifierRefs(ft.visualContinuity),
       advanceContinuityTurn: !req.revision,
       assertAssetPersistenceAvailable: async () => undefined,
-      applyContinuity: async (result: VisualContinuityResult) => {
-        await req.assertTarget();
-        const outfitReferences = ft.outfitContinuityReferences(result.plan.images);
-        commitContinuity = commitWith((info) =>
-          computeDeferredVisualContinuity({
-            basisState: hr,
-            continuity: result,
-            chatKey,
-            chatIndex: 0,
-            messageIndex,
-            messageId: continuityMessageId,
-            historyRevisionId: info.historyRevisionId,
-            historyRevisionOrder: info.historyRevisionOrder,
-            outfitReferences,
-          }),
-        );
-      },
       applyV5Continuity: async (state: unknown) => {
         await req.assertTarget();
         commitContinuity = commitWith((info) =>
@@ -674,7 +644,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
             messageId: continuityMessageId,
             historyRevisionId: info.historyRevisionId,
             historyRevisionOrder: info.historyRevisionOrder,
-          }) as ContinuityState,
+          }),
         );
       },
       persistGeneratedImage: async (image: Rec) => {
@@ -712,6 +682,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
         const plan = rec(image.promptPlan);
         const novelAIConfig = image.novelAIConfig ? { ...rec(image.novelAIConfig) } : undefined;
         if (novelAIConfig) delete novelAIConfig.apiKey;
+        const analysis = analysisRecordOf(image);
         records.push({
           entryId: entry.entryId,
           imageId,
@@ -740,6 +711,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
             };
           }),
           ...(novelAIConfig ? { novelAIConfig } : {}),
+          ...(meta.novelaiSampling ? { novelaiSampling: meta.novelaiSampling as NovelAISampling } : {}),
           actors: actors.map((a) => ({
             identityKey: str(a.identityKey),
             identityName: str(a.identityName),
@@ -755,6 +727,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
           sentParameters: rec(meta.sentParameters),
           generationOrigin: origin,
           ...(entry.parentEntryId ? { parentEntryId: entry.parentEntryId } : {}),
+          ...(analysis ? { analysis } : {}),
         });
         entries.push(entry);
       },
@@ -810,7 +783,9 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
         ownerChatId: req.chatId,
         ownerCharacterId: primaryId,
         comfyuiWorkflowId: imageTarget.comfyuiWorkflowId,
-        forceNsfwPrefix: () => ne.nsfwAlwaysEnabled,
+        forceRating: () => fixedRating,
+        // AM `rW`: the analyzer of the active Atelier preset, prepared from the job-start config snapshot.
+        analysisConfig: amConfig,
       }, config);
       await req.assertTarget();
     } catch (e) {

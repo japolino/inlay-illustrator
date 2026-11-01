@@ -4,9 +4,13 @@ import {
   CHARACTER_REFERENCE_TYPES,
   IMAGE_SIZE_PRESETS,
   NOVELAI_MODELS,
+  NOVELAI_V5_FULL_MODEL,
+  NOVELAI_V5_MEDIUM_MODEL,
   novelAISamplingOptions,
   generationProviderFromLumiverse,
   isNovelAIV5Model,
+  novelAIEffortAvailable,
+  type NovelAIEffort,
   promptCodecForProvider,
   type CharacterReferenceType,
   type CustomImageSize,
@@ -24,8 +28,7 @@ import { Badge, Card, ChoiceCard, Column, Columns, CommitSlider, ErrorBanner, Fi
 
 const PROVIDER_KINDS: Array<{ value: GenerationProvider; gradient: string }> = [
   { value: "novelai", gradient: "from-primary/28 via-primary/10 to-transparent" },
-  { value: "comfy-ui", gradient: "from-success/28 via-success/10 to-transparent" },
-  { value: "generic", gradient: "from-warning/28 via-warning/10 to-transparent" }
+  { value: "comfy-ui", gradient: "from-success/28 via-success/10 to-transparent" }
 ];
 
 /** The connection a config points at ("" = the default connection). */
@@ -66,13 +69,15 @@ export function ImageModelSettingsPage() {
   const actions = <SaveActions dirty={form.dirty} saving={form.saving} error={form.error} onSave={() => void form.save()} />;
   if (!config) return <SettingsFrame section="image-model" title={PAGE_TITLES["image-model"]} actions={actions}><LoadingBox /></SettingsFrame>;
 
+  // null: the connection's provider is not NovelAI or ComfyUI (not supported since the generic providers were removed).
   const kind = generationProviderFromLumiverse(resolved?.provider ?? config.image.provider);
-  const codec = promptCodecForProvider(kind);
+  const codec = kind ? promptCodecForProvider(kind) : null;
   const connectionOptions: SelectOption[] = [
     { value: "", label: resolved && !config.image.connectionId ? `${C.connectionDefault} (${resolved.name})` : C.connectionDefault },
-    ...list.map((c) => ({ value: c.id, label: `${c.name} · ${c.provider}${c.model ? ` · ${c.model}` : ""}` }))
+    // Only NovelAI and ComfyUI connections are offered; a selected unsupported one stays listed below as an existing value.
+    ...list.filter((c) => c.generationProvider).map((c) => ({ value: c.id, label: `${c.name} · ${c.provider}${c.model ? ` · ${c.model}` : ""}` }))
   ];
-  if (config.image.connectionId && !list.some((c) => c.id === config.image.connectionId)) connectionOptions.push({ value: config.image.connectionId, label: C.existingValue(config.image.connectionId) });
+  if (config.image.connectionId && !list.some((c) => c.id === config.image.connectionId && c.generationProvider)) connectionOptions.push({ value: config.image.connectionId, label: C.existingValue(config.image.connectionId) });
   const listed = models.data?.models ?? [];
   const modelList = listed.length || kind !== "novelai" ? listed : NOVELAI_MODELS.map((m) => ({ id: m.value, label: m.label }));
   const modelOptions: SelectOption[] = [{ value: "", label: C.connectionModel(resolved?.model ?? "") }, ...modelList.map((m) => ({ value: m.id, label: m.label || m.id }))];
@@ -98,7 +103,7 @@ export function ImageModelSettingsPage() {
 
   return (
     <SettingsFrame section="image-model" title={PAGE_TITLES["image-model"]} actions={actions} banner={<ErrorBanner message={form.error} />} className="gap-8">
-      <div class="grid min-w-0 grid-cols-3 gap-3 mobile:grid-cols-1" role="radiogroup" aria-label={I.connectionGroup} data-image-generation-provider-selector="">
+      <div class="grid min-w-0 grid-cols-2 gap-3 mobile:grid-cols-1" role="radiogroup" aria-label={I.connectionGroup} data-image-generation-provider-selector="">
         {PROVIDER_KINDS.map((option) => {
           const first = list.find((c) => generationProviderFromLumiverse(c.provider) === option.value);
           return (
@@ -129,21 +134,39 @@ export function ImageModelSettingsPage() {
               <Select aria-label={I.modelAria} value={config.image.model} options={modelOptions}
                 onValueChange={(value) => void form.apply({ image: { model: value }, ...(kind === "novelai" && isNovelAIV5Model(value) ? { novelai: { characterReferenceEnabled: false } } : {}) })} />
             </Field>
+            {kind === "novelai" ? <EffortField form={form} config={config} model={config.image.model || resolved?.model || ""} /> : null}
             <div class="flex flex-wrap items-center gap-2 text-xs font-bold text-muted-foreground">
               {I.promptFormat}
-              <Badge tone="primary">{I.codecs[codec]}</Badge>
+              {codec ? <Badge tone="primary">{I.codecs[codec]}</Badge> : null}
             </div>
           </Column>
         </Columns>
       </Card>
       {kind === "novelai" ? <NovelAIBox form={form} config={config} model={config.image.model || resolved?.model || ""} /> : null}
       {kind === "comfy-ui" ? <ComfyBox form={form} config={config} /> : null}
-      {kind === "generic" ? (
-        <Card title={I.genericBox} data-image-provider-settings-box="generic">
-          <p class="text-xs leading-relaxed text-muted-foreground">{I.genericNote}</p>
+      {resolved && !kind ? (
+        <Card title={I.unsupportedBox} data-image-provider-settings-box="unsupported">
+          <p class="text-xs leading-relaxed text-muted-foreground">{I.unsupportedNote}</p>
         </Card>
       ) : null}
     </SettingsFrame>
+  );
+}
+
+/**
+ * NovelAI V5 Full High / Medium (AM 0.9.90 `$nt$990` N 106200): shown only for V5 Full. Switching never touches the stored
+ * steps, sampler, CFG rescale or negatives, so High uses them again; a stored `-medium` model becomes V5 Full + effort.
+ */
+function EffortField({ form, config, model }: { form: ConfigForm; config: InlayConfig; model: string }) {
+  if (!novelAIEffortAvailable(model)) return null;
+  const effort: NovelAIEffort = model === NOVELAI_V5_MEDIUM_MODEL ? "medium" : config.novelai.effort;
+  const options: SelectOption<NovelAIEffort>[] = [{ value: "high", label: I.effortHigh }, { value: "medium", label: I.effortMedium }];
+  return (
+    <Field label={I.effort}>
+      <Select aria-label={I.effortAria} value={effort} options={options}
+        onValueChange={(value) => void form.apply({ novelai: { effort: value }, ...(config.image.model === NOVELAI_V5_MEDIUM_MODEL ? { image: { model: NOVELAI_V5_FULL_MODEL } } : {}) })} />
+      {effort === "medium" ? <p role="status" class="text-2xs leading-relaxed text-muted-foreground" data-novelai-effort-note="">{I.effortMediumNote}</p> : null}
+    </Field>
   );
 }
 

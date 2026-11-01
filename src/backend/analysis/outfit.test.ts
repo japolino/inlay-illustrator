@@ -72,7 +72,7 @@ describe("outfit image prompt (AM fOt)", () => {
   test("empty prompt is rejected with the AM message", async () => {
     const fx = createAnalysisFixture();
     const { AM } = await import("./core/index.js");
-    expect(AM.sG(["", " "])).toBe("");
+    expect(AM.sU(["", " "])).toBe("");
     await withForms(fx);
     const r = await buildOutfitImageRequest(fx.services, target, "form_default", draft()).catch((e) => e);
     expect(r.request.prompt.length).toBeGreaterThan(0);

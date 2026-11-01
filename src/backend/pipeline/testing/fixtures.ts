@@ -75,7 +75,6 @@ export function createFakeEngine(): FakeEngine {
   const engine: FakeEngine = {
     runs: [],
     dispatches: [],
-    executionMode: () => "single-stage",
     async run(input, context) {
       const i = input as Rec;
       engine.runs.push({ input: i, context });

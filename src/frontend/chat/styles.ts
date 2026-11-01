@@ -464,11 +464,7 @@ export const CHAT_SIDE_CSS = String.raw`
 .ii-am-root .ii-am-chat-count[data-ii-count-mode="fixed"][data-ii-scene-available="true"] { --ii-am-floating-panel-width: 314px; }
 .ii-am-root .ii-am-chat-count[data-ii-count-mode="range"][data-ii-scene-available="true"],
 .ii-am-root .ii-am-chat-count[data-ii-count-mode="split"][data-ii-scene-available="true"] { --ii-am-floating-panel-width: 400px; }
-.ii-am-root .ii-am-chat-count[data-ii-count-mode="webtoon"],
-.ii-am-root .ii-am-chat-count[data-ii-count-mode="manga"] { --ii-am-floating-panel-width: 300px; }
 @media (max-width: 640px) {
-  .ii-am-root .ii-am-chat-count[data-ii-count-mode="webtoon"],
-  .ii-am-root .ii-am-chat-count[data-ii-count-mode="manga"] { --ii-am-floating-panel-width: 340px; }
   .ii-am-root .ii-am-chat-count[data-ii-count-mode="fixed"] { --ii-am-floating-panel-width: 296px; }
   .ii-am-root .ii-am-chat-count[data-ii-count-mode="range"],
   .ii-am-root .ii-am-chat-count[data-ii-count-mode="split"] { --ii-am-floating-panel-width: 412px; }
@@ -523,6 +519,11 @@ export const CHAT_SIDE_CSS = String.raw`
 .ii-am-root .ii-am-chat-count__scene-button { width: auto; min-width: 66px; max-width: 104px; height: 32px; overflow: hidden; padding: 0 8px; border-radius: 8px; background: var(--ii-am-chat-control-bg); font: var(--ii-am-chat-font); white-space: nowrap; }
 .ii-am-root .ii-am-chat-count__scene-label { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .ii-am-root .ii-am-chat-count__mode { position: relative; flex: 0 0 auto; }
+.ii-am-root .ii-am-chat-count__resolution { position: relative; flex: 0 0 auto; }
+.ii-am-root .ii-am-chat-count__resolution-button svg,
+.ii-am-root .ii-am-chat-count__coordinates svg { width: 20px; height: 20px; }
+.ii-am-root .ii-am-chat-count__coordinates[aria-pressed="true"] { background: rgba(241, 229, 207, .18); color: var(--ii-am-chat-hover); }
+.ii-am-root .ii-am-chat-count__coordinates[aria-pressed="false"] { color: var(--ii-am-chat-muted); }
 .ii-am-root .ii-am-chat-count__values { display: flex; min-width: 0; align-items: center; gap: 4px; }
 .ii-am-root .ii-am-chat-count__stepper { display: flex; flex: 0 0 auto; align-items: center; border-radius: 8px; background: var(--ii-am-chat-control-bg); }
 .ii-am-root .ii-am-chat-count__step-button { width: 24px; height: 32px; border-radius: 9px; font: 600 16px/1 ui-sans-serif, system-ui, sans-serif; }

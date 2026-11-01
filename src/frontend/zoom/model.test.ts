@@ -5,12 +5,10 @@ import { h, render, type ComponentChild } from "preact";
 import type { ChatMessageUiState } from "../../shared/contract/chat-dom.js";
 import { createFullMockBackend } from "../dev/mock/index.js";
 import { MockRpcError } from "../dev/mock-backend.js";
-import { ConfirmProvider } from "../overlay/ui/index.js";
 import { RpcClient } from "../rpc/client.js";
 import { AppController } from "../state/app-state.js";
 import { createZoomViewer, type ZoomViewer } from "./index.js";
 import { AI_EDIT_LABELS, ZOOM_LABELS } from "./labels.js";
-import { ChatStatePanel } from "./panels.js";
 import { useZoomSession, type ZoomSession, type ZoomTarget } from "./session.js";
 import { Stage } from "./stage.js";
 import {
@@ -291,20 +289,6 @@ describe("viewer components (DOM, dev mock)", () => {
     await sleep(50);
     expect(mock.calls.some((c) => c.method === "history.selectRevision")).toBe(true);
     expect(session.groups.map((g) => g.messageKey)).toEqual(["illustration:msg-2@0", "illustration:msg-5@0"]);
-  });
-
-  test("a successful chat state clear drops an earlier error", async () => {
-    const { app, fail } = await mockApp();
-    const root = mount(h(ConfirmProvider, null, h(ChatStatePanel, { app, chatId: "chat-1" })));
-    await until(() => root.querySelector("[data-ii-zoom-state-tag]"));
-    fail("chatState.get");
-    root.querySelector<HTMLButtonElement>(`button[aria-label="${ZOOM_LABELS.refreshState}"]`)!.click();
-    await until(() => root.querySelector('[role="alert"]'));
-    [...root.querySelectorAll<HTMLButtonElement>("footer button")].find((b) => b.textContent?.includes(ZOOM_LABELS.clearAll))!.click();
-    const dialog = await until(() => root.querySelector('[role="alertdialog"]'));
-    [...dialog.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent?.includes(ZOOM_LABELS.clearAll))!.click();
-    await until(() => root.textContent?.includes(ZOOM_LABELS.stateEmpty));
-    expect(root.querySelector('[role="alert"]')).toBeNull();
   });
 
   test("Escape while an AI edit runs keeps the panel's layer: after the failure, Escape closes the panel, not the viewer", async () => {

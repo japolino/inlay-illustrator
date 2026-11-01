@@ -45,8 +45,9 @@ describe("provider info", () => {
     expect(providerInfo(config, null)).toMatchObject({ provider: "novelai", anima: false, referenceUiVisible: true, outfitGeneration: true });
     config.image.provider = "comfyui";
     expect(providerInfo(config, null)).toMatchObject({ provider: "comfy-ui", anima: true, referenceUiVisible: true });
+    // Unsupported providers (the former generic ones) fall back to NovelAI like the stored setting (AM aN).
     config.image.provider = "openai";
-    expect(providerInfo(config, null)).toMatchObject({ provider: "generic", anima: true, referenceUiVisible: false, referencesEnabled: false });
+    expect(providerInfo(config, null)).toMatchObject({ provider: "novelai", anima: false, referenceUiVisible: true });
   });
 });
 

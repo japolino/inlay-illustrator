@@ -89,7 +89,6 @@ allowlisted operations:
 - `inlay_patch_config`: deep-merge patch (RPC `config.update`; arrays replace, `null` resets to default) with an optional non-persisting `dry_run`.
 - `inlay_reset_config`: reset selected fields, or all fields with explicit
   `all=true` and `confirm_all=true`.
-- `inlay_get_character_tags`: the chat's accumulated actor state (RPC `chatState.get`).
 - `inlay_get_image_details`: exact positive/negative prompt, prompt sections,
   seed and provider of a baked image (RPC `zoom.getDetails` of its slot).
 

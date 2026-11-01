@@ -12,7 +12,7 @@ import { ToastStore } from "./ui/toast.js";
 import { trackKeyboardInset } from "./viewport.js";
 
 /** `characterId` selects that roster character first; `tab` is then applied to it. */
-export type OverlayOpenOptions = { tab?: WorkspaceTab; settings?: SettingsSection | true; characterId?: string };
+export type OverlayOpenOptions = { tab?: WorkspaceTab; settings?: SettingsSection | true; characterId?: string; atelier?: true };
 
 export type OverlayController = {
   open(options?: OverlayOpenOptions): void;
@@ -94,12 +94,13 @@ export function createOverlayController(ctx: SpindleFrontendContext, options: Ov
 
   const controller: OverlayController = {
     open(openOptions) {
-      if (openOptions?.tab || openOptions?.settings || openOptions?.characterId) {
+      if (openOptions?.tab || openOptions?.settings || openOptions?.characterId || openOptions?.atelier) {
         navigation = {
           requestId: navigation.requestId + 1,
           tab: openOptions.tab,
           settings: openOptions.settings === true ? "charx" : openOptions.settings,
-          characterId: openOptions.characterId
+          characterId: openOptions.characterId,
+          ...(openOptions.atelier ? { atelier: true as const } : {})
         };
         if (host) renderApp();
       }

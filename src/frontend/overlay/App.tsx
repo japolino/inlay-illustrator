@@ -30,17 +30,20 @@ import {
   tabPanelProps,
   useConfirm,
   useFocusTrap,
-  useLayer
+  useLayer,
+  useOverlayEnvironment
 } from "./ui/index.js";
 import { useIsMobile } from "./viewport.js";
 import { AppContext, useApp, useAppState, type AppController } from "../state/app-state.js";
 import { CommandDock, PageHeader } from "./shell/dock.js";
 import { discardWorkspaceDrafts, unsavedWorkspaceDrafts, useWorkspaceTabView } from "./workspace/index.js";
 import { SPLIT_MAX, SPLIT_MIN, WorkspaceUiContext, WorkspaceUiStore, useSourceUi, useWorkspaceUi, type TabView } from "./workspace-ui.js";
+import { AtelierStore, AtelierWorkspace, ATELIER_LABELS } from "./atelier/index.js";
+import { AtelierLauncherContext } from "./atelier/launcher.js";
 import { CharxPickerGrid, CharxRail, CustomCharacterEditor, EDITOR_LABELS, RosterInfoPanel, RosterSidebar, ROSTER_LABELS } from "./roster/index.js";
 
 /** External navigation request (launchers may ask for a tab or a settings page, or for a roster character). */
-export type OverlayNavigation = { requestId: number; tab?: WorkspaceTab; settings?: SettingsSection; characterId?: string };
+export type OverlayNavigation = { requestId: number; tab?: WorkspaceTab; settings?: SettingsSection; characterId?: string; atelier?: true };
 
 export type OverlayAppProps = {
   store: FrontendStore;
@@ -123,6 +126,11 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_MAX);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [atelierOpen, setAtelierOpen] = useState(Boolean(navigation.atelier) && !navigation.settings);
+  const atelierStore = useMemo(() => new AtelierStore(app), [app]);
+  const environment = useOverlayEnvironment();
+  /** Unsaved-edit guard of the open Atelier (set by AtelierWorkspace); outside the Atelier it runs the action at once. */
+  const atelierGuard = useRef<((action: () => void) => void) | null>(null);
   const editorOpen = !!sourceUi.editor && !settingsOpen;
   const navigationCount = useAppState((s) => s.workspace?.roster.filter((r) => r.registered && r.workspaceEnabled).length);
 
@@ -133,8 +141,24 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
   const pendingTab = useRef<{ tab: WorkspaceTab; characterId: string | null } | null>(null);
   useEffect(() => {
     if (!navigation.requestId) return;
+    if (atelierOpen && !navigation.atelier) {
+      // Leaving the Atelier for an external request goes through its "save changes?" guard first.
+      const run = atelierGuard.current ?? ((action: () => void) => action());
+      run(() => { setAtelierOpen(false); applyNavigation(); });
+      return;
+    }
+    applyNavigation();
+  }, [navigation.requestId]);
+  const applyNavigation = () => {
     const target = navigation.characterId;
-    if (navigation.settings) {
+    if (navigation.atelier) {
+      guarded(() => {
+        setSettingsOpen(false);
+        setDrawerOpen(false);
+        setPickerOpen(false);
+        setAtelierOpen(true);
+      });
+    } else if (navigation.settings) {
       const settings = navigation.settings;
       guarded(() => {
         setSection(settings);
@@ -154,7 +178,7 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
       setActiveTab(navigation.tab);
       setSettingsOpen(false);
     }
-  }, [navigation.requestId]);
+  };
   useEffect(() => {
     const pending = pendingTab.current;
     if (characterId && pending && (pending.characterId === null || pending.characterId === characterId)) {
@@ -204,6 +228,29 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
     });
   };
   const closeOverlay = () => guarded(onClose);
+  /** Header entry into the Atelier (AM `mve` workspace switch): the workspace's own unsaved edits are guarded first. */
+  const openAtelier = () => guarded(() => {
+    setSettingsOpen(false);
+    setDrawerOpen(false);
+    setPickerOpen(false);
+    setAtelierOpen(true);
+  });
+  const leaveAtelier = (then?: () => void) => {
+    setAtelierOpen(false);
+    then?.();
+    // Focus returns to the entry button once the workspace has rendered again.
+    requestAnimationFrame(() => environment.portal()?.ownerDocument.querySelector<HTMLElement>("[data-atelier-entry]")?.focus());
+  };
+  /** Settings "moved to the Atelier" card: open straight on the generation guidelines. */
+  const openGuidelines = () => {
+    atelierStore.updateView({ mode: "guidelines", editor: null });
+    openAtelier();
+  };
+  const atelierButton = (
+    <Button variant="command" size="sm" aria-label={ATELIER_LABELS.shell.openAtelierAria} title={ATELIER_LABELS.shell.openAtelierAria} onClick={openAtelier} data-atelier-entry="">
+      {ATELIER_LABELS.shell.openAtelier}
+    </Button>
+  );
   const closeEditor = () => guarded(() => workspaceUi.updateSource(characterId, { editor: null }));
 
   const view = useWorkspaceTabView({ characterId, tab: activeTab, mobile });
@@ -215,13 +262,25 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
     : <RosterSidebar referenceMode={editorOpen} canExpand={!mobile} />;
 
   const primary = settingsOpen
-    ? <div class="min-h-0 flex-1 overflow-y-auto" data-workspace-scroll=""><SettingsPage section={section} /></div>
+    ? <div class="min-h-0 flex-1 overflow-y-auto" data-workspace-scroll=""><AtelierLauncherContext.Provider value={openGuidelines}><SettingsPage section={section} /></AtelierLauncherContext.Provider></div>
     : editorOpen
       ? <CustomCharacterEditor />
       : <WorkspaceGate tab={activeTab}><WorkspaceMain tab={activeTab} view={view} /></WorkspaceGate>;
 
   if (connection === "error") {
     return <ConnectionError message={connectionError?.message ?? ""} onRetry={() => void app.init()} onClose={onClose} />;
+  }
+
+  if (atelierOpen) {
+    return (
+      <AtelierWorkspace
+        store={atelierStore}
+        onExit={() => leaveAtelier()}
+        onSettings={() => leaveAtelier(() => setSettingsOpen(true))}
+        onClose={onClose}
+        onGuard={(guard) => { atelierGuard.current = guard; }}
+      />
+    );
   }
 
   if (mobile) {
@@ -249,6 +308,7 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
                 </Button>
               )}
               {editorOpen ? <div class="flex-1" /> : null}
+              {!settingsOpen && !editorOpen ? atelierButton : null}
               {!settingsOpen && !editorOpen ? (
                 <IconButton label={SHELL_LABELS.openSettings} title="Settings" onClick={toggleSettings} data-mobile-settings-entry="">
                   <SettingsIcon />
@@ -297,6 +357,7 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
                 <nav aria-label={SHELL_LABELS.workspaceNav} class="min-w-0 flex-1 overflow-x-auto">
                   <Tabs idPrefix={TAB_ID_PREFIX} items={WORKSPACE_TABS.map((tab) => ({ id: tab.id, label: tab.label }))} value={activeTab} onValueChange={selectTab} />
                 </nav>
+                {atelierButton}
                 <IconButton label={SHELL_LABELS.close} onClick={closeOverlay} data-source-transition-control=""><XIcon /></IconButton>
               </header>
               <div class="relative flex min-h-0 flex-1">{primary}<RosterInfoPanel /></div>
@@ -336,6 +397,7 @@ function ShellInner({ navigation, onClose, workspaceUi }: { navigation: OverlayN
               <Tabs idPrefix={TAB_ID_PREFIX} items={WORKSPACE_TABS.map((tab) => ({ id: tab.id, label: tab.label }))} value={activeTab} onValueChange={selectTab} />
             </nav>
           ) : <div class="min-w-0 flex-1" />}
+          {!settingsOpen && !editorOpen ? atelierButton : null}
           {secondary ? (
             <IconButton label={SHELL_LABELS.closeWorkspace} onClick={() => workspaceUi.closeSecondary(characterId)} data-close-secondary=""><PanelLeftIcon className="rotate-180" /></IconButton>
           ) : null}

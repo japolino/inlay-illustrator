@@ -83,7 +83,7 @@ export function namedAssets(images: CharacterImageAsset[]): NamedAsset[] {
 async function loadRoster(services: BackendServices, characterId: string): Promise<{ name: string; roster: RosterItem[] }> {
   const [character, parts] = await Promise.all([services.sources.getCharacter(characterId), loadAmConfigParts(services, characterId)]);
   const rawSource = await services.sources.buildSource(characterId, parts.document);
-  const source = (amFn("y_")(rawSource, parts.document.customCharacters, "all") ?? rawSource) as AmSource;
+  const source = (amFn("r5")(rawSource, parts.document.customCharacters, "all") ?? rawSource) as AmSource;
   return { name: character.name, roster: projectRoster(source, parts.document) };
 }
 

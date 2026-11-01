@@ -55,6 +55,10 @@
       "gigantic breasts"
     ]
   },
+  "body.breast_other": {
+    "meaning": "Return only directly supported, persistent breast or chest traits other than size. Exclude clothing, pose, actions and temporary states. Do not infer hidden anatomy. Use body.breast_size for size and marks.distinctive for marks.",
+    "selection": "up_to_4_nonredundant_tags"
+  },
   "marks.distinctive": {
     "meaning": "Return persistent moles, freckles, scars, tattoos, and birthmarks on body parts other than the head.",
     "selection": "up_to_4_nonredundant_tags"

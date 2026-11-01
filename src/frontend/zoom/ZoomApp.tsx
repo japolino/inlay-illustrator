@@ -7,15 +7,16 @@ import type { ComponentChildren } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ZoomPromptSection } from "../../shared/contract/rpc.js";
 import { cn } from "../overlay/ui/cn.js";
-import { Dialog, IconButton } from "../overlay/ui/index.js";
+import { Button, IconButton } from "../overlay/ui/index.js";
 import { useLayer } from "../overlay/ui/layers.js";
 import { useApp, useRpcQuery, type AppController } from "../state/app-state.js";
 import { useSelector } from "../state/store.js";
 import { AiEditPanel } from "./ai-edit.js";
-import { ActivityIcon, ArrowDownToLineIcon, BracesIcon, ChevronDownIcon, ChevronLeftIcon, ColumnsIcon, DicesIcon, FileTextIcon, HistoryIcon, ImagesIcon, InfoIcon, LoaderIcon, PencilIcon, RefreshIcon, SaveIcon, SlidersIcon, TrashIcon, UndoIcon, WandIcon, XIcon } from "./icons.js";
+import { ArrowDownToLineIcon, BracesIcon, ChevronDownIcon, ChevronLeftIcon, ColumnsIcon, DicesIcon, FileTextIcon, HistoryIcon, ImagesIcon, InfoIcon, ListChecksIcon, LoaderIcon, PencilIcon, RefreshIcon, SaveIcon, SlidersIcon, TrashIcon, UndoIcon, WandIcon, XIcon } from "./icons.js";
 import { fill, ZOOM_LABELS } from "./labels.js";
 import { centersOf, isEditableTarget, markersFromSections, mentionCandidates, sizeOptions, type CoordinateMarker } from "./model.js";
-import { AnalyzerText, ChatImagesList, ChatStatePanel, CopyButton, GenerationFooter, HistoryActions, HistoryList, PromptField, SlotDeleteDialog, StatusBox } from "./panels.js";
+import { AnalyzerText, ChatImagesList, CopyButton, GenerationFooter, HistoryActions, HistoryList, PromptField, SlotDeleteDialog, StatusBox } from "./panels.js";
+import { SelectionHistory } from "./selection-history.js";
 import { useZoomSession, type ZoomSession, type ZoomTarget } from "./session.js";
 import { Stage, type CoordinateBoardState } from "./stage.js";
 
@@ -43,7 +44,7 @@ function useZoomMobile(doc: Document): boolean {
   return mobile;
 }
 
-type MobilePanel = "closed" | "images" | "history" | "info" | "generation" | "analyzer";
+type MobilePanel = "closed" | "images" | "history" | "info" | "generation" | "analyzer" | "selection";
 
 export interface ZoomAppProps {
   target: ZoomTarget;
@@ -59,7 +60,7 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
   const uiState = useSelector(app.store, (s) => s.uiState);
   const developer = !!config?.ui.developerModeEnabled;
   const sidebarsOpen = uiState?.global.zoomSidebarsOpen ?? true;
-  const [infoMode, setInfoMode] = useState<"closed" | "info" | "analyzer">(uiState?.global.zoomInfoOpen ? "info" : "closed");
+  const [infoMode, setInfoMode] = useState<"closed" | "info" | "analyzer" | "selection">(uiState?.global.zoomInfoOpen ? "info" : "closed");
   const [panel, setPanel] = useState<MobilePanel>("closed");
   const [chrome, setChrome] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -68,7 +69,6 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
   const [coord, setCoord] = useState<{ markers: CoordinateMarker[]; selected: number | null; saving: boolean; error: string | null } | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
   const [aiRunning, setAiRunning] = useState(false);
-  const [stateOpen, setStateOpen] = useState(false);
   const details = session.details;
   const historicalLock = session.historical && !developer;
   const locked = !!session.busy || editing || !!coord || aiRunning || session.slotDeleting;
@@ -101,10 +101,10 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
   const sizes = useMemo(() => sizeOptions(config?.runtime.customImageSizes ?? []), [config?.runtime.customImageSizes]);
   const sections = details?.sections ?? [];
   const markers = useMemo(() => markersFromSections(sections), [sections]);
-  const providerLabel = details ? (details.generationProvider === "original" ? ZOOM_LABELS.original : details.generationProvider === "novelai" ? "NovelAI" : details.generationProvider === "comfy-ui" ? "ComfyUI" : String(details.generationProvider)) : "";
+  const providerLabel = details ? (details.generationProvider === "original" ? ZOOM_LABELS.original : details.generationProvider === "novelai" ? "NovelAI" : details.generationProvider === "comfy-ui" ? "ComfyUI" : ZOOM_LABELS.otherProvider) : "";
   const canEditCoordinates = !!details && details.coordinateGrid !== null && details.canEdit && markers.length > 0;
 
-  const setInfo = (mode: "info" | "analyzer") => {
+  const setInfo = (mode: "info" | "analyzer" | "selection") => {
     const next = infoMode === mode ? "closed" : mode;
     setInfoMode(next);
     if (uiState) app.setUiState({ ...uiState, global: { ...uiState.global, zoomInfoOpen: next === "info" } });
@@ -244,9 +244,6 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
   const slotDeleteButton = details?.canDeleteSlot ? (
     <IconButton label={ZOOM_LABELS.deleteSlot} disabled={disabled || aiOpen} onClick={() => void session.requestSlotDeletion()} data-ii-zoom-delete-slot=""><TrashIcon /></IconButton>
   ) : null;
-  const stateButton = (
-    <IconButton label={ZOOM_LABELS.chatStateShort} title={ZOOM_LABELS.chatState} variant={stateOpen ? "subtle" : "ghost"} aria-pressed={stateOpen} onClick={() => setStateOpen(!stateOpen)} data-ii-zoom-state-toggle=""><ActivityIcon /></IconButton>
-  );
   const saveBadge = session.saveStatus ? (
     <span class={cn("absolute right-3 z-30 max-w-96 truncate rounded-md px-2 py-1 text-2xs font-bold", mobile ? "top-16" : "top-14", session.saveStatus.tone === "success" ? "bg-success/18 text-success" : "bg-destructive/18 text-destructive")} title={session.saveStatus.detail} role="status">
       {session.saveStatus.label}
@@ -271,9 +268,6 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
   const dialogs = (
     <>
       <SlotDeleteDialog preview={session.slotDeletion} deleting={session.slotDeleting} onCancel={session.cancelSlotDeletion} onConfirm={() => void session.confirmSlotDeletion()} />
-      <Dialog open={stateOpen} onOpenChange={setStateOpen} title={ZOOM_LABELS.chatState} className="w-[min(560px,calc(100%-32px))]">
-        {stateOpen ? <ChatStatePanel app={app} chatId={session.target.chatId} actorNames={actorNames(sections)} /> : null}
-      </Dialog>
     </>
   );
 
@@ -313,7 +307,6 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
         infoActions={infoActions(true)}
         sizes={sizes}
         slotDeleteButton={slotDeleteButton}
-        stateButton={stateButton}
         saveBadge={saveBadge}
         onClose={onClose}
       >
@@ -339,9 +332,10 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
       <main class="relative min-h-0 min-w-0 overflow-hidden bg-background/58">
         <div class="absolute right-3 top-3 z-30 flex items-center gap-1 rounded-md bg-background/72 p-1 backdrop-blur-xl" data-ii-zoom-stage-actions="">
           {slotDeleteButton}
-          {stateButton}
           <IconButton label={infoMode === "info" ? ZOOM_LABELS.closeInfo : ZOOM_LABELS.openInfo} variant={infoMode === "info" ? "subtle" : "ghost"} aria-pressed={infoMode === "info"} aria-expanded={infoMode === "info"} aria-controls="ii-am-zoom-info-panel" disabled={editing || !!coord || aiOpen} onClick={() => setInfo("info")} data-ii-zoom-info-toggle=""><InfoIcon /></IconButton>
-          {developer ? <IconButton label={infoMode === "analyzer" ? ZOOM_LABELS.closeAnalysis : ZOOM_LABELS.openAnalysis} variant={infoMode === "analyzer" ? "subtle" : "ghost"} aria-pressed={infoMode === "analyzer"} disabled={editing || !!coord || aiOpen} onClick={() => setInfo("analyzer")} data-ii-zoom-analyzer-toggle=""><BracesIcon /></IconButton> : null}
+          {developer ? <IconButton label={infoMode === "analyzer" ? ZOOM_LABELS.closeAnalysis : ZOOM_LABELS.openAnalysis} variant={infoMode === "analyzer" ? "subtle" : "ghost"} aria-pressed={infoMode === "analyzer"} disabled={editing || !!coord || aiOpen} onClick={() => setInfo("analyzer")} data-ii-zoom-analyzer-toggle=""><BracesIcon /></IconButton> : (
+            <IconButton label={infoMode === "selection" ? ZOOM_LABELS.closeSelectionHistory : ZOOM_LABELS.openSelectionHistory} variant={infoMode === "selection" ? "subtle" : "ghost"} aria-pressed={infoMode === "selection"} disabled={editing || !!coord || aiOpen} onClick={() => setInfo("selection")} data-ii-zoom-selection-toggle=""><ListChecksIcon /></IconButton>
+          )}
           <IconButton label={sidebarsOpen ? ZOOM_LABELS.hideSidebar : ZOOM_LABELS.showSidebar} aria-expanded={sidebarsOpen} disabled={!!coord} onClick={toggleSidebars}><ColumnsIcon /></IconButton>
           <IconButton label={ZOOM_LABELS.close} disabled={!!coord} onClick={onClose} data-ii-zoom-close=""><XIcon /></IconButton>
         </div>
@@ -355,9 +349,23 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
             <section class="grid min-h-0 w-112 max-w-md grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-hidden bg-background/68 p-3 pt-16 backdrop-blur-2xl" aria-label={ZOOM_LABELS.analysis}>
               <div class="flex min-h-8 items-center justify-between gap-2 text-xs font-extrabold">
                 <span class="inline-flex items-center gap-2"><BracesIcon className="text-primary" />{ZOOM_LABELS.analysis}</span>
-                <CopyButton text={details.analyzerText} label={ZOOM_LABELS.copyAnalysis} copiedLabel={ZOOM_LABELS.copied} />
+                <span class="inline-flex items-center gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => setInfoMode("selection")} data-ii-zoom-selection-switch="">{ZOOM_LABELS.openSelectionHistory}</Button>
+                  <CopyButton text={details.analyzerText} label={ZOOM_LABELS.copyAnalysis} copiedLabel={ZOOM_LABELS.copied} />
+                </span>
               </div>
               <AnalyzerText text={details.analyzerText} />
+            </section>
+          ) : infoMode === "selection" && details ? (
+            <section class="grid min-h-0 w-112 max-w-md grid-rows-[auto_minmax(0,1fr)] gap-2 overflow-hidden bg-background/68 p-3 pt-16 backdrop-blur-2xl" aria-label={ZOOM_LABELS.selectionHistory} data-ii-zoom-selection="">
+              <div class="flex min-h-8 items-center justify-between gap-2 text-xs font-extrabold">
+                <span class="inline-flex items-center gap-2"><ListChecksIcon className="text-primary" />{ZOOM_LABELS.selectionHistory}</span>
+                <span class="inline-flex items-center gap-1">
+                  {developer ? <Button size="sm" variant="ghost" onClick={() => setInfoMode("analyzer")}>{ZOOM_LABELS.openAnalysis}</Button> : null}
+                  <Button size="sm" variant="ghost" onClick={() => setInfo("info")} data-ii-zoom-back-to-info="">{ZOOM_LABELS.backToInfo}</Button>
+                </span>
+              </div>
+              <SelectionHistory summary={details.selectionSummary ?? null} />
             </section>
           ) : infoMode === "info" ? (
             <section id="ii-am-zoom-info-panel" class="relative flex min-h-0 w-112 max-w-md flex-col gap-2 overflow-hidden bg-background/68 p-3 pr-2 backdrop-blur-2xl" aria-label={ZOOM_LABELS.info} data-ii-zoom-info="">
@@ -392,18 +400,6 @@ export function ZoomApp({ target, onClose, doc }: ZoomAppProps) {
   );
 }
 
-function actorNames(sections: readonly ZoomPromptSection[]): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const s of sections) {
-    if (s.target !== "actor") continue;
-    const name = s.label.split(" (")[0]!.trim();
-    const latin = (/\(([^)]+)\)/u.exec(s.label)?.[1] ?? "").toLowerCase();
-    const keys = [name, name.toLowerCase(), latin.replace(/[^a-z0-9]+/gu, ""), ...latin.split(/[^a-z0-9]+/u)].filter((k) => k.length > 1);
-    for (const key of keys) out[key] ??= s.label;
-  }
-  return out;
-}
-
 /* ------------------------------------------------------------------------------------------------
  * Mobile layout (AM 165022-165268)
  * ---------------------------------------------------------------------------------------------- */
@@ -426,7 +422,6 @@ interface MobileZoomProps {
   infoActions: ComponentChildren;
   sizes: ReturnType<typeof sizeOptions>;
   slotDeleteButton: ComponentChildren;
-  stateButton: ComponentChildren;
   saveBadge: ComponentChildren;
   onClose: () => void;
   children?: ComponentChildren;
@@ -441,9 +436,10 @@ function MobileZoom(props: MobileZoomProps) {
     history: ZOOM_LABELS.generationLog,
     info: ZOOM_LABELS.info,
     generation: ZOOM_LABELS.generationSettings,
-    analyzer: ZOOM_LABELS.analysis
+    analyzer: ZOOM_LABELS.analysis,
+    selection: ZOOM_LABELS.selectionHistory
   };
-  const dockItems: Array<{ id: Exclude<MobilePanel, "closed" | "analyzer">; label: string; icon: ComponentChildren; count?: number }> = [
+  const dockItems: Array<{ id: Exclude<MobilePanel, "closed" | "analyzer" | "selection">; label: string; icon: ComponentChildren; count?: number }> = [
     { id: "images", label: ZOOM_LABELS.dockImages, icon: <ImagesIcon />, count: session.items.length },
     { id: "history", label: ZOOM_LABELS.dockLog, icon: <HistoryIcon />, count: details?.history.length ?? 0 },
     { id: "info", label: ZOOM_LABELS.dockPrompt, icon: <FileTextIcon /> },
@@ -463,9 +459,10 @@ function MobileZoom(props: MobileZoomProps) {
           </div>
           <div class="flex items-center gap-1 rounded-full bg-background/72 p-1 backdrop-blur-xl">
             {props.slotDeleteButton}
-            {props.stateButton}
             <IconButton label={panel === "info" ? ZOOM_LABELS.closeInfo : ZOOM_LABELS.openInfo} aria-pressed={panel === "info"} disabled={editing || coordEditing} onClick={() => toggle("info")} data-ii-zoom-info-toggle=""><InfoIcon /></IconButton>
-            {developer ? <IconButton label={panel === "analyzer" ? ZOOM_LABELS.closeAnalysis : ZOOM_LABELS.openAnalysis} aria-pressed={panel === "analyzer"} disabled={editing || coordEditing} onClick={() => toggle("analyzer")}><BracesIcon /></IconButton> : null}
+            {developer ? <IconButton label={panel === "analyzer" ? ZOOM_LABELS.closeAnalysis : ZOOM_LABELS.openAnalysis} aria-pressed={panel === "analyzer"} disabled={editing || coordEditing} onClick={() => toggle("analyzer")}><BracesIcon /></IconButton> : (
+              <IconButton label={panel === "selection" ? ZOOM_LABELS.closeSelectionHistory : ZOOM_LABELS.openSelectionHistory} aria-pressed={panel === "selection"} disabled={editing || coordEditing} onClick={() => toggle("selection")} data-ii-zoom-selection-toggle=""><ListChecksIcon /></IconButton>
+            )}
           </div>
         </header>
         {props.saveBadge}
@@ -479,6 +476,8 @@ function MobileZoom(props: MobileZoomProps) {
                 {panel === "generation" ? <span class="font-mono text-2xs text-muted-foreground">{details.width} × {details.height}</span> : null}
               </div>
               <div class="flex items-center gap-1">
+                {panel === "analyzer" ? <Button size="sm" variant="ghost" onClick={() => setPanel("selection")}>{ZOOM_LABELS.openSelectionHistory}</Button> : null}
+                {panel === "selection" && developer ? <Button size="sm" variant="ghost" onClick={() => setPanel("analyzer")}>{ZOOM_LABELS.openAnalysis}</Button> : null}
                 {panel === "analyzer" ? <CopyButton text={details.analyzerText} label={ZOOM_LABELS.copyAnalysis} copiedLabel={ZOOM_LABELS.copied} /> : null}
                 <IconButton label={ZOOM_LABELS.closePanel} disabled={panel === "info" && editing} onClick={() => setPanel("closed")}><ChevronDownIcon /></IconButton>
               </div>
@@ -489,6 +488,7 @@ function MobileZoom(props: MobileZoomProps) {
               {panel === "info" ? props.fields : null}
               {panel === "generation" ? <GenerationFooter details={details} sizes={props.sizes} disabled={props.disabled} layout="gallery" regenerating={regenerating} onSeedFixed={(f) => void session.setSeedFixed(f)} onSize={(id) => void session.setSizeId(id)} onRegenerate={() => void session.regenerate()} /> : null}
               {panel === "analyzer" ? <AnalyzerText text={details.analyzerText} /> : null}
+              {panel === "selection" ? <SelectionHistory summary={details.selectionSummary ?? null} /> : null}
             </div>
           </aside>
         ) : null}

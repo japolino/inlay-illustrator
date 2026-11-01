@@ -21,6 +21,7 @@
         "body.build",
         "body.proportions",
         "body.breast_size",
+        "body.breast_other",
         "marks.distinctive",
         "nonhuman.features",
         "custom"
@@ -353,6 +354,22 @@
               ]
             }
           ]
+        },
+        {
+          "id": "body.breast_other",
+          "mode": "freeform",
+          "evidence_modes": [
+            "metadata",
+            "image",
+            "text"
+          ],
+          "selection": {
+            "type": "multi",
+            "required": false,
+            "max_tags": 4
+          },
+          "description": "Return only directly supported, persistent breast or chest traits other than size. Exclude clothing, pose, actions and temporary states. Do not infer hidden anatomy. Use body.breast_size for size and marks.distinctive for marks.",
+          "allow_unlisted": true
         },
         {
           "id": "marks.distinctive",

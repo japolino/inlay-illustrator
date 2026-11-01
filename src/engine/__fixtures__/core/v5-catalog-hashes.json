@@ -1,9 +1,23 @@
 {
-  "source": "fnv1a64-b9a3f0039e9bffa6",
-  "semantic": "fnv1a64-6a0ec619e8a0edb3",
-  "analyzer": "fnv1a64-aa75a798efd74292",
-  "rules": "fnv1a64-725dc367daaf3c4c",
-  "prompts": "fnv1a64-40850392af9ab4f8",
-  "weights": "fnv1a64-4d0463fac277af5e",
-  "continuity": "fnv1a64-bd22a1f16b22c8b8"
+ "compilerVersion": "novelai-v5-catalog-v3",
+ "bundled": {
+  "source": "fnv1a64-c17c44a26bdd0559",
+  "semantic": "fnv1a64-25286bc853727f47",
+  "analyzer": "fnv1a64-19e6fcb0d0a50701",
+  "rules": "fnv1a64-021872b0513c121d",
+  "prompts": "fnv1a64-3338fab51901b600",
+  "weights": "fnv1a64-812627a152e7472a",
+  "continuity": "fnv1a64-0701d15417ff9a9d"
+ },
+ "defaultPreset": {
+  "source": "fnv1a64-5a8af409ef8809fd",
+  "semantic": "fnv1a64-554a124a78533747",
+  "analyzer": "fnv1a64-19e6fcb0d0a50701",
+  "rules": "fnv1a64-021872b0513c121d",
+  "prompts": "fnv1a64-e6857591c1e312b8",
+  "weights": "fnv1a64-812627a152e7472a",
+  "continuity": "fnv1a64-0701d15417ff9a9d"
+ },
+ "bundledFingerprint": "v5.fnv1a64-c5d1021919f4bedd",
+ "defaultPresetFingerprint": "v5.fnv1a64-012361ced34fd132"
 }

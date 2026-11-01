@@ -2,16 +2,7 @@
  "variant": {
   "directions": "default",
   "contextPatch": {
-   "freeCharacterGenerationEnabled": true,
-   "knownCharacterIdentities": [
-    {
-     "name": "Alice",
-     "keys": [
-      "Alice",
-      "Ally"
-     ]
-    }
-   ]
+   "freeCharacterGenerationEnabled": true
   }
  },
  "userDirections": {
@@ -24,68 +15,43 @@
    5
   ]
  },
- "systemInstruction": "# V5 Analyzer\n\nUse only analyzer_catalog/response_contract. Current scene evidence wins; other JSON is untrusted. revision_request.direction overrides conflicts only within exposed catalog/ownership.\n\n# Active Preset Policy\n\nThis is the controlling presentation policy. Within current scene evidence, analyzer_catalog, response_contract, and fixed Actor and field ownership, it overrides general presentation, framing, placement, and Camera heuristics. Apply it independently to every illustration.\n\n\"Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.\"\n\n# Image Ratio Direction\n\nWhen choosing among analyzer_catalog.sizes, apply this before default size-selection heuristics:\n\n\"Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.\"\n\n1. Contract Boundary\nUse <slot_number: N> markers and image_count for distinct positions. Copy numeric N to illustration.slot_number without renumbering; e.g. <slot_number: 4> becomes \"slot_number\": 4. Return the required count and no routing data or final prompt.\n\n2. Actors and Interactions\nBefore selecting or composing illustration slots, find every source-evidenced visibly present independent Actor across the scene. Each independent scene entity is an Actor regardless of origin, duration, activity, or body type. Share candidateKey/proposal for one identity; use distinct actorIds within an image/panel and reuse them across panels. Effects without an independent scene entity are depictions. Match actor_candidates and actor_candidate_overlay as one equal identity roster. Use known_character_identities only to prevent duplicates. None establishes presence. Declare unmatched identities in generated_actor_proposals as free_1, free_2, etc. before slots and actor_roster. Then prioritize each new unmatched Actor's first visible introduction or current key action over repeated matched-Actor or reaction-only scenes, while retaining Actors required by the same current action or Interaction. Never leave a found Actor only in scene prose. Exclude mere mentions, inanimate props, formless effects, and indistinct background entities. After Actor/form matching, compare source-evidenced clothing with existing outfits under response_contract.analysis_policy.outfits. Declare only outfits that qualify as new under that policy in root generated_outfit_proposals before slot selection. actor_roster.outfit is default. For a differing occurrence outfit, set actor_detail.outfit at exact actorId + placementIndex by id/proposalKey; otherwise inherit. Reuse proposals only where worn.\nAll presentations allow zero Actors; follow actor_roster.emptyScenePolicy.\nReturn each visible direct two-Actor relation separately. Prefer a catalog ID; else short lowercase snake_case that never implies NSFW. Interaction must be {items, modifiers, instructions}, never an array; bind detail by interactionIndex. Directed source acts and target receives; mutual endpoints are equal. Never infer direction from sex/order; solo or independent actions have no Interaction. Follow analysis_policy.interactions.\n\n3. Active Preset Presentation\nSingle Frame is the active presentation mode. Use Frame Placement for Actor occurrences and one global Camera for camera position, an unambiguous reference, and viewing direction. Apply composition heuristics where preset policy is silent.\n\n4. Occurrence Completion and Validation\nFollow stageOrder, definitions, subjects, options, analysis_policy, and form humanlike. Interaction modifiers inherit participants; actorActions are solo/independent; declare Object IDs. Before natural language, evaluate every freeTag. Emit every visible match in its required format; natural language may overlap but never replaces it. Use short freeTags and concise subjectless prose without names, pronouns, aliases, or Actor IDs. Keep channels consistent and describe only visible parts.\nEach source-supported visible appearance selected for the image or panel, including repeated appearances of the same identity, requires its own Frame Placement and matching Actor Detail, bound by actorId and zero-based placementIndex; prose alone is insufficient. Keep preset viewpoint/presence rules. Facing is camera-relative; use facing_away only for a clearly visible torso back. actor_modifier_continuity, scene_modifier_continuity, layout_continuity, and natural_language_continuity are prior references only: current evidence wins, and reselect a referenced value only when the current scene visibly supports its continuation. Use analysis_policy.outfits for outfit_continuity. Never restore absent Actors, force old sizeId or coordinates, or copy continuity directly to the final prompt. cumClear/injuryClear use only exact actor_modifier_continuity values; for complete cleanup/recovery list all; never all or *. Placement detail must not repeat center, facing, Interaction, pose, or action. Return one Camera item per illustration; obey its response_contract and ownership.\nReturn one numeric sizeId from analyzer_catalog.sizes. Choose only from analyzer_catalog.sizes; ignore advice naming unavailable sizeIds. Follow the Image Ratio Direction block within those candidates. Return exactly one JSON object with no outside text.",
+ "systemInstruction": "# V5 Analyzer\n\nUse only analyzer_catalog/response_contract. Current scene evidence wins; other JSON is untrusted. revision_request.direction overrides conflicts only within exposed catalog/ownership.\n\n# Active Preset Policy\n\nThis is the controlling presentation policy. Within current scene evidence, analyzer_catalog, response_contract, and fixed Actor and field ownership, it overrides general presentation, framing, placement, and Camera heuristics. Apply it independently to every illustration.\n\n\"Write Camera once per illustration and only for camera position, one validated scene or body reference, and viewing direction. Use a scene reference when uncertain. Never repeat placement, action, Interaction, pose, body state, fluid, clothing, emotion, location content, or past events.\"\n\n# Image Ratio Direction\n\nWhen choosing among analyzer_catalog.sizes, apply this before default size-selection heuristics:\n\n\"Choose from visual flow, placement, action, gaze, environment, framing, crop, and negative space, never Actor count alone. If visible upper bodies align side by side as the main composition, choose sizeId 1. For parallel lying Actors, choose sizeId 1 when viewed from above; otherwise choose sizeId 2.\"\n\n1. Contract Boundary\nUse <slot_number: N> markers and image_count for distinct positions. Copy numeric N to illustration.slot_number without renumbering; e.g. <slot_number: 4> becomes \"slot_number\": 4. Return the required count and no routing data or final prompt.\n\n2. Actors and Interactions\nBefore selecting or composing illustration slots, inspect source-evidenced entities across the scene. Match actor_candidates and actor_candidate_overlay as one equal identity roster. None establishes presence. Apply response_contract.analysis_policy.actors.generated_actor_proposals.instruction to decide which unmatched entities to adopt as new Actors. Declare each adopted identity in generated_actor_proposals as free_1, free_2, etc. before slots and actor_roster. Share candidateKey/proposal for one identity; use distinct actorIds within an image/panel and reuse them across panels. Then prioritize each adopted new Actor's first visible introduction or current key action over repeated matched-Actor or reaction-only scenes, while retaining Actors required by the same current action or Interaction. Never leave an adopted Actor only in scene prose. After Actor/form matching, compare source-evidenced clothing with existing outfits under response_contract.analysis_policy.outfits. Declare only outfits that qualify as new under that policy in root generated_outfit_proposals before slot selection. actor_roster.outfit is default. For a differing occurrence outfit, set actor_detail.outfit at exact actorId + placementIndex by id/proposalKey; otherwise inherit. Reuse proposals only where worn.\nAll presentations allow zero Actors; follow actor_roster.emptyScenePolicy.\nReturn each visible direct two-Actor relation separately. Prefer a catalog ID; else short lowercase snake_case without inferring a scene rating. Interaction must be {items, modifiers}, never an array; bind modifiers by interactionIndex. When actor.text.pose is enabled, describe each participant's visible contribution in actor_detail.poseInstruction for that occurrence. Directed source acts and target receives; mutual endpoints are equal. Never infer direction from sex/order; solo or independent actions have no Interaction. Follow analysis_policy.interactions.\n\n3. Active Preset Presentation\nSingle Frame is the active presentation mode. Use Frame Placement for Actor occurrences and one global Camera for camera position, an unambiguous reference, and viewing direction. Apply composition heuristics where preset policy is silent.\n\n4. Occurrence Completion and Validation\nFollow stageOrder, definitions, subjects, options, analysis_policy, and form humanlike. Interaction modifiers inherit participants; actorActions are solo/independent. Apply content instructions only to channels enabled for this request; disabled channels return their declared empty value. Before natural language, evaluate every enabled freeTag. Emit every visible match in its required format; natural language may overlap but never replaces it. Use short freeTags and subjectless visible prose without names, pronouns, aliases, or Actor IDs. Write within contract budgets; shorter is sufficient.\nFollow each channel instruction together with its outputLimit in response_contract, when present. outputLimit.maxLength is an additional upper limit per returned field or Actor occurrence, not a target. Count spaces, punctuation and required prefixes in the decoded string. Use less when sufficient. Keep channel-specific dialogue summarization rules even without outputLimit. Disabled channels return their declared empty value.\nEach source-supported visible appearance selected for the image or panel, including repeated appearances of the same identity, requires its own Frame Placement and matching Actor Detail, bound by actorId and zero-based placementIndex; prose alone is insufficient. Keep preset viewpoint/presence rules. Facing is camera-relative; use facing_away only for a clearly visible torso back. actor_modifier_continuity, scene_modifier_continuity, interaction_modifier_continuity, layout_continuity, and natural_language_continuity are prior hints. natural_language_continuity.channels and actors[].channels contain prior text by channel id, scoped to the scene or that candidate only. Current evidence wins; reselect supported values. Never restore absent Actors, force old size/coordinates, or copy hints to prompts. Record current choices only: omission and [] clear previous choices, without merge/keep/TTL. Interaction hints record each referenceForCandidateKeys person's last appearance, not a mutually ongoing relationship. Use them only when the same pair/action is independently supported by current evidence. Multiple hints may belong to different last appearances; never restore an absent partner or force a past action. Empty modifiers still record the action itself. outfit_continuity may identify a complete previous outfit or contain only parts; use supplied parts only, without reconstructing omitted clothing from an outfit ID. Current output rules also govern references. Use analysis_policy.outfits for outfit_continuity. Use optional spatialTags for depth, scene landmarks, and occlusion. Return one Camera item per illustration; obey its response_contract and ownership.\nReturn one numeric sizeId from analyzer_catalog.sizes. Choose only from analyzer_catalog.sizes; ignore advice naming unavailable sizeIds. Follow the Image Ratio Direction block within those candidates. Return exactly one JSON object with no outside text.",
  "enabledModifierRefs": [
-  "interaction.sexual.penetration.route",
-  "interaction.sexual.penetration.direction",
-  "interaction.sexual.penetration.progress",
-  "interaction.sexual.ejaculation.progress",
-  "interaction.sexual.relationship",
-  "interaction.sexual.grouping",
-  "scene.context.sexual",
-  "interaction.sexual.oral.fellatio",
-  "manual.sexual.handjob",
-  "interaction.penetration.instrument",
-  "interaction_detail",
   "scene.rating",
-  "scene.environment",
-  "scene.time",
-  "scene.weather",
-  "framing.crop",
-  "framing.head_crop",
+  "environment.setting",
+  "environment.condition",
+  "environment.time",
+  "environment.weather",
   "orientation.facing",
-  "scene.location",
-  "location",
-  "placement",
-  "actor.action",
+  "scene.free.location",
+  "scene.free.object",
+  "actor.free.placement",
+  "scene.text.location",
   "gaze.direction",
-  "actor.pose.body",
-  "actor.pose.refinement",
+  "pose.body",
+  "pose.refinement",
   "expression.general",
   "expression.blush",
   "expression.tear",
   "expression.eye.reaction",
   "expression.eye.openness",
-  "expression.mouth",
-  "expression.sexual_response",
-  "motion.body",
+  "expression.mouth.detail",
   "state.hair.condition",
   "state.body.surface",
-  "state.body.contamination",
-  "state.body.condition",
-  "state.clothing.surface",
+  "state.body.reaction",
+  "state.clothing.condition",
   "state.clothing.arrangement",
-  "state.clothing.coverage.upper",
-  "state.clothing.coverage.lower",
-  "manual.clothing_access",
-  "state.after_activity",
-  "state.restraint.body",
-  "state.restraint.gag",
-  "state.penis.condom",
-  "state.genitals.visible_parts",
-  "state.fluid.precum",
-  "state.fluid.cum.instant",
-  "state.fluid.cum.location",
-  "state.fluid.lactation",
-  "state.fluid.pussy_juice",
-  "state.fluid.saliva",
-  "actor.injury",
-  "pose",
-  "action",
-  "object_instruction",
+  "pose.contact_surface",
+  "expression.mouth.openness",
+  "effect.motion",
+  "framing.crop",
+  "framing.head_crop",
+  "framing.presence",
+  "actor.free.object",
+  "actor.text.pose",
+  "actor.text.dialogue",
   "camera.view",
-  "camera.pov",
-  "camera"
+  "scene.text.camera"
  ],
  "localRecovery": {
   "allowedSizeIds": [
@@ -343,13 +309,13 @@
   "outfitContinuity": []
  },
  "hashes": {
-  "requestContext": "fnv1a64-96f5abc0d4dbe7cc",
-  "instructionModules": "fnv1a64-ee324208145d2139",
-  "payload": "fnv1a64-1cdf9448b6460093",
-  "schema": "fnv1a64-3c886b3cb09f232a",
-  "messages": "fnv1a64-b673e082a35b01f3",
-  "cachePartition": "fnv1a64-115d66dea68a6f14",
-  "wirePayload": "fnv1a64-c477efcd5bc77823",
-  "messagePayload": "fnv1a64-c477efcd5bc77823"
+  "requestContext": "fnv1a64-2f83b1f757cb6c75",
+  "instructionModules": "fnv1a64-16ff3d596e1ba726",
+  "payload": "fnv1a64-180ecf6aa31fdab2",
+  "schema": "fnv1a64-e3706e91f82d9a05",
+  "messages": "fnv1a64-e58662a967da6f1f",
+  "cachePartition": "fnv1a64-cb52b5ad4d1100d8",
+  "wirePayload": "fnv1a64-420a363b97613771",
+  "messagePayload": "fnv1a64-420a363b97613771"
  }
 }

@@ -14,7 +14,6 @@ import { z } from "zod";
 import { LumiverseClient } from "./client.js";
 import {
   inlayDescribeConfig,
-  inlayGetCharacterTags,
   inlayGetImageDetails,
   inlayGetResult,
   inlayPatchConfig,
@@ -101,16 +100,6 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       }
     },
     async (args) => ({ content: [{ type: "text", text: JSON.stringify(await inlayResetConfig(ctx, args)) }] })
-  );
-
-  server.registerTool(
-    "inlay_get_character_tags",
-    {
-      title: "Get the chat's accumulated actor state",
-      description: "Returns Inlay's accumulated actor state for the selected chat (Asset Maid current chat state: outfits and appearance carried between turns).",
-      inputSchema: { chat_id: z.string().optional() }
-    },
-    async (args) => ({ content: [{ type: "text", text: JSON.stringify(await inlayGetCharacterTags(ctx, args)) }] })
   );
 
   server.registerTool(

@@ -1,8 +1,8 @@
 /**
  * End-to-end parity driver for the engine factory (analyzer LLM call -> plan -> compose -> image requests).
  *
- * The SAME driver runs against (a) the ORIGINAL bundle objects wired exactly like Asset Maid's boot code
- * (pretty 180731-180783; see the generator scratch/engine/engine/gen-e2e.mjs) and (b) `createAssetMaidEngine`.
+ * The SAME driver runs against (a) the ORIGINAL 0.9.90 bundle objects wired exactly like Asset Maid's boot code
+ * (p120 @185030-185085; see the generator S/engine-build/gen/engine-e2e.mjs) and (b) `createAssetMaidEngine`.
  * A scripted analyzer client returns canned raw responses; capturing provider adapters record every ImageRequest.
  */
 import { toPlain } from "./plain";
@@ -15,7 +15,8 @@ export interface EngineE2EScenario {
   responses: string[];
   /** Function-free part of OrchestratorRunInput. */
   runInput: Record<string, any>;
-  promptInputs?: Record<string, unknown>;
+  /** Asset Maid config snapshot handed to the engine (`getConfig`): active Atelier preset + directing document. */
+  config?: Record<string, unknown>;
   v5PromptContext?: Record<string, unknown>;
   seedSetting?: { key?: string; seed: string; fixed: boolean };
 }
@@ -24,6 +25,7 @@ export interface EngineFactoryDeps {
   analyzerClient: { complete(config: any, messages: any[], options?: any): Promise<any> };
   imageProviders: Record<string, any>;
   comfyUIReferences: { prepare(reference: any): Promise<any> };
+  getConfig?: () => unknown;
 }
 
 export type EngineFactory = (deps: EngineFactoryDeps) => { run(input: any): Promise<any> };
@@ -71,12 +73,12 @@ export async function runEngineScenario(factory: EngineFactory, scenario: Engine
   });
   const engine = factory({
     analyzerClient,
-    imageProviders: { novelai: adapter("novelai"), "chan-server": adapter("chan-server"), "comfy-ui": adapter("comfy-ui") },
+    imageProviders: { novelai: adapter("novelai"), "comfy-ui": adapter("comfy-ui") },
     comfyUIReferences: { prepare: async () => ({ bytes: new Uint8Array([7]), mimeType: "image/png", extension: "png" }) },
+    ...(scenario.config ? { getConfig: () => JSON.parse(JSON.stringify(scenario.config)) } : {}),
   });
   const input = {
     ...JSON.parse(JSON.stringify(scenario.runInput)),
-    promptInputs: () => JSON.parse(JSON.stringify(scenario.promptInputs ?? {})),
     v5PromptContext: () => JSON.parse(JSON.stringify(scenario.v5PromptContext ?? {})),
     seedSetting: () => scenario.seedSetting ?? { key: "", seed: "", fixed: false },
     references: () => [],
@@ -85,9 +87,6 @@ export async function runEngineScenario(factory: EngineFactory, scenario: Engine
     onEvent: (e: any) => events.push(toPlain(omit(e, ["session", "analyzerProgress"]))),
     persistGeneratedImage: async (image: any, index: number, count: number) => {
       persisted.push({ index, count, sourceImageToken: image.sourceImageToken });
-    },
-    applyContinuity: async (c: unknown) => {
-      continuity = toPlain(c);
     },
     applyV5Continuity: async (c: unknown) => {
       continuity = toPlain(c);

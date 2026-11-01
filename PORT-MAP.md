@@ -270,6 +270,8 @@ In migrating from RisuAI to Lumiverse, certain legacy or external platform featu
    - Direct binary PDF upload transport for LLM evidence was dropped; text and image inputs are used.
 6. **Multi-Instance Locks**:
    - Multi-instance cross-tab election locks are obsolete because Spindle backend runs as a single service per user.
+7. **Image PDF size limits (AM 0.9.90)**:
+   - The 128 MiB page-image total / separate final PDF size check has no counterpart: there is no PDF analyzer request path.
 
 ### 5.2 Adapted Features
 1. **Swipe Message Identity**:
@@ -280,6 +282,21 @@ In migrating from RisuAI to Lumiverse, certain legacy or external platform featu
    - The entire UI is scoped to `.ii-am-root` using a build-time Tailwind CSS scoper (`src/build/build-css.ts`), preventing style leaks into the Lumiverse host app.
 4. **Drawer & Inset Integration**:
    - The UI coordinates with the Lumiverse drawer handle (hiding edge handles when open) and visual composer inset (`--ii-am-composer-inset`), ensuring controls never overlap the mobile keyboard or text bar.
+5. **Deleting a character's own artist (AM 0.9.90 default style star)**:
+   - AM sets the character's override to the literal "none" when its selected artist is deleted. The port lets the character follow the default style instead (deliberate divergence; the release notes do not mention it).
+6. **NovelAI V5 Medium (AM 0.9.90)**:
+   - The Medium model goes out as the host request `model` (Lumiverse's `rawRequestOverride` cannot replace the protected `model` key). AM deletes `cfg_rescale`, `qualityToggle` and `skip_cfg_above_sigma`; the override is a deep merge that cannot delete, so the port leaves them out of its override and the host's defaults stay (`cfg_rescale` 0, `qualityToggle` true, `skip_cfg_above_sigma` null). Empty negatives are sent explicitly because the host substitutes a default UC for an empty `negativePrompt`.
+7. **Removed built-in art styles (AM 0.9.90)**:
+   - 0.9.90 ships only the `none` art style. AM simply drops the two former built-ins (`detail_anime_illustration_style`, `comic_page_illustration_style`); the port keeps the look instead: stored entries of them become user styles (English titles unless renamed), and a default or a character's own selection naming one without a stored entry recreates it as a user style with the old prompt / negative (`migrateLegacyBuiltinArtists`, `artists-global` v2).
+8. **Maid Atelier storage (AM 0.9.90)**:
+   - AM keeps `presetCatalog.atelier`, `runtime.instructionChanges`, `runtime.freeGenerationLibrary` and `runtime.analysisExecution` in its settings domain. The port stores the first three plus the execution mode / controls in `config/atelier.json` (atelier.* RPCs; `config.update` refuses those fields). The chat toolbar resolution / AI coordinates stay in `runtime.analysisExecution` of the settings (same split as the toolbar UI).
+   - Document conflicts report `expectedRevision` / `actualRevision` (plus the touched document ids), not AM's base-vs-stored catalog diff: the UI keeps the base catalog it rendered.
+   - New items get English default names ("New preset", "New guideline", "New ratio guideline", "New character guideline", "New outfit guideline", "<name> copy"); error messages are English with the Korean original in `messageKo`.
+   - Legacy directions: the text a user wrote in the 0.9.89 V5 directions (own presets, edited or extended built-ins, changed ratio sizes) is imported once into the guideline library when `config/atelier.json` is first created, under the title "Previous directions", and the previously selected preset stays selected (an unchanged built-in POV / ensemble / comic selection maps to the provided guideline). AM only offers this as a manual import; `atelier.instructions.importLegacyDirections` repeats it on request. `novelai.v5UserDirections` stays readable.
+9. **`presetCatalog.rawJson` (AM 0.9.90)**:
+   - The dead custom V4.5 raw catalog is copied once to `config/legacy/preset-raw-catalog.json` and dropped from the settings on the next settings write.
+10. **AI selection history (AM 0.9.90 zoom)**:
+   - AM reads the compact analyzer record from the PNG metadata. The port keeps it in the pipeline sidecar (`GenerationRecord.analysis`, records above 512 KiB are stored as omitted) and `zoom.getDetails` returns `selectionSummary` with English fallback labels.
 
 ---
 

@@ -6,3 +6,4 @@ export * from "./catalog";
 export * from "./runtime";
 export * from "./analyzer";
 export * from "./compose";
+export * from "./atelier";

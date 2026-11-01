@@ -1,6 +1,6 @@
 # engine/text — paragraph slots, native markup detection, lenient JSON
 
-Typed facade over the verbatim Asset Maid 0.9.88 core (`../core/asset-maid-core.ts`). No algorithm is re-implemented.
+Typed facade over the verbatim Asset Maid 0.9.90 core (`../core/asset-maid-core.ts`). No algorithm is re-implemented.
 
 ## Module map
 | file | content |

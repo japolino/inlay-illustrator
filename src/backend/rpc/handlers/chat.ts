@@ -1,5 +1,5 @@
 /**
- * RPC handlers owned by the `pipeline` module: generation.*, history.*, zoom.*, chatState.*, chatDom.*, webtoon.* (see ./index.ts).
+ * RPC handlers owned by the `pipeline` module: generation.*, history.*, zoom.*, chatDom.* (see ./index.ts).
  * Every handler delegates to `ctx.modules.pipeline` (src/backend/pipeline/controller.ts), except puppet.* (chat image
  * animation, src/backend/puppet/puppet.ts), which only needs the user's services.
  */
@@ -17,13 +17,6 @@ function pipelineOf(ctx: RpcContext): ChatPipeline {
 function need(value: unknown, name: string): string {
   if (typeof value !== "string" || !value.trim()) fail("bad-request", `${name} is required.`);
   return value.trim();
-}
-
-/** Optional webtoon layout width (`stripView` clamps it to 360..690). */
-function stripWidth(value: unknown): number | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "number" || !Number.isFinite(value)) fail("bad-request", "width must be a number.");
-  return value;
 }
 
 const OK = { ok: true } as const;
@@ -82,14 +75,6 @@ export const chatHandlers: HandlerGroup = {
     pipelineOf(ctx).requestAiPromptEdit(need(params.chatId, "chatId"), need(params.slotId, "slotId"), need(params.entryId, "entryId"), params.request ?? { instruction: "", imageToImage: false }),
   "zoom.applyAiPromptEdit": (params, ctx) => pipelineOf(ctx).applyAiPromptEdit(need(params.chatId, "chatId"), need(params.slotId, "slotId"), need(params.proposalId, "proposalId")),
 
-  /* chat state window */
-  "chatState.get": (params, ctx) => pipelineOf(ctx).getChatState(need(params.chatId, "chatId")),
-  "chatState.clear": (params, ctx) => pipelineOf(ctx).clearChatState(need(params.chatId, "chatId"), params.actorKeys),
-  "chatState.set": (params, ctx) => {
-    if (!Number.isSafeInteger(params.baseRevision)) fail("bad-request", "baseRevision is required.");
-    return pipelineOf(ctx).setChatState(need(params.chatId, "chatId"), params.actorState, params.baseRevision);
-  },
-
   /* chat DOM */
   "chatDom.getMessageStates": (params, ctx) => pipelineOf(ctx).getMessageStates(need(params.chatId, "chatId"), params.messageIds),
 
@@ -98,29 +83,4 @@ export const chatHandlers: HandlerGroup = {
   "puppet.rig": async (params, ctx) => ({ state: await puppetService(ctx).rig(need(params.imageId, "imageId"), { force: params.force === true }) }),
   "puppet.setEnabled": async (params, ctx) => ({ state: await puppetService(ctx).setEnabled(need(params.imageId, "imageId"), params.enabled === true) }),
 
-  /* webtoon (experimental) */
-  "webtoon.get": (params, ctx) => pipelineOf(ctx).getWebtoon(need(params.chatId, "chatId"), need(params.messageKey, "messageKey"), stripWidth(params.width)),
-  "webtoon.rerollPanel": (params, ctx) => pipelineOf(ctx).rerollWebtoonPanel(need(params.chatId, "chatId"), need(params.messageKey, "messageKey"), need(params.panelId, "panelId")),
-  "webtoon.editText": (params, ctx) => {
-    if (!Number.isSafeInteger(params.textIndex) || params.textIndex < 0) fail("bad-request", "textIndex is required.");
-    if (typeof params.text !== "string") fail("bad-request", "text is required.");
-    return pipelineOf(ctx).editWebtoonText({
-      chatId: need(params.chatId, "chatId"),
-      messageKey: need(params.messageKey, "messageKey"),
-      panelId: need(params.panelId, "panelId"),
-      textIndex: params.textIndex,
-      text: params.text,
-      width: stripWidth(params.width),
-    });
-  },
-  "webtoon.selectTake": (params, ctx) => {
-    if (!Number.isSafeInteger(params.take) || params.take < 0) fail("bad-request", "take is required.");
-    return pipelineOf(ctx).selectWebtoonTake({
-      chatId: need(params.chatId, "chatId"),
-      messageKey: need(params.messageKey, "messageKey"),
-      panelId: need(params.panelId, "panelId"),
-      take: params.take,
-      width: stripWidth(params.width),
-    });
-  },
 };

@@ -1,0 +1,5390 @@
+{
+ "sequence": {
+  "chatKey": "chat-key",
+  "turn1": {
+   "continuity": {
+    "actors": {
+     "lore:alice": {
+      "identity": {
+       "kind": "lorebook_prompt_key",
+       "value": "lore:alice"
+      },
+      "storageKey": "lore:alice",
+      "characterName": "",
+      "groups": {},
+      "counters": {},
+      "turn": 0,
+      "expires": {},
+      "passthrough": {
+       "naturalLanguage": {
+        "pose": "leaning forward slightly"
+       }
+      }
+     },
+     "persona:persona::p1": {
+      "identity": {
+       "kind": "persona_reference",
+       "value": "persona::p1"
+      },
+      "storageKey": "persona:persona::p1",
+      "characterName": "",
+      "groups": {},
+      "counters": {},
+      "turn": 0,
+      "expires": {},
+      "passthrough": {}
+     },
+     "lore:bob": {
+      "identity": {
+       "kind": "lorebook_prompt_key",
+       "value": "lore:bob"
+      },
+      "storageKey": "lore:bob",
+      "characterName": "",
+      "groups": {},
+      "counters": {},
+      "turn": 0,
+      "expires": {},
+      "passthrough": {
+       "naturalLanguage": {
+        "pose": "hands on the window sill"
+       }
+      }
+     }
+    },
+    "scene": {
+     "backgroundTags": [
+      "staff_room",
+      "window"
+     ],
+     "locationTags": [
+      "staff_room"
+     ]
+    },
+    "modifierRefs": {
+     "referenceOnly": true,
+     "actors": {},
+     "interactionReferences": {
+      "records": {
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+        "id": "arm_hug",
+        "mode": "directed",
+        "source": "lore:alice",
+        "target": "persona:persona::p1",
+        "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+        "slotNumber": 0,
+        "sourcePlacementIndex": 0,
+        "targetPlacementIndex": 1,
+        "groups": {}
+       },
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+        "id": "sleeve_grab",
+        "mode": "directed",
+        "source": "lore:alice",
+        "target": "persona:persona::p1",
+        "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+        "slotNumber": 0,
+        "sourcePlacementIndex": 0,
+        "targetPlacementIndex": 1,
+        "groups": {}
+       }
+      },
+      "actors": {
+       "lore:alice": [
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+       ],
+       "persona:persona::p1": [
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+       ],
+       "lore:bob": false
+      }
+     },
+     "referenceExclusions": {
+      "catalog": "fnv1a64-554a124a78533747",
+      "actors": {
+       "lore:alice": [],
+       "persona:persona::p1": [],
+       "lore:bob": []
+      },
+      "scene": []
+     },
+     "global": {
+      "environment.setting": [
+       "indoors"
+      ],
+      "scene.free.location": [
+       "staff_room",
+       "window"
+      ]
+     }
+    },
+    "outfitRefs": {
+     "actors": {
+      "lore:alice": {
+       "outfitId": "outfit_1",
+       "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers",
+       "formId": "form_default",
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       }
+      },
+      "persona::p1": {
+       "outfitId": "outfit_1",
+       "description": "black hoodie, jeans, sneakers",
+       "formId": "form_default",
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       }
+      },
+      "lore:bob": {
+       "outfitId": "outfit_1",
+       "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+       "formId": "form_default",
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       }
+      }
+     }
+    },
+    "sceneLayouts": [
+     {
+      "sizeId": 1,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:bob"
+        },
+        "center": {
+         "x": 0.5,
+         "y": 0.45
+        },
+        "facing": {
+         "id": "facing_away"
+        }
+       }
+      ]
+     },
+     {
+      "sizeId": 2,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "center": {
+         "x": 0.35,
+         "y": 0.5
+        }
+       },
+       {
+        "identity": {
+         "kind": "persona_reference",
+         "value": "persona::p1"
+        },
+        "center": {
+         "x": 0.7,
+         "y": 0.5
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "chatIndex": 0,
+   "messageIndex": 1,
+   "messageId": "id:msg-1",
+   "historyRevisionId": "rev-1",
+   "historyRevisionOrder": 1,
+   "now": 1700000000000
+  },
+  "turn2": {
+   "continuity": {
+    "actors": {
+     "lore:alice": {
+      "identity": {
+       "kind": "lorebook_prompt_key",
+       "value": "lore:alice"
+      },
+      "storageKey": "lore:alice",
+      "characterName": "",
+      "groups": {},
+      "counters": {},
+      "turn": 0,
+      "expires": {},
+      "passthrough": {}
+     }
+    },
+    "modifierRefs": {
+     "referenceOnly": true,
+     "interactionReferences": {
+      "records": {},
+      "actors": {
+       "lore:alice": false
+      }
+     },
+     "referenceExclusions": {
+      "catalog": "fnv1a64-554a124a78533747",
+      "actors": {
+       "lore:alice": []
+      },
+      "scene": []
+     },
+     "actors": {},
+     "global": {}
+    },
+    "outfitRefs": {
+     "actors": {
+      "lore:alice": {
+       "outfitId": "outfit_1",
+       "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers",
+       "formId": "form_default",
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       }
+      },
+      "persona::p1": {
+       "outfitId": "outfit_1",
+       "description": "black hoodie, jeans, sneakers",
+       "formId": "form_default",
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       }
+      },
+      "lore:bob": {
+       "outfitId": "outfit_1",
+       "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+       "formId": "form_default",
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       }
+      }
+     }
+    },
+    "participants": {
+     "sceneLayouts": [
+      {
+       "sizeId": 1,
+       "actors": [
+        {
+         "identity": {
+          "kind": "lorebook_prompt_key",
+          "value": "lore:bob"
+         },
+         "center": {
+          "x": 0.5,
+          "y": 0.45
+         },
+         "facing": {
+          "id": "facing_away"
+         }
+        }
+       ]
+      },
+      {
+       "sizeId": 2,
+       "actors": [
+        {
+         "identity": {
+          "kind": "lorebook_prompt_key",
+          "value": "lore:alice"
+         },
+         "center": {
+          "x": 0.35,
+          "y": 0.5
+         }
+        },
+        {
+         "identity": {
+          "kind": "persona_reference",
+          "value": "persona::p1"
+         },
+         "center": {
+          "x": 0.7,
+          "y": 0.5
+         }
+        }
+       ]
+      }
+     ]
+    },
+    "sceneLayouts": [
+     {
+      "sizeId": 1,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "center": {
+         "x": 0.5,
+         "y": 0.5
+        }
+       }
+      ]
+     },
+     {
+      "sizeId": 1,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:bob"
+        },
+        "center": {
+         "x": 0.5,
+         "y": 0.45
+        },
+        "facing": {
+         "id": "facing_away"
+        }
+       }
+      ]
+     },
+     {
+      "sizeId": 2,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "center": {
+         "x": 0.35,
+         "y": 0.5
+        }
+       },
+       {
+        "identity": {
+         "kind": "persona_reference",
+         "value": "persona::p1"
+        },
+        "center": {
+         "x": 0.7,
+         "y": 0.5
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "chatIndex": 0,
+   "messageIndex": 3,
+   "messageId": "id:msg-3",
+   "historyRevisionId": "rev-3",
+   "historyRevisionOrder": 1,
+   "now": 1700000100000
+  },
+  "transcript": [
+   {
+    "role": "user",
+    "data": "Hello.",
+    "chatId": "msg-0"
+   },
+   {
+    "role": "char",
+    "data": "Alice waves at the school gate.",
+    "chatId": "msg-1"
+   },
+   {
+    "role": "user",
+    "data": "Again.",
+    "chatId": "msg-2"
+   },
+   {
+    "role": "char",
+    "data": "Alice smiles in the staff room.",
+    "chatId": "msg-3"
+   }
+  ]
+ },
+ "expected": {
+  "empty": {
+   "version": 1,
+   "scenes": {},
+   "characters": {},
+   "modifierRefs": {},
+   "outfitRefs": {},
+   "recentCheckpoints": {}
+  },
+  "s1": {
+   "version": 1,
+   "scenes": {
+    "chat-key": {
+     "backgroundTags": [
+      "staff_room",
+      "window"
+     ],
+     "locationTags": [
+      "staff_room"
+     ],
+     "updatedAt": 1700000000000,
+     "updatedAtChatIndex": 0,
+     "updatedAtMessageIndex": 1,
+     "updatedAtMessageId": "id:msg-1"
+    }
+   },
+   "characters": {
+    "chat-key": {
+     "lore:alice": {
+      "characterName": "",
+      "naturalLanguage": {
+       "pose": "leaning forward slightly"
+      },
+      "updatedAt": 1700000000000,
+      "updatedAtChatIndex": 0,
+      "updatedAtMessageIndex": 1,
+      "updatedAtMessageId": "id:msg-1"
+     },
+     "lore:bob": {
+      "characterName": "",
+      "naturalLanguage": {
+       "pose": "hands on the window sill"
+      },
+      "updatedAt": 1700000000000,
+      "updatedAtChatIndex": 0,
+      "updatedAtMessageIndex": 1,
+      "updatedAtMessageId": "id:msg-1"
+     }
+    }
+   },
+   "modifierRefs": {
+    "chat-key": {
+     "global": {
+      "environment.setting": [
+       "indoors"
+      ],
+      "scene.free.location": [
+       "staff_room",
+       "window"
+      ]
+     },
+     "actors": {},
+     "interactionReferences": {
+      "records": {
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+        "id": "arm_hug",
+        "mode": "directed",
+        "source": "lore:alice",
+        "target": "persona:persona::p1",
+        "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+        "slotNumber": 0,
+        "sourcePlacementIndex": 0,
+        "targetPlacementIndex": 1,
+        "groups": {}
+       },
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+        "id": "sleeve_grab",
+        "mode": "directed",
+        "source": "lore:alice",
+        "target": "persona:persona::p1",
+        "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+        "slotNumber": 0,
+        "sourcePlacementIndex": 0,
+        "targetPlacementIndex": 1,
+        "groups": {}
+       }
+      },
+      "actors": {
+       "lore:alice": [
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+       ],
+       "persona:persona::p1": [
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+       ],
+       "lore:bob": false
+      }
+     },
+     "referenceOnly": true,
+     "referenceExclusions": {
+      "catalog": "fnv1a64-554a124a78533747",
+      "actors": {},
+      "scene": []
+     },
+     "updatedAt": 1700000000000,
+     "updatedAtChatIndex": 0,
+     "updatedAtMessageIndex": 1,
+     "updatedAtMessageId": "id:msg-1"
+    }
+   },
+   "outfitRefs": {
+    "chat-key": {
+     "actors": {
+      "lore:alice": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+      },
+      "persona::p1": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "black hoodie, jeans, sneakers"
+      },
+      "lore:bob": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+      }
+     },
+     "updatedAt": 1700000000000,
+     "updatedAtChatIndex": 0,
+     "updatedAtMessageIndex": 1,
+     "updatedAtMessageId": "id:msg-1"
+    }
+   },
+   "recentCheckpoints": {
+    "chat-key": [
+     {
+      "messageId": "id:msg-1",
+      "messageIndex": 1,
+      "historyRevisionId": "rev-1",
+      "historyRevisionOrder": 1,
+      "capturedAt": 1700000000000,
+      "scene": {
+       "backgroundTags": [
+        "staff_room",
+        "window"
+       ],
+       "locationTags": [
+        "staff_room"
+       ],
+       "updatedAt": 1700000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 1,
+       "updatedAtMessageId": "id:msg-1"
+      },
+      "characters": {
+       "lore:alice": {
+        "characterName": "",
+        "naturalLanguage": {
+         "pose": "leaning forward slightly"
+        },
+        "updatedAt": 1700000000000,
+        "updatedAtChatIndex": 0,
+        "updatedAtMessageIndex": 1,
+        "updatedAtMessageId": "id:msg-1"
+       },
+       "lore:bob": {
+        "characterName": "",
+        "naturalLanguage": {
+         "pose": "hands on the window sill"
+        },
+        "updatedAt": 1700000000000,
+        "updatedAtChatIndex": 0,
+        "updatedAtMessageIndex": 1,
+        "updatedAtMessageId": "id:msg-1"
+       }
+      },
+      "modifierRefs": {
+       "global": {
+        "environment.setting": [
+         "indoors"
+        ],
+        "scene.free.location": [
+         "staff_room",
+         "window"
+        ]
+       },
+       "actors": {},
+       "interactionReferences": {
+        "records": {
+         "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+          "id": "arm_hug",
+          "mode": "directed",
+          "source": "lore:alice",
+          "target": "persona:persona::p1",
+          "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+          "slotNumber": 0,
+          "sourcePlacementIndex": 0,
+          "targetPlacementIndex": 1,
+          "groups": {}
+         },
+         "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+          "id": "sleeve_grab",
+          "mode": "directed",
+          "source": "lore:alice",
+          "target": "persona:persona::p1",
+          "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+          "slotNumber": 0,
+          "sourcePlacementIndex": 0,
+          "targetPlacementIndex": 1,
+          "groups": {}
+         }
+        },
+        "actors": {
+         "lore:alice": [
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+         ],
+         "persona:persona::p1": [
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+         ],
+         "lore:bob": false
+        }
+       },
+       "referenceOnly": true,
+       "referenceExclusions": {
+        "catalog": "fnv1a64-554a124a78533747",
+        "actors": {},
+        "scene": []
+       },
+       "updatedAt": 1700000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 1,
+       "updatedAtMessageId": "id:msg-1"
+      },
+      "outfitRefs": {
+       "actors": {
+        "lore:alice": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+        },
+        "persona::p1": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "black hoodie, jeans, sneakers"
+        },
+        "lore:bob": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+        }
+       },
+       "updatedAt": 1700000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 1,
+       "updatedAtMessageId": "id:msg-1"
+      },
+      "participants": {
+       "characterKeys": [
+        "lore:alice",
+        "lore:bob"
+       ],
+       "personaKeys": [
+        "persona::p1"
+       ],
+       "sceneLayouts": [
+        {
+         "sizeId": 1,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:bob"
+           },
+           "center": {
+            "x": 0.5,
+            "y": 0.45
+           },
+           "facing": {
+            "id": "facing_away"
+           }
+          }
+         ]
+        },
+        {
+         "sizeId": 2,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:alice"
+           },
+           "center": {
+            "x": 0.35,
+            "y": 0.5
+           }
+          },
+          {
+           "identity": {
+            "kind": "persona_reference",
+            "value": "persona::p1"
+           },
+           "center": {
+            "x": 0.7,
+            "y": 0.5
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  "snapshot1": {
+   "scene": {
+    "backgroundTags": [
+     "staff_room",
+     "window"
+    ],
+    "locationTags": [
+     "staff_room"
+    ]
+   },
+   "characters": {
+    "lore:alice": {
+     "naturalLanguage": {
+      "pose": "leaning forward slightly"
+     }
+    },
+    "lore:bob": {
+     "naturalLanguage": {
+      "pose": "hands on the window sill"
+     }
+    }
+   },
+   "modifierRefs": {
+    "global": {
+     "environment.setting": [
+      "indoors"
+     ],
+     "scene.free.location": [
+      "staff_room",
+      "window"
+     ]
+    },
+    "interactionReferences": {
+     "records": {
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+       "id": "arm_hug",
+       "mode": "directed",
+       "source": "lore:alice",
+       "target": "persona:persona::p1",
+       "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+       "slotNumber": 0,
+       "sourcePlacementIndex": 0,
+       "targetPlacementIndex": 1
+      },
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+       "id": "sleeve_grab",
+       "mode": "directed",
+       "source": "lore:alice",
+       "target": "persona:persona::p1",
+       "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+       "slotNumber": 0,
+       "sourcePlacementIndex": 0,
+       "targetPlacementIndex": 1
+      }
+     },
+     "actors": {
+      "lore:alice": [
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+      ],
+      "persona:persona::p1": [
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+      ],
+      "lore:bob": false
+     }
+    },
+    "referenceOnly": true,
+    "referenceExclusions": {
+     "catalog": "fnv1a64-554a124a78533747"
+    }
+   },
+   "outfitRefs": {
+    "actors": {
+     "lore:alice": {
+      "parts": {
+       "head": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "top": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "bottom": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "legs": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "feet": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       }
+      },
+      "formId": "form_default",
+      "outfitId": "outfit_1",
+      "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+     },
+     "persona::p1": {
+      "parts": {
+       "head": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "top": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "bottom": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "legs": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "feet": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       }
+      },
+      "formId": "form_default",
+      "outfitId": "outfit_1",
+      "description": "black hoodie, jeans, sneakers"
+     },
+     "lore:bob": {
+      "parts": {
+       "head": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "top": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "bottom": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "legs": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "feet": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       }
+      },
+      "formId": "form_default",
+      "outfitId": "outfit_1",
+      "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+     }
+    }
+   },
+   "participants": {
+    "characterKeys": [
+     "lore:alice",
+     "lore:bob"
+    ],
+    "personaKeys": [
+     "persona::p1"
+    ],
+    "sceneLayouts": [
+     {
+      "sizeId": 1,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:bob"
+        },
+        "center": {
+         "x": 0.5,
+         "y": 0.45
+        },
+        "facing": {
+         "id": "facing_away"
+        }
+       }
+      ]
+     },
+     {
+      "sizeId": 2,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "center": {
+         "x": 0.35,
+         "y": 0.5
+        }
+       },
+       {
+        "identity": {
+         "kind": "persona_reference",
+         "value": "persona::p1"
+        },
+        "center": {
+         "x": 0.7,
+         "y": 0.5
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "basis1": {
+   "actors": {
+    "lore:alice": {
+     "identity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:alice"
+     },
+     "storageKey": "lore:alice",
+     "characterName": "",
+     "groups": {},
+     "counters": {},
+     "turn": 0,
+     "expires": {},
+     "passthrough": {
+      "naturalLanguage": {
+       "pose": "leaning forward slightly"
+      }
+     }
+    },
+    "lore:bob": {
+     "identity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:bob"
+     },
+     "storageKey": "lore:bob",
+     "characterName": "",
+     "groups": {},
+     "counters": {},
+     "turn": 0,
+     "expires": {},
+     "passthrough": {
+      "naturalLanguage": {
+       "pose": "hands on the window sill"
+      }
+     }
+    }
+   },
+   "scene": {
+    "backgroundTags": [
+     "staff_room",
+     "window"
+    ],
+    "locationTags": [
+     "staff_room"
+    ]
+   },
+   "modifierRefs": {
+    "global": {
+     "environment.setting": [
+      "indoors"
+     ],
+     "scene.free.location": [
+      "staff_room",
+      "window"
+     ]
+    },
+    "interactionReferences": {
+     "records": {
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+       "id": "arm_hug",
+       "mode": "directed",
+       "source": "lore:alice",
+       "target": "persona:persona::p1",
+       "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+       "slotNumber": 0,
+       "sourcePlacementIndex": 0,
+       "targetPlacementIndex": 1
+      },
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+       "id": "sleeve_grab",
+       "mode": "directed",
+       "source": "lore:alice",
+       "target": "persona:persona::p1",
+       "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+       "slotNumber": 0,
+       "sourcePlacementIndex": 0,
+       "targetPlacementIndex": 1
+      }
+     },
+     "actors": {
+      "lore:alice": [
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+      ],
+      "persona:persona::p1": [
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+      ],
+      "lore:bob": false
+     }
+    },
+    "referenceOnly": true,
+    "referenceExclusions": {
+     "catalog": "fnv1a64-554a124a78533747"
+    }
+   },
+   "outfitRefs": {
+    "actors": {
+     "lore:alice": {
+      "parts": {
+       "head": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "top": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "bottom": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "legs": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "feet": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       }
+      },
+      "formId": "form_default",
+      "outfitId": "outfit_1",
+      "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+     },
+     "persona::p1": {
+      "parts": {
+       "head": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "top": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "bottom": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "legs": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "feet": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       }
+      },
+      "formId": "form_default",
+      "outfitId": "outfit_1",
+      "description": "black hoodie, jeans, sneakers"
+     },
+     "lore:bob": {
+      "parts": {
+       "head": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "top": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "bottom": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "legs": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "feet": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       }
+      },
+      "formId": "form_default",
+      "outfitId": "outfit_1",
+      "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+     }
+    }
+   },
+   "participants": {
+    "characterKeys": [
+     "lore:alice",
+     "lore:bob"
+    ],
+    "personaKeys": [
+     "persona::p1"
+    ],
+    "sceneLayouts": [
+     {
+      "sizeId": 1,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:bob"
+        },
+        "center": {
+         "x": 0.5,
+         "y": 0.45
+        },
+        "facing": {
+         "id": "facing_away"
+        }
+       }
+      ]
+     },
+     {
+      "sizeId": 2,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "center": {
+         "x": 0.35,
+         "y": 0.5
+        }
+       },
+       {
+        "identity": {
+         "kind": "persona_reference",
+         "value": "persona::p1"
+        },
+        "center": {
+         "x": 0.7,
+         "y": 0.5
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "sceneLayouts": [
+    {
+     "sizeId": 1,
+     "actors": [
+      {
+       "identity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "center": {
+        "x": 0.5,
+        "y": 0.45
+       },
+       "facing": {
+        "id": "facing_away"
+       }
+      }
+     ]
+    },
+    {
+     "sizeId": 2,
+     "actors": [
+      {
+       "identity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "center": {
+        "x": 0.35,
+        "y": 0.5
+       }
+      },
+      {
+       "identity": {
+        "kind": "persona_reference",
+        "value": "persona::p1"
+       },
+       "center": {
+        "x": 0.7,
+        "y": 0.5
+       }
+      }
+     ]
+    }
+   ]
+  },
+  "hasStored": {
+   "s0": false,
+   "s1": true,
+   "other": false
+  },
+  "commit1": {
+   "first": "committed",
+   "again": "already-committed",
+   "otherRevision": "missing",
+   "unknownMessage": "missing"
+  },
+  "store1": {
+   "messages": {
+    "msg-1": {
+     "kind": "inline",
+     "generations": [
+      {
+       "id": "rev-1",
+       "continuity": {
+        "scene": {
+         "backgroundTags": [
+          "staff_room",
+          "window"
+         ],
+         "locationTags": [
+          "staff_room"
+         ]
+        },
+        "characters": {
+         "lore:alice": {
+          "naturalLanguage": {
+           "pose": "leaning forward slightly"
+          }
+         },
+         "lore:bob": {
+          "naturalLanguage": {
+           "pose": "hands on the window sill"
+          }
+         }
+        },
+        "modifierRefs": {
+         "global": {
+          "environment.setting": [
+           "indoors"
+          ],
+          "scene.free.location": [
+           "staff_room",
+           "window"
+          ]
+         },
+         "interactionReferences": {
+          "records": {
+           "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+            "id": "arm_hug",
+            "mode": "directed",
+            "source": "lore:alice",
+            "target": "persona:persona::p1",
+            "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+            "slotNumber": 0,
+            "sourcePlacementIndex": 0,
+            "targetPlacementIndex": 1
+           },
+           "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+            "id": "sleeve_grab",
+            "mode": "directed",
+            "source": "lore:alice",
+            "target": "persona:persona::p1",
+            "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+            "slotNumber": 0,
+            "sourcePlacementIndex": 0,
+            "targetPlacementIndex": 1
+           }
+          },
+          "actors": {
+           "lore:alice": [
+            "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+            "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+           ],
+           "persona:persona::p1": [
+            "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+            "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+           ],
+           "lore:bob": false
+          }
+         },
+         "referenceOnly": true,
+         "referenceExclusions": {
+          "catalog": "fnv1a64-554a124a78533747"
+         }
+        },
+        "outfitRefs": {
+         "actors": {
+          "lore:alice": {
+           "parts": {
+            "head": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "top": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "bottom": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "legs": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "feet": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            }
+           },
+           "formId": "form_default",
+           "outfitId": "outfit_1",
+           "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+          },
+          "persona::p1": {
+           "parts": {
+            "head": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "top": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "bottom": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "legs": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "feet": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            }
+           },
+           "formId": "form_default",
+           "outfitId": "outfit_1",
+           "description": "black hoodie, jeans, sneakers"
+          },
+          "lore:bob": {
+           "parts": {
+            "head": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "top": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "bottom": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "legs": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "feet": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            }
+           },
+           "formId": "form_default",
+           "outfitId": "outfit_1",
+           "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+          }
+         }
+        },
+        "participants": {
+         "characterKeys": [
+          "lore:alice",
+          "lore:bob"
+         ],
+         "personaKeys": [
+          "persona::p1"
+         ],
+         "sceneLayouts": [
+          {
+           "sizeId": 1,
+           "actors": [
+            {
+             "identity": {
+              "kind": "lorebook_prompt_key",
+              "value": "lore:bob"
+             },
+             "center": {
+              "x": 0.5,
+              "y": 0.45
+             },
+             "facing": {
+              "id": "facing_away"
+             }
+            }
+           ]
+          },
+          {
+           "sizeId": 2,
+           "actors": [
+            {
+             "identity": {
+              "kind": "lorebook_prompt_key",
+              "value": "lore:alice"
+             },
+             "center": {
+              "x": 0.35,
+              "y": 0.5
+             }
+            },
+            {
+             "identity": {
+              "kind": "persona_reference",
+              "value": "persona::p1"
+             },
+             "center": {
+              "x": 0.7,
+              "y": 0.5
+             }
+            }
+           ]
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "rev-1b"
+      }
+     ]
+    },
+    "msg-3": {
+     "kind": "inline",
+     "generations": [
+      {
+       "id": "rev-3"
+      }
+     ]
+    }
+   }
+  },
+  "readCheckpoint": {
+   "messageId": "id:id:msg-1",
+   "messageIndex": 1,
+   "historyRevisionId": "rev-1",
+   "historyRevisionOrder": 0,
+   "capturedAt": 2000,
+   "scene": {
+    "backgroundTags": [
+     "staff_room",
+     "window"
+    ],
+    "locationTags": [
+     "staff_room"
+    ]
+   },
+   "characters": {
+    "lore:alice": {
+     "naturalLanguage": {
+      "pose": "leaning forward slightly"
+     }
+    },
+    "lore:bob": {
+     "naturalLanguage": {
+      "pose": "hands on the window sill"
+     }
+    }
+   },
+   "modifierRefs": {
+    "global": {
+     "environment.setting": [
+      "indoors"
+     ],
+     "scene.free.location": [
+      "staff_room",
+      "window"
+     ]
+    },
+    "interactionReferences": {
+     "records": {
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+       "id": "arm_hug",
+       "mode": "directed",
+       "source": "lore:alice",
+       "target": "persona:persona::p1",
+       "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+       "slotNumber": 0,
+       "sourcePlacementIndex": 0,
+       "targetPlacementIndex": 1
+      },
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+       "id": "sleeve_grab",
+       "mode": "directed",
+       "source": "lore:alice",
+       "target": "persona:persona::p1",
+       "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+       "slotNumber": 0,
+       "sourcePlacementIndex": 0,
+       "targetPlacementIndex": 1
+      }
+     },
+     "actors": {
+      "lore:alice": [
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+      ],
+      "persona:persona::p1": [
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+      ],
+      "lore:bob": false
+     }
+    },
+    "referenceOnly": true,
+    "referenceExclusions": {
+     "catalog": "fnv1a64-554a124a78533747"
+    }
+   },
+   "outfitRefs": {
+    "actors": {
+     "lore:alice": {
+      "parts": {
+       "head": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "top": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "bottom": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "legs": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "feet": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       }
+      },
+      "formId": "form_default",
+      "outfitId": "outfit_1",
+      "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+     },
+     "persona::p1": {
+      "parts": {
+       "head": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "top": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "bottom": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "legs": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "feet": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       }
+      },
+      "formId": "form_default",
+      "outfitId": "outfit_1",
+      "description": "black hoodie, jeans, sneakers"
+     },
+     "lore:bob": {
+      "parts": {
+       "head": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "top": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "bottom": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "legs": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "feet": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       }
+      },
+      "formId": "form_default",
+      "outfitId": "outfit_1",
+      "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+     }
+    }
+   },
+   "participants": {
+    "characterKeys": [
+     "lore:alice",
+     "lore:bob"
+    ],
+    "personaKeys": [
+     "persona::p1"
+    ],
+    "sceneLayouts": [
+     {
+      "sizeId": 1,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:bob"
+        },
+        "center": {
+         "x": 0.5,
+         "y": 0.45
+        },
+        "facing": {
+         "id": "facing_away"
+        }
+       }
+      ]
+     },
+     {
+      "sizeId": 2,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "center": {
+         "x": 0.35,
+         "y": 0.5
+        }
+       },
+       {
+        "identity": {
+         "kind": "persona_reference",
+         "value": "persona::p1"
+        },
+        "center": {
+         "x": 0.7,
+         "y": 0.5
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "rebuiltFromTranscript": {
+   "version": 1,
+   "scenes": {
+    "chat-key": {
+     "backgroundTags": [
+      "staff_room",
+      "window"
+     ],
+     "locationTags": [
+      "staff_room"
+     ],
+     "updatedAt": 0,
+     "updatedAtChatIndex": -1
+    }
+   },
+   "characters": {
+    "chat-key": {
+     "lore:alice": {
+      "characterName": "",
+      "naturalLanguage": {
+       "pose": "leaning forward slightly"
+      },
+      "updatedAt": 0,
+      "updatedAtChatIndex": -1
+     },
+     "lore:bob": {
+      "characterName": "",
+      "naturalLanguage": {
+       "pose": "hands on the window sill"
+      },
+      "updatedAt": 0,
+      "updatedAtChatIndex": -1
+     }
+    }
+   },
+   "modifierRefs": {
+    "chat-key": {
+     "global": {
+      "environment.setting": [
+       "indoors"
+      ],
+      "scene.free.location": [
+       "staff_room",
+       "window"
+      ]
+     },
+     "actors": {},
+     "interactionReferences": {
+      "records": {
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+        "id": "arm_hug",
+        "mode": "directed",
+        "source": "lore:alice",
+        "target": "persona:persona::p1",
+        "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+        "slotNumber": 0,
+        "sourcePlacementIndex": 0,
+        "targetPlacementIndex": 1,
+        "groups": {}
+       },
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+        "id": "sleeve_grab",
+        "mode": "directed",
+        "source": "lore:alice",
+        "target": "persona:persona::p1",
+        "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+        "slotNumber": 0,
+        "sourcePlacementIndex": 0,
+        "targetPlacementIndex": 1,
+        "groups": {}
+       }
+      },
+      "actors": {
+       "lore:alice": [
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+       ],
+       "persona:persona::p1": [
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+       ],
+       "lore:bob": false
+      }
+     },
+     "referenceOnly": true,
+     "referenceExclusions": {
+      "catalog": "fnv1a64-554a124a78533747",
+      "actors": {},
+      "scene": []
+     }
+    }
+   },
+   "outfitRefs": {
+    "chat-key": {
+     "actors": {
+      "lore:alice": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+      },
+      "persona::p1": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "black hoodie, jeans, sneakers"
+      },
+      "lore:bob": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+      }
+     }
+    }
+   },
+   "recentCheckpoints": {
+    "chat-key": [
+     {
+      "messageId": "id:msg-1",
+      "messageIndex": 1,
+      "historyRevisionId": "rev-1",
+      "historyRevisionOrder": 0,
+      "capturedAt": 2000,
+      "scene": {
+       "backgroundTags": [
+        "staff_room",
+        "window"
+       ],
+       "locationTags": [
+        "staff_room"
+       ],
+       "updatedAt": 0,
+       "updatedAtChatIndex": -1
+      },
+      "characters": {
+       "lore:alice": {
+        "characterName": "",
+        "naturalLanguage": {
+         "pose": "leaning forward slightly"
+        },
+        "updatedAt": 0,
+        "updatedAtChatIndex": -1
+       },
+       "lore:bob": {
+        "characterName": "",
+        "naturalLanguage": {
+         "pose": "hands on the window sill"
+        },
+        "updatedAt": 0,
+        "updatedAtChatIndex": -1
+       }
+      },
+      "modifierRefs": {
+       "global": {
+        "environment.setting": [
+         "indoors"
+        ],
+        "scene.free.location": [
+         "staff_room",
+         "window"
+        ]
+       },
+       "actors": {},
+       "interactionReferences": {
+        "records": {
+         "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+          "id": "arm_hug",
+          "mode": "directed",
+          "source": "lore:alice",
+          "target": "persona:persona::p1",
+          "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+          "slotNumber": 0,
+          "sourcePlacementIndex": 0,
+          "targetPlacementIndex": 1,
+          "groups": {}
+         },
+         "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+          "id": "sleeve_grab",
+          "mode": "directed",
+          "source": "lore:alice",
+          "target": "persona:persona::p1",
+          "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+          "slotNumber": 0,
+          "sourcePlacementIndex": 0,
+          "targetPlacementIndex": 1,
+          "groups": {}
+         }
+        },
+        "actors": {
+         "lore:alice": [
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+         ],
+         "persona:persona::p1": [
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+         ],
+         "lore:bob": false
+        }
+       },
+       "referenceOnly": true,
+       "referenceExclusions": {
+        "catalog": "fnv1a64-554a124a78533747",
+        "actors": {},
+        "scene": []
+       }
+      },
+      "outfitRefs": {
+       "actors": {
+        "lore:alice": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+        },
+        "persona::p1": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "black hoodie, jeans, sneakers"
+        },
+        "lore:bob": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+        }
+       }
+      },
+      "participants": {
+       "characterKeys": [
+        "lore:alice",
+        "lore:bob"
+       ],
+       "personaKeys": [
+        "persona::p1"
+       ],
+       "sceneLayouts": [
+        {
+         "sizeId": 1,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:bob"
+           },
+           "center": {
+            "x": 0.5,
+            "y": 0.45
+           },
+           "facing": {
+            "id": "facing_away"
+           }
+          }
+         ]
+        },
+        {
+         "sizeId": 2,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:alice"
+           },
+           "center": {
+            "x": 0.35,
+            "y": 0.5
+           }
+          },
+          {
+           "identity": {
+            "kind": "persona_reference",
+            "value": "persona::p1"
+           },
+           "center": {
+            "x": 0.7,
+            "y": 0.5
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  "rebuiltAtMsg3": {
+   "version": 1,
+   "scenes": {
+    "chat-key": {
+     "backgroundTags": [
+      "staff_room",
+      "window"
+     ],
+     "locationTags": [
+      "staff_room"
+     ],
+     "updatedAt": 0,
+     "updatedAtChatIndex": -1
+    }
+   },
+   "characters": {
+    "chat-key": {
+     "lore:alice": {
+      "characterName": "",
+      "naturalLanguage": {
+       "pose": "leaning forward slightly"
+      },
+      "updatedAt": 0,
+      "updatedAtChatIndex": -1
+     },
+     "lore:bob": {
+      "characterName": "",
+      "naturalLanguage": {
+       "pose": "hands on the window sill"
+      },
+      "updatedAt": 0,
+      "updatedAtChatIndex": -1
+     }
+    }
+   },
+   "modifierRefs": {
+    "chat-key": {
+     "global": {
+      "environment.setting": [
+       "indoors"
+      ],
+      "scene.free.location": [
+       "staff_room",
+       "window"
+      ]
+     },
+     "actors": {},
+     "interactionReferences": {
+      "records": {
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+        "id": "arm_hug",
+        "mode": "directed",
+        "source": "lore:alice",
+        "target": "persona:persona::p1",
+        "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+        "slotNumber": 0,
+        "sourcePlacementIndex": 0,
+        "targetPlacementIndex": 1,
+        "groups": {}
+       },
+       "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+        "id": "sleeve_grab",
+        "mode": "directed",
+        "source": "lore:alice",
+        "target": "persona:persona::p1",
+        "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+        "slotNumber": 0,
+        "sourcePlacementIndex": 0,
+        "targetPlacementIndex": 1,
+        "groups": {}
+       }
+      },
+      "actors": {
+       "lore:alice": [
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+       ],
+       "persona:persona::p1": [
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+        "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+       ],
+       "lore:bob": false
+      }
+     },
+     "referenceOnly": true,
+     "referenceExclusions": {
+      "catalog": "fnv1a64-554a124a78533747",
+      "actors": {},
+      "scene": []
+     }
+    }
+   },
+   "outfitRefs": {
+    "chat-key": {
+     "actors": {
+      "lore:alice": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+      },
+      "persona::p1": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "black hoodie, jeans, sneakers"
+      },
+      "lore:bob": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+      }
+     }
+    }
+   },
+   "recentCheckpoints": {
+    "chat-key": [
+     {
+      "messageId": "id:msg-1",
+      "messageIndex": 1,
+      "historyRevisionId": "rev-1",
+      "historyRevisionOrder": 0,
+      "capturedAt": 2000,
+      "scene": {
+       "backgroundTags": [
+        "staff_room",
+        "window"
+       ],
+       "locationTags": [
+        "staff_room"
+       ],
+       "updatedAt": 0,
+       "updatedAtChatIndex": -1
+      },
+      "characters": {
+       "lore:alice": {
+        "characterName": "",
+        "naturalLanguage": {
+         "pose": "leaning forward slightly"
+        },
+        "updatedAt": 0,
+        "updatedAtChatIndex": -1
+       },
+       "lore:bob": {
+        "characterName": "",
+        "naturalLanguage": {
+         "pose": "hands on the window sill"
+        },
+        "updatedAt": 0,
+        "updatedAtChatIndex": -1
+       }
+      },
+      "modifierRefs": {
+       "global": {
+        "environment.setting": [
+         "indoors"
+        ],
+        "scene.free.location": [
+         "staff_room",
+         "window"
+        ]
+       },
+       "actors": {},
+       "interactionReferences": {
+        "records": {
+         "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+          "id": "arm_hug",
+          "mode": "directed",
+          "source": "lore:alice",
+          "target": "persona:persona::p1",
+          "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+          "slotNumber": 0,
+          "sourcePlacementIndex": 0,
+          "targetPlacementIndex": 1,
+          "groups": {}
+         },
+         "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+          "id": "sleeve_grab",
+          "mode": "directed",
+          "source": "lore:alice",
+          "target": "persona:persona::p1",
+          "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+          "slotNumber": 0,
+          "sourcePlacementIndex": 0,
+          "targetPlacementIndex": 1,
+          "groups": {}
+         }
+        },
+        "actors": {
+         "lore:alice": [
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+         ],
+         "persona:persona::p1": [
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+         ],
+         "lore:bob": false
+        }
+       },
+       "referenceOnly": true,
+       "referenceExclusions": {
+        "catalog": "fnv1a64-554a124a78533747",
+        "actors": {},
+        "scene": []
+       }
+      },
+      "outfitRefs": {
+       "actors": {
+        "lore:alice": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+        },
+        "persona::p1": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "black hoodie, jeans, sneakers"
+        },
+        "lore:bob": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+        }
+       }
+      },
+      "participants": {
+       "characterKeys": [
+        "lore:alice",
+        "lore:bob"
+       ],
+       "personaKeys": [
+        "persona::p1"
+       ],
+       "sceneLayouts": [
+        {
+         "sizeId": 1,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:bob"
+           },
+           "center": {
+            "x": 0.5,
+            "y": 0.45
+           },
+           "facing": {
+            "id": "facing_away"
+           }
+          }
+         ]
+        },
+        {
+         "sizeId": 2,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:alice"
+           },
+           "center": {
+            "x": 0.35,
+            "y": 0.5
+           }
+          },
+          {
+           "identity": {
+            "kind": "persona_reference",
+            "value": "persona::p1"
+           },
+           "center": {
+            "x": 0.7,
+            "y": 0.5
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  "rebuiltAtMsg1": {
+   "version": 1,
+   "scenes": {},
+   "characters": {},
+   "modifierRefs": {},
+   "outfitRefs": {},
+   "recentCheckpoints": {}
+  },
+  "s2": {
+   "version": 1,
+   "scenes": {},
+   "characters": {},
+   "modifierRefs": {
+    "chat-key": {
+     "global": {},
+     "actors": {},
+     "interactionReferences": {
+      "records": {},
+      "actors": {
+       "lore:alice": false
+      }
+     },
+     "referenceOnly": true,
+     "referenceExclusions": {
+      "catalog": "fnv1a64-554a124a78533747",
+      "actors": {},
+      "scene": []
+     },
+     "updatedAt": 1700000100000,
+     "updatedAtChatIndex": 0,
+     "updatedAtMessageIndex": 3,
+     "updatedAtMessageId": "id:msg-3"
+    }
+   },
+   "outfitRefs": {
+    "chat-key": {
+     "actors": {
+      "lore:alice": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+      },
+      "persona::p1": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "black hoodie, jeans, sneakers"
+      },
+      "lore:bob": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+      }
+     },
+     "updatedAt": 1700000100000,
+     "updatedAtChatIndex": 0,
+     "updatedAtMessageIndex": 3,
+     "updatedAtMessageId": "id:msg-3"
+    }
+   },
+   "recentCheckpoints": {
+    "chat-key": [
+     {
+      "messageId": "id:msg-3",
+      "messageIndex": 3,
+      "historyRevisionId": "rev-3",
+      "historyRevisionOrder": 1,
+      "capturedAt": 1700000100000,
+      "characters": {},
+      "modifierRefs": {
+       "global": {},
+       "actors": {},
+       "interactionReferences": {
+        "records": {},
+        "actors": {
+         "lore:alice": false
+        }
+       },
+       "referenceOnly": true,
+       "referenceExclusions": {
+        "catalog": "fnv1a64-554a124a78533747",
+        "actors": {},
+        "scene": []
+       },
+       "updatedAt": 1700000100000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 3,
+       "updatedAtMessageId": "id:msg-3"
+      },
+      "outfitRefs": {
+       "actors": {
+        "lore:alice": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+        },
+        "persona::p1": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "black hoodie, jeans, sneakers"
+        },
+        "lore:bob": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+        }
+       },
+       "updatedAt": 1700000100000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 3,
+       "updatedAtMessageId": "id:msg-3"
+      },
+      "participants": {
+       "characterKeys": [
+        "lore:alice"
+       ],
+       "personaKeys": [],
+       "sceneLayouts": [
+        {
+         "sizeId": 1,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:alice"
+           },
+           "center": {
+            "x": 0.5,
+            "y": 0.5
+           }
+          }
+         ]
+        },
+        {
+         "sizeId": 1,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:bob"
+           },
+           "center": {
+            "x": 0.5,
+            "y": 0.45
+           },
+           "facing": {
+            "id": "facing_away"
+           }
+          }
+         ]
+        },
+        {
+         "sizeId": 2,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:alice"
+           },
+           "center": {
+            "x": 0.35,
+            "y": 0.5
+           }
+          },
+          {
+           "identity": {
+            "kind": "persona_reference",
+            "value": "persona::p1"
+           },
+           "center": {
+            "x": 0.7,
+            "y": 0.5
+           }
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "messageId": "id:msg-1",
+      "messageIndex": 1,
+      "historyRevisionId": "rev-1",
+      "historyRevisionOrder": 0,
+      "capturedAt": 2000,
+      "scene": {
+       "backgroundTags": [
+        "staff_room",
+        "window"
+       ],
+       "locationTags": [
+        "staff_room"
+       ],
+       "updatedAt": 0,
+       "updatedAtChatIndex": -1
+      },
+      "characters": {
+       "lore:alice": {
+        "characterName": "",
+        "naturalLanguage": {
+         "pose": "leaning forward slightly"
+        },
+        "updatedAt": 0,
+        "updatedAtChatIndex": -1
+       },
+       "lore:bob": {
+        "characterName": "",
+        "naturalLanguage": {
+         "pose": "hands on the window sill"
+        },
+        "updatedAt": 0,
+        "updatedAtChatIndex": -1
+       }
+      },
+      "modifierRefs": {
+       "global": {
+        "environment.setting": [
+         "indoors"
+        ],
+        "scene.free.location": [
+         "staff_room",
+         "window"
+        ]
+       },
+       "actors": {},
+       "interactionReferences": {
+        "records": {
+         "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+          "id": "arm_hug",
+          "mode": "directed",
+          "source": "lore:alice",
+          "target": "persona:persona::p1",
+          "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+          "slotNumber": 0,
+          "sourcePlacementIndex": 0,
+          "targetPlacementIndex": 1,
+          "groups": {}
+         },
+         "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+          "id": "sleeve_grab",
+          "mode": "directed",
+          "source": "lore:alice",
+          "target": "persona:persona::p1",
+          "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+          "slotNumber": 0,
+          "sourcePlacementIndex": 0,
+          "targetPlacementIndex": 1,
+          "groups": {}
+         }
+        },
+        "actors": {
+         "lore:alice": [
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+         ],
+         "persona:persona::p1": [
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+         ],
+         "lore:bob": false
+        }
+       },
+       "referenceOnly": true,
+       "referenceExclusions": {
+        "catalog": "fnv1a64-554a124a78533747",
+        "actors": {},
+        "scene": []
+       }
+      },
+      "outfitRefs": {
+       "actors": {
+        "lore:alice": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+        },
+        "persona::p1": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "black hoodie, jeans, sneakers"
+        },
+        "lore:bob": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+        }
+       }
+      },
+      "participants": {
+       "characterKeys": [
+        "lore:alice",
+        "lore:bob"
+       ],
+       "personaKeys": [
+        "persona::p1"
+       ],
+       "sceneLayouts": [
+        {
+         "sizeId": 1,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:bob"
+           },
+           "center": {
+            "x": 0.5,
+            "y": 0.45
+           },
+           "facing": {
+            "id": "facing_away"
+           }
+          }
+         ]
+        },
+        {
+         "sizeId": 2,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:alice"
+           },
+           "center": {
+            "x": 0.35,
+            "y": 0.5
+           }
+          },
+          {
+           "identity": {
+            "kind": "persona_reference",
+            "value": "persona::p1"
+           },
+           "center": {
+            "x": 0.7,
+            "y": 0.5
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  "snapshot2": {
+   "modifierRefs": {
+    "interactionReferences": {
+     "actors": {
+      "lore:alice": false
+     }
+    },
+    "referenceOnly": true,
+    "referenceExclusions": {
+     "catalog": "fnv1a64-554a124a78533747"
+    }
+   },
+   "outfitRefs": {
+    "actors": {
+     "lore:alice": {
+      "parts": {
+       "head": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "top": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "bottom": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "legs": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "feet": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       }
+      },
+      "formId": "form_default",
+      "outfitId": "outfit_1",
+      "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+     },
+     "persona::p1": {
+      "parts": {
+       "head": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "top": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "bottom": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "legs": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "feet": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       }
+      },
+      "formId": "form_default",
+      "outfitId": "outfit_1",
+      "description": "black hoodie, jeans, sneakers"
+     },
+     "lore:bob": {
+      "parts": {
+       "head": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "top": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "bottom": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "legs": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       },
+       "feet": {
+        "outfitId": "outfit_1",
+        "formId": "form_default"
+       }
+      },
+      "formId": "form_default",
+      "outfitId": "outfit_1",
+      "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+     }
+    }
+   },
+   "participants": {
+    "characterKeys": [
+     "lore:alice"
+    ],
+    "sceneLayouts": [
+     {
+      "sizeId": 1,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "center": {
+         "x": 0.5,
+         "y": 0.5
+        }
+       }
+      ]
+     },
+     {
+      "sizeId": 1,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:bob"
+        },
+        "center": {
+         "x": 0.5,
+         "y": 0.45
+        },
+        "facing": {
+         "id": "facing_away"
+        }
+       }
+      ]
+     },
+     {
+      "sizeId": 2,
+      "actors": [
+       {
+        "identity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "center": {
+         "x": 0.35,
+         "y": 0.5
+        }
+       },
+       {
+        "identity": {
+         "kind": "persona_reference",
+         "value": "persona::p1"
+        },
+        "center": {
+         "x": 0.7,
+         "y": 0.5
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "commit2": "committed",
+  "store2": {
+   "messages": {
+    "msg-1": {
+     "kind": "inline",
+     "generations": [
+      {
+       "id": "rev-1",
+       "continuity": {
+        "scene": {
+         "backgroundTags": [
+          "staff_room",
+          "window"
+         ],
+         "locationTags": [
+          "staff_room"
+         ]
+        },
+        "characters": {
+         "lore:alice": {
+          "naturalLanguage": {
+           "pose": "leaning forward slightly"
+          }
+         },
+         "lore:bob": {
+          "naturalLanguage": {
+           "pose": "hands on the window sill"
+          }
+         }
+        },
+        "modifierRefs": {
+         "global": {
+          "environment.setting": [
+           "indoors"
+          ],
+          "scene.free.location": [
+           "staff_room",
+           "window"
+          ]
+         },
+         "interactionReferences": {
+          "records": {
+           "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+            "id": "arm_hug",
+            "mode": "directed",
+            "source": "lore:alice",
+            "target": "persona:persona::p1",
+            "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+            "slotNumber": 0,
+            "sourcePlacementIndex": 0,
+            "targetPlacementIndex": 1
+           },
+           "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+            "id": "sleeve_grab",
+            "mode": "directed",
+            "source": "lore:alice",
+            "target": "persona:persona::p1",
+            "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+            "slotNumber": 0,
+            "sourcePlacementIndex": 0,
+            "targetPlacementIndex": 1
+           }
+          },
+          "actors": {
+           "lore:alice": [
+            "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+            "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+           ],
+           "persona:persona::p1": [
+            "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+            "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+           ],
+           "lore:bob": false
+          }
+         },
+         "referenceOnly": true,
+         "referenceExclusions": {
+          "catalog": "fnv1a64-554a124a78533747"
+         }
+        },
+        "outfitRefs": {
+         "actors": {
+          "lore:alice": {
+           "parts": {
+            "head": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "top": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "bottom": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "legs": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "feet": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            }
+           },
+           "formId": "form_default",
+           "outfitId": "outfit_1",
+           "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+          },
+          "persona::p1": {
+           "parts": {
+            "head": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "top": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "bottom": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "legs": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "feet": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            }
+           },
+           "formId": "form_default",
+           "outfitId": "outfit_1",
+           "description": "black hoodie, jeans, sneakers"
+          },
+          "lore:bob": {
+           "parts": {
+            "head": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "top": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "bottom": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "legs": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "feet": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            }
+           },
+           "formId": "form_default",
+           "outfitId": "outfit_1",
+           "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+          }
+         }
+        },
+        "participants": {
+         "characterKeys": [
+          "lore:alice",
+          "lore:bob"
+         ],
+         "personaKeys": [
+          "persona::p1"
+         ],
+         "sceneLayouts": [
+          {
+           "sizeId": 1,
+           "actors": [
+            {
+             "identity": {
+              "kind": "lorebook_prompt_key",
+              "value": "lore:bob"
+             },
+             "center": {
+              "x": 0.5,
+              "y": 0.45
+             },
+             "facing": {
+              "id": "facing_away"
+             }
+            }
+           ]
+          },
+          {
+           "sizeId": 2,
+           "actors": [
+            {
+             "identity": {
+              "kind": "lorebook_prompt_key",
+              "value": "lore:alice"
+             },
+             "center": {
+              "x": 0.35,
+              "y": 0.5
+             }
+            },
+            {
+             "identity": {
+              "kind": "persona_reference",
+              "value": "persona::p1"
+             },
+             "center": {
+              "x": 0.7,
+              "y": 0.5
+             }
+            }
+           ]
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "rev-1b"
+      }
+     ]
+    },
+    "msg-3": {
+     "kind": "inline",
+     "generations": [
+      {
+       "id": "rev-3",
+       "continuity": {
+        "modifierRefs": {
+         "interactionReferences": {
+          "actors": {
+           "lore:alice": false
+          }
+         },
+         "referenceOnly": true,
+         "referenceExclusions": {
+          "catalog": "fnv1a64-554a124a78533747"
+         }
+        },
+        "outfitRefs": {
+         "actors": {
+          "lore:alice": {
+           "parts": {
+            "head": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "top": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "bottom": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "legs": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "feet": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            }
+           },
+           "formId": "form_default",
+           "outfitId": "outfit_1",
+           "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+          },
+          "persona::p1": {
+           "parts": {
+            "head": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "top": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "bottom": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "legs": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "feet": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            }
+           },
+           "formId": "form_default",
+           "outfitId": "outfit_1",
+           "description": "black hoodie, jeans, sneakers"
+          },
+          "lore:bob": {
+           "parts": {
+            "head": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "top": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "bottom": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "legs": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            },
+            "feet": {
+             "outfitId": "outfit_1",
+             "formId": "form_default"
+            }
+           },
+           "formId": "form_default",
+           "outfitId": "outfit_1",
+           "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+          }
+         }
+        },
+        "participants": {
+         "characterKeys": [
+          "lore:alice"
+         ],
+         "sceneLayouts": [
+          {
+           "sizeId": 1,
+           "actors": [
+            {
+             "identity": {
+              "kind": "lorebook_prompt_key",
+              "value": "lore:alice"
+             },
+             "center": {
+              "x": 0.5,
+              "y": 0.5
+             }
+            }
+           ]
+          },
+          {
+           "sizeId": 1,
+           "actors": [
+            {
+             "identity": {
+              "kind": "lorebook_prompt_key",
+              "value": "lore:bob"
+             },
+             "center": {
+              "x": 0.5,
+              "y": 0.45
+             },
+             "facing": {
+              "id": "facing_away"
+             }
+            }
+           ]
+          },
+          {
+           "sizeId": 2,
+           "actors": [
+            {
+             "identity": {
+              "kind": "lorebook_prompt_key",
+              "value": "lore:alice"
+             },
+             "center": {
+              "x": 0.35,
+              "y": 0.5
+             }
+            },
+            {
+             "identity": {
+              "kind": "persona_reference",
+              "value": "persona::p1"
+             },
+             "center": {
+              "x": 0.7,
+              "y": 0.5
+             }
+            }
+           ]
+          }
+         ]
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "rebuiltFull": {
+   "version": 1,
+   "scenes": {},
+   "characters": {},
+   "modifierRefs": {
+    "chat-key": {
+     "global": {},
+     "actors": {},
+     "interactionReferences": {
+      "records": {},
+      "actors": {
+       "lore:alice": false
+      }
+     },
+     "referenceOnly": true,
+     "referenceExclusions": {
+      "catalog": "fnv1a64-554a124a78533747",
+      "actors": {},
+      "scene": []
+     }
+    }
+   },
+   "outfitRefs": {
+    "chat-key": {
+     "actors": {
+      "lore:alice": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+      },
+      "persona::p1": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "black hoodie, jeans, sneakers"
+      },
+      "lore:bob": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+      }
+     }
+    }
+   },
+   "recentCheckpoints": {
+    "chat-key": [
+     {
+      "messageId": "id:msg-3",
+      "messageIndex": 3,
+      "historyRevisionId": "rev-3",
+      "historyRevisionOrder": 0,
+      "capturedAt": 4000,
+      "characters": {},
+      "modifierRefs": {
+       "global": {},
+       "actors": {},
+       "interactionReferences": {
+        "records": {},
+        "actors": {
+         "lore:alice": false
+        }
+       },
+       "referenceOnly": true,
+       "referenceExclusions": {
+        "catalog": "fnv1a64-554a124a78533747",
+        "actors": {},
+        "scene": []
+       }
+      },
+      "outfitRefs": {
+       "actors": {
+        "lore:alice": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+        },
+        "persona::p1": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "black hoodie, jeans, sneakers"
+        },
+        "lore:bob": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+        }
+       }
+      },
+      "participants": {
+       "characterKeys": [
+        "lore:alice"
+       ],
+       "personaKeys": [],
+       "sceneLayouts": [
+        {
+         "sizeId": 1,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:alice"
+           },
+           "center": {
+            "x": 0.5,
+            "y": 0.5
+           }
+          }
+         ]
+        },
+        {
+         "sizeId": 1,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:bob"
+           },
+           "center": {
+            "x": 0.5,
+            "y": 0.45
+           },
+           "facing": {
+            "id": "facing_away"
+           }
+          }
+         ]
+        },
+        {
+         "sizeId": 2,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:alice"
+           },
+           "center": {
+            "x": 0.35,
+            "y": 0.5
+           }
+          },
+          {
+           "identity": {
+            "kind": "persona_reference",
+            "value": "persona::p1"
+           },
+           "center": {
+            "x": 0.7,
+            "y": 0.5
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  "pushes": {
+   "stable": true,
+   "index": false,
+   "request": false,
+   "response": false,
+   "promote": true
+  },
+  "afterPushes": {
+   "version": 1,
+   "scenes": {},
+   "characters": {},
+   "modifierRefs": {
+    "chat-key": {
+     "global": {},
+     "actors": {},
+     "interactionReferences": {
+      "records": {},
+      "actors": {
+       "lore:alice": false
+      }
+     },
+     "referenceOnly": true,
+     "referenceExclusions": {
+      "catalog": "fnv1a64-554a124a78533747",
+      "actors": {},
+      "scene": []
+     },
+     "updatedAt": 1700000100000,
+     "updatedAtChatIndex": 0,
+     "updatedAtMessageIndex": 3,
+     "updatedAtMessageId": "id:msg-3"
+    }
+   },
+   "outfitRefs": {
+    "chat-key": {
+     "actors": {
+      "lore:alice": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+      },
+      "persona::p1": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "black hoodie, jeans, sneakers"
+      },
+      "lore:bob": {
+       "parts": {
+        "head": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "top": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "bottom": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "legs": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        },
+        "feet": {
+         "outfitId": "outfit_1",
+         "formId": "form_default"
+        }
+       },
+       "formId": "form_default",
+       "outfitId": "outfit_1",
+       "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+      }
+     },
+     "updatedAt": 1700000100000,
+     "updatedAtChatIndex": 0,
+     "updatedAtMessageIndex": 3,
+     "updatedAtMessageId": "id:msg-3"
+    }
+   },
+   "recentCheckpoints": {
+    "chat-key": [
+     {
+      "messageId": "id:msg-6",
+      "messageIndex": 6,
+      "historyRevisionId": "rev-6",
+      "capturedAt": 1700000300000,
+      "characters": {},
+      "modifierRefs": {
+       "global": {},
+       "actors": {},
+       "interactionReferences": {
+        "records": {},
+        "actors": {
+         "lore:alice": false
+        }
+       },
+       "referenceOnly": true,
+       "referenceExclusions": {
+        "catalog": "fnv1a64-554a124a78533747",
+        "actors": {},
+        "scene": []
+       },
+       "updatedAt": 1700000100000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 3,
+       "updatedAtMessageId": "id:msg-3"
+      },
+      "outfitRefs": {
+       "actors": {
+        "lore:alice": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+        },
+        "persona::p1": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "black hoodie, jeans, sneakers"
+        },
+        "lore:bob": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+        }
+       },
+       "updatedAt": 1700000100000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 3,
+       "updatedAtMessageId": "id:msg-3"
+      }
+     },
+     {
+      "messageId": "id:msg-5",
+      "messageIndex": 5,
+      "historyRevisionId": "rev-5",
+      "historyRevisionOrder": 1,
+      "capturedAt": 1700000200000,
+      "scene": {
+       "backgroundTags": [
+        "staff_room",
+        "window"
+       ],
+       "locationTags": [
+        "staff_room"
+       ],
+       "updatedAt": 1700000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 1,
+       "updatedAtMessageId": "id:msg-1"
+      },
+      "characters": {
+       "lore:alice": {
+        "characterName": "",
+        "naturalLanguage": {
+         "pose": "leaning forward slightly"
+        },
+        "updatedAt": 1700000000000,
+        "updatedAtChatIndex": 0,
+        "updatedAtMessageIndex": 1,
+        "updatedAtMessageId": "id:msg-1"
+       },
+       "lore:bob": {
+        "characterName": "",
+        "naturalLanguage": {
+         "pose": "hands on the window sill"
+        },
+        "updatedAt": 1700000000000,
+        "updatedAtChatIndex": 0,
+        "updatedAtMessageIndex": 1,
+        "updatedAtMessageId": "id:msg-1"
+       }
+      },
+      "modifierRefs": {
+       "global": {
+        "environment.setting": [
+         "indoors"
+        ],
+        "scene.free.location": [
+         "staff_room",
+         "window"
+        ]
+       },
+       "actors": {},
+       "interactionReferences": {
+        "records": {
+         "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+          "id": "arm_hug",
+          "mode": "directed",
+          "source": "lore:alice",
+          "target": "persona:persona::p1",
+          "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+          "slotNumber": 0,
+          "sourcePlacementIndex": 0,
+          "targetPlacementIndex": 1,
+          "groups": {}
+         },
+         "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+          "id": "sleeve_grab",
+          "mode": "directed",
+          "source": "lore:alice",
+          "target": "persona:persona::p1",
+          "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+          "slotNumber": 0,
+          "sourcePlacementIndex": 0,
+          "targetPlacementIndex": 1,
+          "groups": {}
+         }
+        },
+        "actors": {
+         "lore:alice": [
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+         ],
+         "persona:persona::p1": [
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+         ],
+         "lore:bob": false
+        }
+       },
+       "referenceOnly": true,
+       "referenceExclusions": {
+        "catalog": "fnv1a64-554a124a78533747",
+        "actors": {},
+        "scene": []
+       },
+       "updatedAt": 1700000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 1,
+       "updatedAtMessageId": "id:msg-1"
+      },
+      "outfitRefs": {
+       "actors": {
+        "lore:alice": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+        },
+        "persona::p1": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "black hoodie, jeans, sneakers"
+        },
+        "lore:bob": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+        }
+       },
+       "updatedAt": 1700000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 1,
+       "updatedAtMessageId": "id:msg-1"
+      }
+     },
+     {
+      "messageId": "id:msg-1",
+      "messageIndex": 1,
+      "historyRevisionId": "rev-1",
+      "historyRevisionOrder": 1,
+      "capturedAt": 1700000000000,
+      "scene": {
+       "backgroundTags": [
+        "staff_room",
+        "window"
+       ],
+       "locationTags": [
+        "staff_room"
+       ],
+       "updatedAt": 1700000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 1,
+       "updatedAtMessageId": "id:msg-1"
+      },
+      "characters": {
+       "lore:alice": {
+        "characterName": "",
+        "naturalLanguage": {
+         "pose": "leaning forward slightly"
+        },
+        "updatedAt": 1700000000000,
+        "updatedAtChatIndex": 0,
+        "updatedAtMessageIndex": 1,
+        "updatedAtMessageId": "id:msg-1"
+       },
+       "lore:bob": {
+        "characterName": "",
+        "naturalLanguage": {
+         "pose": "hands on the window sill"
+        },
+        "updatedAt": 1700000000000,
+        "updatedAtChatIndex": 0,
+        "updatedAtMessageIndex": 1,
+        "updatedAtMessageId": "id:msg-1"
+       }
+      },
+      "modifierRefs": {
+       "global": {
+        "environment.setting": [
+         "indoors"
+        ],
+        "scene.free.location": [
+         "staff_room",
+         "window"
+        ]
+       },
+       "actors": {},
+       "interactionReferences": {
+        "records": {
+         "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+          "id": "arm_hug",
+          "mode": "directed",
+          "source": "lore:alice",
+          "target": "persona:persona::p1",
+          "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+          "slotNumber": 0,
+          "sourcePlacementIndex": 0,
+          "targetPlacementIndex": 1,
+          "groups": {}
+         },
+         "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+          "id": "sleeve_grab",
+          "mode": "directed",
+          "source": "lore:alice",
+          "target": "persona:persona::p1",
+          "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+          "slotNumber": 0,
+          "sourcePlacementIndex": 0,
+          "targetPlacementIndex": 1,
+          "groups": {}
+         }
+        },
+        "actors": {
+         "lore:alice": [
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+         ],
+         "persona:persona::p1": [
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+         ],
+         "lore:bob": false
+        }
+       },
+       "referenceOnly": true,
+       "referenceExclusions": {
+        "catalog": "fnv1a64-554a124a78533747",
+        "actors": {},
+        "scene": []
+       },
+       "updatedAt": 1700000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 1,
+       "updatedAtMessageId": "id:msg-1"
+      },
+      "outfitRefs": {
+       "actors": {
+        "lore:alice": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+        },
+        "persona::p1": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "black hoodie, jeans, sneakers"
+        },
+        "lore:bob": {
+         "parts": {
+          "head": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "top": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "bottom": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "legs": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          },
+          "feet": {
+           "outfitId": "outfit_1",
+           "formId": "form_default"
+          }
+         },
+         "formId": "form_default",
+         "outfitId": "outfit_1",
+         "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+        }
+       },
+       "updatedAt": 1700000000000,
+       "updatedAtChatIndex": 0,
+       "updatedAtMessageIndex": 1,
+       "updatedAtMessageId": "id:msg-1"
+      },
+      "participants": {
+       "characterKeys": [
+        "lore:alice",
+        "lore:bob"
+       ],
+       "personaKeys": [
+        "persona::p1"
+       ],
+       "sceneLayouts": [
+        {
+         "sizeId": 1,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:bob"
+           },
+           "center": {
+            "x": 0.5,
+            "y": 0.45
+           },
+           "facing": {
+            "id": "facing_away"
+           }
+          }
+         ]
+        },
+        {
+         "sizeId": 2,
+         "actors": [
+          {
+           "identity": {
+            "kind": "lorebook_prompt_key",
+            "value": "lore:alice"
+           },
+           "center": {
+            "x": 0.35,
+            "y": 0.5
+           }
+          },
+          {
+           "identity": {
+            "kind": "persona_reference",
+            "value": "persona::p1"
+           },
+           "center": {
+            "x": 0.7,
+            "y": 0.5
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  "stableIds": {
+   "7": true,
+   "id:msg-1": true,
+   "msg-1": true,
+   "index:3": false,
+   "request:x": false,
+   "response-2": false,
+   "": false
+  },
+  "normalized": {
+   "garbage": {
+    "version": 9,
+    "scenes": {},
+    "characters": {},
+    "modifierRefs": {},
+    "outfitRefs": {},
+    "recentCheckpoints": {}
+   },
+   "s2": {
+    "version": 1,
+    "scenes": {},
+    "characters": {},
+    "modifierRefs": {
+     "chat-key": {
+      "global": {},
+      "actors": {},
+      "interactionReferences": {
+       "records": {},
+       "actors": {
+        "lore:alice": false
+       }
+      },
+      "referenceOnly": true,
+      "referenceExclusions": {
+       "catalog": "fnv1a64-554a124a78533747",
+       "actors": {},
+       "scene": []
+      },
+      "updatedAt": 1700000100000,
+      "updatedAtChatIndex": 0,
+      "updatedAtMessageIndex": 3,
+      "updatedAtMessageId": "id:msg-3"
+     }
+    },
+    "outfitRefs": {
+     "chat-key": {
+      "actors": {
+       "lore:alice": {
+        "parts": {
+         "head": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         },
+         "top": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         },
+         "bottom": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         },
+         "legs": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         },
+         "feet": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         }
+        },
+        "formId": "form_default",
+        "outfitId": "outfit_1",
+        "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+       },
+       "persona::p1": {
+        "parts": {
+         "head": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         },
+         "top": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         },
+         "bottom": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         },
+         "legs": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         },
+         "feet": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         }
+        },
+        "formId": "form_default",
+        "outfitId": "outfit_1",
+        "description": "black hoodie, jeans, sneakers"
+       },
+       "lore:bob": {
+        "parts": {
+         "head": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         },
+         "top": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         },
+         "bottom": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         },
+         "legs": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         },
+         "feet": {
+          "outfitId": "outfit_1",
+          "formId": "form_default"
+         }
+        },
+        "formId": "form_default",
+        "outfitId": "outfit_1",
+        "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+       }
+      },
+      "updatedAt": 1700000100000,
+      "updatedAtChatIndex": 0,
+      "updatedAtMessageIndex": 3,
+      "updatedAtMessageId": "id:msg-3"
+     }
+    },
+    "recentCheckpoints": {
+     "chat-key": [
+      {
+       "messageId": "id:msg-3",
+       "messageIndex": 3,
+       "historyRevisionId": "rev-3",
+       "historyRevisionOrder": 1,
+       "capturedAt": 1700000100000,
+       "characters": {},
+       "modifierRefs": {
+        "global": {},
+        "actors": {},
+        "interactionReferences": {
+         "records": {},
+         "actors": {
+          "lore:alice": false
+         }
+        },
+        "referenceOnly": true,
+        "referenceExclusions": {
+         "catalog": "fnv1a64-554a124a78533747",
+         "actors": {},
+         "scene": []
+        },
+        "updatedAt": 1700000100000,
+        "updatedAtChatIndex": 0,
+        "updatedAtMessageIndex": 3,
+        "updatedAtMessageId": "id:msg-3"
+       },
+       "outfitRefs": {
+        "actors": {
+         "lore:alice": {
+          "parts": {
+           "head": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "top": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "bottom": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "legs": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "feet": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           }
+          },
+          "formId": "form_default",
+          "outfitId": "outfit_1",
+          "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+         },
+         "persona::p1": {
+          "parts": {
+           "head": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "top": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "bottom": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "legs": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "feet": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           }
+          },
+          "formId": "form_default",
+          "outfitId": "outfit_1",
+          "description": "black hoodie, jeans, sneakers"
+         },
+         "lore:bob": {
+          "parts": {
+           "head": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "top": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "bottom": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "legs": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "feet": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           }
+          },
+          "formId": "form_default",
+          "outfitId": "outfit_1",
+          "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+         }
+        },
+        "updatedAt": 1700000100000,
+        "updatedAtChatIndex": 0,
+        "updatedAtMessageIndex": 3,
+        "updatedAtMessageId": "id:msg-3"
+       },
+       "participants": {
+        "characterKeys": [
+         "lore:alice"
+        ],
+        "personaKeys": [],
+        "sceneLayouts": [
+         {
+          "sizeId": 1,
+          "actors": [
+           {
+            "identity": {
+             "kind": "lorebook_prompt_key",
+             "value": "lore:alice"
+            },
+            "center": {
+             "x": 0.5,
+             "y": 0.5
+            }
+           }
+          ]
+         },
+         {
+          "sizeId": 1,
+          "actors": [
+           {
+            "identity": {
+             "kind": "lorebook_prompt_key",
+             "value": "lore:bob"
+            },
+            "center": {
+             "x": 0.5,
+             "y": 0.45
+            },
+            "facing": {
+             "id": "facing_away"
+            }
+           }
+          ]
+         },
+         {
+          "sizeId": 2,
+          "actors": [
+           {
+            "identity": {
+             "kind": "lorebook_prompt_key",
+             "value": "lore:alice"
+            },
+            "center": {
+             "x": 0.35,
+             "y": 0.5
+            }
+           },
+           {
+            "identity": {
+             "kind": "persona_reference",
+             "value": "persona::p1"
+            },
+            "center": {
+             "x": 0.7,
+             "y": 0.5
+            }
+           }
+          ]
+         }
+        ]
+       }
+      },
+      {
+       "messageId": "id:msg-1",
+       "messageIndex": 1,
+       "historyRevisionId": "rev-1",
+       "historyRevisionOrder": 0,
+       "capturedAt": 2000,
+       "scene": {
+        "backgroundTags": [
+         "staff_room",
+         "window"
+        ],
+        "locationTags": [
+         "staff_room"
+        ],
+        "updatedAt": 0,
+        "updatedAtChatIndex": -1
+       },
+       "characters": {
+        "lore:alice": {
+         "characterName": "",
+         "naturalLanguage": {
+          "pose": "leaning forward slightly"
+         },
+         "updatedAt": 0,
+         "updatedAtChatIndex": -1
+        },
+        "lore:bob": {
+         "characterName": "",
+         "naturalLanguage": {
+          "pose": "hands on the window sill"
+         },
+         "updatedAt": 0,
+         "updatedAtChatIndex": -1
+        }
+       },
+       "modifierRefs": {
+        "global": {
+         "environment.setting": [
+          "indoors"
+         ],
+         "scene.free.location": [
+          "staff_room",
+          "window"
+         ]
+        },
+        "actors": {},
+        "interactionReferences": {
+         "records": {
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+           "id": "arm_hug",
+           "mode": "directed",
+           "source": "lore:alice",
+           "target": "persona:persona::p1",
+           "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+           "slotNumber": 0,
+           "sourcePlacementIndex": 0,
+           "targetPlacementIndex": 1,
+           "groups": {}
+          },
+          "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]": {
+           "id": "sleeve_grab",
+           "mode": "directed",
+           "source": "lore:alice",
+           "target": "persona:persona::p1",
+           "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+           "slotNumber": 0,
+           "sourcePlacementIndex": 0,
+           "targetPlacementIndex": 1,
+           "groups": {}
+          }
+         },
+         "actors": {
+          "lore:alice": [
+           "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+           "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+          ],
+          "persona:persona::p1": [
+           "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]",
+           "[\"gen:1:mgj6k3cw:slot:s1\",0,null,\"sleeve_grab\",\"directed\",\"lore:alice\",\"persona:persona::p1\",0,1,[]]"
+          ],
+          "lore:bob": false
+         }
+        },
+        "referenceOnly": true,
+        "referenceExclusions": {
+         "catalog": "fnv1a64-554a124a78533747",
+         "actors": {},
+         "scene": []
+        }
+       },
+       "outfitRefs": {
+        "actors": {
+         "lore:alice": {
+          "parts": {
+           "head": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "top": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "bottom": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "legs": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "feet": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           }
+          },
+          "formId": "form_default",
+          "outfitId": "outfit_1",
+          "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+         },
+         "persona::p1": {
+          "parts": {
+           "head": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "top": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "bottom": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "legs": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "feet": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           }
+          },
+          "formId": "form_default",
+          "outfitId": "outfit_1",
+          "description": "black hoodie, jeans, sneakers"
+         },
+         "lore:bob": {
+          "parts": {
+           "head": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "top": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "bottom": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "legs": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           },
+           "feet": {
+            "outfitId": "outfit_1",
+            "formId": "form_default"
+           }
+          },
+          "formId": "form_default",
+          "outfitId": "outfit_1",
+          "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes"
+         }
+        }
+       },
+       "participants": {
+        "characterKeys": [
+         "lore:alice",
+         "lore:bob"
+        ],
+        "personaKeys": [
+         "persona::p1"
+        ],
+        "sceneLayouts": [
+         {
+          "sizeId": 1,
+          "actors": [
+           {
+            "identity": {
+             "kind": "lorebook_prompt_key",
+             "value": "lore:bob"
+            },
+            "center": {
+             "x": 0.5,
+             "y": 0.45
+            },
+            "facing": {
+             "id": "facing_away"
+            }
+           }
+          ]
+         },
+         {
+          "sizeId": 2,
+          "actors": [
+           {
+            "identity": {
+             "kind": "lorebook_prompt_key",
+             "value": "lore:alice"
+            },
+            "center": {
+             "x": 0.35,
+             "y": 0.5
+            }
+           },
+           {
+            "identity": {
+             "kind": "persona_reference",
+             "value": "persona::p1"
+            },
+            "center": {
+             "x": 0.7,
+             "y": 0.5
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "null": {
+    "version": 1,
+    "scenes": {},
+    "characters": {},
+    "modifierRefs": {},
+    "outfitRefs": {},
+    "recentCheckpoints": {}
+   }
+  }
+ }
+}

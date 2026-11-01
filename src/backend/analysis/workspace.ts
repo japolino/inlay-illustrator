@@ -60,7 +60,7 @@ export function imageUrlIndex(images: CharacterImageAsset[]): (asset: Pick<Asset
 
 /** Roster rows (AM `FT` + `R6`) of a runtime source (custom characters already projected by `rI`). */
 export function projectRoster(source: AmSource, document: CharacterDocument, options: { thumbnail?: (promptKey: string, row: Omit<RosterItem, "thumbnailUrl">) => string | null } = {}): RosterItem[] {
-  const Hs = amFn("Hs");
+  const Hs = amFn("Is");
   const cp = document.characterPrompt;
   const customs = new Map(document.customCharacters.map((c) => [c.id, c]));
   const rows: RosterItem[] = [];
@@ -143,7 +143,7 @@ export async function loadWorkspaceSnapshot(services: BackendServices, character
   ]);
   const document = parts.document;
   const rawSource = await services.sources.buildSource(characterId, document, options.chatId ? { chatId: options.chatId } : {});
-  const source = (amFn("y_")(rawSource, document.customCharacters, "all") ?? rawSource) as AmSource;
+  const source = (amFn("r5")(rawSource, document.customCharacters, "all") ?? rawSource) as AmSource;
   const sources = await services.sources.rosterSources(characterId, document, options.chatId ? { chatId: options.chatId } : {});
   const store = new AmConfigStore(services, characterId, parts, "workspace");
   const assets = createAmPriorityAssets(store, (id) => (id === source.id ? source : null));
@@ -257,7 +257,7 @@ export async function setRecognitionKeys(services: BackendServices, characterId:
     await updateCustomCharacterEntry(services, characterId, custom.id, { title: custom.title, recognitionKeys: keys, appearanceDescription: custom.appearanceDescription });
     return;
   }
-  await mutateAmConfig(services, characterId, (config) => amFn("Loe")(config, { id: characterId }, promptKey, keys), { reason: "recognition-keys" });
+  await mutateAmConfig(services, characterId, (config) => amFn("Hce")(config, { id: characterId }, promptKey, keys), { reason: "recognition-keys" });
 }
 
 /* ------------------------------------------------------------------------------------------------
@@ -471,25 +471,6 @@ export async function setFramingWeights(services: BackendServices, characterId: 
     characterId,
     (doc) => ({ ...doc, characterPrompt: { ...doc.characterPrompt, outfitPartFramingWeights: weights as CharacterDocument["characterPrompt"]["outfitPartFramingWeights"] } }),
     { reason: "prompts" },
-  );
-}
-
-/** Unique tag search apply (AM `Oct` L104459): `identity.character_tag` = [tag] on the chosen form. */
-export async function applyUniqueTags(services: BackendServices, characterId: string, choices: { promptKey: string; formId: string; tag: string }[]): Promise<void> {
-  await services.storage.updateCharacterDocument(
-    characterId,
-    (doc) =>
-      choices.reduce(
-        (d, choice) =>
-          withForms(d, choice.promptKey, (c) => ({
-            ...c,
-            forms: c.forms.map((f) =>
-              f.id !== choice.formId ? f : { ...f, basePromptGroups: { ...f.basePromptGroups, "identity.character_tag": choice.tag.trim() ? [choice.tag.trim().replace(/_/gu, " ")] : [] } },
-            ),
-          })),
-        doc,
-      ),
-    { reason: "unique-tags" },
   );
 }
 
