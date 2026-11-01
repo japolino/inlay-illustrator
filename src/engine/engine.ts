@@ -1,39 +1,38 @@
 /**
- * Engine factory: the same object graph Asset Maid 0.9.88 wires at boot (LOt, pretty lines 180714-180783),
+ * Engine factory: the same object graph Asset Maid 0.9.90 wires at boot (`S` @185030-185085 of the p120 bundle),
  * minus the RisuAI-specific transports. Every host effect is injected:
  *
- *   ke = catalogSource.resolve(rawCatalogJson)          hlt  105876   (default rule-IR runtime or a custom V4.5 raw catalog)
- *   Ne = createPromptCompiler(ruleRuntime | catalog, Ns) pyt  119794
- *   ge = createV45AnalyzerEngine(catalog, Ns, {ruleRuntime})  Ttt
- *   ot = createV45AnalyzerRunner(ge, analyzerClient, {onDiagnostic})  VQe 82079
- *   Ie = createGenerationSessions()                      nht  113736
- *   ye = createImageGenerationDispatcher(providers, createProviderQueues({getIntervalMs}), getRetryCount)  Iyt 120220
- *   nt = createGenerationBatchExecutor(ye, Ie, comfyUIReferences)   lht 113992
- *   Ze = createV45Orchestrator(ot, Ne, Ie, nt)           Tht  114878
- *   st = createV5Orchestrator(createV5Analyzer(analyzerClient), Ie, nt, undefined, {onSplitResumeState})  Ygt/Egt
- *   Ct = createProfileOrchestrator({v45: Ze, v5: st, resolveProfile})   Lht 115023
+ *   Ce = createGenerationSessions()                                         fht
+ *   Ie = createImageGenerationDispatcher(providers, createProviderQueues({getIntervalMs}), getRetryCount)   Oht / Lxe
+ *   ie = createGenerationBatchExecutor(Ie, Ce, comfyUIReferences)           vht @158121
+ *   nt = createV5Analyzer(analyzerClient, undefined, jev)                   c0e @161195 (bundled catalog `uz()`)
+ *   ne(config) = analyzer of the active Atelier preset: compiles `aZ(nZ(config.presetCatalog))` when `kind + json`
+ *                changed, rebuilds `c0e(client, Hne({catalog}), jev)`, then checks `C8(zc(config), catalog, selected)`
+ *   tt = createV5Orchestrator(nt, Ce, ie, undefined, {prepareAnalysis: () => rW(config, ne)(), onSplitResumeState})  Ubt
  *
- * Dropped from the original wiring: the NovelAI HTTP client + its queue (xAt/Pyt/kyt), Chan Server (jft), ComfyUI
- * transport (rmt/Rft). The backend supplies provider adapters with the dispatcher contract instead (see README "Image providers").
- * The JEV roster pre-pass (Egt 3rd argument) gets `options.jev`: `network.fetch` answers AM's TypeSafe request.
+ * `rW` snapshots the config and returns `{analysis: yAe(snapshot), analyzer: ne(snapshot)}`; here the snapshot comes
+ * from `options.getConfig()` (no automatic-save flush). There is no V4.5 path and no profile orchestrator any more.
+ *
+ * Dropped from the original wiring: the NovelAI HTTP client + its queue and rating wrapper (`zht`/`Rht`/`Mht`), the
+ * ComfyUI transport (`Emt`/`ogt`). The backend supplies provider adapters with the dispatcher contract instead (see
+ * README "Image providers"). The JEV roster pre-pass (`c0e` 3rd argument) gets `options.jev`.
  */
 import {
-  createCatalogSourceResolver,
-  createPromptCompiler,
-  createV45AnalyzerEngine,
-  createV45AnalyzerRunner,
   createGenerationSessions,
   createImageGenerationDispatcher,
   createProviderQueues,
   createGenerationBatchExecutor,
-  createV45Orchestrator,
   createV5Orchestrator,
   createV5Analyzer,
-  createProfileOrchestrator,
-  NOVELAI_DEFAULTS,
+  createNovelAIV5RuleRuntime,
+  selectActiveAtelierPreset,
+  compileActiveAtelierPreset,
+  resolveAnalysisDocument,
+  resolveAnalysisDirections,
+  assertDirectingRules,
 } from "./core/asset-maid-core";
 
-/** Analyzer LLM message as built by the analyzer layouts (abe / KQe / BQe). */
+/** Analyzer LLM message as built by the V5 analyzer (`s0e`). */
 export interface AnalyzerMessage {
   role: "system" | "user" | "assistant";
   content: string | Array<Record<string, unknown>>;
@@ -41,7 +40,7 @@ export interface AnalyzerMessage {
 }
 
 /**
- * The analyzer transport (`C = nP(network, storage)` in the original; `CQe(...).complete`, spec/llm.md §1.4).
+ * The analyzer transport (`C = nP(network, storage)` in the original; `.complete`, spec/llm.md §1.4).
  * Must resolve `{ raw, parsed }` where `parsed = options.responseMode === "text" ? raw : parseLenientJson(raw)`
  * and throw an error with `code` (ANALYZER_JSON_PARSE, ANALYZER_EMPTY_RESPONSE, ANALYZER_REFUSAL, ...) on failure.
  */
@@ -53,9 +52,10 @@ export interface AnalyzerClient {
   ): Promise<{ raw: string; parsed: unknown; [key: string]: unknown }>;
 }
 
-export type ImageProviderId = "novelai" | "chan-server" | "comfy-ui";
+/** Image providers of 0.9.90 (`F0` @4653). Chan Server was removed. */
+export type ImageProviderId = "novelai" | "comfy-ui";
 
-/** Provider adapter registered in the dispatcher (`Iyt({novelai, "chan-server", "comfy-ui"})`). */
+/** Provider adapter registered in the dispatcher (`Oht({novelai, "comfy-ui"})`). */
 export interface ImageProviderAdapter {
   provider: ImageProviderId;
   /** true: the adapter queues requests itself (original NovelAI client); false/undefined: dispatcher FIFO per queueScopeKey. */
@@ -67,12 +67,18 @@ export interface ImageProviderAdapter {
   dispose?(reason?: string): void;
 }
 
-/** ComfyUI reference preparation (`yt = smt(assetReader, referenceCrops)`): returns image bytes for a reference asset. */
+/** ComfyUI reference preparation (`dt` in the boot code): returns image bytes for a reference asset. */
 export interface ComfyUIReferencePreparer {
   prepare(
     reference: Record<string, unknown>,
     options?: { signal?: AbortSignal },
   ): Promise<{ bytes: Uint8Array; mimeType: string; extension: string }>;
+}
+
+/** Analysis prepared per run (`rW`): directing analysis applied to the run input (`qbt`) and the analyzer to use. */
+export interface PreparedAnalysis {
+  analysis?: unknown;
+  analyzer?: unknown;
 }
 
 export interface AssetMaidEngineOptions {
@@ -83,14 +89,20 @@ export interface AssetMaidEngineOptions {
   getRetryCount?: () => number;
   /** runtime.novelaiParallelIntervalSec * 1000 (min gap between jobs of one queue). */
   getIntervalMs?: () => number;
-  /** config.novelai.presetCatalog.rawJson: "" = built-in rule-IR catalog; otherwise a custom V4.5 raw catalog JSON. */
-  rawCatalogJson?: string;
+  /**
+   * Current Asset Maid config snapshot. When given, every run is prepared like AM's `rW`: the active Atelier preset
+   * (`config.presetCatalog`) selects the analyzer (compiled catalog cached by `kind + json`), the directing rules are
+   * checked (`C8`), and `yAe(config)` (directions, custom sizes, execution) is applied to the run input (`qbt`).
+   * Without it the bundled catalog and the run input's own `novelAIConfig.v5UserDirections` are used.
+   */
+  getConfig?: () => unknown;
+  /** Overrides the `getConfig`-based preparation (a run input's own `prepareAnalysis` still wins). */
+  prepareAnalysis?: () => Promise<PreparedAnalysis | undefined> | PreparedAnalysis | undefined;
   /** JEV pre-pass: `network.fetch(url, init)` (AM TypeSafe systemone request) and `getConfig()` (`{model, apiKey, ...}`). */
   jev?: { network: unknown; getConfig: () => unknown };
+  /** Kept for API compatibility; 0.9.90 has no V4.5 analyzer runner, so nothing reports through it. */
   onAnalyzerDiagnostic?: (event: { event: string; detail?: unknown; [key: string]: unknown }) => void;
   onSplitResumeState?: (key: unknown, state: unknown) => void;
-  /** Profile switch; default: `input.novelAIConfig.analysisProfile === "v5-hybrid" ? "v5-hybrid" : "v4-5"`. */
-  resolveProfile?: (input: OrchestratorRunInputLike) => "v4-5" | "v5-hybrid";
   /**
    * Inlay addition (not in AM): rewrites the composed items of each executor batch (`reservation.execute(input, items)`)
    * before they are dispatched. `input` is the executor input (the run input plus orchestrator callbacks).
@@ -118,12 +130,15 @@ function withPreparedBatchItems(executor: BatchExecutor, prepare: NonNullable<As
   }) as unknown as BatchExecutor;
 }
 
-/** Minimal structural view of `OrchestratorRunInput` (spec/pipeline.md §3.2). The full shape is documented in README.md. */
+/** Minimal structural view of the V5 orchestrator run input (`Ubt.run`). The full shape is documented in README.md. */
 export interface OrchestratorRunInputLike {
   generationType: string;
   sessionContext: Record<string, unknown>;
-  novelAIConfig: Record<string, unknown> & { analysisProfile?: string };
+  novelAIConfig: Record<string, unknown>;
   analyzerInput: Record<string, unknown>;
+  /** Fixed rating of the source (`yS(sourceSettings)`): "sfw" | "nsfw" | false. Replaces `forceNsfwPrefix`. */
+  forceRating?: "sfw" | "nsfw" | false;
+  prepareAnalysis?: () => Promise<PreparedAnalysis | undefined> | PreparedAnalysis | undefined;
   [key: string]: unknown;
 }
 
@@ -134,40 +149,35 @@ export interface OrchestratorRunResult {
   images: Array<Record<string, unknown>>;
 }
 
+/** The active Atelier preset as last compiled by the engine (`{json, catalog}`; `undefined` before the first run). */
+export interface ActiveAtelierPresetState {
+  readonly key: string;
+  readonly json: string;
+  readonly catalog: unknown;
+  readonly diagnostics: readonly unknown[];
+}
+
 export interface AssetMaidEngine {
-  /** Analyze + compose + generate one message (Lht.run). */
+  /** Analyze + compose + generate one message (`Ubt.run`). */
   run(input: OrchestratorRunInputLike): Promise<OrchestratorRunResult>;
   cancel(session: unknown, reason?: string): boolean;
+  /** `{analysis, analyzer}` for a config, exactly as the engine prepares a run (`rW` without the save flush). */
+  prepareAnalysisFor(config: unknown): PreparedAnalysis;
   /** Raw building blocks (verbatim core objects). */
   readonly parts: {
-    catalogSource: ReturnType<typeof createCatalogSourceResolver>;
-    catalogState: { catalog: unknown; source: "default" | "custom" | string; warning: string; ruleRuntime: unknown };
-    promptCompiler: unknown;
-    v45AnalyzerEngine: unknown;
-    v45Analyzer: unknown;
+    /** Analyzer over the bundled catalog (`nt`). */
     v5Analyzer: unknown;
     sessions: unknown;
     dispatcher: unknown;
     executor: unknown;
-    v45: unknown;
     v5: unknown;
+    /** Active preset compiled by the last prepared run. */
+    readonly activePreset: ActiveAtelierPresetState | undefined;
   };
   dispose(): void;
 }
 
 export function createAssetMaidEngine(options: AssetMaidEngineOptions): AssetMaidEngine {
-  const catalogSource = createCatalogSourceResolver();
-  const catalogState = catalogSource.resolve(options.rawCatalogJson ?? "");
-  const ruleRuntime = catalogState.ruleRuntime;
-  const promptCompiler = createPromptCompiler(catalogState.source === "default" ? ruleRuntime : catalogState.catalog, NOVELAI_DEFAULTS);
-  const v45AnalyzerEngine = createV45AnalyzerEngine(catalogState.catalog, NOVELAI_DEFAULTS, {
-    ...(ruleRuntime ? { ruleRuntime } : {}),
-  });
-  const v45Analyzer = createV45AnalyzerRunner(v45AnalyzerEngine, options.analyzerClient, {
-    onDiagnostic(event: { event: string; detail?: unknown }) {
-      options.onAnalyzerDiagnostic?.(event);
-    },
-  });
   const sessions = createGenerationSessions();
   const getIntervalMs = options.getIntervalMs ?? (() => 0);
   const dispatcher = createImageGenerationDispatcher(
@@ -177,34 +187,46 @@ export function createAssetMaidEngine(options: AssetMaidEngineOptions): AssetMai
   );
   const coreExecutor = createGenerationBatchExecutor(dispatcher, sessions, options.comfyUIReferences);
   const executor = options.prepareBatchItems ? withPreparedBatchItems(coreExecutor, options.prepareBatchItems) : coreExecutor;
-  const v45 = createV45Orchestrator(v45Analyzer, promptCompiler, sessions, executor);
-  // Egt(C, void 0, {network, getConfig}): JEV pre-pass adapter injected.
+  // nt = c0e(C, void 0, {network, getConfig}): JEV pre-pass adapter injected.
   const v5Analyzer = (createV5Analyzer as any)(options.analyzerClient, undefined, options.jev);
+  let analyzer = v5Analyzer;
+  let activePreset: ActiveAtelierPresetState | undefined;
+  /** `ne(config)`: analyzer of the active Atelier preset, rebuilt when the preset JSON changes. */
+  const analyzerFor = (config: any): unknown => {
+    const selected = selectActiveAtelierPreset(config.presetCatalog ?? {}) as { kind: string; json: string };
+    const key = selected.kind + ":" + selected.json;
+    if (key !== activePreset?.key) {
+      const compiled = compileActiveAtelierPreset(selected) as { catalog: unknown; diagnostics: readonly unknown[] };
+      analyzer = (createV5Analyzer as any)(options.analyzerClient, createNovelAIV5RuleRuntime({ catalog: compiled.catalog }), options.jev);
+      activePreset = Object.freeze({ key, json: selected.json, catalog: compiled.catalog, diagnostics: compiled.diagnostics });
+    }
+    const document = resolveAnalysisDocument(config, undefined) as { scene: { selected: string } };
+    assertDirectingRules(document, activePreset!.catalog, document.scene.selected);
+    return analyzer;
+  };
+  const prepareAnalysisFor = (config: unknown): PreparedAnalysis => {
+    const snapshot = structuredClone(config);
+    return { analysis: resolveAnalysisDirections(snapshot), analyzer: analyzerFor(snapshot) };
+  };
+  const prepareAnalysis =
+    options.prepareAnalysis ?? (options.getConfig ? async () => prepareAnalysisFor(options.getConfig!()) : undefined);
   const v5 = createV5Orchestrator(v5Analyzer, sessions, executor, undefined, {
+    ...(prepareAnalysis ? { prepareAnalysis } : {}),
     onSplitResumeState: (key: unknown, state: unknown) => options.onSplitResumeState?.(key, state),
   });
-  const orchestrator = createProfileOrchestrator({
-    v45,
-    v5,
-    resolveProfile:
-      options.resolveProfile ??
-      ((input: OrchestratorRunInputLike) => (input.novelAIConfig.analysisProfile === "v5-hybrid" ? "v5-hybrid" : "v4-5")),
-  });
   return {
-    run: (input) => orchestrator.run(input),
-    cancel: (session, reason) => orchestrator.cancel(session, reason),
+    run: (input) => v5.run(input),
+    cancel: (session, reason) => v5.cancel(session, reason),
+    prepareAnalysisFor,
     parts: {
-      catalogSource,
-      catalogState,
-      promptCompiler,
-      v45AnalyzerEngine,
-      v45Analyzer,
       v5Analyzer,
       sessions,
       dispatcher,
       executor,
-      v45,
       v5,
+      get activePreset() {
+        return activePreset;
+      },
     },
     dispose() {
       v5.dispose?.();

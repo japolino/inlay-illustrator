@@ -19,6 +19,15 @@ const svgProps = { viewBox: "0 0 24 24", "aria-hidden": "true" as const, fill: "
 
 /** AM 171732: diamond (initial). */
 export const GenerateIcon = () => <svg {...svgProps}><path d="M12 2.5 20 12 12 21.5 4 12Z" /><path d="M12 7 16.5 12 12 17 7.5 12Z" /></svg>;
+/** AM 0.9.90 `Wke$990`: resolution icon, a rectangle shaped like the aspect ratio, "AI" inside when automatic. */
+export const ResolutionIcon = ({ rect, auto }: { rect: { width: number; height: number }; auto: boolean }) => (
+  <svg {...svgProps} stroke-width={1.6}>
+    <rect x={12 - rect.width / 2 - 1} y={12 - rect.height / 2 - 1} width={rect.width + 2} height={rect.height + 2} rx="2" />
+    {auto ? <text x="12" y="14.6" text-anchor="middle" fill="currentColor" stroke="none" font-size="7" font-weight="700">AI</text> : null}
+  </svg>
+);
+/** AM 0.9.90 `Uwt$990`: crosshair of the AI coordinates toggle. */
+export const CrosshairIcon = () => <svg {...svgProps}><circle cx="12" cy="12" r="7" /><path d="M12 2v5M12 17v5M2 12h5M17 12h5" /><circle cx="12" cy="12" r="1.2" /></svg>;
 /** Extension icon (drawer tab / input-bar action): opens the overlay. */
 export const OverviewIcon = () => <svg {...svgProps}><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="8" cy="10" r="2" /><path d="M21 16l-5-5L5 19" /></svg>;
 /** AM 171734: lucide rotate-ccw (reroll). */

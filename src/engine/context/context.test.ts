@@ -1,5 +1,5 @@
-// Fixture generator: bun C:/Users/eme4/asset-maid-port/scratch/engine/context/gen-context.mjs
-// (runs the same scenarios through the ORIGINAL bundle with src/engine/context/testing/context-replay.ts)
+// Fixture generator: S/engine-build/gen/context.mjs (S = the am990 scratch dir)
+// (runs the same scenarios through the ORIGINAL 0.9.90 bundle with src/engine/context/testing/context-replay.ts)
 import { afterEach, describe, expect, test } from "bun:test";
 import { setEngineEnv } from "../core/env";
 import { seededEnv } from "../testing/env";
@@ -20,7 +20,7 @@ const kit: ContextKit = {
   isFreeOutfitGenerationEnabled: ctx.isFreeOutfitGenerationEnabled as never,
   hasStoredContinuity: ctx.hasStoredContinuity as never,
   resolveOutfitCreationMode: ctx.resolveOutfitCreationMode as never,
-  buildKnownIdentities: ctx.buildKnownIdentities as never,
+  resolveSourceFixedRating: ctx.resolveSourceFixedRating as never,
   resolveIdentityEvidence: ctx.resolveIdentityEvidence as never,
 };
 
@@ -30,7 +30,7 @@ afterEach(() => {
 
 const scenarios = inputs.scenarios as unknown as ContextScenario[];
 
-describe("analyzer context building parity (AM MAt + helpers)", () => {
+describe("analyzer context building parity (AM gxt + helpers)", () => {
   for (const sc of scenarios) {
     test(sc.name, async () => {
       const expected = require(`../__fixtures__/context/context-expected.${sc.name}.json`) as Record<string, unknown>;
@@ -43,7 +43,7 @@ describe("analyzer context building parity (AM MAt + helpers)", () => {
 });
 
 describe("assembleAnalyzerInput / buildCandidateSlots", () => {
-  test("assembles the E1t analyzerInput shape from MAt output", async () => {
+  test("assembles the 0.9.90 Vxt analyzerInput shape from gxt output", async () => {
     const sc = scenarios[0]!;
     const input = structuredClone(sc.input) as unknown as ctx.AnalyzerContextSourceInput;
     const m = ctx.buildAnalyzerContextInputs(input);
@@ -67,16 +67,14 @@ describe("assembleAnalyzerInput / buildCandidateSlots", () => {
       candidateSlots: slots,
       targetImageCount: 2,
       imageCountConstraint: { mode: "range", min: 1, max: 2 },
-      checkpoint: { chatKey: input.chatKey, messageIndex: 5, messageId: "msg-5" },
+      checkpoint: { chatKey: input.chatKey, messageIndex: 5, messageId: "id:msg-5" },
       modelType: " gpt ",
     });
     expect(a.context.presetScope).toBe("all");
-    expect(a.context.freeCharacterGenerationEnabled).toBe(false);
+    expect(a.context.freeCharacterGenerationEnabled).toBe(ctx.resolveSourceGenerationSettings(input.config, sc.sourceId).freeCharacterGenerationEnabled);
     expect(a.context.modelType).toBe("gpt");
-    expect(a.checkpointContext).toEqual({ chatKey: input.chatKey, messageIndex: 5, messageId: "msg-5", generationProvider: "novelai" });
-    expect(a.fingerprintInput.outfitCreationMode).toBe("free-generation");
-    expect(a.fingerprintInput.outfitCandidateIds.length).toBe(m.analyzerOutfitCandidates.length);
-    expect(a.validationOptions.defaultSizeId).toBe(1);
+    expect(a.checkpointContext).toEqual({ chatKey: input.chatKey, messageId: "msg-5" });
+    expect(Object.keys(a).sort()).toEqual(["checkpointContext", "context"]);
     expect(ctx.previousGlobalModifierRefs(m.visualContinuity)).toEqual(m.visualContinuity.previous_modifiers.global as Record<string, string[]>);
   });
 });

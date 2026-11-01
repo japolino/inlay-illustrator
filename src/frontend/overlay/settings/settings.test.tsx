@@ -23,7 +23,7 @@ import {
   toggleSizeCandidate
 } from "./directions.js";
 import { saveCustomSize, setAnalysisMode, setCountMode, setCountRange, setFixedCount, setSplitTotal } from "./system-helpers.js";
-import { anyCharxDirty, fixedResolutionOptions, resetAllPatch, sourceMetadataState } from "./charx.js";
+import { anyCharxDirty, resetAllPatch, sourceMetadataState } from "./charx.js";
 import { detectorsOf, nextDetectors, regexError } from "./charx-regex.js";
 import { formatLogList, mergeLogEntries, scopeLabel } from "./logs.js";
 import { pickAnalyzerError } from "./analyzer-errors.js";
@@ -131,14 +131,11 @@ describe("settings form helpers", () => {
     expect(split.analysisMode).toBe("split");
     expect(split.splitAnalysis.totalCount).toBe(2);
     expect(setSplitTotal(split, 50, 7).splitAnalysis.totalCount).toBe(30);
-    const webtoon = { ...base, webtoonMode: true };
-    for (const next of [setFixedCount(webtoon, 3, 7), setCountMode(webtoon, "range", 7), setAnalysisMode(webtoon, "split", 7), setSplitTotal({ ...split, webtoonMode: true }, 3, 7)]) expect(next.webtoonMode).toBe(true);
   });
   test("charx helpers", () => {
     expect(sourceMetadataState({})).toBe("unknown");
     expect(sourceMetadataState({ a: "available", b: "none" })).toBe("partial");
     expect(sourceMetadataState({ a: "available", b: "deleted" })).toBe("available");
-    expect(fixedResolutionOptions([{ id: 1e9, width: 640, height: 960 }]).map((o) => o.label)).toContain("Portrait 640 × 960 · Custom");
     const config = createDefaultConfig();
     config.characterPrompt.charxGenerationDefaults.dirtyFieldsBySourceId = { c1: ["nsfwAlwaysEnabled"] };
     expect(anyCharxDirty(config)).toBe(true);
@@ -273,14 +270,6 @@ describe("settings pages (DOM)", () => {
     controller.destroy();
   });
 
-  test("system page: webtoon mode (set from the chat count panel) replaces the count controls with the automatic-count note", async () => {
-    const { controller } = await openSettings("system", (mock) => void (mock.db.chatImageGeneration.webtoonMode = true));
-    await until(() => doc.querySelector("[data-webtoon-count]"));
-    expect(doc.querySelector('[aria-label="1 image more"]')).toBeNull();
-    expect(doc.querySelector('[aria-label="Webtoon mode"]')).toBeNull();
-    controller.destroy();
-  });
-
   test("current character settings: a toggle writes a per-character override and shows the Custom marker", async () => {
     const { mock, controller } = await openSettings("charx");
     const toggle = await until(() => doc.querySelector('[data-charx-field="nsfwAlwaysEnabled"] [role="switch"]'));
@@ -295,16 +284,33 @@ describe("settings pages (DOM)", () => {
     controller.destroy();
   });
 
-  test("coordinates switch is on when the analysis AI assigns coordinates (AM 0.9.89.3+: inverse of forceAiChoiceCoordinates)", async () => {
-    const { mock, controller } = await openSettings("charx");
-    const row = '[data-charx-field="forceAiChoiceCoordinates"]';
-    const toggle = (await until(() => doc.querySelector(`${row} [role="switch"]`))) as HTMLButtonElement;
-    expect(doc.querySelector(row)?.textContent).toContain("Analysis AI assigns character coordinates");
-    // Default forceAiChoiceCoordinates = true (NovelAI decides) -> switch off.
-    expect(toggle.getAttribute("aria-checked")).toBe("false");
-    toggle.click();
-    await until(() => doc.querySelector(row)?.textContent?.includes("Custom"));
-    expect(mock.db.documents["char-seoyeon"]!.characterPrompt.charxSettings.overrides["char-seoyeon"]).toMatchObject({ forceAiChoiceCoordinates: false });
+  test("image model: V5 Full offers High / Medium; Medium shows the note and keeps the stored sampling (AM 0.9.90)", async () => {
+    const { mock, controller } = await openSettings("image-model", (m) => { m.db.config.image.model = "nai-diffusion-5-full"; m.db.config.novelai.steps = 30; });
+    const effort = (await until(() => doc.querySelector('[role="combobox"][aria-label="NovelAI V5 effort"]'))) as HTMLButtonElement;
+    expect(effort.textContent).toContain("High");
+    expect(doc.querySelector("[data-novelai-effort-note]")).toBeNull();
+    effort.click();
+    (await until(() => [...doc.querySelectorAll('[role="option"]')].find((o) => o.textContent?.includes("Medium")) as HTMLElement | undefined)).click();
+    await until(() => mock.db.config.novelai.effort === "medium");
+    const note = await until(() => doc.querySelector('[data-novelai-effort-note][role="status"]'));
+    expect(note.textContent).toContain("14 steps");
+    expect(mock.db.config.novelai.steps).toBe(30);
+    expect(mock.db.config.image.model).toBe("nai-diffusion-5-full");
+    controller.destroy();
+  });
+
+  test("image model: no effort choice outside V5 Full", async () => {
+    const { controller } = await openSettings("image-model", (m) => { m.db.config.image.model = "nai-diffusion-4-5-full"; });
+    await until(() => doc.querySelector('[aria-label="Image generation model"]'));
+    expect(doc.querySelector('[aria-label="NovelAI V5 effort"]')).toBeNull();
+    controller.destroy();
+  });
+
+  test("the CharX page no longer has the fixed resolution and coordinates rows (AM 0.9.90: moved to the chat toolbar)", async () => {
+    const { controller } = await openSettings("charx");
+    await until(() => doc.querySelector('[data-charx-field="nsfwAlwaysEnabled"]'));
+    expect(doc.querySelector('[data-charx-field="fixedResolution"]')).toBeNull();
+    expect(doc.querySelector('[data-charx-field="forceAiChoiceCoordinates"]')).toBeNull();
     controller.destroy();
   });
 
@@ -337,12 +343,13 @@ describe("settings pages (DOM)", () => {
     const field = (name: string) => doc.querySelector(`[data-charx-field="${name}"]`)!;
     (await until(() => field("nsfwAlwaysEnabled")?.querySelector('[role="switch"]')) as HTMLButtonElement).click();
     await new Promise((resolve) => setTimeout(resolve, 60));
-    (field("fixedResolution").querySelector('[role="switch"]') as HTMLButtonElement).click();
+    (field("freeOutfitGeneration").querySelector('[role="switch"]') as HTMLButtonElement).click();
     await new Promise((resolve) => setTimeout(resolve, 60));
     (field("nativeAssetVisibility").querySelector('button[aria-pressed="false"]') as HTMLButtonElement).click();
     await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(field("nativeAssetVisibility").querySelector('button[aria-pressed="true"]')?.textContent).toBe("Show");
-    expect(field("fixedResolution").querySelector('[role="switch"]')?.getAttribute("aria-checked")).toBe("true");
+    // AM 0.9.90: native assets are shown by default, so the other choice is "Hide".
+    expect(field("nativeAssetVisibility").querySelector('button[aria-pressed="true"]')?.textContent).toBe("Hide");
+    expect(field("freeOutfitGeneration").querySelector('[role="switch"]')?.getAttribute("aria-checked")).toBe("false");
     controller.destroy();
   });
 
@@ -377,19 +384,13 @@ describe("settings pages (DOM)", () => {
     controller.destroy();
   });
 
-  test("analysis page: a failed preset choice keeps its inline error after the rollback", async () => {
-    const { mock, controller } = await openSettings("analysis-profile");
-    const scene = '[data-v5-direction="scene"]';
-    const comic = (await until(() => doc.querySelector(`${scene} [data-v5-preset="scene-comic"]`))) as HTMLButtonElement;
-    mock.handlers["config.update"] = async (_params, ctx) => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      return ctx.fail("internal", "config write failed");
-    };
-    comic.click();
-    await until(() => comic.getAttribute("aria-checked") === "true");
-    await until(() => comic.getAttribute("aria-checked") === "false");
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    expect(doc.querySelector(`${scene} [role="alert"]`)?.textContent).toBe("config write failed");
+  test("analysis page: shows the Maid Atelier link and no direction editors", async () => {
+    const { controller } = await openSettings("analysis-profile");
+    const card = await until(() => doc.querySelector("[data-guidelines-moved]"));
+    expect(doc.querySelector("[data-v5-direction]")).toBeNull();
+    expect(card.textContent).toContain("Generation guidelines moved to the Maid Atelier");
+    (card.querySelector("[data-open-atelier-guidelines]") as HTMLButtonElement).click();
+    await until(() => doc.querySelector('[data-atelier-section="guidelines"]'));
     controller.destroy();
   });
 

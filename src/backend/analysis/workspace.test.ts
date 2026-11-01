@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { formCollectionRevision, normalizeFormCollection } from "../../shared/contract/index.js";
 import { RpcFailure } from "../rpc/errors.js";
 import {
-  applyUniqueTags,
   createCustomCharacterEntry,
   loadWorkspaceSnapshot,
   promoteCustomCharacters,
@@ -169,9 +168,4 @@ describe("prompts tab", () => {
     expect((conflict as RpcFailure).error).toMatchObject({ code: "conflict", detailCode: "FORM_COLLECTION_CHANGED" });
   });
 
-  test("unique tag apply writes identity.character_tag", async () => {
-    const fx = createAnalysisFixture();
-    await applyUniqueTags(fx.services, CHAR, [{ promptKey: ALICE, formId: "form_default", tag: "alice_(wonderland)" }]);
-    expect(fx.documents.get(CHAR)!.characterPrompt.characterForms[ALICE]!.forms[0]!.basePromptGroups["identity.character_tag"]).toEqual(["alice (wonderland)"]);
-  });
 });

@@ -287,22 +287,6 @@
     "progress": 0,
     "error": ""
   },
-  "novelaiAnalysisProfiles_MH": [
-    {
-      "value": "v5-hybrid",
-      "label": "에셋 메이드 V5",
-      "description": "자연어와 태그를 결합해 장면을 유연하게 구성합니다.",
-      "image": "https://i.postimg.cc/W4rDTB61/5.png",
-      "imageClassName": "-right-6 h-[118%] w-[62%]"
-    },
-    {
-      "value": "v4-5",
-      "label": "에셋 메이드 V4.5",
-      "description": "검증된 프리셋으로 예측 가능한 결과를 만듭니다.",
-      "image": "https://i.postimg.cc/dVZ3jbf6/4-5.png",
-      "imageClassName": "-right-3 h-[110%] w-[60%]"
-    }
-  ],
   "evidenceModeShortLabels_zde": {
     "metadata": "메타",
     "image": "이미지",

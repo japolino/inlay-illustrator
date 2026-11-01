@@ -1,14 +1,17 @@
 // Parity fixtures: src/engine/__fixtures__/v5/compose.*.json (+ inputs.json)
-// Generator: cd C:/Users/eme4/asset-maid-port/scratch/engine/v5 && bun gen-inputs.mjs && bun gen-compose.mjs
-// (gen-compose.mjs drives the ORIGINAL Ygt with the same fake LLM client / capturing dispatcher as composeV5Images.)
+// Generator: bun S/engine-build/gen/v5/inputs.mjs && bun S/engine-build/gen/v5/compose.mjs
+// (compose.mjs drives the ORIGINAL 0.9.90 Ubt with the same fake LLM client / capturing dispatcher as composeV5Images,
+// over the default Atelier preset catalog.)
 import { afterEach, describe, expect, test } from "bun:test";
 import inputs from "../__fixtures__/v5/inputs.json";
 import index from "../__fixtures__/v5/compose.index.json";
 import { setEngineEnv } from "../core/env";
 import { seededEnv } from "../testing/env";
 import { toPlain } from "../testing/plain";
-import { fnv1a64V5 } from "./catalog";
-import type { V5AnalyzerClient, V5AnalyzerContext, V5DirectionSettings } from "./analyzer";
+import { compileActiveAtelierPresetCatalog, fnv1a64V5 } from "./catalog";
+import type { V5AnalyzerClient, V5AnalyzerContext, V5DirectionSettings, V5ResolvedAnalysis } from "./analyzer";
+import { createV5RuleRuntime } from "./runtime";
+import type { RatingTag } from "../compose/types";
 import {
   V5_BUNDLED_COMFY_PROFILE,
   composeV5Images,
@@ -25,7 +28,9 @@ const hash = (v: unknown) => fnv1a64V5(plain(v));
 const fixtures = import.meta.dir + "/../__fixtures__/v5/";
 const context = inputs.context as unknown as V5AnalyzerContext;
 const responses = inputs.responses as Record<string, unknown>;
-const freecharPatch = { freeCharacterGenerationEnabled: true, knownCharacterIdentities: [{ name: "Alice", keys: ["Alice", "Ally"] }] };
+const freecharPatch = { freeCharacterGenerationEnabled: true };
+const catalog = compileActiveAtelierPresetCatalog(null).catalog;
+const runtime = () => createV5RuleRuntime({ catalog });
 
 interface Scenario {
   response: string;
@@ -34,9 +39,9 @@ interface Scenario {
   full?: boolean;
   directions?: string;
   forceAiChoiceCoordinates?: boolean;
-  forceNsfwPrefix?: boolean;
+  forceRating?: RatingTag;
   previous?: string;
-  stateAccumulationEnabled?: boolean;
+  prepared?: string;
   revisionDirection?: string;
   skipSlotNumbers?: number[];
   requestedSizeId?: number;
@@ -57,9 +62,8 @@ function runInput(s: Scenario, previousContinuitySnapshot?: Record<string, unkno
     generationProvider: s.provider,
     ...(s.requestedSizeId ? { requestedSizeId: s.requestedSizeId } : {}),
     forceAiChoiceCoordinates: s.forceAiChoiceCoordinates ?? true,
-    forceNsfwPrefix: s.forceNsfwPrefix ?? false,
-    stateAccumulationEnabled: s.stateAccumulationEnabled ?? false,
-    comfyUI: { workflowProfileId: V5_BUNDLED_COMFY_PROFILE.id, endpoint: "http://127.0.0.1:8188", chanServerRequestUrl: "http://chan.local/api", chanServerApiKey: "chan-key", completionTimeoutMs: 120000 },
+    forceRating: s.forceRating ?? false,
+    comfyUI: { workflowProfileId: V5_BUNDLED_COMFY_PROFILE.id, endpoint: "http://127.0.0.1:8188", completionTimeoutMs: 120000 },
     ...(s.revisionDirection ? { revisionDirection: s.revisionDirection, revisionPromptChannels: [] } : {}),
     analyzerInput: { checkpointPolicy: "restart-analysis", context: ctx, checkpointContext: inputs.checkpointContext },
     v5PromptContext: () => JSON.parse(JSON.stringify(inputs.promptContext)) as V5PromptContextSource,
@@ -108,7 +112,12 @@ describe("v5 compose (orchestrator without host calls)", () => {
       const expected = await Bun.file(fixtures + `compose.${name}.json`).json();
       const previous = s.previous ? (await Bun.file(fixtures + `compose.${s.previous}.json`).json()).snapshot : undefined;
       setEngineEnv(seededEnv(s.seed));
-      const out = await composeV5Images({ run: runInput(s, previous), client: fakeClient(responses[s.response]) });
+      const out = await composeV5Images({
+        run: runInput(s, previous),
+        client: fakeClient(responses[s.response]),
+        runtime: runtime(),
+        ...(s.prepared ? { preparedAnalysis: expected.preparedAnalysis as V5ResolvedAnalysis } : {}),
+      });
       const got = project(out, !!s.full);
       expect(got.analysis).toEqual(expected.analysis);
       expect(got.plans).toEqual(expected.plans);
@@ -129,7 +138,7 @@ describe("v5 compose (orchestrator without host calls)", () => {
     const expected = await Bun.file(fixtures + "compose.default.novelai.json").json();
     const s = scenarios["default.novelai"]!;
     setEngineEnv(seededEnv(s.seed));
-    const out = await composeV5Images({ run: runInput(s), client: fakeClient(responses[s.response]) });
+    const out = await composeV5Images({ run: runInput(s), client: fakeClient(responses[s.response]), runtime: runtime() });
     out.images.forEach(({ image, executedPromptPlan }, i) => {
       const config = createV5NovelAIConfig(
         { novelAIConfig: inputs.novelAIConfig, forceAiChoiceCoordinates: true },
@@ -149,10 +158,22 @@ describe("v5 compose (orchestrator without host calls)", () => {
     const expected = await Bun.file(fixtures + "compose.default.novelai.json").json();
     const s = scenarios["default.novelai"]!;
     setEngineEnv(seededEnv(s.seed));
-    const first = await composeV5Images({ run: runInput(s), client: fakeClient(responses[s.response]) });
+    const first = await composeV5Images({ run: runInput(s), client: fakeClient(responses[s.response]), runtime: runtime() });
     setEngineEnv(seededEnv(s.seed));
-    const injected = await composeV5Images({ run: runInput(s), analysis: JSON.parse(JSON.stringify(first.analysis)) });
+    const injected = await composeV5Images({ run: runInput(s), analysis: JSON.parse(JSON.stringify(first.analysis)), runtime: runtime() });
     expect(plain(injected.executedPromptPlans)).toEqual(expected.plans);
     expect(plain(injected.requests)).toEqual(expected.requests);
+  });
+
+  test("fixed rating: finalizeV5ProviderPrompt prepends the rating tag and strips it from character prompts", async () => {
+    const expected = await Bun.file(fixtures + "compose.routing.novelai-rating-nsfw.json").json();
+    const s = scenarios["routing.novelai-rating-nsfw"]!;
+    setEngineEnv(seededEnv(s.seed));
+    const out = await composeV5Images({ run: runInput(s), client: fakeClient(responses[s.response]), runtime: runtime() });
+    out.images.forEach(({ image, executedPromptPlan }, i) => {
+      const prompt = finalizeV5ProviderPrompt({ plan: executedPromptPlan, provider: "novelai", config: image.novelAIConfig, actors: image.actors, forceRating: "nsfw" });
+      expect(prompt.positivePrompt).toBe(expected.requests[i].prompt);
+      expect(prompt.positivePrompt.startsWith("nsfw, ")).toBe(true);
+    });
   });
 });

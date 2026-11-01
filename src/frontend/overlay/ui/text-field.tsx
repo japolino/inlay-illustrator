@@ -9,6 +9,7 @@ export type TextFieldProps = {
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
+  list?: string;
   id?: string;
   name?: string;
   min?: number;

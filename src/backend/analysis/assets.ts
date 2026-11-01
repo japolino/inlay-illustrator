@@ -39,7 +39,7 @@ export async function listAssets(services: BackendServices, params: RpcParams<"a
   const { characterId } = params;
   const [parts, images] = await Promise.all([loadAmConfigParts(services, characterId), services.sources.listCharacterImages(characterId, { includeGenerated: true }).catch(() => [] as CharacterImageAsset[])]);
   const rawSource = await services.sources.buildSource(characterId, parts.document);
-  const source = (amFn("y_")(rawSource, parts.document.customCharacters, "all") ?? rawSource) as AmSource;
+  const source = (amFn("r5")(rawSource, parts.document.customCharacters, "all") ?? rawSource) as AmSource;
   const store = new AmConfigStore(services, characterId, parts, "assets");
   const index = createAmPriorityAssets(store, (id) => (id === source.id ? source : null));
   const promptKey = params.promptKey ?? "";
@@ -50,7 +50,7 @@ export async function listAssets(services: BackendServices, params: RpcParams<"a
       ? [...pageAll(index, { ...descriptor, filter: "chat-generated" }), ...pageAll(index, { ...descriptor, filter: "outfit-generated" })]
       : pageAll(index, { ...descriptor, filter: AM_FILTER[params.filter] ?? "all" });
   const candidates = promptKey ? new Set(pageAll(index, { ...descriptor, filter: "candidate" }).map((e) => e.assetKey)) : new Set<string>();
-  const selection = promptKey ? new Set((AM.Pi(parts.document.characterPrompt.assetSelections[promptKey]?.selectedAssets ?? []) as Any[]).map((a) => AM.Gt(a))) : new Set<string>();
+  const selection = promptKey ? new Set((AM.Ni(parts.document.characterPrompt.assetSelections[promptKey]?.selectedAssets ?? []) as Any[]).map((a) => AM.tr(a))) : new Set<string>();
   const byKey = new Map<string, CharacterImageAsset>();
   for (const image of images) {
     byKey.set(image.imageId, image);
@@ -82,7 +82,7 @@ function pageAll(index: ReturnType<typeof createAmPriorityAssets>, descriptor: A
 
 function memberKeyOf(source: AmSource, promptKey: string): string | null {
   if (!promptKey) return null;
-  for (const member of source.members) for (const lore of member.lorebooks) if (amFn("Hs")(member, lore) === promptKey) return member.key;
+  for (const member of source.members) for (const lore of member.lorebooks) if (amFn("Is")(member, lore) === promptKey) return member.key;
   return null;
 }
 
@@ -93,7 +93,7 @@ function selectionTarget(characterId: string, promptKey: string) {
 
 export async function setSelection(services: BackendServices, characterId: string, promptKey: string, assets: StoredAssetRef[]): Promise<void> {
   if (!promptKey) fail("bad-request", "promptKey is required.");
-  await mutateAmConfig(services, characterId, (c) => AM.ib(c, selectionTarget(characterId, promptKey), assets.map((a) => AM.sn(a))), { reason: "asset-selection" });
+  await mutateAmConfig(services, characterId, (c) => AM.Nb(c, selectionTarget(characterId, promptKey), assets.map((a) => AM.cn(a))), { reason: "asset-selection" });
 }
 
 /** AM `cve` L133144 ("clear all image selections"). */
@@ -104,8 +104,8 @@ export async function clearSelections(services: BackendServices, characterId: st
     (c) => {
       const keys = promptKeys?.length ? promptKeys : Object.keys(c.characterPrompt.assetSelections ?? {});
       return keys.reduce((acc: AmConfig, pk) => {
-        const current = AM.jf(acc, selectionTarget(characterId, pk));
-        return current.assets.length || current.assetNames.length ? AM.ib(acc, selectionTarget(characterId, pk), []) : acc;
+        const current = AM.pf(acc, selectionTarget(characterId, pk));
+        return current.assets.length || current.assetNames.length ? AM.Nb(acc, selectionTarget(characterId, pk), []) : acc;
       }, c);
     },
     { reason: "asset-selection" },
@@ -116,14 +116,14 @@ type ReferenceTarget = RpcParams<"assets.setReference">["target"];
 
 /** Picker reference targets -> AM `Hy` kinds (character-reference / outfit-reference / persona-* / artist-reference). */
 export async function setReference(services: BackendServices, target: ReferenceTarget, asset: StoredAssetRef | null): Promise<void> {
-  const list = asset ? [AM.sn(asset)] : [];
+  const list = asset ? [AM.cn(asset)] : [];
   if (target.kind === "persona") {
     const characterId = (target as { characterId?: string }).characterId || (await services.sources.getActiveChat())?.characterId;
     if (!characterId) fail("bad-request", "Open a chat (or pass characterId) to set a persona reference: persona references are stored per character.");
     const amTarget = target.outfitId
       ? { kind: "persona-outfit-reference", sourceId: characterId, personaKey: target.personaId, formId: target.formId ?? "form_default", outfitId: target.outfitId }
       : { kind: "persona-reference", sourceId: characterId, personaKey: target.personaId, formId: target.formId ?? "" };
-    await mutateAmConfig(services, characterId, (c) => AM.ib(c, amTarget, list), { reason: "persona-reference" });
+    await mutateAmConfig(services, characterId, (c) => AM.Nb(c, amTarget, list), { reason: "persona-reference" });
     return;
   }
   const characterId = target.characterId;
@@ -133,14 +133,14 @@ export async function setReference(services: BackendServices, target: ReferenceT
       : target.kind === "character-form"
         ? { kind: "character-reference", sourceId: characterId, promptKey: target.promptKey, formId: target.formId, outfitId: "" }
         : { kind: "outfit-reference", sourceId: characterId, promptKey: target.promptKey, formId: target.formId, outfitId: target.outfitId };
-  await mutateAmConfig(services, characterId, (c) => AM.ib(c, amTarget, list), { reason: "reference" });
+  await mutateAmConfig(services, characterId, (c) => AM.Nb(c, amTarget, list), { reason: "reference" });
 }
 
 /** AM metadata reader `inspect` (PNG tEXt/iTXt/zTXt NovelAI `Comment`, SD parameters, JPEG/WebP EXIF; summary `cB`). */
 export async function inspectMetadata(services: BackendServices, characterId: string, asset: AssetRef): Promise<{ hasMetadata: boolean; summary: MetadataSummary | null; raw?: unknown }> {
   const session = await openAnalysisSession(services, characterId, { reason: "metadata" });
   try {
-    const result = await session.metadata.inspect(AM.sn(asset));
+    const result = await session.metadata.inspect(AM.cn(asset));
     return { hasMetadata: result.hasMetadata === true, summary: (result.summary ?? null) as MetadataSummary | null, ...(result.raw ? { raw: result.raw } : {}) };
   } finally {
     session.dispose();

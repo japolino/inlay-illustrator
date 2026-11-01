@@ -4,15 +4,15 @@
  * runtime error dialog (AM `aOt`, §6.4). Styles: ./styles.ts.
  */
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import type { ChatImageGenerationSettings, InlayConfig } from "../../shared/contract/config.js";
+import { analysisExecutionNeedsSeed, generationProviderFromLumiverse, type AnalysisExecution, type ChatImageGenerationSettings, type EffectiveCharxSettings, type InlayConfig } from "../../shared/contract/config.js";
 import type { AppController } from "../state/app-state.js";
 import { useSelector } from "../state/store.js";
-import { applyCountAction, countLimits, countToggleText, countView, floatingStyle, isComicMode, normalizeFloatingPoint, type CountAction, type CountView } from "./count-model.js";
+import { applyCountAction, applyExecutionAction, countLimits, countToggleText, countView, executionView, floatingStyle, normalizeFloatingPoint, resolutionIconRect, type CountAction, type CountView, type ExecutionAction } from "./count-model.js";
 import { COUNT_LABELS, ERROR_DIALOG_LABELS, fill, TOAST_LABELS } from "./labels.js";
 import type { ChatRuntimeStore } from "./runtime-store.js";
 import { buildToastStack, errorDetailText, errorLogText, hasErrorDetails, type RuntimeToastModel } from "./toast-model.js";
-import { GenerateIcon, OverviewIcon, RetryIcon } from "./widgets.js";
-import { directionPatch, selectPreset } from "../overlay/settings/directions.js";
+import { CrosshairIcon, GenerateIcon, OverviewIcon, ResolutionIcon, RetryIcon } from "./widgets.js";
+import type { AtelierState } from "../../shared/contract/atelier.js";
 
 export type ToastCommand = "cancel" | "retry" | "restart" | "dismiss";
 
@@ -246,21 +246,21 @@ const ImageIcon = () => (
 
 interface SceneOption { value: string; label: string }
 
-/** Scene-direction menu options (AM `NIe` 177050: first preset, comic, rest). */
-export function sceneOptions(config: InlayConfig): SceneOption[] {
-  const presets = config.novelai.v5UserDirections.scene.presets ?? [];
-  const label = (id: string, name: string) =>
-    id === "scene-default" ? COUNT_LABELS.sceneIllustration
-      : id === "scene-comic" ? COUNT_LABELS.sceneComic
-        : id === "scene-pov" ? COUNT_LABELS.scenePov
-          : id === "scene-ensemble" ? COUNT_LABELS.sceneEnsemble
-            : name;
-  const all = presets.map((p) => ({ value: p.id, label: label(p.id, p.name) }));
-  const comic = all.find((o) => o.value === "scene-comic");
-  return comic ? [all[0]!, comic, ...all.slice(1).filter((o) => o.value !== "scene-comic")].filter(Boolean) : all;
+/**
+ * Directing-guideline menu options (AM 0.9.90 `hAe`): the Maid Atelier library's directing guidelines, in the order the
+ * backend's `directionMenu` lists them. Built-in guidelines keep their short toolbar labels.
+ */
+export function sceneOptions(menu: AtelierState["directionMenu"] | null | undefined): SceneOption[] {
+  const builtIn: Record<string, string> = {
+    default: COUNT_LABELS.sceneIllustration,
+    "default-comic": COUNT_LABELS.sceneComic,
+    "system-pov": COUNT_LABELS.scenePov,
+    "system-ensemble": COUNT_LABELS.sceneEnsemble,
+  };
+  return (menu?.options ?? []).map((o) => ({ value: o.value, label: builtIn[o.value] ?? (o.shortLabel || o.label) }));
 }
 
-const MODE_LABEL = { fixed: COUNT_LABELS.fixed, range: COUNT_LABELS.range, split: COUNT_LABELS.split, webtoon: COUNT_LABELS.webtoon, manga: COUNT_LABELS.manga } as const;
+const MODE_LABEL = { fixed: COUNT_LABELS.fixed, range: COUNT_LABELS.range, split: COUNT_LABELS.split } as const;
 
 function Stepper({ value, bounds, label, decLabel, incLabel, onStep }: { value: number; bounds: { min: number; max: number }; label: string; decLabel: string; incLabel: string; onStep: (delta: -1 | 1) => void }) {
   return (
@@ -270,6 +270,56 @@ function Stepper({ value, bounds, label, decLabel, incLabel, onStep }: { value: 
       <button type="button" class="ii-am-chat-count__step-button" aria-label={incLabel} disabled={value >= bounds.max} onClick={() => onStep(1)}>+</button>
     </span>
   );
+}
+
+/** Debounced save of the toolbar resolution / AI coordinates (AM 0.9.90 N 182030: 300 ms on the settings domain). */
+const EXECUTION_SAVE_DELAY_MS = 300;
+
+/**
+ * Toolbar resolution / AI coordinates (AM 0.9.90 `runtime.analysisExecution`). Until both are saved, the current
+ * character's old CharX values (`charxSettings.get`) seed the view; the first save persists both (AM `PPe$990`).
+ */
+function useExecutionSettings(app: AppController, config: InlayConfig) {
+  const characterId = useSelector(app.store, (s) => s.selectedCharacterId);
+  const needsSeed = analysisExecutionNeedsSeed(config.runtime);
+  const [source, setSource] = useState<{ characterId: string; settings: EffectiveCharxSettings } | null>(null);
+  const [pending, setPending] = useState<Required<AnalysisExecution> | null>(null);
+  const [failed, setFailed] = useState(false);
+  const failedValue = useRef<Required<AnalysisExecution> | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!needsSeed || !characterId || source?.characterId === characterId) return;
+    let live = true;
+    void app.call("charxSettings.get", { characterId }).then(
+      (r) => { if (live) setSource({ characterId, settings: r.effective }); },
+      () => undefined
+    );
+    return () => { live = false; };
+  }, [needsSeed, characterId]);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const provider = (config.image.provider ? generationProviderFromLumiverse(config.image.provider) : null) ?? config.runtime.generationProvider;
+  const seed = needsSeed && source?.characterId === characterId ? source.settings : null;
+  const view = executionView(pending ? { ...config.runtime, analysisExecution: pending } : config.runtime, seed, COUNT_LABELS.resolutionAuto);
+  const persist = async (next: Required<AnalysisExecution>) => {
+    const saved = await app.updateConfig({ runtime: { analysisExecution: next } } as never);
+    if (saved === null) {
+      failedValue.current = next;
+      setFailed(true);
+    } else {
+      failedValue.current = null;
+      setFailed(false);
+      setPending((current) => (current === next ? null : current));
+    }
+  };
+  const apply = (action: ExecutionAction) => {
+    const next = applyExecutionAction(view, action);
+    if (!next) return;
+    setPending(next);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => { timer.current = null; void persist(next); }, EXECUTION_SAVE_DELAY_MS);
+  };
+  const retry = () => { if (failedValue.current) void persist(failedValue.current); };
+  return { view, novelai: provider === "novelai", apply, retry, failed };
 }
 
 interface CountPanelProps {
@@ -285,17 +335,21 @@ function CountPanel({ app, settings, config, chatId, generateLatest, openOvervie
   const [expanded, setExpanded] = useState(false);
   const [starting, setStarting] = useState(false);
   const chatBusy = useSelector(app.store, (s) => Object.values(s.generationJobs).some((job) => job.chatId === chatId && (job.status === "queued" || job.status === "running")));
-  const [menu, setMenu] = useState<"none" | "count" | "scene">("none");
+  const [menu, setMenu] = useState<"none" | "count" | "scene" | "resolution">("none");
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "failed">("saved");
   const [sceneSaving, setSceneSaving] = useState(false);
   const failedValue = useRef<ChatImageGenerationSettings | null>(null);
-  const limits = countLimits(config.ui.developerModeEnabled, config.novelai.analysisProfile);
+  const execution = useExecutionSettings(app, config);
+  const limits = countLimits(config.ui.developerModeEnabled);
   const view: CountView = countView(settings, limits);
-  // Webtoon and manga modes use their own scene direction: the scene menu would be ignored.
-  const sceneAvailable = !isComicMode(view.mode) && config.novelai.analysisProfile === "v5-hybrid" && (config.novelai.v5UserDirections.scene.presets?.length ?? 0) > 0;
-  const options = sceneAvailable ? sceneOptions(config) : [];
-  const scene = config.novelai.v5UserDirections.scene;
-  const sceneSelection = scene.selectedPresetId ?? scene.presets?.[0]?.id ?? "";
+  // The directing menu reads the Maid Atelier library (loaded once; `atelier.changed` keeps it current).
+  const directionMenu = useSelector(app.store, (s) => s.atelier?.directionMenu ?? null);
+  useEffect(() => {
+    if (app.state.atelierState === "idle") void app.loadAtelier();
+  }, [app]);
+  const options = sceneOptions(directionMenu);
+  const sceneAvailable = options.length > 0;
+  const sceneSelection = directionMenu?.selected ?? options[0]?.value ?? "";
   const sceneLabel = options.find((o) => o.value === sceneSelection)?.label ?? options[0]?.label ?? "";
   const floating = config.ui.floatingGenerationCountEnabled;
   const toggleLabel = expanded ? COUNT_LABELS.collapse : COUNT_LABELS.expand;
@@ -316,17 +370,24 @@ function CountPanel({ app, settings, config, chatId, generateLatest, openOvervie
     const next = applyCountAction(settings, action, limits);
     if (next) void save(next);
   };
+  const retrySave = () => {
+    if (failedValue.current) void save(failedValue.current);
+    else execution.retry();
+  };
+  const failed = saveStatus === "failed" || execution.failed;
   const selectScene = async (id: string) => {
     setMenu("none");
     if (sceneSaving || id === sceneSelection) return;
-    const preset = scene.presets.find((p) => p.id === id);
-    if (!preset) return;
+    if (!options.some((o) => o.value === id)) return;
     setSceneSaving(true);
-    const patchedScene = directionPatch(selectPreset(scene, id));
-    await app.updateConfig({
-      novelai: { v5UserDirections: { scene: patchedScene } }
-    } as never);
-    setSceneSaving(false);
+    try {
+      const result = await app.call("atelier.instructions.select", { kind: "scene", id });
+      app.applyAtelier(result.state);
+    } catch (error) {
+      app.notifyError(error);
+    } finally {
+      setSceneSaving(false);
+    }
   };
 
   // Floating drag (AM `pCt`): drag the toggle after 6px; a click right after a drag is swallowed.
@@ -428,8 +489,46 @@ function CountPanel({ app, settings, config, chatId, generateLatest, openOvervie
             ) : null}
           </span>
         ) : null}
-        {saveStatus === "failed" ? (
-          <button type="button" class="ii-am-chat-count__option" aria-label={COUNT_LABELS.retrySave} title={COUNT_LABELS.retrySave} onClick={() => { if (failedValue.current) void save(failedValue.current); }}>↻</button>
+        <span class="ii-am-chat-count__resolution">
+          <button
+            type="button"
+            class="ii-am-chat-count__option ii-am-chat-count__resolution-button"
+            aria-label={fill(COUNT_LABELS.resolutionButton, { value: execution.view.resolutionLabel })}
+            title={COUNT_LABELS.resolution}
+            aria-haspopup="menu"
+            aria-expanded={menu === "resolution"}
+            data-am-action="toggle-resolution"
+            onClick={() => setMenu(menu === "resolution" ? "none" : "resolution")}
+          >
+            <ResolutionIcon rect={resolutionIconRect(execution.view.resolution)} auto={!execution.view.resolution} />
+          </button>
+          {menu === "resolution" ? (
+            <div class="ii-am-chat-count__menu ii-am-chat-count__resolution-menu" role="menu" aria-label={COUNT_LABELS.resolutionMenu}>
+              {execution.view.options.map((option) => (
+                <button key={option.value} type="button" role="menuitemradio" aria-checked={option.value === execution.view.resolutionValue} class="ii-am-chat-count__menu-item"
+                  data-am-action="select-resolution" data-am-resolution={option.value}
+                  onClick={() => { setMenu("none"); execution.apply({ type: "resolution", value: option.value }); }}>
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </span>
+        {execution.novelai ? (
+          <button
+            type="button"
+            class="ii-am-chat-count__option ii-am-chat-count__coordinates"
+            aria-label={COUNT_LABELS.aiCoordinates}
+            title={COUNT_LABELS.aiCoordinatesTitle}
+            aria-pressed={execution.view.aiCoordinates}
+            data-am-action="toggle-coordinates"
+            onClick={() => execution.apply({ type: "coordinates" })}
+          >
+            <CrosshairIcon />
+          </button>
+        ) : null}
+        {failed ? (
+          <button type="button" class="ii-am-chat-count__option" aria-label={COUNT_LABELS.retrySave} title={COUNT_LABELS.retrySave} onClick={retrySave}>↻</button>
         ) : (
           <button type="button" class="ii-am-chat-count__option" aria-label={view.auto ? COUNT_LABELS.toManual : COUNT_LABELS.toAuto} title={view.auto ? COUNT_LABELS.toManual : COUNT_LABELS.toAuto} aria-pressed={view.auto} onClick={() => run("toggle-auto")}>
             {view.auto ? COUNT_LABELS.auto : COUNT_LABELS.manual}
@@ -449,15 +548,13 @@ function CountPanel({ app, settings, config, chatId, generateLatest, openOvervie
           </button>
           {menu === "count" ? (
             <div class="ii-am-chat-count__menu ii-am-chat-count__mode-menu" role="menu" aria-label={COUNT_LABELS.modeMenu}>
-              {(["fixed", "range", "split", "webtoon", "manga"] as const).map((mode) => (
+              {(["fixed", "range", "split"] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
                   role="menuitemradio"
                   aria-checked={view.mode === mode}
                   class="ii-am-chat-count__menu-item"
-                  disabled={mode === "split" && !view.splitSupported}
-                  title={mode === "split" && !view.splitSupported ? COUNT_LABELS.splitUnsupported : undefined}
                   onClick={() => { setMenu("none"); run(`select-${mode}`); }}
                 >
                   {MODE_LABEL[mode]}
@@ -467,9 +564,7 @@ function CountPanel({ app, settings, config, chatId, generateLatest, openOvervie
           ) : null}
         </span>
         <span class="ii-am-chat-count__values">
-          {isComicMode(view.mode) ? (
-            <span class="ii-am-chat-count__note" title={view.mode === "manga" ? COUNT_LABELS.mangaNoteTitle : COUNT_LABELS.webtoonNoteTitle}>{COUNT_LABELS.webtoonNote}</span>
-          ) : view.mode === "fixed" ? (
+          {view.mode === "fixed" ? (
             <Stepper value={view.fixed} bounds={view.bounds.fixed} label={COUNT_LABELS.count} decLabel={COUNT_LABELS.countDecrease} incLabel={COUNT_LABELS.countIncrease} onStep={(d) => run(d > 0 ? "fixed-increment" : "fixed-decrement")} />
           ) : view.mode === "range" ? (
             <>

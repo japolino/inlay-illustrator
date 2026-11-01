@@ -50,10 +50,10 @@ export interface ProviderInfo {
 }
 
 export function providerInfo(config: InlayConfig | null, status: BackendStatus | null): ProviderInfo {
-  const provider: GenerationProvider = config?.image?.provider
-    ? generationProviderFromLumiverse(config.image.provider)
-    : (config?.runtime?.generationProvider ?? status?.generationProvider ?? "novelai");
-  const caps = PROVIDER_CAPABILITIES[provider] ?? PROVIDER_CAPABILITIES.generic;
+  // An unsupported connection provider falls back like the stored setting does (AM `aN`: NovelAI).
+  const provider: GenerationProvider =
+    (config?.image?.provider ? generationProviderFromLumiverse(config.image.provider) : null) ?? config?.runtime?.generationProvider ?? status?.generationProvider ?? "novelai";
+  const caps = PROVIDER_CAPABILITIES[provider] ?? PROVIDER_CAPABILITIES.novelai;
   return {
     provider,
     referenceUiVisible: caps.referenceUiMode === "full",

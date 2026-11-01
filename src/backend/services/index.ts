@@ -11,6 +11,7 @@ import { createSourcesService } from "./sources.js";
 import { createStorageService } from "./storage.js";
 import { createDecisionService } from "./decisions.js";
 import { shareArtists } from "./shared-artists.js";
+import { createAtelierService } from "./atelier.js";
 import type { BackendServices, SpindleHost } from "./types.js";
 
 export * from "./types.js";
@@ -35,7 +36,8 @@ export function createServices(host: SpindleHost, userId: string | undefined): B
   const sources = createSourcesService({ host, userId, imageBytes, storage, log });
   const decisions = createDecisionService(host, log, userId);
   shareArtists(host, userId, loadConfig);
-  return { host, userId, storage, llm, images, imageBytes, sources, events, log, decisions };
+  const atelier = createAtelierService({ storage, events, log });
+  return { host, userId, storage, llm, images, imageBytes, sources, events, log, decisions, atelier };
 }
 
 export interface ServicesRegistry {

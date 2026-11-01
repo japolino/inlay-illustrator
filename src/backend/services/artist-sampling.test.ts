@@ -12,7 +12,7 @@ test("saved artist sampling reaches the NovelAI request; model changes enforce s
   ] } });
   const run = resolveNovelAIRunConfig({ ...config, characterPrompt: { ...config.characterPrompt, selectedArtistId: "mine" } } as never);
   expect(run).toMatchObject(overrides);
-  const request = { purpose: "chat" as const, prompt: "scene", width: 832, height: 1216, novelai: run };
+  const request = { purpose: "chat" as const, prompt: "scene", negativePrompt: "", width: 832, height: 1216, novelai: run };
   const v45 = buildNovelAIParameters(request, config, { model: "nai-diffusion-4-5-full", isNovelAIV5: false });
   expect(v45.parameters.sampler).toBe("k_dpmpp_2m_sde");
   expect(JSON.parse(String(v45.parameters.rawRequestOverride)).parameters.noise_schedule).toBe("exponential");

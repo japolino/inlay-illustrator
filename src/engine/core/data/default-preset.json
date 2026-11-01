@@ -1,0 +1,1095 @@
+{
+ "builtin": [
+  {
+   "id": "default",
+   "name": "기본 프리셋",
+   "json": "{\"format\":\"asset-maid-preset\",\"title\":\"기본 프리셋\",\"content\":{}}"
+  }
+ ],
+ "document": {
+  "format": "asset-maid-preset",
+  "title": "기본 프리셋",
+  "content": {
+   "system": {
+    "definitions": [
+     {
+      "id": "environment.time",
+      "options": [
+       {
+        "id": "morning",
+        "prompt": [
+         [
+          1,
+          "morning"
+         ]
+        ]
+       },
+       {
+        "id": "day",
+        "prompt": [
+         [
+          1,
+          "day"
+         ]
+        ]
+       },
+       {
+        "id": "sunset",
+        "prompt": [
+         [
+          1,
+          "sunset"
+         ]
+        ]
+       },
+       {
+        "id": "night",
+        "prompt": [
+         [
+          1,
+          "night"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "environment.weather",
+      "options": [
+       {
+        "id": "cloudy_sky",
+        "prompt": [
+         [
+          1,
+          "cloudy sky"
+         ]
+        ]
+       },
+       {
+        "id": "rain",
+        "prompt": [
+         [
+          1,
+          "rain"
+         ]
+        ]
+       },
+       {
+        "id": "snow",
+        "prompt": [
+         [
+          1,
+          "snow"
+         ]
+        ]
+       },
+       {
+        "id": "fog",
+        "prompt": [
+         [
+          1,
+          "fog"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "gaze.direction",
+      "optionAttributes": {
+       "body_part": "eyes"
+      },
+      "options": [
+       {
+        "id": "looking_at_viewer",
+        "prompt": [
+         [
+          1,
+          "looking at viewer"
+         ]
+        ]
+       },
+       {
+        "id": "looking_at_another",
+        "prompt": [
+         [
+          1,
+          "looking at another"
+         ]
+        ]
+       },
+       {
+        "id": "looking_to_the_side",
+        "prompt": [
+         [
+          1,
+          "looking to the side"
+         ]
+        ]
+       },
+       {
+        "id": "looking_down",
+        "prompt": [
+         [
+          1,
+          "looking down"
+         ]
+        ]
+       },
+       {
+        "id": "looking_up",
+        "prompt": [
+         [
+          1,
+          "looking up"
+         ]
+        ]
+       },
+       {
+        "id": "looking_ahead",
+        "prompt": [
+         [
+          1,
+          "looking ahead"
+         ]
+        ]
+       },
+       {
+        "id": "looking_afar",
+        "prompt": [
+         [
+          1,
+          "looking afar"
+         ]
+        ]
+       },
+       {
+        "id": "sideways_glance",
+        "prompt": [
+         [
+          1,
+          "sideways glance"
+         ]
+        ]
+       },
+       {
+        "id": "looking_back",
+        "prompt": [
+         [
+          1,
+          "looking back"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "pose.body",
+      "options": [
+       {
+        "id": "standing",
+        "prompt": [
+         [
+          1,
+          "standing"
+         ]
+        ]
+       },
+       {
+        "id": "sitting",
+        "prompt": [
+         [
+          1,
+          "sitting"
+         ]
+        ]
+       },
+       {
+        "id": "on_back",
+        "prompt": [
+         [
+          1,
+          "on back"
+         ]
+        ]
+       },
+       {
+        "id": "on_side",
+        "prompt": [
+         [
+          1,
+          "on side"
+         ]
+        ]
+       },
+       {
+        "id": "on_stomach",
+        "prompt": [
+         [
+          1,
+          "on stomach"
+         ]
+        ]
+       },
+       {
+        "id": "reclining",
+        "prompt": [
+         [
+          1,
+          "reclining"
+         ]
+        ]
+       },
+       {
+        "id": "kneeling",
+        "prompt": [
+         [
+          1,
+          "kneeling"
+         ]
+        ]
+       },
+       {
+        "id": "squatting",
+        "prompt": [
+         [
+          1,
+          "squatting"
+         ]
+        ]
+       },
+       {
+        "id": "all_fours",
+        "prompt": [
+         [
+          1,
+          "all fours"
+         ]
+        ]
+       },
+       {
+        "id": "wariza",
+        "prompt": [
+         [
+          1,
+          "wariza"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "pose.refinement",
+      "options": [
+       {
+        "id": "legs_apart",
+        "prompt": [
+         [
+          1,
+          "legs apart"
+         ]
+        ]
+       },
+       {
+        "id": "legs_up",
+        "prompt": [
+         [
+          1,
+          "legs up"
+         ]
+        ]
+       },
+       {
+        "id": "knees_to_chest",
+        "prompt": [
+         [
+          1,
+          "knees to chest"
+         ]
+        ]
+       },
+       {
+        "id": "legs_over_head",
+        "prompt": [
+         [
+          1,
+          "legs over head"
+         ]
+        ]
+       },
+       {
+        "id": "leg_lift",
+        "prompt": [
+         [
+          1,
+          "leg lift"
+         ]
+        ]
+       },
+       {
+        "id": "hands_up",
+        "prompt": [
+         [
+          1,
+          "hands up"
+         ]
+        ]
+       },
+       {
+        "id": "arms_behind_back",
+        "prompt": [
+         [
+          1,
+          "arms behind back"
+         ]
+        ]
+       },
+       {
+        "id": "arm_up",
+        "prompt": [
+         [
+          1,
+          "arm up"
+         ]
+        ]
+       },
+       {
+        "id": "arm_behind_head",
+        "prompt": [
+         [
+          1,
+          "arm behind head"
+         ]
+        ]
+       },
+       {
+        "id": "arm_behind_back",
+        "prompt": [
+         [
+          1,
+          "arm behind back"
+         ]
+        ]
+       },
+       {
+        "id": "knee_up",
+        "prompt": [
+         [
+          1,
+          "knee up"
+         ]
+        ]
+       },
+       {
+        "id": "knees_up",
+        "prompt": [
+         [
+          1,
+          "knees up"
+         ]
+        ]
+       },
+       {
+        "id": "leg_up",
+        "prompt": [
+         [
+          1,
+          "leg up"
+         ]
+        ]
+       },
+       {
+        "id": "arched_back",
+        "prompt": [
+         [
+          1,
+          "arched back"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "expression.general",
+      "optionAttributes": {
+       "body_part": "head"
+      },
+      "options": [
+       {
+        "id": "light_smile",
+        "prompt": [
+         [
+          1,
+          "light smile"
+         ]
+        ]
+       },
+       {
+        "id": "seductive_smile",
+        "prompt": [
+         [
+          1,
+          "seductive smile"
+         ]
+        ]
+       },
+       {
+        "id": "nervous_smile",
+        "prompt": [
+         [
+          1,
+          "nervous smile"
+         ]
+        ]
+       },
+       {
+        "id": "embarrassed",
+        "prompt": [
+         [
+          1,
+          "embarrassed"
+         ]
+        ]
+       },
+       {
+        "id": "scared",
+        "prompt": [
+         [
+          1,
+          "scared"
+         ]
+        ]
+       },
+       {
+        "id": "serious",
+        "prompt": [
+         [
+          1,
+          "serious"
+         ]
+        ]
+       },
+       {
+        "id": "exhausted",
+        "prompt": [
+         [
+          1,
+          "exhausted"
+         ]
+        ]
+       },
+       {
+        "id": "expressionless",
+        "prompt": [
+         [
+          1,
+          "expressionless"
+         ]
+        ]
+       },
+       {
+        "id": "surprised",
+        "prompt": [
+         [
+          1,
+          "surprised"
+         ]
+        ]
+       },
+       {
+        "id": "angry",
+        "prompt": [
+         [
+          1,
+          "angry"
+         ]
+        ]
+       },
+       {
+        "id": "wince",
+        "prompt": [
+         [
+          1,
+          "wince"
+         ]
+        ]
+       },
+       {
+        "id": "disdain",
+        "prompt": [
+         [
+          1,
+          "disdain"
+         ]
+        ]
+       },
+       {
+        "id": "grimace",
+        "prompt": [
+         [
+          1,
+          "grimace"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "expression.blush",
+      "optionAttributes": {
+       "body_part": "head"
+      },
+      "options": [
+       {
+        "id": "full_face_blush",
+        "prompt": [
+         [
+          0.8,
+          "full-face blush"
+         ]
+        ]
+       },
+       {
+        "id": "blush",
+        "prompt": [
+         [
+          1,
+          "blush"
+         ]
+        ]
+       },
+       {
+        "id": "light_blush",
+        "prompt": [
+         [
+          1,
+          "light blush"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "expression.tear",
+      "optionAttributes": {
+       "body_part": "head"
+      },
+      "options": [
+       {
+        "id": "tears",
+        "prompt": [
+         [
+          1,
+          "tears"
+         ]
+        ]
+       },
+       {
+        "id": "tearing_up",
+        "prompt": [
+         [
+          1,
+          "tearing up"
+         ]
+        ],
+        "attributes": {
+         "body_part": "eyes"
+        }
+       },
+       {
+        "id": "crying",
+        "prompt": [
+         [
+          1,
+          "crying"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "expression.eye.reaction",
+      "optionAttributes": {
+       "body_part": "eyes"
+      },
+      "options": [
+       {
+        "id": "constricted_pupils",
+        "prompt": [
+         [
+          1,
+          "constricted pupils"
+         ]
+        ]
+       },
+       {
+        "id": "rolling_eyes",
+        "prompt": [
+         [
+          1,
+          "rolling eyes"
+         ]
+        ]
+       },
+       {
+        "id": "empty_eyes",
+        "prompt": [
+         [
+          1,
+          "empty_eyes"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "expression.eye.openness",
+      "optionAttributes": {
+       "body_part": "eyes"
+      },
+      "options": [
+       {
+        "id": "closed_eyes",
+        "prompt": [
+         [
+          1,
+          "closed eyes"
+         ]
+        ]
+       },
+       {
+        "id": "one_eye_closed",
+        "prompt": [
+         [
+          1,
+          "one eye closed"
+         ]
+        ]
+       },
+       {
+        "id": "half_closed_eye",
+        "prompt": [
+         [
+          1,
+          "half-closed eye"
+         ]
+        ]
+       },
+       {
+        "id": "uneven_eyes",
+        "prompt": [
+         [
+          1,
+          "uneven eyes"
+         ]
+        ]
+       },
+       {
+        "id": "half_closed_eyes",
+        "prompt": [
+         [
+          1,
+          "half-closed eyes"
+         ]
+        ]
+       },
+       {
+        "id": "wide_eyed",
+        "prompt": [
+         [
+          1,
+          "wide-eyed"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "expression.mouth.detail",
+      "options": [
+       {
+        "id": "wavy_mouth",
+        "prompt": [
+         [
+          1,
+          "wavy mouth"
+         ]
+        ]
+       },
+       {
+        "id": "tongue_out",
+        "prompt": [
+         [
+          1,
+          "tongue out"
+         ]
+        ]
+       },
+       {
+        "id": "clenched_teeth",
+        "prompt": [
+         [
+          1,
+          "clenched teeth"
+         ]
+        ]
+       }
+      ],
+      "optionAttributes": {
+       "body_part": "head"
+      }
+     },
+     {
+      "id": "state.hair.condition",
+      "options": [
+       {
+        "id": "wet_hair",
+        "prompt": [
+         [
+          1,
+          "wet hair"
+         ]
+        ]
+       },
+       {
+        "id": "messy_hair",
+        "prompt": [
+         [
+          1,
+          "messy hair"
+         ]
+        ]
+       }
+      ],
+      "optionAttributes": {
+       "body_part": "head"
+      }
+     },
+     {
+      "id": "state.body.surface",
+      "options": [
+       {
+        "id": "wet",
+        "prompt": [
+         [
+          1,
+          "wet"
+         ]
+        ]
+       },
+       {
+        "id": "oiled",
+        "prompt": [
+         [
+          1,
+          "oiled"
+         ]
+        ]
+       },
+       {
+        "id": "shiny_skin",
+        "prompt": [
+         [
+          1,
+          "shiny skin"
+         ]
+        ]
+       },
+       {
+        "id": "sweat",
+        "prompt": [
+         [
+          1,
+          "sweat"
+         ]
+        ]
+       },
+       {
+        "id": "very_sweaty",
+        "prompt": [
+         [
+          1,
+          "very sweaty"
+         ]
+        ]
+       },
+       {
+        "id": "steaming_body",
+        "prompt": [
+         [
+          1,
+          "steaming body"
+         ]
+        ]
+       },
+       {
+        "id": "dirty",
+        "prompt": [
+         [
+          1,
+          "dirty"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "state.body.reaction",
+      "options": [
+       {
+        "id": "heavy_breathing",
+        "prompt": [
+         [
+          1,
+          "heavy breathing"
+         ]
+        ]
+       },
+       {
+        "id": "trembling",
+        "prompt": [
+         [
+          2,
+          "trembling"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "state.clothing.condition",
+      "options": [
+       {
+        "id": "wet_clothes",
+        "prompt": [
+         [
+          1,
+          "wet clothes"
+         ]
+        ]
+       },
+       {
+        "id": "dirty_clothes",
+        "prompt": [
+         [
+          1,
+          "dirty clothes"
+         ]
+        ]
+       },
+       {
+        "id": "stained_clothes",
+        "prompt": [
+         [
+          1,
+          "stained clothes"
+         ]
+        ]
+       },
+       {
+        "id": "torn_clothes",
+        "prompt": [
+         [
+          1,
+          "torn clothes"
+         ]
+        ]
+       },
+       {
+        "id": "see_through_clothes",
+        "prompt": [
+         [
+          1,
+          "see-through clothes"
+         ]
+        ]
+       },
+       {
+        "id": "blood_on_clothes",
+        "prompt": [
+         [
+          1,
+          "blood on clothes"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "state.clothing.arrangement",
+      "options": [
+       {
+        "id": "open_clothes",
+        "prompt": [
+         [
+          1,
+          "open clothes"
+         ]
+        ]
+       },
+       {
+        "id": "unbuttoned",
+        "prompt": [
+         [
+          1,
+          "unbuttoned"
+         ]
+        ]
+       },
+       {
+        "id": "partially_unbuttoned",
+        "prompt": [
+         [
+          1,
+          "partially unbuttoned"
+         ]
+        ]
+       },
+       {
+        "id": "unzipped",
+        "prompt": [
+         [
+          1,
+          "unzipped"
+         ]
+        ]
+       },
+       {
+        "id": "partially_unzipped",
+        "prompt": [
+         [
+          1,
+          "partially unzipped"
+         ]
+        ]
+       },
+       {
+        "id": "partially_undressed",
+        "prompt": [
+         [
+          1,
+          "partially undressed"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "environment.condition",
+      "options": [
+       {
+        "id": "underwater",
+        "prompt": [
+         [
+          1,
+          "underwater"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "pose.contact_surface",
+      "options": [
+       {
+        "id": "against_wall",
+        "prompt": [
+         [
+          2,
+          "against wall"
+         ]
+        ]
+       },
+       {
+        "id": "against_glass",
+        "prompt": [
+         [
+          2,
+          "against glass"
+         ]
+        ]
+       },
+       {
+        "id": "against_railing",
+        "prompt": [
+         [
+          2,
+          "against railing"
+         ]
+        ]
+       },
+       {
+        "id": "against_tree",
+        "prompt": [
+         [
+          2,
+          "against tree"
+         ]
+        ]
+       }
+      ]
+     },
+     {
+      "id": "expression.mouth.openness",
+      "options": [
+       {
+        "id": "open_mouth",
+        "prompt": [
+         [
+          1,
+          "open mouth"
+         ]
+        ]
+       },
+       {
+        "id": "parted_lips",
+        "prompt": [
+         [
+          1,
+          "parted lips"
+         ]
+        ]
+       },
+       {
+        "id": "closed_mouth",
+        "prompt": [
+         [
+          1,
+          "closed mouth"
+         ]
+        ]
+       }
+      ],
+      "optionAttributes": {
+       "body_part": "head"
+      }
+     },
+     {
+      "id": "effect.motion",
+      "options": [
+       {
+        "id": "motion_lines",
+        "prompt": [
+         [
+          2,
+          "motion lines"
+         ]
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "analysis": {
+    "scene": {
+     "selected": "default",
+     "items": {}
+    },
+    "imageRatio": {
+     "selected": "default",
+     "items": {}
+    }
+   }
+  }
+ }
+}

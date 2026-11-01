@@ -43,6 +43,18 @@ bundle (`scratch/pipeline/analyzer/am_harness.js`, `__AM_eval`) and run the orig
 `node gen-config-fixtures.mjs <repo>/src/shared/contract/fixtures/config-parity.json` (same for `gen-character-fixtures.mjs`
 and `history/gen-fixtures.cjs`).
 
+`fixtures/character-parity.json` was re-recorded from the AM 0.9.90 bundle with `tmp-audit/contract990/gen-character-fixtures990.mjs`
+(same inputs; 0.9.88 names mapped to the 0.9.90 units by content). Differences: `Mu` (weighted prompt spacing, B9) and
+key order of `bW` outputs. 0.9.90 has no collection revision (`ds`) and no revision check in `GY` (now `dE`); the port keeps
+both as its save-conflict guard, so the generator rebuilds them from 0.9.90 parts. `FP` was re-recorded after the built-in
+art styles were removed from `default-presets.json` (0.9.90 keeps only `none`; the old bodies are `LEGACY_BUILTIN_ARTIST_PRESETS`).
+
+Maid Atelier (`atelier.ts`): `config/atelier.json` (`AtelierStoreDocument`: preset documents, guideline library diff
+`instructionChanges`, free-generation library, execution mode / controls, migrations), the `atelier.*` RPC views
+(`AtelierState`, conflicts, `atelier.changed`) and the AI selection history types (`GenerationAnalysisRecord`,
+`SelectionSummary`). `buildRuntimeConfig(..., {atelier})` merges the store into the AM runtime config. RPC list:
+spec `atelier-rpc.md`.
+
 Static data copied from `extract/` (byte-identical content): `data/appearance-catalog.json` (`Wb`), `data/appearance-ui.json`
 (`IT`, labels, part relevance), `data/default-presets.json` (artist presets `_je`, framing weights `Sje`, Anima defaults),
 `data/image-size-presets.json`, `data/novelai-models.json`, `data/filename-tag-table.json` (`znt` rows + `Sfe` vocabulary),
@@ -79,19 +91,25 @@ Korean labels in stored data (`기본`, `기본 의상`, `의상 N`, `폼 N`, pr
   Legacy AM input: `thinkingMode` default/off/on -> inherit/off/custom; no `thinkingMode` -> `thinkingEnabled ? custom : off`;
   `thinkingLevel` -> effort; the active provider's `providerConfigMap` entry is folded in first (AM `XW`).
 - `image: ImageGenerationSettings` = `{connectionId, provider (Lumiverse provider id of the connection), model, comfyuiWorkflowId, parameters}`.
-  `runtime.generationProvider` is derived: `novelai` -> `"novelai"`, `comfyui` -> `"comfy-ui"`, anything else -> `"generic"`
+  `runtime.generationProvider` is derived: `novelai` -> `"novelai"`, `comfyui` -> `"comfy-ui"`, anything else -> `null` (unsupported; the stored setting falls back to `"novelai"`, AM 0.9.90 drops the generic providers)
   (port addition). Prompt codec: `promptCodecForProvider` -> `novelai-structured` | `anima-flat`. Capabilities table
-  `PROVIDER_CAPABILITIES` (AM `W0`); reference gate `isReferenceEnabledForProvider` (AM `Tu`; generic = no references).
+  `PROVIDER_CAPABILITIES` (AM `W0`); reference gate `isReferenceEnabledForProvider` (AM `Tu`).
 - `novelai`: AM NovelAI parameters (analysisProfile, v5UserDirections, width/height, sampler, noiseSchedule, steps, scale,
   cfgRescale, qualityToggle, useCoords, useOrder, characterReference*, characterPrompts, negativePrompt). The model is `image.model`;
   `buildRuntimeConfig` exposes it as `novelai.naiModel` (resolved connection model when no override). V5 models force
   `characterReferenceEnabled=false` (normalize when `image.model` is known, and again in `buildRuntimeConfig`).
+  `novelai.effort` "high"|"medium" (AM 0.9.90, default "high"; anything else -> "high"): `isNovelAIMedium` = V5 Full + medium
+  (or a stored `nai-diffusion-5-full-medium`); the stored sampling fields are never changed by it.
 - `jevConnection: {rosterSelectionDefault, model}`; `animaArtists` (entries + global default; per-character selection in the document);
   `presetCatalog`; `characterPrompt` = global part (overwriteExistingPrompts, characterReferenceBulkEnabled, personaGender,
   malePersonaPrompt, malePersonaNegativePrompt, personaSettings, fixedPositivePrompt, charxGenerationDefaults, assetRegexEntries,
   artistPrompts); `runtime` (customImageSizes, generationAutoRetryCount 0..10 = 5, nsfwAlwaysEnabled, generationProvider,
   novelaiCallMode "sequential", novelaiParallelIntervalSec 0..30, chatImageWidthPercent 30..100, comfyuiCompletionTimeoutMs
-  1000..3600000, comfyuiCharacterReferenceEnabled, comfyuiOutfitReferenceEnabled).
+  1000..3600000, comfyuiCharacterReferenceEnabled, comfyuiOutfitReferenceEnabled, analysisExecution?).
+- `runtime.analysisExecution` (AM 0.9.90 chat toolbar): `{resolution?: {id,width,height} | null (auto), aiCoordinates?: boolean}`,
+  normalized like AM `M0$990`. Missing values fall back to the current character's `fixedResolution` /
+  `!forceAiChoiceCoordinates` (`effectiveAnalysisExecution`); the toolbar's first save persists both. The per-character fields
+  stay stored only as that seed (their settings rows were removed).
 - `DEFAULT_CONFIG` / `createDefaultConfig()`; `normalizeConfig(raw)` / `normalizeConfigWithIssues(raw)`:
   deep merge over defaults, clamps, enums, legacy fallbacks (`v5-hybrid-preview`, `jevConnection.selectionEnabled`, AM `naiModel`
   and `runtime.generationProvider`, removed `imageAutoGenerationEnabled`/`imageGenerationCountPolicy`, `chanServerVirtualImageEnabled`).
@@ -169,7 +187,6 @@ Root: Spindle `userStorage` of the extension (`{DATA_DIR}/users/{userId}/extensi
 | `characters/<characterId>/asset-maid.json` | `CharacterDocument` | charx lore entry `asset-maid:data` |
 | `characters/<characterId>/metadata-cache.json` | `assetMetadataAvailability` | `local:metadata-cache:<sourceId>` |
 | `characters/<characterId>/reference-crops/<name>.png` | crop images | `__asset_maid_crop_*` assets |
-| `chats/<chatId>/webtoon/<messageId>@<swipe>.json`, `chats/<chatId>/webtoon/index.json` | Webtoon strip per message swipe (experimental webtoon mode; `webtoon.ts` view types, backend-private document) | - |
 | `chats/<chatId>/chat-data.json` | `ChatDataDocument` | chat localLore `asset-maid:chat-data` + `asset-maid:current-actor-state` |
 | `uploads/<id>.<ext>` | uploaded reference images (when not stored as Lumiverse images) | `saveAsset` |
 

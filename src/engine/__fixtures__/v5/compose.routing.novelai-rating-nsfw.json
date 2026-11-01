@@ -1,0 +1,1651 @@
+{
+ "scenario": {
+  "response": "routing",
+  "provider": "novelai",
+  "seed": 45,
+  "forceRating": "nsfw"
+ },
+ "analysis": {
+  "profile": "v5-hybrid",
+  "response": {
+   "illustrations": [
+    {
+     "slotNumber": 1,
+     "status": "degraded",
+     "presentationMode": "single-frame",
+     "actors": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v",
+       "formId": "form_default",
+       "sex": "female",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.m0ais.6ynrym",
+       "formId": "form_default",
+       "sex": "male",
+       "continuityIdentity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "outfit": {
+        "selectedId": "outfit_1"
+       }
+      }
+     ],
+     "interactions": [
+      {
+       "interactionRef": "interaction:0",
+       "id": "missionary",
+       "mode": "directed",
+       "sourceActorId": "actor_2",
+       "targetActorId": "actor_1",
+       "bindingStatus": "complete",
+       "unresolvedActorRefs": [],
+       "modifiers": []
+      }
+     ],
+     "location": {
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "environment.setting",
+        "options": [
+         "indoors"
+        ]
+       },
+       {
+        "id": "environment.time",
+        "options": [
+         "night"
+        ]
+       }
+      ],
+      "freeTags": [
+       "bedroom"
+      ],
+      "instruction": "",
+      "comicPageInstruction": "",
+      "comicPageModifiers": [],
+      "comicPanels": [],
+      "comicCrossPanelActors": []
+     },
+     "analyzerSizeId": 5,
+     "framePlacement": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "center": {
+        "x": 0.5,
+        "y": 0.6
+       },
+       "source": "analyzer",
+       "instruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "center": {
+        "x": 0.5,
+        "y": 0.35
+       },
+       "source": "analyzer",
+       "instruction": ""
+      }
+     ],
+     "actorDetails": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "pose.body",
+         "options": [
+          "on_back"
+         ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
+       "poseInstruction": "",
+       "objects": [],
+       "dialogueInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "serious"
+         ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
+        }
+       ],
+       "poseInstruction": "",
+       "objects": [],
+       "dialogueInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [
+       {
+        "id": "camera.view",
+        "options": [
+         "from_above"
+        ]
+       }
+      ],
+      "instruction": ""
+     },
+     "diagnostics": [
+      {
+       "code": "unknown-modifier-definition",
+       "impact": "degraded",
+       "path": "$.illustrations[0].interaction.modifiers[0][0].id",
+       "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
+      },
+      {
+       "code": "unknown-modifier-definition",
+       "impact": "degraded",
+       "path": "$.illustrations[0].interaction.modifiers[1][0].id",
+       "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
+      },
+      {
+       "code": "unknown-modifier-definition",
+       "impact": "degraded",
+       "path": "$.illustrations[0].interaction.modifiers[2][0].id",
+       "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
+      },
+      {
+       "code": "unknown-modifier-definition",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_detail[0].modifiers[1].id",
+       "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
+      },
+      {
+       "code": "unknown-modifier-definition",
+       "impact": "degraded",
+       "path": "$.illustrations[0].actor_detail[0].modifiers[2].id",
+       "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
+      }
+     ]
+    }
+   ],
+   "diagnostics": []
+  },
+  "attempts": 1,
+  "resumedFromCheckpoint": false,
+  "candidateBindings": [
+   {
+    "candidateKey": "actor.1fmv888.fk4pvw",
+    "identityReferences": [
+     "persona::p1",
+     "Shouta",
+     "p1"
+    ],
+    "sex": "male",
+    "continuityIdentity": {
+     "kind": "persona_reference",
+     "value": "persona::p1"
+    },
+    "outfitCandidateIds": [
+     "Casual hoodie"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "unknown_form_1",
+      "formId": "form_default",
+      "sex": "male",
+      "defaultOutfitRef": "Casual hoodie",
+      "outfits": [
+       {
+        "outfitRef": "Casual hoodie",
+        "outfitId": "outfit_1"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "unknown_form_1"
+   },
+   {
+    "candidateKey": "actor.g00nx3.1d3zc2v",
+    "identityReferences": [
+     "lore:alice",
+     "Alice",
+     "Ally"
+    ],
+    "sex": "female",
+    "continuityIdentity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:alice"
+    },
+    "outfitCandidateIds": [
+     "Navy sailor school uniform",
+     "White summer sundress"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "silver_hair,_blue_eyes",
+      "formId": "form_default",
+      "sex": "female",
+      "defaultOutfitRef": "Navy sailor school uniform",
+      "outfits": [
+       {
+        "outfitRef": "Navy sailor school uniform",
+        "outfitId": "outfit_1"
+       },
+       {
+        "outfitRef": "White summer sundress",
+        "outfitId": "outfit_2"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "silver_hair,_blue_eyes"
+   },
+   {
+    "candidateKey": "actor.m0ais.6ynrym",
+    "identityReferences": [
+     "lore:bob",
+     "Bob"
+    ],
+    "sex": "male",
+    "continuityIdentity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:bob"
+    },
+    "outfitCandidateIds": [
+     "Grey business suit"
+    ],
+    "allowOutfitCreation": true,
+    "appearanceForms": [
+     {
+      "formRef": "black_hair,_tall",
+      "formId": "form_default",
+      "sex": "male",
+      "defaultOutfitRef": "Grey business suit",
+      "outfits": [
+       {
+        "outfitRef": "Grey business suit",
+        "outfitId": "outfit_1"
+       }
+      ]
+     }
+    ],
+    "defaultFormRef": "black_hair,_tall"
+   }
+  ],
+  "candidateSourceKeys": {
+   "actor.g00nx3.1d3zc2v": "lore:alice",
+   "actor.m0ais.6ynrym": "lore:bob",
+   "actor.1fmv888.fk4pvw": "persona::p1"
+  },
+  "requestPayload": "fnv1a64-420a363b97613771",
+  "localProjection": {
+   "allowedSizeIds": [
+    1,
+    2,
+    5
+   ],
+   "characterCoordinates": "fixed"
+  },
+  "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
+ },
+ "plans": [
+  {
+   "format": "novelai-v5-interaction-led-prompt-v1",
+   "sizeId": 5,
+   "width": 1024,
+   "height": 1024,
+   "global": {
+    "tags": [
+     "2::1girl::",
+     "2::1boy::",
+     "1.5::artist:hwansang ::",
+     "year 2025",
+     "masterpiece",
+     "best quality",
+     "from above",
+     "indoors",
+     "night",
+     "bedroom",
+     "very aesthetic"
+    ],
+    "instructions": [],
+    "serializedPrompt": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from above, indoors, night, bedroom, very aesthetic"
+   },
+   "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+   "characters": [
+    {
+     "tags": [
+      "female",
+      "silver hair",
+      "blue eyes",
+      "white sailor shirt",
+      "navy sailor collar",
+      "red neckerchief",
+      "navy pleated skirt",
+      "black thighhighs",
+      "target#missionary",
+      "on back"
+     ],
+     "instructions": [],
+     "serializedPrompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, target#missionary, on back",
+     "actorId": "actor_1",
+     "placementIndex": 0,
+     "candidateKey": "actor.g00nx3.1d3zc2v",
+     "sex": "female",
+     "centerX": 0.5,
+     "centerY": 0.6,
+     "negativePrompt": "bad hands",
+     "outfitPartWeights": {
+      "head": 1,
+      "top": 1,
+      "bottom": 1,
+      "legs": 1,
+      "feet": 0
+     }
+    },
+    {
+     "tags": [
+      "male",
+      "black hair",
+      "grey suit jacket",
+      "white shirt",
+      "blue necktie",
+      "grey suit pants",
+      "source#missionary",
+      "serious"
+     ],
+     "instructions": [],
+     "serializedPrompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, source#missionary, serious",
+     "actorId": "actor_2",
+     "placementIndex": 1,
+     "candidateKey": "actor.m0ais.6ynrym",
+     "sex": "male",
+     "centerX": 0.5,
+     "centerY": 0.35,
+     "negativePrompt": "",
+     "outfitPartWeights": {
+      "head": 1,
+      "top": 1,
+      "bottom": 1,
+      "legs": 1,
+      "feet": 0
+     }
+    }
+   ],
+   "ledger": [
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "actor_roster.female.count",
+     "value": "1girl",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:female",
+     "weight": 2,
+     "id": "ledger:00000",
+     "semanticKey": "1girl",
+     "inputIndex": 0,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "actor_roster.male.count",
+     "value": "1boy",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:male",
+     "weight": 2,
+     "id": "ledger:00001",
+     "semanticKey": "1boy",
+     "inputIndex": 1,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.identity.sex",
+     "value": "female",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:actor_1:sex",
+     "outputOrigin": {
+      "path": "base.sex"
+     },
+     "weight": 1,
+     "id": "ledger:00002",
+     "semanticKey": "female",
+     "inputIndex": 2,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "actor.identity.sex",
+     "value": "male",
+     "order": 0,
+     "sourceKind": "actor-roster",
+     "sourceId": "actor-roster:actor_2:sex",
+     "outputOrigin": {
+      "path": "base.sex"
+     },
+     "weight": 1,
+     "id": "ledger:00003",
+     "semanticKey": "male",
+     "inputIndex": 3,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "base.hair.color"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.hair.color",
+     "value": "silver hair",
+     "order": 9100,
+     "sourceKind": "external-identity",
+     "sourceId": "lore:alice:hair.color:0",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00012",
+     "semanticKey": "silver hair",
+     "inputIndex": 12,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "base.hair.color"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "base.hair.color",
+     "value": "black hair",
+     "order": 9100,
+     "sourceKind": "external-identity",
+     "sourceId": "lore:bob:hair.color:0",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00020",
+     "semanticKey": "black hair",
+     "inputIndex": 20,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "base.eyes.color"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.eyes.color",
+     "value": "blue eyes",
+     "order": 9500,
+     "sourceKind": "external-identity",
+     "sourceId": "lore:alice:eyes.color:0",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00013",
+     "semanticKey": "blue eyes",
+     "inputIndex": 13,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.1",
+     "value": "1.5::artist:hwansang ::",
+     "order": 9500,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00026",
+     "semanticKey": "artist hwansang",
+     "inputIndex": 26,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.2",
+     "value": "year 2025",
+     "order": 9501,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00027",
+     "semanticKey": "year 2025",
+     "inputIndex": 27,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.3",
+     "value": "masterpiece",
+     "order": 9502,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00028",
+     "semanticKey": "masterpiece",
+     "inputIndex": 28,
+     "status": "applied"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "artist.detail_anime_illustration_style.4",
+     "value": "best quality",
+     "order": 9503,
+     "sourceKind": "external-artist",
+     "sourceId": "detail_anime_illustration_style",
+     "weight": 1,
+     "id": "ledger:00029",
+     "semanticKey": "best quality",
+     "inputIndex": 29,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.1",
+     "value": "white sailor shirt",
+     "order": 9100,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00014",
+     "semanticKey": "white sailor shirt",
+     "inputIndex": 14,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.top.1",
+     "value": "grey suit jacket",
+     "order": 9100,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:top",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00021",
+     "semanticKey": "grey suit jacket",
+     "inputIndex": 21,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.camera.view",
+      "option": "from_above"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "camera.view.from_above",
+     "value": "from above",
+     "order": 5050,
+     "sourceKind": "closed",
+     "sourceId": "camera",
+     "weight": 1,
+     "id": "ledger:00011",
+     "semanticKey": "from above",
+     "inputIndex": 11,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.environment.setting",
+      "option": "indoors"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "environment.setting.indoors",
+     "value": "indoors",
+     "order": 6060,
+     "sourceKind": "closed",
+     "sourceId": "scene-location:environment.setting:environment.setting.indoors",
+     "weight": 1,
+     "id": "ledger:00008",
+     "semanticKey": "indoors",
+     "inputIndex": 8,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.environment.time",
+      "option": "night"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "environment.time.night",
+     "value": "night",
+     "order": 6262,
+     "sourceKind": "closed",
+     "sourceId": "scene-location:environment.time:environment.time.night",
+     "weight": 1,
+     "id": "ledger:00009",
+     "semanticKey": "night",
+     "inputIndex": 9,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "free.location",
+      "group": "scene.free.location"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.free.bedroom",
+     "value": "bedroom",
+     "order": 0,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "weight": 1,
+     "id": "ledger:00010",
+     "semanticKey": "bedroom",
+     "inputIndex": 10,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.top.2",
+     "value": "white shirt",
+     "order": 9101,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:top",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00022",
+     "semanticKey": "white shirt",
+     "inputIndex": 22,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.2",
+     "value": "navy sailor collar",
+     "order": 9101,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00015",
+     "semanticKey": "navy sailor collar",
+     "inputIndex": 15,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.3",
+     "value": "red neckerchief",
+     "order": 9102,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00016",
+     "semanticKey": "red neckerchief",
+     "inputIndex": 16,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.top.3",
+     "value": "blue necktie",
+     "order": 9102,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:top",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00023",
+     "semanticKey": "blue necktie",
+     "inputIndex": 23,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.bottom"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.bottom",
+     "value": "navy pleated skirt",
+     "order": 9200,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:bottom",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00017",
+     "semanticKey": "navy pleated skirt",
+     "inputIndex": 17,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.bottom"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.bottom",
+     "value": "grey suit pants",
+     "order": 9200,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:bottom",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00024",
+     "semanticKey": "grey suit pants",
+     "inputIndex": 24,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.legs"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.legs",
+     "value": "black thighhighs",
+     "order": 9300,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:legs",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00018",
+     "semanticKey": "black thighhighs",
+     "inputIndex": 18,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "interaction": "interaction:0",
+      "path": "interaction.missionary"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "interaction.free.directed.source.missionary",
+     "value": "source#missionary",
+     "order": 100,
+     "sourceKind": "recovered-free",
+     "sourceId": "interaction:interaction:0",
+     "weight": 1,
+     "id": "ledger:00004",
+     "semanticKey": "missionary",
+     "inputIndex": 4,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "interaction": "interaction:0",
+      "path": "interaction.missionary"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "interaction.free.directed.target.missionary",
+     "value": "target#missionary",
+     "order": 100,
+     "sourceKind": "recovered-free",
+     "sourceId": "interaction:interaction:0",
+     "weight": 1,
+     "id": "ledger:00005",
+     "semanticKey": "missionary",
+     "inputIndex": 5,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.expression.general",
+      "option": "serious"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "expression.general.serious",
+     "value": "serious",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_2:expression.general.serious",
+     "weight": 1,
+     "placementIndex": 1,
+     "id": "ledger:00007",
+     "semanticKey": "serious",
+     "inputIndex": 7,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.pose.body",
+      "option": "on_back"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "pose.body.on_back",
+     "value": "on back",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:pose.body.on_back",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00006",
+     "semanticKey": "on back",
+     "inputIndex": 6,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.feet"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.feet",
+     "value": "black dress shoes",
+     "order": 9300,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:bob:outfit_1:feet",
+     "placementIndex": 1,
+     "weight": 0,
+     "suppressionReason": "visibility",
+     "id": "ledger:00025",
+     "semanticKey": "black dress shoes",
+     "inputIndex": 25,
+     "status": "suppressed"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.feet"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.feet",
+     "value": "brown loafers",
+     "order": 9400,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:feet",
+     "placementIndex": 0,
+     "weight": 0,
+     "suppressionReason": "visibility",
+     "id": "ledger:00019",
+     "semanticKey": "brown loafers",
+     "inputIndex": 19,
+     "status": "suppressed"
+    },
+    {
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "fixed.positive",
+     "value": "very aesthetic",
+     "order": 10000,
+     "sourceKind": "external-fixed",
+     "sourceId": "character-generation-settings",
+     "weight": 1,
+     "id": "ledger:00030",
+     "semanticKey": "very aesthetic",
+     "inputIndex": 30,
+     "status": "applied"
+    }
+   ]
+  }
+ ],
+ "requests": [
+  {
+   "provider": "novelai",
+   "providerRef": {
+    "providerId": "novelai",
+    "queueScopeKey": "image-provider:novelai:global"
+   },
+   "prompt": "nsfw, 2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from above, indoors, night, bedroom, very aesthetic",
+   "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+   "seed": "1234567",
+   "width": 1024,
+   "height": 1024,
+   "maxAttempts": 1,
+   "config": {
+    "apiKey": "test-key",
+    "naiModel": "nai-diffusion-5-full",
+    "seed": "1234567",
+    "steps": 28,
+    "scale": 5,
+    "sampler": "k_euler_ancestral",
+    "analysisProfile": "v5-hybrid",
+    "width": 1024,
+    "height": 1024,
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "useCoords": false,
+    "characterPrompts": [
+     {
+      "actorSlot": "actor_1",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, target#missionary, on back",
+      "uc": "bad hands",
+      "centerX": 0.5,
+      "centerY": 0.6,
+      "coordinateMode": "automatic"
+     },
+     {
+      "actorSlot": "actor_2",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, source#missionary, serious",
+      "uc": "",
+      "centerX": 0.5,
+      "centerY": 0.35,
+      "coordinateMode": "automatic"
+     }
+    ]
+   },
+   "forceRating": "nsfw",
+   "references": [],
+   "queueMeta": {
+    "kind": "generation",
+    "source": "novelai-v5-interaction-led",
+    "sourceImageToken": "slot:s2"
+   }
+  }
+ ],
+ "images": [
+  {
+   "sourceImageToken": "slot:s2",
+   "providerRef": {
+    "providerId": "novelai",
+    "queueScopeKey": "image-provider:novelai:global"
+   },
+   "actors": [
+    {
+     "actorId": "actor_1",
+     "actorIndex": 0,
+     "kind": "character",
+     "gender": "",
+     "identityKey": "lore:alice",
+     "identityName": "",
+     "selectedFormId": "form_default",
+     "selectedOutfitId": "outfit_1",
+     "identitySuppressed": false,
+     "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, target#missionary, on back",
+     "negativePrompt": "bad hands"
+    },
+    {
+     "actorId": "actor_2",
+     "actorIndex": 1,
+     "kind": "character",
+     "gender": "",
+     "identityKey": "lore:bob",
+     "identityName": "",
+     "selectedFormId": "form_default",
+     "selectedOutfitId": "outfit_1",
+     "identitySuppressed": false,
+     "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, source#missionary, serious",
+     "negativePrompt": ""
+    }
+   ],
+   "promptSegments": {
+    "artistPositive": {
+     "start": 29,
+     "end": 90
+    },
+    "artistNegative": {
+     "start": 30,
+     "end": 57
+    },
+    "outfits": {
+     "actor_1": {
+      "start": 32,
+      "end": 125
+     },
+     "actor_2": {
+      "start": 18,
+      "end": 78
+     }
+    }
+   },
+   "analysisMetadata": {
+    "hash": "fnv1a64-24a282c35420a383"
+   },
+   "decision": {
+    "hash": "fnv1a64-f8aef562e94ff87a"
+   },
+   "analyzerContinuity": {
+    "previous_modifiers": {
+     "global": {},
+     "actors": {
+      "primary": {},
+      "secondary": {},
+      "persona": {}
+     }
+    },
+    "previous_preset_refs": {
+     "actors": {
+      "primary": "",
+      "secondary": "",
+      "persona": ""
+     }
+    },
+    "previous_outfit_refs": {
+     "actors": {
+      "primary": null,
+      "secondary": null,
+      "persona": null
+     }
+    },
+    "previous_scene_tags": [],
+    "previous_background_tags": [],
+    "previous_scene_location_tags": []
+   },
+   "promptPlan": {
+    "globalPositive": "2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from above, indoors, night, bedroom, very aesthetic",
+    "bodyAction": "",
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "characters": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "placementIndex": 0,
+      "selectedOutfitId": "outfit_1",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, target#missionary, on back",
+      "uc": "bad hands",
+      "identityKey": "lore:alice",
+      "identity": {
+       "type": "character",
+       "key": "lore:alice",
+       "name": ""
+      }
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "placementIndex": 1,
+      "selectedOutfitId": "outfit_1",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, source#missionary, serious",
+      "uc": "",
+      "identityKey": "lore:bob",
+      "identity": {
+       "type": "character",
+       "key": "lore:bob",
+       "name": ""
+      }
+     }
+    ],
+    "removeTags": [],
+    "width": 1024,
+    "height": 1024,
+    "sizeId": 5,
+    "selectedVariantId": "",
+    "artistId": "detail_anime_illustration_style",
+    "artistName": "v5 style",
+    "matchedIdentityKeys": {
+     "actor_1": "lore:alice",
+     "actor_2": "lore:bob"
+    },
+    "selectedFormIds": {
+     "actor_1": "form_default",
+     "actor_2": "form_default"
+    },
+    "selectedOutfitIds": {
+     "actor_1": "outfit_1",
+     "actor_2": "outfit_1"
+    },
+    "actorIdentities": {
+     "actor_1": {
+      "type": "character",
+      "key": "lore:alice",
+      "name": ""
+     },
+     "actor_2": {
+      "type": "character",
+      "key": "lore:bob",
+      "name": ""
+     }
+    },
+    "identitySuppressedActorSlots": []
+   },
+   "novelAIConfig": {
+    "apiKey": "test-key",
+    "naiModel": "nai-diffusion-5-full",
+    "seed": "1234567",
+    "steps": 28,
+    "scale": 5,
+    "sampler": "k_euler_ancestral",
+    "analysisProfile": "v5-hybrid",
+    "width": 1024,
+    "height": 1024,
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "useCoords": false,
+    "characterPrompts": [
+     {
+      "actorSlot": "actor_1",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, target#missionary, on back",
+      "uc": "bad hands",
+      "centerX": 0.5,
+      "centerY": 0.6,
+      "coordinateMode": "automatic"
+     },
+     {
+      "actorSlot": "actor_2",
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, source#missionary, serious",
+      "uc": "",
+      "centerX": 0.5,
+      "centerY": 0.35,
+      "coordinateMode": "automatic"
+     }
+    ]
+   },
+   "characterReferences": [],
+   "seedFixed": true,
+   "providerPrompt": {
+    "provider": "novelai",
+    "profileId": "nai-diffusion-5-full",
+    "profileRevision": 0,
+    "sourceFormat": "novelai-v5-interaction-led-prompt-v1",
+    "requestFormat": "novelai-v5-hybrid",
+    "formatterRevision": 1,
+    "globalPositivePrompt": "nsfw, 2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from above, indoors, night, bedroom, very aesthetic",
+    "globalNegativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "positivePrompt": "nsfw, 2::1girl::, 2::1boy::, 1.5::artist:hwansang ::, year 2025, masterpiece, best quality, from above, indoors, night, bedroom, very aesthetic",
+    "negativePrompt": "bad anatomy, text, watermark, lowres, worst quality, text",
+    "characterPrompts": [
+     {
+      "actorId": "actor_1",
+      "actorIndex": 0,
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, target#missionary, on back",
+      "negativePrompt": "bad hands",
+      "centerX": 0.5,
+      "centerY": 0.6
+     },
+     {
+      "actorId": "actor_2",
+      "actorIndex": 1,
+      "prompt": "male, black hair, grey suit jacket, white shirt, blue necktie, grey suit pants, source#missionary, serious",
+      "negativePrompt": "",
+      "centerX": 0.5,
+      "centerY": 0.35
+     }
+    ],
+    "diagnostics": []
+   },
+   "generation": {
+    "provider": "novelai",
+    "bytes": {
+     "__bytes__": []
+    },
+    "mimeType": "image/png",
+    "extension": "png",
+    "seed": "1234567",
+    "width": 1024,
+    "height": 1024,
+    "requestId": "fake-1",
+    "providerMetadata": {},
+    "providerRef": {
+     "providerId": "novelai",
+     "queueScopeKey": "image-provider:novelai:global"
+    }
+   },
+   "generationRecord": {
+    "hash": "fnv1a64-5be5583938553ab8"
+   }
+  }
+ ],
+ "continuity": {
+  "actors": {
+   "lore:alice": {
+    "identity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:alice"
+    },
+    "storageKey": "lore:alice",
+    "characterName": "",
+    "groups": {},
+    "counters": {},
+    "turn": 0,
+    "expires": {},
+    "passthrough": {}
+   },
+   "lore:bob": {
+    "identity": {
+     "kind": "lorebook_prompt_key",
+     "value": "lore:bob"
+    },
+    "storageKey": "lore:bob",
+    "characterName": "",
+    "groups": {},
+    "counters": {},
+    "turn": 0,
+    "expires": {},
+    "passthrough": {}
+   }
+  },
+  "scene": {
+   "backgroundTags": [
+    "bedroom"
+   ],
+   "locationTags": [
+    "bedroom"
+   ]
+  },
+  "modifierRefs": {
+   "referenceOnly": true,
+   "actors": {},
+   "global": {
+    "environment.setting": [
+     "indoors"
+    ],
+    "environment.time": [
+     "night"
+    ],
+    "scene.free.location": [
+     "bedroom"
+    ]
+   },
+   "interactionReferences": {
+    "records": {
+     "[\"gen:1:mgj6k3cw:slot:s2\",1,null,\"missionary\",\"directed\",\"lore:bob\",\"lore:alice\",1,0,[]]": {
+      "id": "missionary",
+      "mode": "directed",
+      "source": "lore:bob",
+      "target": "lore:alice",
+      "eventScopeId": "gen:1:mgj6k3cw:slot:s2",
+      "slotNumber": 1,
+      "sourcePlacementIndex": 1,
+      "targetPlacementIndex": 0,
+      "groups": {}
+     }
+    },
+    "actors": {
+     "lore:alice": [
+      "[\"gen:1:mgj6k3cw:slot:s2\",1,null,\"missionary\",\"directed\",\"lore:bob\",\"lore:alice\",1,0,[]]"
+     ],
+     "lore:bob": [
+      "[\"gen:1:mgj6k3cw:slot:s2\",1,null,\"missionary\",\"directed\",\"lore:bob\",\"lore:alice\",1,0,[]]"
+     ]
+    }
+   },
+   "referenceExclusions": {
+    "catalog": "fnv1a64-554a124a78533747",
+    "actors": {
+     "lore:alice": [],
+     "lore:bob": []
+    },
+    "scene": []
+   }
+  },
+  "outfitRefs": {
+   "actors": {
+    "lore:alice": {
+     "outfitId": "outfit_1",
+     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
+    },
+    "lore:bob": {
+     "outfitId": "outfit_1",
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
+    }
+   }
+  },
+  "sceneLayouts": [
+   {
+    "sizeId": 5,
+    "actors": [
+     {
+      "identity": {
+       "kind": "lorebook_prompt_key",
+       "value": "lore:alice"
+      },
+      "center": {
+       "x": 0.5,
+       "y": 0.6
+      }
+     },
+     {
+      "identity": {
+       "kind": "lorebook_prompt_key",
+       "value": "lore:bob"
+      },
+      "center": {
+       "x": 0.5,
+       "y": 0.35
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "snapshot": {
+  "scene": {
+   "backgroundTags": [
+    "bedroom"
+   ],
+   "locationTags": [
+    "bedroom"
+   ]
+  },
+  "modifierRefs": {
+   "referenceOnly": true,
+   "global": {
+    "environment.setting": [
+     "indoors"
+    ],
+    "environment.time": [
+     "night"
+    ],
+    "scene.free.location": [
+     "bedroom"
+    ]
+   },
+   "interactionReferences": {
+    "records": {
+     "[\"gen:1:mgj6k3cw:slot:s2\",1,null,\"missionary\",\"directed\",\"lore:bob\",\"lore:alice\",1,0,[]]": {
+      "id": "missionary",
+      "mode": "directed",
+      "source": "lore:bob",
+      "target": "lore:alice",
+      "eventScopeId": "gen:1:mgj6k3cw:slot:s2",
+      "slotNumber": 1,
+      "sourcePlacementIndex": 1,
+      "targetPlacementIndex": 0
+     }
+    },
+    "actors": {
+     "lore:alice": [
+      "[\"gen:1:mgj6k3cw:slot:s2\",1,null,\"missionary\",\"directed\",\"lore:bob\",\"lore:alice\",1,0,[]]"
+     ],
+     "lore:bob": [
+      "[\"gen:1:mgj6k3cw:slot:s2\",1,null,\"missionary\",\"directed\",\"lore:bob\",\"lore:alice\",1,0,[]]"
+     ]
+    }
+   },
+   "referenceExclusions": {
+    "catalog": "fnv1a64-554a124a78533747"
+   }
+  },
+  "outfitRefs": {
+   "actors": {
+    "lore:alice": {
+     "outfitId": "outfit_1",
+     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
+    },
+    "lore:bob": {
+     "outfitId": "outfit_1",
+     "description": "grey suit jacket, white shirt, blue necktie, grey suit pants, black dress shoes",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
+    }
+   }
+  },
+  "participants": {
+   "sceneLayouts": [
+    {
+     "sizeId": 5,
+     "actors": [
+      {
+       "identity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:alice"
+       },
+       "center": {
+        "x": 0.5,
+        "y": 0.6
+       }
+      },
+      {
+       "identity": {
+        "kind": "lorebook_prompt_key",
+        "value": "lore:bob"
+       },
+       "center": {
+        "x": 0.5,
+        "y": 0.35
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "events": [
+  {
+   "phase": "analyzing-preset"
+  },
+  {
+   "phase": "planning",
+   "imageCount": 1
+  },
+  {
+   "phase": "generating",
+   "imageIndex": 0,
+   "imageCount": 1
+  },
+  {
+   "phase": "generating",
+   "imageIndex": 1,
+   "imageCount": 1,
+   "sourceImageToken": "slot:s2"
+  },
+  {
+   "phase": "applying-continuity"
+  },
+  {
+   "phase": "complete",
+   "imageIndex": 1,
+   "imageCount": 1
+  }
+ ]
+}

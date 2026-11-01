@@ -1,5 +1,6 @@
 // Parity fixtures: src/engine/__fixtures__/v5/analyzer.{request.*,runs,recovery,split,misc}.json (+ inputs.json)
-// Generator: cd C:/Users/eme4/asset-maid-port/scratch/engine/v5 && bun gen-inputs.mjs && bun gen-analyzer.mjs
+// Generator: bun S/engine-build/gen/v5/inputs.mjs && bun S/engine-build/gen/v5/analyzer.mjs (ORIGINAL 0.9.90 bundle,
+// default Atelier preset runtime)
 import { afterEach, describe, expect, test } from "bun:test";
 import inputs from "../__fixtures__/v5/inputs.json";
 import misc from "../__fixtures__/v5/analyzer.misc.json";
@@ -9,7 +10,8 @@ import split from "../__fixtures__/v5/analyzer.split.json";
 import { setEngineEnv } from "../core/env";
 import { seededEnv } from "../testing/env";
 import { toPlain } from "../testing/plain";
-import { fnv1a64V5 } from "./catalog";
+import { compileActiveAtelierPresetCatalog, fnv1a64V5 } from "./catalog";
+import { createV5RuleRuntime } from "./runtime";
 import {
   V5_ANALYSIS_PRESETS,
   buildV5AnalyzerMessages,
@@ -37,7 +39,9 @@ const settings = inputs.directionSettings as unknown as Record<string, V5Directi
 const responses = inputs.responses as Record<string, unknown>;
 const directions = (key: string) => resolveV5Directions(settings[key]);
 const ctxWith = (patch?: Record<string, unknown> | null) => (patch ? ({ ...context, ...patch } as V5AnalyzerContext) : context);
-const freecharPatch = { freeCharacterGenerationEnabled: true, knownCharacterIdentities: [{ name: "Alice", keys: ["Alice", "Ally"] }] };
+const freecharPatch = { freeCharacterGenerationEnabled: true };
+const catalog = compileActiveAtelierPresetCatalog(null).catalog;
+const runtime = createV5RuleRuntime({ catalog });
 
 afterEach(() => setEngineEnv(null));
 
@@ -58,7 +62,7 @@ describe("v5 analyzer request", () => {
       const v = f.variant;
       const userDirections = directions(v.directions);
       expect(plain(userDirections)).toEqual(f.userDirections);
-      const build = buildV5AnalyzerRequest({ context: ctxWith(v.contextPatch), continuitySnapshot: v.continuitySnapshot ?? null, config: v.config, userDirections });
+      const build = buildV5AnalyzerRequest({ runtime, context: ctxWith(v.contextPatch), continuitySnapshot: v.continuitySnapshot ?? null, config: v.config, userDirections });
       const messages = buildV5AnalyzerMessages(build.request, { revisionDirection: v.revisionDirection, revisionPromptChannels: v.revisionPromptChannels });
       expect(build.request.systemInstruction).toBe(f.systemInstruction);
       expect(plain(build.request.enabledModifierRefs)).toEqual(f.enabledModifierRefs);
@@ -90,7 +94,7 @@ describe("v5 analyzer request", () => {
   }
 });
 
-// Same table as gen-analyzer.mjs egtRun(...) calls.
+// Same table as gen/v5/analyzer.mjs run(...) calls.
 const revisionChannels: V5RevisionPromptChannel[] = [{ id: "c1", kind: "character", label: "Alice", actorIndex: 0, positive: "1girl, silver hair", negative: "" }];
 const runCases: Record<string, { response: string; directionsKey?: string; contextPatch?: Record<string, unknown>; config?: Record<string, unknown>; revision?: boolean; continuity?: boolean }> = {
   default: { response: "default" },
@@ -108,20 +112,23 @@ const runCases: Record<string, { response: string; directionsKey?: string; conte
   continuity: { response: "continuity", continuity: true },
 };
 
-describe("v5 analyzer run (Egt) with a fake LLM client", () => {
+describe("v5 analyzer run (c0e) with a fake LLM client", () => {
   for (const [name, rc] of Object.entries(runCases)) {
     test(`run: ${name}`, async () => {
       const expected = (runs as Record<string, any>)[name];
       setEngineEnv(seededEnv(expected.input.seed));
       const response = responses[rc.response];
       const sent: { config: unknown; messages: unknown; options: Record<string, unknown> }[] = [];
-      const analyzer = createV5Analyzer({
+      const analyzer = createV5Analyzer(
+        {
         async complete(config, messages, options) {
           const { signal: _s, onRequestProgress: _p, beforeRequest: _b, ...rest } = options;
           sent.push({ config, messages, options: rest });
           return typeof response === "string" ? { raw: response, parsed: null } : { raw: JSON.stringify(response), parsed: response };
         },
-      });
+        },
+        createV5RuleRuntime({ catalog }),
+      );
       const input: V5AnalyzerRunInput = {
         context: ctxWith(rc.contextPatch),
         config: rc.config ?? { provider: "openai" },
@@ -150,8 +157,8 @@ describe("v5 analyzer run (Egt) with a fake LLM client", () => {
       expect(r && { ...plain(r), requestPayload: hash(r.requestPayload) }).toEqual(expected.result);
       expect(plain(error)).toEqual(expected.error);
 
-      // The standalone request builder reproduces exactly what Egt sent.
-      const build = buildV5AnalyzerRequest({ context: input.context, continuitySnapshot: input.continuitySnapshot, config: input.config, userDirections: input.userDirections });
+      // The standalone request builder reproduces exactly what c0e sent.
+      const build = buildV5AnalyzerRequest({ runtime, context: input.context, continuitySnapshot: input.continuitySnapshot, config: input.config, userDirections: input.userDirections });
       const messages = buildV5AnalyzerMessages(build.request, { revisionDirection: input.revisionDirection, revisionPromptChannels: input.revisionPromptChannels });
       expect({ messages: hash(messages.messages), schema: hash(build.structuredOutputSchema), cachePartition: hash(messages.cachePartition) }).toEqual(expected.sent[0].hashes);
     });
@@ -161,7 +168,7 @@ describe("v5 analyzer run (Egt) with a fake LLM client", () => {
 describe("v5 analyzer response recovery", () => {
   for (const [name, rec] of Object.entries(recoveries as Record<string, { response: string; directions: string; mode: V5RecoveryMode; freeCharacterGenerationEnabled: boolean; recovered: unknown }>)) {
     test(`recover: ${name}`, () => {
-      const build = buildV5AnalyzerRequest({ context: ctxWith(rec.freeCharacterGenerationEnabled ? freecharPatch : null), userDirections: directions(rec.directions) });
+      const build = buildV5AnalyzerRequest({ runtime, context: ctxWith(rec.freeCharacterGenerationEnabled ? freecharPatch : null), userDirections: directions(rec.directions) });
       const resp = responses[rec.response];
       const out = recoverV5AnalyzerResponse(typeof resp === "string" ? resp : JSON.stringify(resp), build, { mode: rec.mode, freeCharacterGenerationEnabled: rec.freeCharacterGenerationEnabled });
       expect(plain(out)).toEqual(rec.recovered);
@@ -176,8 +183,8 @@ describe("v5 split analysis", () => {
   });
 
   test("phase system prompts", () => {
-    const k0 = buildV5AnalyzerRequest({ context, userDirections: directions("default") }).request;
-    const kc = buildV5AnalyzerRequest({ context, userDirections: directions("comic") }).request;
+    const k0 = buildV5AnalyzerRequest({ runtime, context, userDirections: directions("default") }).request;
+    const kc = buildV5AnalyzerRequest({ runtime, context, userDirections: directions("comic") }).request;
     expect(renderV5SplitPhaseSystemInstruction(k0, "initial")).toBe(split.prompts.initial);
     expect(renderV5SplitPhaseSystemInstruction(k0, "detail")).toBe(split.prompts.detail);
     expect(renderV5SplitPhaseSystemInstruction(kc, "initial")).toBe(split.prompts.comicInitial);
@@ -186,7 +193,7 @@ describe("v5 split analysis", () => {
 
   test("runner over a fake analyzer (initial + batched details)", async () => {
     setEngineEnv(seededEnv(9));
-    const catalogFingerprint = buildV5AnalyzerRequest({ context }).runtime.catalogFingerprint;
+    const catalogFingerprint = buildV5AnalyzerRequest({ runtime, context }).runtime.catalogFingerprint;
     const calls: unknown[] = [];
     const stages: unknown[] = [];
     const progress: unknown[] = [];
@@ -202,6 +209,7 @@ describe("v5 split analysis", () => {
     };
     const runner = createV5SplitAnalysisRunner(fake, (key, msg) => progress.push({ key, msg }));
     const slots = Array.from({ length: 5 }, (_, i) => ({ slot_id: "s" + i, slot_number: i, before: "b" + i, after: "a" + i }));
+    let error: unknown = null;
     const out = await runner.run(
       { context: { ...context, candidateSlots: slots, splitAnalysis: { totalCount: 4, batchSize: 3, retries: 2 } }, config: { provider: "openai" }, userDirections: {}, continuitySnapshot: null, checkpointContext: { chatKey: "chat-key", messageId: "msg-9", pendingKey: "resp-9" } },
       async (initial: any, prepare) => ({ prepared: await prepare("characters", async () => "prepared-characters"), initialSlots: initial.splitPlan.illustrations.map((i: any) => i.slot_number) }),
@@ -209,6 +217,6 @@ describe("v5 split analysis", () => {
       (p) => progress.push({ phase: p.phase, steps: p.steps.map((s: any) => ({ id: s.id, status: s.status, firstImage: s.firstImage, imageCount: s.imageCount })) }),
     );
     runner.dispose();
-    expect(plain({ calls, stages, progress, result: out })).toEqual(split.runner);
+    expect(plain({ calls, stages, progress, result: out, error })).toEqual(split.runner);
   });
 });

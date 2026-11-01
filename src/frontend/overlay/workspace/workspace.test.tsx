@@ -59,9 +59,10 @@ function Harness({ tab }: { tab: WorkspaceTab }) {
   );
 }
 
-async function mount(tab: WorkspaceTab) {
+async function mount(tab: WorkspaceTab, prepare?: (db: ReturnType<typeof createFullMockBackend>["db"]) => void) {
   const mock = createFullMockBackend({ timeScale: 0 });
   seedWorkspaceDemo(mock.db);
+  prepare?.(mock.db);
   workspaceMockState(mock.db).jobStepMs = 0;
   const app = new AppController(new RpcClient(mock.transport));
   await app.init();
@@ -233,15 +234,66 @@ describe("persona tab", () => {
   });
 });
 
+/** Two user art styles (0.9.90 ships no built-in style except "none"). */
+const userStyles = (db: { config: { characterPrompt: { artistPrompts: unknown[] } } }) =>
+  db.config.characterPrompt.artistPrompts.push(
+    { id: "style_detail", title: "Detail style", prompt: "artist:a, masterpiece", negativePrompt: "" },
+    { id: "style_comic", title: "Comic style", prompt: "artist:b, comic", negativePrompt: "" },
+  );
+
 describe("artists tab", () => {
   test("lists NovelAI artists and selects one for the character", async () => {
-    const { root, mock, characterId, unmount } = await mount("artists");
+    const { root, mock, characterId, unmount } = await mount("artists", userStyles);
     expect(root.querySelector("[data-test-title]")!.textContent).toBe("Artist select");
-    (await until(() => [...root.querySelectorAll("[aria-label]")].find((e) => e.getAttribute("aria-label") === "Recommended comic style select") as HTMLElement | undefined, "artist card")).click();
-    await until(() => documentFor(mock.db, characterId).characterPrompt.selectedArtistId === "comic_page_illustration_style", "select");
-    await until(() => root.querySelector('[data-artist-card="comic_page_illustration_style"]')?.getAttribute("data-selected") === "true", "rerender");
-    expect(documentFor(mock.db, characterId).characterPrompt.selectedArtistId).toBe("comic_page_illustration_style");
-    expect(root.querySelector('[data-artist-card="comic_page_illustration_style"]')!.getAttribute("data-selected")).toBe("true");
+    (await until(() => [...root.querySelectorAll("[aria-label]")].find((e) => e.getAttribute("aria-label") === "Comic style select") as HTMLElement | undefined, "artist card")).click();
+    await until(() => documentFor(mock.db, characterId).characterPrompt.selectedArtistId === "style_comic", "select");
+    await until(() => root.querySelector('[data-artist-card="style_comic"]')?.getAttribute("data-selected") === "true", "rerender");
+    expect(documentFor(mock.db, characterId).characterPrompt.selectedArtistId).toBe("style_comic");
+    expect(root.querySelector('[data-artist-card="style_comic"]')!.getAttribute("data-selected")).toBe("true");
+    unmount();
+  });
+});
+
+describe("artists tab default style star (AM 0.9.90)", () => {
+  const star = (root: Element, id: string) => root.querySelector<HTMLElement>(`[data-artist-card="${id}"] [data-artist-default]`)!;
+  test("NovelAI: every card has a star; the default's is pressed; clicking toggles the default without touching the character", async () => {
+    const { root, mock, characterId, unmount } = await mount("artists", (db) => {
+      userStyles(db);
+      db.config.characterPrompt.defaultArtistId = "style_detail";
+    });
+    await until(() => root.querySelectorAll("[data-artist-default]").length >= 3, "stars");
+    expect(star(root, "none")).toBeTruthy();
+    expect(star(root, "style_detail").getAttribute("aria-pressed")).toBe("true");
+    expect(star(root, "style_detail").getAttribute("aria-label")).toBe("Detail style Remove default style");
+    expect(star(root, "style_comic").getAttribute("aria-pressed")).toBe("false");
+    const own = documentFor(mock.db, characterId).characterPrompt.selectedArtistId;
+    star(root, "style_comic").click();
+    await until(() => mock.db.config.characterPrompt.defaultArtistId === "style_comic", "set default");
+    await until(() => star(root, "style_comic").getAttribute("aria-pressed") === "true", "rerender");
+    star(root, "style_comic").click();
+    await until(() => mock.db.config.characterPrompt.defaultArtistId === "none", "clear default");
+    expect(documentFor(mock.db, characterId).characterPrompt.selectedArtistId).toBe(own);
+    unmount();
+  });
+
+  test("Comfy UI: the star sets and clears the Anima default; Global preset makes the character follow it again", async () => {
+    const { root, mock, characterId, unmount } = await mount("artists", (db) => {
+      db.config.image.connectionId = "img-comfy";
+      db.config.image.provider = "comfyui";
+      db.config.animaArtists.entries.push({ id: "anima_a", title: "A", text: "@a" });
+    });
+    await until(() => star(root, "anima_a"), "anima star");
+    star(root, "anima_a").click();
+    await until(() => mock.db.config.animaArtists.selection.defaultId === "anima_a", "set default");
+    await until(() => star(root, "anima_a").getAttribute("aria-pressed") === "true", "rerender");
+    (root.querySelector('[data-artist-card="none"] button') as HTMLElement).click();
+    await until(() => documentFor(mock.db, characterId).animaArtistId === "none", "own none");
+    expect(mock.db.config.animaArtists.selection.defaultId).toBe("anima_a");
+    const global = await until(() => [...root.querySelectorAll<HTMLElement>("[data-test-header] button, [data-test-header] [role=radio]")].find((b) => b.textContent === "Global preset"), "segmented");
+    global.click();
+    await until(() => documentFor(mock.db, characterId).animaArtistId === null, "follow default");
+    star(root, "anima_a").click();
+    await until(() => mock.db.config.animaArtists.selection.defaultId === "none", "clear default");
     unmount();
   });
 });

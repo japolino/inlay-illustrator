@@ -21,6 +21,7 @@
         "body.build",
         "body.proportions",
         "body.breast_size",
+        "body.breast_other",
         "marks.distinctive",
         "nonhuman.features",
         "custom"
@@ -345,6 +346,22 @@
           ]
         },
         {
+          "id": "body.breast_other",
+          "mode": "freeform",
+          "evidence_modes": [
+            "metadata",
+            "image",
+            "text"
+          ],
+          "selection": {
+            "type": "multi",
+            "required": false,
+            "max_tags": 4
+          },
+          "description": "Return only directly supported, persistent breast or chest traits other than size. Exclude clothing, pose, actions and temporary states. Do not infer hidden anatomy. Use body.breast_size for size and marks.distinctive for marks.",
+          "allow_unlisted": true
+        },
+        {
           "id": "marks.distinctive",
           "mode": "freeform",
           "evidence_modes": [
@@ -384,7 +401,7 @@
       "fields": {
         "outfit_id": "short semantic snake_case id",
         "source_asset_name": "exactly copied evidence asset name",
-        "label": "Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim. Name the completed outfit design, including only details actually specified in its parts. Distinguish genuinely different outfits within the same form, but reuse an existing matching outfit's name and reference instead of renaming it. Wetness, stains, damage, or partial undressing alone must not create a new outfit name.",
+        "label": "Write a concise English noun phrase naming the specific outfit type or main garment combination plus 2-3 distinguishing visual features. Aim for 4-8 words, but use fewer when information is limited; never invent details to meet this target. Prefer identifying colors or color combinations, materials or patterns, silhouette or length, and distinctive trim or layering. Select the most useful features rather than listing every item, and make clear which garment each modifier describes. Every named feature must agree with the outfit parts. Avoid vague praise such as Beautiful, Elegant, or Special, generic or numbered names such as Default Outfit or Outfit 2, character names, body traits, pose, expression, camera, and lighting. When no wearables apply, use a brief accurate label without inventing clothing or padding the name. Examples only when supported: Navy Sailor Uniform with Red Ribbon; White Lace Off-Shoulder Midi Dress; Cream Cable-Knit Sweater and Denim Shorts; Black Plate Armor with Gold Trim. Name the completed outfit design, including only details actually specified in its parts. Distinguish genuinely different outfits within the same form, but reuse an existing matching outfit's name and reference instead of renaming it. Wetness, stains, damage, or partial undressing alone must not create a new outfit name. These naming requirements apply independently of custom design instructions and take precedence over conflicting naming directions within them.",
         "keywords": "short scene-matching keywords, not generation prompt fragments",
         "head": "detailed Danbooru-style tags and short English phrases for headwear and head accessories",
         "top": "detailed Danbooru-style tags and short English phrases for upper-body clothing, outerwear, dresses and one-pieces",

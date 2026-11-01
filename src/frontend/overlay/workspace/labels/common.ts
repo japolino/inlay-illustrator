@@ -107,6 +107,7 @@ export const BASE_PROMPT_LABELS = {
     "eyes.color": { label: "Color", placeholder: "e.g. blue eyes" }, // 색
     "eyes.structure": { label: "Shape", placeholder: "e.g. slit pupils" }, // 형태
     "body.breast_size": { label: "Size", placeholder: "Select breast size" }, // 크기 / 가슴 크기 선택
+    "body.breast_other": { label: "Other", placeholder: "e.g. cleavage, chest tattoo" }, // 기타
     "body.skin": { label: "Skin", placeholder: "e.g. dark skin" }, // 피부
     "body.build": { label: "Build", placeholder: "e.g. muscular female" }, // 체형
     "body.proportions": { label: "Proportions", placeholder: "e.g. wide hips" }, // 비율
@@ -299,7 +300,6 @@ export const ANALYSIS_LABELS = {
     "metadata-check": "Meta check", // 메타 확인
     "artist-extraction": "Artist prompt extraction", // 작가 프롬프트 추출
     reclassification: "AI reclassification", // AI 재분류
-    "unique-tag-search": "Unique tag search", // 고유태그검색
     "representative-pick": "Representative image pick", // 대표 이미지 선택
     "charx-regex": "charx regex analysis", // charx 정규식 분석
     "outfit-autopick": "Outfit auto-pick"

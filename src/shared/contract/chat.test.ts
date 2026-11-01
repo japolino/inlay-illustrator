@@ -3,14 +3,11 @@ import basesJson from "./fixtures/history/bases.json" with { type: "json" };
 import storeJson from "./fixtures/history/chat-store.json" with { type: "json" };
 import countJson from "./fixtures/history/count-policy.json" with { type: "json" };
 import namesJson from "./fixtures/history/asset-names.json" with { type: "json" };
-import actorJson from "./fixtures/history/actor-state.json" with { type: "json" };
 import plansJson from "./fixtures/history/plans.json" with { type: "json" };
 import {
   CHAT_DATA_SCHEMA,
   MAX_IMAGE_COUNT,
   UNLIMITED_IMAGE_COUNT,
-  actorStateFromContinuityRecord,
-  applyActorStateToContinuity,
   canonicalizeContinuity,
   chatKeyForChat,
   chatMessageKey,
@@ -21,7 +18,6 @@ import {
   createEmptyJournal,
   createGeneratedAssetName,
   createIllustrationPlan,
-  filterActorStateRecord,
   fixedCountPolicy,
   illustrationMessageKey,
   illustrationSlotId,
@@ -39,7 +35,6 @@ import {
   toHistoryMessageId,
   validateChatData,
   validateChatStore,
-  validateCurrentActorState,
   workflowFromPlan,
   workflowSyncInputs,
   type ChatDataDocument,
@@ -118,40 +113,6 @@ describe("generated asset names parity (pMe / EZ / NZ / HE)", () => {
   });
 });
 
-describe("current actor state parity (Wv / zne)", () => {
-  const data = actorJson as {
-    wv: Array<{ name: string; raw: unknown; result?: unknown; error?: string }>;
-    zne: Array<{ input: unknown; output: unknown }>;
-  };
-  for (const c of data.wv.filter((c) => c.name !== "absent"))
-    test(c.name, () => {
-      const r = validateCurrentActorState(clone(c.raw));
-      if (c.name === "revision-zero") {
-        // Port difference: {revision:0, actors:{}} is the stored empty state (Asset Maid: entry absent).
-        expect(r).toEqual({ ok: true, state: { revision: 0, actors: {} } });
-        return;
-      }
-      expect(r.ok).toBe(c.error === undefined);
-      if (r.ok) expect(r.state).toEqual(c.result as never);
-    });
-  test("absent entry equals the empty state", () => {
-    expect(data.wv.find((c) => c.name === "absent")!.result).toEqual({ revision: 0, actors: {} });
-  });
-  for (const [i, c] of data.zne.entries())
-    test(`zne ${i}`, () => expect(actorStateFromContinuityRecord(c.input)).toEqual(c.output as never));
-  test("apply / filter helpers", () => {
-    const state = { revision: 1, actors: { alice: { groups: { "state.fluid.cum.location": ["a", "b"], "actor.injury": ["cut"] }, count: 3, ttl: { a: 2 } } } };
-    const records = applyActorStateToContinuity({ alice: { _continuity_turn: 4, other: 1 } }, state);
-    expect(records.alice).toMatchObject({ other: 1, cum_count: 3, _continuity_turn: 4, "actor.injury": ["cut"] });
-    expect(actorStateFromContinuityRecord(records.alice)).toEqual({ groups: state.actors.alice.groups, count: 3, ttl: { a: 2 } });
-    expect(filterActorStateRecord(state.actors.alice, { "state.fluid.cum.location": ["b"] })).toEqual({
-      groups: { "state.fluid.cum.location": ["b"], "actor.injury": [] },
-      count: 2,
-      ttl: {},
-    });
-  });
-});
-
 describe("illustration plans parity (aO / Z_e / U5 / B1t / fq)", () => {
   const data = plansJson as { plans: IllustrationPlan[]; workflows: unknown[]; attempts: string[]; sync: unknown; syncNone: unknown; fq: unknown[] };
   test("plansFromHistoryTree", () => expect(JSON.stringify(plansFromHistoryTree(FULL))).toBe(JSON.stringify(data.plans)));
@@ -205,7 +166,7 @@ describe("chat data document", () => {
     const d = createEmptyChatData("lumi-chat-1", NOW);
     expect(d).toEqual({
       schema: CHAT_DATA_SCHEMA, version: 1, chatId: "lumi-chat-1", updatedAt: NOW, store: { messages: {} },
-      history: createEmptyHistoryTree("chat:lumi-chat-1"), plans: {}, actorState: { revision: 0, actors: {} },
+      history: createEmptyHistoryTree("chat:lumi-chat-1"), plans: {},
     });
     expect(validateChatData(d, "lumi-chat-1")).toEqual({ ok: true, data: d });
   });
@@ -241,18 +202,33 @@ describe("chat data document", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.issues.map((i) => i.code)).toEqual(["chat-key"]);
   });
-  test("invalid store and actor state are reset and reported", () => {
+  test("invalid store and plans are reset and reported", () => {
     const d = validDoc() as unknown as Record<string, unknown>;
     d.store = { messages: { "id:1": { kind: "inline", generations: [] } } };
-    d.actorState = { revision: -1, actors: {} };
     d.plans = { "illustration:x@0": { key: "illustration:y@0", messageId: "y@0" } };
     const n = normalizeChatData(d, "lumi-chat-1", NOW);
     expect(n.repaired).toBe(true);
     expect(n.data.store).toEqual({ messages: {} });
-    expect(n.data.actorState).toEqual({ revision: 0, actors: {} });
     expect(n.data.plans).toEqual({});
     expect(n.data.history).toEqual(validDoc().history); // the history itself stays valid
-    expect(n.issues.map((i) => `${i.part}:${i.code}`)).toEqual(["store:message-key", "plans:plan-invalid", "actorState:revision"]);
+    expect(n.issues.map((i) => `${i.part}:${i.code}`)).toEqual(["store:message-key", "plans:plan-invalid"]);
+  });
+  test("a pre-0.9.90 document with the removed actor state loads with its History, without a repair write", () => {
+    const d = validDoc();
+    const plan = createIllustrationPlan({ messageId: "msg-2@1", messageIndex: 5 }, 3, 1);
+    d.plans[plan.key] = plan;
+    const legacy = {
+      ...clone(d),
+      actorState: { revision: 4, actors: { alice: { groups: { "state.fluid.cum.location": ["a"], "actor.injury": [] }, count: 1, ttl: { a: 2 } } } },
+    };
+    const n = normalizeChatData(legacy, "lumi-chat-1", NOW);
+    expect(n.issues).toEqual([]);
+    expect(n.repaired).toBe(false);
+    expect(n.data).toEqual(d);
+    expect("actorState" in n.data).toBe(false);
+    // Strict validation accepts the key as well (and drops it); an invalid old value is not validated.
+    const strict = validateChatData({ ...clone(d), actorState: { revision: -1 } }, "lumi-chat-1");
+    expect(strict).toEqual({ ok: true, data: d });
   });
   test("message ids without a swipe suffix are rejected", () => {
     const d = validDoc();

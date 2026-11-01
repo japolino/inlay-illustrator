@@ -25,6 +25,7 @@ import {
   type RpcResult,
 } from "../../shared/contract/index.js";
 import { applyNonArtistWeightToRequest } from "../../engine/compose/weights.js";
+import { resolveFixedRating } from "../../engine/compose/rating.js";
 import { fail, isAbortLike, toRpcError } from "../rpc/errors.js";
 import type { BackendServices, ImageGenerateRequest } from "../services/types.js";
 import { AM, amFn } from "./core/index.js";
@@ -85,27 +86,27 @@ export interface OutfitTargetContext {
 /** AM positive / negative recipe (fOt L178940-178953, hOt L179153-179167). */
 export function buildOutfitPrompt(config: Any, ctx: OutfitTargetContext, draft: OutfitImageDraft): OutfitPromptPlan {
   const provider = config.runtime.generationProvider;
-  const charx = AM.Ci(config, ctx.sourceId);
-  const anima = AM.Ds(provider) === true;
-  const artist = AM.nb(config, { sourceId: ctx.sourceId, promptKey: ctx.persona ? `persona:${ctx.promptKey}` : ctx.promptKey });
+  const charx = AM.xi(config, ctx.sourceId);
+  const anima = AM.Vi(provider) === true;
+  const artist = AM.Sx(config, { sourceId: ctx.sourceId, promptKey: ctx.persona ? `persona:${ctx.promptKey}` : ctx.promptKey });
   const parts = { head: draft.head, top: draft.top, bottom: draft.bottom, legs: draft.legs, feet: draft.feet, humanlike: ctx.humanlike };
   const gender = ctx.gender === "male" ? "1boy" : ctx.gender === "female" ? "1girl" : "";
-  const pose = ctx.humanlike === false ? AM.uN.freeform : AM.uN.humanlike;
+  const pose = ctx.humanlike === false ? AM.rC.freeform : AM.rC.humanlike;
   let positivePrompt: string;
   let negativePrompt: string;
   let mainPrompt: string;
   if (ctx.persona) {
-    mainPrompt = draft.nsfw ? AM.A4(["nsfw", ctx.mainPrompt]) : ctx.mainPrompt;
-    positivePrompt = AM.A4([artist.prompt, gender, ...pose, anima ? "" : charx.fixedPositivePrompt, mainPrompt, AM.ZOt(config, parts)]);
+    mainPrompt = draft.nsfw ? AM.OT(["nsfw", ctx.mainPrompt]) : ctx.mainPrompt;
+    positivePrompt = AM.OT([artist.prompt, gender, ...pose, anima ? "" : charx.fixedPositivePrompt, mainPrompt, AM.Qkt(config, parts)]);
     if (!positivePrompt) fail("bad-request", "No prompt available for persona outfit generation.", { messageKo: "페르소나 의상 생성에 사용할 프롬프트가 없습니다." });
-    negativePrompt = AM.A4([anima ? "" : charx.negativePrompt, anima ? "" : artist.negativePrompt, ctx.formNegativePrompt]);
+    negativePrompt = AM.OT([anima ? "" : charx.negativePrompt, anima ? "" : artist.negativePrompt, ctx.formNegativePrompt]);
   } else {
-    mainPrompt = AM.qdt(ctx.mainPrompt, draft.nsfw === true);
-    positivePrompt = AM.sG([artist.prompt, gender, ...pose, anima ? "" : charx.fixedPositivePrompt, mainPrompt, AM.XOt(config, parts)]);
+    mainPrompt = AM.Wit(ctx.mainPrompt, draft.nsfw === true);
+    positivePrompt = AM.sU([artist.prompt, gender, ...pose, anima ? "" : charx.fixedPositivePrompt, mainPrompt, AM.Jkt(config, parts)]);
     if (!positivePrompt) fail("bad-request", "No prompt available for outfit generation.", { messageKo: "의상 생성에 사용할 프롬프트가 없습니다." });
-    negativePrompt = anima ? "" : AM.sG([charx.negativePrompt, artist.negativePrompt]);
+    negativePrompt = anima ? "" : AM.sU([charx.negativePrompt, artist.negativePrompt]);
   }
-  const referenceAllowed = AM.Qu(provider, config.novelai.characterReferenceEnabled, config.runtime.comfyuiCharacterReferenceEnabled) === true;
+  const referenceAllowed = AM.Du(provider, config.novelai.characterReferenceEnabled, config.runtime.comfyuiCharacterReferenceEnabled) === true;
   return {
     positivePrompt,
     negativePrompt,
@@ -121,20 +122,23 @@ export function buildOutfitPrompt(config: Any, ctx: OutfitTargetContext, draft: 
   };
 }
 
-/** AM `qge` L111082 provider prompt: `g2` codec (anima prefixes) + `C7` NSFW prefix policy. */
+/**
+ * AM 0.9.90 outfit provider prompt (`Sxe` @156524): `UG` codec (anima prefixes) + `XG` rating policy with the source's
+ * fixed rating (`forceRating: yS(charx)` @184278; was the 0.9.89 `C7` NSFW prefix).
+ */
 export function providerPromptFor(config: Any, plan: OutfitPromptPlan): { positivePrompt: string; negativePrompt: string } {
   const provider = plan.provider;
-  const prompt = AM.PH(
-    AM.J2({
+  const prompt = AM.XG(
+    AM.UG({
       provider,
       plan: { globalPositive: plan.positivePrompt.trim(), bodyAction: "", negativePrompt: plan.negativePrompt, characters: [] },
       novelAIModel: config.novelai.naiModel,
-      comfyUIProfile: provider === "comfy-ui" ? AM.eH(config.runtime.comfyuiWorkflowProfileId) : null,
+      comfyUIProfile: provider === "comfy-ui" ? AM.CG(config.runtime.comfyuiWorkflowProfileId) : null,
       outfitReferenceEnabled: false,
       animaPositivePrefix: plan.charx.animaPositivePrompt,
       animaNegativePrefix: plan.charx.animaNegativePrompt,
     }),
-    plan.charx.nsfwAlwaysEnabled === true,
+    resolveFixedRating(plan.charx) || false,
   );
   return { positivePrompt: String(prompt.positivePrompt ?? ""), negativePrompt: String(prompt.negativePrompt ?? "") };
 }
@@ -162,7 +166,7 @@ async function resolveTargetContext(services: BackendServices, config: Any, targ
     let characterName = target.promptKey;
     try {
       const source = await buildRuntimeSource(services, target.characterId, null);
-      for (const m of source.members) for (const l of m.lorebooks) if (amFn("Hs")(m, l) === target.promptKey) characterName = l.title || characterName;
+      for (const m of source.members) for (const l of m.lorebooks) if (amFn("Is")(m, l) === target.promptKey) characterName = l.title || characterName;
     } catch {
       /* name only */
     }
@@ -176,7 +180,7 @@ async function resolveTargetContext(services: BackendServices, config: Any, targ
       humanlike: form.humanlike !== false,
       mainPrompt: compileMainPrompt(form.basePromptGroups, draftGender(draft) ?? form.gender),
       formNegativePrompt: form.negativePrompt,
-      reference: draft.useCharacterReference && form.reference?.defaultAsset ? (AM.sn(form.reference.defaultAsset) as AssetRef) : null,
+      reference: draft.useCharacterReference && form.reference?.defaultAsset ? (AM.cn(form.reference.defaultAsset) as AssetRef) : null,
       persona: false,
     };
   }
@@ -197,7 +201,7 @@ async function resolveTargetContext(services: BackendServices, config: Any, targ
     humanlike: form.humanlike !== false,
     mainPrompt: compileMainPrompt(form.basePromptGroups, draftGender(draft) ?? form.gender),
     formNegativePrompt: form.negativePrompt,
-    reference: draft.useCharacterReference ? ((form.reference?.defaultAsset ? AM.sn(form.reference.defaultAsset) : fallbackReference) as AssetRef | null) : null,
+    reference: draft.useCharacterReference ? ((form.reference?.defaultAsset ? AM.cn(form.reference.defaultAsset) : fallbackReference) as AssetRef | null) : null,
     persona: true,
   };
 }
@@ -221,7 +225,7 @@ async function prepareConfig(services: BackendServices, characterId: string): Pr
   const config = buildAmConfig(parts);
   config.runtime = { ...config.runtime, generationProvider: imageTarget.generationProvider };
   config.novelai = { ...config.novelai, naiModel: imageTarget.model };
-  if (!AM.Ap(imageTarget.generationProvider)) fail("unsupported", "The selected provider does not support outfit image generation.");
+  if (!AM.dm(imageTarget.generationProvider)) fail("unsupported", "The selected provider does not support outfit image generation.");
   return { config, imageTarget };
 }
 
@@ -394,10 +398,10 @@ export function createAmOutfitGenerator(services: BackendServices, characterId: 
         humanlike: input.humanlike !== false,
         mainPrompt: input.mainPrompt ?? "",
         formNegativePrompt: input.characterNegativePrompt ?? "",
-        reference: input.characterReference ? (AM.sn(input.characterReference) as AssetRef) : null,
+        reference: input.characterReference ? (AM.cn(input.characterReference) as AssetRef) : null,
         persona: false,
       };
-      const seed = AM.Ob(input.seed);
+      const seed = AM.ov(input.seed);
       const draft: OutfitImageDraft = {
         label: input.label ?? "",
         description: input.description ?? "",

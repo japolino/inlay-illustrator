@@ -6,18 +6,20 @@
  * adapters call `ImageService.generate` with `retries: 0`; NovelAI requests use the ImageService queue (`queue: true`,
  * one at a time with the configured interval, like AM's `xAt` queue).
  *
- * Per-run context (connection, owner ids, nsfw getter, progress sink) travels through `providerRef.queueScopeKey`:
+ * Per-run context (connection, owner ids, fixed rating getter, progress sink) travels through `providerRef.queueScopeKey`:
  * the orchestrator input sets `generationProviderForImage` (AM `Eye` 114638) to `{providerId, queueScopeKey:
  * "inlay-run:<runId>"}` and the adapter looks the run up in the {@link ProviderRunRegistry}.
  *
- * NovelAI: what AM's client did when it built the HTTP body (`kyt` 120226 -> `Cyt` 120380 -> `jut` 108897 -> `Cut` 108742):
- * forced `nsfw` prefix (`request.forceNsfwPrefix ?? nsfwAlwaysEnabled`, `d7`), v4 captions from `config.characterPrompts`
+ * NovelAI: what AM's client did when it built the HTTP body (0.9.90 rating wrapper `Mht` @158839 over the HTTP client;
+ * 0.9.89.5 `kyt` 120226 -> `Cyt` 120380 -> `jut` 108897 -> `Cut` 108742): fixed rating tag (`request.forceRating ??
+ * fixedRating getter`, `OG`; rating tags stripped from the character prompts), v4 captions from `config.characterPrompts`
  * (`pge`/`hge`/`gge` 108829-108878, coordinates + per-character negatives), the non-artist weight (`Cut`), seed (`Ii`/`c2`),
  * director references (V4.5 models only, `Out` 108882) and img2img.
  */
 import type { AssetRef, ProgressInfo } from "../../shared/contract/index.js";
 import { applyNonArtistWeightToRequest, type NovelAIRequestBody } from "../../engine/compose/weights.js";
-import { prependNsfwTag } from "../../engine/compose/nsfw.js";
+import { prependRatingTag, stripPromptTags } from "../../engine/compose/rating.js";
+import type { RatingTag } from "../../engine/compose/types.js";
 import { toNovelAICharacterCaptions } from "../../engine/compose/coordinates.js";
 import { normalizeSeed, randomSeed } from "../../engine/compose/size-count-seed.js";
 import type { ImageProviderAdapter, ImageProviderId } from "../../engine/engine.js";
@@ -35,8 +37,11 @@ export interface ProviderRunContext {
   ownerChatId?: string;
   ownerCharacterId?: string;
   comfyuiWorkflowId?: string;
-  /** AM `Cyt` getter: per-source `nsfwAlwaysEnabled` (used when the request does not force `false`). */
-  forceNsfwPrefix: () => boolean;
+  /**
+   * AM 0.9.90 `Mht` `forceRating` getter: fixed rating of the source (`yS(settings)`: `fixedRating` when
+   * `nsfwAlwaysEnabled`, else `false`). Used when the request carries no `forceRating`.
+   */
+  forceRating: () => RatingTag | false;
   /** Provider progress (queue / stages) for the job snapshot. */
   onProgress?: (progress: ProgressInfo) => void;
 }
@@ -174,6 +179,7 @@ function engineResult(provider: ImageProviderId, result: ImageGenerateResult, ex
       model: result.model,
       attempts: result.attempts,
       sentParameters: result.sentParameters,
+      ...(result.sampling ? { novelaiSampling: result.sampling } : {}),
       ...rec(extra.providerMetadata),
     },
   };
@@ -186,7 +192,7 @@ function engineResult(provider: ImageProviderId, result: ImageGenerateResult, ex
 export interface NovelAIBuild {
   request: ImageGenerateRequest;
   body: NovelAIRequestBody;
-  /** Positive prompt actually sent (after nsfw + weight). */
+  /** Positive prompt actually sent (after rating + weight). */
   effectivePrompt: string;
   finalizedPrompt: Rec;
 }
@@ -214,13 +220,25 @@ function normalizeCharacterPrompts(value: unknown) {
  */
 export function buildNovelAIRequest(
   request: Rec,
-  ctx: Pick<ProviderRunContext, "purpose" | "connectionId" | "model" | "ownerChatId" | "ownerCharacterId" | "forceNsfwPrefix">,
+  ctx: Pick<ProviderRunContext, "purpose" | "connectionId" | "model" | "ownerChatId" | "ownerCharacterId" | "forceRating">,
   extras: { characterReferences?: NovelAIImageOptions["characterReferences"]; imageToImage?: NovelAIImageOptions["imageToImage"] } = {},
 ): NovelAIBuild {
   const rawPrompt = typeof request.prompt === "string" ? request.prompt : "";
-  const force = (request.forceNsfwPrefix as boolean | undefined) ?? ctx.forceNsfwPrefix();
-  const prompt = force && rawPrompt.trim() ? prependNsfwTag(rawPrompt) : rawPrompt; // AM Cyt 120389
-  const config: Rec = { ...rec(request.config), width: request.width, height: request.height, negativePrompt: request.negativePrompt, seed: request.seed };
+  // AM 0.9.90 `Mht` @158848: `o.forceRating ?? r.forceRating?.() ?? false`; the rating replaces any rating tag of the
+  // prompt and is stripped from every character prompt.
+  const rating = (request.forceRating as RatingTag | false | undefined) ?? ctx.forceRating() ?? false;
+  const prompt = rating && rawPrompt.trim() ? prependRatingTag(rawPrompt, rating) : rawPrompt;
+  const baseConfig = rec(request.config);
+  const config: Rec = {
+    ...baseConfig,
+    ...(rating && Array.isArray(baseConfig.characterPrompts)
+      ? { characterPrompts: baseConfig.characterPrompts.map((c) => ({ ...rec(c), prompt: stripPromptTags(str(rec(c).prompt)) })) }
+      : {}),
+    width: request.width,
+    height: request.height,
+    negativePrompt: request.negativePrompt,
+    seed: request.seed,
+  };
   const input = str(prompt);
   if (!input) throw Object.assign(new Error("NovelAI prompt is empty."), { code: "NOVELAI_PROMPT_EMPTY", retryable: false });
   const model = str(ctx.model) || str(config.naiModel) || "nai-diffusion-5-full";
@@ -253,6 +271,8 @@ export function buildNovelAIRequest(
     scale: Number(config.scale) || 6,
     cfgRescale: Number.isFinite(Number(config.cfgRescale)) ? Number(config.cfgRescale) : 0.5,
     qualityToggle: config.qualityToggle !== false,
+    // AM 0.9.90: V5 Full High / Medium (the run config carries `config.novelai.effort`; regenerate sets the recorded one).
+    ...(config.effort === "medium" || config.effort === "high" ? { effort: config.effort } : {}),
     useCoords,
     useOrder: config.useOrder !== false,
     characters: v4
@@ -288,7 +308,7 @@ export function buildNovelAIRequest(
  * Adapters
  * ---------------------------------------------------------------------------------------------- */
 
-const DEFAULT_CONTEXT: ProviderRunContext = { purpose: "chat", forceNsfwPrefix: () => false };
+const DEFAULT_CONTEXT: ProviderRunContext = { purpose: "chat", forceRating: () => false };
 
 /** Engine reference `{asset, cropReference}` -> asset ref carrying the crop. */
 function withCrop(reference: Record<string, unknown>): Record<string, unknown> {
@@ -393,44 +413,10 @@ export function createComfyAdapter(services: BackendServices, registry: Provider
   };
 }
 
-/**
- * "generic" Lumiverse providers (not NovelAI / ComfyUI): the engine runs them as "chan-server" (anima-flat codec, no
- * references, tags-only outfit creation; AM `Tu` gate), the adapter sends the flat prompt pair to the connection.
- */
-export function createGenericAdapter(services: BackendServices, registry: ProviderRunRegistry): ImageProviderAdapter {
-  return {
-    provider: "chan-server",
-    async generate(request, options = {}) {
-      const ctx = registry.resolve(request as Rec) ?? DEFAULT_CONTEXT;
-      const signal = (request.signal as AbortSignal | undefined) ?? options.signal;
-      const seedText = normalizeSeed(request.seed);
-      const result = await generateImage(
-        services,
-        {
-          purpose: ctx.purpose,
-          prompt: str(request.prompt),
-          negativePrompt: str(request.negativePrompt),
-          width: Math.max(1, Math.round(Number(request.width) || 832)),
-          height: Math.max(1, Math.round(Number(request.height) || 1216)),
-          seed: seedText ? Number(seedText) : randomSeed(),
-          ...(ctx.connectionId ? { connectionId: ctx.connectionId } : {}),
-          ...(ctx.model ? { model: ctx.model } : {}),
-          ...(ctx.ownerChatId ? { ownerChatId: ctx.ownerChatId } : {}),
-          ...(ctx.ownerCharacterId ? { ownerCharacterId: ctx.ownerCharacterId } : {}),
-          retries: 0,
-        },
-        { signal, onProgress: (p) => emitProgress("chan-server", options.onEvent, ctx, p) },
-      );
-      return engineResult("chan-server", result);
-    },
-  };
-}
-
 export function createImageProviderAdapters(services: BackendServices, registry: ProviderRunRegistry): Partial<Record<ImageProviderId, ImageProviderAdapter>> {
   return {
     novelai: createNovelAIAdapter(services, registry),
     "comfy-ui": createComfyAdapter(services, registry),
-    "chan-server": createGenericAdapter(services, registry),
   };
 }
 

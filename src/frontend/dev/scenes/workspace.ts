@@ -85,11 +85,6 @@ const SCENES: Record<string, PreviewScene> = {
     await sleep(400);
     await clickLabel(doc, "[data-picker-dock]", "Reference crop");
   },
-  "prompts-unique-tags": async ({ doc }) => {
-    await tab(doc, "prompts");
-    await ready(doc, "[data-prompts-list]");
-    await clickLabel(doc, "[data-command-dock]", "Open unique tag search");
-  },
   "prompts-form-edit": async ({ doc }) => {
     await tab(doc, "prompts");
     await ready(doc, "[data-prompts-list]");

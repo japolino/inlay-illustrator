@@ -12,6 +12,9 @@
  *   `v4_negative_prompt` char captions with centers + `use_coords` / `use_order` (AM body `jut` @108897-108966), and img2img
  *   (`action:"img2img"`, `parameters.{image,strength,noise}`, AM `CSt`/`exe` @158090-158104). A connection-level
  *   `rawRequestOverride` default is kept underneath ours.
+ * - V5 Medium (AM 0.9.90 `Imt` N 153476): `nai-diffusion-5-full` + effort "medium" sends the model
+ *   `nai-diffusion-5-full-medium` (as the host `model`: `rawRequestOverride` cannot replace the protected `model` key), 14 steps,
+ *   Euler Ancestral and empty negatives, with NovelAI's Medium request fields. The stored settings are never touched.
  * ComfyUI: host workflow mapping (`parameters.workflow_id`), img2img through `resolvedSourceImages` + `denoise` (also mirrored into
  *   `comfyui_field_values`) when the workflow maps `init_image`.
  * Other providers: prompt / negative / size / seed only.
@@ -28,8 +31,12 @@
  */
 import {
   generationProviderFromLumiverse,
+  isNovelAIMedium,
   novelAISamplingOptions,
   isNovelAIV5Model,
+  normalizeNovelAIEffort,
+  NOVELAI_V5_MEDIUM_MODEL,
+  type NovelAISampling,
   normalizeConfig,
   promptCodecForProvider,
   type ImageConnectionSummary,
@@ -170,7 +177,15 @@ export interface BuiltImageRequest {
   width: number;
   height: number;
   notes: string[];
+  /** Model to send instead of the target model (NovelAI V5 Medium). */
+  model?: string;
+  /** NovelAI: the sampling actually used (AM 0.9.90 `finalizedPrompt.sampling`). */
+  sampling?: NovelAISampling;
 }
+
+/** AM 0.9.90 Medium request: 14 steps, Euler Ancestral (`Imt` N 153476-153497). */
+export const NOVELAI_MEDIUM_STEPS = 14;
+export const NOVELAI_MEDIUM_SAMPLER = "k_euler_ancestral";
 
 /** NovelAI request parameters for the host provider (+ rawRequestOverride). */
 export function buildNovelAIParameters(
@@ -187,23 +202,28 @@ export function buildNovelAIParameters(
   const width = clampInt(request.width, 64, 2048, 832);
   const height = clampInt(request.height, 64, 2048, 1216);
   const seed = parseSeed(request.seed) ?? seedSource();
-  const steps = clampInt(o.steps ?? nai.steps, 1, 50, 28);
+  const effort = normalizeNovelAIEffort(o.effort ?? nai.effort);
+  // AM 0.9.90 `TC$990`: Medium only on V5 Full; steps 14 wins over the global and artist steps, the artist scale stays.
+  const medium = isNovelAIMedium({ naiModel: target.model, effort });
+  const steps = medium ? NOVELAI_MEDIUM_STEPS : clampInt(o.steps ?? nai.steps, 1, 50, 28);
   const scale = Number.isFinite(Number(o.scale ?? nai.scale)) ? Number(o.scale ?? nai.scale) || 6 : 6;
   const cfgRescale = clampNum(o.cfgRescale ?? nai.cfgRescale, 0, 1, 0.5);
-  const sampling = novelAISamplingOptions(target.model);
-  const sampler = [o.sampler, nai.sampler].map(normalizeNovelAiSampler)
-    .find((value) => sampling.samplers.some((s) => s.value === value)) ?? "k_euler_ancestral";
+  const samplingOptions = novelAISamplingOptions(target.model);
+  const sampler = medium
+    ? NOVELAI_MEDIUM_SAMPLER
+    : [o.sampler, nai.sampler].map(normalizeNovelAiSampler).find((value) => samplingOptions.samplers.some((s) => s.value === value)) ?? "k_euler_ancestral";
   const noiseSchedule = [o.noiseSchedule, nai.noiseSchedule]
-    .find((value) => sampling.noiseSchedules.some((s) => s === value)) ?? "karras";
+    .find((value) => samplingOptions.noiseSchedules.some((s) => s === value)) ?? "karras";
   const qualityToggle = (o.qualityToggle ?? nai.qualityToggle) !== false;
   const useOrder = (o.useOrder ?? nai.useOrder) !== false;
   const useCoords = o.useCoords === true;
-  const negative = String(request.negativePrompt ?? "").trim();
+  // Medium applies no global, artist or character negatives (AM `xmt` blanks them, `Imt` sends "").
+  const negative = medium ? "" : String(request.negativePrompt ?? "").trim();
   const prompt = String(request.prompt ?? "").trim();
   const structured = /^nai-diffusion-(?:4|5)(?:-|$)/.test(target.model);
   const is45 = /^nai-diffusion-4-5/.test(target.model);
   const characters = (o.characters ?? [])
-    .map((c) => ({ prompt: String(c.prompt ?? "").trim(), uc: String(c.negativePrompt ?? "").trim(), center: c.center && Number.isFinite(c.center.x) && Number.isFinite(c.center.y) ? { x: c.center.x, y: c.center.y } : { x: 0, y: 0 } }))
+    .map((c) => ({ prompt: String(c.prompt ?? "").trim(), uc: medium ? "" : String(c.negativePrompt ?? "").trim(), center: c.center && Number.isFinite(c.center.x) && Number.isFinite(c.center.y) ? { x: c.center.x, y: c.center.y } : { x: 0, y: 0 } }))
     .filter((c) => c.prompt || c.uc);
 
   const parameters: Record<string, unknown> = {
@@ -249,6 +269,26 @@ export function buildNovelAIParameters(
     inner.v4_negative_prompt = { caption: { base_caption: negative, char_captions: characters.map((c) => ({ char_caption: c.uc, centers: [c.center] })) }, legacy_uc: false };
   }
   inner.skip_cfg_above_sigma = is45 && qualityToggle && !directorRefs ? NOVELAI_SKIP_CFG_ABOVE_SIGMA : null;
+  if (medium) {
+    // AM `Imt` deletes cfg_rescale, qualityToggle and skip_cfg_above_sigma. The override is deep-merged into the host body,
+    // which cannot delete keys, and a JSON null would be sent as null; so they are left out of `inner` and the host's own
+    // defaults stay (LV providers/novelai.ts: cfg_rescale 0 = no CFG rescale, qualityToggle true, skip_cfg_above_sigma null).
+    delete inner.cfg_rescale;
+    delete inner.qualityToggle;
+    delete inner.skip_cfg_above_sigma;
+    Object.assign(inner, {
+      params_version: 4,
+      negative_prompt: "",
+      ucPresetId: "heavy",
+      qualityPresetId: "standard",
+      tag_hint_qt: 1,
+      tag_hint_uc_preset: 2,
+      normalize_reference_strength_multiple: true,
+      straight_alpha: true,
+      image_format: "png",
+      inpaintImg2ImgStrength: 1,
+    });
+  }
 
   let override: Record<string, unknown> = { parameters: inner };
   if (o.imageToImage) {
@@ -261,7 +301,8 @@ export function buildNovelAIParameters(
   if (o.rawOverride) override = deepMerge(override, o.rawOverride) as Record<string, unknown>;
   const base = deepMerge(parseOverride(connectionDefaults.rawRequestOverride), parseOverride(config.image.parameters.rawRequestOverride));
   parameters.rawRequestOverride = JSON.stringify(deepMerge(base, override));
-  return { parameters, seed, width, height, notes };
+  const sampling: NovelAISampling = { model: medium ? NOVELAI_V5_MEDIUM_MODEL : target.model, effort: medium ? "medium" : "high", steps, sampler, scale, cfgRescale, noiseSchedule };
+  return { parameters, seed, width, height, notes, sampling, ...(medium ? { model: NOVELAI_V5_MEDIUM_MODEL } : {}) };
 }
 
 /** ComfyUI parameters (host workflow mapping). Throws `unsupported` when img2img needs an unmapped `init_image`. */
@@ -290,15 +331,6 @@ export function buildComfyParameters(
     parameters.denoise = denoise;
     parameters.comfyui_field_values = { ...asRecord(parameters.comfyui_field_values), denoise };
   }
-  return { parameters, seed, width, height, notes: [] };
-}
-
-export function buildGenericParameters(request: ImageGenerateRequest, config: InlayConfig): BuiltImageRequest {
-  const width = clampInt(request.width, 64, 4096, 1024);
-  const height = clampInt(request.height, 64, 4096, 1024);
-  const seed = parseSeed(request.seed);
-  const parameters: Record<string, unknown> = { ...config.image.parameters, width, height, negativePrompt: String(request.negativePrompt ?? "") };
-  if (seed !== null) parameters.seed = seed;
   return { parameters, seed, width, height, notes: [] };
 }
 
@@ -459,6 +491,13 @@ export function createImageService(deps: ImageServiceDeps): ImageService {
 
   function targetOf(config: InlayConfig, info: ConnectionInfo, modelOverride?: string): ResolvedImageTarget {
     const generationProvider = generationProviderFromLumiverse(info.provider);
+    // Only NovelAI and ComfyUI connections are supported (AM 0.9.90 providers; the port's generic providers were removed).
+    if (!generationProvider)
+      fail("unsupported", `The image connection "${info.name || info.id}" uses the ${info.provider || "unknown"} provider, which is not supported. Select a NovelAI or ComfyUI connection in the image model settings.`, {
+        messageKo: "지원하지 않는 이미지 연결입니다. 이미지 모델 설정에서 NovelAI 또는 ComfyUI 연결을 선택하세요.",
+        detailCode: "IMAGE_PROVIDER_UNSUPPORTED",
+        retryable: false,
+      });
     const model = str(modelOverride) || config.image.model || info.model;
     return {
       connectionId: info.id,
@@ -498,16 +537,14 @@ export function createImageService(deps: ImageServiceDeps): ImageService {
       const built =
         target.generationProvider === "novelai"
           ? buildNovelAIParameters(request, config, target, info.defaultParameters, seedSource)
-          : target.generationProvider === "comfy-ui"
-            ? buildComfyParameters(request, config, target, info.metadata, seedSource)
-            : buildGenericParameters(request, config);
+          : buildComfyParameters(request, config, target, info.metadata, seedSource);
       for (const note of built.notes) log("info", note);
 
       const input: Record<string, unknown> = {
         connection_id: target.connectionId,
         prompt,
-        negativePrompt: String(request.negativePrompt ?? ""),
-        model: target.model,
+        negativePrompt: built.sampling?.effort === "medium" ? "" : String(request.negativePrompt ?? ""),
+        model: built.model ?? target.model,
         parameters: built.parameters,
         includeDataUrl: request.includeData === true,
         ...(request.ownerCharacterId ? { owner_character_id: request.ownerCharacterId } : {}),
@@ -607,6 +644,7 @@ export function createImageService(deps: ImageServiceDeps): ImageService {
         model: str(result.model) || target.model,
         mimeType: data?.mimeType ?? "image/png",
         sentParameters: stripBase64ForRecord(built.parameters) as Record<string, unknown>,
+        ...(built.sampling ? { sampling: built.sampling } : {}),
         attempts,
       };
       if (request.includeData && data) out.dataBase64 = data.data;
@@ -633,7 +671,7 @@ export function createImageService(deps: ImageServiceDeps): ImageService {
           .map(toInfo)
           .map((c): ImageConnectionSummary => {
             const generationProvider = generationProviderFromLumiverse(c.provider);
-            return { id: c.id, name: c.name, provider: c.provider, model: c.model, isDefault: c.isDefault, generationProvider, promptCodec: promptCodecForProvider(generationProvider) };
+            return { id: c.id, name: c.name, provider: c.provider, model: c.model, isDefault: c.isDefault, generationProvider, promptCodec: generationProvider ? promptCodecForProvider(generationProvider) : null };
           });
       } catch (error) {
         throw new RpcFailure({ code: "provider-error", message: `Could not list image connections: ${errorMessage(error)}` });

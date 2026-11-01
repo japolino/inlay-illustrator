@@ -270,39 +270,33 @@ function ChatImageSettings({ settings, developerMode }: { settings: ChatImageGen
         <SystemRow title={S.autoGeneration.title} description={S.autoGeneration.description} first>
           <Switch aria-label={S.autoGeneration.title} checked={settings.autoGenerationEnabled} onCheckedChange={(checked) => void save({ ...settings, autoGenerationEnabled: checked })} />
         </SystemRow>
-        {settings.webtoonMode ? (
-          <SystemRow title={S.webtoonCount.title} description={S.webtoonCount.description} data-webtoon-count="" />
-        ) : (
-          <>
-            <SystemRow title={S.countMode.title} description={S.countMode.description}>
-              <Segmented label={S.countMode.title} value={policy.mode} options={[{ value: "fixed", label: S.countModes.fixed }, { value: "range", label: S.countModes.range }]}
-                onChange={(mode) => void save(setCountMode(settings, mode, limit))} />
-              {policy.mode === "fixed" ? (
-                <Stepper value={values.fixed} label={S.count} format={String} min={1} max={max} decreaseLabel={S.countDecrease} increaseLabel={S.countIncrease}
-                  onChange={(value) => void save(setFixedCount(settings, value, limit))} />
-              ) : (
-                <>
-                  <Stepper value={policy.min} label={S.countMin} format={String} min={1} max={policy.max - 1} decreaseLabel={`${S.countMin} −`} increaseLabel={`${S.countMin} +`}
-                    onChange={(value) => void save(setCountRange(settings, value, policy.max, limit))} />
-                  <Stepper value={policy.max} label={S.countMax} format={String} min={policy.min + 1} max={max} decreaseLabel={`${S.countMax} −`} increaseLabel={`${S.countMax} +`}
-                    onChange={(value) => void save(setCountRange(settings, policy.min, value, limit))} />
-                </>
-              )}
-            </SystemRow>
-            <SystemRow title={S.analysisMode.title} description={S.analysisMode.description}>
-              <Segmented label={S.analysisMode.title} value={settings.analysisMode} options={[{ value: "single", label: S.analysisModes.single }, { value: "split", label: S.analysisModes.split }]}
-                onChange={(mode) => void save(setAnalysisMode(settings, mode, limit))} />
-            </SystemRow>
-            {settings.analysisMode === "split" && total !== null ? (
-              <SystemRow title={S.splitTotal}>
-                <Stepper value={total} label={S.splitTotal} format={String} min={1} max={SPLIT_ANALYSIS_MAX_TOTAL} decreaseLabel={`${S.splitTotal} −`} increaseLabel={`${S.splitTotal} +`}
-                  onChange={(value) => void save(setSplitTotal(settings, value, limit))} />
-                <Stepper value={settings.splitAnalysis.batchSize} label={S.splitBatch} format={String} min={1} max={maxSplitBatchSize(total)} decreaseLabel={`${S.splitBatch} −`} increaseLabel={`${S.splitBatch} +`}
-                  onChange={(value) => void save(setSplitBatch(settings, value, limit))} />
-              </SystemRow>
-            ) : null}
-          </>
-        )}
+        <SystemRow title={S.countMode.title} description={S.countMode.description}>
+          <Segmented label={S.countMode.title} value={policy.mode} options={[{ value: "fixed", label: S.countModes.fixed }, { value: "range", label: S.countModes.range }]}
+            onChange={(mode) => void save(setCountMode(settings, mode, limit))} />
+          {policy.mode === "fixed" ? (
+            <Stepper value={values.fixed} label={S.count} format={String} min={1} max={max} decreaseLabel={S.countDecrease} increaseLabel={S.countIncrease}
+              onChange={(value) => void save(setFixedCount(settings, value, limit))} />
+          ) : (
+            <>
+              <Stepper value={policy.min} label={S.countMin} format={String} min={1} max={policy.max - 1} decreaseLabel={`${S.countMin} −`} increaseLabel={`${S.countMin} +`}
+                onChange={(value) => void save(setCountRange(settings, value, policy.max, limit))} />
+              <Stepper value={policy.max} label={S.countMax} format={String} min={policy.min + 1} max={max} decreaseLabel={`${S.countMax} −`} increaseLabel={`${S.countMax} +`}
+                onChange={(value) => void save(setCountRange(settings, policy.min, value, limit))} />
+            </>
+          )}
+        </SystemRow>
+        <SystemRow title={S.analysisMode.title} description={S.analysisMode.description}>
+          <Segmented label={S.analysisMode.title} value={settings.analysisMode} options={[{ value: "single", label: S.analysisModes.single }, { value: "split", label: S.analysisModes.split }]}
+            onChange={(mode) => void save(setAnalysisMode(settings, mode, limit))} />
+        </SystemRow>
+        {settings.analysisMode === "split" && total !== null ? (
+          <SystemRow title={S.splitTotal}>
+            <Stepper value={total} label={S.splitTotal} format={String} min={1} max={SPLIT_ANALYSIS_MAX_TOTAL} decreaseLabel={`${S.splitTotal} −`} increaseLabel={`${S.splitTotal} +`}
+              onChange={(value) => void save(setSplitTotal(settings, value, limit))} />
+            <Stepper value={settings.splitAnalysis.batchSize} label={S.splitBatch} format={String} min={1} max={maxSplitBatchSize(total)} decreaseLabel={`${S.splitBatch} −`} increaseLabel={`${S.splitBatch} +`}
+              onChange={(value) => void save(setSplitBatch(settings, value, limit))} />
+          </SystemRow>
+        ) : null}
       </div>
     </section>
   );

@@ -21,6 +21,7 @@ import type {
   WorkspaceSnapshot
 } from "../../shared/contract/rpc.js";
 import type { ChatImageGenerationSettings, InlayConfig, UiState } from "../../shared/contract/config.js";
+import type { AtelierChangedEvent, AtelierState } from "../../shared/contract/atelier.js";
 import { RpcCallError, toRpcError, type CallOptions, type ClientMethod, type ClientParams, type ClientResult, type RpcClient } from "../rpc/client.js";
 import { Store, useSelector } from "./store.js";
 
@@ -71,6 +72,12 @@ export interface AppState {
   documentRevision: Record<string, number>;
   /** Bumped by `resync()`: chat-side views re-read every message state they show. */
   resyncCount: number;
+  /** Maid Atelier state (`atelier.get`), loaded on demand by the Atelier and the chat toolbar guideline menu. */
+  atelier: AtelierState | null;
+  atelierState: LoadState;
+  atelierError: RpcError | null;
+  /** Last `atelier.changed` event (the Atelier compares it with its drafts). */
+  atelierEvent: AtelierChangedEvent | null;
 }
 
 export function createInitialAppState(): AppState {
@@ -92,7 +99,11 @@ export function createInitialAppState(): AppState {
     generationJobs: {},
     chatDataRevision: {},
     documentRevision: {},
-    resyncCount: 0
+    resyncCount: 0,
+    atelier: null,
+    atelierState: "idle",
+    atelierError: null,
+    atelierEvent: null
   };
 }
 
@@ -336,6 +347,29 @@ export class AppController {
     }, 400);
   }
 
+  private atelierRequest = 0;
+  /** Loads (or reloads) the Maid Atelier state. Concurrent calls keep the newest answer only. */
+  async loadAtelier(): Promise<AtelierState | null> {
+    const request = ++this.atelierRequest;
+    if (!this.state.atelier) this.store.patch({ atelierState: "loading", atelierError: null });
+    try {
+      const { state } = await this.call("atelier.get", {});
+      if (request === this.atelierRequest) this.store.patch({ atelier: state, atelierState: "ready", atelierError: null });
+      return state;
+    } catch (error) {
+      if (request === this.atelierRequest) this.store.patch({ atelierState: "error", atelierError: toRpcError(error) });
+      return null;
+    }
+  }
+
+  /** Applies an Atelier state returned by a write (an older store revision never replaces a newer one). */
+  applyAtelier(state: AtelierState): void {
+    const current = this.state.atelier;
+    if (current && current.storeRevision > state.storeRevision) return;
+    this.atelierRequest += 1;
+    this.store.patch({ atelier: state, atelierState: "ready", atelierError: null });
+  }
+
   /** Developer mode is a config field (AM `ui.developerModeEnabled`). */
   setDeveloperMode(enabled: boolean): Promise<InlayConfig | null> {
     return this.updateConfig({ ui: { developerModeEnabled: enabled } });
@@ -442,6 +476,11 @@ export class AppController {
     this.on("chatImageGeneration.changed", ({ settings }) => this.store.patch({ chatImageGeneration: settings }));
     this.on("document.changed", ({ characterId }) => this.documentChanged(characterId));
     this.on("chatData.changed", ({ chatId }) => this.bump("chatDataRevision", chatId));
+    this.on("atelier.changed", (event) => {
+      this.store.patch({ atelierEvent: event });
+      const current = this.state.atelier;
+      if (this.state.atelierState !== "idle" && (!current || current.storeRevision < event.storeRevision)) void this.loadAtelier();
+    });
     this.on("analysis.progress", (payload) => {
       const existing = this.state.analysisJobs[payload.jobId];
       this.upsertAnalysisJob({

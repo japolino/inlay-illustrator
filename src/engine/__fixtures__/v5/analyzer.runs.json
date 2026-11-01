@@ -25,9 +25,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-0953bccd5e25c102",
-     "schema": "fnv1a64-f3a356dac71a9e91",
-     "cachePartition": "fnv1a64-1c1e2a1dd94f083d"
+     "messages": "fnv1a64-e58662a967da6f1f",
+     "schema": "fnv1a64-e3706e91f82d9a05",
+     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
     }
    }
   ],
@@ -76,8 +76,7 @@
         "targetActorId": "actor_2",
         "bindingStatus": "complete",
         "unresolvedActorRefs": [],
-        "modifiers": [],
-        "participantDetails": []
+        "modifiers": []
        },
        {
         "interactionRef": "interaction:1",
@@ -87,13 +86,7 @@
         "targetActorId": "actor_2",
         "bindingStatus": "complete",
         "unresolvedActorRefs": [],
-        "modifiers": [],
-        "participantDetails": [
-         {
-          "actorId": "actor_1",
-          "text": "fingers pinching the hoodie sleeve"
-         }
-        ]
+        "modifiers": []
        }
       ],
       "location": {
@@ -105,21 +98,15 @@
          ]
         },
         {
-         "id": "scene.environment",
+         "id": "environment.setting",
          "options": [
           "outdoors"
          ]
         },
         {
-         "id": "scene.time",
+         "id": "environment.time",
          "options": [
           "morning"
-         ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "cowboy_shot"
          ]
         }
        ],
@@ -143,7 +130,7 @@
          "y": 0.5
         },
         "source": "analyzer",
-        "instruction": "left of the gate pillar"
+        "instruction": ""
        },
        {
         "actorId": "actor_2",
@@ -175,24 +162,26 @@
           ]
          },
          {
-          "id": "expression.mouth",
+          "id": "expression.mouth.openness",
           "options": [
            "open_mouth"
           ]
          },
          {
-          "id": "actor.pose.body",
+          "id": "pose.body",
           "options": [
            "standing"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "leaning forward slightly",
-        "actionInstruction": "waving one hand high",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        },
        {
@@ -207,18 +196,20 @@
           ]
          },
          {
-          "id": "actor.pose.body",
+          "id": "pose.body",
           "options": [
            "standing"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "",
-        "actionInstruction": "running toward the gate",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -250,7 +241,7 @@
      },
      {
       "slotNumber": 1,
-      "status": "recovered",
+      "status": "degraded",
       "presentationMode": "single-frame",
       "actors": [
        {
@@ -277,15 +268,9 @@
          ]
         },
         {
-         "id": "scene.environment",
+         "id": "environment.setting",
          "options": [
           "indoors"
-         ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "upper_body"
          ]
         }
        ],
@@ -332,16 +317,16 @@
           "options": [
            "exhausted"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [
-         "scar on face"
-        ],
-        "penetratingInjuries": [],
         "poseInstruction": "hands on the window sill",
-        "actionInstruction": "sighing",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -350,6 +335,12 @@
        "instruction": "Camera behind the actor looking out the window."
       },
       "diagnostics": [
+       {
+        "code": "modifier-stage-mismatch",
+        "impact": "degraded",
+        "path": "$.illustrations[1].frame_placement.modifiers[2]",
+        "message": "Omitted 'framing.crop' from 'frame_placement' because its compiled owner is 'actor_detail'."
+       },
        {
         "code": "tag-canonicalized",
         "impact": "recovered",
@@ -470,7 +461,7 @@
     "actor.m0ais.6ynrym": "lore:bob",
     "actor.1fmv888.fk4pvw": "persona::p1"
    },
-   "requestPayload": "fnv1a64-f0fd20a4873772e8",
+   "requestPayload": "fnv1a64-420a363b97613771",
    "localProjection": {
     "allowedSizeIds": [
      1,
@@ -479,7 +470,7 @@
     ],
     "characterCoordinates": "fixed"
    },
-   "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
   },
   "error": null
  },
@@ -509,9 +500,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-56c5fd58891afe1e",
-     "schema": "fnv1a64-f3a356dac71a9e91",
-     "cachePartition": "fnv1a64-51a3ebd4a8d5d6a1"
+     "messages": "fnv1a64-ec48fb4a012350cd",
+     "schema": "fnv1a64-e3706e91f82d9a05",
+     "cachePartition": "fnv1a64-7bd275d37dfca0ba"
     }
    }
   ],
@@ -561,21 +552,15 @@
          ]
         },
         {
-         "id": "scene.environment",
+         "id": "environment.setting",
          "options": [
           "outdoors"
          ]
         },
         {
-         "id": "scene.time",
+         "id": "environment.time",
          "options": [
           "morning"
-         ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "cowboy_shot"
          ]
         }
        ],
@@ -634,27 +619,32 @@
           "options": [
            "light_blush"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "",
-        "actionInstruction": "reaching toward the viewer",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        },
        {
         "actorId": "actor_2",
         "placementIndex": 2,
         "actions": [],
-        "modifiers": [],
-        "freeTags": [],
-        "penetratingInjuries": [],
+        "modifiers": [
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -664,12 +654,6 @@
          "id": "camera.view",
          "options": [
           "pov"
-         ]
-        },
-        {
-         "id": "camera.pov",
-         "options": [
-          "pov_hands"
          ]
         }
        ],
@@ -820,7 +804,7 @@
     "actor.m0ais.6ynrym": "lore:bob",
     "actor.1fmv888.fk4pvw": "persona::p1"
    },
-   "requestPayload": "fnv1a64-f0fd20a4873772e8",
+   "requestPayload": "fnv1a64-420a363b97613771",
    "localProjection": {
     "allowedSizeIds": [
      1,
@@ -829,7 +813,7 @@
     ],
     "characterCoordinates": "persona-automatic"
    },
-   "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
   },
   "error": null
  },
@@ -859,9 +843,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-e6c9fd59b3e0e228",
-     "schema": "fnv1a64-3d85696c61d6cb87",
-     "cachePartition": "fnv1a64-fa918d42b2c08ef7"
+     "messages": "fnv1a64-744c1b86a2010f2b",
+     "schema": "fnv1a64-cc31d8acd1e241d9",
+     "cachePartition": "fnv1a64-ecbdcedb425ad834"
     }
    }
   ],
@@ -913,13 +897,7 @@
         "targetActorId": "actor_2",
         "bindingStatus": "complete",
         "unresolvedActorRefs": [],
-        "modifiers": [],
-        "participantDetails": [
-         {
-          "actorId": "actor_2",
-          "text": "stumbling half a step"
-         }
-        ]
+        "modifiers": []
        }
       ],
       "location": {
@@ -931,13 +909,13 @@
          ]
         },
         {
-         "id": "scene.environment",
+         "id": "environment.setting",
          "options": [
           "outdoors"
          ]
         },
         {
-         "id": "scene.time",
+         "id": "environment.time",
          "options": [
           "morning"
          ]
@@ -966,6 +944,7 @@
         {
          "panelId": "p_wave",
          "id": "greeting_wave",
+         "selectedDefinitionId": null,
          "visibleActorIds": [
           "actor_1"
          ],
@@ -982,6 +961,7 @@
         {
          "panelId": "p_meet",
          "id": "arm_hug_meeting",
+         "selectedDefinitionId": null,
          "visibleActorIds": [
           "actor_1",
           "actor_2"
@@ -999,6 +979,7 @@
         {
          "panelId": "p_bell",
          "id": "school_bell",
+         "selectedDefinitionId": null,
          "visibleActorIds": [],
          "modifiers": [
           {
@@ -1082,18 +1063,14 @@
           ]
          },
          {
-          "id": "actor.framing.crop",
+          "id": "framing.crop",
           "options": [
            "upper_body"
           ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "",
-        "actionInstruction": "waving",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": "speech bubble, text:You're late again!"
        },
        {
@@ -1105,24 +1082,20 @@
         "actions": [],
         "modifiers": [
          {
-          "id": "expression.mouth",
+          "id": "expression.mouth.openness",
           "options": [
            "open_mouth"
           ]
          },
          {
-          "id": "actor.framing.crop",
+          "id": "framing.crop",
           "options": [
            "cowboy_shot"
           ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        },
        {
@@ -1135,14 +1108,16 @@
           "options": [
            "surprised"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -1271,11 +1246,11 @@
     "actor.m0ais.6ynrym": "lore:bob",
     "actor.1fmv888.fk4pvw": "persona::p1"
    },
-   "requestPayload": "fnv1a64-29fdfa8dcd19ee7d",
+   "requestPayload": "fnv1a64-6b3f333b248a5086",
    "localProjection": {
     "characterCoordinates": "fixed"
    },
-   "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
   },
   "error": null
  },
@@ -1305,9 +1280,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-1551b2f88f9998a9",
-     "schema": "fnv1a64-f3a356dac71a9e91",
-     "cachePartition": "fnv1a64-22ab090cebe62fce"
+     "messages": "fnv1a64-9ecab3062b2dd75c",
+     "schema": "fnv1a64-e3706e91f82d9a05",
+     "cachePartition": "fnv1a64-26b06bab7e08e4b3"
     }
    }
   ],
@@ -1369,8 +1344,7 @@
         "targetActorId": "actor_2",
         "bindingStatus": "complete",
         "unresolvedActorRefs": [],
-        "modifiers": [],
-        "participantDetails": []
+        "modifiers": []
        },
        {
         "interactionRef": "interaction:1",
@@ -1380,8 +1354,7 @@
         "targetActorId": "actor_2",
         "bindingStatus": "complete",
         "unresolvedActorRefs": [],
-        "modifiers": [],
-        "participantDetails": []
+        "modifiers": []
        },
        {
         "interactionRef": "interaction:2",
@@ -1391,17 +1364,7 @@
         "targetActorId": "actor_3",
         "bindingStatus": "complete",
         "unresolvedActorRefs": [],
-        "modifiers": [],
-        "participantDetails": [
-         {
-          "actorId": "actor_1",
-          "text": "swinging the joined hands"
-         },
-         {
-          "actorId": "actor_3",
-          "text": "awkward grip"
-         }
-        ]
+        "modifiers": []
        },
        {
         "interactionRef": "interaction:3",
@@ -1411,8 +1374,7 @@
         "targetActorId": "actor_3",
         "bindingStatus": "complete",
         "unresolvedActorRefs": [],
-        "modifiers": [],
-        "participantDetails": []
+        "modifiers": []
        }
       ],
       "location": {
@@ -1424,21 +1386,15 @@
          ]
         },
         {
-         "id": "scene.environment",
+         "id": "environment.setting",
          "options": [
           "indoors"
          ]
         },
         {
-         "id": "scene.weather",
+         "id": "environment.weather",
          "options": [
           "rain"
-         ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "cowboy_shot"
          ]
         }
        ],
@@ -1474,7 +1430,7 @@
          "y": 0.5
         },
         "source": "analyzer",
-        "instruction": "between the two"
+        "instruction": ""
        },
        {
         "actorId": "actor_3",
@@ -1503,7 +1459,7 @@
           ]
          },
          {
-          "id": "state.clothing.surface",
+          "id": "state.clothing.condition",
           "options": [
            "wet_clothes"
           ]
@@ -1513,16 +1469,16 @@
           "options": [
            "wet_hair"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [
-         "bruise on arm"
-        ],
-        "penetratingInjuries": [],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        },
        {
@@ -1541,14 +1497,16 @@
           "options": [
            "blush"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "arms pinned to the sides",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        },
        {
@@ -1567,14 +1525,16 @@
           "options": [
            "sweat"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -1717,7 +1677,7 @@
     "actor.m0ais.6ynrym": "lore:bob",
     "actor.1fmv888.fk4pvw": "persona::p1"
    },
-   "requestPayload": "fnv1a64-f0fd20a4873772e8",
+   "requestPayload": "fnv1a64-420a363b97613771",
    "localProjection": {
     "allowedSizeIds": [
      1,
@@ -1726,7 +1686,7 @@
     ],
     "characterCoordinates": "fixed"
    },
-   "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
   },
   "error": null
  },
@@ -1756,9 +1716,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-3078df6c7658a55f",
-     "schema": "fnv1a64-a351fa7404a8eaea",
-     "cachePartition": "fnv1a64-89722024bb79caf0"
+     "messages": "fnv1a64-a97c1eb03eb92f35",
+     "schema": "fnv1a64-c99bbf5f8bad9f07",
+     "cachePartition": "fnv1a64-59d8a1e65b919982"
     }
    }
   ],
@@ -1793,12 +1753,6 @@
          "options": [
           "sfw"
          ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "cowboy_shot"
-         ]
         }
        ],
        "freeTags": [],
@@ -1826,13 +1780,16 @@
         "actorId": "actor_1",
         "placementIndex": 0,
         "actions": [],
-        "modifiers": [],
-        "freeTags": [],
-        "penetratingInjuries": [],
+        "modifiers": [
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -1974,7 +1931,7 @@
     "actor.m0ais.6ynrym": "lore:bob",
     "actor.1fmv888.fk4pvw": "persona::p1"
    },
-   "requestPayload": "fnv1a64-7440401f4a97f3ce",
+   "requestPayload": "fnv1a64-b46e66c5a91e23e8",
    "localProjection": {
     "allowedSizeIds": [
      1,
@@ -1983,7 +1940,7 @@
     ],
     "characterCoordinates": "fixed"
    },
-   "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
   },
   "error": null
  },
@@ -2013,9 +1970,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-0953bccd5e25c102",
-     "schema": "fnv1a64-f3a356dac71a9e91",
-     "cachePartition": "fnv1a64-1c1e2a1dd94f083d"
+     "messages": "fnv1a64-e58662a967da6f1f",
+     "schema": "fnv1a64-e3706e91f82d9a05",
+     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
     }
    }
   ],
@@ -2052,15 +2009,9 @@
          ]
         },
         {
-         "id": "scene.environment",
+         "id": "environment.setting",
          "options": [
           "indoors"
-         ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "cowboy_shot"
          ]
         }
        ],
@@ -2097,14 +2048,16 @@
           "options": [
            "looking_down"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -2294,7 +2247,7 @@
     "actor.m0ais.6ynrym": "lore:bob",
     "actor.1fmv888.fk4pvw": "persona::p1"
    },
-   "requestPayload": "fnv1a64-f0fd20a4873772e8",
+   "requestPayload": "fnv1a64-420a363b97613771",
    "localProjection": {
     "allowedSizeIds": [
      1,
@@ -2303,7 +2256,7 @@
     ],
     "characterCoordinates": "fixed"
    },
-   "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
   },
   "error": null
  },
@@ -2333,9 +2286,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-0953bccd5e25c102",
-     "schema": "fnv1a64-f3a356dac71a9e91",
-     "cachePartition": "fnv1a64-1c1e2a1dd94f083d"
+     "messages": "fnv1a64-e58662a967da6f1f",
+     "schema": "fnv1a64-e3706e91f82d9a05",
+     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
     }
    }
   ],
@@ -2370,16 +2323,10 @@
          "options": [
           "sfw"
          ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "cowboy_shot"
-         ]
         }
        ],
        "freeTags": [],
-       "instruction": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+       "instruction": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
        "comicPageInstruction": "",
        "comicPageModifiers": [],
        "comicPanels": [],
@@ -2412,26 +2359,32 @@
         "actorId": "actor_1",
         "placementIndex": 0,
         "actions": [],
-        "modifiers": [],
-        "freeTags": [],
-        "penetratingInjuries": [],
+        "modifiers": [
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        },
        {
         "actorId": "actor_1",
         "placementIndex": 1,
         "actions": [],
-        "modifiers": [],
-        "freeTags": [],
-        "penetratingInjuries": [],
+        "modifiers": [
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -2450,7 +2403,7 @@
         "code": "interaction-mode-recovered",
         "impact": "recovered",
         "path": "$.illustrations[0].interaction.items[0].mode",
-        "message": "Applied default mode 'directed' for Interaction 'kiss'."
+        "message": "Applied directed mode to a free Interaction whose mode was missing or invalid."
        },
        {
         "code": "interaction-binding-incomplete",
@@ -2480,7 +2433,7 @@
         "code": "instruction-truncated",
         "impact": "degraded",
         "path": "$.illustrations[0].frame_placement.instruction",
-        "message": "Truncated an instruction to the channel limit of 320 characters."
+        "message": "Truncated an instruction to the channel limit of 100 characters."
        },
        {
         "code": "scene-rating-defaulted",
@@ -2532,12 +2485,6 @@
          "id": "scene.rating",
          "options": [
           "sfw"
-         ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "cowboy_shot"
          ]
         }
        ],
@@ -2688,7 +2635,7 @@
     "actor.m0ais.6ynrym": "lore:bob",
     "actor.1fmv888.fk4pvw": "persona::p1"
    },
-   "requestPayload": "fnv1a64-f0fd20a4873772e8",
+   "requestPayload": "fnv1a64-420a363b97613771",
    "localProjection": {
     "allowedSizeIds": [
      1,
@@ -2697,7 +2644,7 @@
     ],
     "characterCoordinates": "fixed"
    },
-   "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
   },
   "error": null
  },
@@ -2727,9 +2674,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-0953bccd5e25c102",
-     "schema": "fnv1a64-f3a356dac71a9e91",
-     "cachePartition": "fnv1a64-1c1e2a1dd94f083d"
+     "messages": "fnv1a64-e58662a967da6f1f",
+     "schema": "fnv1a64-e3706e91f82d9a05",
+     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
     }
    }
   ],
@@ -2792,9 +2739,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-0953bccd5e25c102",
-     "schema": "fnv1a64-f3a356dac71a9e91",
-     "cachePartition": "fnv1a64-1c1e2a1dd94f083d"
+     "messages": "fnv1a64-e58662a967da6f1f",
+     "schema": "fnv1a64-e3706e91f82d9a05",
+     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
     }
    }
   ],
@@ -2818,16 +2765,7 @@
    "response": "<object>",
    "directionsKey": "default",
    "contextPatch": {
-    "freeCharacterGenerationEnabled": true,
-    "knownCharacterIdentities": [
-     {
-      "name": "Alice",
-      "keys": [
-       "Alice",
-       "Ally"
-      ]
-     }
-    ]
+    "freeCharacterGenerationEnabled": true
    },
    "config": {
     "provider": "openai"
@@ -2850,9 +2788,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-b673e082a35b01f3",
-     "schema": "fnv1a64-3c886b3cb09f232a",
-     "cachePartition": "fnv1a64-115d66dea68a6f14"
+     "messages": "fnv1a64-e58662a967da6f1f",
+     "schema": "fnv1a64-e3706e91f82d9a05",
+     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
     }
    }
   ],
@@ -2926,8 +2864,7 @@
         "targetActorId": "actor_1",
         "bindingStatus": "complete",
         "unresolvedActorRefs": [],
-        "modifiers": [],
-        "participantDetails": []
+        "modifiers": []
        }
       ],
       "location": {
@@ -2939,15 +2876,9 @@
          ]
         },
         {
-         "id": "scene.environment",
+         "id": "environment.setting",
          "options": [
           "indoors"
-         ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "cowboy_shot"
          ]
         }
        ],
@@ -2994,27 +2925,32 @@
           "options": [
            "exhausted"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        },
        {
         "actorId": "actor_2",
         "placementIndex": 1,
         "actions": [],
-        "modifiers": [],
-        "freeTags": [],
-        "penetratingInjuries": [],
+        "modifiers": [
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -3234,7 +3170,7 @@
     "actor.m0ais.6ynrym": "lore:bob",
     "actor.1fmv888.fk4pvw": "persona::p1"
    },
-   "requestPayload": "fnv1a64-c477efcd5bc77823",
+   "requestPayload": "fnv1a64-420a363b97613771",
    "localProjection": {
     "allowedSizeIds": [
      1,
@@ -3243,7 +3179,7 @@
     ],
     "characterCoordinates": "fixed"
    },
-   "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
   },
   "error": null
  },
@@ -3273,9 +3209,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-0953bccd5e25c102",
-     "schema": "fnv1a64-f3a356dac71a9e91",
-     "cachePartition": "fnv1a64-1c1e2a1dd94f083d"
+     "messages": "fnv1a64-e58662a967da6f1f",
+     "schema": "fnv1a64-e3706e91f82d9a05",
+     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
     }
    }
   ],
@@ -3293,6 +3229,30 @@
         "candidateKey": "free_1",
         "sex": "male",
         "generated": {
+         "profile": {
+          "recognitionKeys": [
+           "School janitor"
+          ],
+          "humanlike": true,
+          "basePromptGroups": {
+           "marks.distinctive": [
+            "old man",
+            "grey hair",
+            "blue overalls"
+           ]
+          },
+          "defaultOutfit": {
+           "name": "기본 의상",
+           "description": "",
+           "head": "",
+           "top": "",
+           "bottom": "",
+           "legs": "",
+           "feet": "",
+           "reason": "",
+           "confidence": 0
+          }
+         },
          "label": "School janitor",
          "tags": [
           "old_man",
@@ -3325,8 +3285,7 @@
         "targetActorId": "actor_1",
         "bindingStatus": "complete",
         "unresolvedActorRefs": [],
-        "modifiers": [],
-        "participantDetails": []
+        "modifiers": []
        }
       ],
       "location": {
@@ -3338,15 +3297,9 @@
          ]
         },
         {
-         "id": "scene.environment",
+         "id": "environment.setting",
          "options": [
           "indoors"
-         ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "cowboy_shot"
          ]
         }
        ],
@@ -3393,27 +3346,32 @@
           "options": [
            "exhausted"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        },
        {
         "actorId": "actor_2",
         "placementIndex": 1,
         "actions": [],
-        "modifiers": [],
-        "freeTags": [],
-        "penetratingInjuries": [],
+        "modifiers": [
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -3439,6 +3397,36 @@
         "impact": "recovered",
         "path": "$.generated_actor_proposals[0].tags[2]",
         "message": "Canonicalized a free tag to 'blue_overalls'."
+       },
+       {
+        "code": "generated-character-profile-reconstructed",
+        "impact": "recovered",
+        "path": "$.generated_actor_proposals[0].profile",
+        "message": "Reconstructed the profile from the same generated Actor's identity evidence."
+       },
+       {
+        "code": "generated-character-recognition-key-meaning-recovered",
+        "impact": "recovered",
+        "path": "$.generated_actor_proposals[0].profile.recognitionKeys",
+        "message": "Recovered recognition keys from the generated Actor identity."
+       },
+       {
+        "code": "generated-character-humanlike-defaulted",
+        "impact": "recovered",
+        "path": "$.generated_actor_proposals[0].profile.humanlike",
+        "message": "Used the existing appearance-form default for an unspecified humanlike value."
+       },
+       {
+        "code": "generated-character-base-prompt-meaning-recovered",
+        "impact": "recovered",
+        "path": "$.generated_actor_proposals[0].profile.basePromptGroups",
+        "message": "Recovered persistent appearance tags from the generated Actor identity tags."
+       },
+       {
+        "code": "generated-character-outfit-name-recovered",
+        "impact": "recovered",
+        "path": "$.generated_actor_proposals[0].profile.defaultOutfit.name",
+        "message": "Used the default outfit label because its name was missing."
        }
       ]
      }
@@ -3461,6 +3449,36 @@
       "impact": "recovered",
       "path": "$.generated_actor_proposals[0].tags[2]",
       "message": "Canonicalized a free tag to 'blue_overalls'."
+     },
+     {
+      "code": "generated-character-profile-reconstructed",
+      "impact": "recovered",
+      "path": "$.generated_actor_proposals[0].profile",
+      "message": "Reconstructed the profile from the same generated Actor's identity evidence."
+     },
+     {
+      "code": "generated-character-recognition-key-meaning-recovered",
+      "impact": "recovered",
+      "path": "$.generated_actor_proposals[0].profile.recognitionKeys",
+      "message": "Recovered recognition keys from the generated Actor identity."
+     },
+     {
+      "code": "generated-character-humanlike-defaulted",
+      "impact": "recovered",
+      "path": "$.generated_actor_proposals[0].profile.humanlike",
+      "message": "Used the existing appearance-form default for an unspecified humanlike value."
+     },
+     {
+      "code": "generated-character-base-prompt-meaning-recovered",
+      "impact": "recovered",
+      "path": "$.generated_actor_proposals[0].profile.basePromptGroups",
+      "message": "Recovered persistent appearance tags from the generated Actor identity tags."
+     },
+     {
+      "code": "generated-character-outfit-name-recovered",
+      "impact": "recovered",
+      "path": "$.generated_actor_proposals[0].profile.defaultOutfit.name",
+      "message": "Used the default outfit label because its name was missing."
      }
     ]
    },
@@ -3573,7 +3591,7 @@
     "actor.m0ais.6ynrym": "lore:bob",
     "actor.1fmv888.fk4pvw": "persona::p1"
    },
-   "requestPayload": "fnv1a64-f0fd20a4873772e8",
+   "requestPayload": "fnv1a64-420a363b97613771",
    "localProjection": {
     "allowedSizeIds": [
      1,
@@ -3582,7 +3600,7 @@
     ],
     "characterCoordinates": "fixed"
    },
-   "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
   },
   "error": null
  },
@@ -3612,9 +3630,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-aa2a3c0e022a2b03",
-     "schema": "fnv1a64-f3a356dac71a9e91",
-     "cachePartition": "fnv1a64-f1afccf50b35903c"
+     "messages": "fnv1a64-ed3f5d5686e99a55",
+     "schema": "fnv1a64-e3706e91f82d9a05",
+     "cachePartition": "fnv1a64-2446727dc6577ad2"
     }
    }
   ],
@@ -3663,8 +3681,7 @@
         "targetActorId": "actor_2",
         "bindingStatus": "complete",
         "unresolvedActorRefs": [],
-        "modifiers": [],
-        "participantDetails": []
+        "modifiers": []
        },
        {
         "interactionRef": "interaction:1",
@@ -3674,13 +3691,7 @@
         "targetActorId": "actor_2",
         "bindingStatus": "complete",
         "unresolvedActorRefs": [],
-        "modifiers": [],
-        "participantDetails": [
-         {
-          "actorId": "actor_1",
-          "text": "fingers pinching the hoodie sleeve"
-         }
-        ]
+        "modifiers": []
        }
       ],
       "location": {
@@ -3692,21 +3703,15 @@
          ]
         },
         {
-         "id": "scene.environment",
+         "id": "environment.setting",
          "options": [
           "outdoors"
          ]
         },
         {
-         "id": "scene.time",
+         "id": "environment.time",
          "options": [
           "morning"
-         ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "cowboy_shot"
          ]
         }
        ],
@@ -3730,7 +3735,7 @@
          "y": 0.5
         },
         "source": "analyzer",
-        "instruction": "left of the gate pillar"
+        "instruction": ""
        },
        {
         "actorId": "actor_2",
@@ -3762,24 +3767,26 @@
           ]
          },
          {
-          "id": "expression.mouth",
+          "id": "expression.mouth.openness",
           "options": [
            "open_mouth"
           ]
          },
          {
-          "id": "actor.pose.body",
+          "id": "pose.body",
           "options": [
            "standing"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "leaning forward slightly",
-        "actionInstruction": "waving one hand high",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        },
        {
@@ -3794,18 +3801,20 @@
           ]
          },
          {
-          "id": "actor.pose.body",
+          "id": "pose.body",
           "options": [
            "standing"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [],
-        "penetratingInjuries": [],
         "poseInstruction": "",
-        "actionInstruction": "running toward the gate",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -3837,7 +3846,7 @@
      },
      {
       "slotNumber": 1,
-      "status": "recovered",
+      "status": "degraded",
       "presentationMode": "single-frame",
       "actors": [
        {
@@ -3864,15 +3873,9 @@
          ]
         },
         {
-         "id": "scene.environment",
+         "id": "environment.setting",
          "options": [
           "indoors"
-         ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "upper_body"
          ]
         }
        ],
@@ -3919,16 +3922,16 @@
           "options": [
            "exhausted"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [
-         "scar on face"
-        ],
-        "penetratingInjuries": [],
         "poseInstruction": "hands on the window sill",
-        "actionInstruction": "sighing",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -3937,6 +3940,12 @@
        "instruction": "Camera behind the actor looking out the window."
       },
       "diagnostics": [
+       {
+        "code": "modifier-stage-mismatch",
+        "impact": "degraded",
+        "path": "$.illustrations[1].frame_placement.modifiers[2]",
+        "message": "Omitted 'framing.crop' from 'frame_placement' because its compiled owner is 'actor_detail'."
+       },
        {
         "code": "tag-canonicalized",
         "impact": "recovered",
@@ -4057,7 +4066,7 @@
     "actor.m0ais.6ynrym": "lore:bob",
     "actor.1fmv888.fk4pvw": "persona::p1"
    },
-   "requestPayload": "fnv1a64-f0fd20a4873772e8",
+   "requestPayload": "fnv1a64-420a363b97613771",
    "localProjection": {
     "allowedSizeIds": [
      1,
@@ -4066,7 +4075,7 @@
     ],
     "characterCoordinates": "fixed"
    },
-   "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
   },
   "error": null
  },
@@ -4096,9 +4105,9 @@
      }
     },
     "hashes": {
-     "messages": "fnv1a64-f224a4973b22c283",
-     "schema": "fnv1a64-f3a356dac71a9e91",
-     "cachePartition": "fnv1a64-a393d965e6209d3c"
+     "messages": "fnv1a64-584cf2b2cb6e66da",
+     "schema": "fnv1a64-e3706e91f82d9a05",
+     "cachePartition": "fnv1a64-db0df4e0c5246c5d"
     }
    }
   ],
@@ -4108,7 +4117,7 @@
     "illustrations": [
      {
       "slotNumber": 0,
-      "status": "exact",
+      "status": "degraded",
       "presentationMode": "single-frame",
       "actors": [
        {
@@ -4132,12 +4141,6 @@
          "id": "scene.rating",
          "options": [
           "sfw"
-         ]
-        },
-        {
-         "id": "framing.crop",
-         "options": [
-          "cowboy_shot"
          ]
         }
        ],
@@ -4168,15 +4171,9 @@
         "actions": [],
         "modifiers": [
          {
-          "id": "state.clothing.surface",
+          "id": "state.clothing.condition",
           "options": [
            "wet_clothes"
-          ]
-         },
-         {
-          "id": "state.fluid.saliva",
-          "options": [
-           "drooling"
           ]
          },
          {
@@ -4184,16 +4181,16 @@
           "options": [
            "tearing_up"
           ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
          }
         ],
-        "freeTags": [
-         "cut on hand"
-        ],
-        "penetratingInjuries": [],
         "poseInstruction": "",
-        "actionInstruction": "",
         "objects": [],
-        "objectInstruction": "",
         "dialogueInstruction": ""
        }
       ],
@@ -4201,7 +4198,14 @@
        "modifiers": [],
        "instruction": ""
       },
-      "diagnostics": []
+      "diagnostics": [
+       {
+        "code": "unknown-modifier-definition",
+        "impact": "degraded",
+        "path": "$.illustrations[0].actor_detail[0].modifiers[1].id",
+        "message": "Omitted a modifier whose Definition is not Analyzer-selectable."
+       }
+      ]
      }
     ],
     "diagnostics": []
@@ -4321,7 +4325,7 @@
     "actor.m0ais.6ynrym": "lore:bob",
     "actor.1fmv888.fk4pvw": "persona::p1"
    },
-   "requestPayload": "fnv1a64-681e5fc5e9432831",
+   "requestPayload": "fnv1a64-c344255f9cc7d66c",
    "localProjection": {
     "allowedSizeIds": [
      1,
@@ -4330,7 +4334,7 @@
     ],
     "characterCoordinates": "fixed"
    },
-   "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
   },
   "error": null
  }

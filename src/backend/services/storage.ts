@@ -14,6 +14,8 @@
 import {
   characterResetPaths,
   createEmptyCharacterDocument,
+  LEGACY_BUILTIN_ARTIST_PRESETS,
+  migrateLegacyBuiltinArtists,
   loadChatImageGenerationSettings,
   mergeStoredConfig,
   migrateStoredFile,
@@ -27,6 +29,7 @@ import {
   STORAGE_PATHS,
   STORAGE_RESET_PREFIXES,
   STORAGE_SCHEMA,
+  storedVersion,
   type CharacterDocument,
   type ChatDataDocument,
   type ChatImageGenerationSettings,
@@ -149,15 +152,72 @@ export function createStorageService(host: SpindleHost, userId: string | undefin
     if (tooNew) throw storageFailure(`${path} was written by a newer version of Inlay Illustrator and cannot be changed by this version.`, undefined, "STORAGE_FILE_TOO_NEW");
   }
 
+  /**
+   * AM 0.9.90 removed the 2 built-in art styles. Before the generic migration of `config/artists-global.json` runs, the
+   * stored and referenced built-ins become user styles (`migrateLegacyBuiltinArtists`, port deviation in PORT-MAP.md):
+   * the referenced ids include every character's own `selectedArtistId`, so the file is migrated here once and
+   * written back right away. A missing file of an existing install (other config files present) still had the old
+   * default, so it is migrated from `{}`.
+   */
+  async function migrateLegacyArtists(): Promise<void> {
+    const path = STORAGE_PATHS.artistsGlobal;
+    const raw = await readRaw(path);
+    if (raw !== undefined && storedVersion(raw) >= STORAGE_FILE_VERSIONS["artists-global"]) return;
+    if (raw === undefined) {
+      const existing = await Promise.all([STORAGE_PATHS.configSettings, STORAGE_PATHS.configModel].map((p) => us.exists(p, userId).catch(() => false)));
+      if (!existing.some(Boolean)) return;
+    }
+    const legacyIds = new Set(LEGACY_BUILTIN_ARTIST_PRESETS.map((p) => p.id));
+    const referenced = new Set<string>();
+    let files: string[] = [];
+    try {
+      files = (await us.list("characters/", userId)).map((e) => `characters/${normalizePath(String(e))}`).filter((e) => e.endsWith("/asset-maid.json"));
+    } catch {
+      files = [];
+    }
+    for (const file of files) {
+      const doc = asRecord(await readRaw(file).catch(() => undefined));
+      const id = String(asRecord(doc.characterPrompt).selectedArtistId ?? "").trim();
+      if (legacyIds.has(id)) referenced.add(id);
+    }
+    const migrated = migrateLegacyBuiltinArtists(raw ?? {}, referenced);
+    await writeRaw(path, { ...asRecord(raw), ...migrated });
+    const kept = migrated.characterPrompt.artistPrompts.filter((e) => legacyIds.has(String(e.id))).map((e) => e.id);
+    log("info", `Migrated ${path}: the removed built-in art styles became user styles${kept.length ? ` (${kept.join(", ")})` : ""}.`);
+  }
+
+  /**
+   * AM 0.9.90 no longer reads `presetCatalog.rawJson` (the custom V4.5 raw catalog; V4.5 analysis was merged into V5).
+   * The port drops the field from the config (the next settings write removes it) after keeping a one-time copy in
+   * `config/legacy/preset-raw-catalog.json` (spec atelier-data §4.4 step 1). It is not converted into an Atelier preset
+   * (different format; AM does not either).
+   */
+  async function backupRawPresetCatalog(settingsRaw: unknown): Promise<void> {
+    const rawJson = asRecord(asRecord(settingsRaw).presetCatalog).rawJson;
+    if (typeof rawJson !== "string" || !rawJson.trim()) return;
+    const path = STORAGE_PATHS.legacyRawCatalog;
+    try {
+      await queue.run(path, async () => {
+        if (await us.exists(path, userId).catch(() => false)) return;
+        await writeRaw(path, { movedAt: now().toISOString(), rawJson });
+        log("info", `The custom V4.5 raw catalog (presetCatalog.rawJson, unused since Asset Maid 0.9.90) was backed up to ${path} and is dropped from the settings.`);
+      });
+    } catch (error) {
+      log("warn", "Could not back up the custom V4.5 raw catalog.", errorMessage(error));
+    }
+  }
+
   async function loadConfigState() {
     if (configCache) return configCache;
     const generation = configGeneration;
+    await queue.run(STORAGE_PATHS.artistsGlobal, () => migrateLegacyArtists()).catch((error) => log("warn", "Could not migrate the built-in art styles.", errorMessage(error)));
     const parts: Partial<StoredGlobalConfig> = {};
     const stored: Partial<Record<keyof StoredGlobalConfig, string>> = {};
     const tooNew = new Set<string>();
     for (const { part, kind, path } of CONFIG_PARTS) {
       const read = await readVersioned(kind, path);
       if (read.value === undefined) continue;
+      if (part === "settings") await backupRawPresetCatalog(read.raw);
       (parts as Record<string, unknown>)[part] = read.value;
       stored[part] = JSON.stringify(read.raw);
       if (read.tooNew) tooNew.add(path);

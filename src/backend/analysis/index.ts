@@ -42,7 +42,7 @@ export function createAnalysisModule(services: BackendServices, _getModules?: ()
     start(params) {
       if (!params || typeof params.characterId !== "string" || !params.characterId.trim()) fail("bad-request", "characterId is required.");
       if (!SUPPORTED_ANALYSIS_KINDS.has(params.kind)) {
-        fail("unsupported", params.kind === "unique-tag-search" ? "Danbooru unique tag search is not available in this port." : `Analysis kind "${params.kind}" is not available yet.`, {
+        fail("unsupported", `Analysis kind "${params.kind}" is not available.`, {
           detailCode: "ANALYSIS_KIND_UNSUPPORTED",
         });
       }

@@ -1,5 +1,6 @@
 // Parity fixtures: src/engine/__fixtures__/v5/runtime.{cases-a,cases-b,errors}.json (+ inputs.json)
-// Generator: cd C:/Users/eme4/asset-maid-port/scratch/engine/v5 && bun gen-inputs.mjs && bun gen-runtime.mjs
+// Generator: bun S/engine-build/gen/v5/inputs.mjs && bun S/engine-build/gen/v5/runtime.mjs (ORIGINAL 0.9.90 bundle,
+// default Atelier preset catalog)
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import casesA from "../__fixtures__/v5/runtime.cases-a.json";
 import casesB from "../__fixtures__/v5/runtime.cases-b.json";
@@ -9,6 +10,7 @@ import { setEngineEnv } from "../core/env";
 import { seededEnv } from "../testing/env";
 import { toPlain } from "../testing/plain";
 import { buildV5PromptContext, type V5PromptContextSource } from "./compose";
+import { compileActiveAtelierPresetCatalog } from "./catalog";
 import { compileV5Scene, createV5RuleRuntime, planV5Scene, toV5ContinuitySnapshot, type V5ContinuityState } from "./runtime";
 import type { V5RuleContext, V5SceneGraph } from "./types";
 
@@ -21,10 +23,11 @@ interface Case {
     sourceKeys: Record<string, string>;
     provider: V5RuleContext["provider"];
     stateIn: V5ContinuityState;
+    previousState: V5ContinuityState | null;
     token: string;
     index: number;
     requestedSizeId?: number;
-    stateAccumulationEnabled?: boolean;
+    allowedSizeIds?: number[];
     scenePresetId?: string;
   };
   expected: Record<string, unknown>;
@@ -33,11 +36,16 @@ interface Case {
 beforeAll(() => setEngineEnv(seededEnv(31)));
 afterAll(() => setEngineEnv(null));
 
+const catalog = compileActiveAtelierPresetCatalog(null).catalog;
+
 describe("v5 rule runtime / scene compiler / prompt projection", () => {
-  test("runtime exposes the default catalog and fingerprint", () => {
+  test("runtime exposes the catalog and fingerprint", () => {
     const rt = createV5RuleRuntime();
-    expect(rt.catalog.compilerVersion).toBe("novelai-v5-catalog-v1");
+    expect(rt.catalog.compilerVersion).toBe("novelai-v5-catalog-v3");
     expect(rt.catalogFingerprint.startsWith("v5.fnv1a64-")).toBe(true);
+    const preset = createV5RuleRuntime({ catalog });
+    expect(preset.catalog).toBe(catalog);
+    expect(preset.catalogFingerprint).not.toBe(rt.catalogFingerprint);
   });
 
   for (const c of [...casesA, ...casesB] as unknown as Case[]) {
@@ -60,10 +68,12 @@ describe("v5 rule runtime / scene compiler / prompt projection", () => {
         selectionKey: `msg-1:${i.token}:${i.index}`,
         provider: i.provider,
         state: i.stateIn,
+        previousState: i.previousState ?? undefined,
         eventScopeId: `session-1:${i.token}`,
         requestedSizeId: i.requestedSizeId,
+        allowedSizeIds: i.allowedSizeIds,
         advanceTurn: true,
-        stateAccumulationEnabled: i.stateAccumulationEnabled ?? false,
+        catalog,
       });
       expect(plain(out.ruleContext)).toEqual(c.expected.ruleContext);
       expect(plain(out.draft)).toEqual(c.expected.draft);
@@ -78,9 +88,9 @@ describe("v5 rule runtime / scene compiler / prompt projection", () => {
   for (const e of errors as unknown as { name: string; graph: V5SceneGraph; ruleContext: V5RuleContext; result: unknown; error: { message: string } | null }[]) {
     test(`compile edge case: ${e.name}`, () => {
       if (e.error) {
-        expect(() => compileV5Scene(e.graph, e.ruleContext)).toThrow(e.error.message);
+        expect(() => compileV5Scene(e.graph, e.ruleContext, catalog)).toThrow(e.error.message);
       } else {
-        expect(plain(compileV5Scene(e.graph, e.ruleContext))).toEqual(e.result);
+        expect(plain(compileV5Scene(e.graph, e.ruleContext, catalog))).toEqual(e.result);
       }
     });
   }

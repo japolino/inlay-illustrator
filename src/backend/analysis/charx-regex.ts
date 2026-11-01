@@ -67,7 +67,7 @@ export async function charxRegexCharacter(services: BackendServices, characterId
 export async function runCharxRegex(ctx: JobContext, params: { force?: boolean }): Promise<JobOutcome> {
   const session = await openAnalysisSession(ctx.services, ctx.characterId, { reason: "charx-regex" });
   const character = await charxRegexCharacter(ctx.services, ctx.characterId);
-  const controller = AM.h0t({
+  const controller = AM.Ort({
     data: { getCurrentCharacter: async () => character },
     sourceCatalog: { ...session.sourceCatalog, getCachedCharacter: () => ({ character }) },
     analyzer: createAmAnalyzer(ctx.services, {
@@ -75,6 +75,9 @@ export async function runCharxRegex(ctx: JobContext, params: { force?: boolean }
       onRetry: (info) => ctx.progress({ label: `Retrying (${info.attempt}/${info.total})`, labelKo: "재시도", retry: { attempt: info.attempt, total: info.total }, retryCount: `${info.attempt}/${info.total}` }),
     }),
     config: session.store,
+    // AM 0.9.90 `Ort` also runs chat-origin analyses while auto generation is on (and cancels them when it is turned
+    // off). The port only starts manual runs here, so the setting reads as constant "on" and never changes.
+    chatImageGenerationSettings: { getSnapshot: () => ({ autoGenerationEnabled: true }), subscribe: () => () => {} },
     log: (line: string) => ctx.services.log.append("warn", "charx-regex", line),
   });
   const unsubscribe = controller.subscribe(() => {
@@ -88,7 +91,7 @@ export async function runCharxRegex(ctx: JobContext, params: { force?: boolean }
     await controller.analyzeRegex({ scope: "current-character", currentCharacter: character, force: params.force === true });
     await session.store.flushSave();
     const snap = controller.getSnapshot();
-    const stored = AM.T_(session.store.getCurrentSnapshot().characterPrompt.charxAssetRegexAnalysis?.[ctx.characterId]);
+    const stored = AM.f1(session.store.getCurrentSnapshot().characterPrompt.charxAssetRegexAnalysis?.[ctx.characterId]);
     const { message, messageKo } = amMessage(String(snap.label ?? ""));
     const status: JobStatus =
       snap.status === "cancelled" || ctx.signal.aborted ? "cancelled" : snap.status === "error" ? "error" : stored.status === "done" ? "success" : "no-evidence";
@@ -126,7 +129,7 @@ export async function setCharxRegexDetectors(services: BackendServices, characte
     services,
     characterId,
     (c) => {
-      const current = AM.T_(c.characterPrompt.charxAssetRegexAnalysis?.[characterId]);
+      const current = AM.f1(c.characterPrompt.charxAssetRegexAnalysis?.[characterId]);
       const next = { ...current, status: list.length ? "done" : "not_applicable", analyzedAt: new Date().toISOString(), detectors: list, error: "" };
       return { ...c, characterPrompt: { ...c.characterPrompt, charxAssetRegexAnalysis: { ...(c.characterPrompt.charxAssetRegexAnalysis ?? {}), [characterId]: next } } };
     },

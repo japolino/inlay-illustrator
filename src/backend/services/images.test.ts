@@ -121,7 +121,6 @@ describe("image helpers", () => {
     expect(imageRequestTimeoutMs("novelai", config)).toBe(NOVELAI_REQUEST_TIMEOUT_MS);
     expect(NOVELAI_REQUEST_TIMEOUT_MS).toBe(120_000);
     expect(imageRequestTimeoutMs("comfy-ui", config)).toBe(5000);
-    expect(imageRequestTimeoutMs("chan-server", config)).toBe(0);
   });
 
   test("NovelAI V5: no director reference, random seed when empty, skip_cfg only for 4.5", () => {
@@ -139,6 +138,61 @@ describe("image helpers", () => {
     expect(JSON.parse(built.parameters.rawRequestOverride as string).parameters).toMatchObject({ params_version: 4, skip_cfg_above_sigma: null, negative_prompt: "" });
     const v45 = buildNovelAIParameters({ purpose: "chat", prompt: "x", negativePrompt: "", width: 1024, height: 1024 }, config, { model: "nai-diffusion-4-5-curated", isNovelAIV5: false });
     expect(JSON.parse(v45.parameters.rawRequestOverride as string).parameters.skip_cfg_above_sigma).toBe(59.04722600415217);
+  });
+});
+
+describe("NovelAI V5 High / Medium (AM 0.9.90 effort)", () => {
+  const request = (extra: Record<string, unknown> = {}) => ({
+    purpose: "chat" as const,
+    prompt: "scene",
+    negativePrompt: "bad",
+    width: 832,
+    height: 1216,
+    seed: 3,
+    novelai: { characters: [{ prompt: "girl", negativePrompt: "male", center: { x: 0.3, y: 0.5 } }], useCoords: true, steps: 40, scale: 7, cfgRescale: 0.4, sampler: "k_dpmpp_2m" },
+    ...extra,
+  });
+  const v5 = { model: "nai-diffusion-5-full", isNovelAIV5: true };
+  test("Medium on V5 Full: medium model, 14 steps, Euler Ancestral, empty negatives and NovelAI's Medium fields", () => {
+    const config = normalizeConfig({ novelai: { effort: "medium", steps: 30, sampler: "k_euler", cfgRescale: 0.3, negativePrompt: "global bad" } });
+    const built = buildNovelAIParameters(request(), config, v5, {}, () => 9);
+    expect(built.model).toBe("nai-diffusion-5-full-medium");
+    expect(built.parameters).toMatchObject({ steps: 14, sampler: "k_euler_ancestral", guidance: 7, negativePrompt: "" });
+    const inner = JSON.parse(built.parameters.rawRequestOverride as string).parameters;
+    expect(inner).toMatchObject({ params_version: 4, negative_prompt: "", ucPresetId: "heavy", qualityPresetId: "standard", tag_hint_qt: 1, tag_hint_uc_preset: 2, normalize_reference_strength_multiple: true, straight_alpha: true, image_format: "png", inpaintImg2ImgStrength: 1, noise_schedule: "karras" });
+    for (const key of ["cfg_rescale", "qualityToggle", "skip_cfg_above_sigma"]) expect(Object.hasOwn(inner, key)).toBe(false);
+    expect(inner.v4_negative_prompt.caption.base_caption).toBe("");
+    expect(inner.v4_negative_prompt.caption.char_captions.map((c: { char_caption: string }) => c.char_caption)).toEqual([""]);
+    expect(inner.characterPrompts).toEqual([{ prompt: "girl", uc: "", center: { x: 0.3, y: 0.5 }, enabled: true }]);
+    expect(inner.v4_prompt.caption.char_captions[0].centers).toEqual([{ x: 0.3, y: 0.5 }]);
+    expect(built.sampling).toEqual({ model: "nai-diffusion-5-full-medium", effort: "medium", steps: 14, sampler: "k_euler_ancestral", scale: 7, cfgRescale: 0.4, noiseSchedule: "karras" });
+    // The stored settings are untouched (High uses them again).
+    expect(config.novelai).toMatchObject({ steps: 30, sampler: "k_euler", cfgRescale: 0.3, negativePrompt: "global bad", effort: "medium" });
+  });
+  test("High on the same model is unchanged; Medium is ignored on V5 Curated and 4.5; a request can force the effort", () => {
+    const high = buildNovelAIParameters(request(), normalizeConfig({}), v5, {}, () => 9);
+    expect(high.model).toBeUndefined();
+    expect(high.parameters).toMatchObject({ steps: 40, sampler: "k_dpmpp_2m", negativePrompt: "bad" });
+    const highInner = JSON.parse(high.parameters.rawRequestOverride as string).parameters;
+    expect(highInner).toMatchObject({ cfg_rescale: 0.4, qualityToggle: true, negative_prompt: "bad" });
+    expect(highInner).not.toHaveProperty("ucPresetId");
+    expect(high.sampling).toMatchObject({ model: "nai-diffusion-5-full", effort: "high", steps: 40 });
+    const medium = normalizeConfig({ novelai: { effort: "medium" } });
+    for (const model of ["nai-diffusion-5-curated", "nai-diffusion-4-5-full"]) {
+      const built = buildNovelAIParameters(request(), medium, { model, isNovelAIV5: model.startsWith("nai-diffusion-5") }, {}, () => 9);
+      expect(built.model).toBeUndefined();
+      expect(built.parameters.steps).toBe(40);
+    }
+    const forced = buildNovelAIParameters(request({ novelai: { ...request().novelai, effort: "medium" } }), normalizeConfig({}), v5, {}, () => 9);
+    expect(forced.model).toBe("nai-diffusion-5-full-medium");
+  });
+  test("an unknown effort normalizes to high; the service sends the medium model as the host model", async () => {
+    expect(normalizeConfig({ novelai: { effort: "ultra" } }).novelai.effort).toBe("high");
+    expect(normalizeConfig({}).novelai.effort).toBe("high");
+    const { fake, images } = setup({ image: { connectionId: "nai5" }, novelai: { effort: "medium" } });
+    const result = await images.generate({ purpose: "chat", prompt: "scene", negativePrompt: "bad", width: 832, height: 1216, seed: 5 });
+    expect(fake.imageGenCalls[0]!.input).toMatchObject({ model: "nai-diffusion-5-full-medium", negativePrompt: "" });
+    expect(result.sampling).toMatchObject({ effort: "medium", steps: 14 });
   });
 });
 
@@ -267,18 +321,18 @@ describe("image service", () => {
     expect(fake.imageGenCalls).toHaveLength(2);
   });
 
-  test("ComfyUI: workflow id, source image + denoise when init_image is mapped, unsupported otherwise; generic providers", async () => {
+  test("ComfyUI: workflow id, source image + denoise when init_image is mapped, unsupported otherwise; other providers are refused", async () => {
     const { fake, images } = setup({ image: { connectionId: "comfy", comfyuiWorkflowId: "wf-img2img" } });
     await images.generate({ purpose: "outfit", prompt: "p", negativePrompt: "n", width: 832, height: 1216, seed: "9", comfy: { sourceImage: { data: "QQ==", mimeType: "image/png" }, denoise: 0.45 } });
     expect(fake.imageGenCalls[0]!.input.parameters).toMatchObject({ workflow_id: "wf-img2img", width: 832, height: 1216, seed: 9, negativePrompt: "n", resolvedSourceImages: [{ data: "QQ==", mimeType: "image/png" }], denoise: 0.45, comfyui_field_values: { denoise: 0.45 } });
     const s2 = setup({ image: { connectionId: "comfy" } });
     await expect(s2.images.generate({ purpose: "outfit", prompt: "p", negativePrompt: "", width: 512, height: 512, comfy: { sourceImage: { data: "QQ==", mimeType: "image/png" } } })).rejects.toMatchObject({ error: { code: "unsupported" } });
     expect(s2.fake.imageGenCalls).toHaveLength(0);
+    // The port's former "generic" providers were removed: a connection of another provider is refused clearly.
     const s3 = setup({ image: { connectionId: "oa" } });
-    const r = await s3.images.generate({ purpose: "test", prompt: "p", negativePrompt: "n", width: 1024, height: 1024 });
-    expect(r.provider).toBe("generic");
-    expect(r.seed).toBe("");
-    expect(s3.fake.imageGenCalls[0]!.input.parameters).toEqual({ width: 1024, height: 1024, negativePrompt: "n" });
+    await expect(s3.images.generate({ purpose: "test", prompt: "p", negativePrompt: "n", width: 1024, height: 1024 })).rejects.toMatchObject({ error: { code: "unsupported", detailCode: "IMAGE_PROVIDER_UNSUPPORTED" } });
+    await expect(s3.images.resolveTarget()).rejects.toMatchObject({ error: { code: "unsupported" } });
+    expect(s3.fake.imageGenCalls).toHaveLength(0);
   });
 
   test("delete, connection list, models, connection test", async () => {
@@ -288,6 +342,8 @@ describe("image service", () => {
     const list = await images.listConnections();
     expect(list.find((c) => c.id === "comfy")).toMatchObject({ generationProvider: "comfy-ui", promptCodec: "anima-flat" });
     expect(list.find((c) => c.id === "nai")).toMatchObject({ isDefault: true, generationProvider: "novelai" });
+    // Other providers are listed but marked unsupported (the settings page does not offer them).
+    expect(list.find((c) => c.id === "oa")).toMatchObject({ generationProvider: null, promptCodec: null });
     fake.imageModels.nai = [{ id: "nai-diffusion-5-full", label: "V5" }];
     expect((await images.listModels("nai")).map((m) => m.id)).toEqual(["nai-diffusion-4-5-full", "nai-diffusion-5-full"]);
     expect(await images.testConnection("nai")).toMatchObject({ ok: true });

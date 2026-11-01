@@ -66,7 +66,7 @@ const itemId = (value: unknown): string | undefined =>
  * AM three-way merge (`Mc`, as in `qv`): the change `before -> after` applied over the stored value, so edits saved
  * outside a long run (Prompts / Artists tabs, other runs) survive; the run's value wins where both changed the same field.
  */
-const merge3 = (before: unknown, after: unknown, stored: unknown): unknown => jsonClone(amFn("Mc")(before, after, stored, itemId));
+const merge3 = (before: unknown, after: unknown, stored: unknown): unknown => jsonClone(amFn("Bs")(before, after, stored, itemId));
 
 /** Apply the difference `before -> after` of one object field onto `target` (per entry for plain maps). */
 function patchField(target: Record<string, unknown>, field: string, before: unknown, after: unknown): boolean {

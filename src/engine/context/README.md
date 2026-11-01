@@ -1,4 +1,19 @@
-# src/engine/context — analyzer context building (Asset Maid 0.9.88 `MAt` and helpers)
+# src/engine/context — analyzer context building (Asset Maid 0.9.90 `gxt` and helpers)
+
+> **0.9.90 update.** The facade now wraps the 0.9.90 units (`gxt` buildAnalyzerContextInputs, `pxt`, `jwe`, `mxt`, `OYe`,
+> `Sx`, `xi`, `pO`, `kj`, `NE`, `Vi`, `Axt`, `Txt`, `r5`, `gyt`, `qAe`, `Xwe`, `$3e`). Changes against the text below
+> (which still documents the 0.9.88 trace and names):
+> - `buildAnalyzerContextInputs` no longer returns `promptInputs(decision)` or `outfitContinuityReferences(images)`
+>   (V4.5 and local accumulation were removed). `pO` requires `config.jevConnection`.
+> - Source generation settings: new `fixedRating` (`"sfw"|"nsfw"`, used when `nsfwAlwaysEnabled`; see
+>   `resolveSourceFixedRating(config, sourceId)` = `yS(xi(...))`), `stateAccumulationEnabled` is gone.
+> - `buildKnownIdentities` was removed (0.9.90's chat flow `Vxt` no longer sends known identities).
+> - `assembleAnalyzerInput` returns `{context, checkpointContext: {chatKey, messageId}, revisionPromptChannels?}`;
+>   `messageId` has no `id:` prefix, there is no `messageIndex` / `generationProvider`, and the V4.5
+>   `fingerprintInput` / `validationOptions` are gone. `freeCharacterGenerationEnabled` comes from `xi(...)`.
+> - Anima providers are `comfy-ui` only (Chan Server removed). Continuity has no `nsfwPositions`.
+> - Fixtures: `S/engine-build/gen/context.mjs` re-records the same scenarios from the 0.9.90 bundle (configs adapted:
+>   v5-hybrid profile, fixed ratings, no accumulation flag).
 
 Typed facade over the verbatim core (`../core/asset-maid-core`). It builds everything the planner
 (V4.5 and V5) can see, plus the late callbacks the orchestrator uses for prompts and references.

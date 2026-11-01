@@ -127,19 +127,6 @@ describe("chat pipeline: races", () => {
     expect(pipeline.listActive(CHAT_ID).map((j) => j.jobId)).not.toContain(b.jobId);
   });
 
-  test("swipe deletion: the deleted swipe's webtoon strip goes and later strips shift down", async () => {
-    const { fx, pipeline } = setup({ messages: [{ id: "m1", swipes: SWIPES, swipe_id: 2 }] });
-    const { createStripDocument, updateStrip, readStrip } = await import("../webtoon/store.js");
-    // Swipe B (index 1) has a webtoon strip, swipe C (index 2) has none.
-    await updateStrip(fx.services.storage, CHAT_ID, "m1@1", () => createStripDocument({ chatId: CHAT_ID, messageKey: "illustration:m1@1", historyId: "m1@1", characterId: "char-1", sourceLength: 14, now: 1 }));
-    hostDeleteSwipe(fx, 1);
-    await pipeline.handleHostEvent("MESSAGE_SWIPED", { chatId: CHAT_ID, action: "deleted", swipeId: 1, message: { id: "m1", chat_id: CHAT_ID } });
-    // C is now m1@1: it has no strip.
-    expect(await readStrip(fx.services.storage, CHAT_ID, "m1@1")).toBeNull();
-    const state = (await pipeline.getMessageStates(CHAT_ID)).messages.find((m) => m.messageId === "m1")!;
-    expect(state.webtoon).toBeUndefined();
-  });
-
   test("swipe deletion keeps the generation records of a run committed meanwhile", async () => {
     const { fx, engine, pipeline } = setup({
       messages: [
@@ -256,7 +243,7 @@ describe("chat pipeline: races", () => {
       if (n !== 1) return;
       // The user sends the next message while the first attempt fails.
       await pipeline.handleHostEvent("GENERATION_STARTED", { generationId: "g-user", chatId: CHAT_ID });
-      throw Object.assign(new Error("Image server timeout"), { retryable: true });
+      throw Object.assign(new Error("Image server timeout"), { code: "REQUEST_TIMEOUT" });
     };
     const { jobId } = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0 });
     await waitFor(() => engine.runs.length >= 1);

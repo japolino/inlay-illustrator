@@ -117,41 +117,42 @@ describe("core handlers: charx settings, reset, artists, personas", () => {
   test("charxSettings.resetAll bumps the default revisions so overrides lose", async () => {
     const { call, events } = setup();
     const before = await call("charxSettings.get", { characterId: "c1" });
-    await call("charxSettings.setOverride", { characterId: "c1", patch: { stateAccumulationEnabled: !before.effective.stateAccumulationEnabled } });
+    await call("charxSettings.setOverride", { characterId: "c1", patch: { nsfwAlwaysEnabled: !before.effective.nsfwAlwaysEnabled } });
     const { all } = await call("charxSettings.resetAll", {});
-    expect(all.stateAccumulationEnabled).toBe(before.all.stateAccumulationEnabled);
+    expect(all.nsfwAlwaysEnabled).toBe(before.all.nsfwAlwaysEnabled);
     const after = await call("charxSettings.get", { characterId: "c1" });
-    expect(after.effective.stateAccumulationEnabled).toBe(before.effective.stateAccumulationEnabled);
+    expect(after.effective.nsfwAlwaysEnabled).toBe(before.effective.nsfwAlwaysEnabled);
     expect(after.dirtyFields).toEqual([]);
     expect(events().at(-1)?.event).toBe("config.changed");
   });
 
   test("character.reset deletes the document and dirty bookkeeping", async () => {
     const { call, services } = setup();
-    await call("charxSettings.setOverride", { characterId: "c1", patch: { stateAccumulationEnabled: false } });
+    await call("charxSettings.setOverride", { characterId: "c1", patch: { nsfwAlwaysEnabled: false } });
     expect(await services.storage.hasCharacterDocument("c1")).toBe(true);
     await call("character.reset", { characterId: "c1", confirm: true });
     expect(await services.storage.hasCharacterDocument("c1")).toBe(false);
     expect((await call("charxSettings.get", { characterId: "c1" })).dirtyFields).toEqual([]);
   });
 
-  test("artists: list, upsert/delete NovelAI (preset overrides only), Anima, per-character + global selection", async () => {
+  test("artists: list, upsert/delete NovelAI, Anima, per-character + global selection", async () => {
     const { call, services } = setup();
     const list = await call("artists.list", { characterId: "c1" });
-    expect(list.selectedNovelAIId).toBe("detail_anime_illustration_style");
+    // AM 0.9.90: "none" is the only built-in and the default.
+    expect(list.selectedNovelAIId).toBe("none");
+    expect(list.novelai.map((a) => a.id)).toEqual(["none"]);
     expect(list.selectedAnimaId).toBe("none");
     const { entry } = await call("artists.upsertNovelAI", { entry: { id: "", title: "Mine", prompt: "artist:me" } });
     expect(entry.id).toMatch(/^artist_/);
-    const preset = list.novelai.find((a) => !a.userDefined && a.id !== "none")!;
-    await call("artists.upsertNovelAI", { entry: { id: preset.id, title: "ignored", prompt: "ignored", novelAIOverrides: { steps: 20, sampler: "k_dpmpp_2m_sde", noiseSchedule: "exponential" } } });
+    await expect(call("artists.upsertNovelAI", { entry: { id: "none", title: "x", prompt: "x" } })).rejects.toMatchObject({ error: { code: "bad-request" } });
+    await call("artists.upsertNovelAI", { entry: { ...entry, novelAIOverrides: { steps: 20, sampler: "k_dpmpp_2m_sde", noiseSchedule: "exponential" } } });
     const after = await call("artists.list", {});
-    expect(after.novelai.find((a) => a.id === preset.id)).toMatchObject({ prompt: preset.prompt, novelAIOverrides: { steps: 20, sampler: "k_dpmpp_2m_sde", noiseSchedule: "exponential" } });
-    expect(after.novelai.find((a) => a.id === entry.id)).toMatchObject({ title: "Mine", userDefined: true });
+    expect(after.novelai.find((a) => a.id === entry.id)).toMatchObject({ title: "Mine", userDefined: true, novelAIOverrides: { steps: 20, sampler: "k_dpmpp_2m_sde", noiseSchedule: "exponential" } });
     await call("artists.select", { list: "novelai", artistId: entry.id, characterId: "c1" });
     expect((await call("artists.list", { characterId: "c1" })).selectedNovelAIId).toBe(entry.id);
     await expect(call("artists.select", { list: "novelai", artistId: "nope", characterId: "c1" })).rejects.toMatchObject({ error: { code: "not-found" } });
     await call("artists.deleteNovelAI", { id: entry.id });
-    expect((await call("artists.list", { characterId: "c1" })).selectedNovelAIId).toBe("detail_anime_illustration_style");
+    expect((await call("artists.list", { characterId: "c1" })).selectedNovelAIId).toBe("none");
 
     const anima = await call("artists.upsertAnima", { entry: { id: "", title: "A", text: "@artist" } });
     await call("artists.select", { list: "anima", artistId: anima.entry.id });
@@ -168,21 +169,46 @@ describe("core handlers: charx settings, reset, artists, personas", () => {
     // v1 documents stored the built-in default even when nobody picked it: those follow the global preset.
     const legacy = { ...createEmptyCharacterDocument("old"), version: 1 };
     fake.files.set(STORAGE_PATHS.characterDocument("old"), JSON.stringify({ ...legacy, characterPrompt: { ...legacy.characterPrompt, selectedArtistId: "detail_anime_illustration_style" } }));
-    expect(await call("artists.list", { characterId: "c1" })).toMatchObject({ selectedNovelAIId: "detail_anime_illustration_style", globalNovelAIId: "detail_anime_illustration_style", followsGlobalNovelAI: true });
+    expect(await call("artists.list", { characterId: "c1" })).toMatchObject({ selectedNovelAIId: "none", globalNovelAIId: "none", followsGlobalNovelAI: true });
 
     const { entry } = await call("artists.upsertNovelAI", { entry: { id: "", title: "Mine", prompt: "artist:me" } });
+    const other = (await call("artists.upsertNovelAI", { entry: { id: "", title: "Other", prompt: "artist:other" } })).entry;
     await call("artists.select", { list: "novelai", artistId: entry.id });
     expect(JSON.parse(fake.files.get(STORAGE_PATHS.artistsGlobal) as string).characterPrompt.defaultArtistId).toBe(entry.id);
     for (const id of ["c1", "old"]) expect(await call("artists.list", { characterId: id })).toMatchObject({ selectedNovelAIId: entry.id, followsGlobalNovelAI: true });
 
-    await call("artists.select", { list: "novelai", artistId: "detail_anime_illustration_style", characterId: "c1" });
-    expect(await call("artists.list", { characterId: "c1" })).toMatchObject({ selectedNovelAIId: "detail_anime_illustration_style", globalNovelAIId: entry.id, followsGlobalNovelAI: false });
+    await call("artists.select", { list: "novelai", artistId: other.id, characterId: "c1" });
+    expect(await call("artists.list", { characterId: "c1" })).toMatchObject({ selectedNovelAIId: other.id, globalNovelAIId: entry.id, followsGlobalNovelAI: false });
     await call("artists.select", { list: "novelai", artistId: "", characterId: "old" });
     expect((await services.storage.loadCharacterDocument("old")).characterPrompt.selectedArtistId).toBe("");
 
     await call("artists.deleteNovelAI", { id: entry.id });
     expect(await call("artists.list", { characterId: "old" })).toMatchObject({ selectedNovelAIId: "none", globalNovelAIId: "none" });
-    expect((await call("artists.list", { characterId: "c1" })).selectedNovelAIId).toBe("detail_anime_illustration_style");
+    expect((await call("artists.list", { characterId: "c1" })).selectedNovelAIId).toBe(other.id);
+  });
+
+  test("artists: default style star (AM 0.9.90) — none rules, own pick wins, Anima follows the default again", async () => {
+    const { call, services } = setup();
+    // Default "none": characters without an own style get no artist; an explicit own pick wins over the default.
+    await call("artists.select", { list: "novelai", artistId: "none" });
+    expect(await call("artists.list", { characterId: "c1" })).toMatchObject({ selectedNovelAIId: "none", globalNovelAIId: "none", followsGlobalNovelAI: true });
+    const style = (await call("artists.upsertNovelAI", { entry: { id: "", title: "Comic", prompt: "artist:comic" } })).entry;
+    await call("artists.select", { list: "novelai", artistId: style.id });
+    await call("artists.select", { list: "novelai", artistId: "none", characterId: "c1" });
+    expect(await call("artists.list", { characterId: "c1" })).toMatchObject({ selectedNovelAIId: "none", globalNovelAIId: style.id, followsGlobalNovelAI: false });
+
+    const a = await call("artists.upsertAnima", { entry: { id: "", title: "A", text: "@a" } });
+    const b = await call("artists.upsertAnima", { entry: { id: "", title: "B", text: "@b" } });
+    await call("artists.select", { list: "anima", artistId: a.entry.id });
+    await call("artists.select", { list: "anima", artistId: b.entry.id, characterId: "c1" });
+    expect(await call("artists.list", { characterId: "c1" })).toMatchObject({ selectedAnimaId: b.entry.id, globalAnimaId: a.entry.id, followsGlobalAnima: false });
+    // "" + characterId clears the own selection: the character follows the default again.
+    await call("artists.select", { list: "anima", artistId: "", characterId: "c1" });
+    expect((await services.storage.loadCharacterDocument("c1")).animaArtistId).toBeNull();
+    expect(await call("artists.list", { characterId: "c1" })).toMatchObject({ selectedAnimaId: a.entry.id, globalAnimaId: a.entry.id, followsGlobalAnima: true });
+    // Clicking the active star clears the default to "none".
+    await call("artists.select", { list: "anima", artistId: "none" });
+    expect(await call("artists.list", { characterId: "c1" })).toMatchObject({ selectedAnimaId: "none", globalAnimaId: "none" });
   });
 
   test("personas: list with forms, saveForms with base revision guard, settings", async () => {

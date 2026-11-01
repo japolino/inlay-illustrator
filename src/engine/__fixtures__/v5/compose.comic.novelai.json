@@ -53,13 +53,7 @@
        "targetActorId": "actor_2",
        "bindingStatus": "complete",
        "unresolvedActorRefs": [],
-       "modifiers": [],
-       "participantDetails": [
-        {
-         "actorId": "actor_2",
-         "text": "stumbling half a step"
-        }
-       ]
+       "modifiers": []
       }
      ],
      "location": {
@@ -71,13 +65,13 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "outdoors"
         ]
        },
        {
-        "id": "scene.time",
+        "id": "environment.time",
         "options": [
          "morning"
         ]
@@ -106,6 +100,7 @@
        {
         "panelId": "p_wave",
         "id": "greeting_wave",
+        "selectedDefinitionId": null,
         "visibleActorIds": [
          "actor_1"
         ],
@@ -122,6 +117,7 @@
        {
         "panelId": "p_meet",
         "id": "arm_hug_meeting",
+        "selectedDefinitionId": null,
         "visibleActorIds": [
          "actor_1",
          "actor_2"
@@ -139,6 +135,7 @@
        {
         "panelId": "p_bell",
         "id": "school_bell",
+        "selectedDefinitionId": null,
         "visibleActorIds": [],
         "modifiers": [
          {
@@ -222,18 +219,14 @@
          ]
         },
         {
-         "id": "actor.framing.crop",
+         "id": "framing.crop",
          "options": [
           "upper_body"
          ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "waving",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": "speech bubble, text:You're late again!"
       },
       {
@@ -245,24 +238,20 @@
        "actions": [],
        "modifiers": [
         {
-         "id": "expression.mouth",
+         "id": "expression.mouth.openness",
          "options": [
           "open_mouth"
          ]
         },
         {
-         "id": "actor.framing.crop",
+         "id": "framing.crop",
          "options": [
           "cowboy_shot"
          ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       },
       {
@@ -275,14 +264,16 @@
          "options": [
           "surprised"
          ]
+        },
+        {
+         "id": "framing.crop",
+         "options": [
+          "cowboy_shot"
+         ]
         }
        ],
-       "freeTags": [],
-       "penetratingInjuries": [],
        "poseInstruction": "",
-       "actionInstruction": "",
        "objects": [],
-       "objectInstruction": "",
        "dialogueInstruction": ""
       }
      ],
@@ -411,11 +402,11 @@
    "actor.m0ais.6ynrym": "lore:bob",
    "actor.1fmv888.fk4pvw": "persona::p1"
   },
-  "requestPayload": "fnv1a64-29fdfa8dcd19ee7d",
+  "requestPayload": "fnv1a64-6b3f333b248a5086",
   "localProjection": {
    "characterCoordinates": "fixed"
   },
-  "catalogFingerprint": "v5.fnv1a64-e275e8a1dab52c47"
+  "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
  },
  "plans": [
   {
@@ -452,71 +443,88 @@
       "female",
       "silver hair",
       "blue eyes",
-      "light smile",
-      "upper body",
       "white sailor shirt",
       "navy sailor collar",
       "red neckerchief",
-      "0.3::navy pleated skirt::"
+      "0.5::navy pleated skirt::",
+      "upper body",
+      "light smile"
      ],
      "instructions": [
-      "waving.",
       "speech bubble, text:You're late again!"
      ],
-     "serializedPrompt": "female, silver hair, blue eyes, light smile, upper body, white sailor shirt, navy sailor collar, red neckerchief, 0.3::navy pleated skirt::\nwaving. speech bubble, text:You're late again!",
+     "serializedPrompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, 0.5::navy pleated skirt::, upper body, light smile\nspeech bubble, text:You're late again!",
      "actorId": "actor_1",
      "placementIndex": 0,
      "candidateKey": "actor.g00nx3.1d3zc2v",
      "sex": "female",
      "centerX": 0.5,
      "centerY": 0.25,
-     "negativePrompt": "bad hands"
+     "negativePrompt": "bad hands",
+     "outfitPartWeights": {
+      "head": 1,
+      "top": 1,
+      "bottom": 0.5,
+      "legs": 0,
+      "feet": 0
+     }
     },
     {
      "tags": [
       "female",
       "silver hair",
       "blue eyes",
-      "source#arm hug",
-      "open mouth",
       "white sailor shirt",
       "navy sailor collar",
       "red neckerchief",
       "navy pleated skirt",
-      "0.8::black thighhighs::"
+      "black thighhighs",
+      "source#arm hug",
+      "open mouth"
      ],
      "instructions": [],
-     "serializedPrompt": "female, silver hair, blue eyes, source#arm hug, open mouth, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, 0.8::black thighhighs::",
+     "serializedPrompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, source#arm hug, open mouth",
      "actorId": "actor_1",
      "placementIndex": 1,
      "candidateKey": "actor.g00nx3.1d3zc2v",
      "sex": "female",
      "centerX": 0.35,
      "centerY": 0.62,
-     "negativePrompt": "bad hands"
+     "negativePrompt": "bad hands",
+     "outfitPartWeights": {
+      "head": 1,
+      "top": 1,
+      "bottom": 1,
+      "legs": 1,
+      "feet": 0
+     }
     },
     {
      "tags": [
       "male",
       "1::kazehaya shouta::",
-      "target#arm hug",
-      "surprised",
-      "2::facing away::",
       "black hoodie",
       "jeans",
-      "sneakers"
+      "2::facing away::",
+      "target#arm hug",
+      "surprised"
      ],
-     "instructions": [
-      "stumbling half a step."
-     ],
-     "serializedPrompt": "male, 1::kazehaya shouta::, target#arm hug, surprised, 2::facing away::, black hoodie, jeans, sneakers\nstumbling half a step.",
+     "instructions": [],
+     "serializedPrompt": "male, 1::kazehaya shouta::, black hoodie, jeans, 2::facing away::, target#arm hug, surprised",
      "actorId": "actor_2",
      "placementIndex": 2,
      "candidateKey": "actor.1fmv888.fk4pvw",
      "sex": "male",
      "centerX": 0.65,
      "centerY": 0.62,
-     "negativePrompt": ""
+     "negativePrompt": "",
+     "outfitPartWeights": {
+      "head": 1,
+      "top": 1,
+      "bottom": 1,
+      "legs": 1,
+      "feet": 0
+     }
     }
    ],
    "ledger": [
@@ -563,6 +571,9 @@
      "order": 0,
      "sourceKind": "actor-roster",
      "sourceId": "actor-roster:actor_1:sex",
+     "outputOrigin": {
+      "path": "base.sex"
+     },
      "weight": 1,
      "id": "ledger:00002",
      "semanticKey": "female",
@@ -580,6 +591,9 @@
      "order": 0,
      "sourceKind": "actor-roster",
      "sourceId": "actor-roster:actor_2:sex",
+     "outputOrigin": {
+      "path": "base.sex"
+     },
      "weight": 1,
      "id": "ledger:00003",
      "semanticKey": "male",
@@ -587,6 +601,9 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "base.hair.color"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -599,66 +616,78 @@
      "sourceId": "lore:alice:hair.color:0",
      "placementIndex": 0,
      "weight": 1,
-     "id": "ledger:00022",
+     "id": "ledger:00020",
      "semanticKey": "silver hair",
+     "inputIndex": 20,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "base.hair.color"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.hair.color",
+     "value": "silver hair",
+     "order": 9100,
+     "sourceKind": "external-identity",
+     "sourceId": "lore:alice:hair.color:0",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00021",
+     "semanticKey": "silver hair",
+     "inputIndex": 21,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "base.eyes.color"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "base.eyes.color",
+     "value": "blue eyes",
+     "order": 9500,
+     "sourceKind": "external-identity",
+     "sourceId": "lore:alice:eyes.color:0",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00022",
+     "semanticKey": "blue eyes",
      "inputIndex": 22,
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "base.eyes.color"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
       "actorId": "actor_1"
      },
-     "semanticId": "base.hair.color",
-     "value": "silver hair",
-     "order": 9100,
+     "semanticId": "base.eyes.color",
+     "value": "blue eyes",
+     "order": 9500,
      "sourceKind": "external-identity",
-     "sourceId": "lore:alice:hair.color:0",
+     "sourceId": "lore:alice:eyes.color:0",
      "placementIndex": 1,
      "weight": 1,
      "id": "ledger:00023",
-     "semanticKey": "silver hair",
+     "semanticKey": "blue eyes",
      "inputIndex": 23,
      "status": "applied"
     },
     {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
+     "outputOrigin": {
+      "path": "base.custom"
      },
-     "semanticId": "base.eyes.color",
-     "value": "blue eyes",
-     "order": 9500,
-     "sourceKind": "external-identity",
-     "sourceId": "lore:alice:eyes.color:0",
-     "placementIndex": 0,
-     "weight": 1,
-     "id": "ledger:00024",
-     "semanticKey": "blue eyes",
-     "inputIndex": 24,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "base.eyes.color",
-     "value": "blue eyes",
-     "order": 9500,
-     "sourceKind": "external-identity",
-     "sourceId": "lore:alice:eyes.color:0",
-     "placementIndex": 1,
-     "weight": 1,
-     "id": "ledger:00025",
-     "semanticKey": "blue eyes",
-     "inputIndex": 25,
-     "status": "applied"
-    },
-    {
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -666,14 +695,14 @@
      },
      "semanticId": "base.custom",
      "value": "1::kazehaya shouta::",
-     "order": 10300,
+     "order": 10400,
      "sourceKind": "external-identity",
      "sourceId": "persona::p1:custom:0",
      "placementIndex": 2,
      "weight": 1,
-     "id": "ledger:00038",
+     "id": "ledger:00036",
      "semanticKey": "kazehaya shouta",
-     "inputIndex": 38,
+     "inputIndex": 36,
      "status": "applied"
     },
     {
@@ -687,9 +716,9 @@
      "sourceKind": "external-artist",
      "sourceId": "detail_anime_illustration_style",
      "weight": 1,
-     "id": "ledger:00042",
+     "id": "ledger:00040",
      "semanticKey": "artist hwansang",
-     "inputIndex": 42,
+     "inputIndex": 40,
      "status": "applied"
     },
     {
@@ -703,9 +732,9 @@
      "sourceKind": "external-artist",
      "sourceId": "detail_anime_illustration_style",
      "weight": 1,
-     "id": "ledger:00043",
+     "id": "ledger:00041",
      "semanticKey": "year 2025",
-     "inputIndex": 43,
+     "inputIndex": 41,
      "status": "applied"
     },
     {
@@ -719,9 +748,9 @@
      "sourceKind": "external-artist",
      "sourceId": "detail_anime_illustration_style",
      "weight": 1,
-     "id": "ledger:00044",
+     "id": "ledger:00042",
      "semanticKey": "masterpiece",
-     "inputIndex": 44,
+     "inputIndex": 42,
      "status": "applied"
     },
     {
@@ -735,30 +764,378 @@
      "sourceKind": "external-artist",
      "sourceId": "detail_anime_illustration_style",
      "weight": 1,
-     "id": "ledger:00045",
+     "id": "ledger:00043",
      "semanticKey": "best quality",
-     "inputIndex": 45,
+     "inputIndex": 43,
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
       "actorId": "actor_1"
      },
-     "semanticId": "interaction.arm_hug.directed.source",
-     "value": "source#arm hug",
-     "order": 41,
-     "sourceKind": "closed",
-     "sourceId": "interaction:interaction:0",
+     "semanticId": "outfit.top.1",
+     "value": "white sailor shirt",
+     "order": 9100,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "placementIndex": 0,
      "weight": 1,
-     "placementIndex": 1,
-     "id": "ledger:00004",
-     "semanticKey": "arm hug",
-     "inputIndex": 4,
+     "id": "ledger:00024",
+     "semanticKey": "white sailor shirt",
+     "inputIndex": 24,
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.top",
+     "value": "black hoodie",
+     "order": 9100,
+     "sourceKind": "external",
+     "sourceId": "outfit:persona::p1:outfit_1:top",
+     "placementIndex": 2,
+     "weight": 1,
+     "id": "ledger:00037",
+     "semanticKey": "black hoodie",
+     "inputIndex": 37,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.1",
+     "value": "white sailor shirt",
+     "order": 9100,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00030",
+     "semanticKey": "white sailor shirt",
+     "inputIndex": 30,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.2",
+     "value": "navy sailor collar",
+     "order": 9101,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00025",
+     "semanticKey": "navy sailor collar",
+     "inputIndex": 25,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.bottom"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "outfit.bottom",
+     "value": "jeans",
+     "order": 9200,
+     "sourceKind": "external",
+     "sourceId": "outfit:persona::p1:outfit_1:bottom",
+     "placementIndex": 2,
+     "weight": 1,
+     "id": "ledger:00038",
+     "semanticKey": "jeans",
+     "inputIndex": 38,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.orientation.facing",
+      "option": "facing_away"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_2"
+     },
+     "semanticId": "orientation.facing.facing_away",
+     "value": "facing away",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "placement:actor_2:facing:orientation.facing.facing_away",
+     "weight": 2,
+     "placementIndex": 2,
+     "id": "ledger:00019",
+     "semanticKey": "facing away",
+     "inputIndex": 19,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.2",
+     "value": "navy sailor collar",
+     "order": 9101,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00031",
+     "semanticKey": "navy sailor collar",
+     "inputIndex": 31,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.environment.setting",
+      "option": "outdoors"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "environment.setting.outdoors",
+     "value": "outdoors",
+     "order": 6060,
+     "sourceKind": "closed",
+     "sourceId": "scene-location:environment.setting:environment.setting.outdoors",
+     "weight": 1,
+     "id": "ledger:00011",
+     "semanticKey": "outdoors",
+     "inputIndex": 11,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.environment.time",
+      "option": "morning"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "environment.time.morning",
+     "value": "morning",
+     "order": 6262,
+     "sourceKind": "closed",
+     "sourceId": "scene-location:environment.time:environment.time.morning",
+     "weight": 1,
+     "id": "ledger:00012",
+     "semanticKey": "morning",
+     "inputIndex": 12,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "free.location",
+      "group": "scene.free.location"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.location.free.school_gate",
+     "value": "school gate",
+     "order": 0,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-location",
+     "weight": 1,
+     "id": "ledger:00013",
+     "semanticKey": "school gate",
+     "inputIndex": 13,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "text.dialogue",
+      "group": "actor.text.dialogue"
+     },
+     "lane": "instruction",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "actor.comic_dialogue.instruction.actor_1",
+     "value": "speech bubble, text:You're late again!",
+     "order": 10400,
+     "sourceKind": "recovered-free",
+     "sourceId": "actor-detail:actor_1",
+     "placementIndex": 0,
+     "id": "ledger:00008",
+     "semanticKey": "speech bubble text you re late again",
+     "inputIndex": 8,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "text.page",
+      "group": "scene.text.page"
+     },
+     "lane": "instruction",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.comic_page.instruction",
+     "value": "A dominant top panel of Alice waving, a wide middle panel of the arm hug, and a small inset of the gate bell.",
+     "order": 10900,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-comic-page",
+     "id": "ledger:00014",
+     "semanticKey": "a dominant top panel of alice waving a wide middle panel of the arm hug and a small inset of the gate bell",
+     "inputIndex": 14,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "panel.description"
+     },
+     "lane": "instruction",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.comic_page.panel.p_wave",
+     "value": "Alice waving high from the gate.",
+     "order": 10901,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-comic-panel:p_wave",
+     "id": "ledger:00015",
+     "semanticKey": "alice waving high from the gate",
+     "inputIndex": 15,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "panel.description"
+     },
+     "lane": "instruction",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.comic_page.panel.p_meet",
+     "value": "Alice hooks her arm around Shouta's.",
+     "order": 10902,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-comic-panel:p_meet",
+     "id": "ledger:00016",
+     "semanticKey": "alice hooks her arm around shouta s",
+     "inputIndex": 16,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "panel.description"
+     },
+     "lane": "instruction",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.comic_page.panel.p_bell",
+     "value": "Close view of the ringing school bell.",
+     "order": 10903,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-comic-panel:p_bell",
+     "id": "ledger:00017",
+     "semanticKey": "close view of the ringing school bell",
+     "inputIndex": 17,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "panel.crossActor"
+     },
+     "lane": "instruction",
+     "destination": {
+      "kind": "global"
+     },
+     "semanticId": "scene.comic_page.cross_panel_actor.actor_1",
+     "value": "Alice's raised hand breaks the border between the first two panels.",
+     "order": 10904,
+     "sourceKind": "recovered-free",
+     "sourceId": "scene-comic-cross-panel:actor_1",
+     "id": "ledger:00018",
+     "semanticKey": "alice s raised hand breaks the border between the first two panels",
+     "inputIndex": 18,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.3",
+     "value": "red neckerchief",
+     "order": 9102,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "placementIndex": 0,
+     "weight": 1,
+     "id": "ledger:00026",
+     "semanticKey": "red neckerchief",
+     "inputIndex": 26,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.top"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.top.3",
+     "value": "red neckerchief",
+     "order": 9102,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:top",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00032",
+     "semanticKey": "red neckerchief",
+     "inputIndex": 32,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "interaction": "interaction:0",
+      "path": "interaction.arm_hug"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -777,6 +1154,117 @@
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "outfit.bottom"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.bottom",
+     "value": "navy pleated skirt",
+     "order": 9200,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:bottom",
+     "placementIndex": 0,
+     "weight": 0.5,
+     "id": "ledger:00027",
+     "semanticKey": "navy pleated skirt",
+     "inputIndex": 27,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.bottom"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.bottom",
+     "value": "navy pleated skirt",
+     "order": 9200,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:bottom",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00033",
+     "semanticKey": "navy pleated skirt",
+     "inputIndex": 33,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "outfit.legs"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "outfit.legs",
+     "value": "black thighhighs",
+     "order": 9300,
+     "sourceKind": "external",
+     "sourceId": "outfit:lore:alice:outfit_1:legs",
+     "placementIndex": 1,
+     "weight": 1,
+     "id": "ledger:00034",
+     "semanticKey": "black thighhighs",
+     "inputIndex": 34,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.framing.crop",
+      "option": "upper_body"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "framing.crop.upper_body",
+     "value": "upper body",
+     "order": 4848,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:framing.crop.upper_body",
+     "weight": 1,
+     "placementIndex": 0,
+     "id": "ledger:00007",
+     "semanticKey": "upper body",
+     "inputIndex": 7,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "interaction": "interaction:0",
+      "path": "interaction.arm_hug"
+     },
+     "lane": "tag",
+     "destination": {
+      "kind": "actor",
+      "actorId": "actor_1"
+     },
+     "semanticId": "interaction.arm_hug.directed.source",
+     "value": "source#arm hug",
+     "order": 41,
+     "sourceKind": "closed",
+     "sourceId": "interaction:interaction:0",
+     "weight": 1,
+     "placementIndex": 1,
+     "id": "ledger:00004",
+     "semanticKey": "arm hug",
+     "inputIndex": 4,
+     "status": "applied"
+    },
+    {
+     "outputOrigin": {
+      "path": "group.expression.general",
+      "option": "light_smile"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -789,30 +1277,16 @@
      "sourceId": "actor-detail:actor_1:expression.general.light_smile",
      "weight": 1,
      "placementIndex": 0,
-     "id": "ledger:00007",
+     "id": "ledger:00006",
      "semanticKey": "light smile",
-     "inputIndex": 7,
+     "inputIndex": 6,
      "status": "applied"
     },
     {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
+     "outputOrigin": {
+      "path": "group.expression.general",
+      "option": "surprised"
      },
-     "semanticId": "expression.mouth.open_mouth",
-     "value": "open mouth",
-     "order": 4040,
-     "sourceKind": "closed",
-     "sourceId": "actor-detail:actor_1:expression.mouth.open_mouth",
-     "weight": 1,
-     "placementIndex": 1,
-     "id": "ledger:00011",
-     "semanticKey": "open mouth",
-     "inputIndex": 11,
-     "status": "applied"
-    },
-    {
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -825,402 +1299,15 @@
      "sourceId": "actor-detail:actor_2:expression.general.surprised",
      "weight": 1,
      "placementIndex": 2,
-     "id": "ledger:00012",
-     "semanticKey": "surprised",
-     "inputIndex": 12,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_2"
-     },
-     "semanticId": "orientation.facing.facing_away",
-     "value": "facing away",
-     "order": 4040,
-     "sourceKind": "closed",
-     "sourceId": "placement:actor_2:facing:orientation.facing.facing_away",
-     "weight": 2,
-     "placementIndex": 2,
-     "id": "ledger:00021",
-     "semanticKey": "facing away",
-     "inputIndex": 21,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "actor.framing.crop.upper_body",
-     "value": "upper body",
-     "order": 4848,
-     "sourceKind": "closed",
-     "sourceId": "actor-detail:actor_1:actor.framing.crop.upper_body",
-     "weight": 1,
-     "placementIndex": 0,
-     "id": "ledger:00008",
-     "semanticKey": "upper body",
-     "inputIndex": 8,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "global"
-     },
-     "semanticId": "scene.environment.outdoors",
-     "value": "outdoors",
-     "order": 6060,
-     "sourceKind": "closed",
-     "sourceId": "scene-location:scene.environment:scene.environment.outdoors",
-     "weight": 1,
-     "id": "ledger:00013",
-     "semanticKey": "outdoors",
-     "inputIndex": 13,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "global"
-     },
-     "semanticId": "scene.time.morning",
-     "value": "morning",
-     "order": 6262,
-     "sourceKind": "closed",
-     "sourceId": "scene-location:scene.time:scene.time.morning",
-     "weight": 1,
-     "id": "ledger:00014",
-     "semanticKey": "morning",
-     "inputIndex": 14,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "global"
-     },
-     "semanticId": "scene.location.free.school_gate",
-     "value": "school gate",
-     "order": 0,
-     "sourceKind": "recovered-free",
-     "sourceId": "scene-location",
-     "weight": 1,
-     "id": "ledger:00015",
-     "semanticKey": "school gate",
-     "inputIndex": 15,
-     "status": "applied"
-    },
-    {
-     "lane": "instruction",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_2"
-     },
-     "semanticId": "interaction.instruction.interaction:0.0.actor_2",
-     "value": "stumbling half a step",
-     "order": 10000,
-     "sourceKind": "recovered-free",
-     "sourceId": "interaction:0",
-     "placementIndex": 2,
-     "id": "ledger:00006",
-     "semanticKey": "stumbling half a step",
-     "inputIndex": 6,
-     "status": "applied"
-    },
-    {
-     "lane": "instruction",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "actor.action.instruction.actor_1",
-     "value": "waving",
-     "order": 10200,
-     "sourceKind": "recovered-free",
-     "sourceId": "actor-detail:actor_1",
-     "placementIndex": 0,
-     "id": "ledger:00009",
-     "semanticKey": "waving",
-     "inputIndex": 9,
-     "status": "applied"
-    },
-    {
-     "lane": "instruction",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "actor.comic_dialogue.instruction.actor_1",
-     "value": "speech bubble, text:You're late again!",
-     "order": 10400,
-     "sourceKind": "recovered-free",
-     "sourceId": "actor-detail:actor_1",
-     "placementIndex": 0,
      "id": "ledger:00010",
-     "semanticKey": "speech bubble text you re late again",
+     "semanticKey": "surprised",
      "inputIndex": 10,
      "status": "applied"
     },
     {
-     "lane": "instruction",
-     "destination": {
-      "kind": "global"
+     "outputOrigin": {
+      "path": "outfit.legs"
      },
-     "semanticId": "scene.comic_page.instruction",
-     "value": "A dominant top panel of Alice waving, a wide middle panel of the arm hug, and a small inset of the gate bell.",
-     "order": 10900,
-     "sourceKind": "recovered-free",
-     "sourceId": "scene-comic-page",
-     "id": "ledger:00016",
-     "semanticKey": "a dominant top panel of alice waving a wide middle panel of the arm hug and a small inset of the gate bell",
-     "inputIndex": 16,
-     "status": "applied"
-    },
-    {
-     "lane": "instruction",
-     "destination": {
-      "kind": "global"
-     },
-     "semanticId": "scene.comic_page.panel.p_wave",
-     "value": "Alice waving high from the gate.",
-     "order": 10901,
-     "sourceKind": "recovered-free",
-     "sourceId": "scene-comic-panel:p_wave",
-     "id": "ledger:00017",
-     "semanticKey": "alice waving high from the gate",
-     "inputIndex": 17,
-     "status": "applied"
-    },
-    {
-     "lane": "instruction",
-     "destination": {
-      "kind": "global"
-     },
-     "semanticId": "scene.comic_page.panel.p_meet",
-     "value": "Alice hooks her arm around Shouta's.",
-     "order": 10902,
-     "sourceKind": "recovered-free",
-     "sourceId": "scene-comic-panel:p_meet",
-     "id": "ledger:00018",
-     "semanticKey": "alice hooks her arm around shouta s",
-     "inputIndex": 18,
-     "status": "applied"
-    },
-    {
-     "lane": "instruction",
-     "destination": {
-      "kind": "global"
-     },
-     "semanticId": "scene.comic_page.panel.p_bell",
-     "value": "Close view of the ringing school bell.",
-     "order": 10903,
-     "sourceKind": "recovered-free",
-     "sourceId": "scene-comic-panel:p_bell",
-     "id": "ledger:00019",
-     "semanticKey": "close view of the ringing school bell",
-     "inputIndex": 19,
-     "status": "applied"
-    },
-    {
-     "lane": "instruction",
-     "destination": {
-      "kind": "global"
-     },
-     "semanticId": "scene.comic_page.cross_panel_actor.actor_1",
-     "value": "Alice's raised hand breaks the border between the first two panels.",
-     "order": 10904,
-     "sourceKind": "recovered-free",
-     "sourceId": "scene-comic-cross-panel:actor_1",
-     "id": "ledger:00020",
-     "semanticKey": "alice s raised hand breaks the border between the first two panels",
-     "inputIndex": 20,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "outfit.top.1",
-     "value": "white sailor shirt",
-     "order": 9100,
-     "sourceKind": "external",
-     "sourceId": "outfit:lore:alice:outfit_1:top",
-     "placementIndex": 0,
-     "weight": 1,
-     "id": "ledger:00026",
-     "semanticKey": "white sailor shirt",
-     "inputIndex": 26,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "outfit.top.1",
-     "value": "white sailor shirt",
-     "order": 9100,
-     "sourceKind": "external",
-     "sourceId": "outfit:lore:alice:outfit_1:top",
-     "placementIndex": 1,
-     "weight": 1,
-     "id": "ledger:00032",
-     "semanticKey": "white sailor shirt",
-     "inputIndex": 32,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_2"
-     },
-     "semanticId": "outfit.top",
-     "value": "black hoodie",
-     "order": 9100,
-     "sourceKind": "external",
-     "sourceId": "outfit:persona::p1:outfit_1:top",
-     "placementIndex": 2,
-     "weight": 1,
-     "id": "ledger:00039",
-     "semanticKey": "black hoodie",
-     "inputIndex": 39,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "outfit.top.2",
-     "value": "navy sailor collar",
-     "order": 9101,
-     "sourceKind": "external",
-     "sourceId": "outfit:lore:alice:outfit_1:top",
-     "placementIndex": 0,
-     "weight": 1,
-     "id": "ledger:00027",
-     "semanticKey": "navy sailor collar",
-     "inputIndex": 27,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "outfit.top.2",
-     "value": "navy sailor collar",
-     "order": 9101,
-     "sourceKind": "external",
-     "sourceId": "outfit:lore:alice:outfit_1:top",
-     "placementIndex": 1,
-     "weight": 1,
-     "id": "ledger:00033",
-     "semanticKey": "navy sailor collar",
-     "inputIndex": 33,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "outfit.top.3",
-     "value": "red neckerchief",
-     "order": 9102,
-     "sourceKind": "external",
-     "sourceId": "outfit:lore:alice:outfit_1:top",
-     "placementIndex": 0,
-     "weight": 1,
-     "id": "ledger:00028",
-     "semanticKey": "red neckerchief",
-     "inputIndex": 28,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "outfit.top.3",
-     "value": "red neckerchief",
-     "order": 9102,
-     "sourceKind": "external",
-     "sourceId": "outfit:lore:alice:outfit_1:top",
-     "placementIndex": 1,
-     "weight": 1,
-     "id": "ledger:00034",
-     "semanticKey": "red neckerchief",
-     "inputIndex": 34,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "outfit.bottom",
-     "value": "navy pleated skirt",
-     "order": 9200,
-     "sourceKind": "external",
-     "sourceId": "outfit:lore:alice:outfit_1:bottom",
-     "placementIndex": 0,
-     "weight": 0.3,
-     "id": "ledger:00029",
-     "semanticKey": "navy pleated skirt",
-     "inputIndex": 29,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_1"
-     },
-     "semanticId": "outfit.bottom",
-     "value": "navy pleated skirt",
-     "order": 9200,
-     "sourceKind": "external",
-     "sourceId": "outfit:lore:alice:outfit_1:bottom",
-     "placementIndex": 1,
-     "weight": 1,
-     "id": "ledger:00035",
-     "semanticKey": "navy pleated skirt",
-     "inputIndex": 35,
-     "status": "applied"
-    },
-    {
-     "lane": "tag",
-     "destination": {
-      "kind": "actor",
-      "actorId": "actor_2"
-     },
-     "semanticId": "outfit.bottom",
-     "value": "jeans",
-     "order": 9200,
-     "sourceKind": "external",
-     "sourceId": "outfit:persona::p1:outfit_1:bottom",
-     "placementIndex": 2,
-     "weight": 1,
-     "id": "ledger:00040",
-     "semanticKey": "jeans",
-     "inputIndex": 40,
-     "status": "applied"
-    },
-    {
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -1234,30 +1321,37 @@
      "placementIndex": 0,
      "weight": 0,
      "suppressionReason": "visibility",
-     "id": "ledger:00030",
+     "id": "ledger:00028",
      "semanticKey": "black thighhighs",
-     "inputIndex": 30,
+     "inputIndex": 28,
      "status": "suppressed"
     },
     {
+     "outputOrigin": {
+      "path": "group.expression.mouth.openness",
+      "option": "open_mouth"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
       "actorId": "actor_1"
      },
-     "semanticId": "outfit.legs",
-     "value": "black thighhighs",
-     "order": 9300,
-     "sourceKind": "external",
-     "sourceId": "outfit:lore:alice:outfit_1:legs",
+     "semanticId": "expression.mouth.openness.open_mouth",
+     "value": "open mouth",
+     "order": 4040,
+     "sourceKind": "closed",
+     "sourceId": "actor-detail:actor_1:expression.mouth.openness.open_mouth",
+     "weight": 1,
      "placementIndex": 1,
-     "weight": 0.8,
-     "id": "ledger:00036",
-     "semanticKey": "black thighhighs",
-     "inputIndex": 36,
+     "id": "ledger:00009",
+     "semanticKey": "open mouth",
+     "inputIndex": 9,
      "status": "applied"
     },
     {
+     "outputOrigin": {
+      "path": "outfit.feet"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -1269,13 +1363,17 @@
      "sourceKind": "external",
      "sourceId": "outfit:persona::p1:outfit_1:feet",
      "placementIndex": 2,
-     "weight": 1,
-     "id": "ledger:00041",
+     "weight": 0,
+     "suppressionReason": "visibility",
+     "id": "ledger:00039",
      "semanticKey": "sneakers",
-     "inputIndex": 41,
-     "status": "applied"
+     "inputIndex": 39,
+     "status": "suppressed"
     },
     {
+     "outputOrigin": {
+      "path": "outfit.feet"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -1289,12 +1387,15 @@
      "placementIndex": 0,
      "weight": 0,
      "suppressionReason": "visibility",
-     "id": "ledger:00031",
+     "id": "ledger:00029",
      "semanticKey": "brown loafers",
-     "inputIndex": 31,
+     "inputIndex": 29,
      "status": "suppressed"
     },
     {
+     "outputOrigin": {
+      "path": "outfit.feet"
+     },
      "lane": "tag",
      "destination": {
       "kind": "actor",
@@ -1308,9 +1409,9 @@
      "placementIndex": 1,
      "weight": 0,
      "suppressionReason": "visibility",
-     "id": "ledger:00037",
+     "id": "ledger:00035",
      "semanticKey": "brown loafers",
-     "inputIndex": 37,
+     "inputIndex": 35,
      "status": "suppressed"
     },
     {
@@ -1324,9 +1425,9 @@
      "sourceKind": "external-fixed",
      "sourceId": "character-generation-settings",
      "weight": 1,
-     "id": "ledger:00046",
+     "id": "ledger:00044",
      "semanticKey": "very aesthetic",
-     "inputIndex": 46,
+     "inputIndex": 44,
      "status": "applied"
     }
    ]
@@ -1366,13 +1467,13 @@
        {
         "id": "scene-pov",
         "name": "pov 연출",
-        "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when the persona's hands and arms are not visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Select camera.pov option pov_hands only when the persona's hands or arms are visibly framed for action, contact, object manipulation, or spatial distance; otherwise leave this modifier unselected. Keep the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+        "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
         "scenePresetId": "pov"
        },
        {
         "id": "scene-ensemble",
         "name": "다인 연출",
-        "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent or split Actor identities, or restore absent Actors; repeated visible depictions share candidateKey with distinct actorIds in one image or panel. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+        "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
         "scenePresetId": "ensemble"
        },
        {
@@ -1420,7 +1521,7 @@
     "characterPrompts": [
      {
       "actorSlot": "actor_1",
-      "prompt": "female, silver hair, blue eyes, light smile, upper body, white sailor shirt, navy sailor collar, red neckerchief, 0.3::navy pleated skirt::\nwaving. speech bubble, text:You're late again!",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, 0.5::navy pleated skirt::, upper body, light smile\nspeech bubble, text:You're late again!",
       "uc": "bad hands",
       "centerX": 0.5,
       "centerY": 0.25,
@@ -1428,7 +1529,7 @@
      },
      {
       "actorSlot": "actor_1",
-      "prompt": "female, silver hair, blue eyes, source#arm hug, open mouth, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, 0.8::black thighhighs::",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, source#arm hug, open mouth",
       "uc": "bad hands",
       "centerX": 0.35,
       "centerY": 0.62,
@@ -1436,7 +1537,7 @@
      },
      {
       "actorSlot": "actor_2",
-      "prompt": "male, 1::kazehaya shouta::, target#arm hug, surprised, 2::facing away::, black hoodie, jeans, sneakers\nstumbling half a step.",
+      "prompt": "male, 1::kazehaya shouta::, black hoodie, jeans, 2::facing away::, target#arm hug, surprised",
       "uc": "",
       "centerX": 0.65,
       "centerY": 0.62,
@@ -1444,6 +1545,7 @@
      }
     ]
    },
+   "forceRating": false,
    "references": [],
    "queueMeta": {
     "kind": "generation",
@@ -1470,7 +1572,7 @@
      "selectedFormId": "form_default",
      "selectedOutfitId": "outfit_1",
      "identitySuppressed": false,
-     "prompt": "female, silver hair, blue eyes, light smile, upper body, white sailor shirt, navy sailor collar, red neckerchief, 0.3::navy pleated skirt::\nwaving. speech bubble, text:You're late again!",
+     "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, 0.5::navy pleated skirt::, upper body, light smile\nspeech bubble, text:You're late again!",
      "negativePrompt": "bad hands"
     },
     {
@@ -1483,7 +1585,7 @@
      "selectedFormId": "form_default",
      "selectedOutfitId": "outfit_1",
      "identitySuppressed": false,
-     "prompt": "female, silver hair, blue eyes, source#arm hug, open mouth, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, 0.8::black thighhighs::",
+     "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, source#arm hug, open mouth",
      "negativePrompt": "bad hands"
     },
     {
@@ -1496,7 +1598,7 @@
      "selectedFormId": "form_default",
      "selectedOutfitId": "outfit_1",
      "identitySuppressed": false,
-     "prompt": "male, 1::kazehaya shouta::, target#arm hug, surprised, 2::facing away::, black hoodie, jeans, sneakers\nstumbling half a step.",
+     "prompt": "male, 1::kazehaya shouta::, black hoodie, jeans, 2::facing away::, target#arm hug, surprised",
      "negativePrompt": ""
     }
    ],
@@ -1511,24 +1613,24 @@
     },
     "outfits": {
      "actor_1": {
-      "start": 57,
-      "end": 139
+      "start": 32,
+      "end": 114
      },
      "actor_2": {
-      "start": 60,
-      "end": 160
+      "start": 32,
+      "end": 125
      },
      "actor_3": {
-      "start": 73,
-      "end": 102
+      "start": 28,
+      "end": 47
      }
     }
    },
    "analysisMetadata": {
-    "hash": "fnv1a64-866e24f2f050caf8"
+    "hash": "fnv1a64-ec66a7f36b15c1f9"
    },
    "decision": {
-    "hash": "fnv1a64-ba413e881203d2be"
+    "hash": "fnv1a64-aeab09688d591bef"
    },
    "analyzerContinuity": {
     "previous_modifiers": {
@@ -1567,7 +1669,7 @@
       "actorIndex": 0,
       "placementIndex": 0,
       "selectedOutfitId": "outfit_1",
-      "prompt": "female, silver hair, blue eyes, light smile, upper body, white sailor shirt, navy sailor collar, red neckerchief, 0.3::navy pleated skirt::\nwaving. speech bubble, text:You're late again!",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, 0.5::navy pleated skirt::, upper body, light smile\nspeech bubble, text:You're late again!",
       "uc": "bad hands",
       "identityKey": "lore:alice",
       "identity": {
@@ -1581,7 +1683,7 @@
       "actorIndex": 1,
       "placementIndex": 1,
       "selectedOutfitId": "outfit_1",
-      "prompt": "female, silver hair, blue eyes, source#arm hug, open mouth, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, 0.8::black thighhighs::",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, source#arm hug, open mouth",
       "uc": "bad hands",
       "identityKey": "lore:alice",
       "identity": {
@@ -1595,7 +1697,7 @@
       "actorIndex": 2,
       "placementIndex": 2,
       "selectedOutfitId": "outfit_1",
-      "prompt": "male, 1::kazehaya shouta::, target#arm hug, surprised, 2::facing away::, black hoodie, jeans, sneakers\nstumbling half a step.",
+      "prompt": "male, 1::kazehaya shouta::, black hoodie, jeans, 2::facing away::, target#arm hug, surprised",
       "uc": "",
       "identityKey": "persona::p1",
       "identity": {
@@ -1609,7 +1711,6 @@
     "width": 832,
     "height": 1216,
     "sizeId": 1,
-    "selectedFraming": "",
     "selectedVariantId": "",
     "artistId": "detail_anime_illustration_style",
     "artistName": "v5 style",
@@ -1660,13 +1761,13 @@
        {
         "id": "scene-pov",
         "name": "pov 연출",
-        "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when the persona's hands and arms are not visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Select camera.pov option pov_hands only when the persona's hands or arms are visibly framed for action, contact, object manipulation, or spatial distance; otherwise leave this modifier unselected. Keep the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+        "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
         "scenePresetId": "pov"
        },
        {
         "id": "scene-ensemble",
         "name": "다인 연출",
-        "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent or split Actor identities, or restore absent Actors; repeated visible depictions share candidateKey with distinct actorIds in one image or panel. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+        "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
         "scenePresetId": "ensemble"
        },
        {
@@ -1714,7 +1815,7 @@
     "characterPrompts": [
      {
       "actorSlot": "actor_1",
-      "prompt": "female, silver hair, blue eyes, light smile, upper body, white sailor shirt, navy sailor collar, red neckerchief, 0.3::navy pleated skirt::\nwaving. speech bubble, text:You're late again!",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, 0.5::navy pleated skirt::, upper body, light smile\nspeech bubble, text:You're late again!",
       "uc": "bad hands",
       "centerX": 0.5,
       "centerY": 0.25,
@@ -1722,7 +1823,7 @@
      },
      {
       "actorSlot": "actor_1",
-      "prompt": "female, silver hair, blue eyes, source#arm hug, open mouth, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, 0.8::black thighhighs::",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, source#arm hug, open mouth",
       "uc": "bad hands",
       "centerX": 0.35,
       "centerY": 0.62,
@@ -1730,7 +1831,7 @@
      },
      {
       "actorSlot": "actor_2",
-      "prompt": "male, 1::kazehaya shouta::, target#arm hug, surprised, 2::facing away::, black hoodie, jeans, sneakers\nstumbling half a step.",
+      "prompt": "male, 1::kazehaya shouta::, black hoodie, jeans, 2::facing away::, target#arm hug, surprised",
       "uc": "",
       "centerX": 0.65,
       "centerY": 0.62,
@@ -1755,7 +1856,7 @@
      {
       "actorId": "actor_1",
       "actorIndex": 0,
-      "prompt": "female, silver hair, blue eyes, light smile, upper body, white sailor shirt, navy sailor collar, red neckerchief, 0.3::navy pleated skirt::\nwaving. speech bubble, text:You're late again!",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, 0.5::navy pleated skirt::, upper body, light smile\nspeech bubble, text:You're late again!",
       "negativePrompt": "bad hands",
       "centerX": 0.5,
       "centerY": 0.25
@@ -1763,7 +1864,7 @@
      {
       "actorId": "actor_1",
       "actorIndex": 1,
-      "prompt": "female, silver hair, blue eyes, source#arm hug, open mouth, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, 0.8::black thighhighs::",
+      "prompt": "female, silver hair, blue eyes, white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, source#arm hug, open mouth",
       "negativePrompt": "bad hands",
       "centerX": 0.35,
       "centerY": 0.62
@@ -1771,7 +1872,7 @@
      {
       "actorId": "actor_2",
       "actorIndex": 2,
-      "prompt": "male, 1::kazehaya shouta::, target#arm hug, surprised, 2::facing away::, black hoodie, jeans, sneakers\nstumbling half a step.",
+      "prompt": "male, 1::kazehaya shouta::, black hoodie, jeans, 2::facing away::, target#arm hug, surprised",
       "negativePrompt": "",
       "centerX": 0.65,
       "centerY": 0.62
@@ -1797,7 +1898,7 @@
     }
    },
    "generationRecord": {
-    "hash": "fnv1a64-cb102d717937aced"
+    "hash": "fnv1a64-c31a8284b6ef796c"
    }
   }
  ],
@@ -1812,7 +1913,7 @@
     "characterName": "",
     "groups": {},
     "counters": {},
-    "turn": 1,
+    "turn": 0,
     "expires": {},
     "passthrough": {}
    },
@@ -1825,7 +1926,7 @@
     "characterName": "",
     "groups": {},
     "counters": {},
-    "turn": 1,
+    "turn": 0,
     "expires": {},
     "passthrough": {}
    }
@@ -1839,26 +1940,107 @@
    ]
   },
   "modifierRefs": {
+   "referenceOnly": true,
+   "actors": {},
    "global": {
-    "scene.environment": [
+    "environment.setting": [
      "outdoors"
     ],
-    "scene.time": [
+    "environment.time": [
      "morning"
+    ],
+    "scene.free.location": [
+     "school_gate"
     ]
+   },
+   "interactionReferences": {
+    "records": {
+     "[\"gen:1:mgj6k3cw:slot:s1\",0,\"p_meet\",\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",1,2,[]]": {
+      "id": "arm_hug",
+      "mode": "directed",
+      "source": "lore:alice",
+      "target": "persona:persona::p1",
+      "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+      "slotNumber": 0,
+      "sourcePlacementIndex": 1,
+      "targetPlacementIndex": 2,
+      "panelId": "p_meet",
+      "groups": {}
+     }
+    },
+    "actors": {
+     "lore:alice": [
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,\"p_meet\",\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",1,2,[]]"
+     ],
+     "persona:persona::p1": [
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,\"p_meet\",\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",1,2,[]]"
+     ]
+    }
+   },
+   "referenceExclusions": {
+    "catalog": "fnv1a64-554a124a78533747",
+    "actors": {
+     "lore:alice": [],
+     "persona:persona::p1": []
+    },
+    "scene": []
    }
   },
   "outfitRefs": {
    "actors": {
     "lore:alice": {
-     "formId": "form_default",
      "outfitId": "outfit_1",
-     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
     },
     "persona::p1": {
-     "formId": "form_default",
      "outfitId": "outfit_1",
-     "description": "black hoodie, jeans, sneakers"
+     "description": "black hoodie, jeans, sneakers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
     }
    }
   }
@@ -1872,35 +2054,101 @@
     "school_gate"
    ]
   },
-  "characters": {
-   "lore:alice": {
-    "_continuity_turn": 1
-   },
-   "persona:persona::p1": {
-    "_continuity_turn": 1
-   }
-  },
   "modifierRefs": {
+   "referenceOnly": true,
    "global": {
-    "scene.environment": [
+    "environment.setting": [
      "outdoors"
     ],
-    "scene.time": [
+    "environment.time": [
      "morning"
+    ],
+    "scene.free.location": [
+     "school_gate"
     ]
+   },
+   "interactionReferences": {
+    "records": {
+     "[\"gen:1:mgj6k3cw:slot:s1\",0,\"p_meet\",\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",1,2,[]]": {
+      "id": "arm_hug",
+      "mode": "directed",
+      "source": "lore:alice",
+      "target": "persona:persona::p1",
+      "eventScopeId": "gen:1:mgj6k3cw:slot:s1",
+      "slotNumber": 0,
+      "sourcePlacementIndex": 1,
+      "targetPlacementIndex": 2,
+      "panelId": "p_meet"
+     }
+    },
+    "actors": {
+     "lore:alice": [
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,\"p_meet\",\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",1,2,[]]"
+     ],
+     "persona:persona::p1": [
+      "[\"gen:1:mgj6k3cw:slot:s1\",0,\"p_meet\",\"arm_hug\",\"directed\",\"lore:alice\",\"persona:persona::p1\",1,2,[]]"
+     ]
+    }
+   },
+   "referenceExclusions": {
+    "catalog": "fnv1a64-554a124a78533747"
    }
   },
   "outfitRefs": {
    "actors": {
     "lore:alice": {
-     "formId": "form_default",
      "outfitId": "outfit_1",
-     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers"
+     "description": "white sailor shirt, navy sailor collar, red neckerchief, navy pleated skirt, black thighhighs, brown loafers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
     },
     "persona::p1": {
-     "formId": "form_default",
      "outfitId": "outfit_1",
-     "description": "black hoodie, jeans, sneakers"
+     "description": "black hoodie, jeans, sneakers",
+     "formId": "form_default",
+     "parts": {
+      "head": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "top": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "bottom": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "legs": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      },
+      "feet": {
+       "outfitId": "outfit_1",
+       "formId": "form_default"
+      }
+     }
     }
    }
   }

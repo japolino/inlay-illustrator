@@ -1,9 +1,12 @@
 /**
- * Runtime shapes of the compose stage (Asset Maid 0.9.88), mirrored field by field.
+ * Runtime shapes of the compose stage (Asset Maid 0.9.90), mirrored field by field.
  * Source: spec/pipeline.md §3, spec/novelai.md §6 and §9.
  */
 
-export type ImageProviderId = "novelai" | "chan-server" | "comfy-ui";
+/** Engine image providers. AM 0.9.90 removed Chan Server (`F0` @4653 has only these two). */
+export type ImageProviderId = "novelai" | "comfy-ui";
+/** Fixed rating tag prepended to NovelAI prompts (`O8` @4529), or `false` for none. */
+export type RatingTag = "sfw" | "nsfw";
 export type ActorSlot = "primary" | "secondary" | "persona";
 
 /** `{providerId, queueScopeKey}` (`_be` @119949; default scope `image-provider:<id>:global`). */
@@ -52,34 +55,6 @@ export interface PromptPlan {
   actorIdentities: Partial<Record<ActorSlot, { type: "character" | "persona"; key: string; name: string }>>;
   identitySuppressedActorSlots: ActorSlot[];
   [key: string]: unknown;
-}
-
-/** Participant of a build spec (`jht` @114764). */
-export interface PromptParticipant {
-  actorSlot: ActorSlot;
-  type: "character" | "persona";
-  gender: string;
-  lorebookPromptKey: string;
-  characterName: string;
-  sourceImageToken: string;
-  outfitId: string;
-  formId: string;
-}
-
-/** `spec` argument of `compiler.build(spec, inputs)` (`Eht` @114786). */
-export interface PromptBuildSpec {
-  presetId: string;
-  bodyAction?: string;
-  requestedModifiers: Record<string, unknown>;
-  variantId: string;
-  frameId: string;
-  frameSizeId?: number | string;
-  sizeId: number | string;
-  providerId: ImageProviderId | string;
-  chanceSeed: string;
-  /** Canonical rule selections (`iee(decision.modifiers, ruleRuntime)`); required on the rule-IR path. */
-  ruleSelections?: unknown;
-  participants: PromptParticipant[];
 }
 
 /** Identity candidate (`u_e` @167040 output; read: key, prompt, basePromptGroups, negativePrompt, appearanceForms, defaultFormId, aliases). */
@@ -342,13 +317,13 @@ export type ImageRequest =
   | (ImageRequestBase & {
       provider: "novelai";
       config: NovelAIRunConfig;
-      forceNsfwPrefix?: false;
+      /** `forceRating` (0.9.90; replaces `forceNsfwPrefix`): rating tag the adapter prepends (`Mht` @158839); `false` when the image has no actors. */
+      forceRating: RatingTag | false;
       session: unknown;
       references: unknown[];
       imageToImage?: { image: unknown; strength: number; noise: number };
       queueMeta: { kind: "generation"; source: string; sourceImageToken: string };
     })
-  | (ImageRequestBase & { provider: "chan-server"; transport: "chan-server-nai"; requestUrl: string; apiKey: string; timeoutMs?: number })
   | (ImageRequestBase & {
       provider: "comfy-ui";
       transport: "direct-workflow";

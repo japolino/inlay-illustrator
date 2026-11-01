@@ -5,9 +5,9 @@
  * Puppet states (animate toggle) live in `db.extra.puppets`; `db.extra.puppetRigs` (imageId -> rig) lets a scene supply
  * real rigs, `db.extra.puppetFail` (imageId -> failure code) a failed answer; other images get a generic rig.
  */
-import { createEmptyActorState, type CurrentActorState } from "../../../shared/contract/chat.js";
 import type { ChatMessageUiState, ChatSlotUi, FooterAttempt } from "../../../shared/contract/chat-dom.js";
 import type { GenerationOrigin } from "../../../shared/contract/history.js";
+import type { SelectionSummary } from "../../../shared/contract/atelier.js";
 import type { AttemptKind, GenerationJobSnapshot, GenerationPhase, RegenerationOverrides, ZoomDetails, ZoomPromptSection } from "../../../shared/contract/rpc.js";
 import { emptyPuppetState, PUPPET_FAILURE_MESSAGES, type PuppetRig, type PuppetState } from "../../../shared/contract/puppet.js";
 import { MockRpcError, type MockContext, type MockHandlers } from "../mock-backend.js";
@@ -46,7 +46,6 @@ export interface MockChatJob { snapshot: GenerationJobSnapshot; cancelled: boole
 export interface MockChatData {
   chatId: string;
   messages: MockChatMessage[];
-  actorState: CurrentActorState;
   jobs: Record<string, MockChatJob>;
   /** Scenes: keep started jobs running in the "generating" phase. */
   holdJobs: boolean;
@@ -174,14 +173,7 @@ export function createMockChat(chatId: string): MockChatData {
       lastError: { code: "provider-error", message: "NovelAI returned HTTP 429 (Too Many Requests) for image 2 of 2.", retryable: true }
     }
   ];
-  const actorState: CurrentActorState = {
-    revision: 3,
-    actors: {
-      seoyeon: { groups: { "state.fluid.cum.location": [], "actor.injury": ["bandage_on_arm", "scraped_knee"] }, count: 2, ttl: {} },
-      mina: { groups: { "state.fluid.cum.location": ["cum_on_hair"], "actor.injury": [] }, count: 1, ttl: { cum_on_hair: 3 } }
-    }
-  };
-  return { chatId, messages, actorState, jobs: {}, holdJobs: false, failNext: false, previews: {}, proposals: {}, seq: 0 };
+  return { chatId, messages, jobs: {}, holdJobs: false, failNext: false, previews: {}, proposals: {}, seq: 0 };
 }
 
 /** The mock chat of the db (created on first use). */
@@ -263,6 +255,22 @@ export function messageUiState(chat: MockChatData, m: MockChatMessage): ChatMess
 const MOCK_ARTISTS = [{ id: "preset-1", label: "Soft watercolor" }, { id: "preset-2", label: "Clean lineart" }];
 const MOCK_OUTFITS = [{ id: "outfit_default", label: "기본 의상" }, { id: "outfit_casual", label: "Casual" }];
 
+/** AI selection history of a generated mock image (AM 0.9.90 `fye` shape). */
+const MOCK_SELECTION_SUMMARY: SelectionSummary = {
+  status: "ready",
+  scenes: [{ key: "scene", scope: "Whole scene", id: "panel.group/library" }, { key: "panel-2", scope: "Panel 2", id: "" }],
+  interactions: [
+    { key: "i0", id: "pat", source: "Seoyeon", target: "Mina", mutual: false, complete: true, panels: [], groups: [{ id: "pat.speed", options: ["slow"] }] },
+    { key: "i1", id: "handhold", source: "Seoyeon", target: "Mina", mutual: true, complete: false, panels: ["Panel 2"], groups: [] }
+  ],
+  sections: [
+    { key: "scene", title: "Scene", groups: [{ id: "environment.time", options: ["afternoon"] }, { id: "environment.weather", options: [] }, { id: "custom.text.weather", kind: "text", options: ["light drizzle"], recorded: true }] },
+    { key: "actor-1", title: "Seoyeon", groups: [{ id: "mood.tone", options: ["happy"] }, { id: "custom.free.mood", kind: "free", options: [], recorded: true }] },
+    { key: "actor-2", title: "Mina", groups: [{ id: "mood.tone", options: [] }, { id: "custom.free.mood", kind: "free", options: [], recorded: false }] }
+  ],
+  inventoryRecorded: true
+};
+
 function zoomDetails(chat: MockChatData, slotId: string, entryId: string | undefined, ctx: MockContext): ZoomDetails {
   const found = findSlot(chat, slotId);
   if (!found) return ctx.fail("not-found", "The image slot no longer exists.");
@@ -312,11 +320,12 @@ function zoomDetails(chat: MockChatData, slotId: string, entryId: string | undef
     positivePrompt: entry.positivePrompt,
     negativePrompt: entry.negativePrompt,
     sections: choiced,
-    coordinateGrid: "v4-5",
+    coordinateGrid: "v5",
     excludedCharacterIndexes: draft.excludedCharacterIndexes ?? [],
     promptDraftActive: !!draft.promptDraft,
     coordinateDraftActive: !!draft.coordinateDraft,
     analyzerText: chat.chatId ? `[Main]\nscene: classroom, afternoon\nmodifiers.camera: from side, cowboy shot\nanalyzer_reason: two actors at desks\n\n[First]\nactor: seoyeon\npose: sitting\nexpression: smile\nvisual_continuity.outfit: uniform\n\n[Second]\nactor: mina\npose: standing, arms crossed\nobject: (none)` : "",
+    selectionSummary: entry.kind === "generated" ? MOCK_SELECTION_SUMMARY : { status: "missing", scenes: [], interactions: [], sections: [], inventoryRecorded: false },
     canEdit: active,
     canDelete: entry.kind === "generated" && s.entries.length > 1,
     canRegenerate: active,
@@ -609,23 +618,6 @@ export function chatMockHandlers(): MockHandlers {
       const chat = mockChat(ctx.db);
       if (!chat.proposals[proposalId]) return ctx.fail("conflict", "The image or prompt target changed before applying the AI edit.");
       return ctx.call("generation.regenerateSlot", { chatId: chat.chatId, messageKey: findSlot(chat, slotId)?.message ? messageKeyOf(findSlot(chat, slotId)!.message) : "", slotId });
-    },
-    "chatState.get": (_params, ctx) => ({ actorState: mockChat(ctx.db).actorState }),
-    "chatState.set": ({ actorState, baseRevision }, ctx) => {
-      const chat = mockChat(ctx.db);
-      if (chat.actorState.revision !== baseRevision) throw new MockRpcError("conflict", "The chat state changed since it was opened. Reload it and try again.");
-      chat.actorState = { revision: chat.actorState.revision + 1, actors: actorState.actors };
-      return { actorState: chat.actorState };
-    },
-    "chatState.clear": ({ actorKeys }, ctx) => {
-      const chat = mockChat(ctx.db);
-      if (!actorKeys || actorKeys.length === 0) chat.actorState = createEmptyActorState();
-      else {
-        const actors = { ...chat.actorState.actors };
-        for (const key of actorKeys) delete actors[key];
-        chat.actorState = { revision: chat.actorState.revision + 1, actors };
-      }
-      return { actorState: chat.actorState };
     },
     "puppet.get": ({ imageIds }, ctx) => ({ states: Object.fromEntries(imageIds.map((id) => [id, puppetStore(ctx.db)[id] ?? emptyPuppetState(id)])) }),
     "puppet.rig": async ({ imageId, force }, ctx) => {

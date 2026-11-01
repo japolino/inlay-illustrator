@@ -321,6 +321,7 @@ export function createFakeServices(overrides: FakeServicesOverrides = {}): FakeS
       const image = fx.config.value.image;
       const lumiverseProvider = image.provider || "novelai";
       const generationProvider = generationProviderFromLumiverse(lumiverseProvider);
+      if (!generationProvider) fail("unsupported", `The ${lumiverseProvider} image provider is not supported.`, { detailCode: "IMAGE_PROVIDER_UNSUPPORTED" });
       const model = o.model || image.model || "nai-diffusion-4-5-full";
       return {
         connectionId: o.connectionId || image.connectionId || "fake-image",

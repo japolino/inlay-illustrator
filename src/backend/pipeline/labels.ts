@@ -41,15 +41,10 @@ export const PIPELINE_TEXT = Object.freeze({
     en: "Could not find a paragraph position to insert images. Check the message body.",
     ko: "이미지를 삽입할 문단 위치를 찾지 못했습니다. 메시지 본문을 확인해 주세요.",
   },
-  noCandidates: { en: "No character candidates are available for generation.", ko: "생성에 사용할 캐릭터 후보가 없습니다." },
   emptyContent: { en: "The message has no text to generate from.", ko: "생성에 사용할 메시지 본문이 없습니다." },
   messageMissing: { en: "The target character message could not be found.", ko: "대상 캐릭터 메시지를 찾을 수 없습니다." },
   noInsertableSlot: { en: "There is no paragraph slot to insert images into.", ko: "삽입 가능한 문단 슬롯이 없습니다." },
   failedCount: { en: "{n} image(s) failed to generate.", ko: "{n}장 생성에 실패했습니다." },
-  splitNeedsV5: {
-    en: "Split analysis is supported with V5 only. Choose fixed or range.",
-    ko: "분할 분석은 V5에서 지원합니다. 고정 또는 범위를 선택하세요.",
-  },
   busy: { en: "This message already has an image job running.", ko: "이미 생성 중인 작업입니다." },
   targetChanged: { en: "Chat response target is no longer current.", ko: "Chat response target is no longer current." },
   slotMismatch: {
@@ -67,23 +62,6 @@ export const PIPELINE_TEXT = Object.freeze({
     en: "No saved count settings for this job. Use regenerate all instead.",
     ko: "원래 장수 설정 기록이 없습니다. 전체 다시 생성을 사용하세요.",
   },
-} satisfies Record<string, Label>);
-
-/** Experimental webtoon mode progress (no Asset Maid original; Korean added for the ko locale). */
-export const WEBTOON_TEXT = Object.freeze({
-  planning: { en: "Webtoon: planning the storyboard", ko: "웹툰: 스토리보드 구성 중" },
-  panel: { en: "Webtoon: drawing panel {n} of {total}", ko: "웹툰: {total}컷 중 {n}컷 그리는 중" },
-  finishing: { en: "Webtoon: finishing", ko: "웹툰: 마무리 중" },
-  reroll: { en: "Webtoon: redrawing panel {n}", ko: "웹툰: {n}컷 다시 그리는 중" },
-  busy: { en: "This panel is already being redrawn.", ko: "이 컷은 이미 다시 그리는 중입니다." },
-} satisfies Record<string, Label>);
-
-/** Manga mode progress (same steps as the webtoon). */
-export const MANGA_TEXT = Object.freeze({
-  planning: { en: "Manga: planning the pages", ko: "만화: 페이지 구성 중" },
-  panel: { en: "Manga: drawing panel {n} of {total}", ko: "만화: {total}컷 중 {n}컷 그리는 중" },
-  finishing: { en: "Manga: finishing", ko: "만화: 마무리 중" },
-  reroll: { en: "Manga: redrawing panel {n}", ko: "만화: {n}컷 다시 그리는 중" },
 } satisfies Record<string, Label>);
 
 export function formatLabel(label: Label, values: Record<string, string | number> = {}): Label {

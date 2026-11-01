@@ -66,6 +66,11 @@
           "id": "body.breast_size",
           "label": "크기",
           "placeholder": "가슴 크기 선택"
+        },
+        {
+          "id": "body.breast_other",
+          "label": "기타",
+          "placeholder": ""
         }
       ]
     },
@@ -121,6 +126,7 @@
     "body.build": "기타 / 체형",
     "body.proportions": "기타 / 비율",
     "body.breast_size": "가슴 / 크기",
+    "body.breast_other": "가슴 / 기타",
     "marks.distinctive": "기타 / 신체 표식",
     "nonhuman.features": "기타 / 신체",
     "custom": "기타 프롬프트",
@@ -142,6 +148,7 @@
     "body.build",
     "body.proportions",
     "body.breast_size",
+    "body.breast_other",
     "marks.distinctive",
     "nonhuman.features"
   ],
@@ -183,6 +190,9 @@
       "legs"
     ],
     "body.breast_size": [
+      "top"
+    ],
+    "body.breast_other": [
       "top"
     ],
     "marks.distinctive": [

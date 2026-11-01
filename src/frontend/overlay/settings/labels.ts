@@ -50,11 +50,9 @@ export const PAGE_TITLES = {
 /* ---------------------------------------------------------------------------------------------- */
 
 export const ANALYSIS_LABELS = {
-  profileGroup: "NovelAI analysis method", // NovelAI 분석 방식
-  profiles: {
-    "v5-hybrid": { label: "Inlay V5", description: "Builds the scene flexibly by combining natural language and tags." }, // 에셋 메이드 V5 / 자연어와 태그를 결합해 장면을 유연하게 구성합니다.
-    "v4-5": { label: "Inlay V4.5", description: "Makes predictable results with verified presets." } // 에셋 메이드 V4.5 / 검증된 프리셋으로 예측 가능한 결과를 만듭니다.
-  },
+  movedTitle: "Generation guidelines moved to the Maid Atelier", // 생성지침은 메이드 아틀리에로 이동했습니다
+  movedDescription: "Scene direction and image ratio guides, plus the free character and outfit guidelines, are now edited under Generation guidelines in the Maid Atelier. The chat toolbar's scene menu lists the same guidelines.", // 연출지침·비율지침·자유 캐릭터/의상 지침은 메이드 아틀리에의 생성지침에서 편집합니다
+  openAtelier: "Open generation guidelines", // 생성지침 열기
   sceneTitle: "Scene direction guide", // 장면 연출 지침
   imageRatioTitle: "Image ratio decision guide", // 이미지 비율 결정 지침
   selection: (title: string) => `${title} selection`, // `${title}` 선택
@@ -128,17 +126,9 @@ export const CHARX_LABELS = {
   generationRules: "Generation rules", // 생성 규칙
   freeCharacter: { title: "Free character generation", description: "Creates appearance and default outfit for unregistered characters and adds them to the current character." }, // 인물 자유생성
   freeOutfit: { title: "Free outfit generation", description: "If no matching outfit exists, creates a new outfit and adds it to the current character." }, // 의상 자유생성
-  stateAccumulation: { title: "State accumulation", description: "Carries character state into the next generation. When off, saved states are kept." }, // 상태 누적
   nsfwAlways: { title: "Always add NSFW", description: "Adds nsfw in front of every generation prompt." }, // NSFW 항상 추가
   analysisOutput: "Analysis & output", // 분석·출력
   rosterSelection: { title: "Roster pre-selection", description: "JEV pre-filters characters and passes them to analysis using your Lumiverse Decision model connection." }, // 로스터 사전 선정
-  fixedResolution: { title: "Fixed resolution", description: "Fixes the generated image resolution to the selected size." }, // 고정 해상도
-  fixedResolutionSelect: "Select fixed resolution", // 고정 해상도 선택
-  fixedResolutionUse: "Use fixed resolution", // 고정 해상도 사용
-  customSize: "Custom", // 커스텀
-  sizeLabel: (kind: "square" | "landscape" | "portrait", width: number, height: number) =>
-    `${kind === "square" ? "Square" : kind === "landscape" ? "Landscape" : "Portrait"} ${width} × ${height}`, // 정사각형/가로/세로 W × H
-  aiChoice: { title: "Analysis AI assigns character coordinates", description: "On: the analysis AI places each character. Off: NovelAI decides automatically." }, // 분석 AI가 캐릭터 좌표 지정
   nativeAssets: { title: "Show existing character assets", description: "Hides or shows the existing character images in chat." }, // 기존 charx 에셋 표시
   hide: "Hide", // 숨김
   show: "Show", // 표시
@@ -251,13 +241,17 @@ export const IMAGE_LABELS = {
   noConnections: "No Lumiverse image generation connections found.",
   providerKinds: {
     novelai: { label: "NovelAI", description: "Generates images with NovelAI through Lumiverse." }, // Novel Ai / NovelAI API로 이미지를 직접 생성합니다.
-    "comfy-ui": { label: "ComfyUI", description: "Generates images with a ComfyUI workflow through Lumiverse." }, // Comfy UI / 로컬 Comfy UI 워크플로로 이미지를 생성합니다.
-    generic: { label: "Other provider", description: "Generates images with the connection's provider. Reference images are not used." }
+    "comfy-ui": { label: "ComfyUI", description: "Generates images with a ComfyUI workflow through Lumiverse." } // Comfy UI / 로컬 Comfy UI 워크플로로 이미지를 생성합니다.
   },
   promptFormat: "Prompt format",
   codecs: { "novelai-structured": "NovelAI structured prompts", "anima-flat": "Anima flat prompts" },
   model: "Model", // NovelAI 모델
   modelAria: "Image generation model",
+  effort: "Effort", // Effort
+  effortAria: "NovelAI V5 effort", // NovelAI V5 Effort
+  effortHigh: "High", // High
+  effortMedium: "Medium", // Medium
+  effortMediumNote: "Medium generates with 14 steps and Euler Ancestral. CFG rescale and the global, artist and character negatives are not applied. Your settings are used again when you switch back to High.", // Medium은 14 스텝과 Euler Ancestral로 생성합니다. CFG 리스케일과 전역·작가·캐릭터 네거티브는 적용하지 않으며, High로 돌아가면 기존 설정을 다시 사용합니다.
   testConnection: "Check connection", // Comfy UI 연결 확인
   connected: (ms: number) => `Connected · ${ms}ms`, // 연결됨 · Nms
   connectionFailed: "Connection failed", // 연결 실패
@@ -288,8 +282,8 @@ export const IMAGE_LABELS = {
   timeoutAria: "Image generation timeout (s)", // Comfy UI 생성 제한 시간(초)
   characterReference: "Enable character reference", // 레퍼런스 활성화
   outfitReference: "Enable outfit reference",
-  genericBox: "Provider parameters",
-  genericNote: "This provider uses the connection's own parameters. Inlay Illustrator sends a flat prompt and no reference images."
+  unsupportedBox: "Unsupported connection", // (port)
+  unsupportedNote: "This connection's provider is not supported. Inlay Illustrator generates images with NovelAI or ComfyUI connections only: select one above."
 } as const;
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -311,7 +305,7 @@ export const SYSTEM_LABELS = {
   queueAria: "Sequential image generation call interval", // 이미지 생성 순차 호출 간격
   queueDecrease: "1 second less", // 1초 감소
   queueIncrease: "1 second more", // 1초 증가
-  retry: { title: "Automatic retry on generation error", description: "Applies to AI generation, message regeneration and AI edit. 0 = no automatic retry." }, // 생성 오류 자동 재시도
+  retry: { title: "Automatic retry on generation error", description: "Retries only network and server errors. 0 disables." }, // 생성 오류 자동 재시도 — 통신·서버 오류만 재시도합니다. 0회는 사용하지 않습니다.
   retryAria: "Automatic retry count on generation error", // 생성 오류 자동 재시도 횟수
   retryDecrease: "1 automatic retry less", // 자동 재시도 1회 감소
   retryIncrease: "1 automatic retry more", // 자동 재시도 1회 증가
@@ -327,7 +321,6 @@ export const SYSTEM_LABELS = {
   developerModeDisabled: "Developer mode disabled.",
   chatImages: "Chat image generation",
   autoGeneration: { title: "Automatic generation", description: "Generates illustrations when an AI reply finishes." },
-  webtoonCount: { title: "Image count", description: "Automatic in webtoon and manga modes: about one panel per 1,000 characters, 4 to 14. Count and analysis mode settings are not used. Turn these modes on or off from the chat's image count panel." }, // 장수 / 웹툰 모드에서는 자동: 1,000자당 약 1컷, 4~14컷. 장수와 분석 방식 설정은 사용하지 않습니다. 웹툰 모드는 채팅의 장수 패널에서 켜고 끕니다.
   countMode: { title: "Image count", description: "Number of illustrations per message." },
   countModes: { fixed: "Fixed", range: "Range" },
   count: "Image count",
@@ -401,7 +394,6 @@ export const ANALYZER_ERROR_LABELS = {
     "artist-extraction": "Artist prompt extraction error", // 작가 프롬프트 추출 오류
     "metadata-check": "Asset metadata check error",
     reclassification: "AI reclassification error",
-    "unique-tag-search": "Unique tag search error",
     "representative-pick": "Representative image error",
     "outfit-autopick": "Outfit auto-pick error"
   } as Record<AnalysisKind, string>,

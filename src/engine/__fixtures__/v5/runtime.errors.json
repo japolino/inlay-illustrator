@@ -42,8 +42,7 @@
      "targetActorId": "actor_2",
      "bindingStatus": "complete",
      "unresolvedActorRefs": [],
-     "modifiers": [],
-     "participantDetails": []
+     "modifiers": []
     },
     {
      "interactionRef": "interaction:1",
@@ -53,13 +52,7 @@
      "targetActorId": "actor_2",
      "bindingStatus": "complete",
      "unresolvedActorRefs": [],
-     "modifiers": [],
-     "participantDetails": [
-      {
-       "actorId": "actor_1",
-       "text": "fingers pinching the hoodie sleeve"
-      }
-     ]
+     "modifiers": []
     }
    ],
    "location": {
@@ -71,21 +64,15 @@
       ]
      },
      {
-      "id": "scene.environment",
+      "id": "environment.setting",
       "options": [
        "outdoors"
       ]
      },
      {
-      "id": "scene.time",
+      "id": "environment.time",
       "options": [
        "morning"
-      ]
-     },
-     {
-      "id": "framing.crop",
-      "options": [
-       "cowboy_shot"
       ]
      }
     ],
@@ -120,24 +107,26 @@
        ]
       },
       {
-       "id": "expression.mouth",
+       "id": "expression.mouth.openness",
        "options": [
         "open_mouth"
        ]
       },
       {
-       "id": "actor.pose.body",
+       "id": "pose.body",
        "options": [
         "standing"
        ]
+      },
+      {
+       "id": "framing.crop",
+       "options": [
+        "cowboy_shot"
+       ]
       }
      ],
-     "freeTags": [],
-     "penetratingInjuries": [],
      "poseInstruction": "leaning forward slightly",
-     "actionInstruction": "waving one hand high",
      "objects": [],
-     "objectInstruction": "",
      "dialogueInstruction": ""
     },
     {
@@ -152,18 +141,20 @@
        ]
       },
       {
-       "id": "actor.pose.body",
+       "id": "pose.body",
        "options": [
         "standing"
        ]
+      },
+      {
+       "id": "framing.crop",
+       "options": [
+        "cowboy_shot"
+       ]
       }
      ],
-     "freeTags": [],
-     "penetratingInjuries": [],
      "poseInstruction": "",
-     "actionInstruction": "running toward the gate",
      "objects": [],
-     "objectInstruction": "",
      "dialogueInstruction": ""
     }
    ],
@@ -245,8 +236,7 @@
      "targetActorId": "actor_2",
      "bindingStatus": "complete",
      "unresolvedActorRefs": [],
-     "modifiers": [],
-     "participantDetails": []
+     "modifiers": []
     },
     {
      "interactionRef": "interaction:1",
@@ -256,13 +246,7 @@
      "targetActorId": "actor_2",
      "bindingStatus": "complete",
      "unresolvedActorRefs": [],
-     "modifiers": [],
-     "participantDetails": [
-      {
-       "actorId": "actor_1",
-       "text": "fingers pinching the hoodie sleeve"
-      }
-     ]
+     "modifiers": []
     }
    ],
    "location": {
@@ -274,21 +258,15 @@
       ]
      },
      {
-      "id": "scene.environment",
+      "id": "environment.setting",
       "options": [
        "outdoors"
       ]
      },
      {
-      "id": "scene.time",
+      "id": "environment.time",
       "options": [
        "morning"
-      ]
-     },
-     {
-      "id": "framing.crop",
-      "options": [
-       "cowboy_shot"
       ]
      }
     ],
@@ -321,24 +299,26 @@
        ]
       },
       {
-       "id": "expression.mouth",
+       "id": "expression.mouth.openness",
        "options": [
         "open_mouth"
        ]
       },
       {
-       "id": "actor.pose.body",
+       "id": "pose.body",
        "options": [
         "standing"
        ]
+      },
+      {
+       "id": "framing.crop",
+       "options": [
+        "cowboy_shot"
+       ]
       }
      ],
-     "freeTags": [],
-     "penetratingInjuries": [],
      "poseInstruction": "leaning forward slightly",
-     "actionInstruction": "waving one hand high",
      "objects": [],
-     "objectInstruction": "",
      "dialogueInstruction": ""
     },
     {
@@ -353,18 +333,20 @@
        ]
       },
       {
-       "id": "actor.pose.body",
+       "id": "pose.body",
        "options": [
         "standing"
        ]
+      },
+      {
+       "id": "framing.crop",
+       "options": [
+        "cowboy_shot"
+       ]
       }
      ],
-     "freeTags": [],
-     "penetratingInjuries": [],
      "poseInstruction": "",
-     "actionInstruction": "running toward the gate",
      "objects": [],
-     "objectInstruction": "",
      "dialogueInstruction": ""
     }
    ],
@@ -382,29 +364,16 @@
      "message": "Canonicalized a free tag to 'cherry_blossoms'."
     }
    ],
-   "rulePromptEffects": [
-    {
-     "operation": "remove",
-     "prompt": {
-      "*": [
-       "on floor"
-      ]
-     },
-     "owner": {
-      "kind": "global"
-     },
-     "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
-    }
-   ],
+   "rulePromptEffects": [],
    "projectionAttributes": [],
    "matchedRules": [
     {
      "rule": {
-      "id": "rule:fnv1a64-22d73b179b7bc3e3",
+      "id": "rule:fnv1a64-8aa04aa193fa4b83",
       "source": {
        "kind": "definition",
        "definitionId": "framing.crop",
-       "sourcePath": "raw.modifierLibrary.closed[47].rules[0]"
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[0]"
       },
       "phases": [
        "weight"
@@ -412,26 +381,23 @@
       "rule": {
        "weight": {
         "prompt": "body_part"
-       },
-       "when": {
-        "actor": "cast"
        }
       },
+      "attributeEffects": [],
       "effects": {},
-      "condition": {
-       "actor": "cast"
-      },
       "weight": {
        "prompt": "body_part"
       }
      },
      "owner": {
-      "kind": "global",
-      "bindingActorId": "actor_1"
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
      },
      "chanceOwner": {
-      "kind": "global",
-      "bindingActorId": "actor_1"
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
      },
      "sourceOptions": [
       "cowboy_shot"
@@ -439,11 +405,11 @@
     },
     {
      "rule": {
-      "id": "rule:fnv1a64-22d73b179b7bc3e3",
+      "id": "rule:fnv1a64-8aa04aa193fa4b83",
       "source": {
        "kind": "definition",
        "definitionId": "framing.crop",
-       "sourcePath": "raw.modifierLibrary.closed[47].rules[0]"
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[0]"
       },
       "phases": [
        "weight"
@@ -451,348 +417,37 @@
       "rule": {
        "weight": {
         "prompt": "body_part"
-       },
-       "when": {
-        "actor": "cast"
        }
       },
+      "attributeEffects": [],
       "effects": {},
-      "condition": {
-       "actor": "cast"
-      },
       "weight": {
        "prompt": "body_part"
       }
      },
      "owner": {
-      "kind": "global",
-      "bindingActorId": "actor_2"
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
      },
      "chanceOwner": {
-      "kind": "global",
-      "bindingActorId": "actor_2"
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
      },
      "sourceOptions": [
       "cowboy_shot"
-     ]
-    },
-    {
-     "rule": {
-      "id": "rule:fnv1a64-32e6fe4743f5a7e4",
-      "source": {
-       "kind": "option",
-       "definitionId": "scene.environment",
-       "optionId": "outdoors",
-       "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
-      },
-      "phases": [
-       "result"
-      ],
-      "rule": {
-       "remove": {
-        "prompt": {
-         "*": [
-          "on floor"
-         ]
-        }
-       }
-      },
-      "effects": {
-       "remove": {
-        "prompt": {
-         "*": [
-          "on floor"
-         ]
-        }
-       }
-      }
-     },
-     "owner": {
-      "kind": "global"
-     },
-     "chanceOwner": {
-      "kind": "global"
-     },
-     "sourceOptions": [
-      "outdoors"
      ]
     }
    ],
    "ruleCandidates": [
     {
      "rule": {
-      "id": "rule:fnv1a64-22d73b179b7bc3e3",
+      "id": "rule:fnv1a64-1d56d384b14fffb8",
       "source": {
        "kind": "definition",
-       "definitionId": "framing.crop",
-       "sourcePath": "raw.modifierLibrary.closed[47].rules[0]"
-      },
-      "phases": [
-       "weight"
-      ],
-      "rule": {
-       "weight": {
-        "prompt": "body_part"
-       },
-       "when": {
-        "actor": "cast"
-       }
-      },
-      "effects": {},
-      "condition": {
-       "actor": "cast"
-      },
-      "weight": {
-       "prompt": "body_part"
-      }
-     },
-     "owner": {
-      "kind": "global",
-      "bindingActorId": "actor_1"
-     },
-     "chanceOwner": {
-      "kind": "global",
-      "bindingActorId": "actor_1"
-     },
-     "sourceOptions": [
-      "cowboy_shot"
-     ]
-    },
-    {
-     "rule": {
-      "id": "rule:fnv1a64-22d73b179b7bc3e3",
-      "source": {
-       "kind": "definition",
-       "definitionId": "framing.crop",
-       "sourcePath": "raw.modifierLibrary.closed[47].rules[0]"
-      },
-      "phases": [
-       "weight"
-      ],
-      "rule": {
-       "weight": {
-        "prompt": "body_part"
-       },
-       "when": {
-        "actor": "cast"
-       }
-      },
-      "effects": {},
-      "condition": {
-       "actor": "cast"
-      },
-      "weight": {
-       "prompt": "body_part"
-      }
-     },
-     "owner": {
-      "kind": "global",
-      "bindingActorId": "actor_2"
-     },
-     "chanceOwner": {
-      "kind": "global",
-      "bindingActorId": "actor_2"
-     },
-     "sourceOptions": [
-      "cowboy_shot"
-     ]
-    },
-    {
-     "rule": {
-      "id": "rule:fnv1a64-32e6fe4743f5a7e4",
-      "source": {
-       "kind": "option",
-       "definitionId": "scene.environment",
-       "optionId": "outdoors",
-       "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
-      },
-      "phases": [
-       "result"
-      ],
-      "rule": {
-       "remove": {
-        "prompt": {
-         "*": [
-          "on floor"
-         ]
-        }
-       }
-      },
-      "effects": {
-       "remove": {
-        "prompt": {
-         "*": [
-          "on floor"
-         ]
-        }
-       }
-      }
-     },
-     "owner": {
-      "kind": "global"
-     },
-     "chanceOwner": {
-      "kind": "global"
-     },
-     "sourceOptions": [
-      "outdoors"
-     ]
-    },
-    {
-     "rule": {
-      "id": "rule:fnv1a64-7d921ae24ec88be7",
-      "source": {
-       "kind": "stage",
-       "stage": "actor_detail",
-       "sourcePath": "raw.stages.actor_detail.rules[0]"
-      },
-      "phases": [
-       "result"
-      ],
-      "rule": {
-       "remove": {
-        "continuity": {
-         "modifier": [
-          "state.clothing.surface",
-          "state.clothing.arrangement",
-          "state.clothing.coverage.upper",
-          "state.clothing.coverage.lower",
-          "manual.clothing_access"
-         ]
-        },
-        "modifier": [
-         "state.clothing.surface",
-         "state.clothing.arrangement",
-         "state.clothing.coverage.upper",
-         "state.clothing.coverage.lower",
-         "manual.clothing_access"
-        ]
-       },
-       "when": {
-        "attribute": {
-         "actor.outfit.nude": true
-        }
-       }
-      },
-      "effects": {
-       "remove": {
-        "continuity": {
-         "modifier": [
-          "state.clothing.surface",
-          "state.clothing.arrangement",
-          "state.clothing.coverage.upper",
-          "state.clothing.coverage.lower",
-          "manual.clothing_access"
-         ]
-        },
-        "modifier": [
-         "state.clothing.surface",
-         "state.clothing.arrangement",
-         "state.clothing.coverage.upper",
-         "state.clothing.coverage.lower",
-         "manual.clothing_access"
-        ]
-       }
-      },
-      "condition": {
-       "attribute": {
-        "actor.outfit.nude": true
-       }
-      }
-     },
-     "owner": {
-      "kind": "actor",
-      "actorId": "actor_1",
-      "placementIndex": 0
-     },
-     "chanceOwner": {
-      "kind": "actor",
-      "actorId": "actor_1",
-      "placementIndex": 0
-     },
-     "sourceOptions": []
-    },
-    {
-     "rule": {
-      "id": "rule:fnv1a64-7d921ae24ec88be7",
-      "source": {
-       "kind": "stage",
-       "stage": "actor_detail",
-       "sourcePath": "raw.stages.actor_detail.rules[0]"
-      },
-      "phases": [
-       "result"
-      ],
-      "rule": {
-       "remove": {
-        "continuity": {
-         "modifier": [
-          "state.clothing.surface",
-          "state.clothing.arrangement",
-          "state.clothing.coverage.upper",
-          "state.clothing.coverage.lower",
-          "manual.clothing_access"
-         ]
-        },
-        "modifier": [
-         "state.clothing.surface",
-         "state.clothing.arrangement",
-         "state.clothing.coverage.upper",
-         "state.clothing.coverage.lower",
-         "manual.clothing_access"
-        ]
-       },
-       "when": {
-        "attribute": {
-         "actor.outfit.nude": true
-        }
-       }
-      },
-      "effects": {
-       "remove": {
-        "continuity": {
-         "modifier": [
-          "state.clothing.surface",
-          "state.clothing.arrangement",
-          "state.clothing.coverage.upper",
-          "state.clothing.coverage.lower",
-          "manual.clothing_access"
-         ]
-        },
-        "modifier": [
-         "state.clothing.surface",
-         "state.clothing.arrangement",
-         "state.clothing.coverage.upper",
-         "state.clothing.coverage.lower",
-         "manual.clothing_access"
-        ]
-       }
-      },
-      "condition": {
-       "attribute": {
-        "actor.outfit.nude": true
-       }
-      }
-     },
-     "owner": {
-      "kind": "actor",
-      "actorId": "actor_2",
-      "placementIndex": 1
-     },
-     "chanceOwner": {
-      "kind": "actor",
-      "actorId": "actor_2",
-      "placementIndex": 1
-     },
-     "sourceOptions": []
-    },
-    {
-     "rule": {
-      "id": "rule:fnv1a64-89542616329395a8",
-      "source": {
-       "kind": "definition",
-       "definitionId": "actor.pose.body",
-       "sourcePath": "raw.modifierLibrary.closed[15].rules[0]"
+       "definitionId": "pose.body",
+       "sourcePath": "raw.modifierLibrary.closed[8].rules[0]"
       },
       "phases": [
        "candidate"
@@ -800,7 +455,7 @@
       "rule": {
        "exclude": {
         "modifier": [
-         "actor.pose.body"
+         "pose.body"
         ]
        },
        "when": {
@@ -809,10 +464,11 @@
         }
        }
       },
+      "attributeEffects": [],
       "effects": {
        "exclude": {
         "modifier": [
-         "actor.pose.body"
+         "pose.body"
         ]
        }
       },
@@ -838,11 +494,11 @@
     },
     {
      "rule": {
-      "id": "rule:fnv1a64-89542616329395a8",
+      "id": "rule:fnv1a64-1d56d384b14fffb8",
       "source": {
        "kind": "definition",
-       "definitionId": "actor.pose.body",
-       "sourcePath": "raw.modifierLibrary.closed[15].rules[0]"
+       "definitionId": "pose.body",
+       "sourcePath": "raw.modifierLibrary.closed[8].rules[0]"
       },
       "phases": [
        "candidate"
@@ -850,7 +506,7 @@
       "rule": {
        "exclude": {
         "modifier": [
-         "actor.pose.body"
+         "pose.body"
         ]
        },
        "when": {
@@ -859,10 +515,11 @@
         }
        }
       },
+      "attributeEffects": [],
       "effects": {
        "exclude": {
         "modifier": [
-         "actor.pose.body"
+         "pose.body"
         ]
        }
       },
@@ -885,6 +542,572 @@
      "sourceOptions": [
       "standing"
      ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-5a7827bdbb7762e2",
+      "source": {
+       "kind": "definition",
+       "definitionId": "framing.crop",
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[2]"
+      },
+      "phases": [
+       "candidate"
+      ],
+      "rule": {
+       "exclude": {
+        "option": {
+         "$match": {
+          "attributes": {
+           "framing_boundary": [
+            "head_crop"
+           ]
+          },
+          "matches": [
+           {
+            "definitionId": "framing.head_crop",
+            "optionIds": [
+             "eyes_out_of_frame",
+             "head_out_of_frame",
+             "lower_body"
+            ],
+            "path": "current.framing.head_crop",
+            "qualifier": "current",
+            "scope": "actor"
+           }
+          ],
+          "scope": "actor"
+         }
+        }
+       },
+       "when": {
+        "option": {
+         "framing.crop": [
+          "ass_focus",
+          "foot_focus",
+          "hip_focus",
+          "eye_focus",
+          "breast_focus",
+          "hand_focus",
+          "crotch_focus",
+          "pectoral_focus"
+         ]
+        }
+       }
+      },
+      "attributeEffects": [],
+      "effects": {
+       "exclude": {
+        "option": {
+         "$match": {
+          "attributes": {
+           "framing_boundary": [
+            "head_crop"
+           ]
+          },
+          "matches": [
+           {
+            "definitionId": "framing.head_crop",
+            "optionIds": [
+             "eyes_out_of_frame",
+             "head_out_of_frame",
+             "lower_body"
+            ],
+            "path": "current.framing.head_crop",
+            "qualifier": "current",
+            "scope": "actor"
+           }
+          ],
+          "scope": "actor"
+         }
+        }
+       }
+      },
+      "condition": {
+       "option": {
+        "framing.crop": [
+         "ass_focus",
+         "foot_focus",
+         "hip_focus",
+         "eye_focus",
+         "breast_focus",
+         "hand_focus",
+         "crotch_focus",
+         "pectoral_focus"
+        ]
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "sourceOptions": [
+      "cowboy_shot"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-5a7827bdbb7762e2",
+      "source": {
+       "kind": "definition",
+       "definitionId": "framing.crop",
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[2]"
+      },
+      "phases": [
+       "candidate"
+      ],
+      "rule": {
+       "exclude": {
+        "option": {
+         "$match": {
+          "attributes": {
+           "framing_boundary": [
+            "head_crop"
+           ]
+          },
+          "matches": [
+           {
+            "definitionId": "framing.head_crop",
+            "optionIds": [
+             "eyes_out_of_frame",
+             "head_out_of_frame",
+             "lower_body"
+            ],
+            "path": "current.framing.head_crop",
+            "qualifier": "current",
+            "scope": "actor"
+           }
+          ],
+          "scope": "actor"
+         }
+        }
+       },
+       "when": {
+        "option": {
+         "framing.crop": [
+          "ass_focus",
+          "foot_focus",
+          "hip_focus",
+          "eye_focus",
+          "breast_focus",
+          "hand_focus",
+          "crotch_focus",
+          "pectoral_focus"
+         ]
+        }
+       }
+      },
+      "attributeEffects": [],
+      "effects": {
+       "exclude": {
+        "option": {
+         "$match": {
+          "attributes": {
+           "framing_boundary": [
+            "head_crop"
+           ]
+          },
+          "matches": [
+           {
+            "definitionId": "framing.head_crop",
+            "optionIds": [
+             "eyes_out_of_frame",
+             "head_out_of_frame",
+             "lower_body"
+            ],
+            "path": "current.framing.head_crop",
+            "qualifier": "current",
+            "scope": "actor"
+           }
+          ],
+          "scope": "actor"
+         }
+        }
+       }
+      },
+      "condition": {
+       "option": {
+        "framing.crop": [
+         "ass_focus",
+         "foot_focus",
+         "hip_focus",
+         "eye_focus",
+         "breast_focus",
+         "hand_focus",
+         "crotch_focus",
+         "pectoral_focus"
+        ]
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "sourceOptions": [
+      "cowboy_shot"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-8aa04aa193fa4b83",
+      "source": {
+       "kind": "definition",
+       "definitionId": "framing.crop",
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[0]"
+      },
+      "phases": [
+       "weight"
+      ],
+      "rule": {
+       "weight": {
+        "prompt": "body_part"
+       }
+      },
+      "attributeEffects": [],
+      "effects": {},
+      "weight": {
+       "prompt": "body_part"
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "sourceOptions": [
+      "cowboy_shot"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-8aa04aa193fa4b83",
+      "source": {
+       "kind": "definition",
+       "definitionId": "framing.crop",
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[0]"
+      },
+      "phases": [
+       "weight"
+      ],
+      "rule": {
+       "weight": {
+        "prompt": "body_part"
+       }
+      },
+      "attributeEffects": [],
+      "effects": {},
+      "weight": {
+       "prompt": "body_part"
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "sourceOptions": [
+      "cowboy_shot"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-9c16dfba3f3d5a9f",
+      "source": {
+       "kind": "definition",
+       "definitionId": "framing.crop",
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[1]"
+      },
+      "phases": [
+       "candidate"
+      ],
+      "rule": {
+       "exclude": {
+        "option": {
+         "framing.crop": [
+          "portrait",
+          "upper_body",
+          "cowboy_shot",
+          "feet_out_of_frame",
+          "ass_focus",
+          "foot_focus",
+          "hip_focus",
+          "breast_focus",
+          "hand_focus",
+          "crotch_focus",
+          "pectoral_focus"
+         ]
+        }
+       },
+       "when": {
+        "actor": {
+         "humanlike": false
+        }
+       }
+      },
+      "attributeEffects": [],
+      "effects": {
+       "exclude": {
+        "option": {
+         "framing.crop": [
+          "portrait",
+          "upper_body",
+          "cowboy_shot",
+          "feet_out_of_frame",
+          "ass_focus",
+          "foot_focus",
+          "hip_focus",
+          "breast_focus",
+          "hand_focus",
+          "crotch_focus",
+          "pectoral_focus"
+         ]
+        }
+       }
+      },
+      "condition": {
+       "actor": {
+        "humanlike": false
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "sourceOptions": [
+      "cowboy_shot"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-9c16dfba3f3d5a9f",
+      "source": {
+       "kind": "definition",
+       "definitionId": "framing.crop",
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[1]"
+      },
+      "phases": [
+       "candidate"
+      ],
+      "rule": {
+       "exclude": {
+        "option": {
+         "framing.crop": [
+          "portrait",
+          "upper_body",
+          "cowboy_shot",
+          "feet_out_of_frame",
+          "ass_focus",
+          "foot_focus",
+          "hip_focus",
+          "breast_focus",
+          "hand_focus",
+          "crotch_focus",
+          "pectoral_focus"
+         ]
+        }
+       },
+       "when": {
+        "actor": {
+         "humanlike": false
+        }
+       }
+      },
+      "attributeEffects": [],
+      "effects": {
+       "exclude": {
+        "option": {
+         "framing.crop": [
+          "portrait",
+          "upper_body",
+          "cowboy_shot",
+          "feet_out_of_frame",
+          "ass_focus",
+          "foot_focus",
+          "hip_focus",
+          "breast_focus",
+          "hand_focus",
+          "crotch_focus",
+          "pectoral_focus"
+         ]
+        }
+       }
+      },
+      "condition": {
+       "actor": {
+        "humanlike": false
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "sourceOptions": [
+      "cowboy_shot"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-c1e40615e24cfa7f",
+      "source": {
+       "kind": "stage",
+       "stage": "actor_detail",
+       "sourcePath": "raw.stages.actor_detail.rules[0]"
+      },
+      "phases": [
+       "result"
+      ],
+      "rule": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.condition",
+          "state.clothing.arrangement"
+         ]
+        },
+        "modifier": [
+         "state.clothing.condition",
+         "state.clothing.arrangement"
+        ]
+       },
+       "when": {
+        "attribute": {
+         "actor.outfit.nude": true
+        }
+       }
+      },
+      "attributeEffects": [],
+      "effects": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.condition",
+          "state.clothing.arrangement"
+         ]
+        },
+        "modifier": [
+         "state.clothing.condition",
+         "state.clothing.arrangement"
+        ]
+       }
+      },
+      "condition": {
+       "attribute": {
+        "actor.outfit.nude": true
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "sourceOptions": []
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-c1e40615e24cfa7f",
+      "source": {
+       "kind": "stage",
+       "stage": "actor_detail",
+       "sourcePath": "raw.stages.actor_detail.rules[0]"
+      },
+      "phases": [
+       "result"
+      ],
+      "rule": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.condition",
+          "state.clothing.arrangement"
+         ]
+        },
+        "modifier": [
+         "state.clothing.condition",
+         "state.clothing.arrangement"
+        ]
+       },
+       "when": {
+        "attribute": {
+         "actor.outfit.nude": true
+        }
+       }
+      },
+      "attributeEffects": [],
+      "effects": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.condition",
+          "state.clothing.arrangement"
+         ]
+        },
+        "modifier": [
+         "state.clothing.condition",
+         "state.clothing.arrangement"
+        ]
+       }
+      },
+      "condition": {
+       "attribute": {
+        "actor.outfit.nude": true
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "sourceOptions": []
     }
    ],
    "ruleContext": {
@@ -897,18 +1120,16 @@
     "completelyNudeActorIds": [],
     "ruleContinuityByActorId": {}
    },
+   "panelSelections": {},
    "ruleProjectionSelections": {
     "global:scene.rating": [
      "sfw"
     ],
-    "global:scene.environment": [
+    "global:environment.setting": [
      "outdoors"
     ],
-    "global:scene.time": [
+    "global:environment.time": [
      "morning"
-    ],
-    "global:framing.crop": [
-     "cowboy_shot"
     ],
     "global:camera.view": [
      "from_side"
@@ -919,78 +1140,55 @@
     "actor:actor_1:0:expression.general": [
      "light_smile"
     ],
-    "actor:actor_1:0:expression.mouth": [
+    "actor:actor_1:0:expression.mouth.openness": [
      "open_mouth"
     ],
-    "actor:actor_1:0:actor.pose.body": [
+    "actor:actor_1:0:pose.body": [
      "standing"
     ],
-    "actor:actor_1:0:actor.action": [],
+    "actor:actor_1:0:framing.crop": [
+     "cowboy_shot"
+    ],
+    "actor:actor_1:0:action.general": [],
     "actor:actor_2:1:expression.general": [
      "surprised"
     ],
-    "actor:actor_2:1:actor.pose.body": [
+    "actor:actor_2:1:pose.body": [
      "standing"
     ],
-    "actor:actor_2:1:actor.action": []
+    "actor:actor_2:1:framing.crop": [
+     "cowboy_shot"
+    ],
+    "actor:actor_2:1:action.general": []
    },
    "allowedModifierDefinitionIds": [
-    "actor.framing.crop",
-    "actor.framing.head_crop",
-    "actor.pose.body",
-    "actor.pose.refinement",
-    "camera.pov",
     "camera.view",
+    "effect.motion",
+    "environment.condition",
+    "environment.setting",
+    "environment.time",
+    "environment.weather",
     "expression.blush",
     "expression.eye.openness",
     "expression.eye.reaction",
     "expression.general",
-    "expression.mouth",
-    "expression.sexual_response",
+    "expression.mouth.detail",
+    "expression.mouth.openness",
     "expression.tear",
     "framing.crop",
     "framing.head_crop",
     "framing.presence",
     "gaze.direction",
-    "interaction.penetration.instrument",
-    "interaction.sexual.ejaculation.progress",
-    "interaction.sexual.grouping",
-    "interaction.sexual.oral.fellatio",
-    "interaction.sexual.panel_visualization",
-    "interaction.sexual.penetration.direction",
-    "interaction.sexual.penetration.progress",
-    "interaction.sexual.penetration.route",
-    "interaction.sexual.relationship",
-    "manual.clothing_access",
-    "manual.sexual.handjob",
-    "motion.body",
     "orientation.facing",
-    "scene.comic.min_panels",
-    "scene.context.sexual",
-    "scene.environment",
+    "pose.body",
+    "pose.contact_surface",
+    "pose.refinement",
     "scene.rating",
-    "scene.time",
-    "scene.weather",
-    "state.after_activity",
-    "state.body.condition",
-    "state.body.contamination",
+    "state.body.reaction",
     "state.body.surface",
     "state.clothing.arrangement",
-    "state.clothing.coverage.lower",
-    "state.clothing.coverage.upper",
-    "state.clothing.surface",
-    "state.fluid.cum.accumulation",
-    "state.fluid.cum.instant",
-    "state.fluid.cum.location",
-    "state.fluid.lactation",
-    "state.fluid.precum",
-    "state.fluid.pussy_juice",
-    "state.fluid.saliva",
-    "state.genitals.visible_parts",
-    "state.hair.condition",
-    "state.penis.condom",
-    "state.restraint.body",
-    "state.restraint.gag"
+    "state.clothing.condition",
+    "state.hair.condition"
    ],
    "placements": [],
    "renderActorOrder": [],
@@ -1054,8 +1252,7 @@
      "targetActorId": "actor_2",
      "bindingStatus": "complete",
      "unresolvedActorRefs": [],
-     "modifiers": [],
-     "participantDetails": []
+     "modifiers": []
     },
     {
      "interactionRef": "interaction:1",
@@ -1065,13 +1262,7 @@
      "targetActorId": "actor_2",
      "bindingStatus": "complete",
      "unresolvedActorRefs": [],
-     "modifiers": [],
-     "participantDetails": [
-      {
-       "actorId": "actor_1",
-       "text": "fingers pinching the hoodie sleeve"
-      }
-     ]
+     "modifiers": []
     }
    ],
    "location": {
@@ -1083,21 +1274,15 @@
       ]
      },
      {
-      "id": "scene.environment",
+      "id": "environment.setting",
       "options": [
        "outdoors"
       ]
      },
      {
-      "id": "scene.time",
+      "id": "environment.time",
       "options": [
        "morning"
-      ]
-     },
-     {
-      "id": "framing.crop",
-      "options": [
-       "cowboy_shot"
       ]
      }
     ],
@@ -1121,7 +1306,7 @@
       "y": 0.5
      },
      "source": "analyzer",
-     "instruction": "left of the gate pillar"
+     "instruction": ""
     },
     {
      "actorId": "actor_2",
@@ -1153,24 +1338,26 @@
        ]
       },
       {
-       "id": "expression.mouth",
+       "id": "expression.mouth.openness",
        "options": [
         "open_mouth"
        ]
       },
       {
-       "id": "actor.pose.body",
+       "id": "pose.body",
        "options": [
         "standing"
        ]
+      },
+      {
+       "id": "framing.crop",
+       "options": [
+        "cowboy_shot"
+       ]
       }
      ],
-     "freeTags": [],
-     "penetratingInjuries": [],
      "poseInstruction": "leaning forward slightly",
-     "actionInstruction": "waving one hand high",
      "objects": [],
-     "objectInstruction": "",
      "dialogueInstruction": ""
     },
     {
@@ -1185,18 +1372,20 @@
        ]
       },
       {
-       "id": "actor.pose.body",
+       "id": "pose.body",
        "options": [
         "standing"
        ]
+      },
+      {
+       "id": "framing.crop",
+       "options": [
+        "cowboy_shot"
+       ]
       }
      ],
-     "freeTags": [],
-     "penetratingInjuries": [],
      "poseInstruction": "",
-     "actionInstruction": "running toward the gate",
      "objects": [],
-     "objectInstruction": "",
      "dialogueInstruction": ""
     }
    ],
@@ -1279,8 +1468,7 @@
      "targetActorId": "actor_2",
      "bindingStatus": "complete",
      "unresolvedActorRefs": [],
-     "modifiers": [],
-     "participantDetails": []
+     "modifiers": []
     },
     {
      "interactionRef": "interaction:1",
@@ -1290,13 +1478,7 @@
      "targetActorId": "actor_2",
      "bindingStatus": "complete",
      "unresolvedActorRefs": [],
-     "modifiers": [],
-     "participantDetails": [
-      {
-       "actorId": "actor_1",
-       "text": "fingers pinching the hoodie sleeve"
-      }
-     ]
+     "modifiers": []
     }
    ],
    "location": {
@@ -1308,21 +1490,15 @@
       ]
      },
      {
-      "id": "scene.environment",
+      "id": "environment.setting",
       "options": [
        "outdoors"
       ]
      },
      {
-      "id": "scene.time",
+      "id": "environment.time",
       "options": [
        "morning"
-      ]
-     },
-     {
-      "id": "framing.crop",
-      "options": [
-       "cowboy_shot"
       ]
      }
     ],
@@ -1355,24 +1531,26 @@
        ]
       },
       {
-       "id": "expression.mouth",
+       "id": "expression.mouth.openness",
        "options": [
         "open_mouth"
        ]
       },
       {
-       "id": "actor.pose.body",
+       "id": "pose.body",
        "options": [
         "standing"
        ]
+      },
+      {
+       "id": "framing.crop",
+       "options": [
+        "cowboy_shot"
+       ]
       }
      ],
-     "freeTags": [],
-     "penetratingInjuries": [],
      "poseInstruction": "leaning forward slightly",
-     "actionInstruction": "waving one hand high",
      "objects": [],
-     "objectInstruction": "",
      "dialogueInstruction": ""
     },
     {
@@ -1387,18 +1565,20 @@
        ]
       },
       {
-       "id": "actor.pose.body",
+       "id": "pose.body",
        "options": [
         "standing"
        ]
+      },
+      {
+       "id": "framing.crop",
+       "options": [
+        "cowboy_shot"
+       ]
       }
      ],
-     "freeTags": [],
-     "penetratingInjuries": [],
      "poseInstruction": "",
-     "actionInstruction": "running toward the gate",
      "objects": [],
-     "objectInstruction": "",
      "dialogueInstruction": ""
     }
    ],
@@ -1416,20 +1596,7 @@
      "message": "Canonicalized a free tag to 'cherry_blossoms'."
     }
    ],
-   "rulePromptEffects": [
-    {
-     "operation": "remove",
-     "prompt": {
-      "*": [
-       "on floor"
-      ]
-     },
-     "owner": {
-      "kind": "global"
-     },
-     "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
-    }
-   ],
+   "rulePromptEffects": [],
    "projectionAttributes": [
     {
      "actorId": "actor_1",
@@ -1455,11 +1622,11 @@
    "matchedRules": [
     {
      "rule": {
-      "id": "rule:fnv1a64-22d73b179b7bc3e3",
+      "id": "rule:fnv1a64-8aa04aa193fa4b83",
       "source": {
        "kind": "definition",
        "definitionId": "framing.crop",
-       "sourcePath": "raw.modifierLibrary.closed[47].rules[0]"
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[0]"
       },
       "phases": [
        "weight"
@@ -1467,26 +1634,23 @@
       "rule": {
        "weight": {
         "prompt": "body_part"
-       },
-       "when": {
-        "actor": "cast"
        }
       },
+      "attributeEffects": [],
       "effects": {},
-      "condition": {
-       "actor": "cast"
-      },
       "weight": {
        "prompt": "body_part"
       }
      },
      "owner": {
-      "kind": "global",
-      "bindingActorId": "actor_1"
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
      },
      "chanceOwner": {
-      "kind": "global",
-      "bindingActorId": "actor_1"
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
      },
      "sourceOptions": [
       "cowboy_shot"
@@ -1494,11 +1658,11 @@
     },
     {
      "rule": {
-      "id": "rule:fnv1a64-22d73b179b7bc3e3",
+      "id": "rule:fnv1a64-8aa04aa193fa4b83",
       "source": {
        "kind": "definition",
        "definitionId": "framing.crop",
-       "sourcePath": "raw.modifierLibrary.closed[47].rules[0]"
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[0]"
       },
       "phases": [
        "weight"
@@ -1506,348 +1670,37 @@
       "rule": {
        "weight": {
         "prompt": "body_part"
-       },
-       "when": {
-        "actor": "cast"
        }
       },
+      "attributeEffects": [],
       "effects": {},
-      "condition": {
-       "actor": "cast"
-      },
       "weight": {
        "prompt": "body_part"
       }
      },
      "owner": {
-      "kind": "global",
-      "bindingActorId": "actor_2"
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
      },
      "chanceOwner": {
-      "kind": "global",
-      "bindingActorId": "actor_2"
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
      },
      "sourceOptions": [
       "cowboy_shot"
-     ]
-    },
-    {
-     "rule": {
-      "id": "rule:fnv1a64-32e6fe4743f5a7e4",
-      "source": {
-       "kind": "option",
-       "definitionId": "scene.environment",
-       "optionId": "outdoors",
-       "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
-      },
-      "phases": [
-       "result"
-      ],
-      "rule": {
-       "remove": {
-        "prompt": {
-         "*": [
-          "on floor"
-         ]
-        }
-       }
-      },
-      "effects": {
-       "remove": {
-        "prompt": {
-         "*": [
-          "on floor"
-         ]
-        }
-       }
-      }
-     },
-     "owner": {
-      "kind": "global"
-     },
-     "chanceOwner": {
-      "kind": "global"
-     },
-     "sourceOptions": [
-      "outdoors"
      ]
     }
    ],
    "ruleCandidates": [
     {
      "rule": {
-      "id": "rule:fnv1a64-22d73b179b7bc3e3",
+      "id": "rule:fnv1a64-1d56d384b14fffb8",
       "source": {
        "kind": "definition",
-       "definitionId": "framing.crop",
-       "sourcePath": "raw.modifierLibrary.closed[47].rules[0]"
-      },
-      "phases": [
-       "weight"
-      ],
-      "rule": {
-       "weight": {
-        "prompt": "body_part"
-       },
-       "when": {
-        "actor": "cast"
-       }
-      },
-      "effects": {},
-      "condition": {
-       "actor": "cast"
-      },
-      "weight": {
-       "prompt": "body_part"
-      }
-     },
-     "owner": {
-      "kind": "global",
-      "bindingActorId": "actor_1"
-     },
-     "chanceOwner": {
-      "kind": "global",
-      "bindingActorId": "actor_1"
-     },
-     "sourceOptions": [
-      "cowboy_shot"
-     ]
-    },
-    {
-     "rule": {
-      "id": "rule:fnv1a64-22d73b179b7bc3e3",
-      "source": {
-       "kind": "definition",
-       "definitionId": "framing.crop",
-       "sourcePath": "raw.modifierLibrary.closed[47].rules[0]"
-      },
-      "phases": [
-       "weight"
-      ],
-      "rule": {
-       "weight": {
-        "prompt": "body_part"
-       },
-       "when": {
-        "actor": "cast"
-       }
-      },
-      "effects": {},
-      "condition": {
-       "actor": "cast"
-      },
-      "weight": {
-       "prompt": "body_part"
-      }
-     },
-     "owner": {
-      "kind": "global",
-      "bindingActorId": "actor_2"
-     },
-     "chanceOwner": {
-      "kind": "global",
-      "bindingActorId": "actor_2"
-     },
-     "sourceOptions": [
-      "cowboy_shot"
-     ]
-    },
-    {
-     "rule": {
-      "id": "rule:fnv1a64-32e6fe4743f5a7e4",
-      "source": {
-       "kind": "option",
-       "definitionId": "scene.environment",
-       "optionId": "outdoors",
-       "sourcePath": "raw.modifierLibrary.closed[3].options[1].rules[0]"
-      },
-      "phases": [
-       "result"
-      ],
-      "rule": {
-       "remove": {
-        "prompt": {
-         "*": [
-          "on floor"
-         ]
-        }
-       }
-      },
-      "effects": {
-       "remove": {
-        "prompt": {
-         "*": [
-          "on floor"
-         ]
-        }
-       }
-      }
-     },
-     "owner": {
-      "kind": "global"
-     },
-     "chanceOwner": {
-      "kind": "global"
-     },
-     "sourceOptions": [
-      "outdoors"
-     ]
-    },
-    {
-     "rule": {
-      "id": "rule:fnv1a64-7d921ae24ec88be7",
-      "source": {
-       "kind": "stage",
-       "stage": "actor_detail",
-       "sourcePath": "raw.stages.actor_detail.rules[0]"
-      },
-      "phases": [
-       "result"
-      ],
-      "rule": {
-       "remove": {
-        "continuity": {
-         "modifier": [
-          "state.clothing.surface",
-          "state.clothing.arrangement",
-          "state.clothing.coverage.upper",
-          "state.clothing.coverage.lower",
-          "manual.clothing_access"
-         ]
-        },
-        "modifier": [
-         "state.clothing.surface",
-         "state.clothing.arrangement",
-         "state.clothing.coverage.upper",
-         "state.clothing.coverage.lower",
-         "manual.clothing_access"
-        ]
-       },
-       "when": {
-        "attribute": {
-         "actor.outfit.nude": true
-        }
-       }
-      },
-      "effects": {
-       "remove": {
-        "continuity": {
-         "modifier": [
-          "state.clothing.surface",
-          "state.clothing.arrangement",
-          "state.clothing.coverage.upper",
-          "state.clothing.coverage.lower",
-          "manual.clothing_access"
-         ]
-        },
-        "modifier": [
-         "state.clothing.surface",
-         "state.clothing.arrangement",
-         "state.clothing.coverage.upper",
-         "state.clothing.coverage.lower",
-         "manual.clothing_access"
-        ]
-       }
-      },
-      "condition": {
-       "attribute": {
-        "actor.outfit.nude": true
-       }
-      }
-     },
-     "owner": {
-      "kind": "actor",
-      "actorId": "actor_1",
-      "placementIndex": 0
-     },
-     "chanceOwner": {
-      "kind": "actor",
-      "actorId": "actor_1",
-      "placementIndex": 0
-     },
-     "sourceOptions": []
-    },
-    {
-     "rule": {
-      "id": "rule:fnv1a64-7d921ae24ec88be7",
-      "source": {
-       "kind": "stage",
-       "stage": "actor_detail",
-       "sourcePath": "raw.stages.actor_detail.rules[0]"
-      },
-      "phases": [
-       "result"
-      ],
-      "rule": {
-       "remove": {
-        "continuity": {
-         "modifier": [
-          "state.clothing.surface",
-          "state.clothing.arrangement",
-          "state.clothing.coverage.upper",
-          "state.clothing.coverage.lower",
-          "manual.clothing_access"
-         ]
-        },
-        "modifier": [
-         "state.clothing.surface",
-         "state.clothing.arrangement",
-         "state.clothing.coverage.upper",
-         "state.clothing.coverage.lower",
-         "manual.clothing_access"
-        ]
-       },
-       "when": {
-        "attribute": {
-         "actor.outfit.nude": true
-        }
-       }
-      },
-      "effects": {
-       "remove": {
-        "continuity": {
-         "modifier": [
-          "state.clothing.surface",
-          "state.clothing.arrangement",
-          "state.clothing.coverage.upper",
-          "state.clothing.coverage.lower",
-          "manual.clothing_access"
-         ]
-        },
-        "modifier": [
-         "state.clothing.surface",
-         "state.clothing.arrangement",
-         "state.clothing.coverage.upper",
-         "state.clothing.coverage.lower",
-         "manual.clothing_access"
-        ]
-       }
-      },
-      "condition": {
-       "attribute": {
-        "actor.outfit.nude": true
-       }
-      }
-     },
-     "owner": {
-      "kind": "actor",
-      "actorId": "actor_2",
-      "placementIndex": 1
-     },
-     "chanceOwner": {
-      "kind": "actor",
-      "actorId": "actor_2",
-      "placementIndex": 1
-     },
-     "sourceOptions": []
-    },
-    {
-     "rule": {
-      "id": "rule:fnv1a64-89542616329395a8",
-      "source": {
-       "kind": "definition",
-       "definitionId": "actor.pose.body",
-       "sourcePath": "raw.modifierLibrary.closed[15].rules[0]"
+       "definitionId": "pose.body",
+       "sourcePath": "raw.modifierLibrary.closed[8].rules[0]"
       },
       "phases": [
        "candidate"
@@ -1855,7 +1708,7 @@
       "rule": {
        "exclude": {
         "modifier": [
-         "actor.pose.body"
+         "pose.body"
         ]
        },
        "when": {
@@ -1864,10 +1717,11 @@
         }
        }
       },
+      "attributeEffects": [],
       "effects": {
        "exclude": {
         "modifier": [
-         "actor.pose.body"
+         "pose.body"
         ]
        }
       },
@@ -1893,11 +1747,11 @@
     },
     {
      "rule": {
-      "id": "rule:fnv1a64-89542616329395a8",
+      "id": "rule:fnv1a64-1d56d384b14fffb8",
       "source": {
        "kind": "definition",
-       "definitionId": "actor.pose.body",
-       "sourcePath": "raw.modifierLibrary.closed[15].rules[0]"
+       "definitionId": "pose.body",
+       "sourcePath": "raw.modifierLibrary.closed[8].rules[0]"
       },
       "phases": [
        "candidate"
@@ -1905,7 +1759,7 @@
       "rule": {
        "exclude": {
         "modifier": [
-         "actor.pose.body"
+         "pose.body"
         ]
        },
        "when": {
@@ -1914,10 +1768,11 @@
         }
        }
       },
+      "attributeEffects": [],
       "effects": {
        "exclude": {
         "modifier": [
-         "actor.pose.body"
+         "pose.body"
         ]
        }
       },
@@ -1940,6 +1795,572 @@
      "sourceOptions": [
       "standing"
      ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-5a7827bdbb7762e2",
+      "source": {
+       "kind": "definition",
+       "definitionId": "framing.crop",
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[2]"
+      },
+      "phases": [
+       "candidate"
+      ],
+      "rule": {
+       "exclude": {
+        "option": {
+         "$match": {
+          "attributes": {
+           "framing_boundary": [
+            "head_crop"
+           ]
+          },
+          "matches": [
+           {
+            "definitionId": "framing.head_crop",
+            "optionIds": [
+             "eyes_out_of_frame",
+             "head_out_of_frame",
+             "lower_body"
+            ],
+            "path": "current.framing.head_crop",
+            "qualifier": "current",
+            "scope": "actor"
+           }
+          ],
+          "scope": "actor"
+         }
+        }
+       },
+       "when": {
+        "option": {
+         "framing.crop": [
+          "ass_focus",
+          "foot_focus",
+          "hip_focus",
+          "eye_focus",
+          "breast_focus",
+          "hand_focus",
+          "crotch_focus",
+          "pectoral_focus"
+         ]
+        }
+       }
+      },
+      "attributeEffects": [],
+      "effects": {
+       "exclude": {
+        "option": {
+         "$match": {
+          "attributes": {
+           "framing_boundary": [
+            "head_crop"
+           ]
+          },
+          "matches": [
+           {
+            "definitionId": "framing.head_crop",
+            "optionIds": [
+             "eyes_out_of_frame",
+             "head_out_of_frame",
+             "lower_body"
+            ],
+            "path": "current.framing.head_crop",
+            "qualifier": "current",
+            "scope": "actor"
+           }
+          ],
+          "scope": "actor"
+         }
+        }
+       }
+      },
+      "condition": {
+       "option": {
+        "framing.crop": [
+         "ass_focus",
+         "foot_focus",
+         "hip_focus",
+         "eye_focus",
+         "breast_focus",
+         "hand_focus",
+         "crotch_focus",
+         "pectoral_focus"
+        ]
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "sourceOptions": [
+      "cowboy_shot"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-5a7827bdbb7762e2",
+      "source": {
+       "kind": "definition",
+       "definitionId": "framing.crop",
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[2]"
+      },
+      "phases": [
+       "candidate"
+      ],
+      "rule": {
+       "exclude": {
+        "option": {
+         "$match": {
+          "attributes": {
+           "framing_boundary": [
+            "head_crop"
+           ]
+          },
+          "matches": [
+           {
+            "definitionId": "framing.head_crop",
+            "optionIds": [
+             "eyes_out_of_frame",
+             "head_out_of_frame",
+             "lower_body"
+            ],
+            "path": "current.framing.head_crop",
+            "qualifier": "current",
+            "scope": "actor"
+           }
+          ],
+          "scope": "actor"
+         }
+        }
+       },
+       "when": {
+        "option": {
+         "framing.crop": [
+          "ass_focus",
+          "foot_focus",
+          "hip_focus",
+          "eye_focus",
+          "breast_focus",
+          "hand_focus",
+          "crotch_focus",
+          "pectoral_focus"
+         ]
+        }
+       }
+      },
+      "attributeEffects": [],
+      "effects": {
+       "exclude": {
+        "option": {
+         "$match": {
+          "attributes": {
+           "framing_boundary": [
+            "head_crop"
+           ]
+          },
+          "matches": [
+           {
+            "definitionId": "framing.head_crop",
+            "optionIds": [
+             "eyes_out_of_frame",
+             "head_out_of_frame",
+             "lower_body"
+            ],
+            "path": "current.framing.head_crop",
+            "qualifier": "current",
+            "scope": "actor"
+           }
+          ],
+          "scope": "actor"
+         }
+        }
+       }
+      },
+      "condition": {
+       "option": {
+        "framing.crop": [
+         "ass_focus",
+         "foot_focus",
+         "hip_focus",
+         "eye_focus",
+         "breast_focus",
+         "hand_focus",
+         "crotch_focus",
+         "pectoral_focus"
+        ]
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "sourceOptions": [
+      "cowboy_shot"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-8aa04aa193fa4b83",
+      "source": {
+       "kind": "definition",
+       "definitionId": "framing.crop",
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[0]"
+      },
+      "phases": [
+       "weight"
+      ],
+      "rule": {
+       "weight": {
+        "prompt": "body_part"
+       }
+      },
+      "attributeEffects": [],
+      "effects": {},
+      "weight": {
+       "prompt": "body_part"
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "sourceOptions": [
+      "cowboy_shot"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-8aa04aa193fa4b83",
+      "source": {
+       "kind": "definition",
+       "definitionId": "framing.crop",
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[0]"
+      },
+      "phases": [
+       "weight"
+      ],
+      "rule": {
+       "weight": {
+        "prompt": "body_part"
+       }
+      },
+      "attributeEffects": [],
+      "effects": {},
+      "weight": {
+       "prompt": "body_part"
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "sourceOptions": [
+      "cowboy_shot"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-9c16dfba3f3d5a9f",
+      "source": {
+       "kind": "definition",
+       "definitionId": "framing.crop",
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[1]"
+      },
+      "phases": [
+       "candidate"
+      ],
+      "rule": {
+       "exclude": {
+        "option": {
+         "framing.crop": [
+          "portrait",
+          "upper_body",
+          "cowboy_shot",
+          "feet_out_of_frame",
+          "ass_focus",
+          "foot_focus",
+          "hip_focus",
+          "breast_focus",
+          "hand_focus",
+          "crotch_focus",
+          "pectoral_focus"
+         ]
+        }
+       },
+       "when": {
+        "actor": {
+         "humanlike": false
+        }
+       }
+      },
+      "attributeEffects": [],
+      "effects": {
+       "exclude": {
+        "option": {
+         "framing.crop": [
+          "portrait",
+          "upper_body",
+          "cowboy_shot",
+          "feet_out_of_frame",
+          "ass_focus",
+          "foot_focus",
+          "hip_focus",
+          "breast_focus",
+          "hand_focus",
+          "crotch_focus",
+          "pectoral_focus"
+         ]
+        }
+       }
+      },
+      "condition": {
+       "actor": {
+        "humanlike": false
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "sourceOptions": [
+      "cowboy_shot"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-9c16dfba3f3d5a9f",
+      "source": {
+       "kind": "definition",
+       "definitionId": "framing.crop",
+       "sourcePath": "raw.modifierLibrary.closed[21].rules[1]"
+      },
+      "phases": [
+       "candidate"
+      ],
+      "rule": {
+       "exclude": {
+        "option": {
+         "framing.crop": [
+          "portrait",
+          "upper_body",
+          "cowboy_shot",
+          "feet_out_of_frame",
+          "ass_focus",
+          "foot_focus",
+          "hip_focus",
+          "breast_focus",
+          "hand_focus",
+          "crotch_focus",
+          "pectoral_focus"
+         ]
+        }
+       },
+       "when": {
+        "actor": {
+         "humanlike": false
+        }
+       }
+      },
+      "attributeEffects": [],
+      "effects": {
+       "exclude": {
+        "option": {
+         "framing.crop": [
+          "portrait",
+          "upper_body",
+          "cowboy_shot",
+          "feet_out_of_frame",
+          "ass_focus",
+          "foot_focus",
+          "hip_focus",
+          "breast_focus",
+          "hand_focus",
+          "crotch_focus",
+          "pectoral_focus"
+         ]
+        }
+       }
+      },
+      "condition": {
+       "actor": {
+        "humanlike": false
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "sourceOptions": [
+      "cowboy_shot"
+     ]
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-c1e40615e24cfa7f",
+      "source": {
+       "kind": "stage",
+       "stage": "actor_detail",
+       "sourcePath": "raw.stages.actor_detail.rules[0]"
+      },
+      "phases": [
+       "result"
+      ],
+      "rule": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.condition",
+          "state.clothing.arrangement"
+         ]
+        },
+        "modifier": [
+         "state.clothing.condition",
+         "state.clothing.arrangement"
+        ]
+       },
+       "when": {
+        "attribute": {
+         "actor.outfit.nude": true
+        }
+       }
+      },
+      "attributeEffects": [],
+      "effects": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.condition",
+          "state.clothing.arrangement"
+         ]
+        },
+        "modifier": [
+         "state.clothing.condition",
+         "state.clothing.arrangement"
+        ]
+       }
+      },
+      "condition": {
+       "attribute": {
+        "actor.outfit.nude": true
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_1",
+      "placementIndex": 0
+     },
+     "sourceOptions": []
+    },
+    {
+     "rule": {
+      "id": "rule:fnv1a64-c1e40615e24cfa7f",
+      "source": {
+       "kind": "stage",
+       "stage": "actor_detail",
+       "sourcePath": "raw.stages.actor_detail.rules[0]"
+      },
+      "phases": [
+       "result"
+      ],
+      "rule": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.condition",
+          "state.clothing.arrangement"
+         ]
+        },
+        "modifier": [
+         "state.clothing.condition",
+         "state.clothing.arrangement"
+        ]
+       },
+       "when": {
+        "attribute": {
+         "actor.outfit.nude": true
+        }
+       }
+      },
+      "attributeEffects": [],
+      "effects": {
+       "remove": {
+        "continuity": {
+         "modifier": [
+          "state.clothing.condition",
+          "state.clothing.arrangement"
+         ]
+        },
+        "modifier": [
+         "state.clothing.condition",
+         "state.clothing.arrangement"
+        ]
+       }
+      },
+      "condition": {
+       "attribute": {
+        "actor.outfit.nude": true
+       }
+      }
+     },
+     "owner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "chanceOwner": {
+      "kind": "actor",
+      "actorId": "actor_2",
+      "placementIndex": 1
+     },
+     "sourceOptions": []
     }
    ],
    "ruleContext": {
@@ -1953,18 +2374,16 @@
     "ruleContinuityByActorId": {},
     "requestedSizeId": 9
    },
+   "panelSelections": {},
    "ruleProjectionSelections": {
     "global:scene.rating": [
      "sfw"
     ],
-    "global:scene.environment": [
+    "global:environment.setting": [
      "outdoors"
     ],
-    "global:scene.time": [
+    "global:environment.time": [
      "morning"
-    ],
-    "global:framing.crop": [
-     "cowboy_shot"
     ],
     "global:camera.view": [
      "from_side"
@@ -1975,78 +2394,55 @@
     "actor:actor_1:0:expression.general": [
      "light_smile"
     ],
-    "actor:actor_1:0:expression.mouth": [
+    "actor:actor_1:0:expression.mouth.openness": [
      "open_mouth"
     ],
-    "actor:actor_1:0:actor.pose.body": [
+    "actor:actor_1:0:pose.body": [
      "standing"
     ],
-    "actor:actor_1:0:actor.action": [],
+    "actor:actor_1:0:framing.crop": [
+     "cowboy_shot"
+    ],
+    "actor:actor_1:0:action.general": [],
     "actor:actor_2:1:expression.general": [
      "surprised"
     ],
-    "actor:actor_2:1:actor.pose.body": [
+    "actor:actor_2:1:pose.body": [
      "standing"
     ],
-    "actor:actor_2:1:actor.action": []
+    "actor:actor_2:1:framing.crop": [
+     "cowboy_shot"
+    ],
+    "actor:actor_2:1:action.general": []
    },
    "allowedModifierDefinitionIds": [
-    "actor.framing.crop",
-    "actor.framing.head_crop",
-    "actor.pose.body",
-    "actor.pose.refinement",
-    "camera.pov",
     "camera.view",
+    "effect.motion",
+    "environment.condition",
+    "environment.setting",
+    "environment.time",
+    "environment.weather",
     "expression.blush",
     "expression.eye.openness",
     "expression.eye.reaction",
     "expression.general",
-    "expression.mouth",
-    "expression.sexual_response",
+    "expression.mouth.detail",
+    "expression.mouth.openness",
     "expression.tear",
     "framing.crop",
     "framing.head_crop",
     "framing.presence",
     "gaze.direction",
-    "interaction.penetration.instrument",
-    "interaction.sexual.ejaculation.progress",
-    "interaction.sexual.grouping",
-    "interaction.sexual.oral.fellatio",
-    "interaction.sexual.panel_visualization",
-    "interaction.sexual.penetration.direction",
-    "interaction.sexual.penetration.progress",
-    "interaction.sexual.penetration.route",
-    "interaction.sexual.relationship",
-    "manual.clothing_access",
-    "manual.sexual.handjob",
-    "motion.body",
     "orientation.facing",
-    "scene.comic.min_panels",
-    "scene.context.sexual",
-    "scene.environment",
+    "pose.body",
+    "pose.contact_surface",
+    "pose.refinement",
     "scene.rating",
-    "scene.time",
-    "scene.weather",
-    "state.after_activity",
-    "state.body.condition",
-    "state.body.contamination",
+    "state.body.reaction",
     "state.body.surface",
     "state.clothing.arrangement",
-    "state.clothing.coverage.lower",
-    "state.clothing.coverage.upper",
-    "state.clothing.surface",
-    "state.fluid.cum.accumulation",
-    "state.fluid.cum.instant",
-    "state.fluid.cum.location",
-    "state.fluid.lactation",
-    "state.fluid.precum",
-    "state.fluid.pussy_juice",
-    "state.fluid.saliva",
-    "state.genitals.visible_parts",
-    "state.hair.condition",
-    "state.penis.condom",
-    "state.restraint.body",
-    "state.restraint.gag"
+    "state.clothing.condition",
+    "state.hair.condition"
    ],
    "placements": [
     {
@@ -2060,7 +2456,7 @@
        "y": 0.5
       },
       "source": "analyzer",
-      "instruction": "left of the gate pillar"
+      "instruction": ""
      }
     },
     {

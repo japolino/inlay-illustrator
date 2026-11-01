@@ -7,7 +7,6 @@ import type { CustomCharacter } from "../../../shared/contract/index.js";
 import { fail } from "../errors.js";
 import type { HandlerGroup, RpcContext } from "../types.js";
 import {
-  applyUniqueTags,
   createCustomCharacterEntry,
   loadWorkspaceSnapshot,
   promoteCustomCharacters,
@@ -145,10 +144,6 @@ export const workspaceHandlers: HandlerGroup = {
   "analysis.listActive": (_p, ctx) => ({ jobs: analysis(ctx).listActive() }),
   "autopick.get": (p, ctx) => getAutoPick(ctx, { characterId: requireId(p.characterId, "characterId"), ...(p.chatId ? { chatId: p.chatId } : {}) }),
   "autopick.apply": (p, ctx) => applyAutoPick(ctx, { characterId: requireId(p.characterId, "characterId"), items: Array.isArray(p.items) ? p.items : [] }),
-  "uniqueTags.apply": async (p, ctx) => {
-    await applyUniqueTags(ctx, requireId(p.characterId, "characterId"), p.choices ?? []);
-    return { ok: true };
-  },
 
   "charxRegex.setDetectors": (p, ctx) => setCharxRegexDetectors(ctx, requireId(p.characterId, "characterId"), p.detectors),
 

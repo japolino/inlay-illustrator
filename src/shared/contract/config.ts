@@ -19,6 +19,8 @@ import {
   type CharacterDocument,
   type CharacterScopedPrompt,
   CHARX_SETTING_FIELDS,
+  REMOVED_CHARX_SETTING_FIELDS,
+  stripRemovedCharxFields,
   type CharxOverride,
   type CharxSettingField,
   createDefaultAnimaArtists,
@@ -33,6 +35,7 @@ import {
   resolveNovelAIArtistSelection,
 } from "./character.js";
 import { type CountPolicy, fixedCountPolicy, MAX_IMAGE_COUNT, normalizeCountPolicy, UNLIMITED_IMAGE_COUNT } from "./chat.js";
+import type { AtelierCatalog, AtelierExecution, AtelierRuntimeOverlay, DefaultChanges } from "./atelier.js";
 import {
   asArray,
   asRecord,
@@ -69,6 +72,28 @@ export const NOVELAI_MODELS: readonly { value: string; label: string }[] = novel
 export const DEFAULT_NOVELAI_MODEL = novelaiModelsJson.defaultModel;
 export const CHARACTER_REFERENCE_TYPES = ["character", "style", "character&style"] as const;
 export type CharacterReferenceType = (typeof CHARACTER_REFERENCE_TYPES)[number];
+/** NovelAI V5 Medium wire model (AM 0.9.90 `p5e$990`). */
+export const NOVELAI_V5_MEDIUM_MODEL = "nai-diffusion-5-full-medium";
+export const NOVELAI_V5_FULL_MODEL = "nai-diffusion-5-full";
+export const NOVELAI_EFFORTS = ["high", "medium"] as const;
+export type NovelAIEffort = (typeof NOVELAI_EFFORTS)[number];
+/** AM 0.9.90 `g5e$990`: the High / Medium choice is offered only for NovelAI V5 Full (or a stored `-medium` model). */
+export function novelAIEffortAvailable(model: unknown): boolean {
+  const m = trimString(model);
+  return m === NOVELAI_V5_FULL_MODEL || m === NOVELAI_V5_MEDIUM_MODEL;
+}
+/** AM 0.9.90 `TC$990`: this request runs NovelAI V5 Medium. */
+export function isNovelAIMedium(config: { naiModel?: unknown; effort?: unknown }): boolean {
+  const m = trimString(config.naiModel);
+  return m === NOVELAI_V5_MEDIUM_MODEL || (m === NOVELAI_V5_FULL_MODEL && config.effort === "medium");
+}
+/** AM 0.9.90 `m5e$990`: anything but "medium" is "high". */
+export function normalizeNovelAIEffort(value: unknown): NovelAIEffort {
+  return value === "medium" ? "medium" : "high";
+}
+/** Sampling a NovelAI image was actually made with (AM 0.9.90 `finalizedPrompt.sampling` -> `analyzerDecision.novelaiSampling`). */
+export interface NovelAISampling { model: string; effort: NovelAIEffort; steps: number; sampler: string; scale: number; cfgRescale: number; noiseSchedule: string }
+
 /** AM `Uj`: NovelAI V5 model test (V5 has no director reference). */
 export function isNovelAIV5Model(model: unknown): boolean {
   return /^nai-diffusion-5(?:-|$)/u.test(trimString(model));
@@ -77,13 +102,13 @@ export function isNovelAIV5Model(model: unknown): boolean {
 export const THINKING_LEVELS = ["minimal", "low", "medium", "high", "xhigh", "max"] as const;
 export type ThinkingLevel = (typeof THINKING_LEVELS)[number];
 
-/** NovelAI scene analyzer profiles (`$je`): "v4-5" (Asset Maid V4.5) / "v5-hybrid" (Asset Maid V5). */
-export const ANALYSIS_PROFILES = ["v4-5", "v5-hybrid"] as const;
+/** NovelAI scene analyzer profiles (AM 0.9.90 `b5e`): only "v5-hybrid" (Asset Maid V5); V4.5 analysis was merged into V5. */
+export const ANALYSIS_PROFILES = ["v5-hybrid"] as const;
 export type AnalysisProfile = (typeof ANALYSIS_PROFILES)[number];
 export const DEFAULT_ANALYSIS_PROFILE: AnalysisProfile = "v5-hybrid";
-/** AM `Hje`: "v5-hybrid-preview" -> "v5-hybrid"; unknown -> "v5-hybrid". */
-export function normalizeAnalysisProfile(value: unknown): AnalysisProfile {
-  return value === "v5-hybrid-preview" ? "v5-hybrid" : (ANALYSIS_PROFILES as readonly unknown[]).includes(value) ? (value as AnalysisProfile) : DEFAULT_ANALYSIS_PROFILE;
+/** AM 0.9.90 `w5e`: every stored value ("v4-5", "v5-hybrid-preview", unknown) becomes "v5-hybrid". The field is kept and still written. */
+export function normalizeAnalysisProfile(_value: unknown): AnalysisProfile {
+  return DEFAULT_ANALYSIS_PROFILE;
 }
 
 /* ------------------------------------------------------------------------------------------------
@@ -91,10 +116,12 @@ export function normalizeAnalysisProfile(value: unknown): AnalysisProfile {
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * AM provider ids kept: "novelai" and "comfy-ui". "generic" is a port addition for every other Lumiverse
- * image provider (sdapi, swarmui, openai, google-gemini ...). "chan-server" is dropped.
+ * AM 0.9.90 provider ids (`Ix`): "novelai" and "comfy-ui". "chan-server" is gone, and so are the port's former
+ * "generic" Lumiverse providers (sdapi, swarmui, openai, ...): a connection of another provider is not usable.
  */
-export type GenerationProvider = "novelai" | "comfy-ui" | "generic";
+export type GenerationProvider = "novelai" | "comfy-ui";
+/** AM `VQ`: the provider a stored unknown or removed id ("generic", "chan-server") normalizes to. */
+export const DEFAULT_GENERATION_PROVIDER: GenerationProvider = "novelai";
 export type PromptCodecId = "novelai-structured" | "anima-flat";
 export interface ProviderCapabilities {
   label: string;
@@ -106,14 +133,13 @@ export interface ProviderCapabilities {
 export const PROVIDER_CAPABILITIES: Readonly<Record<GenerationProvider, ProviderCapabilities>> = Object.freeze({
   novelai: { label: "NovelAI", referenceUiMode: "full", outfitImageGeneration: "enabled", promptCodecId: "novelai-structured" },
   "comfy-ui": { label: "ComfyUI", referenceUiMode: "full", outfitImageGeneration: "enabled", promptCodecId: "anima-flat" },
-  generic: { label: "Other", referenceUiMode: "none", outfitImageGeneration: "enabled", promptCodecId: "anima-flat" },
 });
-/** Lumiverse image-gen provider id -> AM generation provider. */
-export function generationProviderFromLumiverse(providerId: unknown): GenerationProvider {
+/** Lumiverse image-gen provider id -> AM generation provider; null for every other provider (not supported). */
+export function generationProviderFromLumiverse(providerId: unknown): GenerationProvider | null {
   const id = trimString(providerId).toLowerCase();
   if (id === "novelai") return "novelai";
   if (id === "comfyui" || id === "comfy-ui") return "comfy-ui";
-  return "generic";
+  return null;
 }
 export function promptCodecForProvider(provider: GenerationProvider): PromptCodecId {
   return PROVIDER_CAPABILITIES[provider].promptCodecId;
@@ -382,6 +408,11 @@ export interface NovelAISettings {
   characterPrompts: unknown[];
   /** Global negative prompt (AM "settings" domain). */
   negativePrompt: string;
+  /**
+   * NovelAI V5 Full High / Medium (AM 0.9.90 `config.novelai.effort`). Medium sends `nai-diffusion-5-full-medium` with 14
+   * steps, Euler Ancestral and no negatives; the stored steps / sampler / CFG rescale / negatives stay untouched.
+   */
+  effort: NovelAIEffort;
 }
 
 /** Lumiverse image-gen connection. */
@@ -404,7 +435,6 @@ export interface CharxGenerationDefaults {
   freeCharacterGeneration: boolean;
   /** Absent = `jevConnection.rosterSelectionDefault`. */
   rosterSelectionEnabled?: boolean;
-  stateAccumulationEnabled: boolean;
   nsfwAlwaysEnabled: boolean;
   forceAiChoiceCoordinates: boolean;
   autoRemoveConflictingRegex: boolean;
@@ -437,8 +467,19 @@ export interface GlobalCharacterPromptSettings {
   defaultArtistId: string;
 }
 
+/** Generation resolution chosen in the chat toolbar (AM 0.9.90 `runtime.analysisExecution.resolution`). */
+export interface ExecutionResolution { id: number; width: number; height: number }
+/**
+ * Chat toolbar quick settings (AM 0.9.90 `runtime.analysisExecution`, normalizer `M0$990` N 3807). `resolution: null`
+ * = automatic (the analyzer picks); absent fields are seeded once from the per-CharX `fixedResolution` /
+ * `forceAiChoiceCoordinates` of the current character (`PPe$990`), see `effectiveAnalysisExecution`.
+ */
+export interface AnalysisExecution { resolution?: ExecutionResolution | null; aiCoordinates?: boolean }
+
 export interface RuntimeSettings {
   customImageSizes: CustomImageSize[];
+  /** Chat toolbar resolution / AI coordinates (AM 0.9.90); absent until the toolbar first saves it. */
+  analysisExecution?: AnalysisExecution;
   /** 0..10, default 5. Shared by analyzer, image and AI-edit retries. */
   generationAutoRetryCount: number;
   nsfwAlwaysEnabled: boolean;
@@ -466,8 +507,6 @@ export interface RuntimeSettings {
   outfitAwarenessDisabled?: boolean;
 }
 
-export interface PresetCatalogSettings { rawJson: string; lastError: string }
-
 /** Persisted global settings (userStorage `config/model.json` + `config/settings.json` + artists files). */
 export interface InlayConfig {
   version: typeof CONFIG_VERSION;
@@ -479,7 +518,6 @@ export interface InlayConfig {
   image: ImageGenerationSettings;
   /** Entries + default selection (per-character selection lives in the character document). */
   animaArtists: AnimaArtistList;
-  presetCatalog: PresetCatalogSettings;
   characterPrompt: GlobalCharacterPromptSettings;
   runtime: RuntimeSettings;
 }
@@ -488,9 +526,21 @@ export interface InlayConfig {
  * Asset Maid's merged runtime config (`Y0` shape) for the engine: global settings + the active character's
  * document. `novelai.naiModel` is the resolved image model (connection model when no override).
  */
-export interface RuntimeConfig extends Omit<InlayConfig, "characterPrompt" | "novelai"> {
+export interface RuntimeConfig extends Omit<InlayConfig, "characterPrompt" | "novelai" | "runtime"> {
   novelai: NovelAISettings & { naiModel: string };
   characterPrompt: GlobalCharacterPromptSettings & CharacterScopedPrompt;
+  /**
+   * AM `presetCatalog` (0.9.90: only `atelier`; the dead V4.5 `rawJson` was dropped, backed up to
+   * `config/legacy/preset-raw-catalog.json`). Absent `atelier` = the built-in preset only.
+   */
+  presetCatalog: { atelier?: AtelierCatalog };
+  runtime: RuntimeSettings & {
+    /** Atelier data merged from `config/atelier.json` (see `AtelierRuntimeOverlay`). */
+    instructionChanges?: DefaultChanges;
+    freeGenerationLibrary?: AtelierRuntimeOverlay["freeGenerationLibrary"];
+    freeGenerationInstructions?: AtelierRuntimeOverlay["freeGenerationInstructions"];
+    analysisExecution?: AnalysisExecution & Partial<AtelierExecution>;
+  };
 }
 
 /* ------------------------------------------------------------------------------------------------
@@ -504,10 +554,10 @@ export const DEFAULT_JEV_MODEL = "jev-latest";
 
 export function createDefaultCharxGenerationDefaults(): CharxGenerationDefaults {
   return {
-    nativeAssetVisibility: "hidden",
+    // AM 0.9.90: native CharX assets are shown unless the user hid them (was "hidden").
+    nativeAssetVisibility: "shown",
     freeOutfitGeneration: true,
     freeCharacterGeneration: true,
-    stateAccumulationEnabled: false,
     nsfwAlwaysEnabled: false,
     forceAiChoiceCoordinates: true,
     autoRemoveConflictingRegex: false,
@@ -538,6 +588,7 @@ export function createDefaultConfig(): InlayConfig {
       scale: 6,
       cfgRescale: 0.5,
       qualityToggle: true,
+      effort: "high",
       useCoords: false,
       useOrder: true,
       characterReferenceEnabled: false,
@@ -549,7 +600,6 @@ export function createDefaultConfig(): InlayConfig {
     },
     image: { connectionId: "", provider: "", model: "", comfyuiWorkflowId: "", parameters: {} },
     animaArtists: createDefaultAnimaArtists(),
-    presetCatalog: { rawJson: "", lastError: "" },
     characterPrompt: {
       overwriteExistingPrompts: false,
       characterReferenceBulkEnabled: false,
@@ -566,7 +616,7 @@ export function createDefaultConfig(): InlayConfig {
       customImageSizes: [],
       generationAutoRetryCount: 5,
       nsfwAlwaysEnabled: false,
-      generationProvider: "generic",
+      generationProvider: DEFAULT_GENERATION_PROVIDER,
       novelaiCallMode: "sequential",
       novelaiParallelIntervalSec: 0,
       chatImageWidthPercent: 70,
@@ -626,6 +676,49 @@ export function normalizeFixedResolution(value: unknown, customSizes?: readonly 
   return { enabled: r.enabled === true, sizeId: !customSizes || findImageSize(sizeId, customSizes) ? sizeId : DEFAULT_IMAGE_SIZE_PRESET_ID };
 }
 
+/**
+ * AM 0.9.90 `M0$990` (N 3807): a resolution is kept only when it is a built-in preset with the same size or a valid
+ * custom size; `null` (auto) is kept; `aiCoordinates` only when boolean. Undefined when nothing is left.
+ */
+export function normalizeAnalysisExecution(value: unknown): AnalysisExecution | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const r = value as Record<string, unknown>;
+  const out: AnalysisExecution = {};
+  if (r.resolution === null) out.resolution = null;
+  else if (r.resolution && typeof r.resolution === "object") {
+    const { id, width, height } = r.resolution as Record<string, unknown>;
+    const preset = IMAGE_SIZE_PRESETS.some((p) => p.id === id && p.width === width && p.height === height);
+    if (preset || normalizeCustomImageSizes([{ id, width, height }]).length === 1) out.resolution = { id: id as number, width: width as number, height: height as number };
+  }
+  if (typeof r.aiCoordinates === "boolean") out.aiCoordinates = r.aiCoordinates;
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** AM 0.9.90 `WV$990` (N 3826): the toolbar settings still need their one-time seed from the CharX settings. */
+export function analysisExecutionNeedsSeed(runtime: { analysisExecution?: AnalysisExecution }): boolean {
+  const e = normalizeAnalysisExecution(runtime.analysisExecution);
+  return !e || !hasOwn(e, "resolution") || typeof e.aiCoordinates !== "boolean";
+}
+
+/**
+ * Effective toolbar settings (AM 0.9.90 `qv$990` + the `CPe$990` seed as a read-time fallback): stored values win;
+ * a missing resolution comes from the CharX fixed resolution (enabled -> that size, else auto) and a missing
+ * `aiCoordinates` from `!forceAiChoiceCoordinates`.
+ */
+export function effectiveAnalysisExecution(
+  runtime: { analysisExecution?: AnalysisExecution; customImageSizes?: readonly CustomImageSize[] },
+  source: Pick<EffectiveCharxSettings, "fixedResolution" | "forceAiChoiceCoordinates"> | null,
+): { resolution: ExecutionResolution | null; aiCoordinates: boolean } {
+  const stored = normalizeAnalysisExecution(runtime.analysisExecution) ?? {};
+  let resolution: ExecutionResolution | null = null;
+  if (stored.resolution !== undefined) resolution = stored.resolution;
+  else if (source?.fixedResolution.enabled) {
+    const size = findImageSize(source.fixedResolution.sizeId, runtime.customImageSizes ?? []);
+    resolution = size ? { id: size.id, width: size.width, height: size.height } : null;
+  }
+  return { resolution, aiCoordinates: typeof stored.aiCoordinates === "boolean" ? stored.aiCoordinates : !(source?.forceAiChoiceCoordinates ?? true) };
+}
+
 /** Map AM's analyzer config (`thinkingMode`/`thinkingEnabled`/`thinkingLevel`) onto the Lumiverse reasoning setting. */
 export function reasoningFromLegacy(raw: Record<string, unknown>): { mode: ReasoningMode; effort: ThinkingLevel } {
   const level = trimString(raw.thinkingLevel).toLowerCase();
@@ -662,11 +755,23 @@ export function normalizeAnalyzerSettings(value: unknown, fallback: AnalyzerSett
   };
 }
 
-const REMOVED_CHARX_DEFAULT_FIELDS = ["imageAutoGenerationEnabled", "imageGenerationCountPolicy"];
+const REMOVED_CHARX_DEFAULT_FIELDS = REMOVED_CHARX_SETTING_FIELDS;
+
+/**
+ * Stored all-charx defaults without `nativeAssetVisibility` from before AM 0.9.90. Settings are stored as a diff against
+ * the defaults, so an explicit "hidden" (the old default) was never written; only its revision or a dirty entry shows
+ * the user chose it. Those keep "hidden"; untouched settings take the new "shown" default (AM 0.9.90 `nR`).
+ */
+function withLegacyAssetVisibility(value: unknown): unknown {
+  if (!isPlainObject(value) || hasOwn(value, "nativeAssetVisibility")) return value;
+  const revision = Number(asRecord(value.revisionByField).nativeAssetVisibility);
+  const dirty = Object.values(asRecord(value.dirtyFieldsBySourceId)).some((v) => Array.isArray(v) && v.includes("nativeAssetVisibility"));
+  return (Number.isFinite(revision) && revision > 0) || dirty ? { ...value, nativeAssetVisibility: "hidden" } : value;
+}
 
 /** Keep only known charx default fields; strip removed fields from revisions and dirty lists (AM `uEe`). */
 export function normalizeCharxGenerationDefaults(value: unknown): CharxGenerationDefaults {
-  const merged = deepMergeOverDefaults(createDefaultCharxGenerationDefaults() as unknown as Record<string, unknown>, value) as Record<string, unknown>;
+  const merged = deepMergeOverDefaults(createDefaultCharxGenerationDefaults() as unknown as Record<string, unknown>, withLegacyAssetVisibility(value)) as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const f of CHARX_SETTING_FIELDS) if (hasOwn(merged, f)) out[f] = merged[f];
   const known = new Set<string>(CHARX_SETTING_FIELDS);
@@ -688,13 +793,7 @@ export function normalizeCharxGenerationDefaults(value: unknown): CharxGeneratio
 
 /** Strip removed fields from one per-charx override (AM `uEe` part 2). */
 export function normalizeCharxOverride(value: unknown): CharxOverride {
-  const o = jsonClone(asRecord(value)) as Record<string, unknown>;
-  for (const f of REMOVED_CHARX_DEFAULT_FIELDS) delete o[f];
-  if (isPlainObject(o.revisionByField)) {
-    for (const f of REMOVED_CHARX_DEFAULT_FIELDS) delete (o.revisionByField as Record<string, unknown>)[f];
-    if (!Object.keys(o.revisionByField).length) delete o.revisionByField;
-  }
-  return o as CharxOverride;
+  return stripRemovedCharxFields(jsonClone(asRecord(value)) as Record<string, unknown>) as CharxOverride;
 }
 
 export interface ConfigNormalizeResult { config: InlayConfig; issues: ContractIssue[] }
@@ -725,7 +824,10 @@ export function normalizeConfigWithIssues(raw: unknown): ConfigNormalizeResult {
   const legacyModel = !hasOwn(asRecord(input.image), "model") ? trimString(legacyNovelai.naiModel) : "";
   const image: ImageGenerationSettings = {
     connectionId: trimString(imageIn.connectionId),
-    provider: trimString(imageIn.provider).toLowerCase() || (trimString(asRecord(input.runtime).generationProvider) === "novelai" ? "novelai" : trimString(asRecord(input.runtime).generationProvider) === "comfy-ui" ? "comfyui" : ""),
+    // AM-shaped input (no `image` part): the provider comes from `runtime.generationProvider`.
+    provider:
+      trimString(imageIn.provider).toLowerCase() ||
+      (hasOwn(input, "image") ? "" : trimString(asRecord(input.runtime).generationProvider) === "novelai" ? "novelai" : trimString(asRecord(input.runtime).generationProvider) === "comfy-ui" ? "comfyui" : ""),
     model: trimString(imageIn.model) || legacyModel,
     comfyuiWorkflowId: trimString(imageIn.comfyuiWorkflowId),
     parameters: isPlainObject(imageIn.parameters) ? (jsonClone(imageIn.parameters) as Record<string, unknown>) : {},
@@ -744,6 +846,7 @@ export function normalizeConfigWithIssues(raw: unknown): ConfigNormalizeResult {
     scale: clampNumber(n.scale, d.scale, 0, 20),
     cfgRescale: clampNumber(n.cfgRescale, d.cfgRescale, 0, 1),
     qualityToggle: bool(n.qualityToggle, d.qualityToggle),
+    effort: normalizeNovelAIEffort(n.effort),
     useCoords: bool(n.useCoords, d.useCoords),
     useOrder: bool(n.useOrder, d.useOrder),
     characterReferenceEnabled: n.characterReferenceEnabled === true,
@@ -782,18 +885,19 @@ export function normalizeConfigWithIssues(raw: unknown): ConfigNormalizeResult {
     customImageSizes: normalizeCustomImageSizes(rt.customImageSizes),
     generationAutoRetryCount: Math.max(0, Math.min(10, Math.floor(Number(rt.generationAutoRetryCount ?? 5) || 0))),
     nsfwAlwaysEnabled: rt.nsfwAlwaysEnabled === true,
-    generationProvider: generationProviderFromLumiverse(image.provider),
+    // AM `aN`: unsupported or removed providers ("generic", "chan-server") fall back to NovelAI.
+    generationProvider: generationProviderFromLumiverse(image.provider) ?? DEFAULT_GENERATION_PROVIDER,
     novelaiCallMode: "sequential",
     novelaiParallelIntervalSec: clampInt(rt.novelaiParallelIntervalSec, 0, 0, 30),
     chatImageWidthPercent: clampInt(rt.chatImageWidthPercent, 70, 30, 100),
     comfyuiCompletionTimeoutMs: clampInt(rt.comfyuiCompletionTimeoutMs, 600000, 1000, 3600000),
     comfyuiCharacterReferenceEnabled: rt.comfyuiCharacterReferenceEnabled !== false,
     comfyuiOutfitReferenceEnabled: rt.comfyuiOutfitReferenceEnabled === true,
+    ...(normalizeAnalysisExecution(rt.analysisExecution) ? { analysisExecution: normalizeAnalysisExecution(rt.analysisExecution) } : {}),
     ...(rt.devPromptOnly === true ? { devPromptOnly: true } : {}),
     ...(rt.outfitAwarenessDisabled === true ? { outfitAwarenessDisabled: true } : {}),
   };
 
-  const pc = asRecord(merged.presetCatalog);
   const config: InlayConfig = {
     version: CONFIG_VERSION,
     enabled: input.enabled !== false,
@@ -809,7 +913,6 @@ export function normalizeConfigWithIssues(raw: unknown): ConfigNormalizeResult {
     novelai,
     image,
     animaArtists: normalizeAnimaArtists(merged.animaArtists),
-    presetCatalog: { rawJson: typeof pc.rawJson === "string" ? pc.rawJson : "", lastError: typeof pc.lastError === "string" ? pc.lastError : "" },
     characterPrompt,
     runtime,
   };
@@ -831,7 +934,7 @@ export const CHARACTER_CONFIG_DOMAINS = ["workspace", "prompts", "artists", "ass
 export interface StoredGlobalConfig {
   /** `config/model.json`: analysis, jevConnection, novelai (minus negativePrompt/characterPrompts), image. */
   model: Record<string, unknown>;
-  /** `config/settings.json`: enabled, ui, presetCatalog (minus lastError), runtime, novelai.negativePrompt, characterPrompt (global part minus artistPrompts). */
+  /** `config/settings.json`: enabled, ui, runtime, novelai.negativePrompt, characterPrompt (global part minus artistPrompts). The Atelier lives in `config/atelier.json`. */
   settings: Record<string, unknown>;
   /** `config/artists-global.json`: `{characterPrompt:{artistPrompts, defaultArtistId}}`. */
   artistsGlobal: { characterPrompt: { artistPrompts: ArtistEntry[]; defaultArtistId: string } };
@@ -849,12 +952,19 @@ export function splitConfigForStorage(config: InlayConfig): StoredGlobalConfig {
   const { artistPrompts: _a, defaultArtistId: _d, ...cpDefaults } = defaults.characterPrompt;
   const settings = asRecord(
     diffAgainstDefaults(
-      { version: config.version, enabled: config.enabled, ui: config.ui, presetCatalog: { rawJson: config.presetCatalog.rawJson }, runtime: config.runtime, novelai: { negativePrompt: config.novelai.negativePrompt }, characterPrompt: cpSettings },
-      { version: defaults.version, enabled: defaults.enabled, ui: defaults.ui, presetCatalog: { rawJson: defaults.presetCatalog.rawJson }, runtime: defaults.runtime, novelai: { negativePrompt: defaults.novelai.negativePrompt }, characterPrompt: cpDefaults },
+      { version: config.version, enabled: config.enabled, ui: config.ui, runtime: config.runtime, novelai: { negativePrompt: config.novelai.negativePrompt }, characterPrompt: cpSettings },
+      { version: defaults.version, enabled: defaults.enabled, ui: defaults.ui, runtime: defaults.runtime, novelai: { negativePrompt: defaults.novelai.negativePrompt }, characterPrompt: cpDefaults },
     ),
   );
   // AM always writes popupClickThroughProtectionEnabled (device default may differ).
   settings.ui = { ...asRecord(settings.ui), popupClickThroughProtectionEnabled: config.ui.popupClickThroughProtectionEnabled };
+  // The native asset visibility is always written too, so an explicit choice survives a later default change (the
+  // default became "shown" in AM 0.9.90; see `withLegacyAssetVisibility`).
+  const charxStored = asRecord(asRecord(settings.characterPrompt).charxGenerationDefaults);
+  settings.characterPrompt = {
+    ...asRecord(settings.characterPrompt),
+    charxGenerationDefaults: { ...charxStored, nativeAssetVisibility: config.characterPrompt.charxGenerationDefaults.nativeAssetVisibility },
+  };
   return {
     model,
     settings,
@@ -901,7 +1011,6 @@ export interface EffectiveCharxSettings {
   freeCharacterGenerationEnabled: boolean;
   freeOutfitGenerationEnabled: boolean;
   rosterSelectionEnabled: boolean;
-  stateAccumulationEnabled: boolean;
   nsfwAlwaysEnabled: boolean;
   forceAiChoiceCoordinates: boolean;
   autoRemoveConflictingRegex: boolean;
@@ -952,11 +1061,11 @@ function overrideWins(defaults: Record<string, unknown>, override: Record<string
 export function resolveAllCharxSettings(config: CharxScopeConfig): EffectiveCharxSettings {
   const t = defaultsOf(config);
   return {
-    nativeAssetVisibility: hasOwn(t, "nativeAssetVisibility") && t.nativeAssetVisibility === "shown" ? "shown" : "hidden",
+    // AM 0.9.90 `nR`: an own value wins, otherwise "shown".
+    nativeAssetVisibility: hasOwn(t, "nativeAssetVisibility") ? (t.nativeAssetVisibility === "shown" ? "shown" : "hidden") : "shown",
     freeCharacterGenerationEnabled: t.freeCharacterGeneration !== false,
     freeOutfitGenerationEnabled: typeof t.freeOutfitGeneration === "boolean" ? t.freeOutfitGeneration : true,
     rosterSelectionEnabled: typeof t.rosterSelectionEnabled === "boolean" ? t.rosterSelectionEnabled : config.jevConnection.rosterSelectionDefault === true,
-    stateAccumulationEnabled: t.stateAccumulationEnabled === true,
     nsfwAlwaysEnabled: t.nsfwAlwaysEnabled === true,
     forceAiChoiceCoordinates: typeof t.forceAiChoiceCoordinates === "boolean" ? t.forceAiChoiceCoordinates : true,
     autoRemoveConflictingRegex: typeof t.autoRemoveConflictingRegex === "boolean" ? t.autoRemoveConflictingRegex : false,
@@ -982,7 +1091,6 @@ export function resolveEffectiveCharxSettings(config: CharxScopeConfig, characte
     freeCharacterGenerationEnabled: boolField("freeCharacterGeneration", all.freeCharacterGenerationEnabled),
     freeOutfitGenerationEnabled: boolField("freeOutfitGeneration", all.freeOutfitGenerationEnabled),
     rosterSelectionEnabled: boolField("rosterSelectionEnabled", all.rosterSelectionEnabled),
-    stateAccumulationEnabled: boolField("stateAccumulationEnabled", all.stateAccumulationEnabled),
     nsfwAlwaysEnabled: boolField("nsfwAlwaysEnabled", all.nsfwAlwaysEnabled),
     forceAiChoiceCoordinates: boolField("forceAiChoiceCoordinates", all.forceAiChoiceCoordinates),
     autoRemoveConflictingRegex: boolField("autoRemoveConflictingRegex", all.autoRemoveConflictingRegex),
@@ -1019,7 +1127,6 @@ function applyPatch(target: Record<string, unknown>, patch: CharxSettingsPatch):
   if (patch.freeOutfitGenerationEnabled !== undefined) set("freeOutfitGeneration", patch.freeOutfitGenerationEnabled);
   if (patch.freeCharacterGenerationEnabled !== undefined) set("freeCharacterGeneration", patch.freeCharacterGenerationEnabled);
   if (patch.rosterSelectionEnabled !== undefined) set("rosterSelectionEnabled", patch.rosterSelectionEnabled);
-  if (patch.stateAccumulationEnabled !== undefined) set("stateAccumulationEnabled", patch.stateAccumulationEnabled);
   if (patch.nsfwAlwaysEnabled !== undefined) set("nsfwAlwaysEnabled", patch.nsfwAlwaysEnabled);
   if (patch.forceAiChoiceCoordinates !== undefined) set("forceAiChoiceCoordinates", patch.forceAiChoiceCoordinates);
   if (patch.autoRemoveConflictingRegex !== undefined) set("autoRemoveConflictingRegex", patch.autoRemoveConflictingRegex);
@@ -1153,8 +1260,14 @@ export function resolveEffectiveConfig(global: InlayConfig, character: { charact
   return resolveEffectiveCharxSettings(charxScopeFor(global, doc), character.characterId);
 }
 
-/** Merge global config + character document into Asset Maid's runtime config shape (for the engine). */
-export function buildRuntimeConfig(global: InlayConfig, document: CharacterDocument | null, options: { resolvedImageModel?: string } = {}): RuntimeConfig {
+/**
+ * Merge global config + character document into Asset Maid's runtime config shape (for the engine). With `atelier`
+ * (from `config/atelier.json`, see the backend AtelierService) the AM Atelier fields are merged in:
+ * `presetCatalog.atelier`, `runtime.instructionChanges` / `freeGenerationLibrary` / `freeGenerationInstructions`, and a
+ * complete `runtime.analysisExecution` = stored mode + controls + the chat toolbar resolution / AI coordinates
+ * (seeded from the character's CharX settings when never saved, AM `CPe`), so `qv`/`yAe` take the Atelier path.
+ */
+export function buildRuntimeConfig(global: InlayConfig, document: CharacterDocument | null, options: { resolvedImageModel?: string; atelier?: AtelierRuntimeOverlay } = {}): RuntimeConfig {
   const g = jsonClone(global);
   const cp = document ? jsonClone(document.characterPrompt) : ({} as CharacterScopedPrompt);
   const characterId = document?.characterId ?? "";
@@ -1163,11 +1276,37 @@ export function buildRuntimeConfig(global: InlayConfig, document: CharacterDocum
   if (characterId && document?.animaArtistId) animaSelection[characterId] = document.animaArtistId;
   const runtime: RuntimeConfig = {
     ...g,
+    runtime: { ...g.runtime },
+    presetCatalog: {},
     novelai: { ...g.novelai, naiModel, characterReferenceEnabled: isNovelAIV5Model(naiModel) ? false : g.novelai.characterReferenceEnabled },
     animaArtists: { ...g.animaArtists, selection: { ...g.animaArtists.selection, bySourceId: animaSelection } },
     characterPrompt: { ...g.characterPrompt, ...(document ? cp : ({} as CharacterScopedPrompt)) } as GlobalCharacterPromptSettings & CharacterScopedPrompt,
   };
   runtime.characterPrompt.selectedArtistId = resolveNovelAIArtistSelection(g.characterPrompt, document?.characterPrompt.selectedArtistId).id;
+  if (options.atelier) applyAtelierOverlay(runtime, options.atelier, resolveEffectiveConfig(g, { characterId, document }));
+  return runtime;
+}
+
+/**
+ * Merge the Atelier fields into an AM runtime config snapshot (in place; see `buildRuntimeConfig`). `source` = the
+ * CharX settings that seed a never-saved toolbar resolution / AI coordinates.
+ */
+export function applyAtelierOverlay<T extends { runtime: unknown; presetCatalog?: unknown }>(
+  runtime: T,
+  atelier: AtelierRuntimeOverlay,
+  source: Pick<EffectiveCharxSettings, "fixedResolution" | "forceAiChoiceCoordinates"> | null,
+): T {
+  const settings = { ...(runtime.runtime as RuntimeConfig["runtime"]) };
+  const execution = effectiveAnalysisExecution(settings, source);
+  settings.analysisExecution = { ...jsonClone(atelier.execution), resolution: execution.resolution, aiCoordinates: execution.aiCoordinates };
+  delete settings.instructionChanges;
+  delete settings.freeGenerationLibrary;
+  delete settings.freeGenerationInstructions;
+  if (atelier.instructionChanges !== undefined) settings.instructionChanges = jsonClone(atelier.instructionChanges);
+  if (atelier.freeGenerationLibrary !== undefined) settings.freeGenerationLibrary = jsonClone(atelier.freeGenerationLibrary);
+  if (atelier.freeGenerationInstructions !== undefined) settings.freeGenerationInstructions = jsonClone(atelier.freeGenerationInstructions);
+  runtime.runtime = settings;
+  runtime.presetCatalog = { ...(runtime.presetCatalog as Record<string, unknown> | undefined), atelier: jsonClone(atelier.catalog) };
   return runtime;
 }
 
@@ -1182,16 +1321,12 @@ export interface ChatImageGenerationSettings {
   /** "split" = V5 split analysis (needs a total count). */
   analysisMode: "single" | "split";
   splitAnalysis: { totalCount: number | null; batchSize: number };
-  /** Experimental: a message generation makes one webtoon strip instead of inline illustrations. */
-  webtoonMode: boolean;
-  /** With `webtoonMode`: "manga" makes manga pages instead of the webtoon strip (absent = webtoon). */
-  comicFormat?: "manga";
 }
 /** AM 0.9.89.6 `iRt` / `aRt`: split total cap 30 and batch cap 10 (20 and 7 before). */
 export const SPLIT_ANALYSIS_MAX_TOTAL = 30;
 export const MAX_SPLIT_BATCH_SIZE = 10;
 export function createDefaultChatImageGenerationSettings(): ChatImageGenerationSettings {
-  return { autoGenerationEnabled: true, countPolicy: fixedCountPolicy(1), analysisMode: "single", splitAnalysis: { totalCount: null, batchSize: 3 }, webtoonMode: false };
+  return { autoGenerationEnabled: true, countPolicy: fixedCountPolicy(1), analysisMode: "single", splitAnalysis: { totalCount: null, batchSize: 3 } };
 }
 export const DEFAULT_CHAT_IMAGE_GENERATION_SETTINGS: Readonly<ChatImageGenerationSettings> = Object.freeze(createDefaultChatImageGenerationSettings());
 /** AM `T2`: max batch size for a split total. */
@@ -1208,13 +1343,12 @@ export function normalizeChatImageGenerationSettings(value: unknown, fallback: C
   const positive = (n: unknown): n is number => Number.isSafeInteger(n) && Number(n) > 0;
   const total = positive(split.totalCount) ? split.totalCount : null;
   const batch = positive(split.batchSize) ? split.batchSize : 3;
+  // Rebuilt from the known fields: keys of removed features (`webtoonMode`, `comicFormat`) are dropped on the next write.
   return {
     analysisMode: r.analysisMode === "split" && total !== null ? "split" : "single",
     splitAnalysis: { totalCount: total, batchSize: Math.min(batch, total === null ? MAX_SPLIT_BATCH_SIZE : maxSplitBatchSize(total)) },
     autoGenerationEnabled: typeof r.autoGenerationEnabled === "boolean" ? r.autoGenerationEnabled : fallback.autoGenerationEnabled,
     countPolicy: normalizeCountPolicy(r.countPolicy, fallback.countPolicy, maxCount),
-    webtoonMode: typeof r.webtoonMode === "boolean" ? r.webtoonMode : fallback.webtoonMode,
-    ...(r.comicFormat === "manga" ? { comicFormat: "manga" as const } : {}),
   };
 }
 /** Load-time normalization with the AM notices (157887-157901, English; Korean in `noticeKo`). */
@@ -1257,7 +1391,7 @@ export type WorkspaceTab = "assets" | "prompts" | "artists" | "settings" | "pers
 export interface UiStateSource {
   activeTab: WorkspaceTab;
   secondaryOpen: boolean;
-  secondaryMode: "asset-picker" | "character-tags" | "outfit";
+  secondaryMode: "asset-picker" | "outfit";
   navigationView: "characters" | "lorebooks" | "custom" | "modules";
   activeOutfitByPromptKey: Record<string, string>;
   activePersonaOutfitByPersonaKey: Record<string, string>;
@@ -1275,8 +1409,9 @@ export function normalizeUiStateSource(value: unknown): UiStateSource {
   const r = asRecord(value);
   return {
     activeTab: r.activeTab === "prompts" || r.activeTab === "artists" || r.activeTab === "settings" || r.activeTab === "persona" ? r.activeTab : "assets",
-    secondaryOpen: typeof r.secondaryOpen === "boolean" ? r.secondaryOpen : false,
-    secondaryMode: r.secondaryMode === "character-tags" ? "character-tags" : r.secondaryMode === "outfit" || r.secondaryMode === "persona-reference" ? "outfit" : "asset-picker",
+    // AM 0.9.90 `oSt`: a saved unique-tag search pane ("character-tags", search removed) reopens as the closed asset picker.
+    secondaryOpen: r.secondaryMode === "character-tags" ? false : typeof r.secondaryOpen === "boolean" ? r.secondaryOpen : false,
+    secondaryMode: r.secondaryMode === "outfit" || r.secondaryMode === "persona-reference" ? "outfit" : "asset-picker",
     navigationView: r.navigationView === "lorebooks" || r.navigationView === "custom" || r.navigationView === "modules" ? r.navigationView : "characters",
     activeOutfitByPromptKey: stringPairs(r.activeOutfitByPromptKey),
     activePersonaOutfitByPersonaKey: stringPairs(r.activePersonaOutfitByPersonaKey),

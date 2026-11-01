@@ -7,20 +7,18 @@ import type { ComponentChildren } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import type { CharxSettingField, MetadataAvailability } from "../../../shared/contract/character.js";
 import {
-  IMAGE_SIZE_PRESETS,
   charxScopeFor,
   generationProviderFromLumiverse,
   promptCodecForProvider,
   resetAllCharxOverrides,
   type CharxSettingsPatch,
-  type CustomImageSize,
   type EffectiveCharxSettings,
   type InlayConfig
 } from "../../../shared/contract/config.js";
 import type { AnalysisKind } from "../../../shared/contract/rpc.js";
 import { useApp, useAppState, useRpcQuery } from "../../state/app-state.js";
 import { toRpcError } from "../../rpc/client.js";
-import { Button, IconButton, Select, Switch, TrashIcon, cn, useConfirm, type SelectOption } from "../ui/index.js";
+import { Button, IconButton, Switch, TrashIcon, cn, useConfirm } from "../ui/index.js";
 import { ResetIcon, SpinnerIcon } from "./icons.js";
 import { CHARX_LABELS as X, COMMON_LABELS as C, PAGE_TITLES } from "./labels.js";
 import { CharxRegexRows } from "./charx-regex.js";
@@ -37,7 +35,6 @@ export const PATCH_FIELD: Record<keyof EffectiveCharxSettings, CharxSettingField
   freeCharacterGenerationEnabled: "freeCharacterGeneration",
   freeOutfitGenerationEnabled: "freeOutfitGeneration",
   rosterSelectionEnabled: "rosterSelectionEnabled",
-  stateAccumulationEnabled: "stateAccumulationEnabled",
   nsfwAlwaysEnabled: "nsfwAlwaysEnabled",
   forceAiChoiceCoordinates: "forceAiChoiceCoordinates",
   autoRemoveConflictingRegex: "autoRemoveConflictingRegex",
@@ -47,15 +44,6 @@ export const PATCH_FIELD: Record<keyof EffectiveCharxSettings, CharxSettingField
   animaPositivePrompt: "animaPositivePrompt",
   animaNegativePrompt: "animaNegativePrompt"
 };
-
-/** Fixed resolution options (`Z0` + `lxt`): built-in sizes then custom sizes. */
-export function fixedResolutionOptions(customSizes: readonly CustomImageSize[]): Array<SelectOption & { custom: boolean }> {
-  const label = (w: number, h: number) => X.sizeLabel(w === h ? "square" : w > h ? "landscape" : "portrait", w, h);
-  return [
-    ...IMAGE_SIZE_PRESETS.map((p) => ({ value: String(p.id), label: label(p.width, p.height), custom: false })),
-    ...customSizes.map((s) => ({ value: String(s.id), label: `${label(s.width, s.height)} · ${X.customSize}`, custom: true }))
-  ];
-}
 
 /** Source metadata state from the per-asset cache (`sme` badge input). */
 export function sourceMetadataState(availability: Record<string, MetadataAvailability> | undefined): MetadataAvailability | "unknown" {
@@ -240,12 +228,11 @@ export function CharxSettingsPage({ scope }: { scope: CharxScope }) {
 
   const marker = (key: keyof EffectiveCharxSettings) =>
     dirtyFields.has(PATCH_FIELD[key]) ? <Badge tone="primary" className="px-1.5 text-3xs" title={X.overrideBadgeTitle}>{X.overrideBadge}</Badge> : null;
-  const anima = promptCodecForProvider(config.image.provider ? generationProviderFromLumiverse(config.image.provider) : config.runtime.generationProvider) === "anima-flat";
+  const anima = promptCodecForProvider((config.image.provider ? generationProviderFromLumiverse(config.image.provider) : null) ?? config.runtime.generationProvider) === "anima-flat";
   const positiveField: PromptField = anima ? "animaPositivePrompt" : "fixedPositivePrompt";
   const negativeField: PromptField = anima ? "animaNegativePrompt" : "negativePrompt";
   const metadataState = sourceMetadataState(workspace?.metadataAvailability);
   const metadataPresent = Object.keys(workspace?.metadataAvailability ?? {}).length > 0;
-  const sizeOptions = fixedResolutionOptions(config.runtime.customImageSizes);
   const metadataTone = metadataState === "none" ? "danger" : metadataState === "partial" ? "warning" : metadataState === "available" ? "success" : "neutral";
   const analyzeLabels = { analyze: X.analyze, stop: X.stop, stopAnalysis: X.stopAnalysis };
 
@@ -257,25 +244,14 @@ export function CharxSettingsPage({ scope }: { scope: CharxScope }) {
           onChange={(checked) => void write({ freeCharacterGenerationEnabled: checked })} field="freeCharacterGeneration" />
         <ToggleRow title={X.freeOutfit.title} description={X.freeOutfit.description} marker={marker("freeOutfitGenerationEnabled")} checked={values.freeOutfitGenerationEnabled}
           onChange={(checked) => void write({ freeOutfitGenerationEnabled: checked })} field="freeOutfitGeneration" />
-        <ToggleRow title={X.stateAccumulation.title} description={X.stateAccumulation.description} marker={marker("stateAccumulationEnabled")} checked={values.stateAccumulationEnabled}
-          onChange={(checked) => void write({ stateAccumulationEnabled: checked })} field="stateAccumulationEnabled" />
         <ToggleRow title={X.nsfwAlways.title} description={X.nsfwAlways.description} marker={marker("nsfwAlwaysEnabled")} checked={values.nsfwAlwaysEnabled}
           onChange={(checked) => void write({ nsfwAlwaysEnabled: checked })} field="nsfwAlwaysEnabled" />
       </SectionCard>
       <SectionCard title={X.analysisOutput}>
         <ToggleRow title={X.rosterSelection.title} description={X.rosterSelection.description} marker={marker("rosterSelectionEnabled")} checked={values.rosterSelectionEnabled}
           onChange={(checked) => void write({ rosterSelectionEnabled: checked })} field="rosterSelectionEnabled" />
-        <Row title={X.fixedResolution.title} titleEnd={marker("fixedResolution")} description={X.fixedResolution.description} className="mobile:grid-cols-1 mobile:gap-2" data-charx-field="fixedResolution">
-          <div class="w-48">
-            <Select aria-label={X.fixedResolutionSelect} value={String(values.fixedResolution.sizeId)} options={sizeOptions} disabled={!values.fixedResolution.enabled}
-              onValueChange={(value) => void write({ fixedResolution: { enabled: values.fixedResolution.enabled, sizeId: Number(value) } })} />
-          </div>
-          <Switch aria-label={X.fixedResolutionUse} checked={values.fixedResolution.enabled}
-            onCheckedChange={(checked) => void write({ fixedResolution: { enabled: checked, sizeId: values.fixedResolution.sizeId } })} />
-        </Row>
-        {/* AM 0.9.89.3+ (180633): the switch shows the inverse of forceAiChoiceCoordinates (on = analyzer coordinates). */}
-        <ToggleRow title={X.aiChoice.title} description={X.aiChoice.description} marker={marker("forceAiChoiceCoordinates")} checked={!values.forceAiChoiceCoordinates}
-          onChange={(checked) => void write({ forceAiChoiceCoordinates: !checked })} field="forceAiChoiceCoordinates" />
+        {/* AM 0.9.90 moved fixed resolution and AI coordinates to the chat toolbar (global `runtime.analysisExecution`); the
+            per-CharX fields stay stored only as the one-time seed of those toolbar settings. */}
         <Row title={X.nativeAssets.title} titleEnd={marker("nativeAssetVisibility")} description={X.nativeAssets.description} data-charx-field="nativeAssetVisibility">
           <div class="inline-flex h-8 items-center rounded-md bg-surface-control p-1 max-md:h-11" role="group" aria-label={X.nativeAssets.title}>
             {(["hidden", "shown"] as const).map((option) => (

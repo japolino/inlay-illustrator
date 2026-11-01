@@ -684,13 +684,13 @@
     {
      "id": "scene-pov",
      "name": "pov 연출",
-     "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when the persona's hands and arms are not visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Select camera.pov option pov_hands only when the persona's hands or arms are visibly framed for action, contact, object manipulation, or spatial distance; otherwise leave this modifier unselected. Keep the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+     "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
      "scenePresetId": "pov"
     },
     {
      "id": "scene-ensemble",
      "name": "다인 연출",
-     "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent or split Actor identities, or restore absent Actors; repeated visible depictions share candidateKey with distinct actorIds in one image or panel. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+     "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
      "scenePresetId": "ensemble"
     },
     {
@@ -744,13 +744,13 @@
      {
       "id": "scene-pov",
       "name": "pov 연출",
-      "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when the persona's hands and arms are not visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Select camera.pov option pov_hands only when the persona's hands or arms are visibly framed for action, contact, object manipulation, or spatial distance; otherwise leave this modifier unselected. Keep the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+      "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
       "scenePresetId": "pov"
      },
      {
       "id": "scene-ensemble",
       "name": "다인 연출",
-      "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent or split Actor identities, or restore absent Actors; repeated visible depictions share candidateKey with distinct actorIds in one image or panel. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+      "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
       "scenePresetId": "ensemble"
      },
      {
@@ -803,13 +803,13 @@
      {
       "id": "scene-pov",
       "name": "pov 연출",
-      "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when the persona's hands and arms are not visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Select camera.pov option pov_hands only when the persona's hands or arms are visibly framed for action, contact, object manipulation, or spatial distance; otherwise leave this modifier unselected. Keep the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+      "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
       "scenePresetId": "pov"
      },
      {
       "id": "scene-ensemble",
       "name": "다인 연출",
-      "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent or split Actor identities, or restore absent Actors; repeated visible depictions share candidateKey with distinct actorIds in one image or panel. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+      "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
       "scenePresetId": "ensemble"
      },
      {
@@ -820,7 +820,7 @@
      }
     ],
     "presetId": "pov",
-    "customText": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when the persona's hands and arms are not visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Select camera.pov option pov_hands only when the persona's hands or arms are visibly framed for action, contact, object manipulation, or spatial distance; otherwise leave this modifier unselected. Keep the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number."
+    "customText": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view."
    },
    "imageRatio": {
     "mode": "preset",
@@ -863,13 +863,13 @@
      {
       "id": "scene-pov",
       "name": "pov 연출",
-      "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when the persona's hands and arms are not visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Select camera.pov option pov_hands only when the persona's hands or arms are visibly framed for action, contact, object manipulation, or spatial distance; otherwise leave this modifier unselected. Keep the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+      "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
       "scenePresetId": "pov"
      },
      {
       "id": "scene-ensemble",
       "name": "다인 연출",
-      "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent or split Actor identities, or restore absent Actors; repeated visible depictions share candidateKey with distinct actorIds in one image or panel. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+      "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
       "scenePresetId": "ensemble"
      },
      {
@@ -880,7 +880,7 @@
      }
     ],
     "presetId": "ensemble",
-    "customText": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent or split Actor identities, or restore absent Actors; repeated visible depictions share candidateKey with distinct actorIds in one image or panel. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check."
+    "customText": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records."
    },
    "imageRatio": {
     "mode": "preset",
@@ -923,13 +923,13 @@
      {
       "id": "scene-pov",
       "name": "pov 연출",
-      "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when the persona's hands and arms are not visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Select camera.pov option pov_hands only when the persona's hands or arms are visibly framed for action, contact, object manipulation, or spatial distance; otherwise leave this modifier unselected. Keep the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+      "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
       "scenePresetId": "pov"
      },
      {
       "id": "scene-ensemble",
       "name": "다인 연출",
-      "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent or split Actor identities, or restore absent Actors; repeated visible depictions share candidateKey with distinct actorIds in one image or panel. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+      "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
       "scenePresetId": "ensemble"
      },
      {
@@ -983,13 +983,13 @@
      {
       "id": "scene-pov",
       "name": "pov 연출",
-      "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when the persona's hands and arms are not visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Select camera.pov option pov_hands only when the persona's hands or arms are visibly framed for action, contact, object manipulation, or spatial distance; otherwise leave this modifier unselected. Keep the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+      "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
       "scenePresetId": "pov"
      },
      {
       "id": "scene-ensemble",
       "name": "다인 연출",
-      "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent or split Actor identities, or restore absent Actors; repeated visible depictions share candidateKey with distinct actorIds in one image or panel. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+      "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
       "scenePresetId": "ensemble"
      },
      {
@@ -1057,13 +1057,13 @@
      {
       "id": "scene-pov",
       "name": "pov 연출",
-      "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when the persona's hands and arms are not visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Select camera.pov option pov_hands only when the persona's hands or arms are visibly framed for action, contact, object manipulation, or spatial distance; otherwise leave this modifier unselected. Keep the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+      "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
       "scenePresetId": "pov"
      },
      {
       "id": "scene-ensemble",
       "name": "다인 연출",
-      "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent or split Actor identities, or restore absent Actors; repeated visible depictions share candidateKey with distinct actorIds in one image or panel. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+      "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
       "scenePresetId": "ensemble"
      },
      {
@@ -1116,13 +1116,13 @@
      {
       "id": "scene-pov",
       "name": "pov 연출",
-      "instruction": "Stage every scene strictly through the persona's first-person view. Always include the persona in Actor Roster as the viewpoint participant, even when the persona's hands and arms are not visible. Even when other characters appear or drive the action, never switch to an external observer's or another character's viewpoint; frame them as seen from the persona's gaze direction, distance, and eye level. The persona is the story's viewpoint protagonist, not an externally observed Actor. Keep the required Persona Frame Placement and Actor Detail binding only for response-contract compliance: omit Persona facing and placement prose, and leave Persona actions, modifiers, freeTags, cumClear, injuryClear, poseInstruction, actionInstruction, objects, and objectInstruction empty. Express visible contact and relationships through Interaction and the other visible Actors. Select camera.pov option pov_hands only when the persona's hands or arms are visibly framed for action, contact, object manipulation, or spatial distance; otherwise leave this modifier unselected. Keep the persona's head, face, and full body out of frame. When multiple other characters are present, frame them together whenever feasible within the persona's natural field of view, with their actions and relationships clearly readable. Do not exclude or distribute them across images merely because of their number.",
+      "instruction": "Show the scene through the persona's eyes, maintaining their eye level, gaze direction, and viewing distance. Never switch to an external or another actor's viewpoint. In the persona's pose description, include only visible hand and arm actions in the current image or panel, including contact, support, or object handling. Keep these actions consistent with the first-person view; leave the description empty when no hands or arms are visible or no action needs clarification. Do not describe the persona's face, appearance, clothing, whole-body pose, or unseen body parts. Frame other present actors and their interactions clearly within a plausible field of view.",
       "scenePresetId": "pov"
      },
      {
       "id": "scene-ensemble",
       "name": "다인 연출",
-      "instruction": "For each requested image independently, identify its depicted time and place from the full message, then identify every independent entity actually present there before matching registered candidates. Include people, robots, animals, monsters, summons, and other non-human entities regardless of registration. actor_candidates is an identity reference list, not a scene attendance list. Registration, appearance or outfit records, generation history, and continuity alone never establish presence. Match only scene-confirmed entities to actor_candidates; for each unmatched entity, follow the base Actor-selection contract to define generated_actor_proposals before referencing its free_N in actor_roster. Never substitute a similar registered character for an unmatched entity. Include every clearly present Actor together; do not distribute them across images depicting the same scene or merge casts from different times or places. Place required Interaction participants first, then every remaining confirmed Actor, registered or free. Lack of action, dialogue, or direct Interaction is not a reason to omit one. If the cast does not fit comfortably, widen the framing or adjust the arrangement instead of dropping an Actor. Give every included Actor occurrence its own Frame Placement and Actor Detail, and keep it visually distinguishable. Omission from an individual image description does not mean departure only when presence was established in the same continuous scene and context gives no evidence of departure. Exclude mere mentions, remembered or hypothetical people outside the depicted scene, remote speakers who are not physically present, Actors who have explicitly or clearly left, are off-screen, or belong to another scene. Do not invent or split Actor identities, or restore absent Actors; repeated visible depictions share candidateKey with distinct actorIds in one image or panel. Do not weaken required Interactions or create unreadable overcrowding merely to increase the Actor count. Before returning, verify both that every included Actor has scene-presence evidence and that no confirmed entity is omitted; do not add response fields for this check.",
+      "instruction": "Compose all actors confirmed present at the depicted time and place together, including quiet observers and non-human participants. Preserve established presence within a continuous scene unless departure is indicated. Widen the view or adjust spacing and depth to keep everyone distinguishable and interactions readable. Do not split the scene solely because of actor count, combine separate scenes, or add participants based only on mentions or candidate records.",
       "scenePresetId": "ensemble"
      },
      {
@@ -1227,13 +1227,13 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "outdoors"
         ]
        },
        {
-        "id": "scene.time",
+        "id": "environment.time",
         "options": [
          "morning"
         ]
@@ -1281,13 +1281,13 @@
          ]
         },
         {
-         "id": "expression.mouth",
+         "id": "expression.mouth.openness",
          "options": [
           "open_mouth"
          ]
         },
         {
-         "id": "actor.pose.body",
+         "id": "pose.body",
          "options": [
           "standing"
          ]
@@ -1310,7 +1310,7 @@
          ]
         },
         {
-         "id": "actor.pose.body",
+         "id": "pose.body",
          "options": [
           "standing"
          ]
@@ -1357,7 +1357,7 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "indoors"
         ]
@@ -1446,13 +1446,13 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "outdoors"
         ]
        },
        {
-        "id": "scene.time",
+        "id": "environment.time",
         "options": [
          "morning"
         ]
@@ -1585,13 +1585,13 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "indoors"
         ]
        },
        {
-        "id": "scene.weather",
+        "id": "environment.weather",
         "options": [
          "rain"
         ]
@@ -1776,13 +1776,13 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "outdoors"
         ]
        },
        {
-        "id": "scene.time",
+        "id": "environment.time",
         "options": [
          "morning"
         ]
@@ -1917,7 +1917,7 @@
          ]
         },
         {
-         "id": "actor.framing.crop",
+         "id": "framing.crop",
          "options": [
           "upper_body"
          ]
@@ -1935,13 +1935,13 @@
        "actions": [],
        "modifiers": [
         {
-         "id": "expression.mouth",
+         "id": "expression.mouth.openness",
          "options": [
           "open_mouth"
          ]
         },
         {
-         "id": "actor.framing.crop",
+         "id": "framing.crop",
          "options": [
           "cowboy_shot"
          ]
@@ -2039,13 +2039,13 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "indoors"
         ]
        },
        {
-        "id": "scene.time",
+        "id": "environment.time",
         "options": [
          "night"
         ]
@@ -2079,7 +2079,7 @@
        "actions": [],
        "modifiers": [
         {
-         "id": "actor.pose.body",
+         "id": "pose.body",
          "options": [
           "on_back"
          ]
@@ -2260,7 +2260,7 @@
         ]
        },
        {
-        "id": "scene.environment",
+        "id": "environment.setting",
         "options": [
          "indoors"
         ]
@@ -2323,7 +2323,7 @@
     }
    ]
   },
-  "broken.fencedText": "Here is the plan:\n```json\n{\"illustrations\":[{\"slot_number\":\"1\",\"actor_roster\":[{\"actor_id\":\"actor_1\",\"candidate_key\":\"actor.m0ais.6ynrym\"}],\"frame_placement\":{\"sizeId\":\"size 2\",\"modifiers\":[{\"id\":\"scene.environment\",\"options\":[\"indoors\"]}],\"freeTags\":[\"Staff Room\"],\"items\":[{\"actorId\":\"actor_1\",\"center\":{\"x\":0.123,\"y\":2}}]},\"actor_detail\":[{\"actorId\":\"actor_1\",\"placementIndex\":0,\"modifiers\":[{\"id\":\"gaze.direction\",\"options\":[\"looking_down\",\"not_an_option\"]},{\"id\":\"unknown.modifier\",\"options\":[\"x\"]}]}],\"camera\":{\"modifiers\":[],\"instruction\":\"\",\"freeTags\":[\"legacy\"]}}]}\n```\nDone.",
+  "broken.fencedText": "Here is the plan:\n```json\n{\"illustrations\":[{\"slot_number\":\"1\",\"actor_roster\":[{\"actor_id\":\"actor_1\",\"candidate_key\":\"actor.m0ais.6ynrym\"}],\"frame_placement\":{\"sizeId\":\"size 2\",\"modifiers\":[{\"id\":\"environment.setting\",\"options\":[\"indoors\"]}],\"freeTags\":[\"Staff Room\"],\"items\":[{\"actorId\":\"actor_1\",\"center\":{\"x\":0.123,\"y\":2}}]},\"actor_detail\":[{\"actorId\":\"actor_1\",\"placementIndex\":0,\"modifiers\":[{\"id\":\"gaze.direction\",\"options\":[\"looking_down\",\"not_an_option\"]},{\"id\":\"unknown.modifier\",\"options\":[\"x\"]}]}],\"camera\":{\"modifiers\":[],\"instruction\":\"\",\"freeTags\":[\"legacy\"]}}]}\n```\nDone.",
   "broken.partial": {
    "illustrations": [
     {

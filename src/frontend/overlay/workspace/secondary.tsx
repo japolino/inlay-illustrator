@@ -33,8 +33,6 @@ export function useSecondaryView(tab: WorkspaceTab, mobile: boolean): TabView["s
   if (!sourceUi.secondaryOpen || !characterId || !workspace) return null;
   const close = () => { sessions.closeGeneration(characterId); ui.closeSecondary(characterId); };
 
-  // Unique tag search (Danbooru) is not part of the port: a stored "character-tags" pane shows nothing.
-  if (sourceUi.secondaryMode === "character-tags") return null;
 
   if (sourceUi.secondaryMode === "asset-picker") {
     const target = sourceUi.pickerTarget;

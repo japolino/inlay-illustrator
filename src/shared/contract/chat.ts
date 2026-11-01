@@ -739,128 +739,6 @@ export function parseAssetMaidChatStoreContent(content: unknown): ChatStore | nu
 }
 
 /* ------------------------------------------------------------------------------------------------------------------ */
-/* Current actor state (`asset-maid:current-actor-state`, 52315-52419)                                                 */
-/* ------------------------------------------------------------------------------------------------------------------ */
-
-export const AM_ACTOR_STATE_LORE_ID = "asset-maid:current-actor-state";
-export const AM_ACTOR_STATE_LORE_COMMENT = "__ASSET_MAID_CURRENT_ACTOR_STATE__";
-/** `Zu`: tracked state groups. */
-export const ACTOR_STATE_GROUPS = ["state.fluid.cum.location", "actor.injury"] as const;
-export type ActorStateGroup = (typeof ACTOR_STATE_GROUPS)[number];
-/** Reserved slot-like actor keys that cannot hold state. */
-export const ACTOR_STATE_RESERVED_KEY = /^(?:primary|secondary|actor_\d+|female_\d+|male_\d+)$/u;
-
-export interface ActorStateRecord {
-  groups: Record<ActorStateGroup, string[]>;
-  count: number;
-  /** Remaining turns per `state.fluid.cum.location` value. */
-  ttl: Record<string, number>;
-}
-/** Current actor state of a chat. `{revision: 0, actors: {}}` = no state yet (Asset Maid's "absent"). */
-export interface CurrentActorState {
-  revision: number;
-  actors: Record<string, ActorStateRecord>;
-}
-
-export function createEmptyActorState(): CurrentActorState {
-  return { revision: 0, actors: {} };
-}
-
-function uniqueStrings(value: unknown): string[] {
-  return [...new Set((Array.isArray(value) ? value : []).filter((v) => typeof v === "string" && !!v.trim()).map((v: string) => v.trim()))];
-}
-function floorCount(value: unknown): number {
-  return Number.isFinite(Number(value)) ? Math.max(0, Math.floor(Number(value))) : 0;
-}
-
-export type ActorStateValidationResult = { ok: true; state: CurrentActorState } | { ok: false; issues: ChatStoreIssue[] };
-
-/**
- * `Wv` parse rules: revision safe int >= 1, actor keys non-reserved, groups are string arrays (non-blank items),
- * count safe int >= 0, ttl values safe ints >= 0. Output is normalized (trimmed, de-duplicated). The empty state
- * `{revision: 0, actors: {}}` is accepted.
- */
-export function validateCurrentActorState(value: unknown): ActorStateValidationResult {
-  const bad = (code: string, path: string, message: string): ActorStateValidationResult => ({ ok: false, issues: [{ code, path, message }] });
-  const o = rec(value);
-  if (!isRecord(o.actors)) return bad("actors-record", "$.actors", "actors must be an object.");
-  if (o.revision === 0 && !Object.keys(o.actors).length) return { ok: true, state: createEmptyActorState() };
-  if (!Number.isSafeInteger(o.revision) || Number(o.revision) < 1) return bad("revision", "$.revision", "revision must be a safe integer >= 1.");
-  const actors: Record<string, ActorStateRecord> = {};
-  for (const [key, raw] of Object.entries(o.actors)) {
-    const p = `$.actors.${key}`;
-    const c = rec(raw);
-    if (!key || ACTOR_STATE_RESERVED_KEY.test(key)) return bad("actor-key", p, "Actor keys must be real actor keys.");
-    if (!isRecord(c.groups) || !isRecord(c.ttl) || !Number.isSafeInteger(c.count) || Number(c.count) < 0)
-      return bad("actor-record", p, "An actor needs groups, ttl and a count >= 0.");
-    for (const g of ACTOR_STATE_GROUPS) {
-      const list = c.groups[g];
-      if (!Array.isArray(list) || list.some((v) => typeof v !== "string" || !v.trim()))
-        return bad("actor-group", `${p}.groups.${g}`, "Groups must be arrays of non-blank strings.");
-    }
-    if (Object.values(c.ttl).some((v) => !Number.isSafeInteger(v) || Number(v) < 0)) return bad("actor-ttl", `${p}.ttl`, "ttl values must be integers >= 0.");
-    actors[key] = {
-      groups: Object.fromEntries(ACTOR_STATE_GROUPS.map((g) => [g, uniqueStrings(rec(c.groups)[g])])) as Record<ActorStateGroup, string[]>,
-      count: floorCount(c.count),
-      ttl: Object.fromEntries(Object.entries(c.ttl).map(([k, v]) => [k, floorCount(v)])),
-    };
-  }
-  return { ok: true, state: { revision: Number(o.revision), actors } };
-}
-
-/** `zne`: actor record from a continuity state object (`cum_count`, `_continuity_turn`, `_continuity_expires`). */
-export function actorStateFromContinuityRecord(value: unknown): ActorStateRecord {
-  const t = rec(value);
-  const expires = rec(rec(t._continuity_expires)[ACTOR_STATE_GROUPS[0]]);
-  const turn = floorCount(t._continuity_turn);
-  const groups = Object.fromEntries(
-    ACTOR_STATE_GROUPS.map((g) => [
-      g,
-      uniqueStrings(t[g]).filter((v) => g !== ACTOR_STATE_GROUPS[0] || expires[v] === undefined || floorCount(expires[v]) >= turn),
-    ]),
-  ) as Record<ActorStateGroup, string[]>;
-  return {
-    groups,
-    count: floorCount(t.cum_count),
-    ttl: Object.fromEntries(
-      Object.entries(expires).flatMap(([k, v]) =>
-        groups[ACTOR_STATE_GROUPS[0]].includes(k) && floorCount(v) >= turn ? [[k, floorCount(v) - turn]] : [],
-      ),
-    ),
-  };
-}
-
-/** `Lne`: write a state into per-actor continuity records (turn >= 1, expiry = turn + ttl). */
-export function applyActorStateToContinuity(
-  records: Readonly<Record<string, unknown>>,
-  state: CurrentActorState,
-): Record<string, Record<string, unknown>> {
-  const out: Record<string, Record<string, unknown>> = { ...(records as Record<string, Record<string, unknown>>) };
-  for (const [key, actor] of Object.entries(state.actors)) {
-    const current = rec(out[key]);
-    const turn = Math.max(1, floorCount(current._continuity_turn));
-    const expires: Record<string, unknown> = { ...rec(current._continuity_expires) };
-    expires[ACTOR_STATE_GROUPS[0]] = Object.fromEntries(Object.entries(actor.ttl).map(([k, v]) => [k, turn + v]));
-    out[key] = { ...current, ...actor.groups, cum_count: actor.count, _continuity_turn: turn, _continuity_expires: expires };
-  }
-  return out;
-}
-
-/** `Dne`: keep only the group values still present in `allowed`; the count drops by the removed locations. */
-export function filterActorStateRecord(record: ActorStateRecord, allowed: Partial<Record<ActorStateGroup, readonly string[]>>): ActorStateRecord {
-  const groups = Object.fromEntries(
-    ACTOR_STATE_GROUPS.map((g) => [g, record.groups[g].filter((v) => allowed[g]?.includes(v))]),
-  ) as Record<ActorStateGroup, string[]>;
-  const kept = groups[ACTOR_STATE_GROUPS[0]];
-  const removed = record.groups[ACTOR_STATE_GROUPS[0]].length - kept.length;
-  return {
-    groups,
-    count: kept.length ? Math.max(0, record.count - removed) : 0,
-    ttl: Object.fromEntries(Object.entries(record.ttl).filter(([k]) => kept.includes(k))),
-  };
-}
-
-/* ------------------------------------------------------------------------------------------------------------------ */
 /* Generation journal (types + constants only; inert in Asset Maid, see spec pipeline §7)                              */
 /* ------------------------------------------------------------------------------------------------------------------ */
 
@@ -1223,7 +1101,8 @@ export const CHAT_DATA_VERSION = 1;
  * - `history`: the Image History tree persisted directly (port fix: entry ids, origins, parent entries, chosen
  *   defaults, asset hints and range count policies are durable). `store` is kept in sync with `foldTreeIntoStore`.
  * - `plans`: illustration plans keyed by `illustration:<HistoryMessageId>`.
- * - `actorState`: current actor state (`asset-maid:current-actor-state`).
+ * Documents written before AM 0.9.90 may also hold `actorState` (the removed accumulated actor state). It is accepted
+ * and dropped without a repair, so the next normal write omits it (AM new:29455); see `LEGACY_IGNORED_KEYS`.
  */
 export interface ChatDataDocument {
   schema: typeof CHAT_DATA_SCHEMA;
@@ -1233,12 +1112,14 @@ export interface ChatDataDocument {
   store: ChatStore;
   history: HistoryTree;
   plans: Record<string, IllustrationPlan>;
-  actorState: CurrentActorState;
 }
+
+/** Top-level keys of older documents that are accepted and dropped (no issue, no repair write). */
+const LEGACY_IGNORED_KEYS: readonly string[] = ["actorState"];
 
 export interface ChatDataIssue {
   /** Document part that the issue belongs to. */
-  part: "document" | "store" | "history" | "plans" | "actorState";
+  part: "document" | "store" | "history" | "plans";
   code: string;
   path: string;
   message: string;
@@ -1253,7 +1134,6 @@ export function createEmptyChatData(chatId: string, now: string = new Date().toI
     store: createEmptyChatStore(),
     history: createEmptyHistoryTree(chatKeyForChat(chatId)),
     plans: {},
-    actorState: createEmptyActorState(),
   };
 }
 
@@ -1279,7 +1159,6 @@ interface CheckedParts {
   history: HistoryTree | null;
   plans: Record<string, IllustrationPlan>;
   plansValid: boolean;
-  actorState: CurrentActorState | null;
 }
 
 function checkParts(raw: Record<string, unknown>, chatId: string): CheckedParts {
@@ -1312,9 +1191,7 @@ function checkParts(raw: Record<string, unknown>, chatId: string): CheckedParts 
         issues.push({ part: "plans", code: "plan-invalid", path: `$.plans.${key}`, message: "Plan key/messageId mismatch or not an object." });
       }
     }
-  const a = validateCurrentActorState(raw.actorState);
-  if (!a.ok) issues.push(...a.issues.map(fromStoreIssue("actorState")));
-  return { issues, store, history, plans, plansValid, actorState: a.ok ? a.state : null };
+  return { issues, store, history, plans, plansValid };
 }
 
 export type ChatDataValidationResult = { ok: true; data: ChatDataDocument } | { ok: false; issues: ChatDataIssue[] };
@@ -1330,12 +1207,12 @@ export function validateChatData(value: unknown, chatId?: string): ChatDataValid
     issues.push({ part: "document", code: "chat-id", path: "$.chatId", message: "chatId must match the chat that owns the document." });
   if (typeof value.updatedAt !== "string" || Number.isNaN(Date.parse(value.updatedAt)))
     issues.push({ part: "document", code: "updated-at", path: "$.updatedAt", message: "updatedAt must be an ISO date string." });
-  const extra = Object.keys(value).filter((k) => !["schema", "version", "chatId", "updatedAt", "store", "history", "plans", "actorState"].includes(k));
+  const extra = Object.keys(value).filter((k) => !["schema", "version", "chatId", "updatedAt", "store", "history", "plans", ...LEGACY_IGNORED_KEYS].includes(k));
   for (const k of extra) issues.push({ part: "document", code: "unexpected-field", path: `$.${k}`, message: "Unknown document field." });
   if (!id) return { ok: false, issues };
   const parts = checkParts(value, id);
   issues.push(...parts.issues);
-  if (issues.length || !parts.store || !parts.history || !parts.actorState) return { ok: false, issues };
+  if (issues.length || !parts.store || !parts.history) return { ok: false, issues };
   return {
     ok: true,
     data: {
@@ -1346,7 +1223,6 @@ export function validateChatData(value: unknown, chatId?: string): ChatDataValid
       store: parts.store,
       history: parts.history,
       plans: parts.plans,
-      actorState: parts.actorState,
     },
   };
 }
@@ -1402,7 +1278,6 @@ export function normalizeChatData(value: unknown, chatId: string, now: string = 
       store,
       history,
       plans: parts.plans,
-      actorState: parts.actorState ?? createEmptyActorState(),
     },
     issues,
     repaired: issues.length > 0,

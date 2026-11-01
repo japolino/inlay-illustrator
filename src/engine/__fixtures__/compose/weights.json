@@ -3038,8 +3038,14 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-4-5-full",
      "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
      "parameters": {
+      "steps": 28,
+      "sampler": "k_euler_ancestral",
+      "scale": 5,
+      "cfg_rescale": 0.1,
+      "noise_schedule": "karras",
       "negative_prompt": "lowres, blurry",
       "v4_prompt": {
        "caption": {
@@ -3099,8 +3105,14 @@
    "expected": {
     "ok": {
      "body": {
+      "model": "nai-diffusion-4-5-full",
       "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
       "parameters": {
+       "steps": 28,
+       "sampler": "k_euler_ancestral",
+       "scale": 5,
+       "cfg_rescale": 0.1,
+       "noise_schedule": "karras",
        "negative_prompt": "lowres, blurry",
        "v4_prompt": {
         "caption": {
@@ -3176,6 +3188,15 @@
       ],
       "weight": {
        "status": "unconfigured"
+      },
+      "sampling": {
+       "model": "nai-diffusion-4-5-full",
+       "effort": "high",
+       "steps": 28,
+       "sampler": "k_euler_ancestral",
+       "scale": 5,
+       "cfgRescale": 0.1,
+       "noiseSchedule": "karras"
       }
      }
     }
@@ -3184,8 +3205,14 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-4-5-full",
      "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
      "parameters": {
+      "steps": 28,
+      "sampler": "k_euler_ancestral",
+      "scale": 5,
+      "cfg_rescale": 0.1,
+      "noise_schedule": "karras",
       "negative_prompt": "lowres, blurry",
       "v4_prompt": {
        "caption": {
@@ -3250,8 +3277,14 @@
    "expected": {
     "ok": {
      "body": {
+      "model": "nai-diffusion-4-5-full",
       "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
       "parameters": {
+       "steps": 28,
+       "sampler": "k_euler_ancestral",
+       "scale": 5,
+       "cfg_rescale": 0.1,
+       "noise_schedule": "karras",
        "negative_prompt": "lowres, blurry",
        "v4_prompt": {
         "caption": {
@@ -3346,6 +3379,15 @@
       "weight": {
        "status": "disabled",
        "multiplier": 0.7
+      },
+      "sampling": {
+       "model": "nai-diffusion-4-5-full",
+       "effort": "high",
+       "steps": 28,
+       "sampler": "k_euler_ancestral",
+       "scale": 5,
+       "cfgRescale": 0.1,
+       "noiseSchedule": "karras"
       }
      }
     }
@@ -3354,8 +3396,14 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-4-5-full",
      "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
      "parameters": {
+      "steps": 28,
+      "sampler": "k_euler_ancestral",
+      "scale": 5,
+      "cfg_rescale": 0.1,
+      "noise_schedule": "karras",
       "negative_prompt": "lowres, blurry",
       "v4_prompt": {
        "caption": {
@@ -3420,8 +3468,14 @@
    "expected": {
     "ok": {
      "body": {
+      "model": "nai-diffusion-4-5-full",
       "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
       "parameters": {
+       "steps": 28,
+       "sampler": "k_euler_ancestral",
+       "scale": 5,
+       "cfg_rescale": 0.1,
+       "noise_schedule": "karras",
        "negative_prompt": "lowres, blurry",
        "v4_prompt": {
         "caption": {
@@ -3516,6 +3570,15 @@
       "weight": {
        "status": "identity",
        "multiplier": 1
+      },
+      "sampling": {
+       "model": "nai-diffusion-4-5-full",
+       "effort": "high",
+       "steps": 28,
+       "sampler": "k_euler_ancestral",
+       "scale": 5,
+       "cfgRescale": 0.1,
+       "noiseSchedule": "karras"
       }
      }
     }
@@ -3524,8 +3587,14 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-4-5-full",
      "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
      "parameters": {
+      "steps": 28,
+      "sampler": "k_euler_ancestral",
+      "scale": 5,
+      "cfg_rescale": 0.1,
+      "noise_schedule": "karras",
       "negative_prompt": "lowres, blurry",
       "v4_prompt": {
        "caption": {
@@ -3646,11 +3715,26 @@
        "status": "applied",
        "multiplier": 0.7,
        "artistId": "a1"
+      },
+      "sampling": {
+       "model": "nai-diffusion-4-5-full",
+       "effort": "high",
+       "steps": 28,
+       "sampler": "k_euler_ancestral",
+       "scale": 5,
+       "cfgRescale": 0.1,
+       "noiseSchedule": "karras"
       }
      },
      "body": {
+      "model": "nai-diffusion-4-5-full",
       "input": "0.7::1girl ::, artist:foo, 0.8::artist:bar ::, 0.7::scenery ::",
       "parameters": {
+       "steps": 28,
+       "sampler": "k_euler_ancestral",
+       "scale": 5,
+       "cfg_rescale": 0.1,
+       "noise_schedule": "karras",
        "negative_prompt": "lowres, 0.7::blurry ::",
        "v4_prompt": {
         "caption": {
@@ -3711,8 +3795,14 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-4-5-full",
      "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
      "parameters": {
+      "steps": 28,
+      "sampler": "k_euler_ancestral",
+      "scale": 5,
+      "cfg_rescale": 0.1,
+      "noise_schedule": "karras",
       "negative_prompt": "lowres, blurry",
       "v4_prompt": {
        "caption": {
@@ -3829,11 +3919,26 @@
        "status": "applied",
        "multiplier": 0.65,
        "artistId": "a1"
+      },
+      "sampling": {
+       "model": "nai-diffusion-4-5-full",
+       "effort": "high",
+       "steps": 28,
+       "sampler": "k_euler_ancestral",
+       "scale": 5,
+       "cfgRescale": 0.1,
+       "noiseSchedule": "karras"
       }
      },
      "body": {
+      "model": "nai-diffusion-4-5-full",
       "input": "0.65::1girl ::, artist:foo, 0.8::artist:bar ::, 0.65::scenery ::",
       "parameters": {
+       "steps": 28,
+       "sampler": "k_euler_ancestral",
+       "scale": 5,
+       "cfg_rescale": 0.1,
+       "noise_schedule": "karras",
        "negative_prompt": "0.65::lowres, blurry ::",
        "v4_prompt": {
         "caption": {
@@ -3894,8 +3999,14 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-4-5-full",
      "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
      "parameters": {
+      "steps": 28,
+      "sampler": "k_euler_ancestral",
+      "scale": 5,
+      "cfg_rescale": 0.1,
+      "noise_schedule": "karras",
       "negative_prompt": "lowres, blurry",
       "v4_prompt": {
        "caption": {
@@ -3972,8 +4083,14 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-4-5-full",
      "input": "1girl, artist:foo, 0.8::artist:bar ::, scenery",
      "parameters": {
+      "steps": 28,
+      "sampler": "k_euler_ancestral",
+      "scale": 5,
+      "cfg_rescale": 0.1,
+      "noise_schedule": "karras",
       "negative_prompt": "lowres, blurry",
       "v4_prompt": {
        "caption": {
@@ -4055,6 +4172,7 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-5-full",
      "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
      "parameters": {
       "negative_prompt": "lowres"
@@ -4065,6 +4183,7 @@
    "expected": {
     "ok": {
      "body": {
+      "model": "nai-diffusion-5-full",
       "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
       "parameters": {
        "negative_prompt": "lowres"
@@ -4076,6 +4195,11 @@
       "characterPrompts": [],
       "weight": {
        "status": "unconfigured"
+      },
+      "sampling": {
+       "model": "nai-diffusion-5-full",
+       "effort": "high",
+       "cfgRescale": 0
       }
      }
     }
@@ -4084,6 +4208,7 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-5-full",
      "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
      "parameters": {
       "negative_prompt": "lowres"
@@ -4099,6 +4224,7 @@
    "expected": {
     "ok": {
      "body": {
+      "model": "nai-diffusion-5-full",
       "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
       "parameters": {
        "negative_prompt": "lowres"
@@ -4120,6 +4246,11 @@
       "weight": {
        "status": "disabled",
        "multiplier": 0.7
+      },
+      "sampling": {
+       "model": "nai-diffusion-5-full",
+       "effort": "high",
+       "cfgRescale": 0
       }
      }
     }
@@ -4128,6 +4259,7 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-5-full",
      "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
      "parameters": {
       "negative_prompt": "lowres"
@@ -4143,6 +4275,7 @@
    "expected": {
     "ok": {
      "body": {
+      "model": "nai-diffusion-5-full",
       "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
       "parameters": {
        "negative_prompt": "lowres"
@@ -4164,6 +4297,11 @@
       "weight": {
        "status": "identity",
        "multiplier": 1
+      },
+      "sampling": {
+       "model": "nai-diffusion-5-full",
+       "effort": "high",
+       "cfgRescale": 0
       }
      }
     }
@@ -4172,6 +4310,7 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-5-full",
      "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
      "parameters": {
       "negative_prompt": "lowres"
@@ -4219,9 +4358,15 @@
        "status": "applied",
        "multiplier": 0.7,
        "artistId": "a1"
+      },
+      "sampling": {
+       "model": "nai-diffusion-5-full",
+       "effort": "high",
+       "cfgRescale": 0
       }
      },
      "body": {
+      "model": "nai-diffusion-5-full",
       "input": "nsfw, 0.7::solo ::, artist:foo, 0.8::artist:bar ::",
       "parameters": {
        "negative_prompt": "lowres"
@@ -4233,6 +4378,7 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-5-full",
      "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
      "parameters": {
       "negative_prompt": "lowres"
@@ -4276,9 +4422,15 @@
        "status": "applied",
        "multiplier": 0.65,
        "artistId": "a1"
+      },
+      "sampling": {
+       "model": "nai-diffusion-5-full",
+       "effort": "high",
+       "cfgRescale": 0
       }
      },
      "body": {
+      "model": "nai-diffusion-5-full",
       "input": "nsfw, 0.65::solo ::, artist:foo, 0.8::artist:bar ::",
       "parameters": {
        "negative_prompt": "0.65::lowres ::"
@@ -4290,6 +4442,7 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-5-full",
      "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
      "parameters": {
       "negative_prompt": "lowres"
@@ -4317,6 +4470,7 @@
   {
    "input": {
     "body": {
+     "model": "nai-diffusion-5-full",
      "input": "nsfw, solo, artist:foo, 0.8::artist:bar ::",
      "parameters": {
       "negative_prompt": "lowres"

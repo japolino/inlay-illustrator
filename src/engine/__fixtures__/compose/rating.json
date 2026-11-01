@@ -1,0 +1,1846 @@
+{
+ "policy": [
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl, solo",
+     "globalPositivePrompt": "nsfw, 1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "sfw",
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "sfw, 1girl, solo",
+     "globalPositivePrompt": "sfw, 1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, solo",
+     "globalPositivePrompt": "1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl, solo",
+     "globalPositivePrompt": "nsfw, 1girl, solo, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl",
+     "globalPositivePrompt": "1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl",
+     "globalPositivePrompt": "1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "sfw",
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "sfw, 1girl",
+     "globalPositivePrompt": "sfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl",
+     "globalPositivePrompt": "1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl",
+     "globalPositivePrompt": "1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "sfw",
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "sfw, 1girl",
+     "globalPositivePrompt": "sfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1girl, NSFW, rating:explicit",
+     "globalPositivePrompt": "1girl, NSFW, rating:explicit, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, 1girl",
+     "globalPositivePrompt": "nsfw, 1girl, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "scenery",
+     "globalPositivePrompt": "scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "scenery",
+     "globalPositivePrompt": "scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, scenery",
+     "globalPositivePrompt": "nsfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "sfw",
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "sfw, scenery",
+     "globalPositivePrompt": "sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery",
+     "globalPositivePrompt": "1.2::nsfw, rating:safe::, sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, scenery",
+     "globalPositivePrompt": "nsfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": "extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": "extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw",
+     "globalPositivePrompt": "nsfw, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "sfw",
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "sfw",
+     "globalPositivePrompt": "sfw, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "",
+     "globalPositivePrompt": ", extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw",
+     "globalPositivePrompt": "nsfw, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "a",
+     "globalPositivePrompt": "a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "a",
+     "globalPositivePrompt": "a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, a",
+     "globalPositivePrompt": "nsfw, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "sfw",
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "sfw, a",
+     "globalPositivePrompt": "sfw, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "2::nsfw::, a",
+     "globalPositivePrompt": "2::nsfw::, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, a",
+     "globalPositivePrompt": "nsfw, a, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "scenery",
+     "globalPositivePrompt": "scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 0
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "scenery",
+     "globalPositivePrompt": "scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 1
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, scenery",
+     "globalPositivePrompt": "nsfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": false,
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "sfw",
+    "actorCount": 3
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "sfw, scenery",
+     "globalPositivePrompt": "sfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "prompt": {
+     "provider": "novelai",
+     "positivePrompt": "scenery, rating:general",
+     "globalPositivePrompt": "scenery, rating:general, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl, nsfw, rating:safe"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    },
+    "rating": "nsfw",
+    "actorCount": 2
+   },
+   "expected": {
+    "ok": {
+     "provider": "novelai",
+     "positivePrompt": "nsfw, scenery",
+     "globalPositivePrompt": "nsfw, scenery, extra",
+     "negativePrompt": "x",
+     "characterPrompts": [
+      {
+       "prompt": "1girl"
+      },
+      {
+       "prompt": "solo"
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  }
+ ],
+ "prepend": [
+  {
+   "input": [
+    "1girl, solo",
+    "sfw"
+   ],
+   "expected": {
+    "ok": "sfw, 1girl, solo"
+   }
+  },
+  {
+   "input": [
+    "1girl, solo",
+    "nsfw"
+   ],
+   "expected": {
+    "ok": "nsfw, 1girl, solo"
+   }
+  },
+  {
+   "input": [
+    "nsfw, 1girl",
+    "sfw"
+   ],
+   "expected": {
+    "ok": "sfw, 1girl"
+   }
+  },
+  {
+   "input": [
+    "nsfw, 1girl",
+    "nsfw"
+   ],
+   "expected": {
+    "ok": "nsfw, 1girl"
+   }
+  },
+  {
+   "input": [
+    "1girl, NSFW, rating:explicit",
+    "sfw"
+   ],
+   "expected": {
+    "ok": "sfw, 1girl"
+   }
+  },
+  {
+   "input": [
+    "1girl, NSFW, rating:explicit",
+    "nsfw"
+   ],
+   "expected": {
+    "ok": "nsfw, 1girl"
+   }
+  },
+  {
+   "input": [
+    "1.2::nsfw, rating:safe::, sfw, scenery",
+    "sfw"
+   ],
+   "expected": {
+    "ok": "sfw, scenery"
+   }
+  },
+  {
+   "input": [
+    "1.2::nsfw, rating:safe::, sfw, scenery",
+    "nsfw"
+   ],
+   "expected": {
+    "ok": "nsfw, scenery"
+   }
+  },
+  {
+   "input": [
+    "",
+    "sfw"
+   ],
+   "expected": {
+    "ok": "sfw"
+   }
+  },
+  {
+   "input": [
+    "",
+    "nsfw"
+   ],
+   "expected": {
+    "ok": "nsfw"
+   }
+  },
+  {
+   "input": [
+    "2::nsfw::, a",
+    "sfw"
+   ],
+   "expected": {
+    "ok": "sfw, a"
+   }
+  },
+  {
+   "input": [
+    "2::nsfw::, a",
+    "nsfw"
+   ],
+   "expected": {
+    "ok": "nsfw, a"
+   }
+  },
+  {
+   "input": [
+    "scenery, rating:general",
+    "sfw"
+   ],
+   "expected": {
+    "ok": "sfw, scenery"
+   }
+  },
+  {
+   "input": [
+    "scenery, rating:general",
+    "nsfw"
+   ],
+   "expected": {
+    "ok": "nsfw, scenery"
+   }
+  },
+  {
+   "input": [
+    "a::b, nsfw::c, nsfw",
+    "sfw"
+   ],
+   "expected": {
+    "ok": "sfw, a::b, nsfw::c"
+   }
+  },
+  {
+   "input": [
+    "a::b, nsfw::c, nsfw",
+    "nsfw"
+   ],
+   "expected": {
+    "ok": "nsfw, a::b, nsfw::c"
+   }
+  },
+  {
+   "input": [
+    "1::nsfw::",
+    "sfw"
+   ],
+   "expected": {
+    "ok": "sfw"
+   }
+  },
+  {
+   "input": [
+    "1::nsfw::",
+    "nsfw"
+   ],
+   "expected": {
+    "ok": "nsfw"
+   }
+  }
+ ],
+ "fixed": [
+  {
+   "input": {},
+   "expected": {
+    "ok": false
+   }
+  },
+  {
+   "input": {
+    "nsfwAlwaysEnabled": true,
+    "fixedRating": "nsfw"
+   },
+   "expected": {
+    "ok": "nsfw"
+   }
+  },
+  {
+   "input": {
+    "nsfwAlwaysEnabled": true,
+    "fixedRating": "sfw"
+   },
+   "expected": {
+    "ok": "sfw"
+   }
+  },
+  {
+   "input": {
+    "nsfwAlwaysEnabled": false,
+    "fixedRating": "sfw"
+   },
+   "expected": {
+    "ok": false
+   }
+  }
+ ],
+ "normalize": [
+  {
+   "input": "sfw",
+   "expected": {
+    "ok": "sfw"
+   }
+  },
+  {
+   "input": "nsfw",
+   "expected": {
+    "ok": "nsfw"
+   }
+  },
+  {
+   "input": "SFW",
+   "expected": {
+    "ok": "nsfw"
+   }
+  },
+  {
+   "input": "",
+   "expected": {
+    "ok": "nsfw"
+   }
+  },
+  {
+   "input": null,
+   "expected": {
+    "ok": "nsfw"
+   }
+  },
+  {
+   "input": 1,
+   "expected": {
+    "ok": "nsfw"
+   }
+  }
+ ],
+ "ratingTags": [
+  "sfw",
+  "nsfw",
+  "rating:general",
+  "rating:sensitive",
+  "rating:questionable",
+  "rating:explicit",
+  "rating:safe"
+ ]
+}

@@ -1,8 +1,0 @@
-{
- "scenarios": [
-  "novelai-two-images",
-  "novelai-fixed-size-nsfw-skip",
-  "comfyui-anima"
- ],
- "seed": 99
-}

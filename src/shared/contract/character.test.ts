@@ -13,6 +13,11 @@ import {
   customCharacterRosterState,
   dedupeAssetRefs,
   deleteForm,
+  editGroupFields,
+  GROUP_TO_OUTFIT_PARTS,
+  groupFieldValues,
+  hasPhysicalTraits,
+  OTHER_ORDER_FIELDS,
   deleteOutfit,
   descriptionPromptKey,
   effectiveRecognitionKeys,
@@ -24,6 +29,7 @@ import {
   isOutfitEmpty,
   listNovelAIArtists,
   lorePromptKey,
+  resolveNovelAIArtistSelection,
   mergeAnalyzedBasePromptGroups,
   moveOutfit,
   normalizeAssetRef,
@@ -70,10 +76,52 @@ describe("prompt keys (Lumiverse mapping)", () => {
 });
 
 describe("appearance catalog parity (Qs / Si / bW)", () => {
-  test("catalog has 13 groups", () => expect(APPEARANCE_CATALOG.groups.length).toBe(13));
+  test("catalog has 14 groups (0.9.90 adds body.breast_other)", () => expect(APPEARANCE_CATALOG.groups.length).toBe(14));
   for (const [i, c] of P.Qs.entries()) test(`Qs ${i}`, () => expect(normalizeBasePromptGroups(c.input, c.options)).toEqual(c.output));
   for (const [i, c] of P.Si.entries()) test(`Si ${i}`, () => expect(compileMainPrompt(c.input, c.gender ?? undefined)).toBe(c.output));
   for (const [i, c] of P.bW.entries()) test(`bW ${i}`, () => expect(mergeAnalyzedBasePromptGroups(c.current, c.analyzed, c.gender)).toEqual(c.output));
+});
+
+describe("chest other (AM 0.9.90 body.breast_other)", () => {
+  test("freeform group after the breast size, top-relevant, max 4 tags for analysis input", () => {
+    const groups = { "body.breast_other": ["cleavage", "a", "b", "c", "d"] };
+    expect(normalizeBasePromptGroups(groups)["body.breast_other"]).toEqual(["cleavage", "a", "b", "c"]);
+    expect(normalizeBasePromptGroups(groups, { allowPromptFragments: true })["body.breast_other"]).toHaveLength(5);
+    expect(GROUP_TO_OUTFIT_PARTS["body.breast_other"]).toEqual(["top"]);
+  });
+  test("compiled right after the size; a male form keeps it and drops the size", () => {
+    const groups = { "body.breast_size": ["large breasts"], "body.breast_other": ["cleavage"], "marks.distinctive": ["mole"] };
+    expect(compileMainPrompt(groups, "female")).toBe("large breasts, cleavage, mole");
+    expect(compileMainPrompt(groups, "male")).toBe("cleavage, mole");
+  });
+});
+
+describe("other tags order (AM 0.9.90 otherOrder)", () => {
+  const base = { "hair.color": ["black hair"], "body.skin": ["dark skin"], "body.proportions": ["wide hips"] };
+  const fields = [...OTHER_ORDER_FIELDS] as string[];
+  test("typed order is stored when it differs from field order, and compiled in that order", () => {
+    const edited = editGroupFields(base, "female", fields, "custom", "scar, dark skin, wide hips");
+    expect(edited).toEqual({ "hair.color": ["black hair"], "body.skin": ["dark skin"], "body.proportions": ["wide hips"], custom: ["scar"], otherOrder: ["scar", "dark skin", "wide hips"] });
+    expect(compileMainPrompt(edited, "female")).toBe("black hair, scar, dark skin, wide hips");
+    expect(groupFieldValues(edited, fields)).toEqual(["scar", "dark skin", "wide hips"]);
+  });
+  test("typing in field order deletes otherOrder; removing a value drops it from otherOrder", () => {
+    const ordered = editGroupFields(base, "female", fields, "custom", "scar, dark skin, wide hips");
+    expect(editGroupFields(ordered, "female", fields, "custom", "dark skin, wide hips, scar")).not.toHaveProperty("otherOrder");
+    expect(editGroupFields(ordered, "female", fields, "custom", "scar, wide hips").otherOrder).toEqual(["scar", "wide hips"]);
+    const dropped = normalizeBasePromptGroups({ ...ordered, "body.skin": [] }, { allowPromptFragments: true });
+    expect(dropped.otherOrder).toEqual(["scar", "wide hips"]);
+  });
+  test("round-trips only for stored forms (allowPromptFragments); not a physical trait; kept by analysis merge", () => {
+    const stored = { "body.skin": ["dark skin"], custom: ["scar"], otherOrder: ["scar", "dark skin"] };
+    expect(normalizeBasePromptGroups(stored, { allowPromptFragments: true }).otherOrder).toEqual(["scar", "dark skin"]);
+    expect(normalizeBasePromptGroups(stored)).not.toHaveProperty("otherOrder");
+    expect(hasPhysicalTraits({ otherOrder: ["x"] })).toBe(false);
+    expect(mergeAnalyzedBasePromptGroups(stored, { "hair.color": ["red hair"] }).otherOrder).toEqual(["scar"]);
+    expect(mergeAnalyzedBasePromptGroups(stored, { "eyes.color": ["blue eyes"], "body.skin": ["dark skin"] }).otherOrder).toEqual(["scar", "dark skin"]);
+    const collection = normalizeFormCollection({ forms: [{ id: "form_default", basePromptGroups: stored }] });
+    expect(collection.forms[0]!.basePromptGroups.otherOrder).toEqual(["scar", "dark skin"]);
+  });
 });
 
 describe("FormCollection parity (go / LY / ds / ops)", () => {
@@ -148,6 +196,18 @@ describe("recognition keys / artists / assets parity", () => {
   for (const [i, c] of P.Aa.entries()) test(`Aa ${i}`, () => expect(normalizeNonArtistPromptWeight(c.input) ?? null).toEqual(c.output));
   for (const [i, c] of P.Mu.entries()) test(`Mu ${i}`, () => expect(normalizeWeightedPromptSpacing(c.input)).toBe(c.output));
   test("FP", () => expect(listNovelAIArtists(P.FP.artistPrompts)).toEqual(P.FP.output));
+  test("artist selection: a default pointing at a deleted or removed built-in resolves to none (AM 0.9.90 default star)", () => {
+    expect(resolveNovelAIArtistSelection({ artistPrompts: [], defaultArtistId: "removed_builtin" }, "")).toMatchObject({ id: "none" });
+    expect(resolveNovelAIArtistSelection({ artistPrompts: [{ id: "artist_x", title: "X", prompt: "x" }], defaultArtistId: "artist_x" }, "none")).toMatchObject({ id: "none", followsGlobal: false });
+  });
+  test("weighted spacing (AM 0.9.90 `Uu`): a space before the closing `::` only after a number, never trimmed", () => {
+    expect(normalizeWeightedPromptSpacing("0.9::artist:junkzero::")).toBe("0.9::artist:junkzero::");
+    expect(normalizeWeightedPromptSpacing("1.2::artist:abc123::")).toBe("1.2::artist:abc123 ::");
+    expect(normalizeWeightedPromptSpacing("1.2::artist:abc   ::, 0.5::artist:x2 ::")).toBe("1.2::artist:abc   ::, 0.5::artist:x2 ::");
+    expect(normalizeWeightedPromptSpacing("year 2024, 1.1::artist:foo::")).toBe("year 2024, 1.1::artist:foo::");
+    const stored = listNovelAIArtists([{ id: "artist_foo", title: "Foo", prompt: "1.1::artist:foo::" }]).find((a) => a.id === "artist_foo");
+    expect(stored?.prompt).toBe("1.1::artist:foo::");
+  });
   for (const [i, c] of P.assetRefs.entries()) test(`pn ${i}`, () => {
     expect(normalizeAssetRef(c.input)).toEqual(c.output);
     expect(assetIdentity(c.input)).toBe(c.identity);

@@ -1,9 +1,10 @@
 /**
- * Analyzer context building (Asset Maid `MAt` @167588-167725 and helpers): everything the V4.5/V5
- * planner can see, plus the prompt-input/reference callbacks the orchestrator uses later.
+ * Analyzer context building (Asset Maid 0.9.90 `gxt` @172212 and helpers): everything the V5 planner can see, plus
+ * the prompt-context/reference callbacks the orchestrator uses later.
  *
  * Thin typed wrappers over the verbatim core. See README.md in this folder for the exact list of
- * config / source / character fields read.
+ * config / source / character fields read. 0.9.90 dropped the V4.5 parts of the old `s1t`
+ * (`promptInputs`, `outfitContinuityReferences`) and the known-identity list for free character generation.
  */
 import {
   buildAnalyzerContextInputs as coreBuildAnalyzerContextInputs,
@@ -13,25 +14,22 @@ import {
   resolveArtistPromptSelection as coreResolveArtistPromptSelection,
   resolveSourceGenerationSettings as coreResolveSourceGenerationSettings,
   normalizeSourceGenerationSettings as coreDefaultSourceGenerationSettings,
-  NOVELAI_DEFAULTS,
-  i1t as coreBuildChatContext,
-  ES as coreResolvePersonaProfile,
-  mR as coreFreeOutfitGenerationEnabled,
-  Ds as coreIsAnimaFlatProvider,
-  QWe as coreHasStoredContinuity,
-  y1t as coreResolveIdentityEvidence,
-  tPt as coreToPlannerImageToken,
-  y_ as coreWithCustomCharacterMembers,
-  ZQ as coreResolvePresetScope,
-  S1t as coreResolveOutfitCreationMode,
-  V1t as coreBuildKnownIdentities,
-  kIe as coreAsRecord,
+  resolveFixedRating as coreResolveFixedRating,
+  mxt as coreBuildChatContext,
+  kj as coreResolvePersonaProfile,
+  NE as coreFreeOutfitGenerationEnabled,
+  Vi as coreIsAnimaFlatProvider,
+  hasStoredContinuity as coreHasStoredContinuity,
+  Axt as coreResolveIdentityEvidence,
+  Txt as coreToPlannerImageToken,
+  r5 as coreWithCustomCharacterMembers,
+  qAe as coreResolvePresetScope,
+  gyt as coreResolveOutfitCreationMode,
+  Xwe as coreAsRecord,
 } from "../core/asset-maid-core";
 import type {
   AnalyzerCheckpointContext,
   AnalyzerContext,
-  AnalyzerFingerprintInput,
-  AnalyzerValidationOptions,
   CandidateSlot,
   ChatContext,
   IdentityCandidate,
@@ -115,22 +113,20 @@ export interface ChatMessageLike {
   content: unknown;
 }
 
-/** Visual continuity state (spec/pipeline.md §3.7a, AM `$g` @42944). */
+/** Visual continuity state (spec/pipeline.md §3.7a, AM 0.9.90 `UE` @36624). */
 export interface ContinuityState {
   version: 1;
   scenes: Record<string, unknown>;
   characters: Record<string, Record<string, Record<string, unknown>>>;
   modifierRefs: Record<string, unknown>;
   outfitRefs: Record<string, unknown>;
-  nsfwPositions: Record<string, unknown>;
   recentCheckpoints: Record<string, unknown[]>;
-  historicalStaticBases: Record<string, unknown[]>;
 }
 
-/** Input of `buildAnalyzerContextInputs` (E1t @169541-169562). */
+/** Input of `buildAnalyzerContextInputs` (AM 0.9.90 `Vxt` @173414-173431). */
 export interface AnalyzerContextSourceInput {
   config: AssetMaidConfig;
-  /** Live config getter used by the late callbacks (promptInputs, references, ...). Defaults to `config`. */
+  /** Live config getter used by the late callbacks (v5PromptContext, references, ...). Defaults to `config`. */
   getConfig?: () => AssetMaidConfig;
   continuity: ContinuityState;
   chatKey: string;
@@ -147,13 +143,6 @@ export interface AnalyzerContextSourceInput {
   personaRecords?: PersonaRecord[];
 }
 
-/** NovelAI decision subset read by `promptInputs` (only `actors.*.lorebook_prompt_key`, `lorebook_prompt_key`). */
-export interface DecisionLike {
-  actors: Record<string, { lorebook_prompt_key?: string } | null | undefined>;
-  lorebook_prompt_key?: string;
-  [extra: string]: unknown;
-}
-
 /** Image actor subset read by the reference callbacks (AM `p_e` @167230). */
 export interface ImageActorLike {
   actorId: string;
@@ -164,29 +153,6 @@ export interface ImageActorLike {
   selectedOutfitId?: string;
   identitySuppressed?: boolean;
   [extra: string]: unknown;
-}
-
-/** Prompt inputs for the prompt compiler (MAt @167610-167634). */
-export interface PromptInputs {
-  identityCandidates: unknown[];
-  outfitsByPromptKey: Record<string, unknown[]>;
-  fixedPositivePrompt: string;
-  negativePrompt: string;
-  personaPrompt: string;
-  personaBasePromptGroups: Record<string, string[]>;
-  personaNegativePrompt: string;
-  personaName: string;
-  personaGender: string;
-  personaPromptKey: string;
-  personaDefaultOutfitId: string;
-  personaAppearanceForms: unknown[];
-  personaDefaultFormId: string;
-  artistId: string;
-  artistName: string;
-  artistPrompt: string;
-  artistNegativePrompt: string;
-  continuityPrompt?: string;
-  actorContinuityPrompts?: Record<string, string>;
 }
 
 export interface CharacterReference {
@@ -201,7 +167,7 @@ export interface CharacterReference {
   fidelity: unknown;
 }
 
-/** Output of `buildAnalyzerContextInputs` (MAt @167601-167724). */
+/** Output of `buildAnalyzerContextInputs` (`gxt` @172212). */
 export interface AnalyzerContextInputs {
   analyzerIdentityCandidates: IdentityCandidate[];
   analyzerPersonaCandidates: IdentityCandidate[];
@@ -211,29 +177,28 @@ export interface AnalyzerContextInputs {
   analyzerPersonaPromptKey: string;
   analyzerPersonaDefaultOutfitId: string;
   personaGender: string;
-  promptInputs(decision: DecisionLike): PromptInputs;
   v5PromptContext(identityKeys: string[]): Record<string, unknown>;
   references(actors: ImageActorLike[]): CharacterReference[];
   outfitReference(actors: ImageActorLike[]): CharacterReference | null;
   characterReference(actors: ImageActorLike[]): CharacterReference | null;
-  /** Always `{key:"", seed:"", fixed:false}` in Asset Maid 0.9.88 (AM `kAt` @167335 stub). */
-  seedSetting(actors: ImageActorLike[]): { key: string; seed: string; fixed: boolean };
-  outfitContinuityReferences(images: unknown[]): { actorKey: string; formId: string; outfitId: string; description: string }[];
+  /** Per-actor seed setting (`sxt`). */
+  seedSetting(actors: ImageActorLike[]): { key?: string; seed: string; fixed: boolean };
   visualContinuity: VisualContinuityContext;
   previousCharacterStateMap: Record<string, Record<string, unknown>>;
   chatContext: ChatContext;
 }
 
 /**
- * Build everything the analyzer and the prompt compiler need from config + source + chat (AM `MAt` @167588).
+ * Build everything the V5 analyzer and composer need from config + source + chat (AM `gxt` @172212).
  * Pure except for the callbacks, which read `getConfig()` lazily (Asset Maid passes a live snapshot getter).
+ * The config must carry `jevConnection` (read by the source generation settings `pO`).
  */
 export function buildAnalyzerContextInputs(input: AnalyzerContextSourceInput): AnalyzerContextInputs {
-  return coreBuildAnalyzerContextInputs(input) as AnalyzerContextInputs;
+  return coreBuildAnalyzerContextInputs(input) as unknown as AnalyzerContextInputs;
 }
 
 /**
- * Outfit candidates of identity candidates (AM `y_e` @167359): candidate-enabled, non-empty outfits;
+ * Outfit candidates of identity candidates (AM `jwe` @171996): candidate-enabled, non-empty outfits;
  * ai-auto outfits only when status "ready"; `form_id` omitted for "form_default".
  */
 export function buildOutfitCandidates(candidates: IdentityCandidate[]): OutfitCandidate[] {
@@ -241,7 +206,7 @@ export function buildOutfitCandidates(candidates: IdentityCandidate[]): OutfitCa
 }
 
 /**
- * Visual continuity context (AM `NAt` @167494).
+ * Visual continuity context (AM `pxt` @172119).
  * @param primaryKeys first two image-token prompt keys (primary, secondary)
  * @param identityKeys all identity candidate keys (filters previous participants)
  * @param personaKeys `[personaPromptKey]` or []
@@ -259,7 +224,7 @@ export function buildVisualContinuityContext(
 }
 
 /**
- * Chat history part of the chat context (AM `RAt` @167561): last non-empty user message,
+ * Chat history part of the chat context (AM `mxt` @172185): last non-empty user message,
  * previous non-empty assistant message before it (only when `includePreviousAssistant`), and `content`.
  */
 export function buildChatContext(
@@ -270,7 +235,7 @@ export function buildChatContext(
   return coreBuildChatContext(messages, content, includePreviousAssistant) as ReturnType<typeof buildChatContext>;
 }
 
-/** Does the continuity state hold anything for this chat? (AM `B8` @42956). MAt sends the previous assistant reply only when false. */
+/** Does the continuity state hold anything for this chat? (AM `$3e` @36627). `gxt` sends the previous assistant reply only when false. */
 export function hasStoredContinuity(continuity: ContinuityState, chatKey: string): boolean {
   return coreHasStoredContinuity(continuity, chatKey) as boolean;
 }
@@ -280,8 +245,9 @@ export interface SourceGenerationSettings {
   freeCharacterGenerationEnabled: boolean;
   freeOutfitGenerationEnabled: boolean;
   rosterSelectionEnabled: boolean;
-  stateAccumulationEnabled: boolean;
   nsfwAlwaysEnabled: boolean;
+  /** 0.9.90: the rating used when `nsfwAlwaysEnabled` (`O8`: "sfw" stays, anything else "nsfw"). */
+  fixedRating: "sfw" | "nsfw";
   forceAiChoiceCoordinates: boolean;
   autoRemoveConflictingRegex: boolean;
   fixedResolution: { enabled: boolean; sizeId: number };
@@ -292,19 +258,25 @@ export interface SourceGenerationSettings {
 }
 
 /**
- * Per-character-source generation settings (AM `ki` @24725): `characterPrompt.charxSettings.overrides[sourceId]`
- * over the defaults `characterPrompt.charxGenerationDefaults` (AM `xE` @24772).
+ * Per-character-source generation settings (AM `xi` @12476): `characterPrompt.charxSettings.overrides[sourceId]`
+ * over the defaults `characterPrompt.charxGenerationDefaults` (AM `pO` @12520). 0.9.90: no `stateAccumulationEnabled`,
+ * new `fixedRating`, `rosterSelectionEnabled` defaults to `config.jevConnection.rosterSelectionDefault`.
  */
 export function resolveSourceGenerationSettings(config: AssetMaidConfig, sourceId: string): SourceGenerationSettings {
   return coreResolveSourceGenerationSettings(config, sourceId) as SourceGenerationSettings;
 }
 
-/** Defaults part only (AM `xE` @24772). */
+/** Defaults part only (AM `pO` @12520). */
 export function getDefaultSourceGenerationSettings(config: AssetMaidConfig): SourceGenerationSettings {
   return coreDefaultSourceGenerationSettings(config) as SourceGenerationSettings;
 }
 
-/** `resolveSourceGenerationSettings(config, sourceId).freeOutfitGenerationEnabled` (AM `jE` @25542). */
+/** Fixed rating of a source (`nsfwAlwaysEnabled ? fixedRating : false`; run input `forceRating`). AM `yS` @4532. */
+export function resolveSourceFixedRating(config: AssetMaidConfig, sourceId: string): "sfw" | "nsfw" | false {
+  return coreResolveFixedRating(resolveSourceGenerationSettings(config, sourceId)) as "sfw" | "nsfw" | false;
+}
+
+/** `resolveSourceGenerationSettings(config, sourceId).freeOutfitGenerationEnabled` (AM `NE`). */
 export function isFreeOutfitGenerationEnabled(config: AssetMaidConfig, sourceId: string): boolean {
   return coreFreeOutfitGenerationEnabled(config, sourceId) as boolean;
 }
@@ -319,9 +291,9 @@ export interface ArtistPromptSelection {
 }
 
 /**
- * Artist prompt for a provider (AM `Ky` @94951). NovelAI: `characterPrompt.selectedArtistId` over
- * default presets + `characterPrompt.artistPrompts`; Anima (chan-server/comfy-ui): `animaArtists`
- * (`selection.bySourceId[sourceId] ?? defaultId`, negative ""). Prompts pass the weight normaliser `Mu`.
+ * Artist prompt for a provider (AM `Sx` @89787). NovelAI: `characterPrompt.selectedArtistId` over
+ * default presets (0.9.90: only `none`) + `characterPrompt.artistPrompts`; Anima (comfy-ui): `animaArtists`
+ * (`selection.bySourceId[sourceId] ?? defaultId`, negative ""). Prompts pass the weight normaliser `hm`.
  */
 export function resolveArtistPromptSelection(
   config: AssetMaidConfig,
@@ -331,7 +303,7 @@ export function resolveArtistPromptSelection(
 }
 
 /**
- * NovelAI config for a run (AM `Sat` @94971): `config.novelai` + artist `novelAIOverrides`
+ * NovelAI config for a run (AM `OYe` @89807): `config.novelai` + artist `novelAIOverrides`
  * + `nonArtistPromptWeight` + `nonArtistPromptWeightArtist {id,name,positive,negative}`.
  */
 export function resolveNovelAIRunConfig(config: AssetMaidConfig, options: { sourceId?: string; promptKey?: string } = {}): Record<string, unknown> {
@@ -349,17 +321,17 @@ export interface PersonaProfile {
   forms: { defaultFormId: string; forms: unknown[] };
 }
 
-/** Persona appearance (AM `lS` @167430); default prompt "1::kazehaya shouta::" when the persona has no prompt. */
+/** Persona appearance (AM `kj` @172062). */
 export function resolvePersonaProfile(config: AssetMaidConfig, personaKey: string): PersonaProfile {
   return coreResolvePersonaProfile(config, personaKey) as PersonaProfile;
 }
 
-/** chan-server / comfy-ui use the Anima flat prompt codec (AM `Nc` @20644). */
+/** comfy-ui uses the Anima flat prompt codec (AM `Vi` @4734; Chan Server is gone in 0.9.90). */
 export function isAnimaFlatProvider(provider: string): boolean {
   return coreIsAnimaFlatProvider(provider) as boolean;
 }
 
-/** Planner image token from a detected chat image token (AM `g1t` @168873). */
+/** Planner image token from a detected chat image token (AM `Txt` @172924). */
 export function toPlannerImageToken(token: {
   tokenName: string;
   characterName: string;
@@ -371,7 +343,7 @@ export function toPlannerImageToken(token: {
   return coreToPlannerImageToken(token) as PlannerImageToken;
 }
 
-/** Append active custom characters as virtual source members (AM `rI` @93161). Memoised per source. */
+/** Append active custom characters as virtual source members (AM `r5` @69417). Memoised per source. */
 export function withCustomCharacterMembers(
   source: CharacterSource | null,
   customCharacters: unknown[],
@@ -380,19 +352,14 @@ export function withCustomCharacterMembers(
   return coreWithCustomCharacterMembers(source, customCharacters, mode) as CharacterSource | null;
 }
 
-/** Always "all" in 0.9.88 (AM `OW` @20663). */
+/** Always "all" (AM `qAe` @4753). */
 export function resolvePresetScope(provider: string, comfyuiOutfitReferenceEnabled?: boolean): PresetScope {
   return coreResolvePresetScope(provider, comfyuiOutfitReferenceEnabled) as PresetScope;
 }
 
-/** Auto-outfit creation mode "tags-only" | "reference-image" (AM `ZAt` @168328). */
+/** Auto-outfit creation mode "tags-only" | "reference-image" (AM `gyt` @169692). */
 export function resolveOutfitCreationMode(config: AssetMaidConfig): "tags-only" | "reference-image" {
   return coreResolveOutfitCreationMode(config) as "tags-only" | "reference-image";
-}
-
-/** Known identities for free character generation (AM `c1t` @168769). */
-export function buildKnownIdentities(source: CharacterSource | null, personaRecords: PersonaRecord[] = []): { name: string; keys: string[] }[] {
-  return coreBuildKnownIdentities(source, personaRecords as never[]) as { name: string; keys: string[] }[];
 }
 
 export interface ParagraphSlotLike {
@@ -408,7 +375,7 @@ export interface IdentityEvidence {
 }
 
 /**
- * Identity evidence per paragraph slot (AM `UAt` @167957, async; yields every `yieldBudgetMs`).
+ * Identity evidence per paragraph slot (AM `Axt` @172554, async; yields every `yieldBudgetMs`).
  * `actorHintsBySlot.get(slotId)` becomes `candidateSlots[].actor_hints`.
  */
 export async function resolveIdentityEvidence(input: {
@@ -423,7 +390,7 @@ export async function resolveIdentityEvidence(input: {
   return (await coreResolveIdentityEvidence({ yieldBudgetMs: 8, ...input })) as IdentityEvidence;
 }
 
-/** Candidate slots for the analyzer from paragraph slots + evidence (E1t @169621-169630). */
+/** Candidate slots for the analyzer from paragraph slots + evidence (AM `Vxt` chat flow). */
 export function buildCandidateSlots(slots: ParagraphSlotLike[], evidence: IdentityEvidence | null): CandidateSlot[] {
   return slots.map((slot) => {
     const hints = [...(evidence?.actorHintsBySlot.get(slot.slotId) ?? [])];
@@ -444,7 +411,8 @@ export interface AssembleAnalyzerInputOptions {
   candidateSlots: CandidateSlot[];
   targetImageCount: number;
   imageCountConstraint: ImageCountConstraint;
-  checkpoint: { chatKey: string; messageIndex: number; messageId: string };
+  /** `messageIndex` is accepted for compatibility and unused (0.9.90 checkpoint context has no index). */
+  checkpoint: { chatKey: string; messageIndex?: number; messageId: string };
   modelType?: string;
   replayGeneratedOutfits?: ReplayGeneratedOutfit[];
   splitAnalysis?: AnalyzerContext["splitAnalysis"];
@@ -456,31 +424,29 @@ export interface AssembleAnalyzerInputOptions {
 export interface AssembledAnalyzerInput {
   context: AnalyzerContext;
   checkpointContext: AnalyzerCheckpointContext;
-  fingerprintInput: AnalyzerFingerprintInput;
   revisionPromptChannels?: RevisionPromptChannel[];
-  validationOptions: AnalyzerValidationOptions;
 }
 
 const s = (v: unknown): string => (v == null ? "" : String(v).trim());
 
 /**
- * Assemble `analyzerInput.{context, checkpointContext, fingerprintInput, validationOptions}` exactly as
- * the chat pipeline does (E1t @169706-169762). Object assembly only; every value comes from core helpers.
- * `freeCharacterGenerationEnabled` = profile v5-hybrid && per-source setting (E1t @169564).
+ * Assemble `analyzerInput.{context, checkpointContext, revisionPromptChannels?}` exactly as the 0.9.90 chat flow does
+ * (`Vxt` @173586-173614). Object assembly only; every value comes from core helpers.
+ * 0.9.90 changes: `freeCharacterGenerationEnabled` is the per-source setting alone (no analysis-profile gate),
+ * `checkpointContext` is `{chatKey, messageId}` (the `id:` prefix stripped), and the V4.5 `fingerprintInput` /
+ * `validationOptions` are gone. `revisionDirection` / `revisionEvidenceKey` are accepted and ignored (they travel on
+ * the run input).
  */
 export function assembleAnalyzerInput(o: AssembleAnalyzerInputOptions): AssembledAnalyzerInput {
   const cfg = o.config;
   const settings = resolveSourceGenerationSettings(cfg, o.sourceId);
-  const profile = (cfg.novelai as { analysisProfile?: string }).analysisProfile;
-  const freeCharacterGenerationEnabled = profile === "v5-hybrid" && settings.freeCharacterGenerationEnabled;
   const runtime = cfg.runtime as { generationProvider: string; comfyuiOutfitReferenceEnabled?: boolean };
-  const presetScope = resolvePresetScope(runtime.generationProvider, runtime.comfyuiOutfitReferenceEnabled);
   const ft = o.inputs;
   const context: AnalyzerContext = {
     cacheSourceId: o.sourceId,
     ...(o.splitAnalysis ? { splitAnalysis: o.splitAnalysis } : {}),
     rosterSelectionEnabled: settings.rosterSelectionEnabled,
-    freeCharacterGenerationEnabled,
+    freeCharacterGenerationEnabled: settings.freeCharacterGenerationEnabled,
     freeOutfitGenerationEnabled: isFreeOutfitGenerationEnabled(cfg, o.sourceId),
     replayGeneratedOutfits: o.replayGeneratedOutfits ?? [],
     scope: "paragraph-slot-illustration",
@@ -496,42 +462,16 @@ export function assembleAnalyzerInput(o: AssembleAnalyzerInputOptions): Assemble
     v5OutfitCatalogCandidates: ft.v5OutfitCatalogCandidates,
     personaPromptKey: ft.analyzerPersonaPromptKey,
     visualContinuity: ft.visualContinuity,
-    presetScope,
+    presetScope: resolvePresetScope(runtime.generationProvider, runtime.comfyuiOutfitReferenceEnabled),
   };
   return {
     context,
-    checkpointContext: {
-      chatKey: o.checkpoint.chatKey,
-      messageIndex: o.checkpoint.messageIndex,
-      messageId: o.checkpoint.messageId,
-      generationProvider: runtime.generationProvider,
-    },
-    fingerprintInput: {
-      presetScope,
-      candidateSlots: o.candidateSlots.map((slot) => ({ slotId: slot.slot_id, slotNumber: slot.slot_number, actorHints: slot.actor_hints ?? [] })),
-      imageCountConstraint: o.imageCountConstraint,
-      outfitCreationMode: [...ft.analyzerIdentityCandidates, ...ft.analyzerPersonaCandidates].some((c) => c.allowOutfitCreation === true)
-        ? "free-generation"
-        : "existing-only",
-      outfitCandidateIds: ft.analyzerOutfitCandidates.map((c) => [c.lorebook_prompt_key, c.id] as [string, string]),
-      revisionDirection: s(o.revisionDirection),
-      revisionPromptChannels: o.revisionPromptChannels ?? [],
-      revisionEvidenceKey: s(o.revisionEvidenceKey),
-    },
+    checkpointContext: { chatKey: o.checkpoint.chatKey, messageId: s(o.checkpoint.messageId).replace(/^id:/u, "") },
     ...(o.revisionPromptChannels?.length ? { revisionPromptChannels: o.revisionPromptChannels } : {}),
-    validationOptions: {
-      identityCandidates: ft.analyzerIdentityCandidates,
-      personaCandidates: ft.analyzerPersonaCandidates,
-      outfitCandidates: ft.analyzerOutfitCandidates,
-      personaGender: ft.personaGender,
-      personaPromptKey: ft.analyzerPersonaPromptKey,
-      personaDefaultOutfitId: ft.analyzerPersonaDefaultOutfitId,
-      defaultSizeId: (NOVELAI_DEFAULTS as { DEFAULT_IMAGE_SIZE_PRESET_ID: number }).DEFAULT_IMAGE_SIZE_PRESET_ID,
-    },
   };
 }
 
-/** `previousGlobalModifierRefs` for the orchestrator (E1t @169805). */
+/** `previousGlobalModifierRefs` for the orchestrator (`Vxt` @173646). */
 export function previousGlobalModifierRefs(visualContinuity: VisualContinuityContext): Record<string, string[]> {
   return (coreAsRecord(visualContinuity.previous_modifiers.global) ?? {}) as Record<string, string[]>;
 }

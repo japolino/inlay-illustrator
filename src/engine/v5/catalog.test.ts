@@ -1,5 +1,5 @@
 // Parity fixtures: src/engine/__fixtures__/v5/catalog.json
-// Generator: cd C:/Users/eme4/asset-maid-port/scratch/engine/v5 && bun gen-catalog.mjs
+// Generator: bun S/engine-build/gen/v5/catalog.mjs (S = the am990 scratch dir; runs the ORIGINAL 0.9.90 bundle)
 import { describe, expect, test } from "bun:test";
 import fixture from "../__fixtures__/v5/catalog.json";
 import rawConfigJson from "../core/data/v5-raw-config.json";
@@ -9,7 +9,10 @@ import {
   V5_RAW_CONFIG,
   assertV5RawConfig,
   canonicalV5Json,
+  compileActiveAtelierPresetCatalog,
+  compileAtelierPreset,
   compileV5Catalog,
+  selectActiveAtelierPresetJson,
   fnv1a64V5,
   getDefaultV5Catalog,
   getV5CatalogFingerprint,
@@ -62,10 +65,10 @@ const broken: Record<string, () => unknown> = {
   },
 };
 const modified: Record<string, (r: any) => void> = {
-  "weight-change": (r) => { r.modifierLibrary.closed[3].options[0].prompt = [[1.2, "indoors"]]; },
-  "new-option": (r) => { r.modifierLibrary.closed[4].options.push({ id: "dawn", prompt: [[1, "dawn"]], description: "Early morning light." }); },
+  "weight-change": (r) => { r.modifierLibrary.closed[3].options[0].prompt = [[1.2, "morning"]]; },
+  "new-option": (r) => { r.modifierLibrary.closed[4].options.push({ id: "dawn_mist", prompt: [[1, "dawn mist"]], description: "Early morning mist." }); },
   "new-interaction": (r) => {
-    r.stages.interaction.definitions.push({ id: "high_five", allowedModes: ["mutual"], defaultMode: "mutual", promptTarget: "relation", prompt: { tag: [[1, "high five"]] }, description: "Two actors slap raised palms." });
+    r.stages.interaction.definitions.push({ id: "high_five", category: "contact", allowedModes: ["mutual"], defaultMode: "mutual", promptTarget: "relation", prompt: { tag: [[1, "high five"]] }, description: "Two actors slap raised palms." });
   },
 };
 
@@ -81,7 +84,7 @@ describe("v5 catalog", () => {
     expect(plain(c.sizes)).toEqual(d.sizes);
     expect(plain(c.analyzer.sizes)).toEqual(d.analyzerSizes);
     expect(plain(c.interactions.get("hug"))).toEqual(d.interaction0);
-    expect(plain(c.definitions.get("framing.crop"))).toEqual(d.definition0);
+    expect(plain(c.definitions.get(d.firstDefinitionId))).toEqual(d.definition0);
     expect(plain(c.weights)).toEqual(d.weights);
     expect(c.prompts.entries.length).toBe(d.promptEntryCount);
   });
@@ -89,7 +92,8 @@ describe("v5 catalog", () => {
   for (const [name, make] of Object.entries(broken)) {
     test(`diagnostics: ${name}`, () => {
       const expected = (fixture.diagnostics as Record<string, { result: unknown; error: unknown }>)[name];
-      expect(plain(validateV5RawConfig(make()))).toEqual(expected.result);
+      const r = validateV5RawConfig(make());
+      expect(plain({ valid: r.valid, diagnostics: r.diagnostics })).toEqual(expected.result);
       let error: unknown = null;
       try {
         compileV5Catalog(make());
@@ -114,7 +118,7 @@ describe("v5 catalog", () => {
       expect(plain(c.stats)).toEqual(expected.stats);
       expect(getV5CatalogFingerprint(c)).toBe(expected.fingerprint as string);
       expect(plain(c.diagnostics)).toEqual(expected.diagnostics);
-      const sample = name === "new-interaction" ? c.interactions.get("high_five") : c.definitions.get(name === "new-option" ? "scene.time" : "scene.environment");
+      const sample = name === "new-interaction" ? c.interactions.get("high_five") : c.definitions.get(name === "new-option" ? "environment.weather" : "environment.time");
       expect(plain(sample)).toEqual(expected.sample);
     });
   }
@@ -129,5 +133,22 @@ describe("v5 catalog", () => {
       expect(canonicalV5Json(value)).toBe(vector.canonical!);
       expect(fnv1a64V5(value)).toBe(vector.hash!);
     }
+  });
+
+  type PresetCase = { kind: "compile" | "active"; input: unknown; result: Record<string, unknown> };
+  for (const [name, c] of Object.entries(fixture.presets as Record<string, PresetCase>)) {
+    test(`Atelier preset: ${name}`, () => {
+      const r = c.kind === "compile" ? compileAtelierPreset(c.input as string) : compileActiveAtelierPresetCatalog(c.input as never);
+      const got = r.valid
+        ? { valid: true, diagnostics: r.diagnostics, hashes: r.catalog!.hashes, stats: (r.catalog as any).stats, fingerprint: getV5CatalogFingerprint(r.catalog!), json: r.json }
+        : { valid: false, diagnostics: r.diagnostics };
+      expect(plain(got)).toEqual(c.result);
+    });
+  }
+
+  test("Atelier preset: missing active document", () => {
+    expect(() => selectActiveAtelierPresetJson({ atelier: { activeId: "zzz", documents: [{ id: "default", json: "{}" }] } })).toThrow(
+      fixture.missingActive!.message,
+    );
   });
 });

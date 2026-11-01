@@ -1,3 +1,6 @@
+// Slicer of src/engine/core/asset-maid-core.ts. Usage: bun slice.mjs <slice-config.json>. The 0.9.90 config points
+// `source` at the ORIGINAL 0.9.90 bundle (`0.9.90.p120.js`, prettier width 120, original minified names; no rename layer).
+// Roots and renames: slice-config.json. Output units are tagged `// AM <p120 name> @<p120 line>`.
 
 import fs from "node:fs";
 import * as acorn from "acorn";

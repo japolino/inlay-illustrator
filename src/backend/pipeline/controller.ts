@@ -14,10 +14,8 @@
 import {
   appendGeneratedEntry,
   chatKeyForChat,
-  createEmptyActorState,
   createGeneratedAssetName,
   deleteGeneratedEntry,
-  filterActorStateRecord,
   fixedCountPolicy,
   illustrationMessageKey,
   imageIdFromResultUrl,
@@ -30,10 +28,10 @@ import {
   promptCodecForProvider,
   reconcilePlanWithTree,
   resolveEffectiveConfig,
+  effectiveAnalysisExecution,
   resolveHistorySlot,
   rpcError,
   toHistoryMessageId,
-  validateCurrentActorState,
   listNovelAIArtists,
   resolveFormCollection,
   resolvePersonaForms,
@@ -45,7 +43,6 @@ import {
   type ChatImageGenerationSettings,
   type ChatMessageUiState,
   type CountPolicy,
-  type CurrentActorState,
   type GenerationJobSnapshot,
   type GenerationRetryError,
   type GenerationPhase,
@@ -61,12 +58,12 @@ import {
   type RpcError,
   type SlotDeletionPreview,
   type ZoomDetails,
-  type WebtoonStripView,
   type ZoomPromptSection,
 } from "../../shared/contract/index.js";
 import { resolveImageSize } from "../../engine/compose/index.js";
-// AM 0.9.89.5 retry error record (`FC`, sanitized by `c0`) and the 20-entry append (`LH`).
-import { FC as retryErrorRecord, LH as appendRetryError } from "../../engine/core/asset-maid-core";
+// AM 0.9.90 retry error record (`dj`, was 0.9.89.5 `FC`) and the 20-entry append (`JG`, was `LH`).
+import { appendRetryError, retryErrorRecord } from "../../engine/compose/batch.js";
+import { resolveFixedRating, stripPromptTags } from "../../engine/compose/rating.js";
 import { fail, isAbortLike, RpcFailure, toRpcError } from "../rpc/errors.js";
 import type { BackendModules } from "../rpc/types.js";
 import type { BackendServices, ChatInfo } from "../services/types.js";
@@ -86,6 +83,7 @@ import type { EnginePort } from "./engine-port.js";
 import {
   engineProviderFor,
   generateMessageIllustrations,
+  isRegenerableEngineProvider,
   isCancellation,
   nativeDetectorsFor,
   speakingCharacterId,
@@ -94,11 +92,10 @@ import {
   type RevisionInput,
 } from "./generate.js";
 import { HostGenerationTracker, isIllustratableMessage, loadMessages, swipeContent, writeSwipeContent, type ChatMessageView } from "./host-chat.js";
-import { formatLabel, labelError, MANGA_TEXT, phaseProgress, PIPELINE_TEXT, WEBTOON_TEXT, type Label } from "./labels.js";
+import { formatLabel, labelError, phaseProgress, PIPELINE_TEXT, type Label } from "./labels.js";
 import { bakeMessage, messageSlots, stripForInterceptor, type InterceptorMessage } from "./markup.js";
 import { emptySidecar, pruneSidecar, readSidecar, sidecarPath, updateSidecar, type PipelineSidecar } from "./records.js";
-import { editWebtoonText, rerollWebtoonPanel, runWebtoonStrip, selectWebtoonTake, type WebtoonProgress } from "../webtoon/run.js";
-import { dropMessageStrips, failInterruptedStrips, readStrip, stripSummaries, stripView } from "../webtoon/store.js";
+import { selectionSummaryOf } from "./selection-summary.js";
 
 type Rec = Record<string, unknown>;
 const rec = (v: unknown): Rec => (v && typeof v === "object" && !Array.isArray(v) ? (v as Rec) : {});
@@ -205,20 +202,11 @@ export interface ChatPipeline {
   requestAiPromptEdit(chatId: string, slotId: string, entryId: string, request: AiPromptEditRequest): Promise<AiPromptEditProposal>;
   applyAiPromptEdit(chatId: string, slotId: string, proposalId: string): Promise<{ jobId: string }>;
 
-  /* chatState.* / chatDom.* */
-  getChatState(chatId: string): Promise<{ actorState: CurrentActorState }>;
-  clearChatState(chatId: string, actorKeys?: string[]): Promise<{ actorState: CurrentActorState }>;
-  setChatState(chatId: string, actorState: CurrentActorState, baseRevision: number): Promise<{ actorState: CurrentActorState }>;
+  /* chatDom.* */
   getMessageStates(chatId: string, messageIds?: string[]): Promise<{ messages: ChatMessageUiState[] }>;
 
   /** Re-bake one message from its History (publish). */
   publish(chatId: string, messageKey: string): Promise<PublishResult>;
-
-  /* webtoon.* (experimental webtoon mode) */
-  getWebtoon(chatId: string, messageKey: string, width?: number): Promise<{ strip: WebtoonStripView | null }>;
-  rerollWebtoonPanel(chatId: string, messageKey: string, panelId: string): Promise<{ jobId: string }>;
-  editWebtoonText(params: { chatId: string; messageKey: string; panelId: string; textIndex: number; text: string; width?: number }): Promise<{ strip: WebtoonStripView }>;
-  selectWebtoonTake(params: { chatId: string; messageKey: string; panelId: string; take: number; width?: number }): Promise<{ strip: WebtoonStripView }>;
 }
 
 export type PublishResult = "published" | "missing" | "streaming";
@@ -233,10 +221,6 @@ interface JobRecord {
   /** Re-run inputs (retry / restart). */
   regenerate?: { entryId?: string; overrides?: RegenerationOverrides };
   revision?: RevisionInput;
-  /** Webtoon panel reroll: panel id. */
-  webtoonPanel?: string;
-  /** The reroll is a manga panel (toast wording). */
-  webtoonManga?: boolean;
   /** Failed attempts: whole-run auto retries (AM `fail` 115606, stage "분석·생성") and the current engine run. */
   retryErrors?: { run: readonly GenerationRetryError[]; engine: readonly GenerationRetryError[] };
   done: Promise<void>;
@@ -299,8 +283,6 @@ export function createChatPipelineController(services: BackendServices, engine: 
   let seq = 0;
   const nextId = (prefix: string) => `${prefix}:${now().toString(36)}:${(++seq).toString(36)}`;
   const k = (chatId: string, key: string) => `${chatId}\u0000${key}`;
-  /** Webtoon panel rerolls: panel ids repeat in every strip, so the busy key carries the message. */
-  const webtoonSlotKey = (chatId: string, messageKey: string, panelId: string) => k(chatId, `webtoon:${messageKey}\u0000${panelId}`);
 
   /* ---------------------------------------------------------------- events / snapshots */
 
@@ -502,24 +484,26 @@ export function createChatPipelineController(services: BackendServices, engine: 
     | { kind: "cancelled" }
     | { kind: "blocked"; error: RpcError };
 
-  /** AM `xr` 173248: auto-retryable failure. */
+  /**
+   * AM 0.9.90 `pr` in `L0t$990` (N 176993) over `Not` (N 97273): only transport failures retry the whole run, i.e.
+   * network/timeout/interrupted codes and HTTP 408/429/5xx. Content errors (JSON parse, empty response, no usable
+   * illustration, ...) and any other coded error fail at once, even when the error says `retryable: true`.
+   */
   const autoRetryable = (error: unknown): boolean => {
     if (!error || isCancellation(error)) return false;
     const r = rec(error);
     const inner = error instanceof RpcFailure ? rec(error.error) : rec(r.rpcError);
     const retryable = r.retryable ?? inner.retryable;
     if (retryable === false) return false;
-    const status = Number(r.httpStatus ?? r.status ?? rec(inner.details).status);
-    const code = str(r.code) || str(inner.detailCode);
-    return (
-      retryable === true ||
-      error instanceof TypeError ||
-      status === 408 ||
-      status === 429 ||
-      (status >= 500 && status < 600) ||
-      ["ANALYZER_JSON_PARSE", "ANALYZER_EMPTY_RESPONSE", "ANALYZER_TIMEOUT", "REQUEST_TIMEOUT", "CHAN_SERVER_TIMEOUT", "CHAN_SERVER_NETWORK", "V5_ANALYZER_NO_USABLE_ILLUSTRATION"].includes(code) ||
-      (error instanceof RpcFailure && error.error.code === "timeout")
-    );
+    if (error instanceof RpcFailure && error.error.code === "timeout") return true;
+    // The analyzer client rethrows ANALYZER_NETWORK as a TypeError for the engine (llm.ts); AM wraps the same failure as
+    // ANALYZER_NETWORK (`cfe$990`). A bare TypeError (a bug) is not retried.
+    const code = str(r.code) || str(inner.detailCode) || (error instanceof TypeError ? str(rec(r.cause).code) : "");
+    if (["ANALYZER_NETWORK", "ANALYZER_TIMEOUT", "ANALYZER_PROVIDER_INTERRUPTED", "REQUEST_TIMEOUT"].includes(code)) return true;
+    if (code && code !== "ANALYZER_HTTP") return false;
+    const details = rec(inner.details);
+    const status = Number(r.httpStatus ?? r.status ?? details.httpStatus ?? details.status);
+    return status === 408 || status === 429 || (status >= 500 && status < 600);
   };
 
   const errorOf = (e: unknown, label?: Label): RpcError => {
@@ -579,7 +563,6 @@ export function createChatPipelineController(services: BackendServices, engine: 
     const settings =
       opts.settings ?? (attemptKind === "retry" && settingsSnapshots.has(skey) ? settingsSnapshots.get(skey)! : await services.storage.loadChatImageGenerationSettings());
     const runSettings: ChatImageGenerationSettings = opts.countPolicy ? { ...settings, countPolicy: opts.countPolicy } : settings;
-    if (runSettings.webtoonMode && !opts.revision) return runWebtoonOnce(job, { config, chat, messages, target, view, content, historyId, attemptKind, chatData: doc0, manga: runSettings.comicFormat === "manga" });
     const split = runSettings.analysisMode === "split" && !opts.revision;
     const countPolicy = split ? fixedCountPolicy(runSettings.splitAnalysis.totalCount ?? 1) : runSettings.countPolicy;
     if (attemptKind !== "retry") analyzerCompleted.delete(skey);
@@ -614,7 +597,6 @@ export function createChatPipelineController(services: BackendServices, engine: 
     if (split) splitRevisions.set(skey, revisionId);
 
     try {
-      if (split && config.novelai.analysisProfile !== "v5-hybrid") throw new RpcFailure(labelError("bad-request", PIPELINE_TEXT.splitNeedsV5, { retryable: false }));
       const characterId = await speakingCharacterId(services, chat, view);
       const document = await services.storage.loadCharacterDocument(characterId);
       const visibility = resolveEffectiveConfig(config, { characterId, document }).nativeAssetVisibility;
@@ -777,79 +759,6 @@ export function createChatPipelineController(services: BackendServices, engine: 
         .catch((err) => log("error", "Illustration plan persistence failed", toRpcError(err)));
       emitChanged(chatId, [planKey]);
       return { kind: "failed", error, autoRetryable: autoRetryable(e), partial: false };
-    }
-  };
-
-  /** Toast label + fraction for a webtoon step (planner, then one step per panel). */
-  const webtoonProgress = (job: JobRecord, p: WebtoonProgress) => {
-    const total = Math.max(1, p.total ?? 1);
-    if (p.stage === "planning") setPhase(job, "analyzing-preset", { imageCount: total });
-    else setPhase(job, p.stage, { imageIndex: p.done ?? 0, imageCount: total });
-    if (p.stage !== "planning") job.snapshot.completedSlots = p.done ?? 0;
-    const text = p.manga ? MANGA_TEXT : WEBTOON_TEXT;
-    const label = p.stage === "planning" ? text.planning : p.stage === "generating" ? formatLabel(text.panel, { n: (p.done ?? 0) + 1, total }) : text.finishing;
-    job.snapshot.progress = { ...job.snapshot.progress, label: label.en, labelKo: label.ko };
-    job.snapshot.requestedCount = total;
-    emitProgress(job);
-  };
-
-  /** Webtoon mode: one strip for the message instead of the analyzer run (no plan / History / bake changes). */
-  const runWebtoonOnce = async (
-    job: JobRecord,
-    input: { config: InlayConfig; chat: ChatInfo; messages: ChatMessageView[]; target: number; view: ChatMessageView; content: string; historyId: string; attemptKind: AttemptKind; chatData: ChatDataDocument; manga: boolean },
-  ): Promise<Outcome> => {
-    const { chatId } = job.target;
-    const characterId = await speakingCharacterId(services, input.chat, input.view);
-    const document = await services.storage.loadCharacterDocument(characterId);
-    const clean = messageSlots(job.planKey, input.content, nativeDetectorsFor(characterId, "", document)).clean;
-    const result = await runWebtoonStrip(
-      { services, engine, now, ...(options.getModules ? { getModules: options.getModules } : {}) },
-      {
-        chatId,
-        chat: input.chat,
-        messages: input.messages,
-        target: input.target,
-        historyId: input.historyId,
-        planKey: job.planKey,
-        source: clean,
-        config: input.config,
-        chatData: input.chatData,
-        signal: job.controller.signal,
-        assertTarget: targetGuard(job.target),
-        resume: input.attemptKind === "retry",
-        format: input.manga ? "manga" : "webtoon",
-        onProgress: (p) => webtoonProgress(job, p),
-        onChanged: () => emitChanged(chatId, [job.planKey]),
-      },
-    );
-    if (result.status === "cancelled") return { kind: "cancelled" };
-    if (result.status === "complete") return { kind: "completed" };
-    job.snapshot.failedSlots = result.failedPanels;
-    return { kind: "failed", error: result.error ?? rpcError("provider-error", PIPELINE_TEXT.generationIncomplete.en), autoRetryable: false, partial: result.failedPanels > 0 };
-  };
-
-  const runWebtoonReroll = async (job: JobRecord, config: InlayConfig): Promise<void> => {
-    const { chatId } = job.target;
-    try {
-      setPhase(job, "generating", { imageIndex: 0, imageCount: 1 });
-      const label = formatLabel(job.webtoonManga ? MANGA_TEXT.reroll : WEBTOON_TEXT.reroll, { n: job.webtoonPanel! });
-      job.snapshot.progress = { ...job.snapshot.progress, label: label.en, labelKo: label.ko };
-      emitProgress(job);
-      const historyId = job.planKey.replace(/^illustration:/u, "");
-      await rerollWebtoonPanel({ services, engine, now }, { chatId, historyId, panelId: job.webtoonPanel!, config, signal: job.controller.signal, onChanged: () => emitChanged(chatId, [job.planKey]) });
-      job.snapshot.completedSlots = 1;
-      finishJob(job, "completed", "success");
-    } catch (e) {
-      if (job.controller.signal.aborted || isCancellation(e)) finishJob(job, "cancelled", "cancelled");
-      else {
-        const error = errorOf(e);
-        finishJob(job, "failed", "error", error);
-        log("warn", "Webtoon panel reroll failed", error);
-      }
-    } finally {
-      const key = webtoonSlotKey(chatId, job.planKey, job.webtoonPanel!);
-      if (slotJobs.get(key) === job) slotJobs.delete(key);
-      emitChanged(chatId, [job.planKey]);
     }
   };
 
@@ -1048,23 +957,27 @@ export function createChatPipelineController(services: BackendServices, engine: 
       })
       .filter((_c, i) => !excluded.has(i));
     const seed = keepSeed ? str(o.seed) || record.seed : "";
-    const provider = record.engineProvider === "comfy-ui" ? "comfy-ui" : record.engineProvider === "chan-server" ? "chan-server" : "novelai";
-    if (provider !== "novelai") return { provider, prompt: positive, negativePrompt: negative, seed, width, height } as Rec & { provider: "comfy-ui" | "chan-server" };
+    if (record.engineProvider === "comfy-ui") return { provider: "comfy-ui", prompt: positive, negativePrompt: negative, seed, width, height } as Rec & { provider: "comfy-ui" };
     const cfg = { ...rec(record.novelAIConfig) };
+    // AM 0.9.90 `hvt`: the recorded sampling decides High / Medium, so a Medium image rerolls as Medium even after the
+    // settings went back to High. Records without it are High.
+    cfg.effort = record.novelaiSampling?.effort === "medium" ? "medium" : "high";
     // Prompts in the record are already finalized (non-artist weight applied once by the adapter).
     delete cfg.nonArtistPromptWeight;
     delete cfg.nonArtistPromptSource;
     delete cfg.nonArtistPromptWeightArtist;
     return {
-      provider,
-      prompt: positive,
+      provider: "novelai",
+      // AM `XG(prompt, rating, 0)` @163913: without character prompts every rating tag is stripped.
+      prompt: characters.length === 0 ? stripPromptTags(positive) : positive,
       negativePrompt: negative,
       seed,
       width,
       height,
-      // AM 0.9.89.3 (123136/123242): zoom regenerate never forces the NSFW prefix; chat regenerate follows
-      // nsfwAlwaysEnabled (the adapter's fallback), except without character prompts.
-      ...(fromZoom || characters.length === 0 ? { forceNsfwPrefix: false } : {}),
+      // AM 0.9.90 ratings (zoom `regenerate({forceRating: false})` @152148, regeneration `B = o.forceRating ?? yS(D)` /
+      // `forceRating: characterPrompts.length === 0 ? false : B` @163821-163928): zoom regenerate never forces a rating
+      // tag; chat regenerate follows the source's fixed rating (the adapter's fallback), except without character prompts.
+      ...(fromZoom || characters.length === 0 ? { forceRating: false } : {}),
       config: {
         ...cfg,
         ...(rebuilt?.configPatch ?? {}),
@@ -1109,6 +1022,14 @@ export function createChatPipelineController(services: BackendServices, engine: 
       const record = sidecar.records[source.entryId] ?? [...resolved.entries].reverse().map((e) => sidecar.records[e.entryId]).find(Boolean) ?? null;
       if (!record)
         throw new RpcFailure(rpcError("unsupported", "Could not load the regeneration settings of the selected image.", { messageKo: "선택한 이미지의 재생성 설정을 불러오지 못했습니다.", retryable: false }));
+      // AM 0.9.90: images of removed providers (Chan Server; the port's former generic providers) are not regenerated.
+      if (!isRegenerableEngineProvider(record.engineProvider))
+        throw new RpcFailure(
+          rpcError("unsupported", "This image was made with an image provider that is no longer supported, so it cannot be regenerated. Regenerate the whole message with a NovelAI or ComfyUI connection instead.", {
+            messageKo: "더 이상 지원하지 않는 이미지 제공자로 만든 이미지라 다시 생성할 수 없습니다. NovelAI 또는 ComfyUI 연결로 메시지 전체를 다시 생성하세요.",
+            retryable: false,
+          }),
+        );
       const target = await services.images.resolveTarget();
       if (engineProviderFor(target) !== record.engineProvider)
         throw new RpcFailure(rpcError("unsupported", "The image provider changed since this image was generated. Regenerate the whole message instead.", { retryable: false }));
@@ -1123,7 +1044,11 @@ export function createChatPipelineController(services: BackendServices, engine: 
       const messages = await loadMessages(services.host, chatId);
       const characterId = await speakingCharacterId(services, chat, findMessage(messages, job.target.messageId).view);
       const document = await services.storage.loadCharacterDocument(characterId);
-      const nsfw = resolveEffectiveConfig(config, { characterId, document }).nsfwAlwaysEnabled;
+      const effective = resolveEffectiveConfig(config, { characterId, document });
+      const rating = resolveFixedRating(effective);
+      // AM 0.9.90 `uvt$990` (N 163822): without forced coordinates, the toolbar's AI coordinates setting decides.
+      if (request.provider === "novelai" && rec(request.config).forceCharacterCoordinates !== true)
+        (request.config as Rec).useCoords = effectiveAnalysisExecution(config.runtime, effective).aiCoordinates;
       const result = await engine.dispatch(request, {
         engineProvider: record.engineProvider as "novelai",
         purpose: "regenerate",
@@ -1132,7 +1057,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
         ownerChatId: chatId,
         ownerCharacterId: characterId,
         comfyuiWorkflowId: target.comfyuiWorkflowId,
-        forceNsfwPrefix: () => nsfw,
+        forceRating: () => rating,
         onProgress: (p) => {
           job.snapshot.progress = { ...phaseProgress("generating", { regenerate: true, imageIndex: 0, imageCount: 1 }), ...(p.queue ? { queue: p.queue } : {}) };
           emitProgress(job);
@@ -1209,6 +1134,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
           positivePrompt: str(result.effectivePrompt) || str(finalized.positivePrompt) || String(request.prompt ?? ""),
           negativePrompt: String(request.negativePrompt ?? ""),
           sentParameters: rec(meta.sentParameters),
+          ...(meta.novelaiSampling ? { novelaiSampling: meta.novelaiSampling as GenerationRecord["novelaiSampling"] } : {}),
           generationOrigin: "regenerate",
           parentEntryId: source.entryId,
           actors: rebuilt.actors,
@@ -1283,8 +1209,9 @@ export function createChatPipelineController(services: BackendServices, engine: 
 
   /* ---------------------------------------------------------------- zoom */
 
+  /** Records of removed providers ("chan-server", the former "generic" ones) show as "other" (viewable, not regenerable). */
   const providerOf = (record: GenerationRecord | null): ZoomDetails["generationProvider"] =>
-    !record ? "novelai" : record.engineProvider === "comfy-ui" ? "comfy-ui" : record.engineProvider === "chan-server" ? "generic" : "novelai";
+    !record ? "novelai" : record.engineProvider === "comfy-ui" ? "comfy-ui" : record.engineProvider === "chan-server" || record.engineProvider === "generic" ? "other" : "novelai";
 
   interface SectionChoices {
     artists?: { id: string; label: string }[];
@@ -1377,7 +1304,6 @@ export function createChatPipelineController(services: BackendServices, engine: 
     const provider = record ? providerOf(record) : entry.kind === "original" ? "original" : "novelai";
     const imageId = imageIdFromResultUrl(entry.savedPath) ?? "";
     const isNovelAI = record?.engineProvider === "novelai";
-    const v5 = isNovelAI && (rec(record?.novelAIConfig).analysisProfile === "v5-hybrid" || /^nai-diffusion-5/u.test(record?.model ?? ""));
     const busy = messageBusy(chatId, resolved.message.messageKey);
     return {
       chatId,
@@ -1395,15 +1321,17 @@ export function createChatPipelineController(services: BackendServices, engine: 
       seed: draft?.seed ?? record?.seed ?? "",
       seedFixed: draft?.seedFixed ?? false,
       generationProvider: provider,
-      promptCodec: provider === "original" ? null : promptCodecForProvider(provider),
+      promptCodec: provider === "original" ? null : provider === "other" ? "anima-flat" : promptCodecForProvider(provider),
       positivePrompt: draft?.positivePrompt ?? record?.positivePrompt ?? "",
       negativePrompt: draft?.negativePrompt ?? record?.negativePrompt ?? "",
       sections: sectionsOf(record, draft, await choicesFor(record, chatId)),
-      coordinateGrid: isNovelAI ? (v5 ? "v5" : "v4-5") : null,
+      // AM 0.9.90 (new:150979): NovelAI coordinates are always on the V5 grid, V4.5-era records included.
+      coordinateGrid: isNovelAI ? "v5" : null,
       excludedCharacterIndexes: [...(draft?.excludedCharacterIndexes ?? [])],
       promptDraftActive: !!draft && (draft.positivePrompt !== undefined || draft.negativePrompt !== undefined || !!draft.sections?.length),
       coordinateDraftActive: !!draft && (!!draft.centers?.length || !!draft.excludedCharacterIndexes?.length),
       analyzerText: record?.analyzerText ?? "",
+      ...(entry.kind === "generated" ? { selectionSummary: selectionSummaryOf(record?.analysis, record?.actors ?? []) } : {}),
       canEdit: !!record && !busy,
       canDelete: entry.kind === "generated" && !busy,
       canRegenerate: !!record && entry.kind === "generated" && !busy,
@@ -1523,7 +1451,6 @@ export function createChatPipelineController(services: BackendServices, engine: 
         pruneSidecar(JSON.parse(shift(JSON.stringify(current))), (await services.storage.loadChatData(chatId)).history),
       )
       .catch(() => undefined);
-    await dropMessageStrips(services.storage, chatId, messageId, swipe).catch((e) => log("warn", "Webtoon strip cleanup failed", toRpcError(e)));
     if (swipe !== undefined) {
       // The shifted swipes still carry blocks baked with their old key / swipe id: re-bake them with the new identity.
       const doc = await services.storage.loadChatData(chatId);
@@ -1611,8 +1538,8 @@ export function createChatPipelineController(services: BackendServices, engine: 
         return;
       }
       const chatIds = [...new Set(files.flatMap((f) => {
-        // Chats with chat data or webtoon strips (a webtoon-only chat may have no chat data).
-        const m = /(?:^|\/)([^/]+)\/(?:chat-data|webtoon\/index)\.json$/u.exec(f.replace(/\\/gu, "/"));
+        // Chats with chat data.
+        const m = /(?:^|\/)([^/]+)\/chat-data\.json$/u.exec(f.replace(/\\/gu, "/"));
         if (!m) return [];
         try {
           return [decodeURIComponent(m[1]!)];
@@ -1622,9 +1549,6 @@ export function createChatPipelineController(services: BackendServices, engine: 
       }))];
       for (const chatId of chatIds) {
         try {
-          // Webtoon strips left planning / generating by a restart would show their spinner forever.
-          const strips = await failInterruptedStrips(services.storage, chatId, PIPELINE_TEXT.interrupted.en, (historyId) => messageJobs.has(k(chatId, illustrationMessageKey(historyId))), now);
-          if (strips.length) emitChanged(chatId, strips.map((historyId) => illustrationMessageKey(historyId)));
           const doc = await services.storage.loadChatData(chatId);
           const stale = Object.values(doc.plans).filter((p) => p.status === "generating" && !messageJobs.has(k(chatId, p.key)));
           if (!stale.length) continue;
@@ -1683,7 +1607,6 @@ export function createChatPipelineController(services: BackendServices, engine: 
       const job = jobs.get(jobId) ?? fail("not-found", `Job not found: ${jobId}`);
       if (job.snapshot.status === "queued" || job.snapshot.status === "running") throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
       job.dismissed = true;
-      if (job.webtoonPanel) return api.rerollWebtoonPanel(job.target.chatId, job.planKey, job.webtoonPanel);
       if (job.kind === "regenerate") return api.regenerateSlot({ chatId: job.target.chatId, messageKey: job.planKey, slotId: job.slotId!, ...(job.regenerate?.entryId ? { entryId: job.regenerate.entryId } : {}), ...(job.regenerate?.overrides ? { overrides: job.regenerate.overrides } : {}) });
       if (messageBusy(job.target.chatId, job.planKey)) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
       const next = job.kind === "revision" && job.revision
@@ -1993,38 +1916,8 @@ export function createChatPipelineController(services: BackendServices, engine: 
       return { jobId: job.snapshot.jobId };
     },
 
-    async getChatState(chatId) {
-      const doc = await services.storage.loadChatData(chatId);
-      return { actorState: doc.actorState };
-    },
-
-    async clearChatState(chatId, actorKeys) {
-      const written = await services.storage.updateChatData(chatId, (doc) => {
-        const actors = { ...doc.actorState.actors };
-        if (actorKeys?.length) for (const key of actorKeys) delete actors[key];
-        else for (const key of Object.keys(actors)) delete actors[key];
-        doc.actorState = Object.keys(actors).length || doc.actorState.revision > 0 ? { revision: doc.actorState.revision + 1, actors } : createEmptyActorState();
-        return doc;
-      });
-      emitChanged(chatId, []);
-      return { actorState: written.actorState };
-    },
-
-    async setChatState(chatId, actorState, baseRevision) {
-      const checked = validateCurrentActorState(actorState);
-      if (!checked.ok) fail("bad-request", `Invalid actor state: ${checked.issues[0]?.message ?? "unknown issue"}`, { details: checked.issues });
-      const written = await services.storage.updateChatData(chatId, (doc) => {
-        if (doc.actorState.revision !== baseRevision)
-          fail("conflict", "The chat state changed since it was opened. Reload it and try again.", { details: { revision: doc.actorState.revision, baseRevision } });
-        doc.actorState = { revision: doc.actorState.revision + 1, actors: checked.state.actors };
-        return doc;
-      });
-      emitChanged(chatId, []);
-      return { actorState: written.actorState };
-    },
-
     async getMessageStates(chatId, messageIds) {
-      const [messages, doc, strips] = await Promise.all([loadMessages(services.host, chatId), services.storage.loadChatData(chatId), stripSummaries(services.storage, chatId)]);
+      const [messages, doc] = await Promise.all([loadMessages(services.host, chatId), services.storage.loadChatData(chatId)]);
       const wanted = messageIds?.length ? new Set(messageIds) : null;
       const regenerating = new Set([...slotJobs.values()].filter((j) => j.target.chatId === chatId).map((j) => j.slotId!));
       const out: ChatMessageUiState[] = [];
@@ -2048,52 +1941,8 @@ export function createChatPipelineController(services: BackendServices, engine: 
             ...(lastError ? { lastError } : {}),
           }),
         );
-        const strip = strips[toHistoryMessageId(m.id, m.swipeId)];
-        if (strip) out[out.length - 1]!.webtoon = strip;
       }
       return { messages: out };
-    },
-
-    async getWebtoon(chatId, messageKey, width) {
-      const doc = await readStrip(services.storage, chatId, targetHistoryId(chatId, messageKey));
-      return { strip: doc ? stripView(doc, width) : null };
-    },
-
-    async rerollWebtoonPanel(chatId, messageKey, panelId) {
-      const target = targetOfKey(chatId, messageKey);
-      const slotId = `webtoon:${panelId}`;
-      const slotKey = webtoonSlotKey(chatId, messageKey, panelId);
-      const busy = () => {
-        if (slotJobs.has(slotKey)) throw new RpcFailure(labelError("busy", WEBTOON_TEXT.busy));
-        if (messageJobs.has(k(chatId, messageKey))) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
-      };
-      busy();
-      const doc = await readStrip(services.storage, chatId, targetHistoryId(chatId, messageKey));
-      if (!doc?.requests[panelId]) fail("not-found", `Webtoon panel not found: ${panelId}`);
-      const config = await services.storage.loadConfig();
-      // Checked again after the reads: a second click or a strip run may have started meanwhile.
-      busy();
-      const job = createJob({ target, planKey: messageKey, kind: "regenerate", attemptKind: "regenerate", slotId, requestedCount: 1 });
-      job.webtoonPanel = panelId;
-      if (doc!.format === "manga") job.webtoonManga = true;
-      slotJobs.set(slotKey, job);
-      emitProgress(job);
-      job.done = runWebtoonReroll(job, config);
-      return { jobId: job.snapshot.jobId };
-    },
-
-    async editWebtoonText(params) {
-      const historyId = targetHistoryId(params.chatId, params.messageKey);
-      const result = await editWebtoonText({ services, engine, now }, { ...params, historyId });
-      emitChanged(params.chatId, [params.messageKey]);
-      return { strip: result };
-    },
-
-    async selectWebtoonTake(params) {
-      const historyId = targetHistoryId(params.chatId, params.messageKey);
-      const result = await selectWebtoonTake({ services, engine, now }, { ...params, historyId });
-      emitChanged(params.chatId, [params.messageKey]);
-      return { strip: result };
     },
   };
   return api;

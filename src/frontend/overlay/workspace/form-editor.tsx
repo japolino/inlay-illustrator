@@ -6,7 +6,7 @@
  */
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { APPEARANCE_UI, type AssetRef, type BasePromptGroups, type Form, type FormCollection, type Gender } from "../../../shared/contract/character.js";
+import { APPEARANCE_UI, editGroupFields, groupFieldValues, type AssetRef, type BasePromptGroups, type Form, type FormCollection, type Gender } from "../../../shared/contract/character.js";
 import { Button, CheckIcon, IconButton, PencilIcon, PlusIcon, MoreIcon, Select, XIcon, cn } from "../ui/index.js";
 import { CropIcon, ImagePlusIcon, RotateCcwIcon, ZoomInIcon } from "./icons.js";
 import { BASE_PROMPT_LABELS, COMMON_LABELS, FORM_LABELS, GENDER_LABELS } from "./labels/common.js";
@@ -179,27 +179,17 @@ export function BasePromptEditor({ groups, gender, onChange, identityActions, re
   if (group.id === "final") {
     body = <textarea readOnly aria-label={L.combined} value={composedPrompt({ basePromptGroups: groups, gender })} class="h-full min-h-0 w-full resize-none rounded-md bg-surface-prompt-field px-2.5 py-2 text-2xs leading-relaxed text-muted-foreground outline-none" />;
   } else if (group.fallbackFieldId) {
-    // Flat textarea editing all fields of the group (`pje` join / `hje` split: fragments go to "custom" unless they are known per-field tags).
+    // Flat textarea editing all fields of the group (AM 0.9.90 `s8e` display / `c8e` edit: a value stays in its field, new
+    // fragments go to "custom", and the typed order of the "other" group is kept in `otherOrder`).
     const fieldIds = group.fields.map((f) => f.id);
-    const all = fieldIds.flatMap((id) => (groups as Record<string, string[]>)[id] ?? []);
     body = (
       <TagInput
         multiline
         readOnly={readOnly}
         label={L.groupPrompt(L.groups[group.id] ?? group.label)}
         placeholder={L.otherGroupPlaceholder}
-        values={all}
-        onChange={(values) => {
-          const next = { ...groups } as Record<string, string[]>;
-          const known = new Map<string, string>();
-          for (const id of fieldIds) for (const v of (groups as Record<string, string[]>)[id] ?? []) known.set(v, id);
-          for (const id of fieldIds) delete next[id];
-          for (const v of values) {
-            const id = known.get(v) ?? group.fallbackFieldId!;
-            (next[id] ??= []).push(v);
-          }
-          onChange(next as BasePromptGroups);
-        }}
+        values={groupFieldValues(groups, fieldIds)}
+        onChange={(values) => onChange(editGroupFields(groups, gender, fieldIds, group.fallbackFieldId!, values))}
       />
     );
   } else {

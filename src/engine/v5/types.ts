@@ -1,5 +1,5 @@
 /**
- * Runtime shapes of Asset Maid 0.9.88 NovelAI V5 ("v5-hybrid") data, mirrored from the original bundle.
+ * Runtime shapes of Asset Maid 0.9.90 NovelAI V5 ("v5-hybrid") data, mirrored from the original bundle.
  *
  * Field names follow the original runtime objects exactly (camelCase for engine shapes, snake_case for analyzer
  * payload fields). Shapes that are large or open-ended keep an index signature so the verbatim core can attach
@@ -10,7 +10,7 @@
 export type V5Json = null | boolean | number | string | readonly V5Json[] | { readonly [key: string]: V5Json };
 
 /** Image provider ids understood by the V5 rule language (`provider` condition) and the prompt codecs. */
-export type V5ImageProviderId = "novelai" | "chan-server" | "comfy-ui";
+export type V5ImageProviderId = "novelai" | "comfy-ui";
 
 /** Raw config validation diagnostic (`pt` helper, raw validator 29-1641). */
 export interface V5RawDiagnostic {
@@ -58,9 +58,9 @@ export interface V5CompiledSize {
   readonly guidance: unknown;
 }
 
-/** Compiled catalog (`E1e` 2059-2368, compilerVersion "novelai-v5-catalog-v1"). Only the commonly used members are typed. */
+/** Compiled catalog (`WY` @16323, compilerVersion "novelai-v5-catalog-v3"). Only the commonly used members are typed. */
 export interface V5CompiledCatalog {
-  readonly compilerVersion: "novelai-v5-catalog-v1";
+  readonly compilerVersion: string;
   readonly schema: string;
   readonly revision: number;
   readonly sizes: V5ReadonlyMap<number, V5CompiledSize>;
@@ -207,6 +207,10 @@ export interface V5RuleContext {
   readonly completelyNudeActorIds: readonly string[];
   readonly ruleContinuityByActorId: Readonly<Record<string, V5RuleContinuity>>;
   readonly requestedSizeId?: number;
+  /** Sizes the analyzer request allowed (`localProjection.allowedSizeIds`, 0.9.90). */
+  readonly allowedSizeIds?: readonly number[];
+  /** `${actorId}:${placementIndex}` → completely nude (0.9.90 per-occurrence outfits). */
+  readonly completelyNudeByOccurrence?: Readonly<Record<string, boolean>>;
 }
 
 /** Compiled free-scene draft (`_8e` 45656). */

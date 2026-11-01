@@ -15,6 +15,7 @@ import {
   type ContractIssue,
   fnv1a32Base36,
   hasOwn,
+  isPlainObject,
   jsonClone,
   prefixedId,
   trimString,
@@ -290,12 +291,17 @@ export const BASE_PROMPT_GROUP_IDS = [
   "body.build",
   "body.proportions",
   "body.breast_size",
+  "body.breast_other",
   "marks.distinctive",
   "nonhuman.features",
 ] as const;
 export type BasePromptGroupId = (typeof BASE_PROMPT_GROUP_IDS)[number];
 export type BasePromptGroupKey = BasePromptGroupId | "custom";
-export type BasePromptGroups = Partial<Record<BasePromptGroupKey, string[]>>;
+/** `otherOrder` (AM 0.9.90): the typed order of the "other" editor's values when it differs from field order. */
+export type BasePromptGroups = Partial<Record<BasePromptGroupKey | "otherOrder", string[]>>;
+/** Fields of the "other" editor whose typed order is kept in `otherOrder` (AM `bL$990` N 20774). */
+export const OTHER_ORDER_FIELDS: readonly BasePromptGroupKey[] = ["body.skin", "body.build", "body.proportions", "marks.distinctive", "nonhuman.features", "custom"];
+const OTHER_ORDER_FIELD_SET = new Set<string>(OTHER_ORDER_FIELDS);
 
 export const OUTFIT_PARTS = ["head", "top", "bottom", "legs", "feet"] as const;
 export type OutfitPart = (typeof OUTFIT_PARTS)[number];
@@ -313,6 +319,7 @@ export const GROUP_TO_OUTFIT_PARTS: Readonly<Record<BasePromptGroupKey, readonly
   "body.build": ["top", "bottom"],
   "body.proportions": ["top", "bottom", "legs"],
   "body.breast_size": ["top"],
+  "body.breast_other": ["top"],
   "marks.distinctive": ["head", "top", "bottom"],
   "nonhuman.features": ["head", "top", "bottom"],
   custom: [],
@@ -399,12 +406,60 @@ export function normalizeBasePromptGroups(value: unknown, options: BasePromptGro
     const custom = splitPromptFragments(groups.custom);
     if (custom.length) out.custom = custom;
   }
+  // AM 0.9.90 `fc`: stored forms keep `otherOrder`, filtered to values still present, the rest appended.
+  if (options.allowPromptFragments === true && Array.isArray(groups.otherOrder)) {
+    const present = new Set(OTHER_ORDER_FIELDS.flatMap((id) => out[id] ?? []));
+    const order = splitPromptFragments(groups.otherOrder).filter((v) => present.delete(v));
+    order.push(...present);
+    if (order.length) out.otherOrder = order;
+  }
   return out;
 }
 
-/** AM `X0`: any physical trait (any group except identity.character_tag; includes custom). */
+/** AM 0.9.90 `yL$990` (N 20776): reorder only the "other" items of a list by `otherOrder`; the rest keep their places. */
+export function orderOtherTags<T>(groups: BasePromptGroups, items: readonly T[], fieldOf: (item: T) => string, valueOf: (item: T) => string): T[] {
+  if (!groups.otherOrder?.length) return [...items];
+  const rank = new Map(groups.otherOrder.map((v, i) => [v, i]));
+  const others = items.filter((item) => OTHER_ORDER_FIELD_SET.has(fieldOf(item))).sort((a, b) => (rank.get(valueOf(a)) ?? Infinity) - (rank.get(valueOf(b)) ?? Infinity));
+  let i = 0;
+  return items.map((item) => (OTHER_ORDER_FIELD_SET.has(fieldOf(item)) ? others[i++]! : item));
+}
+
+/** AM 0.9.90 `s8e` (N 20927): the values of a field set in display order (`otherOrder` applied). */
+export function groupFieldValues(groups: BasePromptGroups, fieldIds: readonly string[]): string[] {
+  const items = fieldIds.flatMap((fieldId) => (groups[fieldId as BasePromptGroupKey] ?? []).map((value) => ({ fieldId, value })));
+  return [...new Set(orderOtherTags(groups, items, (x) => x.fieldId, (x) => x.value).map((x) => x.value))];
+}
+
+/**
+ * AM 0.9.90 `c8e` (N 20933): edit a multi-field group from one typed list. A value stays in the field that already held
+ * it; new values go to `fallbackFieldId`. For the "other" field set the typed order is kept in `otherOrder` when it
+ * differs from field order (deleted otherwise).
+ */
+export function editGroupFields(groups: BasePromptGroups, gender: Gender | string, fieldIds: readonly string[], fallbackFieldId: string, values: unknown): BasePromptGroups {
+  if (gender === "male" && fieldIds.includes("body.breast_size")) return normalizeBasePromptGroups(groups, { allowPromptFragments: true });
+  const typed = splitPromptFragments(values);
+  const left = new Set(typed);
+  const next = { ...groups } as Record<string, string[]>;
+  for (const id of fieldIds) {
+    const had = new Set(groups[id as BasePromptGroupKey] ?? []);
+    const kept = typed.filter((v) => had.has(v) && left.delete(v));
+    if (kept.length) next[id] = kept;
+    else delete next[id];
+  }
+  const rest = typed.filter((v) => left.has(v));
+  if (rest.length) next[fallbackFieldId] = [...(next[fallbackFieldId] ?? []), ...rest];
+  if (fieldIds.length === OTHER_ORDER_FIELDS.length && fieldIds.every((id) => OTHER_ORDER_FIELD_SET.has(id))) {
+    const fieldOrder = [...new Set(fieldIds.flatMap((id) => next[id] ?? []))];
+    if (typed.some((v, i) => v !== fieldOrder[i])) next.otherOrder = typed;
+    else delete next.otherOrder;
+  }
+  return normalizeBasePromptGroups(next, { allowPromptFragments: true });
+}
+
+/** AM `X0` / 0.9.90 `qx`: any physical trait (any group except identity.character_tag and `otherOrder`; includes custom). */
 export function hasPhysicalTraits(groups: BasePromptGroups): boolean {
-  return Object.entries(groups).some(([k, v]) => k !== "identity.character_tag" && (v?.length ?? 0) > 0);
+  return Object.entries(groups).some(([k, v]) => k !== "identity.character_tag" && k !== "otherOrder" && (v?.length ?? 0) > 0);
 }
 
 /** AM `bW` 11705: merge analysis result into existing groups (physical traits replace; tag + custom kept). */
@@ -413,19 +468,20 @@ export function mergeAnalyzedBasePromptGroups(current: BasePromptGroups, analyze
   const merged: BasePromptGroups = hasPhysicalTraits(next) ? next : { ...current, ...next };
   if (current["identity.character_tag"]?.length) merged["identity.character_tag"] = current["identity.character_tag"];
   if (current.custom?.length) merged.custom = current.custom;
-  return merged;
+  if (current.otherOrder) merged.otherOrder = current.otherOrder;
+  return normalizeBasePromptGroups(merged, { allowPromptFragments: true });
 }
 
-/** AM `Si` 11746: compiled main prompt (catalog order, then custom; ", "-joined). */
+/** AM `Si` 11746 / 0.9.90 `Yi` (N 20961): compiled main prompt (catalog order, then custom; "other" values in `otherOrder`; ", "-joined). */
 export function compileMainPrompt(groups: unknown, gender?: Gender | string): string {
   const normalized = normalizeBasePromptGroups(groups, { gender, allowPromptFragments: true });
-  const parts: string[] = [];
+  const items: { fieldId: string; value: string }[] = [];
   for (const id of BASE_PROMPT_GROUP_IDS) {
     const group = catalogGroupsById.get(id);
     if (!group || !groupApplies(group, gender)) continue;
     const values = normalized[id] ?? [];
     if (group.mode === "freeform") {
-      parts.push(...values);
+      items.push(...values.map((value) => ({ fieldId: id, value })));
       continue;
     }
     const options = new Map((group.options ?? []).map((o) => [normalizeCatalogTag(o.id), o]));
@@ -433,11 +489,12 @@ export function compileMainPrompt(groups: unknown, gender?: Gender | string): st
       const option = options.get(normalizeCatalogTag(value));
       if (option) {
         if (gender && option.genders?.length && !option.genders.includes(gender)) continue;
-        parts.push(trimString(option.prompt) || option.id);
-      } else parts.push(value);
+        items.push({ fieldId: id, value: trimString(option.prompt) || option.id });
+      } else items.push({ fieldId: id, value });
     }
   }
-  parts.push(...(normalized.custom ?? []));
+  items.push(...(normalized.custom ?? []).map((value) => ({ fieldId: "custom", value })));
+  const parts = orderOtherTags(normalized, items, (x) => x.fieldId, (x) => x.value).map((x) => x.value);
   return [...new Set(parts.map((p) => p.replace(/_/gu, " ").replace(/\s+/gu, " ").trim()).filter(Boolean))].join(", ");
 }
 
@@ -1128,15 +1185,33 @@ export interface ArtistEntry {
 export interface ArtistPreset { id: string; title: string; prompt: string; negativePrompt: string; description: string }
 const defaultPresets = defaultPresetsJson as unknown as {
   DEFAULT_ARTIST_PRESETS: ArtistPreset[];
+  LEGACY_BUILTIN_ARTIST_PRESETS: ArtistPreset[];
   DEFAULT_MALE_PERSONA_PROMPT: string;
   DEFAULT_OUTFIT_PART_FRAMING_WEIGHTS: Record<OutfitPart, Record<string, number>>;
   DEFAULT_OUTFIT_PART_CONTEXT_WEIGHT_RULES: unknown[];
   ANIMA_DEFAULT_POSITIVE_PROMPT: string;
   ANIMA_DEFAULT_NEGATIVE_PROMPT: string;
 };
-/** Built-in NovelAI artist presets (`_je` 20463). Titles are Korean in the original data. */
+/**
+ * Built-in NovelAI artist presets (AM 0.9.90 `Y2e` N 2475: only `none`). Titles are Korean in the original data.
+ */
 export const DEFAULT_ARTIST_PRESETS: readonly ArtistPreset[] = defaultPresets.DEFAULT_ARTIST_PRESETS;
-export const DEFAULT_SELECTED_ARTIST_ID = "detail_anime_illustration_style";
+/** Default art style (AM 0.9.90 `mW$990` = "none"; was `detail_anime_illustration_style` up to 0.9.89). */
+export const DEFAULT_SELECTED_ARTIST_ID = "none";
+/**
+ * The two built-in art styles AM 0.9.90 removed (`detail_anime_illustration_style`, `comic_page_illustration_style`;
+ * 0.9.89.6 `Y2e`). Kept only to migrate stored data, see {@link migrateLegacyBuiltinArtists}.
+ */
+export const LEGACY_BUILTIN_ARTIST_PRESETS: readonly ArtistPreset[] = defaultPresets.LEGACY_BUILTIN_ARTIST_PRESETS;
+/** English titles / descriptions of the migrated legacy built-ins (the stored data has the Korean originals). */
+const LEGACY_BUILTIN_ARTIST_TEXT: Readonly<Record<string, { title: string; description: string }>> = Object.freeze({
+  detail_anime_illustration_style: { title: "v5 verified style", description: "Default style prompt for testing and verifying NovelAI V5." }, // v5 검증 그림체 / NovelAI V5 테스트와 검증을 위한 기본 그림체 프롬프트입니다.
+  comic_page_illustration_style: { title: "Recommended comic style", description: "Default style prompt suited to cartoon and comic page staging." }, // 만화 추천 그림체 / 카툰·만화 페이지 연출에 적합한 기본 그림체 프롬프트입니다.
+});
+/** Default art style of 0.9.89 and older (the old `DEFAULT_SELECTED_ARTIST_ID`). */
+export const LEGACY_DEFAULT_ARTIST_ID = "detail_anime_illustration_style";
+/** Version of `config/artists-global.json` after the built-in art style migration. */
+export const ARTISTS_GLOBAL_VERSION = 2;
 export const DEFAULT_MALE_PERSONA_PROMPT = defaultPresets.DEFAULT_MALE_PERSONA_PROMPT;
 export const DEFAULT_OUTFIT_PART_FRAMING_WEIGHTS: Record<OutfitPart, Record<string, number>> = defaultPresets.DEFAULT_OUTFIT_PART_FRAMING_WEIGHTS;
 export const DEFAULT_OUTFIT_PART_CONTEXT_WEIGHT_RULES: readonly unknown[] = defaultPresets.DEFAULT_OUTFIT_PART_CONTEXT_WEIGHT_RULES;
@@ -1173,7 +1248,11 @@ export function normalizeNonArtistPromptWeight(value: unknown): NonArtistPromptW
   return { enabled: r.enabled === true, multiplier };
 }
 
-/** AM `Mu` 7452: normalize the whitespace before the closing `::` of weighted groups. */
+/**
+ * AM 0.9.90 `Uu` (N 7284; 0.9.89 `Mu` 7452): at the closing `::` of a weighted group, add one space only when the text
+ * before it ends with a number (`1.2::artist:abc123 ::`, so the number is not read as the next weight). Other spacing is
+ * kept as typed: 0.9.89 forced exactly one space before every closing `::`.
+ */
 export function normalizeWeightedPromptSpacing(text: string): string {
   if (!text.includes("::")) return text;
   const numberEnd = /[-+]?(?:\d+(?:\.\d*)?|\.\d+)$/u;
@@ -1200,7 +1279,8 @@ export function normalizeWeightedPromptSpacing(text: string): string {
       depth += 1;
       out += "::";
     } else if (depth > 0) {
-      out = out.replace(/[ \t]*$/u, " ") + "::";
+      if (numberEnd.test(out)) out += " ";
+      out += "::";
       depth -= 1;
     } else out += "::";
     pos = at + 2;
@@ -1246,6 +1326,46 @@ export function listNovelAIArtists(artistPrompts: unknown): ResolvedNovelAIArtis
     });
   });
   return [...out.values()];
+}
+
+/**
+ * Built-in art style migration (AM 0.9.90 removed the 2 built-ins; port deviation, see PORT-MAP.md).
+ *
+ * AM's list builder (`Qk`) turns a stored built-in override entry (no `prompt`) into a user style with an empty prompt,
+ * and a default or selection that names a removed built-in ends at "none", so upgraded users would silently lose
+ * their art style. The port instead keeps the look:
+ * - every stored entry with a legacy built-in id becomes a full user style: the legacy title, and `prompt` /
+ *   `negativePrompt` from the stored entry when present (the port stored the body), else the legacy body; stored
+ *   `novelAIOverrides` / `nonArtistPromptWeight` stay;
+ * - a legacy id named by `defaultArtistId` (missing = the old default `detail_anime_illustration_style`) or by
+ *   `referencedIds` (characters' own selections) without a stored entry is recreated as a user style with the
+ *   legacy body and the same id, so the selections keep resolving.
+ * Idempotent: an entry that already has a prompt keeps it. `raw` is the stored `config/artists-global.json` value.
+ */
+export function migrateLegacyBuiltinArtists(raw: unknown, referencedIds: Iterable<string> = []): { characterPrompt: { artistPrompts: ArtistEntry[]; defaultArtistId: string }; version: number } {
+  const cp = asRecord(asRecord(raw).characterPrompt);
+  const entries = asArray(cp.artistPrompts).filter(isPlainObject).map((e) => jsonClone(e) as ArtistEntry);
+  const defaultArtistId = trimString(cp.defaultArtistId) || LEGACY_DEFAULT_ARTIST_ID;
+  const legacy = new Map(LEGACY_BUILTIN_ARTIST_PRESETS.map((p) => [p.id, p]));
+  const out = entries.map((entry) => {
+    const preset = legacy.get(trimString(entry.id));
+    if (!preset) return entry;
+    const prompt = trimString(entry.prompt) ? entry.prompt : preset.prompt;
+    const negativePrompt = trimString(entry.negativePrompt) ? entry.negativePrompt : preset.negativePrompt;
+    const text = LEGACY_BUILTIN_ARTIST_TEXT[preset.id];
+    const storedTitle = trimString(entry.title);
+    const title = storedTitle && storedTitle !== preset.id && storedTitle !== preset.title ? storedTitle : (text?.title ?? preset.title);
+    return { ...entry, id: preset.id, title, prompt, negativePrompt, ...(entry.description === undefined ? { description: text?.description ?? preset.description } : {}) };
+  });
+  const present = new Set(out.map((e) => trimString(e.id)));
+  for (const id of [defaultArtistId, ...referencedIds]) {
+    const preset = legacy.get(trimString(id));
+    if (!preset || present.has(preset.id)) continue;
+    const text = LEGACY_BUILTIN_ARTIST_TEXT[preset.id];
+    out.push({ id: preset.id, title: text?.title ?? preset.title, prompt: preset.prompt, negativePrompt: preset.negativePrompt, description: text?.description ?? preset.description });
+    present.add(preset.id);
+  }
+  return { characterPrompt: { artistPrompts: out, defaultArtistId }, version: ARTISTS_GLOBAL_VERSION };
 }
 
 export interface NovelAIArtistSelection {
@@ -1420,7 +1540,6 @@ export const CHARX_SETTING_FIELDS = [
   "freeOutfitGeneration",
   "freeCharacterGeneration",
   "rosterSelectionEnabled",
-  "stateAccumulationEnabled",
   "nsfwAlwaysEnabled",
   "forceAiChoiceCoordinates",
   "autoRemoveConflictingRegex",
@@ -1431,6 +1550,23 @@ export const CHARX_SETTING_FIELDS = [
   "animaNegativePrompt",
 ] as const;
 export type CharxSettingField = (typeof CHARX_SETTING_FIELDS)[number];
+/**
+ * Per-charx fields Asset Maid removed (AM `uEe` / 0.9.90 `l4e`): dropped from stored defaults, overrides, revisions and
+ * dirty lists on load. `stateAccumulationEnabled` went with the accumulated actor state in 0.9.90.
+ */
+export const REMOVED_CHARX_SETTING_FIELDS: readonly string[] = ["imageAutoGenerationEnabled", "imageGenerationCountPolicy", "stateAccumulationEnabled"];
+/** A stored per-charx override without the removed fields (also in its `revisionByField`). */
+export function stripRemovedCharxFields(value: Record<string, unknown>): Record<string, unknown> {
+  const o = { ...value };
+  for (const f of REMOVED_CHARX_SETTING_FIELDS) delete o[f];
+  if (o.revisionByField && typeof o.revisionByField === "object" && !Array.isArray(o.revisionByField)) {
+    const rev = { ...(o.revisionByField as Record<string, unknown>) };
+    for (const f of REMOVED_CHARX_SETTING_FIELDS) delete rev[f];
+    if (Object.keys(rev).length) o.revisionByField = rev;
+    else delete o.revisionByField;
+  }
+  return o;
+}
 export type NativeAssetVisibility = "hidden" | "shown";
 export interface FixedResolution { enabled: boolean; sizeId: number }
 
@@ -1440,7 +1576,6 @@ export interface CharxOverride {
   freeOutfitGeneration?: boolean;
   freeCharacterGeneration?: boolean;
   rosterSelectionEnabled?: boolean;
-  stateAccumulationEnabled?: boolean;
   nsfwAlwaysEnabled?: boolean;
   forceAiChoiceCoordinates?: boolean;
   autoRemoveConflictingRegex?: boolean;
@@ -1607,7 +1742,9 @@ export function normalizeCharacterPrompt(value: unknown, characterId = ""): Char
       if (Number.isFinite(n)) framing[part][frame] = n;
     }
   }
-  const overrides: Record<string, CharxOverride> = objectMap<CharxOverride>(asRecord(r.charxSettings).overrides);
+  const overrides = Object.fromEntries(
+    Object.entries(objectMap<Record<string, unknown>>(asRecord(r.charxSettings).overrides)).map(([k, v]) => [k, stripRemovedCharxFields(v) as CharxOverride]),
+  );
   return {
     selectedSourceId: trimString(r.selectedSourceId) || base.selectedSourceId,
     selectedCharacters: Array.isArray(r.selectedCharacters) ? r.selectedCharacters.map(trimString).filter(Boolean) : [],

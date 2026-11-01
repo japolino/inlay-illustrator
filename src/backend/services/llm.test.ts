@@ -81,9 +81,9 @@ describe("llm service", () => {
 
   test("retries retryable errors with a fixed 100 ms delay, stops on non-retryable", async () => {
     const { fake, llm, sleeps } = setup({ runtime: { generationAutoRetryCount: 2 } });
-    fake.scriptLlm(new Error("failed (503): overloaded"), { content: "" }, { content: "not json" });
+    fake.scriptLlm(new Error("failed (503): overloaded"), new TypeError("fetch failed"), { content: "not json" });
     const retries: number[] = [];
-    await expect(llm.complete({ purpose: "t", messages: [], responseMode: "json" }, { onRetry: (i) => retries.push(i.attempt) })).rejects.toMatchObject({ error: { code: "provider-error", detailCode: "ANALYZER_JSON_PARSE" } });
+    await expect(llm.complete({ purpose: "t", messages: [], responseMode: "json" }, { onRetry: (i) => retries.push(i.attempt) })).rejects.toMatchObject({ error: { code: "provider-error", detailCode: "ANALYZER_JSON_PARSE", retryable: false } });
     expect(fake.generateCalls).toHaveLength(3);
     expect(sleeps).toEqual([100, 100]);
     expect(retries).toEqual([1, 2]);
@@ -92,10 +92,24 @@ describe("llm service", () => {
     expect(fake.generateCalls).toHaveLength(4);
   });
 
-  test("an empty reply cut off by length is an empty response and is retried (AM checks the finish reason only for DeepSeek)", async () => {
-    const { fake, llm } = setup({ runtime: { generationAutoRetryCount: 1 } });
-    fake.scriptLlm({ content: "", finish_reason: "length" }, { content: '{"ok":1}' });
+  test("content errors are not retried (AM 0.9.90 `Not`): empty response and JSON parse fail after one attempt", async () => {
+    const { fake, llm, sleeps } = setup({ runtime: { generationAutoRetryCount: 3 } });
+    fake.scriptLlm({ content: "" });
+    await expect(llm.complete({ purpose: "t", messages: [], responseMode: "json" })).rejects.toMatchObject({ error: { detailCode: "ANALYZER_EMPTY_RESPONSE", retryable: false } });
+    expect(fake.generateCalls).toHaveLength(1);
+    fake.scriptLlm({ content: "not json" });
+    await expect(llm.complete({ purpose: "t", messages: [], responseMode: "json" })).rejects.toMatchObject({ error: { detailCode: "ANALYZER_JSON_PARSE", retryable: false } });
+    expect(fake.generateCalls).toHaveLength(2);
+    expect(sleeps).toEqual([]);
+    fake.scriptLlm(new Error("failed (503): overloaded"), { content: '{"ok":1}' });
     expect(await llm.complete({ purpose: "t", messages: [], responseMode: "json" })).toMatchObject({ parsed: { ok: 1 }, attempts: 2 });
+  });
+
+  test("an empty reply cut off by length is an empty response and is not retried (AM checks the finish reason only for DeepSeek)", async () => {
+    const { fake, llm } = setup({ runtime: { generationAutoRetryCount: 1 } });
+    fake.scriptLlm({ content: "", finish_reason: "length" });
+    await expect(llm.complete({ purpose: "t", messages: [], responseMode: "json" })).rejects.toMatchObject({ error: { detailCode: "ANALYZER_EMPTY_RESPONSE" } });
+    expect(fake.generateCalls).toHaveLength(1);
   });
 
   test("own timeout -> ANALYZER_TIMEOUT; caller abort -> AbortError without retry", async () => {

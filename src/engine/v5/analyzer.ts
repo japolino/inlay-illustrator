@@ -3,35 +3,46 @@
  * structured output schema, response recovery, the analyzer run (`Egt`) over an injected LLM client, and the
  * split-analysis helpers.
  *
- * `buildV5AnalyzerRequest` composes the verbatim core builders in the same order as `Egt.run` (117383-117489):
- * `nbe` → `Cgt` → `Pgt` → continuity projections (`_gt`, `vN`, `UDe`, `qDe`, `XDe`) → `rt.buildAnalyzerRequest`
- * (`tMe`) → `eje` schema (+ split `mgt` / `hgt`). Parity with the messages that `Egt` actually sends is tested.
+ * `buildV5AnalyzerRequest` composes the verbatim core builders in the same order as `c0e.run` (0.9.90 @161195):
+ * `o0e` → `kbt` → `wbt` → continuity projections (`hbt`, `BE`, `V3e`, `W3e`, `J3e`, `Fre`, `q3e`) →
+ * `rt.buildAnalyzerRequest` (`p3e`) → `qOe` schema (+ split `sbt` / `lbt` / `pbt`). Parity with the messages that
+ * `c0e` actually sends is tested.
  */
 import {
   buildV5ActorCandidates,
   resolveV5ImageCount,
   buildV5SceneSlots,
-  Zyt as buildLayoutContinuity,
+  hbt as buildLayoutContinuity,
   createV5ContinuityBasis,
-  xrt as buildActorModifierContinuity,
-  _rt as buildSceneModifierContinuity,
-  krt as buildNaturalLanguageContinuity,
+  V3e as buildActorModifierContinuity,
+  W3e as buildSceneModifierContinuity,
+  J3e as buildInteractionModifierContinuity,
+  Fre as buildNaturalLanguageContinuity,
+  q3e as buildReferenceExclusions,
   buildV5StructuredOutputSchema,
-  Byt as toInitialPhaseSchema,
-  Uyt as toDetailPhaseSchema,
-  Xyt as toDetailPhasePayload,
+  sbt as toInitialPhaseSchema,
+  lbt as toDetailPhaseSchema,
+  pbt as toDetailPhasePayload,
   buildV5AnalyzerMessages as coreBuildV5AnalyzerMessages,
   toV5AnalyzerWirePayload,
   resolveV5UserDirections as coreResolveV5UserDirections,
   createDefaultV5UserDirectionSettings,
   selectV5DirectionPreset as coreSelectV5DirectionPreset,
-  V5_ANALYSIS_PRESETS as CORE_V5_ANALYSIS_PRESETS,
+  NOVELAI_V5_RAW_CONFIG,
+  createDefaultAnalysisDocument as coreCreateDefaultAnalysisDocument,
+  resolveStoredAnalysisDocument as coreResolveStoredAnalysisDocument,
+  resolveAnalysisDocument as coreResolveAnalysisDocument,
+  validateAnalysisDocument as coreValidateAnalysisDocument,
+  resolveAnalysisExecution as coreResolveAnalysisExecution,
+  resolveAnalysisDirections as coreResolveAnalysisDirections,
+  assertDirectingRules as coreAssertDirectingRules,
+  applyAnalysisToRunInput as coreApplyAnalysisToRunInput,
   createV5Analyzer as coreCreateV5Analyzer,
   createV5SplitAnalysisRunner as coreCreateV5SplitAnalysisRunner,
   renderV5SplitPhaseSystemInstruction as coreRenderV5SplitPhaseSystemInstruction,
   renderV5AnalyzerSystemInstruction as coreRenderV5AnalyzerSystemInstruction,
   buildV5InstructionModules as coreBuildV5InstructionModules,
-  pbt as planSplitBatchSizes,
+  Rbt as planSplitBatchSizes,
 } from "../core/asset-maid-core";
 import { getSharedV5RuleRuntime, type V5AnalyzerRequest, type V5ContinuitySnapshot, type V5RecoveryMode, type V5RuleRuntime } from "./runtime";
 import type { V5RecoveredResponse } from "./types";
@@ -69,8 +80,12 @@ export interface V5DirectionSettings {
   readonly imageRatio: V5DirectionList;
 }
 
-/** Resolved user directions handed to the analyzer request (`xbt` 0.9.89.5; 0.9.88 `qgt` 118641). */
+/** Resolved user directions handed to the analyzer request (`Kbt` @162561). */
 export interface V5UserDirections {
+  readonly freeGenerationInstructions?: Readonly<Record<string, unknown>>;
+  readonly freeGenerationDesignInstructions?: Readonly<Record<string, unknown>>;
+  /** System execution settings of the directing document (`fAe`), rendered as the analyzer system direction. */
+  readonly systemExecution?: unknown;
   readonly customInstruction?: string;
   readonly scenePresetId?: string;
   readonly scenePresetControlOverrides?: Readonly<Record<string, boolean | number>>;
@@ -82,26 +97,34 @@ export interface V5UserDirections {
   readonly imageRatioCustomSizes?: readonly { readonly id: number; readonly sizeId: number; readonly width: number; readonly height: number }[];
 }
 
-/** Built-in analysis presets (`bPe` @3459 = `dg.analysisPresets`): scene default/pov/ensemble/comic, image ratio default/unspecified. */
-export const V5_ANALYSIS_PRESETS = CORE_V5_ANALYSIS_PRESETS as Readonly<Record<string, unknown>>;
+/**
+ * Built-in analysis presets: scene default/pov/ensemble/comic, image ratio default/unspecified. In 0.9.90 they are
+ * inline in the raw config (`Gl.analysisPresets`); read-only.
+ */
+export const V5_ANALYSIS_PRESETS = (NOVELAI_V5_RAW_CONFIG as { analysisPresets: unknown }).analysisPresets as Readonly<Record<string, unknown>>;
 
-/** Default `v5UserDirections` settings (scene-default + image-ratio-default). Original: `RPe` @6060. */
+/**
+ * Default legacy `novelai.v5UserDirections` settings (scene-default + image-ratio-default). 0.9.90 reads them only as the
+ * fallback when no directing document is stored. Original: `CV` @2771.
+ */
 export function createDefaultV5DirectionSettings(): V5DirectionSettings {
   return createDefaultV5UserDirectionSettings() as V5DirectionSettings;
 }
 
 /**
- * Select a preset in a direction list (falls back to the first preset). Original: `Td` (selectV5DirectionPreset) @6049.
+ * Select a preset in a direction list (falls back to the first preset). Original: `Hv` (selectV5DirectionPreset) @2760.
  */
 export function selectV5DirectionPreset(list: Partial<V5DirectionList>, presetId: string | undefined, mode: string = "preset"): V5DirectionList {
   return coreSelectV5DirectionPreset(list, presetId, mode) as V5DirectionList;
 }
 
 /**
- * Resolve the analyzer user directions from the run input. Outside the comic preset it also sets
+ * Resolve the analyzer user directions from the run input (`novelAIConfig.v5UserDirections`, which 0.9.90 fills from
+ * the directing document via `applyAnalysisToRunInput`). Outside the comic preset it also sets
  * `imageRatioAllowedSizeIds` (the fixed `requestedSize` id, else the selected ratio preset's `allowedSizeIds`) and
- * `imageRatioCustomSizes` (allowed custom sizes from `customImageSizes` + a custom `requestedSize`).
- * Original: `xbt` (0.9.89.5 @120954; 0.9.88 `qgt`).
+ * `imageRatioCustomSizes` (allowed custom sizes from `customImageSizes` + a custom `requestedSize`). Copies
+ * `freeGenerationInstructions`, `freeGenerationDesignInstructions` and `systemExecution`.
+ * Original: `Kbt` (resolveV5UserDirections) @162561.
  */
 export function resolveV5UserDirections(input: {
   readonly novelAIConfig: { readonly v5UserDirections?: V5DirectionSettings | unknown };
@@ -115,6 +138,76 @@ export function resolveV5UserDirections(input: {
 /** `resolveV5UserDirections({novelAIConfig: {v5UserDirections: settings}})`. */
 export function resolveV5Directions(settings: V5DirectionSettings | undefined): V5UserDirections {
   return resolveV5UserDirections({ novelAIConfig: { v5UserDirections: settings } });
+}
+
+/* ----------------------------------------------------------------------------------- directing document (0.9.90) */
+
+/**
+ * Directing document: `{migration, scene: {selected, items}, imageRatio: {selected, items}}`. It lives in
+ * `config.runtime.instructionChanges` as a diff over the default document, merged with the active Atelier preset's
+ * `analysis.scene.rules`. Shape is owned by the core; typed loosely here.
+ */
+export type V5AnalysisDocument = {
+  readonly scene: { readonly selected: string; readonly items: Readonly<Record<string, unknown>> };
+  readonly imageRatio: { readonly selected: string; readonly items: Readonly<Record<string, unknown>> };
+  readonly [key: string]: unknown;
+};
+
+/** Analysis execution settings (`qv`): `{execution: {mode: "default"|"comic", resolution, aiCoordinates, ...}, customSizes}`. */
+export type V5AnalysisExecution = { readonly execution: { readonly mode: string; readonly [key: string]: unknown }; readonly customSizes: readonly unknown[] };
+
+/** `{directions, customSizes, execution}` resolved from the config (`yAe`), the `analysis` of a prepared run. */
+export interface V5ResolvedAnalysis {
+  readonly directions: Readonly<Record<string, unknown>>;
+  readonly customSizes: readonly unknown[];
+  readonly execution: V5AnalysisExecution["execution"];
+}
+
+/** The built-in default directing document. Original: `L0` (createDefaultAnalysisDocument) @4393. */
+export function createDefaultAnalysisDocument(): V5AnalysisDocument {
+  return coreCreateDefaultAnalysisDocument() as V5AnalysisDocument;
+}
+
+/** Stored directing document of a config (default + `runtime.instructionChanges`). Original: `w8` @4136. */
+export function resolveStoredAnalysisDocument(config: unknown): V5AnalysisDocument {
+  return coreResolveStoredAnalysisDocument(config) as V5AnalysisDocument;
+}
+
+/** Effective directing document (stored + active preset's scene rules). Original: `zc` (resolveAnalysisDocument) @4147. */
+export function resolveAnalysisDocument(config: unknown): V5AnalysisDocument {
+  return coreResolveAnalysisDocument(config, undefined) as V5AnalysisDocument;
+}
+
+/** Validate a directing document; throws on invalid input. Original: `mC` (validateAnalysisDocument) @3605. */
+export function validateAnalysisDocument(document: unknown): unknown {
+  return coreValidateAnalysisDocument(document);
+}
+
+/** Analysis execution settings of a config. Original: `qv` (resolveAnalysisExecution) @3534. */
+export function resolveAnalysisExecution(config: unknown): V5AnalysisExecution {
+  return coreResolveAnalysisExecution(config) as V5AnalysisExecution;
+}
+
+/** Analyzer directions resolved from a config. Original: `yAe` (resolveAnalysisDirections) @3741. */
+export function resolveAnalysisDirections(config: unknown): V5ResolvedAnalysis {
+  return coreResolveAnalysisDirections(config) as V5ResolvedAnalysis;
+}
+
+/**
+ * Check the directing rules of a document against a compiled catalog (throws Korean errors).
+ * Original: `C8` (assertDirectingRules) @4466.
+ */
+export function assertDirectingRules(document: unknown, catalog: unknown, selected?: unknown): void {
+  (coreAssertDirectingRules as AnyFn)(document, catalog, selected);
+}
+
+/**
+ * Apply a resolved analysis to an orchestrator run input: `novelAIConfig.v5UserDirections = analysis.directions`,
+ * `customImageSizes`, `forceAiChoiceCoordinates`, `requestedSize[Id]` from the execution resolution (not for comic).
+ * Original: `qbt` (applyAnalysisToRunInput) @162696.
+ */
+export function applyAnalysisToRunInput<T extends object>(runInput: T, analysis: V5ResolvedAnalysis | undefined): T {
+  return (coreApplyAnalysisToRunInput as AnyFn)(runInput, analysis) as T;
 }
 
 /* ------------------------------------------------------------------------------------------------ request */
@@ -133,6 +226,7 @@ export interface V5AnalyzerContext {
   readonly personaPromptKey?: string;
   readonly freeCharacterGenerationEnabled: boolean;
   readonly freeOutfitGenerationEnabled: boolean;
+  /** Forwarded to the request context; 0.9.90's chat flow no longer fills it (known identities were removed). */
   readonly knownCharacterIdentities?: readonly { readonly name: string; readonly keys: readonly string[] }[];
   readonly replayGeneratedOutfits?: readonly unknown[];
   readonly rosterSelectionEnabled?: boolean;
@@ -159,7 +253,7 @@ export interface V5AnalyzerRequestInput {
   readonly runtime?: V5RuleRuntime;
 }
 
-/** Candidate bindings (`nbe` 116899). */
+/** Candidate bindings (`o0e`). */
 export interface V5CandidateBindings {
   readonly request: readonly unknown[];
   readonly response: readonly unknown[];
@@ -176,7 +270,7 @@ export interface V5CandidateBindings {
 /**
  * Candidate bindings of one analyzer context, as `buildV5AnalyzerRequest` builds them. Each `response` entry maps a wire
  * `candidateKey` to its source key (`identityReferences[0]`) and lists `appearanceForms[{formRef, formId, outfits[{outfitRef,
- * outfitId}]}]`, where `outfitRef` is the outfit id the analyzer sees. Original: `lve` (buildV5ActorCandidates) @119479.
+ * outfitId}]}]`, where `outfitRef` is the outfit id the analyzer sees. Original: `o0e` (buildV5ActorCandidates).
  */
 export function buildV5CandidateBindings(context: V5AnalyzerContext, continuitySnapshot?: V5ContinuitySnapshot | null): V5CandidateBindings {
   return buildV5ActorCandidates(context, continuitySnapshot ?? null) as unknown as V5CandidateBindings;
@@ -188,7 +282,7 @@ export interface V5AnalyzerRequestBuild {
   readonly candidates: V5CandidateBindings;
   readonly imageCount: number | { readonly min: number; readonly max: number };
   readonly scene: { readonly scene: string; readonly slotHints?: Readonly<Record<string, readonly string[]>> };
-  /** Context handed to `rt.buildAnalyzerRequest` (the `I` object of Egt). */
+  /** Context handed to `rt.buildAnalyzerRequest` (the `A` object of `c0e.run`). */
   readonly requestContext: Record<string, unknown>;
   readonly request: V5AnalyzerRequest;
   /** Structured output schema passed to `client.complete` (`structuredOutputSchema`). */
@@ -197,12 +291,12 @@ export interface V5AnalyzerRequestBuild {
 }
 
 /**
- * Build the V5 analyzer request for one message exactly as `Egt.run` does before the LLM call (no JEV roster pass).
+ * Build the V5 analyzer request for one message exactly as `c0e.run` does before the LLM call (no JEV roster pass).
  * Reads context fields: candidateSlots, targetImageCount, imageCountConstraint, actorCandidates, personaCandidates,
  * v5PersonaCatalogCandidates, v5OutfitCatalogCandidates, personaPromptKey, freeCharacterGenerationEnabled,
  * freeOutfitGenerationEnabled, knownCharacterIdentities, replayGeneratedOutfits.
- * Originals: `nbe` @116899, `Cgt` @117183, `Pgt` @117160, `_gt` @116748, `vN` @38066, `UDe` @43833, `qDe` @43870,
- * `XDe` @43965, `tMe` via `_re().buildAnalyzerRequest` @48543, `eje` @11083, `mgt`/`hgt`/`vgt` (split phases).
+ * Originals: `o0e`, `kbt`, `wbt`, `hbt`, `BE`, `V3e`, `W3e`, `J3e`, `Fre`, `q3e`, `Hne().buildAnalyzerRequest` (`p3e`),
+ * `qOe`, `sbt`/`lbt`/`pbt` (split phases).
  */
 export function buildV5AnalyzerRequest(input: V5AnalyzerRequestInput): V5AnalyzerRequestBuild {
   const runtime = input.runtime ?? getSharedV5RuleRuntime();
@@ -218,8 +312,10 @@ export function buildV5AnalyzerRequest(input: V5AnalyzerRequestInput): V5Analyze
   const v = createV5ContinuityBasis(snapshot);
   const w = buildActorModifierContinuity(v, u.response, runtime.catalog) as readonly unknown[];
   const x = buildSceneModifierContinuity(v, runtime.catalog) as unknown;
-  const nl = buildNaturalLanguageContinuity(v, u.response, { excludePersona: userDirections.scenePresetId === "pov" }) as unknown;
+  const im = buildInteractionModifierContinuity(v, u.response, runtime.catalog) as readonly unknown[];
+  const nl = buildNaturalLanguageContinuity(v, u.response) as unknown;
   const requestContext: Record<string, unknown> = {
+    referenceExclusions: buildReferenceExclusions(v, u.response, runtime.catalog),
     freeCharacterGenerationEnabled: context.freeCharacterGenerationEnabled,
     freeOutfitGenerationEnabled: context.freeOutfitGenerationEnabled,
     knownCharacterIdentities: context.knownCharacterIdentities,
@@ -234,6 +330,7 @@ export function buildV5AnalyzerRequest(input: V5AnalyzerRequestInput): V5Analyze
     ...(y.length ? { layoutContinuity: y } : {}),
     ...(w.length ? { actorModifierContinuity: w } : {}),
     ...(x ? { sceneModifierContinuity: x } : {}),
+    ...(im.length ? { interactionModifierContinuity: im } : {}),
     ...(nl ? { naturalLanguageContinuity: nl } : {}),
     ...(h.slotHints ? { slotHints: h.slotHints } : {}),
     ...(slotMap ? { responseEnvelopeMode: "slot-map" } : {}),
@@ -267,7 +364,7 @@ export interface V5ChatMessage {
   readonly content: string | readonly unknown[];
 }
 
-/** Messages + cache partition (`abe` 117190). */
+/** Messages + cache partition (`s0e`). */
 export interface V5AnalyzerMessages {
   readonly payload: Record<string, unknown>;
   readonly wirePayload: Record<string, unknown>;
@@ -280,7 +377,7 @@ export interface V5AnalyzerMessages {
  * cache partition (app-static / config-static / character-static / outfit-static + live input).
  * @param request `build.request` (or `rt.buildAnalyzerRequest` result).
  * @param options.imageParts Image parts appended to the user message (revision images).
- * Original: `abe` (buildV5AnalyzerMessages) @117190.
+ * Original: `s0e` (buildV5AnalyzerMessages) @161028.
  */
 export function buildV5AnalyzerMessages(
   request: V5AnalyzerRequest,
@@ -304,17 +401,17 @@ export function buildV5AnalyzerMessages(
   ) as V5AnalyzerMessages;
 }
 
-/** Compact wire payload (`KE` toV5AnalyzerWirePayload @28901). */
+/** Compact wire payload (`KE` toV5AnalyzerWirePayload). */
 export function toV5WirePayload(payload: Record<string, unknown>): Record<string, unknown> {
   return toV5AnalyzerWirePayload(payload) as Record<string, unknown>;
 }
 
-/** Structured output JSON schema (`eje` @11083). */
+/** Structured output JSON schema (`qOe`). */
 export function buildV5ResponseSchema(input: { slotNumbers: readonly number[]; imageCount: unknown; requestPayload: unknown }): Record<string, unknown> {
   return buildV5StructuredOutputSchema(input) as Record<string, unknown>;
 }
 
-/** System instruction text from instruction modules (`nX` @6244) and the module builder (`rX` @6207). */
+/** System instruction text from instruction modules (`uZ`) and the module builder (`dZ`). */
 export function renderV5AnalyzerSystemInstruction(modules: unknown): string {
   return coreRenderV5AnalyzerSystemInstruction(modules) as string;
 }
@@ -328,7 +425,8 @@ export function buildV5InstructionModules(input: unknown): unknown {
  * Recover a raw analyzer response (string or object) against a request build, with the same arguments `Egt` uses:
  * candidates, enabled modifier refs, source scene, local recovery, slot hints, requested slot numbers.
  * @param options.mode "complete-from-request" (normal) or "preserve-response-membership" (split / revision).
- * Original: `_re().recoverAnalyzerResponse` → `KRe` @28260 (`nje` envelope + `FRe` normalisation).
+ * Original: `Hne().recoverAnalyzerResponse` → `ZTe` (recoverV5AnalyzerResponseCore); `systemDirection` from the
+ * local recovery is copied onto every illustration.
  */
 export function recoverV5AnalyzerResponse(
   response: unknown,
@@ -371,7 +469,7 @@ export interface V5AnalyzerClient {
   ): Promise<{ readonly raw?: string; readonly parsed?: unknown; readonly transportDiagnostic?: unknown; readonly [key: string]: unknown }>;
 }
 
-/** Analyzer result (`Egt.run` return, 117690-117703). */
+/** Analyzer result (`c0e.run` return). */
 export interface V5AnalyzerResult {
   readonly profile: "v5-hybrid";
   readonly response: V5RecoveredResponse;
@@ -387,7 +485,7 @@ export interface V5AnalyzerResult {
   readonly transportDiagnostic?: unknown;
 }
 
-/** Input of `analyzer.run` (fields read by `Egt.run`). */
+/** Input of `analyzer.run` (fields read by `c0e.run`). */
 export interface V5AnalyzerRunInput {
   readonly context: V5AnalyzerContext;
   readonly config: Readonly<Record<string, unknown>>;
@@ -407,7 +505,7 @@ export interface V5AnalyzerRunInput {
   readonly [key: string]: unknown;
 }
 
-/** The V5 analyzer (`Egt`). */
+/** The V5 analyzer (`c0e`). */
 export interface V5Analyzer {
   readonly runtime: V5RuleRuntime;
   captureSelectionSettings(): unknown;
@@ -419,7 +517,7 @@ export interface V5Analyzer {
  * (code `V5_ANALYZER_NO_USABLE_ILLUSTRATION`, `diagnostics`) when nothing usable is recovered.
  * The JEV roster pre-pass is disabled (no JEV dependencies are passed); with `rosterSelectionEnabled` the run
  * fails with `JEV_UNAVAILABLE`, as in Asset Maid without a JEV connection.
- * Original: `Egt` (createV5Analyzer) @117357.
+ * Original: `c0e` (createV5Analyzer) @161195.
  */
 export function createV5Analyzer(client: V5AnalyzerClient, runtime?: V5RuleRuntime, jev?: unknown): V5Analyzer {
   return (coreCreateV5Analyzer as AnyFn)(client, runtime ?? undefined, jev) as V5Analyzer;
@@ -428,19 +526,19 @@ export function createV5Analyzer(client: V5AnalyzerClient, runtime?: V5RuleRunti
 /* ------------------------------------------------------------------------------------------------ split analysis */
 
 /**
- * Batch sizes for split analysis: `r = max(1, floor(total/min(batch,7)), ceil(total/7))` batches, sizes as even
- * as possible. Throws for non-positive inputs. Original: `Dgt` @118145.
+ * Batch sizes for split analysis: `r = max(1, floor(total/min(batch,10)), ceil(total/10))` batches (at most 4096), sizes
+ * as even as possible. Throws for non-positive inputs. Original: `Rbt` @162062.
  */
 export function planV5SplitBatches(totalCount: number, batchSize: number): number[] {
   return planSplitBatchSizes(totalCount, batchSize) as number[];
 }
 
-/** System instruction of a split phase ("initial" | "detail"). Original: `wgt` @116617. */
+/** System instruction of a split phase ("initial" | "detail"). Original: `mbt` @160391. */
 export function renderV5SplitPhaseSystemInstruction(request: V5AnalyzerRequest, phase: "initial" | "detail"): string {
   return coreRenderV5SplitPhaseSystemInstruction(request, phase) as string;
 }
 
-/** Split runner (`Bgt`): initial call → preparation callback → parallel detail batches. */
+/** Split runner (`Lbt`): initial call → preparation callback → parallel detail batches. */
 export interface V5SplitAnalysisRunner {
   dispose(): void;
   run(
@@ -454,7 +552,7 @@ export interface V5SplitAnalysisRunner {
 
 /**
  * Create the split-analysis runner over an analyzer (`run` is called with `splitStage`), so a fake analyzer can
- * drive it. `onResumeState(responseKey, message)` receives resume hints. Original: `Bgt` @118287.
+ * drive it. `onResumeState(responseKey, message)` receives resume hints. Original: `Lbt` @162200.
  */
 export function createV5SplitAnalysisRunner(
   analyzer: Pick<V5Analyzer, "run"> & { readonly runtime?: { readonly catalogFingerprint?: string }; captureSelectionSettings?: () => unknown },

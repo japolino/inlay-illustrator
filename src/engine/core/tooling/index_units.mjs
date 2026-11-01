@@ -1,3 +1,5 @@
+// Lists the top-level units of a bundle (name, line, size). Point `src` at the bundle to inspect
+// (0.9.90: `0.9.90.p120.js`; the path below is the historical 0.9.88 pretty build).
 
 import fs from "node:fs";
 import * as acorn from "acorn";

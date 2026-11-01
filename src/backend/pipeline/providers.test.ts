@@ -4,10 +4,10 @@ import { RpcFailure } from "../rpc/errors.js";
 import { createFakeServices } from "../testing/fake-services.js";
 import { buildNovelAIRequest, createComfyReferencePreparer, createImageProviderAdapters, ProviderRunRegistry, toProviderError } from "./providers.js";
 
-const ctx = { purpose: "chat" as const, connectionId: "img-1", model: "nai-diffusion-4-5-full", ownerChatId: "c1", ownerCharacterId: "ch1", forceNsfwPrefix: () => false };
+const ctx = { purpose: "chat" as const, connectionId: "img-1", model: "nai-diffusion-4-5-full", ownerChatId: "c1", ownerCharacterId: "ch1", forceRating: () => false as const };
 
-describe("NovelAI request (AM jut / gge / Cut / Cyt)", () => {
-  test("v4 captions with per-character negatives and coordinates, nsfw prefix, retries 0 + queue", () => {
+describe("NovelAI request (AM jut / gge / Cut; 0.9.90 rating wrapper Mht)", () => {
+  test("v4 captions with per-character negatives and coordinates, fixed rating tag, retries 0 + queue", () => {
     const build = buildNovelAIRequest(
       {
         prompt: "1girl, 1boy, classroom",
@@ -20,15 +20,16 @@ describe("NovelAI request (AM jut / gge / Cut / Cyt)", () => {
           steps: 99,
           useCoords: true,
           characterPrompts: [
-            { prompt: "girl, red hair", uc: "bad hands", centerX: 0.3, centerY: 0.5, coordinateMode: "fixed" },
+            { prompt: "girl, red hair, rating:explicit", uc: "bad hands", centerX: 0.3, centerY: 0.5, coordinateMode: "fixed" },
             { prompt: "boy, black hair", uc: "", centerX: 0.7, centerY: 0.5, coordinateMode: "fixed" },
             { prompt: "", uc: "" },
           ],
         },
       },
-      { ...ctx, forceNsfwPrefix: () => true },
+      { ...ctx, forceRating: () => "nsfw" as const },
     );
     const r = build.request;
+    // AM 0.9.90 `Mht`: the fixed rating replaces the prompt's rating tags; character prompts lose theirs.
     expect(r.prompt.startsWith("nsfw, ")).toBe(true);
     expect(r.negativePrompt).toBe("lowres");
     expect(r.seed).toBe(123);
@@ -44,15 +45,27 @@ describe("NovelAI request (AM jut / gge / Cut / Cyt)", () => {
     ]);
   });
 
-  test("request.forceNsfwPrefix false wins over the setting; automatic coordinates send no centers", () => {
+  test("a fixed \"sfw\" rating replaces an nsfw tag of the prompt (AM OG)", () => {
+    const r = buildNovelAIRequest({ prompt: "nsfw, 1girl, rating:explicit, beach", negativePrompt: "", seed: "1", width: 832, height: 1216, config: {} }, { ...ctx, forceRating: () => "sfw" as const }).request;
+    expect(r.prompt).toBe("sfw, 1girl, beach");
+  });
+
+  test("request.forceRating false wins over the source's fixed rating; automatic coordinates send no centers", () => {
     const r = buildNovelAIRequest(
-      { prompt: "landscape", negativePrompt: "", seed: "", width: 832, height: 1216, forceNsfwPrefix: false, config: { useCoords: false, characterPrompts: [{ prompt: "a", uc: "", coordinateMode: "automatic" }] } },
-      { ...ctx, forceNsfwPrefix: () => true },
+      { prompt: "landscape", negativePrompt: "", seed: "", width: 832, height: 1216, forceRating: false, config: { useCoords: false, characterPrompts: [{ prompt: "a", uc: "", coordinateMode: "automatic" }] } },
+      { ...ctx, forceRating: () => "nsfw" as const },
     ).request;
     expect(r.prompt).toBe("landscape");
     expect(r.novelai?.useCoords).toBe(false);
     expect(r.novelai?.characters).toEqual([{ prompt: "a", negativePrompt: "" }]);
     expect(typeof r.seed).toBe("number");
+  });
+
+  test("the run config's NovelAI effort reaches the image request (AM 0.9.90 High / Medium)", () => {
+    const base = { prompt: "landscape", negativePrompt: "", seed: "", width: 832, height: 1216 };
+    expect(buildNovelAIRequest({ ...base, config: { effort: "medium" } }, { ...ctx, model: "nai-diffusion-5-full" }).request.novelai?.effort).toBe("medium");
+    expect(buildNovelAIRequest({ ...base, config: { effort: "high" } }, ctx).request.novelai?.effort).toBe("high");
+    expect(buildNovelAIRequest({ ...base, config: {} }, ctx).request.novelai).not.toHaveProperty("effort");
   });
 
   test("non-artist weight rescales everything outside the artist segment", () => {
@@ -143,15 +156,6 @@ describe("adapters over ImageService", () => {
     await run("nai-diffusion-5-full", { characterReferenceEnabled: true });
     expect(seen).toEqual([]);
     await expect(run("nai-diffusion-4-5-full", {}, { imageToImage: { image: "" } })).rejects.toThrow(/img2img source image is empty/);
-  });
-
-  test("generic providers send the flat prompt pair", async () => {
-    const fx = createFakeServices();
-    const registry = new ProviderRunRegistry();
-    const adapters = createImageProviderAdapters(fx.services, registry);
-    await adapters["chan-server"]!.generate({ provider: "chan-server", prompt: "a, b", negativePrompt: "c", seed: "9", width: 800, height: 600 });
-    expect(fx.imageRequests[0]).toMatchObject({ prompt: "a, b", negativePrompt: "c", seed: 9, width: 800, height: 600, retries: 0 });
-    expect(fx.imageRequests[0]!.novelai).toBeUndefined();
   });
 
   test("ImageService failures map to dispatcher-classifiable errors", () => {

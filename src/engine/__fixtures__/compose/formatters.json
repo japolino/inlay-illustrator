@@ -52,56 +52,7 @@
   },
   {
    "input": {
-    "provider": "chan-server",
-    "plan": {
-     "globalPositive": "  1girl, 1.2::smile::, artist:some_artist, score_9, best_quality  ",
-     "negativePrompt": " lowres, target#bad, worst quality ",
-     "bodyAction": "She waves.",
-     "characters": [
-      {
-       "actorSlot": "primary",
-       "prompt": "silver_hair, (ribbon), source#hug",
-       "uc": "bad hands"
-      },
-      {
-       "actorSlot": "persona",
-       "prompt": "black_hoodie, mutual#kiss",
-       "uc": ""
-      }
-     ]
-    }
-   },
-   "expected": {
-    "ok": {
-     "provider": "chan-server",
-     "profileId": "anima-base",
-     "profileRevision": 1,
-     "sourceFormat": "novelai-canonical-v1",
-     "requestFormat": "anima",
-     "formatterRevision": 1,
-     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.",
-     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres",
-     "positivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.\n\nsilver hair, \\(ribbon\\), hug\n\nblack hoodie, kiss",
-     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres\n\nbad hands",
-     "characterPrompts": [
-      {
-       "actorSlot": "primary",
-       "prompt": "silver_hair, (ribbon), source#hug",
-       "negativePrompt": "bad hands"
-      },
-      {
-       "actorSlot": "persona",
-       "prompt": "black_hoodie, mutual#kiss",
-       "negativePrompt": ""
-      }
-     ],
-     "diagnostics": []
-    }
-   }
-  },
-  {
-   "input": {
-    "provider": "chan-server",
+    "provider": "comfy-ui",
     "plan": {
      "globalPositive": "  1girl, 1.2::smile::, artist:some_artist, score_9, best_quality  ",
      "negativePrompt": " lowres, target#bad, worst quality ",
@@ -119,21 +70,20 @@
       }
      ]
     },
-    "animaPositivePrefix": "",
-    "animaNegativePrefix": "custom neg"
+    "comfyUIProfile": "@bundled"
    },
    "expected": {
     "ok": {
-     "provider": "chan-server",
-     "profileId": "anima-base",
+     "provider": "comfy-ui",
+     "profileId": "asset-maid-comfy-ui-workflow-v1",
      "profileRevision": 1,
      "sourceFormat": "novelai-canonical-v1",
      "requestFormat": "anima",
      "formatterRevision": 1,
-     "globalPositivePrompt": "1girl, smile, @some artist, score_9, best quality\n\nShe waves.",
-     "globalNegativePrompt": "custom neg, lowres, worst quality",
-     "positivePrompt": "1girl, smile, @some artist, score_9, best quality\n\nShe waves.\n\nsilver hair, \\(ribbon\\), hug\n\nblack hoodie, kiss",
-     "negativePrompt": "custom neg, lowres, worst quality\n\nbad hands",
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres",
+     "positivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.\n\nsilver hair, \\(ribbon\\), hug\n\nblack hoodie, kiss",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres\n\nbad hands",
      "characterPrompts": [
       {
        "actorSlot": "primary",
@@ -170,7 +120,9 @@
       }
      ]
     },
-    "comfyUIProfile": "@bundled"
+    "comfyUIProfile": "@bundled",
+    "animaPositivePrefix": "",
+    "animaNegativePrefix": "custom neg"
    },
    "expected": {
     "ok": {
@@ -180,10 +132,10 @@
      "sourceFormat": "novelai-canonical-v1",
      "requestFormat": "anima",
      "formatterRevision": 1,
-     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.",
-     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres",
-     "positivePrompt": "masterpiece, best quality, score_7, safe, 1girl, smile, @some artist, score_9\n\nShe waves.\n\nsilver hair, \\(ribbon\\), hug\n\nblack hoodie, kiss",
-     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, lowres\n\nbad hands",
+     "globalPositivePrompt": "1girl, smile, @some artist, score_9, best quality\n\nShe waves.",
+     "globalNegativePrompt": "custom neg, lowres, worst quality",
+     "positivePrompt": "1girl, smile, @some artist, score_9, best quality\n\nShe waves.\n\nsilver hair, \\(ribbon\\), hug\n\nblack hoodie, kiss",
+     "negativePrompt": "custom neg, lowres, worst quality\n\nbad hands",
      "characterPrompts": [
       {
        "actorSlot": "primary",
@@ -455,100 +407,6 @@
   },
   {
    "input": {
-    "provider": "chan-server",
-    "plan": {
-     "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
-     "negativePrompt": "",
-     "bodyAction": "",
-     "characters": []
-    }
-   },
-   "expected": {
-    "ok": {
-     "provider": "chan-server",
-     "profileId": "anima-base",
-     "profileRevision": 1,
-     "sourceFormat": "novelai-canonical-v1",
-     "requestFormat": "anima",
-     "formatterRevision": 1,
-     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
-     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
-     "positivePrompt": "masterpiece, best quality, score_7, safe, kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
-     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
-     "characterPrompts": [],
-     "diagnostics": [
-      {
-       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
-       "field": "positivePrompt",
-       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
-       "offset": 84
-      },
-      {
-       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
-       "field": "positivePrompt",
-       "message": "A non-positive NovelAI prompt block was removed: 0.",
-       "offset": 42
-      },
-      {
-       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
-       "field": "positivePrompt",
-       "message": "A non-positive NovelAI prompt block was removed: -1.",
-       "offset": 56
-      }
-     ]
-    }
-   }
-  },
-  {
-   "input": {
-    "provider": "chan-server",
-    "plan": {
-     "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
-     "negativePrompt": "",
-     "bodyAction": "",
-     "characters": []
-    },
-    "animaPositivePrefix": "",
-    "animaNegativePrefix": "custom neg"
-   },
-   "expected": {
-    "ok": {
-     "provider": "chan-server",
-     "profileId": "anima-base",
-     "profileRevision": 1,
-     "sourceFormat": "novelai-canonical-v1",
-     "requestFormat": "anima",
-     "formatterRevision": 1,
-     "globalPositivePrompt": "kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
-     "globalNegativePrompt": "custom neg",
-     "positivePrompt": "kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
-     "negativePrompt": "custom neg",
-     "characterPrompts": [],
-     "diagnostics": [
-      {
-       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
-       "field": "positivePrompt",
-       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
-       "offset": 42
-      },
-      {
-       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
-       "field": "positivePrompt",
-       "message": "A non-positive NovelAI prompt block was removed: 0.",
-       "offset": 0
-      },
-      {
-       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
-       "field": "positivePrompt",
-       "message": "A non-positive NovelAI prompt block was removed: -1.",
-       "offset": 14
-      }
-     ]
-    }
-   }
-  },
-  {
-   "input": {
     "provider": "comfy-ui",
     "plan": {
      "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
@@ -589,6 +447,55 @@
        "field": "positivePrompt",
        "message": "A non-positive NovelAI prompt block was removed: -1.",
        "offset": 56
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "0::removed::, -1::neg::, 1.5::kept_tag::, ::stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": []
+    },
+    "comfyUIProfile": "@bundled",
+    "animaPositivePrefix": "",
+    "animaNegativePrefix": "custom neg"
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "asset-maid-comfy-ui-workflow-v1",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "globalNegativePrompt": "custom neg",
+     "positivePrompt": "kept tag, stray, {brace}, http://x.y/a_b, C:/path_x/y",
+     "negativePrompt": "custom neg",
+     "characterPrompts": [],
+     "diagnostics": [
+      {
+       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
+       "field": "positivePrompt",
+       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
+       "offset": 42
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: 0.",
+       "offset": 0
+      },
+      {
+       "code": "ANIMA_PROMPT_NON_POSITIVE_WEIGHT_DROPPED",
+       "field": "positivePrompt",
+       "message": "A non-positive NovelAI prompt block was removed: -1.",
+       "offset": 14
       }
      ]
     }
@@ -824,61 +731,7 @@
   },
   {
    "input": {
-    "provider": "chan-server",
-    "plan": {
-     "globalPositive": "a\n\nb, B\n\n\n1girl, 1GIRL",
-     "negativePrompt": "x\n\ny",
-     "bodyAction": "Line",
-     "characters": [
-      {
-       "actorId": "actor_1",
-       "actorIndex": 0,
-       "prompt": "1.1::unclosed",
-       "uc": "::"
-      }
-     ]
-    }
-   },
-   "expected": {
-    "ok": {
-     "provider": "chan-server",
-     "profileId": "anima-base",
-     "profileRevision": 1,
-     "sourceFormat": "novelai-canonical-v1",
-     "requestFormat": "anima",
-     "formatterRevision": 1,
-     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine",
-     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
-     "positivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine\n\nunclosed",
-     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
-     "characterPrompts": [
-      {
-       "actorId": "actor_1",
-       "actorIndex": 0,
-       "prompt": "1.1::unclosed",
-       "negativePrompt": "::"
-      }
-     ],
-     "diagnostics": [
-      {
-       "code": "ANIMA_PROMPT_UNCLOSED_EMPHASIS",
-       "field": "positivePrompt",
-       "message": "An unclosed NovelAI numeric-emphasis block was recovered as plain tags.",
-       "offset": 0
-      },
-      {
-       "code": "ANIMA_PROMPT_STRAY_DELIMITER",
-       "field": "negativePrompt",
-       "message": "A NovelAI emphasis delimiter without a numeric opener was removed.",
-       "offset": 0
-      }
-     ]
-    }
-   }
-  },
-  {
-   "input": {
-    "provider": "chan-server",
+    "provider": "comfy-ui",
     "plan": {
      "globalPositive": "a\n\nb, B\n\n\n1girl, 1GIRL",
      "negativePrompt": "x\n\ny",
@@ -892,21 +745,20 @@
       }
      ]
     },
-    "animaPositivePrefix": "",
-    "animaNegativePrefix": "custom neg"
+    "comfyUIProfile": "@bundled"
    },
    "expected": {
     "ok": {
-     "provider": "chan-server",
-     "profileId": "anima-base",
+     "provider": "comfy-ui",
+     "profileId": "asset-maid-comfy-ui-workflow-v1",
      "profileRevision": 1,
      "sourceFormat": "novelai-canonical-v1",
      "requestFormat": "anima",
      "formatterRevision": 1,
-     "globalPositivePrompt": "a\n\nb\n\n1girl\n\nLine",
-     "globalNegativePrompt": "custom neg, x\n\ny",
-     "positivePrompt": "a\n\nb\n\n1girl\n\nLine\n\nunclosed",
-     "negativePrompt": "custom neg, x\n\ny",
+     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine",
+     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
+     "positivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine\n\nunclosed",
+     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
      "characterPrompts": [
       {
        "actorId": "actor_1",
@@ -948,7 +800,9 @@
       }
      ]
     },
-    "comfyUIProfile": "@bundled"
+    "comfyUIProfile": "@bundled",
+    "animaPositivePrefix": "",
+    "animaNegativePrefix": "custom neg"
    },
    "expected": {
     "ok": {
@@ -958,10 +812,10 @@
      "sourceFormat": "novelai-canonical-v1",
      "requestFormat": "anima",
      "formatterRevision": 1,
-     "globalPositivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine",
-     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
-     "positivePrompt": "masterpiece, best quality, score_7, safe, a\n\nb\n\n1girl\n\nLine\n\nunclosed",
-     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration, x\n\ny",
+     "globalPositivePrompt": "a\n\nb\n\n1girl\n\nLine",
+     "globalNegativePrompt": "custom neg, x\n\ny",
+     "positivePrompt": "a\n\nb\n\n1girl\n\nLine\n\nunclosed",
+     "negativePrompt": "custom neg, x\n\ny",
      "characterPrompts": [
       {
        "actorId": "actor_1",
@@ -1250,82 +1104,6 @@
   },
   {
    "input": {
-    "provider": "chan-server",
-    "plan": {
-     "globalPositive": "",
-     "negativePrompt": "",
-     "bodyAction": "",
-     "characters": [
-      {
-       "prompt": "",
-       "uc": ""
-      }
-     ]
-    }
-   },
-   "expected": {
-    "ok": {
-     "provider": "chan-server",
-     "profileId": "anima-base",
-     "profileRevision": 1,
-     "sourceFormat": "novelai-canonical-v1",
-     "requestFormat": "anima",
-     "formatterRevision": 1,
-     "globalPositivePrompt": "masterpiece, best quality, score_7, safe",
-     "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
-     "positivePrompt": "masterpiece, best quality, score_7, safe",
-     "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
-     "characterPrompts": [
-      {
-       "prompt": "",
-       "negativePrompt": ""
-      }
-     ],
-     "diagnostics": []
-    }
-   }
-  },
-  {
-   "input": {
-    "provider": "chan-server",
-    "plan": {
-     "globalPositive": "",
-     "negativePrompt": "",
-     "bodyAction": "",
-     "characters": [
-      {
-       "prompt": "",
-       "uc": ""
-      }
-     ]
-    },
-    "animaPositivePrefix": "",
-    "animaNegativePrefix": "custom neg"
-   },
-   "expected": {
-    "ok": {
-     "provider": "chan-server",
-     "profileId": "anima-base",
-     "profileRevision": 1,
-     "sourceFormat": "novelai-canonical-v1",
-     "requestFormat": "anima",
-     "formatterRevision": 1,
-     "globalPositivePrompt": "",
-     "globalNegativePrompt": "custom neg",
-     "positivePrompt": "",
-     "negativePrompt": "custom neg",
-     "characterPrompts": [
-      {
-       "prompt": "",
-       "negativePrompt": ""
-      }
-     ],
-     "diagnostics": []
-    }
-   }
-  },
-  {
-   "input": {
     "provider": "comfy-ui",
     "plan": {
      "globalPositive": "",
@@ -1352,6 +1130,46 @@
      "globalNegativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
      "positivePrompt": "masterpiece, best quality, score_7, safe",
      "negativePrompt": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, chromatic aberration",
+     "characterPrompts": [
+      {
+       "prompt": "",
+       "negativePrompt": ""
+      }
+     ],
+     "diagnostics": []
+    }
+   }
+  },
+  {
+   "input": {
+    "provider": "comfy-ui",
+    "plan": {
+     "globalPositive": "",
+     "negativePrompt": "",
+     "bodyAction": "",
+     "characters": [
+      {
+       "prompt": "",
+       "uc": ""
+      }
+     ]
+    },
+    "comfyUIProfile": "@bundled",
+    "animaPositivePrefix": "",
+    "animaNegativePrefix": "custom neg"
+   },
+   "expected": {
+    "ok": {
+     "provider": "comfy-ui",
+     "profileId": "asset-maid-comfy-ui-workflow-v1",
+     "profileRevision": 1,
+     "sourceFormat": "novelai-canonical-v1",
+     "requestFormat": "anima",
+     "formatterRevision": 1,
+     "globalPositivePrompt": "",
+     "globalNegativePrompt": "custom neg",
+     "positivePrompt": "",
+     "negativePrompt": "custom neg",
      "characterPrompts": [
       {
        "prompt": "",
@@ -4871,5 +4689,23 @@
   },
   "source": "bundled",
   "fingerprint": "da5e209d"
+ },
+ "providerTable": {
+  "novelai": {
+   "label": "Novel Ai",
+   "capabilities": {
+    "referenceUiMode": "full",
+    "outfitImageGeneration": "enabled",
+    "promptCodecId": "novelai-structured"
+   }
+  },
+  "comfy-ui": {
+   "label": "Comfy UI",
+   "capabilities": {
+    "referenceUiMode": "full",
+    "outfitImageGeneration": "enabled",
+    "promptCodecId": "anima-flat"
+   }
+  }
  }
 }

@@ -18,6 +18,7 @@
       "body.build",
       "body.proportions",
       "body.breast_size",
+      "body.breast_other",
       "marks.distinctive",
       "nonhuman.features",
       "custom"

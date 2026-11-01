@@ -23,9 +23,10 @@ RPC handlers get an `RpcContext` = services + `modules`.
 |---|---|---|
 | StorageService | `storage.ts` | userStorage with the contract layout: split config diffs, character documents (revision guard -> `conflict`), chat data, chat image settings, ui state, migrations + too-new guard, per-path FIFO writes, factory / character reset. Emits `config.changed`, `chatImageGeneration.changed`, `document.changed`. |
 | LlmService | `llm.ts` | Connection profiles over `generate.raw` (explicit model), reasoning DTO, JSON mode + remembered 400 fallback, lenient JSON (engine `parseLenientJson`), vision detection + text-only fallback, retries = `generationAutoRetryCount` with fixed 100 ms delay, own timeout + AbortSignal. `analyzerClient()` = engine `AnalyzerClient` (retries 0: the engine retries). |
-| ImageService | `images.ts` | `imageGen.generate`: NovelAI host parameters + `rawRequestOverride` (coords, per-character negatives, img2img), V4.5 director references (`resolvedReferenceImages`), ComfyUI workflow mapping (`workflow_id`, `resolvedSourceImages`, denoise), generic providers; serial queue with `novelaiParallelIntervalSec`; retries; abort. |
+| ImageService | `images.ts` | `imageGen.generate`: NovelAI host parameters + `rawRequestOverride` (coords, per-character negatives, img2img), V4.5 director references (`resolvedReferenceImages`), ComfyUI workflow mapping (`workflow_id`, `resolvedSourceImages`, denoise); other providers are refused (`IMAGE_PROVIDER_UNSUPPORTED`); serial queue with `novelaiParallelIntervalSec`; retries; abort. |
 | ImageBytesService | `image-bytes.ts` | Image bytes: Lumiverse images (id or `/api/v1/images/<id>` / `/api/v1/image-gen/results/<id>` URL) via `spindle.images.readBinary`, mime type sniffed from the bytes; uploads / crops from userStorage (`storage:` keys). Same-origin REST JSON without a Spindle API (character gallery, LLM model lists) via the contract fetch bridge (`src/shared/contract/bridge.ts`). |
 | SourcesService | `sources.ts` | Characters, chats (group members), personas, world books by scope; Asset Maid `Source/Member/LoreRecord` build; character images (avatar, gallery via bridge, expressions, risu asset map, generated). |
+| AtelierService | `atelier.ts` | Maid Atelier store `config/atelier.json`: preset documents (revision checks, import / export envelope, bundled guidelines merged with new ids), guideline library and free-generation edits through the verbatim AM commit logic (`src/engine/v5/atelier.ts`), field-level conflicts, execution controls, one-time import of the legacy V5 directions, repair. Emits `atelier.changed`; `runtimeOverlay()` feeds generation runs. |
 | EventBus / RunLog | `events.ts`, `run-log.ts` | RPC events with a monotonic seq; run log ring (250) + `log.appended`. |
 
 Tests use `src/backend/testing/fake-host.ts` (in-memory Spindle host) and `fake-services.ts`.
@@ -34,20 +35,10 @@ Tests use `src/backend/testing/fake-host.ts` (in-memory Spindle host) and `fake-
 
 `controller.ts` (jobs, triggers, locks, cancel, retry, recovery, publish, history / zoom / chat-state operations),
 `generate.ts` (one message run: slots, analyzer context, engine run, persist), `engine-port.ts` + `providers.ts` (real engine
-`createAssetMaidEngine`, NovelAI / ComfyUI / generic image provider adapters over ImageService), `auto.ts` + `core/auto-core.ts`
+`createAssetMaidEngine`, NovelAI / ComfyUI image provider adapters over ImageService), `auto.ts` + `core/auto-core.ts`
 (free character / outfit generation, verbatim AM slice), `markup.ts` (strip, suppression carriers, bake per
 `src/shared/contract/chat-dom.ts`), `chat-data.ts` (plans <-> Image History), `records.ts` (sidecar `chats/<chatId>/pipeline.json`:
 generation records + zoom drafts), `host-chat.ts` (messages / swipes), `labels.ts`.
-
-## Webtoon mode (`src/backend/webtoon`, experimental)
-
-When the chat image setting `webtoonMode` is on, a message job runs `run.ts runWebtoonStrip` instead of the analyzer:
-`roster.ts` (cast, outfits, artist / negative / NovelAI parameters from the analyzer context inputs), one planner call
-(`planner-prompt.ts`, `LlmService.complete`, up to 3 calls), `storyboard-validate.ts` (webtoon bench round 2: quotes, limits,
-layout and size repairs, `drop_outfit`), `panel-request.ts` (identity + framing-weighted outfit tags, `use_coords`), one
-`EnginePort.dispatch` per image panel (NovelAI adapter, ImageService queue), `layout.ts` (pure, coordinates only) and
-`store.ts` (`chats/<chatId>/webtoon/<messageId>@<swipe>.json` + `index.json`). Panel rerolls are regenerate jobs with slot id
-`webtoon:<panelId>`; text edits are stored as overrides and re-laid out. Nothing is baked into the message.
 
 ## Asset analysis (`src/backend/analysis`, see its README)
 

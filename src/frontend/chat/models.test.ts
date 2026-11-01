@@ -2,13 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { createDefaultChatImageGenerationSettings } from "../../shared/contract/config.js";
 import { findScopeViolations } from "../../build/css-scope.js";
 import type { GenerationJobSnapshot } from "../../shared/contract/rpc.js";
-import { applyCountAction, countLimits, countToggleText, countView } from "./count-model.js";
+import { applyCountAction, applyExecutionAction, countLimits, countToggleText, countView, executionView, resolutionIconRect } from "./count-model.js";
 import { historyIdOfKey, jobForMessage, uniqueBubbles } from "./dom.js";
 import { CHAT_SIDE_CSS } from "./styles.js";
 import { buildToastStack, errorDetailText, errorLogText, finishedToast, generationProgress, hasErrorDetails, retryErrorText, runningMessage, runningToast, type FinishedGeneration } from "./toast-model.js";
 import { historyPosition, revisionPosition } from "./widgets.js";
 
-const limits = countLimits(false, "v5-hybrid");
+const limits = countLimits(false);
 
 describe("generation-count panel model", () => {
   test("default view: fixed 1, auto", () => {
@@ -23,7 +23,7 @@ describe("generation-count panel model", () => {
     for (let i = 0; i < 15; i += 1) s = applyCountAction(s, "fixed-increment", limits) ?? s;
     expect(countView(s, limits).fixed).toBe(10);
     expect(applyCountAction(s, "fixed-increment", limits)).toBeNull();
-    expect(countView(s, countLimits(true, "v5-hybrid")).bounds.fixed.max).toBe(Number.MAX_SAFE_INTEGER);
+    expect(countView(s, countLimits(true)).bounds.fixed.max).toBe(Number.MAX_SAFE_INTEGER);
   });
   test("range keeps min < max and the toggle shows min–max", () => {
     let s = applyCountAction(createDefaultChatImageGenerationSettings(), "select-range", limits)!;
@@ -37,8 +37,7 @@ describe("generation-count panel model", () => {
     expect([view.min, view.max]).toEqual([2, 3]);
     expect(s.analysisMode).toBe("single");
   });
-  test("split needs V5 and caps the batch at ceil(total/2)", () => {
-    expect(applyCountAction(createDefaultChatImageGenerationSettings(), "select-split", countLimits(false, "v4.5"))).toBeNull();
+  test("split caps the batch at ceil(total/2)", () => {
     let s = applyCountAction(createDefaultChatImageGenerationSettings(), "select-split", limits)!;
     expect(s.analysisMode).toBe("split");
     for (let i = 0; i < 8; i += 1) s = applyCountAction(s, "total-increment", limits) ?? s;
@@ -52,15 +51,10 @@ describe("generation-count panel model", () => {
   test("auto toggle", () => {
     expect(applyCountAction(createDefaultChatImageGenerationSettings(), "toggle-auto", limits)!.autoGenerationEnabled).toBe(false);
   });
-  test("webtoon mode: own mode, kept by the auto toggle, left by picking a count mode", () => {
-    const webtoon = applyCountAction(createDefaultChatImageGenerationSettings(), "select-webtoon", limits)!;
-    expect(webtoon.webtoonMode).toBe(true);
-    const view = countView(webtoon, limits);
-    expect(view.mode).toBe("webtoon");
-    expect(countToggleText(view)).toBe("W");
-    expect(applyCountAction(webtoon, "select-webtoon", limits)).toBeNull();
-    expect(applyCountAction(webtoon, "toggle-auto", limits)!.webtoonMode).toBe(true);
-    for (const action of ["select-fixed", "select-range", "select-split"] as const) expect(applyCountAction(webtoon, action, limits)!.webtoonMode).toBe(false);
+  test("stored webtoon / manga settings of the removed comic modes show the stored count mode", () => {
+    const stored = { ...createDefaultChatImageGenerationSettings(), webtoonMode: true, comicFormat: "manga" } as never;
+    expect(countView(stored, limits).mode).toBe("fixed");
+    expect(countToggleText(countView(stored, limits))).toBe("1");
   });
 });
 
@@ -216,5 +210,23 @@ describe("chat-side stylesheet", () => {
       expect(/^\.(?:ii-am-root|inlay-illustrator-frame)[.:\s[]/u.test(selector) || selector === ".ii-am-root").toBe(true);
     }
     expect(styleSelectors("@media (x){.a,.ii-am-root .b{c:d}} @keyframes k{to{x:y}} .e{f:g}")).toEqual([".a", ".ii-am-root .b", ".e"]);
+  });
+});
+
+describe("toolbar resolution / AI coordinates reducer (AM 0.9.90 Xwt$990)", () => {
+  const runtime = { customImageSizes: [{ id: 1e9, width: 640, height: 960 }], analysisExecution: { resolution: { id: 2, width: 1216, height: 832 }, aiCoordinates: true } };
+  const view = executionView(runtime, null, "Auto");
+  test("view: options are Auto + presets + custom sizes as W × H; selected value and label", () => {
+    expect(view.options[0]).toEqual({ value: "auto", label: "Auto", size: null });
+    expect(view.options.map((o) => o.label)).toContain("640 × 960");
+    expect(view).toMatchObject({ resolutionValue: "2", resolutionLabel: "1216 × 832", aiCoordinates: true });
+    expect(resolutionIconRect(view.resolution)).toEqual({ width: 16, height: 11 });
+  });
+  test("coordinates toggles; auto -> null; a size -> {id,width,height}; unknown or unchanged -> null", () => {
+    expect(applyExecutionAction(view, { type: "coordinates" })).toEqual({ resolution: { id: 2, width: 1216, height: 832 }, aiCoordinates: false });
+    expect(applyExecutionAction(view, { type: "resolution", value: "auto" })).toEqual({ resolution: null, aiCoordinates: true });
+    expect(applyExecutionAction(view, { type: "resolution", value: "1000000000" })).toEqual({ resolution: { id: 1e9, width: 640, height: 960 }, aiCoordinates: true });
+    expect(applyExecutionAction(view, { type: "resolution", value: "nope" })).toBeNull();
+    expect(applyExecutionAction(view, { type: "resolution", value: "2" })).toBeNull();
   });
 });

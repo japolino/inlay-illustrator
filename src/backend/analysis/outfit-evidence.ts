@@ -53,7 +53,7 @@ export function loreBodiesByPromptKey(source: AmSource): Map<string, string> {
   const map = new Map<string, string>();
   for (const m of source.members ?? [])
     for (const l of m.lorebooks ?? []) {
-      const key = String(amFn("Hs")(m, l) ?? "");
+      const key = String(amFn("Is")(m, l) ?? "");
       if (key && typeof l.content === "string" && l.content.trim()) map.set(key, l.content);
     }
   return map;

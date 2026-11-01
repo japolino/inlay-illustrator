@@ -6,7 +6,9 @@
       "prompt": "",
       "negativePrompt": "",
       "description": "작가 프롬프트를 적용하지 않습니다."
-    },
+    }
+  ],
+  "LEGACY_BUILTIN_ARTIST_PRESETS": [
     {
       "id": "detail_anime_illustration_style",
       "title": "v5 검증 그림체",
