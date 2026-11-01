@@ -127,6 +127,51 @@ const STREAM_WAIT_POLL_MS = 250;
 /** Host generation types that start automatic illustration (Lumiverse: normal, swipe, regenerate; not continue/impersonate/quiet). */
 const AUTO_GENERATION_TYPES = new Set(["", "normal", "swipe", "regenerate"]);
 
+const WEIGHT_OPEN = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)::/u;
+/** Comma tags of a prompt with their offsets. The key drops weights, case and spacing, so it survives the core's prompt cleanup. */
+const promptTags = (text: string) =>
+  [...text.matchAll(/[^,\n]+/gu)].flatMap((m) => {
+    const body = m[0].trim();
+    if (!body) return [];
+    const start = m.index + m[0].length - m[0].trimStart().length;
+    return [{ start, end: start + body.length, body, key: body.replace(WEIGHT_OPEN, "").replace(/\s*::$/u, "").replace(/\s+/gu, " ").trim().toLowerCase() }];
+  });
+
+/**
+ * Where `segment` (an artist prompt) sits in a saved prompt. Exact text first; otherwise the longest run of the
+ * segment's tags, because the core rewrites the prompt it sends: whitespace and newlines collapse, a weight group
+ * can split off its first tag, and a duplicate or conflicting tag can drop out. Null when under half the tags match.
+ */
+export function findPromptSegment(text: string, segment: string): { start: number; end: number } | null {
+  const exact = text.indexOf(segment);
+  if (exact >= 0) return { start: exact, end: exact + segment.length };
+  const wanted = new Set(promptTags(segment).map((t) => t.key).filter(Boolean));
+  if (!wanted.size) return null;
+  const tags = promptTags(text);
+  let best: { from: number; to: number; hits: number } | null = null;
+  for (let i = 0; i < tags.length; i += 1) {
+    if (!wanted.has(tags[i]!.key)) continue;
+    const hit = new Set<string>();
+    let to = i;
+    let gap = 0;
+    for (let j = i; j < tags.length && gap <= 1; j += 1) {
+      const key = tags[j]!.key;
+      if (!key) continue;
+      if (wanted.has(key)) {
+        hit.add(key);
+        to = j;
+        gap = 0;
+      } else gap += 1;
+    }
+    if (!best || hit.size > best.hits) best = { from: i, to, hits: hit.size };
+  }
+  if (!best || best.hits * 2 < wanted.size) return null;
+  // A weight split off the segment's first tag ("1.2::, artist:x ::") belongs to the segment.
+  let from = best.from;
+  while (from > 0 && WEIGHT_OPEN.test(tags[from - 1]!.body) && !tags[from - 1]!.key) from -= 1;
+  return { start: tags[from]!.start, end: tags[best.to]!.end };
+}
+
 export interface ChatPipeline {
   handleGenerationEnded(payload: unknown): Promise<void>;
   handleHostEvent(event: string, payload: unknown): Promise<void>;
@@ -910,12 +955,13 @@ export function createChatPipelineController(services: BackendServices, engine: 
     en: "Editing made the artist prompt segment undetectable. Edit the artist part and the rest separately in the original.",
     ko: "편집으로 작가 프롬프트 구간을 확인할 수 없습니다. 원본에서 작가 구간과 나머지 내용을 나누어 편집해 주세요.",
   };
-  const replaceSegment = (text: string, oldSegment: string, nextSegment: string): string => {
-    const from = oldSegment.trim();
-    if (!from) return nextSegment.trim() ? (text.trim() ? `${text.trim()}, ${nextSegment.trim()}` : nextSegment.trim()) : text;
-    const index = text.indexOf(from);
-    if (index < 0) throw new RpcFailure(labelError("conflict", ARTIST_SEGMENT_LOST));
-    const next = `${text.slice(0, index)}${nextSegment.trim()}${text.slice(index + from.length)}`;
+  /** Swaps the first of `oldSegments` found in `text` (the tracked artist part, then the preset's current prompt). */
+  const replaceSegment = (text: string, oldSegments: readonly string[], nextSegment: string): string => {
+    const froms = [...new Set(oldSegments.map((s) => s.trim()).filter(Boolean))];
+    if (!froms.length) return nextSegment.trim() ? (text.trim() ? `${text.trim()}, ${nextSegment.trim()}` : nextSegment.trim()) : text;
+    const span = froms.reduce<ReturnType<typeof findPromptSegment>>((found, from) => found ?? findPromptSegment(text, from), null);
+    if (!span) throw new RpcFailure(labelError("conflict", ARTIST_SEGMENT_LOST));
+    const next = `${text.slice(0, span.start)}${nextSegment.trim()}${text.slice(span.end)}`;
     return next.replace(/,\s*,/gu, ",").replace(/^\s*,\s*|\s*,\s*$/gu, "").trim();
   };
 
@@ -936,15 +982,15 @@ export function createChatPipelineController(services: BackendServices, engine: 
         // The tracked segment is the record's own artist part, except on records regenerated before it followed the artist.
         const tracked = rec(rec(record.novelAIConfig).nonArtistPromptWeightArtist);
         const own = str(tracked.id) === str(record.artistId) || out.positive.includes(str(tracked.positive));
-        out.positive = replaceSegment(out.positive, (own && str(tracked.positive)) || str(old?.prompt), str(next.prompt));
-        out.negative = replaceSegment(out.negative, (own && str(tracked.negative)) || str(old?.negativePrompt), str(next.negativePrompt));
+        out.positive = replaceSegment(out.positive, [(own && str(tracked.positive)) || "", str(old?.prompt)], str(next.prompt));
+        out.negative = replaceSegment(out.negative, [(own && str(tracked.negative)) || "", str(old?.negativePrompt)], str(next.negativePrompt));
         out.trackedArtist = { id: next.id, name: next.title, positive: str(next.prompt), negative: str(next.negativePrompt) };
         const o = rec(next.novelAIOverrides);
         for (const key of ["steps", "scale", "cfgRescale"]) if (Number.isFinite(Number(o[key]))) out.configPatch[key] = Number(o[key]);
       } else {
         const entries = config.animaArtists.entries;
         const next = entries.find((a) => a.id === overrides.artistId) ?? fail("not-found", `Artist not found: ${overrides.artistId}`);
-        out.positive = replaceSegment(out.positive, str(entries.find((a) => a.id === record.artistId)?.text), str(next.text));
+        out.positive = replaceSegment(out.positive, [str(entries.find((a) => a.id === record.artistId)?.text)], str(next.text));
       }
       out.artistId = overrides.artistId;
     }
