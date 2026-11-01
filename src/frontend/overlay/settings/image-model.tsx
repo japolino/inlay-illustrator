@@ -4,8 +4,7 @@ import {
   CHARACTER_REFERENCE_TYPES,
   IMAGE_SIZE_PRESETS,
   NOVELAI_MODELS,
-  NOVELAI_NOISE_SCHEDULES,
-  NOVELAI_SAMPLERS,
+  novelAISamplingOptions,
   generationProviderFromLumiverse,
   isNovelAIV5Model,
   promptCodecForProvider,
@@ -153,9 +152,11 @@ function NovelAIBox({ form, config, model }: { form: ConfigForm; config: InlayCo
   const v5 = isNovelAIV5Model(model);
   const referenceDisabled = v5;
   const ids = { steps: useFieldId("ii-nai-steps"), scale: useFieldId("ii-nai-scale"), rescale: useFieldId("ii-nai-rescale") };
-  const samplerOptions: SelectOption[] = NOVELAI_SAMPLERS.map((s) => ({ value: s.value, label: s.label }));
-  if (!samplerOptions.some((o) => o.value === nai.sampler)) samplerOptions.push({ value: nai.sampler, label: C.existingValue(nai.sampler) });
-  const scheduleOptions: SelectOption[] = NOVELAI_NOISE_SCHEDULES.map((s) => ({ value: s, label: s }));
+  const sampling = novelAISamplingOptions(model);
+  const samplerOptions: SelectOption[] = sampling.samplers.map((s) => ({ value: s.value, label: s.label }));
+  if (!samplerOptions.some((o) => o.value === nai.sampler)) samplerOptions.push({ value: nai.sampler, label: C.existingValue(nai.sampler), disabled: true });
+  const scheduleOptions: SelectOption[] = sampling.noiseSchedules.map((s) => ({ value: s, label: s }));
+  if (!scheduleOptions.some((o) => o.value === nai.noiseSchedule)) scheduleOptions.push({ value: nai.noiseSchedule, label: C.existingValue(nai.noiseSchedule), disabled: true });
   const referenceTypes: SelectOption<CharacterReferenceType>[] = CHARACTER_REFERENCE_TYPES.map((t) => ({ value: t, label: t }));
   return (
     <Card title={I.novelaiBox} data-image-provider-settings-box="novelai">

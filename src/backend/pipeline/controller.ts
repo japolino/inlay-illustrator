@@ -986,6 +986,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
         out.negative = replaceSegment(out.negative, [(own && str(tracked.negative)) || "", str(old?.negativePrompt)], str(next.negativePrompt));
         out.trackedArtist = { id: next.id, name: next.title, positive: str(next.prompt), negative: str(next.negativePrompt) };
         const o = rec(next.novelAIOverrides);
+        for (const key of ["sampler", "noiseSchedule"] as const) out.configPatch[key] = str(o[key]) || config.novelai[key];
         for (const key of ["steps", "scale", "cfgRescale"]) if (Number.isFinite(Number(o[key]))) out.configPatch[key] = Number(o[key]);
       } else {
         const entries = config.animaArtists.entries;

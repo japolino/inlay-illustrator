@@ -28,6 +28,7 @@
  */
 import {
   generationProviderFromLumiverse,
+  novelAISamplingOptions,
   isNovelAIV5Model,
   normalizeConfig,
   promptCodecForProvider,
@@ -189,8 +190,11 @@ export function buildNovelAIParameters(
   const steps = clampInt(o.steps ?? nai.steps, 1, 50, 28);
   const scale = Number.isFinite(Number(o.scale ?? nai.scale)) ? Number(o.scale ?? nai.scale) || 6 : 6;
   const cfgRescale = clampNum(o.cfgRescale ?? nai.cfgRescale, 0, 1, 0.5);
-  const sampler = normalizeNovelAiSampler(o.sampler ?? nai.sampler) ?? "k_euler_ancestral";
-  const noiseSchedule = str(o.noiseSchedule ?? nai.noiseSchedule) || "karras";
+  const sampling = novelAISamplingOptions(target.model);
+  const sampler = [o.sampler, nai.sampler].map(normalizeNovelAiSampler)
+    .find((value) => sampling.samplers.some((s) => s.value === value)) ?? "k_euler_ancestral";
+  const noiseSchedule = [o.noiseSchedule, nai.noiseSchedule]
+    .find((value) => sampling.noiseSchedules.some((s) => s === value)) ?? "karras";
   const qualityToggle = (o.qualityToggle ?? nai.qualityToggle) !== false;
   const useOrder = (o.useOrder ?? nai.useOrder) !== false;
   const useCoords = o.useCoords === true;

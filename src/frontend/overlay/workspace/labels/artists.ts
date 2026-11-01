@@ -28,6 +28,10 @@ export const ARTISTS_LABELS = {
   fieldPositive: "Artist positive", // 작가 포지티브
   fieldNegative: "Artist negative · optional", // 작가 네거티브 · 선택 사항
   fieldNegativeAria: "Artist negative", // 작가 네거티브
+  sampler: "Sampler",
+  noiseSchedule: "Denoiser (noise schedule)",
+  useGlobal: "Use global setting",
+  unavailable: "unavailable for this model",
   custom: "Custom", // 커스텀
   customAria: "Per-artist custom generation settings", // 작가별 커스텀 생성 설정
   stepDecrease: "STEPS decrease by 1", // STEPS 1 감소

@@ -279,3 +279,15 @@ describe("artist dock form", () => {
     expect(formToEntry("", { ...form, custom: false, negative: " n " }, false)).toEqual({ id: "", title: "P", prompt: "a", negativePrompt: "n" });
   });
 });
+
+
+test("artist sampler and denoiser round-trip through editing and can return to global", () => {
+  const artist = { id: "mine", title: "Mine", prompt: "artist:me", negativePrompt: "", description: "", displayTitle: "Mine", userDefined: true,
+    novelAIOverrides: { sampler: "k_dpmpp_sde", noiseSchedule: "exponential" } };
+  const form = artistToForm(artist, { steps: 28, scale: 5, cfgRescale: 0 });
+  expect(formToEntry(artist.id, form, false).novelAIOverrides).toMatchObject(artist.novelAIOverrides);
+  const inherited = formToEntry(artist.id, { ...form, sampler: "", noiseSchedule: "" }, false).novelAIOverrides!;
+  expect(inherited.sampler).toBeUndefined();
+  expect(inherited.noiseSchedule).toBeUndefined();
+  expect(formToEntry(artist.id, { ...form, custom: false }, false).novelAIOverrides).toBeUndefined();
+});
