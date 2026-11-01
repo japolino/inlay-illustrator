@@ -4,14 +4,16 @@
  * Both lists have a global default and an optional per-character selection (NovelAI `selectedArtistId` "" = global preset).
  * Without a character in context the list edits the global default.
  */
+import { novelAISamplingOptions } from "../../../shared/contract/config.js";
+import { resolveImageConnection } from "../settings/image-model.js";
 import { useEffect } from "preact/hooks";
 import { ARTIST_OVERRIDE_RANGES, NO_ARTIST_ID, type AnimaArtistEntry, type ArtistEntry, type ResolvedNovelAIArtist } from "../../../shared/contract/character.js";
 import type { AnimaArtistList } from "../../../shared/contract/character.js";
 import type { AppController } from "../../state/app-state.js";
-import { useAppState } from "../../state/app-state.js";
+import { useAppState, useRpcQuery } from "../../state/app-state.js";
 import { Store, useSelector } from "../../state/store.js";
 import { DockLayout } from "../shell/dock.js";
-import { Button, CheckIcon, ChevronDownIcon, ChevronUpIcon, IconButton, PencilIcon, PlusIcon, SaveIcon, Slider, TrashIcon, XIcon, cn } from "../ui/index.js";
+import { Button, CheckIcon, ChevronDownIcon, ChevronUpIcon, IconButton, PencilIcon, PlusIcon, SaveIcon, Select, Slider, TrashIcon, XIcon, cn } from "../ui/index.js";
 import { useWorkspaceCtx, type WorkspaceCtx } from "./context.js";
 import { ImageIcon, MinusIcon, SparklesIcon, StarIcon, TypeIcon } from "./icons.js";
 import { ARTISTS_LABELS } from "./labels/artists.js";
@@ -29,6 +31,8 @@ export interface ArtistForm {
   prompt: string;
   negative: string;
   custom: boolean;
+  sampler: string;
+  noiseSchedule: string;
   steps: number;
   scale: number;
   cfgRescale: number;
@@ -53,7 +57,7 @@ interface ArtistsState {
 }
 
 export function emptyArtistForm(config?: { steps: number; scale: number; cfgRescale: number }): ArtistForm {
-  return { title: "", prompt: "", negative: "", custom: false, steps: config?.steps ?? 28, scale: config?.scale ?? 5, cfgRescale: config?.cfgRescale ?? 0, weightEnabled: false, multiplier: 0.7 };
+  return { title: "", prompt: "", negative: "", custom: false, sampler: "", noiseSchedule: "", steps: config?.steps ?? 28, scale: config?.scale ?? 5, cfgRescale: config?.cfgRescale ?? 0, weightEnabled: false, multiplier: 0.7 };
 }
 
 /** Form values of an existing NovelAI artist (overrides fall back to the global NovelAI values). */
@@ -64,6 +68,8 @@ export function artistToForm(artist: ResolvedNovelAIArtist, global: { steps: num
     prompt: artist.prompt,
     negative: artist.negativePrompt,
     custom: !!o,
+    sampler: o?.sampler ?? "",
+    noiseSchedule: o?.noiseSchedule ?? "",
     steps: o?.steps ?? global.steps,
     scale: o?.scale ?? global.scale,
     cfgRescale: o?.cfgRescale ?? global.cfgRescale,
@@ -74,7 +80,7 @@ export function artistToForm(artist: ResolvedNovelAIArtist, global: { steps: num
 
 /** Entry to upsert from the dock form (AM `M_t` 149362): built-ins only store overrides/weights. */
 export function formToEntry(id: string, form: ArtistForm, builtIn: boolean): ArtistEntry {
-  const overrides = form.custom ? { novelAIOverrides: { steps: form.steps, scale: form.scale, cfgRescale: form.cfgRescale } } : {};
+  const overrides = form.custom ? { novelAIOverrides: { steps: form.steps, scale: form.scale, cfgRescale: form.cfgRescale, ...(form.sampler ? { sampler: form.sampler } : {}), ...(form.noiseSchedule ? { noiseSchedule: form.noiseSchedule } : {}) } } : {};
   const weight = form.weightEnabled ? { nonArtistPromptWeight: { enabled: true, multiplier: form.multiplier } } : {};
   if (builtIn) return { id, title: form.title, prompt: "", ...overrides, ...weight };
   return { id, title: form.title.trim(), prompt: form.prompt.trim(), ...(form.negative.trim() ? { negativePrompt: form.negative.trim() } : {}), ...overrides, ...weight };
@@ -291,6 +297,16 @@ export function ArtistsDock() {
   const form = state.form;
   const setForm = (patch: Partial<ArtistForm>) => store.patch({ form: { ...store.get().form, ...patch } });
   const editing = ui.editingId;
+  const connections = useRpcQuery("connections.listImage", {});
+  const config = useAppState((s) => s.config);
+  const connection = resolveImageConnection(connections.data?.connections ?? [], config?.image.connectionId ?? "");
+  const model = config?.image.model || connection?.model || "nai-diffusion-5-full";
+  const sampling = novelAISamplingOptions(model);
+  const samplingOptions = (options: readonly { value: string; label: string }[], value: string) => [
+    { value: "", label: ARTISTS_LABELS.useGlobal },
+    ...options,
+    ...(value && !options.some((o) => o.value === value) ? [{ value, label: `${value} (${ARTISTS_LABELS.unavailable})`, disabled: true }] : []),
+  ];
   const extraction = useRunningJob(characterId, ["artist-extraction"]);
   const extractionAsset = toAssetRef(workspace?.document.characterPrompt.artistExtractionAssetBySourceId[characterId ?? ""] ?? null);
   const cancelEdit = () => { setUi({ editingId: "" }); store.patch({ form: emptyArtistForm(app.state.config?.novelai), saveError: null }); };
@@ -371,6 +387,18 @@ export function ArtistsDock() {
           <SliderRow label="SCALE" value={form.scale} min={0} max={20} step={0.1} digits={1} disabled={!custom} onChange={(scale) => setForm({ scale })} />
           <SliderRow label="RESCALE" value={form.cfgRescale} min={0} max={1} step={0.01} digits={2} disabled={!custom} onChange={(cfgRescale) => setForm({ cfgRescale })} />
         </div>
+      </div>
+      <div class="grid gap-2 md:grid-cols-2">
+        <label class="grid min-w-0 gap-1 text-2xs text-muted-foreground">
+          {ARTISTS_LABELS.sampler}
+          <Select aria-label={ARTISTS_LABELS.sampler} disabled={!custom} value={form.sampler}
+            options={samplingOptions(sampling.samplers, form.sampler)} onValueChange={(sampler) => setForm({ sampler })} />
+        </label>
+        <label class="grid min-w-0 gap-1 text-2xs text-muted-foreground">
+          {ARTISTS_LABELS.noiseSchedule}
+          <Select aria-label={ARTISTS_LABELS.noiseSchedule} disabled={!custom} value={form.noiseSchedule}
+            options={samplingOptions(sampling.noiseSchedules.map((value) => ({ value, label: value })), form.noiseSchedule)} onValueChange={(noiseSchedule) => setForm({ noiseSchedule })} />
+        </label>
       </div>
       <div class="flex items-center gap-2" title={ARTISTS_LABELS.weightTitle}>
         <span class="inline-flex shrink-0 items-center gap-2 text-2xs font-bold">

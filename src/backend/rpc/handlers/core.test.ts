@@ -143,9 +143,9 @@ describe("core handlers: charx settings, reset, artists, personas", () => {
     const { entry } = await call("artists.upsertNovelAI", { entry: { id: "", title: "Mine", prompt: "artist:me" } });
     expect(entry.id).toMatch(/^artist_/);
     const preset = list.novelai.find((a) => !a.userDefined && a.id !== "none")!;
-    await call("artists.upsertNovelAI", { entry: { id: preset.id, title: "ignored", prompt: "ignored", novelAIOverrides: { steps: 20 } } });
+    await call("artists.upsertNovelAI", { entry: { id: preset.id, title: "ignored", prompt: "ignored", novelAIOverrides: { steps: 20, sampler: "k_dpmpp_2m_sde", noiseSchedule: "exponential" } } });
     const after = await call("artists.list", {});
-    expect(after.novelai.find((a) => a.id === preset.id)).toMatchObject({ prompt: preset.prompt, novelAIOverrides: { steps: 20 } });
+    expect(after.novelai.find((a) => a.id === preset.id)).toMatchObject({ prompt: preset.prompt, novelAIOverrides: { steps: 20, sampler: "k_dpmpp_2m_sde", noiseSchedule: "exponential" } });
     expect(after.novelai.find((a) => a.id === entry.id)).toMatchObject({ title: "Mine", userDefined: true });
     await call("artists.select", { list: "novelai", artistId: entry.id, characterId: "c1" });
     expect((await call("artists.list", { characterId: "c1" })).selectedNovelAIId).toBe(entry.id);

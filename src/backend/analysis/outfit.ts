@@ -269,8 +269,10 @@ async function requestFromContext(
     }
     request.prompt = weighted.input;
     request.negativePrompt = weighted.parameters.negative_prompt;
-    const overrides = plan.novelAIOverrides as { steps?: number; scale?: number; cfgRescale?: number };
+    const overrides = plan.novelAIOverrides as { steps?: number; scale?: number; cfgRescale?: number; sampler?: string; noiseSchedule?: string };
     request.novelai = {
+      ...(overrides.sampler ? { sampler: overrides.sampler } : {}),
+      ...(overrides.noiseSchedule ? { noiseSchedule: overrides.noiseSchedule } : {}),
       ...(overrides.steps !== undefined ? { steps: overrides.steps } : {}),
       ...(overrides.scale !== undefined ? { scale: overrides.scale } : {}),
       ...(overrides.cfgRescale !== undefined ? { cfgRescale: overrides.cfgRescale } : {}),

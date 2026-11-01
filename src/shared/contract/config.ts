@@ -1,3 +1,5 @@
+import { NOVELAI_SAMPLERS, NOVELAI_NOISE_SCHEDULES } from "./novelai-sampling.js";
+export { NOVELAI_SAMPLERS, NOVELAI_NOISE_SCHEDULES, novelAISamplingOptions } from "./novelai-sampling.js";
 /**
  * Global settings of the port (Asset Maid 0.9.88 config `Y0` 20768 + normalizer `fEe` 21767) with the Lumiverse mapping:
  * - analyzer = a Lumiverse connection profile (+ model override, reasoning, timeout) instead of direct provider fields;
@@ -65,14 +67,6 @@ export const IMAGE_SIZE_MAX = 2048;
 /** NovelAI models offered in settings (`aL` 20541). */
 export const NOVELAI_MODELS: readonly { value: string; label: string }[] = novelaiModelsJson.models;
 export const DEFAULT_NOVELAI_MODEL = novelaiModelsJson.defaultModel;
-export const NOVELAI_SAMPLERS = [
-  { value: "k_euler_ancestral", label: "Euler Ancestral" },
-  { value: "k_euler", label: "Euler" },
-  { value: "k_dpmpp_2m", label: "DPM++ 2M" },
-  { value: "k_dpmpp_2m_sde", label: "DPM++ 2M SDE" },
-  { value: "k_dpmpp_sde", label: "DPM++ SDE" },
-] as const;
-export const NOVELAI_NOISE_SCHEDULES = ["karras", "native", "exponential", "polyexponential"] as const;
 export const CHARACTER_REFERENCE_TYPES = ["character", "style", "character&style"] as const;
 export type CharacterReferenceType = (typeof CHARACTER_REFERENCE_TYPES)[number];
 /** AM `Uj`: NovelAI V5 model test (V5 has no director reference). */

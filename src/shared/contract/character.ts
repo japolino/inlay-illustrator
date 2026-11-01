@@ -8,6 +8,7 @@ import appearanceCatalogJson from "./data/appearance-catalog.json" with { type: 
 import appearanceUiJson from "./data/appearance-ui.json" with { type: "json" };
 import defaultPresetsJson from "./data/default-presets.json" with { type: "json" };
 import filenameTagTableJson from "./data/filename-tag-table.json" with { type: "json" };
+import { NOVELAI_SAMPLERS, NOVELAI_NOISE_SCHEDULES } from "./novelai-sampling.js";
 import {
   asArray,
   asRecord,
@@ -1105,7 +1106,7 @@ export function replaceRecognitionKeys(keys: unknown): CustomLorebookKeys {
  * Artists (NovelAI list `artistPrompts` + Anima list `animaArtists`)
  * ---------------------------------------------------------------------------------------------- */
 
-export interface NovelAIArtistOverrides { steps?: number; scale?: number; cfgRescale?: number }
+export interface NovelAIArtistOverrides { steps?: number; scale?: number; cfgRescale?: number; sampler?: string; noiseSchedule?: string }
 export interface NonArtistPromptWeight { enabled: boolean; multiplier: number }
 export interface ArtistEntry {
   /** `artist_<uuid>` for user entries; built-in preset ids for override-only entries. */
@@ -1156,6 +1157,8 @@ export function normalizeNovelAIArtistOverrides(value: unknown): NovelAIArtistOv
   const scale = hasOwn(r, "scale") ? clampOptional(r.scale, 0, 20) : undefined;
   const cfgRescale = hasOwn(r, "cfgRescale") ? clampOptional(r.cfgRescale, 0, 1) : undefined;
   const out: NovelAIArtistOverrides = {
+    ...(NOVELAI_SAMPLERS.some((s) => s.value === r.sampler) ? { sampler: r.sampler as string } : {}),
+    ...(NOVELAI_NOISE_SCHEDULES.some((s) => s === r.noiseSchedule) ? { noiseSchedule: r.noiseSchedule as string } : {}),
     ...(steps === undefined ? {} : { steps: Math.round(steps) }),
     ...(scale === undefined ? {} : { scale }),
     ...(cfgRescale === undefined ? {} : { cfgRescale }),

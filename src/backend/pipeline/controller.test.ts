@@ -348,6 +348,9 @@ describe("history, regenerate, delete", () => {
     const { fx, engine, pipeline } = await generated();
     const { listNovelAIArtists } = await import("../../shared/contract/index.js");
     const [, artistA, artistB] = listNovelAIArtists([]);
+    await fx.services.storage.updateConfig((config) => ({ ...config, characterPrompt: { ...config.characterPrompt,
+      artistPrompts: [{ id: artistB!.id, title: "", prompt: "", novelAIOverrides: { sampler: "k_dpmpp_sde", noiseSchedule: "exponential" } }],
+    } }));
     const slotId = "illustration:m1@0:slot:0";
     const entryId = Object.values(fx.chatData.get(CHAT_ID)!.history.entriesById).find((e) => e.slotId === slotId)!.entryId;
     const sidecar = fx.json.get("chats/chat-1/pipeline.json") as any;
@@ -366,9 +369,13 @@ describe("history, regenerate, delete", () => {
       await waitFor(() => finished(fx, jobId).length > 0);
       expect(finished(fx, jobId)[0]!.result).toBe("completed");
       expect(engine.dispatches.at(-1)!.request.prompt).toBe(`1boy, ${artist.prompt}`);
+      expect(engine.dispatches.at(-1)!.request.config).toMatchObject(artist.id === artistB!.id
+        ? { sampler: "k_dpmpp_sde", noiseSchedule: "exponential" }
+        : { sampler: "k_euler_ancestral", noiseSchedule: "karras" });
     }
     const latest = (await pipeline.getZoomDetails(CHAT_ID, slotId)).entryId;
     expect((fx.json.get("chats/chat-1/pipeline.json") as any).records[latest].novelAIConfig.nonArtistPromptWeightArtist).toEqual(tracked(artistA));
+
   });
 
   test("the artist can be changed on a record whose saved prompt the core cleaned up", async () => {

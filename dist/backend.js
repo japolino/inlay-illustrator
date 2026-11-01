@@ -1368,6 +1368,25 @@ var filename_tag_table_default = {
   rankingVocab: { marker: [["default", "normal", "basic", "base", "기본"]], emotion: { fallbackTier: 5, tiers: [["expressionless"], ["neutral"], ["calm", "relaxed", "relaxing", "content", "contented", "light_smile", "light_frown"], ["smile", "serious", "indifferent", "thoughtful", "thinking", "concentrating", "confident", "determined"], ["affectionate", "amused", "angry", "annoyed", "aroused", "awkward", "bashful", "blank_stare", "bored", "clueless", "confused", "curious", "dazed", "depressed", "disappointed", "disdain", "disgust", "doyagao", "embarrassed", "embarrassment", "evil_smile", "false_smile", "flustered", "forced_smile", "frown", "frustrated", "glaring", "gloom_(expression)", "grumpy", "guilty", "happy", "hopeful", "jealous", "lonely", "lovestruck", "naughty_face", "nervous", "nervous_smile", "pout", "proud", "relieved", "sad", "sad_smile", "satisfied", "scared", "scowl", "seductive", "seductive_smile", "shy", "sigh", "sleepy", "smirk", "smug", "stifled_laugh", "sulking", "surprised", "tired", "unamused", "unaware", "uneasy", "unhappy", "unsatisfied", "worried"], ["akanbe", "astonished", "awestruck", "crying", "crying_with_eyes_open", "despair", "elated", "evil_grin", "excited", "exhausted", "furious", "giggling", "grimace", "grin", "happy_tears", "horrified", "joyful", "laughing", "panic", "panicking", "screaming", "sobbing", "wince", "yawning"], ["ahegao", "crazy_smile", "crazy_grin", "fucked_silly", "gesugao", "torogao", "troll_face"]], modifiers: ["biting_own_lip", "black_tears", "blush", "blush_stickers", "body_blush", "clenched_teeth", "closed_eyes", "closed_mouth", "cocked_eyebrow", "drooling", "ear_blush", "emoticon", "eyelid_pull", "full-face_blush", "furrowed_brow", "licking", "light_blush", "lowered_eyelids", "mismatched_eyebrows", "mob_face", "multiple_expressions", "nervous_sweating", "no_mouth", "nose_blush", "nose_bubble", "o3o", "one_eye_closed", "open_mouth", "parted_lips", "pleading_eyes", "pursed_lips", "raised_eyebrow", "raised_eyebrows", "raised_inner_eyebrows", "shaded_face", "single_tear", "squinting", "sweat", "sweatdrop", "tearing_up", "tears", "tears_from_one_eye", "thick_lips", "triangle_mouth", "turn_pale", "u_u", "upturned_eyes", "v-shaped_eyebrows", "void_face", "wavy_mouth", "wide_eyed", "wink"], limitedVisibility: ["closed_eyes", "one_eye_closed", "wink", "u_u", "shaded_face", "mob_face", "no_mouth", "void_face"] } }
 };
 
+// src/shared/contract/novelai-sampling.ts
+var NOVELAI_SAMPLERS = [
+  { value: "k_euler_ancestral", label: "Euler Ancestral" },
+  { value: "k_euler", label: "Euler" },
+  { value: "k_dpmpp_2m", label: "DPM++ 2M" },
+  { value: "k_dpmpp_2m_sde", label: "DPM++ 2M SDE" },
+  { value: "k_dpmpp_sde", label: "DPM++ SDE" },
+  { value: "k_dpmpp_2s_ancestral", label: "DPM++ 2S Ancestral" },
+  { value: "ddim_v3", label: "DDIM v3" }
+];
+var NOVELAI_NOISE_SCHEDULES = ["karras", "native", "exponential", "polyexponential"];
+function novelAISamplingOptions(model) {
+  const modern = /^nai-diffusion-(?:4|5)(?:-|$)/u.test(model);
+  return {
+    samplers: NOVELAI_SAMPLERS.filter((s) => modern ? s.value !== "ddim_v3" : s.value !== "k_dpmpp_2m_sde"),
+    noiseSchedules: /^nai-diffusion-5(?:-|$)/u.test(model) ? ["karras"] : NOVELAI_NOISE_SCHEDULES
+  };
+}
+
 // src/shared/contract/character.ts
 var CHARACTER_DESCRIPTION_LORE_ID = "asset-maid:charx-description:v1";
 var CUSTOM_CHARACTER_ID_PREFIX = "character_";
@@ -1859,6 +1878,8 @@ function normalizeNovelAIArtistOverrides(value) {
   const scale = hasOwn(r, "scale") ? clampOptional(r.scale, 0, 20) : undefined;
   const cfgRescale = hasOwn(r, "cfgRescale") ? clampOptional(r.cfgRescale, 0, 1) : undefined;
   const out = {
+    ...NOVELAI_SAMPLERS.some((s) => s.value === r.sampler) ? { sampler: r.sampler } : {},
+    ...NOVELAI_NOISE_SCHEDULES.some((s) => s === r.noiseSchedule) ? { noiseSchedule: r.noiseSchedule } : {},
     ...steps === undefined ? {} : { steps: Math.round(steps) },
     ...scale === undefined ? {} : { scale },
     ...cfgRescale === undefined ? {} : { cfgRescale }
@@ -4445,14 +4466,6 @@ var IMAGE_SIZE_MIN = 64;
 var IMAGE_SIZE_MAX = 2048;
 var NOVELAI_MODELS = novelai_models_default.models;
 var DEFAULT_NOVELAI_MODEL = novelai_models_default.defaultModel;
-var NOVELAI_SAMPLERS = [
-  { value: "k_euler_ancestral", label: "Euler Ancestral" },
-  { value: "k_euler", label: "Euler" },
-  { value: "k_dpmpp_2m", label: "DPM++ 2M" },
-  { value: "k_dpmpp_2m_sde", label: "DPM++ 2M SDE" },
-  { value: "k_dpmpp_sde", label: "DPM++ SDE" }
-];
-var NOVELAI_NOISE_SCHEDULES = ["karras", "native", "exponential", "polyexponential"];
 var CHARACTER_REFERENCE_TYPES = ["character", "style", "character&style"];
 function isNovelAIV5Model(model) {
   return /^nai-diffusion-5(?:-|$)/u.test(trimString(model));
@@ -58994,6 +59007,8 @@ async function requestFromContext(services, characterId, prepared, context, draf
     request.negativePrompt = weighted.parameters.negative_prompt;
     const overrides = plan.novelAIOverrides;
     request.novelai = {
+      ...overrides.sampler ? { sampler: overrides.sampler } : {},
+      ...overrides.noiseSchedule ? { noiseSchedule: overrides.noiseSchedule } : {},
       ...overrides.steps !== undefined ? { steps: overrides.steps } : {},
       ...overrides.scale !== undefined ? { scale: overrides.scale } : {},
       ...overrides.cfgRescale !== undefined ? { cfgRescale: overrides.cfgRescale } : {},
@@ -70125,6 +70140,8 @@ function createChatPipelineController(services, engine, options = {}) {
         out.negative = replaceSegment(out.negative, [own && str10(tracked.negative) || "", str10(old?.negativePrompt)], str10(next.negativePrompt));
         out.trackedArtist = { id: next.id, name: next.title, positive: str10(next.prompt), negative: str10(next.negativePrompt) };
         const o = rec8(next.novelAIOverrides);
+        for (const key of ["sampler", "noiseSchedule"])
+          out.configPatch[key] = str10(o[key]) || config.novelai[key];
         for (const key of ["steps", "scale", "cfgRescale"])
           if (Number.isFinite(Number(o[key])))
             out.configPatch[key] = Number(o[key]);
@@ -72980,8 +72997,9 @@ function buildNovelAIParameters(request, config, target, connectionDefaults = {}
   const steps = clampInt2(o.steps ?? nai.steps, 1, 50, 28);
   const scale = Number.isFinite(Number(o.scale ?? nai.scale)) ? Number(o.scale ?? nai.scale) || 6 : 6;
   const cfgRescale = clampNum(o.cfgRescale ?? nai.cfgRescale, 0, 1, 0.5);
-  const sampler = normalizeNovelAiSampler(o.sampler ?? nai.sampler) ?? "k_euler_ancestral";
-  const noiseSchedule = str5(o.noiseSchedule ?? nai.noiseSchedule) || "karras";
+  const sampling = novelAISamplingOptions(target.model);
+  const sampler = [o.sampler, nai.sampler].map(normalizeNovelAiSampler).find((value) => sampling.samplers.some((s) => s.value === value)) ?? "k_euler_ancestral";
+  const noiseSchedule = [o.noiseSchedule, nai.noiseSchedule].find((value) => sampling.noiseSchedules.some((s) => s === value)) ?? "karras";
   const qualityToggle = (o.qualityToggle ?? nai.qualityToggle) !== false;
   const useOrder = (o.useOrder ?? nai.useOrder) !== false;
   const useCoords = o.useCoords === true;
