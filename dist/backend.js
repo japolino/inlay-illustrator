@@ -69441,6 +69441,50 @@ var AUTO_RETRY_DELAY_MS = 100;
 var STREAM_WAIT_MAX_MS = 5 * 60000;
 var STREAM_WAIT_POLL_MS = 250;
 var AUTO_GENERATION_TYPES = new Set(["", "normal", "swipe", "regenerate"]);
+var WEIGHT_OPEN = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)::/u;
+var promptTags = (text) => [...text.matchAll(/[^,\n]+/gu)].flatMap((m) => {
+  const body = m[0].trim();
+  if (!body)
+    return [];
+  const start = m.index + m[0].length - m[0].trimStart().length;
+  return [{ start, end: start + body.length, body, key: body.replace(WEIGHT_OPEN, "").replace(/\s*::$/u, "").replace(/\s+/gu, " ").trim().toLowerCase() }];
+});
+function findPromptSegment(text, segment) {
+  const exact = text.indexOf(segment);
+  if (exact >= 0)
+    return { start: exact, end: exact + segment.length };
+  const wanted = new Set(promptTags(segment).map((t) => t.key).filter(Boolean));
+  if (!wanted.size)
+    return null;
+  const tags = promptTags(text);
+  let best = null;
+  for (let i = 0;i < tags.length; i += 1) {
+    if (!wanted.has(tags[i].key))
+      continue;
+    const hit = new Set;
+    let to = i;
+    let gap = 0;
+    for (let j = i;j < tags.length && gap <= 1; j += 1) {
+      const key = tags[j].key;
+      if (!key)
+        continue;
+      if (wanted.has(key)) {
+        hit.add(key);
+        to = j;
+        gap = 0;
+      } else
+        gap += 1;
+    }
+    if (!best || hit.size > best.hits)
+      best = { from: i, to, hits: hit.size };
+  }
+  if (!best || best.hits * 2 < wanted.size)
+    return null;
+  let from = best.from;
+  while (from > 0 && WEIGHT_OPEN.test(tags[from - 1].body) && !tags[from - 1].key)
+    from -= 1;
+  return { start: tags[from].start, end: tags[best.to].end };
+}
 function createChatPipelineController(services, engine, options = {}) {
   const now = options.now ?? (() => Date.now());
   const tracker = new HostGenerationTracker;
@@ -70055,14 +70099,14 @@ function createChatPipelineController(services, engine, options = {}) {
     en: "Editing made the artist prompt segment undetectable. Edit the artist part and the rest separately in the original.",
     ko: "편집으로 작가 프롬프트 구간을 확인할 수 없습니다. 원본에서 작가 구간과 나머지 내용을 나누어 편집해 주세요."
   };
-  const replaceSegment = (text, oldSegment, nextSegment) => {
-    const from = oldSegment.trim();
-    if (!from)
+  const replaceSegment = (text, oldSegments, nextSegment) => {
+    const froms = [...new Set(oldSegments.map((s) => s.trim()).filter(Boolean))];
+    if (!froms.length)
       return nextSegment.trim() ? text.trim() ? `${text.trim()}, ${nextSegment.trim()}` : nextSegment.trim() : text;
-    const index = text.indexOf(from);
-    if (index < 0)
+    const span = froms.reduce((found, from) => found ?? findPromptSegment(text, from), null);
+    if (!span)
       throw new RpcFailure(labelError("conflict", ARTIST_SEGMENT_LOST));
-    const next = `${text.slice(0, index)}${nextSegment.trim()}${text.slice(index + from.length)}`;
+    const next = `${text.slice(0, span.start)}${nextSegment.trim()}${text.slice(span.end)}`;
     return next.replace(/,\s*,/gu, ",").replace(/^\s*,\s*|\s*,\s*$/gu, "").trim();
   };
   const applyArtistAndOutfits = async (chatId, record, overrides) => {
@@ -70077,8 +70121,8 @@ function createChatPipelineController(services, engine, options = {}) {
         const old = list.find((a) => a.id === record.artistId);
         const tracked = rec8(rec8(record.novelAIConfig).nonArtistPromptWeightArtist);
         const own = str10(tracked.id) === str10(record.artistId) || out.positive.includes(str10(tracked.positive));
-        out.positive = replaceSegment(out.positive, own && str10(tracked.positive) || str10(old?.prompt), str10(next.prompt));
-        out.negative = replaceSegment(out.negative, own && str10(tracked.negative) || str10(old?.negativePrompt), str10(next.negativePrompt));
+        out.positive = replaceSegment(out.positive, [own && str10(tracked.positive) || "", str10(old?.prompt)], str10(next.prompt));
+        out.negative = replaceSegment(out.negative, [own && str10(tracked.negative) || "", str10(old?.negativePrompt)], str10(next.negativePrompt));
         out.trackedArtist = { id: next.id, name: next.title, positive: str10(next.prompt), negative: str10(next.negativePrompt) };
         const o = rec8(next.novelAIOverrides);
         for (const key of ["steps", "scale", "cfgRescale"])
@@ -70087,7 +70131,7 @@ function createChatPipelineController(services, engine, options = {}) {
       } else {
         const entries = config.animaArtists.entries;
         const next = entries.find((a) => a.id === overrides.artistId) ?? fail2("not-found", `Artist not found: ${overrides.artistId}`);
-        out.positive = replaceSegment(out.positive, str10(entries.find((a) => a.id === record.artistId)?.text), str10(next.text));
+        out.positive = replaceSegment(out.positive, [str10(entries.find((a) => a.id === record.artistId)?.text)], str10(next.text));
       }
       out.artistId = overrides.artistId;
     }
