@@ -371,6 +371,42 @@ describe("history, regenerate, delete", () => {
     expect((fx.json.get("chats/chat-1/pipeline.json") as any).records[latest].novelAIConfig.nonArtistPromptWeightArtist).toEqual(tracked(artistA));
   });
 
+  test("the artist can be changed on a record whose saved prompt the core cleaned up", async () => {
+    const { fx, engine, pipeline } = await generated();
+    const { listNovelAIArtists } = await import("../../shared/contract/index.js");
+    const [, artistA, artistB] = listNovelAIArtists([]);
+    const slotId = "illustration:m1@0:slot:0";
+    const entryId = Object.values(fx.chatData.get(CHAT_ID)!.history.entriesById).find((e) => e.slotId === slotId)!.entryId;
+    const sidecar = fx.json.get("chats/chat-1/pipeline.json") as any;
+    // The core collapsed the preset's newlines and spacing, split a weight off its first tag and dropped a tag
+    // ("text") from the negative, so neither preset text appears verbatim in the saved prompts.
+    Object.assign(sidecar.records[entryId], {
+      artistId: artistA!.id,
+      positivePrompt: "2::1boy::, 0.9::artist:junkzero ::, 1.2::, artist:mi 398 ::, year 2025, masterpiece, school",
+      negativePrompt: "blank page, logo,  multiple views, bad hands",
+      novelAIConfig: {
+        ...sidecar.records[entryId].novelAIConfig,
+        nonArtistPromptWeightArtist: { id: artistA!.id, name: artistA!.title, positive: "0.9::artist:junkzero ::,\n\n1.2::artist:mi 398 ::,          \nyear 2025, masterpiece", negative: "blank page, text, logo,multiple views" },
+      },
+    });
+    fx.json.set("chats/chat-1/pipeline.json", sidecar);
+    await pipeline.saveDraft(CHAT_ID, slotId, { artistId: artistB!.id });
+    const { jobId } = await pipeline.regenerateSlot({ chatId: CHAT_ID, messageKey: "illustration:m1@0", slotId, overrides: { seedFixed: false, excludedCharacterIndexes: [] } });
+    await waitFor(() => finished(fx, jobId).length > 0);
+    expect(finished(fx, jobId)[0]!.result).toBe("completed");
+    const request = engine.dispatches.at(-1)!.request as any;
+    expect(request.prompt).toBe(`2::1boy::, ${artistB!.prompt}, school`);
+    expect(request.negativePrompt).toBe(artistB!.negativePrompt ? `${artistB!.negativePrompt}, bad hands` : "bad hands");
+  });
+
+  test("an artist segment matches by its tags, and not in a prompt that shares under half of them", async () => {
+    const { findPromptSegment } = await import("./controller.js");
+    expect(findPromptSegment("1girl, masterpiece, park", "0.9::artist:junkzero ::, 1.5::artist:realistic ::, masterpiece")).toBeNull();
+    const text = "1girl, 0.9::artist:junkzero ::, 1.5::realistic ::, park";
+    const span = findPromptSegment(text, "0.9::artist:junkzero ::,\n1.5::realistic ::")!;
+    expect(text.slice(span.start, span.end)).toBe("0.9::artist:junkzero ::, 1.5::realistic ::");
+  });
+
   test("a character excluded in zoom stays out of later regenerations without hiding the others", async () => {
     const { fx, engine, pipeline } = await generated();
     const slotId = "illustration:m1@0:slot:0";
