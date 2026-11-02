@@ -127,10 +127,10 @@ export interface StorageService {
  * LLM (connection profiles; spec/llm.md)
  * ---------------------------------------------------------------------------------------------- */
 
-export type LlmTextPart = { type: "text"; text: string };
+export type LlmTextPart = { type: "text"; text: string; cache_control?: Record<string, unknown> };
 /** Base64 without the data: prefix. */
-export type LlmImagePart = { type: "image"; data: string; mime_type: string };
-export interface LlmMessage { role: "system" | "user" | "assistant"; content: string | Array<LlmTextPart | LlmImagePart> }
+export type LlmImagePart = { type: "image"; data: string; mime_type: string; cache_control?: Record<string, unknown> };
+export interface LlmMessage { role: "system" | "user" | "assistant"; content: string | Array<LlmTextPart | LlmImagePart>; cache_control?: Record<string, unknown> }
 
 export interface LlmCompleteRequest {
   /** Log scope / diagnostics label, e.g. "analyzer", "character-analysis", "artist-extraction". */
@@ -150,6 +150,8 @@ export interface LlmCompleteRequest {
   retries?: number;
   /** What to do when the model cannot read images: drop image parts and retry text-only (default) or fail `unsupported`. */
   visionFallback?: "drop-images" | "fail";
+  /** Indices of messages that end a reusable prompt prefix. Marked as cache breakpoints for Anthropic; other providers cache a matching prefix on their own. */
+  cacheBreakpoints?: number[];
 }
 
 export interface LlmCompleteResult {
