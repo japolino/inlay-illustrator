@@ -168,6 +168,47 @@ describe("llm service", () => {
     expect(await client.complete({}, [{ role: "user", content: "x" }], { responseMode: "text" })).toMatchObject({ raw: "plain", parsed: "plain" });
   });
 
+  const partition = {
+    cacheSegments: [
+      { kind: "app-static", messages: [{ role: "system", content: "SYS" }] },
+      { kind: "config-static", messages: [{ role: "user", content: "CONFIG" }] },
+      { kind: "character-static", messages: [{ role: "user", content: "ROSTER" }] },
+      { kind: "outfit-static", messages: [{ role: "user", content: "OUTFITS" }] },
+    ],
+    liveMessages: [{ role: "user", content: "LIVE" }],
+  };
+  const sentMessages = (fake: ReturnType<typeof setup>["fake"]) => fake.generateCalls.at(-1)!.input.messages as Array<Record<string, unknown>>;
+
+  test("analyzerClient sends the cache partition static-first; non-Anthropic gets no markers", async () => {
+    const { fake, llm } = setup();
+    fake.scriptLlm({ content: "{}" });
+    await llm.analyzerClient().complete({}, [{ role: "system", content: "SYS" }, { role: "user", content: "LIVE+STATIC" }], { cachePartition: partition });
+    expect(sentMessages(fake)).toEqual([
+      { role: "system", content: "SYS" },
+      { role: "user", content: "CONFIG" },
+      { role: "user", content: "ROSTER" },
+      { role: "user", content: "OUTFITS" },
+      { role: "user", content: "LIVE" },
+    ]);
+    fake.scriptLlm({ content: "{}" });
+    await llm.analyzerClient().complete({}, [{ role: "user", content: "FLAT" }], { cachePartition: { cacheSegments: "bad" } });
+    expect(sentMessages(fake)).toEqual([{ role: "user", content: "FLAT" }]);
+  });
+
+  test("Anthropic gets cache breakpoints at segment ends, two when Lumiverse prompt caching is on", async () => {
+    const { fake, llm } = setup({ analysis: { connectionId: "cl" } });
+    fake.scriptLlm({ content: "{}" });
+    await llm.analyzerClient().complete({}, [], { cachePartition: partition });
+    expect(sentMessages(fake).map((m) => Boolean(m.cache_control))).toEqual([true, true, true, true, false]);
+
+    fake.llmConnections[1]!.metadata = { prompt_caching: true };
+    // A fresh service: the first one cached the connection metadata.
+    const cachedLlm = createLlmService({ host: fake.host, userId: fake.userId, loadConfig: async () => normalizeConfig({ analysis: { connectionId: "cl" } }) });
+    fake.scriptLlm({ content: "{}" });
+    await cachedLlm.analyzerClient().complete({}, [], { cachePartition: partition });
+    expect(sentMessages(fake).map((m) => Boolean(m.cache_control))).toEqual([true, false, false, true, false]);
+  });
+
   test("analyzerClient raises network failures as a TypeError (AM nativeFetch), which the engine retry checks retry", async () => {
     const { fake, llm } = setup();
     fake.scriptLlm(new TypeError("fetch failed"));

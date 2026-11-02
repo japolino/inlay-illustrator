@@ -56663,6 +56663,45 @@ function toLlmMessage(message) {
   }
   return { role, content: parts };
 }
+function partitionMessages(partition) {
+  const p = asRecord3(partition);
+  if (!Array.isArray(p.cacheSegments) || !Array.isArray(p.liveMessages) || !p.liveMessages.length)
+    return null;
+  const messages = [];
+  const cacheBreakpoints = [];
+  for (const segment of p.cacheSegments) {
+    const segmentMessages = asRecord3(segment).messages;
+    if (!Array.isArray(segmentMessages))
+      return null;
+    if (!segmentMessages.length)
+      continue;
+    messages.push(...segmentMessages.map((m) => toLlmMessage(asRecord3(m))));
+    cacheBreakpoints.push(messages.length - 1);
+  }
+  messages.push(...p.liveMessages.map((m) => toLlmMessage(asRecord3(m))));
+  return { messages, cacheBreakpoints };
+}
+var MAX_CACHE_BREAKPOINTS = 4;
+var EPHEMERAL = Object.freeze({ type: "ephemeral" });
+function withCacheBreakpoints(messages, breakpoints, connection) {
+  if (!breakpoints?.length || !/anthropic/i.test(connection.provider))
+    return messages;
+  const budget = connection.metadata.prompt_caching ? MAX_CACHE_BREAKPOINTS - 2 : MAX_CACHE_BREAKPOINTS;
+  const valid = [...new Set(breakpoints)].filter((i) => Number.isInteger(i) && i >= 0 && i < messages.length).sort((a, b) => a - b);
+  const chosen = new Set(valid.length > budget ? [...valid.slice(0, budget - 1), valid.at(-1)] : valid);
+  if (!chosen.size)
+    return messages;
+  return messages.map((message, index) => {
+    if (!chosen.has(index))
+      return message;
+    if (typeof message.content === "string")
+      return { ...message, cache_control: EPHEMERAL };
+    const last = message.content.length - 1;
+    if (last < 0)
+      return message;
+    return { ...message, content: message.content.map((part, i) => i === last ? { ...part, cache_control: EPHEMERAL } : part) };
+  });
+}
 function clampRetries(value, fallback) {
   const n = Number(value);
   if (!Number.isFinite(n))
@@ -56788,6 +56827,7 @@ function createLlmService(deps) {
       imagesDropped = true;
       log("info", `Images dropped: ${model} cannot read images (${request.purpose}).`);
     }
+    messages = withCacheBreakpoints(messages, request.cacheBreakpoints, connection);
     const baseParameters = { ...request.parameters ?? {} };
     const temperature = request.temperature ?? settings.temperature;
     if (baseParameters.temperature === undefined && Number.isFinite(temperature) && !omitsTemperature(model))
@@ -56878,9 +56918,11 @@ function createLlmService(deps) {
           const signal = o.signal ?? clientOptions.signal;
           const timeoutMs = Number(o.timeoutMs);
           const maxOutputTokens = Number(o.maxOutputTokens ?? o.maxTokens);
+          const partitioned = partitionMessages(o.cachePartition);
           const result = await run({
             purpose: str3(o.purpose) || clientOptions.purpose || "analyzer",
-            messages: messages.map(toLlmMessage),
+            messages: partitioned?.messages ?? messages.map(toLlmMessage),
+            ...partitioned ? { cacheBreakpoints: partitioned.cacheBreakpoints } : {},
             responseMode: o.responseMode === "text" ? "text" : "json",
             ...o.structuredOutputSchema && typeof o.structuredOutputSchema === "object" ? { schema: o.structuredOutputSchema } : {},
             ...Number.isFinite(maxOutputTokens) && maxOutputTokens > 0 ? { maxTokens: maxOutputTokens } : {},

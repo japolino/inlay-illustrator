@@ -14,6 +14,8 @@
  *   (`jQe`). Only transport failures retry: HTTP 408/429/5xx, timeout, provider interrupted, network errors. Content errors
  *   (empty response, JSON parse, ...) fail at once since 0.9.90.
  * - Timeout: our own per attempt (`analysis.timeoutMs`, 1000..300000), chained with the caller signal. Aborts never retry.
+ * - Prompt caching: the analyzer client sends the engine's cache partition (static segments first, live input last) instead
+ *   of its flat messages, and Anthropic connections get `cache_control` breakpoints at the segment ends (AM `fUe` @79296).
  *
  * `complete()` throws RpcFailure (`detailCode` = AM code, `cause` = the AnalyzerClientError). `analyzerClient()` throws the
  * engine's AnalyzerClientError (`on` @79248) so the engine's own checks (`Tde` @81611, `Lde`, soft parse results) work, and
@@ -295,6 +297,56 @@ export function toLlmMessage(message: { role: string; content: unknown }): LlmMe
   return { role, content: parts };
 }
 
+/**
+ * Engine cache partition (AM `Vpe`: `cacheSegments[].messages` + `liveMessages`) -> messages with the static segments
+ * first and the live input last, so providers can reuse the static prefix across calls. `cacheBreakpoints` are the
+ * indices of each segment's last message. Null when the partition is missing or malformed (send `messages` as is).
+ * AM's transport sends the same order (`fUe`/`Pse` @79296).
+ */
+export function partitionMessages(partition: unknown): { messages: LlmMessage[]; cacheBreakpoints: number[] } | null {
+  const p = asRecord(partition);
+  if (!Array.isArray(p.cacheSegments) || !Array.isArray(p.liveMessages) || !p.liveMessages.length) return null;
+  const messages: LlmMessage[] = [];
+  const cacheBreakpoints: number[] = [];
+  for (const segment of p.cacheSegments) {
+    const segmentMessages = asRecord(segment).messages;
+    if (!Array.isArray(segmentMessages)) return null;
+    if (!segmentMessages.length) continue;
+    messages.push(...segmentMessages.map((m) => toLlmMessage(asRecord(m) as { role: string; content: unknown })));
+    cacheBreakpoints.push(messages.length - 1);
+  }
+  messages.push(...p.liveMessages.map((m) => toLlmMessage(asRecord(m) as { role: string; content: unknown })));
+  return { messages, cacheBreakpoints };
+}
+
+/** Anthropic allows four cache breakpoints per request. */
+const MAX_CACHE_BREAKPOINTS = 4;
+const EPHEMERAL = Object.freeze({ type: "ephemeral" });
+
+/**
+ * Mark cache breakpoints for Anthropic (the only Lumiverse provider that forwards `cache_control`). When the connection
+ * has Lumiverse prompt caching on, the host adds up to two markers of its own (system + conversation tail), so ours
+ * drop to two. Over budget, the first breakpoints and the last one are kept: the last covers the whole static prefix.
+ */
+export function withCacheBreakpoints(
+  messages: LlmMessage[],
+  breakpoints: readonly number[] | undefined,
+  connection: { provider: string; metadata: Record<string, unknown> },
+): LlmMessage[] {
+  if (!breakpoints?.length || !/anthropic/i.test(connection.provider)) return messages;
+  const budget = connection.metadata.prompt_caching ? MAX_CACHE_BREAKPOINTS - 2 : MAX_CACHE_BREAKPOINTS;
+  const valid = [...new Set(breakpoints)].filter((i) => Number.isInteger(i) && i >= 0 && i < messages.length).sort((a, b) => a - b);
+  const chosen = new Set(valid.length > budget ? [...valid.slice(0, budget - 1), valid.at(-1)!] : valid);
+  if (!chosen.size) return messages;
+  return messages.map((message, index) => {
+    if (!chosen.has(index)) return message;
+    if (typeof message.content === "string") return { ...message, cache_control: EPHEMERAL };
+    const last = message.content.length - 1;
+    if (last < 0) return message;
+    return { ...message, content: message.content.map((part, i) => (i === last ? { ...part, cache_control: EPHEMERAL } : part)) };
+  });
+}
+
 function clampRetries(value: unknown, fallback: number): number {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
@@ -432,6 +484,7 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
       imagesDropped = true;
       log("info", `Images dropped: ${model} cannot read images (${request.purpose}).`);
     }
+    messages = withCacheBreakpoints(messages, request.cacheBreakpoints, connection);
 
     const baseParameters: Record<string, unknown> = { ...(request.parameters ?? {}) };
     const temperature = request.temperature ?? settings.temperature;
@@ -518,10 +571,12 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
           const signal = (o.signal as AbortSignal | undefined) ?? clientOptions.signal;
           const timeoutMs = Number(o.timeoutMs);
           const maxOutputTokens = Number(o.maxOutputTokens ?? o.maxTokens);
+          const partitioned = partitionMessages(o.cachePartition);
           const result = await run(
             {
               purpose: str(o.purpose) || clientOptions.purpose || "analyzer",
-              messages: messages.map(toLlmMessage),
+              messages: partitioned?.messages ?? messages.map(toLlmMessage),
+              ...(partitioned ? { cacheBreakpoints: partitioned.cacheBreakpoints } : {}),
               responseMode: o.responseMode === "text" ? "text" : "json",
               ...(o.structuredOutputSchema && typeof o.structuredOutputSchema === "object" ? { schema: o.structuredOutputSchema as Record<string, unknown> } : {}),
               ...(Number.isFinite(maxOutputTokens) && maxOutputTokens > 0 ? { maxTokens: maxOutputTokens } : {}),
