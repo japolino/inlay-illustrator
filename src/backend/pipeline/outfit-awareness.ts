@@ -281,7 +281,14 @@ export function augmentV5AnalyzerPayload(payload: Rec, lookup: Lookup): boolean 
   const a = augmentCatalog(payload.appearance_catalog, lookup);
   const b = augmentCatalog(payload.generated_appearance_catalog, lookup);
   if (!a && !b) return false;
+  applyOutfitPartPolicy(payload);
+  return true;
+}
+
+/** Adds the part policy and the `outfit_parts` input default to the payload's `response_contract` (mutates). Returns whether it had one. */
+function applyOutfitPartPolicy(payload: Rec): boolean {
   const contract = rec(payload.response_contract);
+  if (contract !== payload.response_contract) return false;
   const policy = rec(contract.analysis_policy);
   if (contract.analysis_policy === policy) {
     if (policy.outfits && typeof policy.outfits === "object") Object.assign(policy.outfits as Rec, OUTFIT_PART_POLICY);
@@ -338,16 +345,80 @@ export function augmentV5AnalyzerMessages<M extends Message>(messages: readonly 
 export function withOutfitAwareness(client: AnalyzerClientLike, registry: OutfitIndexRegistry, onAugment?: (outfits: number) => void): AnalyzerClientLike {
   return {
     complete(config, messages, options) {
+      if (!registry.size) return client.complete(config, messages, options);
       let outfits = 0;
-      const augmented = registry.size
-        ? augmentV5AnalyzerMessages(messages, (k, f, o) => {
-            const parts = registry.wire(k, f, o);
-            if (parts) outfits += 1;
-            return parts;
-          })
-        : null;
+      const augmented = augmentV5AnalyzerMessages(messages, (k, f, o) => {
+        const parts = registry.wire(k, f, o);
+        if (parts) outfits += 1;
+        return parts;
+      });
       if (augmented) onAugment?.(outfits);
-      return client.complete(config, augmented ?? messages, options);
+      // The client sends the cache partition when there is one, so it needs the same parts.
+      const cachePartition = (options as { cachePartition?: unknown } | undefined)?.cachePartition;
+      const partition = cachePartition ? augmentPartition(cachePartition, (k, f, o) => registry.wire(k, f, o)) : null;
+      return client.complete(config, augmented ?? messages, partition ? { ...options, cachePartition: partition } : options);
     },
+  };
+}
+
+/** A JSON text of the cache partition, which may start with a header line such as `STATIC V5 APPEARANCE CATALOG`. */
+type PartitionDoc = { header: string; payload: Rec };
+const PARTITION_HEADER = /^(?:STATIC|CURRENT) V5 [A-Z ]+\n/u;
+
+function readPartitionDoc(text: string): PartitionDoc | null {
+  const header = PARTITION_HEADER.exec(text)?.[0] ?? "";
+  const payload = parseObject(text.slice(header.length));
+  return payload ? { header, payload } : null;
+}
+
+/**
+ * The engine's cache partition (`Vpe`) with outfit parts added, or null when nothing changed. The partition splits the
+ * flat payload across messages (catalog in one, `response_contract` in another), so the catalogs and the part policy
+ * are edited per message: the policy goes in only when a catalog got parts.
+ */
+export function augmentPartition(partition: unknown, lookup: Lookup): Rec | null {
+  const p = rec(partition);
+  if (!Array.isArray(p.cacheSegments) || !Array.isArray(p.liveMessages)) return null;
+  const docs: PartitionDoc[] = [];
+  const edited = new Set<PartitionDoc>();
+  // Parse every JSON text once; `write` rebuilds a message from its (possibly edited) docs.
+  const read = (m: unknown) => {
+    const message = rec(m);
+    const doc = (text: unknown) => {
+      const d = typeof text === "string" ? readPartitionDoc(text) : null;
+      if (d) docs.push(d);
+      return d;
+    };
+    if (message.role !== "user") return () => m;
+    if (typeof message.content === "string") {
+      const d = doc(message.content);
+      return () => (d && edited.has(d) ? { ...message, content: d.header + JSON.stringify(d.payload) } : m);
+    }
+    if (!Array.isArray(message.content)) return () => m;
+    const parts = message.content.map((part: unknown) => {
+      const r = rec(part);
+      return { part, d: r.type === "text" ? doc(r.text) : null };
+    });
+    return () =>
+      parts.some(({ d }) => d && edited.has(d))
+        ? { ...message, content: parts.map(({ part, d }) => (d && edited.has(d) ? { ...rec(part), text: d.header + JSON.stringify(d.payload) } : part)) }
+        : m;
+  };
+  const segments = p.cacheSegments.map((segment: unknown) => {
+    const s = rec(segment);
+    return { s, writes: Array.isArray(s.messages) ? s.messages.map(read) : null };
+  });
+  const live = p.liveMessages.map(read);
+  for (const d of docs) {
+    const a = augmentCatalog(d.payload.appearance_catalog, lookup);
+    const b = augmentCatalog(d.payload.generated_appearance_catalog, lookup);
+    if (a || b) edited.add(d);
+  }
+  if (!edited.size) return null;
+  for (const d of docs) if (d.payload.response_contract && applyOutfitPartPolicy(d.payload)) edited.add(d);
+  return {
+    ...p,
+    cacheSegments: segments.map(({ s, writes }) => (writes ? { ...s, messages: writes.map((w) => w()) } : s)),
+    liveMessages: live.map((w) => w()),
   };
 }

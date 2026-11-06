@@ -15,6 +15,15 @@ describe("run log branding", () => {
     expect(entry.message).toBe("[Inlay] retry");
     expect(mirrored).toEqual(["[Inlay:analysis] [Inlay] retry"]);
   });
+
+  test("the mirrored line carries the error reason from the details", () => {
+    const mirrored: string[] = [];
+    const log = createRunLog({ host: { log: { info() {}, warn: (m: string) => mirrored.push(m), error: (m: string) => mirrored.push(m) } } as never });
+    log.append("warn", "pipeline", "Illustration message failed: k@0", { jobId: "j", error: { code: "provider-error", message: "NovelAI 429" } });
+    log.append("error", "pipeline", "Plan failed", new Error("boom"));
+    log.append("error", "pipeline", "Saving failed: boom", { message: "boom" });
+    expect(mirrored).toEqual(["[Inlay:pipeline] Illustration message failed: k@0 (provider-error: NovelAI 429)", "[Inlay:pipeline] Plan failed (boom)", "[Inlay:pipeline] Saving failed: boom"]);
+  });
 });
 
 describe("run log error redaction and truncation", () => {
