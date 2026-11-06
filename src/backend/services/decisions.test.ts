@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createFakeHost } from "../testing/fake-host.js";
-import { createDecisionService } from "./decisions.js";
+import { CONNECTION_MODEL_PLACEHOLDER, createDecisionService } from "./decisions.js";
 import { createRunLog } from "./run-log.js";
 import { createEventBus } from "./events.js";
 
@@ -80,6 +80,22 @@ describe("DecisionService", () => {
     });
     expect(await res.json()).toEqual({ model: "typesafe/jev-latest", answers: { q1: { type: "noul", noul: 1 } }, usage: { input_tokens: 3, output_tokens: 1 } });
     expect(capturedInput).toMatchObject({ connection_id: "dec-1", model: "typesafe/jev-latest", userId: "test-user-789" });
+  });
+
+  test("createJevAdapter: an empty model passes the engine's check and reaches the host as the connection's model", async () => {
+    const fake = createFakeHost({ userId: "u" });
+    let capturedInput: any = null;
+    (fake.host.decisions as any).evaluate = async (input: any) => {
+      capturedInput = input;
+      return { model: "inception-model", answers: {} };
+    };
+    const log = createRunLog({ events: createEventBus(fake.host, fake.userId), host: fake.host });
+    const adapter = createDecisionService(fake.host, log, fake.userId).createJevAdapter(() => ({ connectionId: "inception", model: "", rosterSelectionDefault: false }));
+    const model = adapter.getConfig().model;
+    expect(model).toBe(CONNECTION_MODEL_PLACEHOLDER);
+    await adapter.network.fetch("https://api.typesafe.ai/v1/systemone", { method: "POST", headers: {}, body: JSON.stringify({ model, state: "s", questions: {} }) });
+    expect(capturedInput.connection_id).toBe("inception");
+    expect(capturedInput.model).toBeUndefined();
   });
 
   test("createJevAdapter answers host decision errors with a TypeSafe-style status and logs the host message", async () => {

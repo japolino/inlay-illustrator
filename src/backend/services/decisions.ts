@@ -38,6 +38,12 @@ export interface DecisionService {
   };
 }
 
+/**
+ * Stands in for an empty JEV model inside the engine, which refuses requests without one (AM `pnt`), and is sent to the
+ * host as "no model" so the decision connection uses its own.
+ */
+export const CONNECTION_MODEL_PLACEHOLDER = "lumiverse-connection-model";
+
 /** HTTP status for a failed host decision request, as AM's JEV client classifies it (401/403 auth, 429 rate limit, 5xx server, else http). */
 function jevErrorStatus(error: unknown): number {
   const status = httpStatusOf(error);
@@ -153,7 +159,7 @@ export function createDecisionService(host: SpindleHost, log: RunLog, defaultUse
               const res = await api.evaluate(
                 {
                   connection_id: currentCfg.connectionId || undefined,
-                  model: body.model,
+                  model: body.model && body.model !== CONNECTION_MODEL_PLACEHOLDER ? body.model : undefined,
                   state: body.state as any,
                   questions: body.questions as any,
                   ...(effectiveUserId ? { userId: effectiveUserId } : {}),
@@ -170,8 +176,12 @@ export function createDecisionService(host: SpindleHost, log: RunLog, defaultUse
             }
           },
         },
-        // AM checks `connection.apiKey` before a JEV run; the key stays in the Lumiverse connection, so pass a placeholder.
-        getConfig: () => ({ ...getConfig(), apiKey: "lumiverse" }),
+        // AM checks `connection.apiKey` and `connection.model` before a JEV run; the key stays in the Lumiverse connection,
+        // so pass a placeholder, and an empty model becomes the connection-model placeholder.
+        getConfig: () => {
+          const config = getConfig();
+          return { ...config, model: config.model || CONNECTION_MODEL_PLACEHOLDER, apiKey: "lumiverse" };
+        },
       };
     },
   };
