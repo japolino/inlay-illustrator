@@ -47769,7 +47769,13 @@ function augmentV5AnalyzerPayload(payload, lookup) {
   const b = augmentCatalog(payload.generated_appearance_catalog, lookup);
   if (!a && !b)
     return false;
+  applyOutfitPartPolicy(payload);
+  return true;
+}
+function applyOutfitPartPolicy(payload) {
   const contract = rec5(payload.response_contract);
+  if (contract !== payload.response_contract)
+    return false;
   const policy = rec5(contract.analysis_policy);
   if (contract.analysis_policy === policy) {
     if (policy.outfits && typeof policy.outfits === "object")
@@ -47826,17 +47832,77 @@ function augmentV5AnalyzerMessages(messages, lookup) {
 function withOutfitAwareness(client, registry, onAugment) {
   return {
     complete(config, messages, options) {
+      if (!registry.size)
+        return client.complete(config, messages, options);
       let outfits = 0;
-      const augmented = registry.size ? augmentV5AnalyzerMessages(messages, (k, f, o) => {
+      const augmented = augmentV5AnalyzerMessages(messages, (k, f, o) => {
         const parts = registry.wire(k, f, o);
         if (parts)
           outfits += 1;
         return parts;
-      }) : null;
+      });
       if (augmented)
         onAugment?.(outfits);
-      return client.complete(config, augmented ?? messages, options);
+      const cachePartition = options?.cachePartition;
+      const partition = cachePartition ? augmentPartition(cachePartition, (k, f, o) => registry.wire(k, f, o)) : null;
+      return client.complete(config, augmented ?? messages, partition ? { ...options, cachePartition: partition } : options);
     }
+  };
+}
+var PARTITION_HEADER = /^(?:STATIC|CURRENT) V5 [A-Z ]+\n/u;
+function readPartitionDoc(text) {
+  const header = PARTITION_HEADER.exec(text)?.[0] ?? "";
+  const payload = parseObject(text.slice(header.length));
+  return payload ? { header, payload } : null;
+}
+function augmentPartition(partition, lookup) {
+  const p = rec5(partition);
+  if (!Array.isArray(p.cacheSegments) || !Array.isArray(p.liveMessages))
+    return null;
+  const docs = [];
+  const edited = new Set;
+  const read = (m) => {
+    const message = rec5(m);
+    const doc = (text) => {
+      const d = typeof text === "string" ? readPartitionDoc(text) : null;
+      if (d)
+        docs.push(d);
+      return d;
+    };
+    if (message.role !== "user")
+      return () => m;
+    if (typeof message.content === "string") {
+      const d = doc(message.content);
+      return () => d && edited.has(d) ? { ...message, content: d.header + JSON.stringify(d.payload) } : m;
+    }
+    if (!Array.isArray(message.content))
+      return () => m;
+    const parts = message.content.map((part) => {
+      const r = rec5(part);
+      return { part, d: r.type === "text" ? doc(r.text) : null };
+    });
+    return () => parts.some(({ d }) => d && edited.has(d)) ? { ...message, content: parts.map(({ part, d }) => d && edited.has(d) ? { ...rec5(part), text: d.header + JSON.stringify(d.payload) } : part) } : m;
+  };
+  const segments = p.cacheSegments.map((segment) => {
+    const s = rec5(segment);
+    return { s, writes: Array.isArray(s.messages) ? s.messages.map(read) : null };
+  });
+  const live = p.liveMessages.map(read);
+  for (const d of docs) {
+    const a = augmentCatalog(d.payload.appearance_catalog, lookup);
+    const b = augmentCatalog(d.payload.generated_appearance_catalog, lookup);
+    if (a || b)
+      edited.add(d);
+  }
+  if (!edited.size)
+    return null;
+  for (const d of docs)
+    if (d.payload.response_contract && applyOutfitPartPolicy(d.payload))
+      edited.add(d);
+  return {
+    ...p,
+    cacheSegments: segments.map(({ s, writes }) => writes ? { ...s, messages: writes.map((w) => w()) } : s),
+    liveMessages: live.map((w) => w())
   };
 }
 
@@ -57038,6 +57104,13 @@ function safeDetails(details) {
     return truncateLog(redactSensitive(String(details)));
   }
 }
+function detailReason(details) {
+  const d = details && typeof details === "object" ? details : {};
+  const error = d.error && typeof d.error === "object" ? d.error : d;
+  const message = typeof error.message === "string" ? error.message.trim() : "";
+  const code = typeof error.code === "string" ? error.code : "";
+  return message ? (code ? `${code}: ${message}` : message).slice(0, 500) : "";
+}
 function createRunLog(options = {}) {
   const limit = options.limit ?? RUN_LOG_LIMIT;
   const now = options.now ?? (() => new Date);
@@ -57056,7 +57129,8 @@ function createRunLog(options = {}) {
         entries = entries.slice(entries.length - limit);
       if (level === "warn" || level === "error") {
         try {
-          options.host?.log[level](`[Inlay:${scope}] ${entry.message}`);
+          const reason = detailReason(d);
+          options.host?.log[level](`[Inlay:${scope}] ${entry.message}${reason && !entry.message.includes(reason) ? ` (${reason})` : ""}`);
         } catch {}
       }
       options.events?.emit("log.appended", { entry });

@@ -354,6 +354,39 @@ describe("analyzer outfit awareness", () => {
     expect(augmented.find((m) => m.role === "system")).toBe(messages.find((m) => m.role === "system"));
   });
 
+  test("the cache partition the client sends gets the same parts and policy as the flat request", async () => {
+    const payload = payloadOf(messages);
+    const { analyzer_catalog, response_contract, appearance_catalog, ...live } = payload;
+    const system = messages.find((m) => m.role === "system")!;
+    const partition = {
+      namespace: "test",
+      cacheSegments: [
+        { kind: "app-static", messages: [system] },
+        { kind: "config-static", messages: [{ role: "user", content: `STATIC V5 ANALYZER CONFIG\n${JSON.stringify({ analyzer_catalog, response_contract })}` }] },
+        { kind: "outfit-static", messages: [{ role: "user", content: `STATIC V5 APPEARANCE CATALOG\n${JSON.stringify({ appearance_catalog })}` }] },
+      ],
+      liveMessages: [{ role: "user", content: [{ type: "text", text: `CURRENT V5 ANALYSIS INPUT\n${JSON.stringify(live)}` }, { type: "image_url", image_url: { url: "data:," } }] }],
+    };
+    const sent: Array<Record<string, unknown> | undefined> = [];
+    const client: AnalyzerClientLike = { complete: async (_c, _ms, o) => (sent.push(o as Record<string, unknown>), { raw: "{}", parsed: {} }) };
+    const registry = new OutfitIndexRegistry();
+    const release = registry.register(index);
+    await withOutfitAwareness(client, registry).complete({}, messages, { cachePartition: partition });
+    release();
+    const flat = payloadOf(augmentV5AnalyzerMessages(messages, (k, f, o) => index.wire(k, f, o))!);
+    const out = sent[0]!.cachePartition as typeof partition;
+    const body = (text: string, header: string) => (expect(text.startsWith(`${header}\n`)).toBe(true), JSON.parse(text.slice(header.length + 1)));
+    expect(body(out.cacheSegments[1]!.messages[0]!.content as string, "STATIC V5 ANALYZER CONFIG").response_contract).toEqual(flat.response_contract);
+    expect(body(out.cacheSegments[2]!.messages[0]!.content as string, "STATIC V5 APPEARANCE CATALOG").appearance_catalog).toEqual(flat.appearance_catalog);
+    expect(out.cacheSegments[0]!.messages[0]).toBe(system);
+    const liveParts = out.liveMessages[0]!.content as Array<Record<string, unknown>>;
+    expect(liveParts[1]).toBe(partition.liveMessages[0]!.content[1]);
+    expect(out.namespace).toBe("test");
+    // Nothing registered: the partition passes through untouched.
+    await withOutfitAwareness(client, registry).complete({}, messages, { cachePartition: partition });
+    expect(sent[1]!.cachePartition).toBe(partition);
+  });
+
   test("passes requests through when no run is registered or nothing matches", async () => {
     const seen: unknown[] = [];
     const client: AnalyzerClientLike = { complete: async (_c, ms) => (seen.push(ms), { raw: "{}", parsed: {} }) };
