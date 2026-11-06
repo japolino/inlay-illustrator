@@ -50,6 +50,12 @@ describe("config defaults", () => {
     expect(JSON.stringify(splitConfigForStorage(createDefaultConfig()).model)).toBe("{}");
     expect(mergeStoredConfig(JSON.parse(JSON.stringify(parts)))).toEqual(c);
   });
+  test("a cleared JEV model survives save and reload; an absent one is jev-latest", () => {
+    const cleared = normalizeConfig({ jevConnection: { connectionId: "inception", model: "  " } });
+    expect(cleared.jevConnection.model).toBe("");
+    expect(mergeStoredConfig(JSON.parse(JSON.stringify(splitConfigForStorage(cleared)))).jevConnection.model).toBe("");
+    expect(normalizeConfig({ jevConnection: { connectionId: "inception" } }).jevConnection.model).toBe("jev-latest");
+  });
 });
 
 describe("Lumiverse mapping", () => {
@@ -140,6 +146,9 @@ function am990(output: AnyRec, input: AnyRec): AnyRec {
     defaults.nativeAssetVisibility = (Number.isFinite(revision) && revision > 0) || dirty ? "hidden" : "shown";
   }
   o.characterPrompt.charxGenerationDefaults = defaults;
+  // Port deviation: a cleared JEV model is kept (= the Lumiverse decision connection's model); AM only talked to TypeSafe.
+  const jevModel = input?.jevConnection?.model;
+  if (typeof jevModel === "string") o.jevConnection.model = jevModel.trim();
   return o;
 }
 

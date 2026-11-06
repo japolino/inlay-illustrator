@@ -4953,7 +4953,7 @@ function normalizeConfigWithIssues(raw) {
   const jevConnection = {
     connectionId: trimString(jevRaw.connectionId),
     rosterSelectionDefault: typeof jevRaw.rosterSelectionDefault === "boolean" ? jevRaw.rosterSelectionDefault : jevRaw.selectionEnabled === true,
-    model: typeof jevRaw.model === "string" && jevRaw.model.trim() ? jevRaw.model.trim() : DEFAULT_JEV_MODEL
+    model: typeof jevRaw.model === "string" ? jevRaw.model.trim() : DEFAULT_JEV_MODEL
   };
   const cp = asRecord(merged.characterPrompt);
   const characterPrompt = {
@@ -58047,6 +58047,7 @@ function createStorageService(host, userId, options = {}) {
 }
 
 // src/backend/services/decisions.ts
+var CONNECTION_MODEL_PLACEHOLDER = "lumiverse-connection-model";
 function jevErrorStatus(error) {
   const status = httpStatusOf(error);
   if (status >= 400)
@@ -58154,7 +58155,7 @@ function createDecisionService(host, log, defaultUserId) {
               const effectiveUserId = adapterOptions.userId ?? defaultUserId;
               const res = await api.evaluate({
                 connection_id: currentCfg.connectionId || undefined,
-                model: body.model,
+                model: body.model && body.model !== CONNECTION_MODEL_PLACEHOLDER ? body.model : undefined,
                 state: body.state,
                 questions: body.questions,
                 ...effectiveUserId ? { userId: effectiveUserId } : {}
@@ -58169,7 +58170,10 @@ function createDecisionService(host, log, defaultUserId) {
             }
           }
         },
-        getConfig: () => ({ ...getConfig(), apiKey: "lumiverse" })
+        getConfig: () => {
+          const config = getConfig();
+          return { ...config, model: config.model || CONNECTION_MODEL_PLACEHOLDER, apiKey: "lumiverse" };
+        }
       };
     }
   };

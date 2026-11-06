@@ -384,6 +384,7 @@ export interface JevConnectionSettings {
   connectionId?: string;
   /** Default of the per-charx "roster preselection" toggle. */
   rosterSelectionDefault: boolean;
+  /** Model sent with JEV requests; "" = the decision connection's own model. Absent = `DEFAULT_JEV_MODEL`. */
   model: string;
 }
 
@@ -862,7 +863,8 @@ export function normalizeConfigWithIssues(raw: unknown): ConfigNormalizeResult {
   const jevConnection: JevConnectionSettings = {
     connectionId: trimString(jevRaw.connectionId),
     rosterSelectionDefault: typeof jevRaw.rosterSelectionDefault === "boolean" ? jevRaw.rosterSelectionDefault : jevRaw.selectionEnabled === true,
-    model: typeof jevRaw.model === "string" && jevRaw.model.trim() ? jevRaw.model.trim() : DEFAULT_JEV_MODEL,
+    // A cleared field is kept: it selects the connection's model (other providers reject `jev-latest`).
+    model: typeof jevRaw.model === "string" ? jevRaw.model.trim() : DEFAULT_JEV_MODEL,
   };
 
   const cp = asRecord(merged.characterPrompt);
