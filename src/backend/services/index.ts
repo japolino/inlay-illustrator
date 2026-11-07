@@ -11,8 +11,9 @@ import { createSourcesService } from "./sources.js";
 import { createStorageService } from "./storage.js";
 import { createDecisionService } from "./decisions.js";
 import { shareArtists } from "./shared-artists.js";
+import { shareCharacters } from "./shared-characters.js";
 import { createAtelierService } from "./atelier.js";
-import type { BackendServices, SpindleHost } from "./types.js";
+import type { BackendServices, EventBus, SpindleHost } from "./types.js";
 
 export * from "./types.js";
 export { createEventBus } from "./events.js";
@@ -24,9 +25,18 @@ export { createSourcesService } from "./sources.js";
 export { createStorageService } from "./storage.js";
 export { createDecisionService } from "./decisions.js";
 export { sharedArtistsChannel, sharedArtistsValue, shareArtists } from "./shared-artists.js";
+export { sharedCharacterChannel, sharedCharacterValue, shareCharacters } from "./shared-characters.js";
 
 export function createServices(host: SpindleHost, userId: string | undefined): BackendServices {
-  const events = createEventBus(host, userId);
+  const bus = createEventBus(host, userId);
+  // A newly saved character document gets its shared library endpoint (set below, once storage and sources exist).
+  let onDocument: (characterId: string) => void = () => {};
+  const events: EventBus = {
+    emit(event, payload) {
+      bus.emit(event, payload);
+      if (event === "document.changed") onDocument(String((payload as { characterId?: unknown }).characterId ?? ""));
+    },
+  };
   const log = createRunLog({ events, host });
   const storage = createStorageService(host, userId, { events, log });
   const loadConfig = () => storage.loadConfig();
@@ -36,6 +46,9 @@ export function createServices(host: SpindleHost, userId: string | undefined): B
   const sources = createSourcesService({ host, userId, imageBytes, storage, log });
   const decisions = createDecisionService(host, log, userId);
   shareArtists(host, userId, loadConfig);
+  const characters = shareCharacters(host, userId, { storage, sources });
+  onDocument = characters.ensure;
+  void characters.registerStored().catch(() => undefined);
   const atelier = createAtelierService({ storage, events, log });
   return { host, userId, storage, llm, images, imageBytes, sources, events, log, decisions, atelier };
 }
