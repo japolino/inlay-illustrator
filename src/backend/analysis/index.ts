@@ -14,9 +14,10 @@ import type { AnalysisKind, AnalysisStartParams, JobStatus, ProgressInfo } from 
 import { fail } from "../rpc/errors.js";
 import type { BackendModules } from "../rpc/types.js";
 import type { BackendServices } from "../services/types.js";
-import { AnalysisJobs } from "./jobs.js";
+import { AnalysisJobs, type JobOutcome } from "./jobs.js";
 import { createOutfitImageController, type OutfitImageController } from "./outfit.js";
 import { runAnalysis, SUPPORTED_ANALYSIS_KINDS } from "./runs.js";
+import { shareProfiles } from "./shared-profiles.js";
 
 export interface AnalysisController {
   start(params: AnalysisStartParams): { jobId: string };
@@ -24,6 +25,8 @@ export interface AnalysisController {
   listActive(): { jobId: string; kind: AnalysisKind; characterId: string; status: JobStatus; progress: ProgressInfo }[];
   /** Resolves when the job finished (tests / internal callers). */
   wait(jobId: string): Promise<void>;
+  /** The job's outcome when it ends (null for an unknown or finished job). */
+  outcome(jobId: string): Promise<JobOutcome> | null;
   outfitImages: OutfitImageController;
   dispose(): void;
 }
@@ -36,7 +39,7 @@ declare module "../rpc/types.js" {
 
 export function createAnalysisModule(services: BackendServices, _getModules?: () => Partial<BackendModules>): { analysis: AnalysisController } {
   const jobs = new AnalysisJobs(services);
-  const done = new Map<string, Promise<unknown>>();
+  const done = new Map<string, Promise<JobOutcome>>();
   const outfitImages = createOutfitImageController(services);
   const analysis: AnalysisController = {
     start(params) {
@@ -59,12 +62,18 @@ export function createAnalysisModule(services: BackendServices, _getModules?: ()
     async wait(jobId) {
       await done.get(jobId);
     },
+    outcome(jobId) {
+      return done.get(jobId) ?? null;
+    },
     outfitImages,
     dispose() {
+      profiles.dispose();
       jobs.dispose();
       outfitImages.dispose();
     },
   };
+  // Other extensions ask for character profiles (Gambit: the card people it draws); see shared-profiles.ts.
+  const profiles = shareProfiles(services, () => analysis);
   return { analysis };
 }
 

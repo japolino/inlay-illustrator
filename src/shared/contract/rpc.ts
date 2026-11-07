@@ -166,6 +166,8 @@ export interface AnalysisStartParams {
    * references / asset-matching / reclassification: explicit targets (AM `promptKeys`).
    */
   promptKeys?: string[];
+  /** character-prompts: analyse exactly `promptKeys` (other extensions' profile requests), not the analyze-enabled selection. */
+  explicit?: boolean;
   personaIds?: string[];
   /** asset-matching: re-run even when signatures are unchanged. */
   force?: boolean;

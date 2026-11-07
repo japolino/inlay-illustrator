@@ -45844,7 +45844,7 @@ async function runReclassification(ctx, params) {
 async function runAnalysis(ctx, params) {
   switch (params.kind) {
     case "character-prompts":
-      return runCharacterPrompts(ctx, params);
+      return runCharacterPrompts(ctx, params, params.explicit === true);
     case "references":
       return runReferences(ctx, params);
     case "persona":
@@ -45868,6 +45868,211 @@ async function runAnalysis(ctx, params) {
   }
 }
 var SUPPORTED_ANALYSIS_KINDS = new Set(["character-prompts", "references", "persona", "asset-matching", "metadata-check", "artist-extraction", "representative-pick", "reclassification", "charx-regex", "outfit-autopick"]);
+
+// src/backend/services/shared-artists.ts
+var SHARED_ARTISTS_CHANNEL = "artists";
+var SHARED_ARTISTS_VERSION = 1;
+var OWNER_CHANNEL = "owner";
+var CHANNEL_SEGMENT = /^[a-z0-9][a-z0-9_-]*$/u;
+function sharedArtistsChannel(userId) {
+  const key = (userId ?? "").trim().toLowerCase();
+  return `${SHARED_ARTISTS_CHANNEL}.${key && CHANNEL_SEGMENT.test(key) ? key : OWNER_CHANNEL}`;
+}
+function sharedArtistsValue(config) {
+  const novelai = listNovelAIArtists(config.characterPrompt.artistPrompts).filter((artist) => artist.id !== NO_ARTIST_ID).map((artist) => ({
+    id: artist.id,
+    title: artist.displayTitle || artist.title,
+    prompt: artist.prompt,
+    negativePrompt: artist.negativePrompt,
+    ...artist.novelAIOverrides ? { novelAIOverrides: { ...artist.novelAIOverrides } } : {},
+    builtIn: !artist.userDefined
+  }));
+  const ids = new Set(novelai.map((artist) => artist.id));
+  const defaultArtistId = ids.has(config.characterPrompt.defaultArtistId) ? config.characterPrompt.defaultArtistId : NO_ARTIST_ID;
+  const anima = config.animaArtists.entries.map((entry) => ({ id: entry.id, title: entry.title, text: entry.text }));
+  return { version: SHARED_ARTISTS_VERSION, defaultArtistId, novelai, anima };
+}
+function shareArtists(host, userId, loadConfig) {
+  const pool = host.rpcPool;
+  if (!pool?.handle)
+    return () => {};
+  const channel = sharedArtistsChannel(userId);
+  try {
+    pool.handle(channel, async () => sharedArtistsValue(await loadConfig()), { requires: ["image_gen"] });
+  } catch {
+    return () => {};
+  }
+  return () => {
+    try {
+      pool.unregister(channel);
+    } catch {}
+  };
+}
+
+// src/backend/analysis/shared-profiles.ts
+var SHARED_PROFILES_CHANNEL = "profiles";
+var SHARED_PROFILES_VERSION = 1;
+var RETRY_MS = 30 * 60000;
+var MAX_PEOPLE = 12;
+function sharedProfilesChannel(userId) {
+  return `${SHARED_PROFILES_CHANNEL}.${sharedArtistsChannel(userId).slice("artists.".length)}`;
+}
+function wantedEndpoint(readerExtensionId, userId) {
+  return `${readerExtensionId}.inlay.wanted.${sharedArtistsChannel(userId).slice("artists.".length)}`;
+}
+var text3 = (v, max) => typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "";
+function parseProfileRequest(raw) {
+  const o = raw && typeof raw === "object" ? raw : null;
+  if (!o || o.version !== 1)
+    return null;
+  const characterId = text3(o.characterId, 80);
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/u.test(characterId))
+    return null;
+  const people = (Array.isArray(o.people) ? o.people : []).map((p) => {
+    const x = p && typeof p === "object" ? p : null;
+    const name = text3(x?.name, 80);
+    if (!name)
+      return null;
+    const aliases = (Array.isArray(x?.aliases) ? x.aliases : []).map((a) => text3(a, 80)).filter(Boolean).slice(0, 6);
+    const description = text3(x?.description, 1500);
+    return { name, ...aliases.length ? { aliases } : {}, ...description ? { description } : {} };
+  }).filter((p) => !!p).slice(0, MAX_PEOPLE);
+  return people.length ? { version: 1, characterId: characterId.toLowerCase(), people } : null;
+}
+var norm2 = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+function rowFor(roster, person) {
+  const names = [person.name, ...person.aliases ?? []].map(norm2).filter(Boolean);
+  const score = (row) => {
+    const title = norm2(row.title);
+    const keys = [...row.recognitionKeys, ...row.keys].map(norm2);
+    if (names.includes(title))
+      return 3;
+    if (keys.some((k) => names.includes(k)))
+      return 2;
+    if (names.some((n) => title.startsWith(`${n} `)))
+      return 1;
+    return 0;
+  };
+  let best = null;
+  let top = 0;
+  for (const row of roster) {
+    if (row.kind === "description")
+      continue;
+    const s = score(row);
+    if (s > top || s === top && s > 0 && best && !best.mainPrompt && row.mainPrompt) {
+      best = row;
+      top = s;
+    }
+  }
+  return top > 0 ? best : null;
+}
+function shareProfiles(services, analysis) {
+  const host = services.host;
+  const pool = host.rpcPool;
+  if (!pool?.handle)
+    return { dispose() {} };
+  const tried = new Map;
+  const last = new Map;
+  const channel = sharedProfilesChannel(services.userId);
+  const outside = [];
+  const drain = setInterval(() => {
+    for (const run of outside.splice(0)) {
+      try {
+        run();
+      } catch (err) {
+        services.log.append("warn", "profiles", `profile analysis could not start: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+  }, 500);
+  drain.unref?.();
+  async function answer(reader) {
+    const raw = await pool.read(wantedEndpoint(reader, services.userId)).catch(() => null);
+    const req = parseProfileRequest(raw);
+    if (!req)
+      return { version: SHARED_PROFILES_VERSION, status: "no-request" };
+    const { characterId } = req;
+    const ended = last.get(characterId);
+    const withLast = (a) => ended ? { ...a, last: ended } : a;
+    const running = analysis().listActive().find((j) => j.characterId === characterId && j.kind === "character-prompts" && (j.status === "running" || j.status === "queued"));
+    let snap = await loadWorkspaceSnapshot(services, characterId);
+    const ready = [];
+    const pending = [];
+    const skipped = [];
+    const targets = [];
+    const made = [];
+    for (const person of req.people) {
+      const row = rowFor(snap.roster, person);
+      if (row?.mainPrompt)
+        ready.push(person.name);
+      else if (row)
+        targets.push(row);
+      else
+        made.push(person);
+    }
+    if (running)
+      return withLast({ version: SHARED_PROFILES_VERSION, status: "running", characterId, ready, pending: [...targets, ...made].map((r) => ("title" in r) ? r.title : r.name), jobId: running.jobId });
+    for (const person of made) {
+      await createCustomCharacterEntry(services, characterId, {
+        title: person.name,
+        recognitionKeys: [person.name, ...person.aliases ?? []].join(", "),
+        appearanceDescription: person.description ?? ""
+      });
+    }
+    if (made.length) {
+      snap = await loadWorkspaceSnapshot(services, characterId);
+      for (const person of made) {
+        const row = rowFor(snap.roster, person);
+        if (row)
+          targets.push(row);
+      }
+    }
+    const now = Date.now();
+    const go = targets.filter((row) => {
+      const at = tried.get(`${characterId}\x00${row.promptKey}`);
+      if (at && now - at < RETRY_MS) {
+        skipped.push(row.title);
+        return false;
+      }
+      return true;
+    });
+    if (!go.length)
+      return withLast({ version: SHARED_PROFILES_VERSION, status: "ready", characterId, ready, ...skipped.length ? { skipped } : {} });
+    const lore = go.filter((r) => r.kind === "lore" && !r.registered);
+    if (lore.length)
+      await setRosterRegistered(services, characterId, lore.map((r) => ({ memberKey: r.memberKey, selectionId: r.selectionId })), true);
+    const customs = go.filter((r) => r.kind === "custom" && !r.registered).map((r) => r.selectionId);
+    if (customs.length)
+      await setCustomCharactersRegistered(services, characterId, customs, true);
+    for (const row of go)
+      tried.set(`${characterId}\x00${row.promptKey}`, now);
+    outside.push(() => {
+      const { jobId } = analysis().start({ kind: "character-prompts", characterId, evidenceMode: "text", promptKeys: go.map((r) => r.promptKey), explicit: true });
+      services.log.append("info", "profiles", `${reader} asked for ${go.map((r) => r.title).join(", ")}: analysing`, { characterId, jobId });
+      analysis().outcome(jobId)?.then((o) => {
+        last.set(characterId, { status: o.status, message: o.message, ...o.error ? { error: o.error.message } : {}, at: Date.now() });
+        services.log.append(o.status === "error" ? "warn" : "info", "profiles", `profile analysis for ${reader}: ${o.status} (${o.error?.message ?? o.message})`, { characterId, jobId });
+      }).catch(() => {
+        return;
+      });
+    });
+    for (const row of go)
+      pending.push(row.title);
+    return withLast({ version: SHARED_PROFILES_VERSION, status: "started", characterId, ready, pending, ...skipped.length ? { skipped } : {} });
+  }
+  try {
+    pool.handle(channel, (ctx) => answer(ctx.requesterExtensionId), { requires: ["characters", "generation"] });
+  } catch {
+    return { dispose() {} };
+  }
+  return {
+    dispose() {
+      clearInterval(drain);
+      try {
+        pool.unregister(channel);
+      } catch {}
+    }
+  };
+}
 
 // src/backend/analysis/index.ts
 function createAnalysisModule(services, _getModules) {
@@ -45896,12 +46101,17 @@ function createAnalysisModule(services, _getModules) {
     async wait(jobId) {
       await done.get(jobId);
     },
+    outcome(jobId) {
+      return done.get(jobId) ?? null;
+    },
     outfitImages,
     dispose() {
+      profiles.dispose();
       jobs.dispose();
       outfitImages.dispose();
     }
   };
+  const profiles = shareProfiles(services, () => analysis);
   return { analysis };
 }
 // src/engine/compose/provider-prompt.ts
@@ -46701,7 +46911,7 @@ function executionOf(store, config) {
 }
 var isInstructionKind = (kind) => kind === "scene" || kind === "imageRatio";
 var isFreeKind = (kind) => FREE_GENERATION_KINDS.includes(kind);
-var norm2 = (text) => typeof text === "string" ? text.replace(/\r\n?/gu, `
+var norm3 = (text) => typeof text === "string" ? text.replace(/\r\n?/gu, `
 `).trim() : "";
 function changedLegacyPresets(directions) {
   const out = { scene: new Set, imageRatio: new Set };
@@ -46710,12 +46920,12 @@ function changedLegacyPresets(directions) {
     for (const preset of directions[kind].presets ?? []) {
       const builtIn = builtIns.get(preset.id);
       if (!builtIn) {
-        if (norm2(preset.instruction) || norm2(preset.customInstruction?.text))
+        if (norm3(preset.instruction) || norm3(preset.customInstruction?.text))
           out[kind].add(preset.id);
         continue;
       }
-      const textChanged = norm2(preset.instruction) !== norm2(builtIn.instruction);
-      const added = !!norm2(preset.customInstruction?.text);
+      const textChanged = norm3(preset.instruction) !== norm3(builtIn.instruction);
+      const added = !!norm3(preset.customInstruction?.text);
       const sizesChanged = kind === "imageRatio" && !same2([...preset.allowedSizeIds ?? [1, 2, 5]].sort(), [...builtIn.allowedSizeIds ?? [1, 2, 5]].sort());
       if (textChanged || added || sizesChanged)
         out[kind].add(preset.id);
@@ -58271,46 +58481,6 @@ function createDecisionService(host, log, defaultUserId) {
         }
       };
     }
-  };
-}
-
-// src/backend/services/shared-artists.ts
-var SHARED_ARTISTS_CHANNEL = "artists";
-var SHARED_ARTISTS_VERSION = 1;
-var OWNER_CHANNEL = "owner";
-var CHANNEL_SEGMENT = /^[a-z0-9][a-z0-9_-]*$/u;
-function sharedArtistsChannel(userId) {
-  const key = (userId ?? "").trim().toLowerCase();
-  return `${SHARED_ARTISTS_CHANNEL}.${key && CHANNEL_SEGMENT.test(key) ? key : OWNER_CHANNEL}`;
-}
-function sharedArtistsValue(config) {
-  const novelai = listNovelAIArtists(config.characterPrompt.artistPrompts).filter((artist) => artist.id !== NO_ARTIST_ID).map((artist) => ({
-    id: artist.id,
-    title: artist.displayTitle || artist.title,
-    prompt: artist.prompt,
-    negativePrompt: artist.negativePrompt,
-    ...artist.novelAIOverrides ? { novelAIOverrides: { ...artist.novelAIOverrides } } : {},
-    builtIn: !artist.userDefined
-  }));
-  const ids = new Set(novelai.map((artist) => artist.id));
-  const defaultArtistId = ids.has(config.characterPrompt.defaultArtistId) ? config.characterPrompt.defaultArtistId : NO_ARTIST_ID;
-  const anima = config.animaArtists.entries.map((entry) => ({ id: entry.id, title: entry.title, text: entry.text }));
-  return { version: SHARED_ARTISTS_VERSION, defaultArtistId, novelai, anima };
-}
-function shareArtists(host, userId, loadConfig) {
-  const pool = host.rpcPool;
-  if (!pool?.handle)
-    return () => {};
-  const channel = sharedArtistsChannel(userId);
-  try {
-    pool.handle(channel, async () => sharedArtistsValue(await loadConfig()), { requires: ["image_gen"] });
-  } catch {
-    return () => {};
-  }
-  return () => {
-    try {
-      pool.unregister(channel);
-    } catch {}
   };
 }
 

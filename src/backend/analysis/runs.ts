@@ -360,7 +360,7 @@ export async function runReclassification(ctx: JobContext, params: AnalysisStart
 export async function runAnalysis(ctx: JobContext, params: AnalysisStartParams): Promise<JobOutcome> {
   switch (params.kind) {
     case "character-prompts":
-      return runCharacterPrompts(ctx, params);
+      return runCharacterPrompts(ctx, params, params.explicit === true);
     case "references":
       return runReferences(ctx, params);
     case "persona":
