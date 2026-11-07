@@ -23,6 +23,7 @@ import {
   toggleSizeCandidate
 } from "./directions.js";
 import { saveCustomSize, setAnalysisMode, setCountMode, setCountRange, setFixedCount, setSplitTotal } from "./system-helpers.js";
+import { applyCountAction, countLimits } from "../../chat/count-model.js";
 import { anyCharxDirty, resetAllPatch, sourceMetadataState } from "./charx.js";
 import { detectorsOf, nextDetectors, regexError } from "./charx-regex.js";
 import { formatLogList, mergeLogEntries, scopeLabel } from "./logs.js";
@@ -131,6 +132,13 @@ describe("settings form helpers", () => {
     expect(split.analysisMode).toBe("split");
     expect(split.splitAnalysis.totalCount).toBe(2);
     expect(setSplitTotal(split, 50, 7).splitAnalysis.totalCount).toBe(30);
+  });
+  test("a count edit on the settings page leaves split analysis, as in the count panel (AM setCountPolicy)", () => {
+    const split = setAnalysisMode(createDefaultChatImageGenerationSettings(), "split", 7);
+    expect(setFixedCount(split, 3, 7).analysisMode).toBe("single");
+    expect(setCountMode(split, "range", 7).analysisMode).toBe("single");
+    expect(setCountRange(setCountMode(split, "range", 7), 1, 3, 7).analysisMode).toBe("single");
+    expect(applyCountAction(split, "fixed-increment", countLimits(false))?.analysisMode).toBe("single");
   });
   test("charx helpers", () => {
     expect(sourceMetadataState({})).toBe("unknown");

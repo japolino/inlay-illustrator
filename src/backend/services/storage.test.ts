@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { normalizeConfig, STORAGE_PATHS } from "../../shared/contract/index.js";
+import { fixedCountPolicy, normalizeConfig, STORAGE_PATHS } from "../../shared/contract/index.js";
 import { createFakeHost } from "../testing/fake-host.js";
 import { createRunLog } from "./run-log.js";
 import { createStorageService } from "./storage.js";
@@ -74,6 +74,58 @@ describe("storage service: config", () => {
     expect((await storage.loadConfig()).analysis.temperature).toBe(1.5);
     await expect(storage.updateConfig((c) => ({ ...c, analysis: { ...c.analysis, temperature: 0.1 } }))).rejects.toMatchObject({ error: { code: "storage-error", detailCode: "STORAGE_FILE_TOO_NEW" } });
     expect(JSON.parse(fake.files.get(STORAGE_PATHS.configModel) as string).version).toBe(99);
+  });
+
+  test("a newer build's config part the update leaves alone does not block it; a refused part writes nothing", async () => {
+    const { fake, storage } = setup();
+    fake.files.set(STORAGE_PATHS.configSettings, JSON.stringify({ version: 1, ui: { language: "en" } }));
+    fake.files.set(STORAGE_PATHS.animaArtists, JSON.stringify({ version: 99, futureField: true }));
+    const animaText = fake.files.get(STORAGE_PATHS.animaArtists);
+    await storage.updateConfig((c) => ({ ...c, analysis: { ...c.analysis, temperature: 0.4 } }));
+    expect(JSON.parse(fake.files.get(STORAGE_PATHS.configModel) as string).analysis.temperature).toBe(0.4);
+    expect(fake.files.get(STORAGE_PATHS.animaArtists)).toBe(animaText);
+    // Changing the too-new part is refused before any other part is written.
+    const modelText = fake.files.get(STORAGE_PATHS.configModel);
+    await expect(storage.updateConfig((c) => ({ ...c, analysis: { ...c.analysis, temperature: 0.9 }, animaArtists: { ...c.animaArtists, entries: [{ id: "x", title: "X", text: "artist:x" }] } }))).rejects.toMatchObject({ error: { detailCode: "STORAGE_FILE_TOO_NEW" } });
+    expect(fake.files.get(STORAGE_PATHS.configModel)).toBe(modelText);
+    expect((await storage.loadConfig()).analysis.temperature).toBe(0.4);
+  });
+
+  test("a config write that fails midway drops the cache, so loads match the disk", async () => {
+    const { fake, storage } = setup();
+    await storage.loadConfig();
+    const write = fake.host.userStorage.write;
+    fake.host.userStorage.write = (async (path: string, data: string, userId?: string) => {
+      if (path === STORAGE_PATHS.configSettings) throw new Error("disk full");
+      return write(path, data, userId);
+    }) as typeof write;
+    await expect(storage.updateConfig((c) => ({ ...c, enabled: !c.enabled, analysis: { ...c.analysis, temperature: 0.6 } }))).rejects.toMatchObject({ error: { code: "storage-error" } });
+    fake.host.userStorage.write = write;
+    // model.json was written before settings.json failed: the cache must not hide it.
+    expect((await storage.loadConfig()).analysis.temperature).toBe(0.6);
+    expect((await storage.loadConfig()).enabled).toBe(normalizeConfig({}).enabled);
+  });
+
+  test("the chat image settings migration does not overwrite a save that landed first", async () => {
+    const { fake, storage } = setup();
+    fake.files.set(STORAGE_PATHS.configSettings, JSON.stringify({ version: 1, runtime: { imageAutoGenerationEnabled: false } }));
+    // Hold the load's read of the old settings until the user's save has been queued.
+    const read = fake.host.userStorage.read;
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    fake.host.userStorage.read = (async (path: string, userId?: string) => {
+      if (path === STORAGE_PATHS.configSettings) await held;
+      return read(path, userId);
+    }) as typeof read;
+    const loading = storage.loadChatImageGenerationSettings();
+    await new Promise((r) => setTimeout(r, 5));
+    const saved = storage.saveChatImageGenerationSettings({ autoGenerationEnabled: true, countPolicy: fixedCountPolicy(3), analysisMode: "single", splitAnalysis: { totalCount: null, batchSize: 3 } });
+    await saved;
+    release();
+    const loaded = await loading;
+    fake.host.userStorage.read = read;
+    expect(JSON.parse(fake.files.get(STORAGE_PATHS.chatImageGenerationSettings) as string).autoGenerationEnabled).toBe(true);
+    expect(loaded.autoGenerationEnabled).toBe(true);
   });
 
   test("chat image settings: save normalizes + emits; ui state round trip", async () => {

@@ -224,3 +224,93 @@ describe("outfit image generation session", () => {
     expect(root.querySelector<HTMLButtonElement>('[data-test-secondary-dock] [aria-label="Generate outfit image"]')!.disabled).toBe(false);
   });
 });
+
+async function generationPane() {
+  const mock = createFullMockBackend({ timeScale: 0 });
+  seedWorkspaceDemo(mock.db);
+  workspaceMockState(mock.db).jobStepMs = 0;
+  const app = new AppController(new RpcClient(mock.transport));
+  await app.init();
+  const characterId = app.state.selectedCharacterId!;
+  const ui = new WorkspaceUiStore();
+  ui.updateSource(characterId, { activeTab: "prompts" });
+  const root = doc.createElement("div");
+  doc.body.appendChild(root);
+  cleanups.push(() => { render(null, root as unknown as Element); app.destroy(); });
+  render(
+    <AppContext.Provider value={app}><WorkspaceUiContext.Provider value={ui}><Harness tab="prompts" /></WorkspaceUiContext.Provider></AppContext.Provider>,
+    root as unknown as Element
+  );
+  await until(() => root.querySelector("[data-test-content] *"), "content");
+  await wait(30);
+  const promptKey = app.state.workspace!.roster.find((r) => r.registered && r.promptKey)!.promptKey!;
+  const collection = characterCollection(app.state.workspace!.document, promptKey);
+  const sessions = sessionStoreFor(app);
+  const open = () => sessions.openGeneration(characterId, {
+    target: { kind: "character", characterId, promptKey },
+    formId: collection.defaultFormId,
+    collectionRevision: "",
+    draft: { label: "", description: "", head: "", top: "shirt", bottom: "", legs: "", feet: "", nsfw: false, gender: "female" },
+    replaceCurrent: false,
+    seed: "",
+    seedFixed: false,
+    useReference: false,
+    referenceType: "character",
+    strength: 0.6,
+    fidelity: 1
+  });
+  open();
+  ui.openSecondary(characterId, "outfit", { promptKey });
+  const button = () => root.querySelector<HTMLButtonElement>('[data-test-secondary-dock] [aria-label="Generate outfit image"]');
+  await until(button, "generation dock");
+  const generateCalls = () => mock.calls.filter((c) => c.method === "outfitImage.generate").length;
+  return { mock, app, characterId, sessions, open, button, generateCalls };
+}
+
+const outfitResult = (resultId: string) => ({ resultId, imageId: `img-${resultId}`, url: "data:image/png;base64,AA==", seed: "1", width: 832, height: 1216, positivePrompt: "shirt", negativePrompt: "", createdAt: new Date().toISOString() });
+
+describe("outfit image generation requests", () => {
+  test("a job that finished before the generate answer still ends the session with its result", async () => {
+    const pane = await generationPane();
+    pane.mock.handlers["outfitImage.generate"] = async (_params, ctx) => {
+      ctx.emit("outfitImage.finished", { jobId: "outfit-fast", result: outfitResult("res-fast") });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return { jobId: "outfit-fast" };
+    };
+    pane.button()!.click();
+    await until(() => pane.sessions.get(pane.characterId).generation?.results.some((r) => r.resultId === "res-fast"), "result merged");
+    expect(pane.sessions.get(pane.characterId).generation?.jobId).toBeNull();
+  });
+
+  test("a second Generate while the first request is in flight starts nothing", async () => {
+    const pane = await generationPane();
+    let release!: () => void;
+    pane.mock.handlers["outfitImage.generate"] = async () => {
+      await new Promise<void>((resolve) => (release = resolve));
+      return { jobId: "outfit-one" };
+    };
+    pane.button()!.click();
+    pane.button()!.click();
+    await until(() => pane.generateCalls() === 1, "request sent");
+    release();
+    await until(() => pane.sessions.get(pane.characterId).generation?.jobId === "outfit-one", "job stored");
+    await wait(30);
+    expect(pane.generateCalls()).toBe(1);
+  });
+
+  test("the answer of a closed session is not attached to the session opened after it", async () => {
+    const pane = await generationPane();
+    let release!: () => void;
+    pane.mock.handlers["outfitImage.generate"] = async () => {
+      await new Promise<void>((resolve) => (release = resolve));
+      return { jobId: "outfit-old" };
+    };
+    pane.button()!.click();
+    await until(() => pane.generateCalls() === 1, "request sent");
+    pane.sessions.closeGeneration(pane.characterId);
+    pane.open();
+    release();
+    await wait(50);
+    expect(pane.sessions.get(pane.characterId).generation?.jobId).toBeNull();
+  });
+});

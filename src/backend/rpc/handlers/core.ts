@@ -57,6 +57,44 @@ function requireId(value: unknown, name: string): string {
   return id;
 }
 
+/** How long a reset waits for cancelled jobs to settle before it deletes anyway. */
+export const RESET_SETTLE_TIMEOUT_MS = 15_000;
+
+/**
+ * Cancel the jobs that write what a reset deletes and wait for them (bounded), so a late save cannot bring the data back.
+ * Character reset: that character's analysis jobs. Factory reset: every analysis, outfit image and chat pipeline job.
+ */
+async function stopWriters(ctx: RpcContext, characterId?: string): Promise<void> {
+  const { analysis, pipeline } = ctx.modules as Partial<RpcContext["modules"]>;
+  const waits: Array<Promise<unknown>> = [];
+  let settled = false;
+  for (const job of analysis?.listActive() ?? []) {
+    if (characterId !== undefined && job.characterId !== characterId) continue;
+    analysis!.cancel({ jobId: job.jobId });
+    waits.push(analysis!.wait(job.jobId));
+  }
+  if (characterId === undefined) {
+    if (analysis) waits.push(analysis.outfitImages.cancelAll());
+    if (pipeline) {
+      const running = () => pipeline.listActive().filter((j) => j.status === "queued" || j.status === "running");
+      for (const job of running()) pipeline.cancel({ jobId: job.jobId });
+      // The pipeline has no wait API: poll until its cancelled jobs are gone.
+      waits.push((async () => {
+        while (!settled && running().length) await new Promise((r) => setTimeout(r, 25));
+      })());
+    }
+  }
+  if (!waits.length) return;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = await Promise.race([
+    Promise.allSettled(waits).then(() => false),
+    new Promise<boolean>((resolve) => (timer = setTimeout(() => resolve(true), RESET_SETTLE_TIMEOUT_MS))),
+  ]);
+  clearTimeout(timer);
+  settled = true;
+  if (timedOut) ctx.log.append("warn", "storage", "Reset: some cancelled jobs were still running; resetting anyway.");
+}
+
 function requireConfirm(params: { confirm?: unknown }): void {
   if (params.confirm !== true) fail("bad-request", "This action needs an explicit confirmation (confirm: true).");
 }
@@ -192,6 +230,7 @@ export const coreHandlers: HandlerGroup = {
   },
   async "config.factoryReset"(params, ctx) {
     requireConfirm(params);
+    await stopWriters(ctx);
     await ctx.storage.factoryReset();
     ctx.sources.invalidate();
     ctx.log.clear();
@@ -257,6 +296,7 @@ export const coreHandlers: HandlerGroup = {
   async "character.reset"(params, ctx) {
     requireConfirm(params);
     const characterId = requireId(params.characterId, "characterId");
+    await stopWriters(ctx, characterId);
     await ctx.storage.resetCharacter(characterId);
     // The overrides are gone with the document: drop this character's dirty bookkeeping too.
     await ctx.storage.updateConfig((c) => applyScopeToConfig(c, recomputeCharxDirtyFields(charxScopeFor(c, null), characterId)));

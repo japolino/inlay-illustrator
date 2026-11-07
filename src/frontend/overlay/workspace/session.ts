@@ -39,6 +39,8 @@ export interface GenerationSession {
   strength: number;
   fidelity: number;
   jobId: string | null;
+  /** `outfitImage.generate` is in flight (no jobId yet): Generate is disabled. */
+  requesting: boolean;
   results: OutfitImageResult[];
   shownResultId: string | null;
   selectedResultIds: string[];
@@ -114,8 +116,8 @@ export class WorkspaceSessionStore {
     this.update(characterId, (s) => (s.generation ? { generation: { ...s.generation, ...(typeof patch === "function" ? patch(s.generation) : patch) } } : {}));
   }
 
-  openGeneration(characterId: string | null, input: Omit<GenerationSession, "id" | "jobId" | "results" | "shownResultId" | "selectedResultIds" | "savedResultIds" | "historyExpanded" | "saving" | "error">): void {
-    this.update(characterId, { generation: { ...input, id: this.nextGenerationId++, jobId: null, results: [], shownResultId: null, selectedResultIds: [], savedResultIds: [], historyExpanded: false, saving: false, error: null } });
+  openGeneration(characterId: string | null, input: Omit<GenerationSession, "id" | "jobId" | "requesting" | "results" | "shownResultId" | "selectedResultIds" | "savedResultIds" | "historyExpanded" | "saving" | "error">): void {
+    this.update(characterId, { generation: { ...input, id: this.nextGenerationId++, jobId: null, requesting: false, results: [], shownResultId: null, selectedResultIds: [], savedResultIds: [], historyExpanded: false, saving: false, error: null } });
   }
 
   closeGeneration(characterId: string | null): void {

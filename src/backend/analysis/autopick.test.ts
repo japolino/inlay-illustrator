@@ -5,6 +5,8 @@ import { AnalysisJobs } from "./jobs.js";
 import { AUTOPICK_PATH, applyAutoPick, dedupeParts, getAutoPick, namedAssets, outfitText, readAutoPickState, representativeScore, runOutfitAutoPick } from "./autopick.js";
 import { ALICE, BOB, CHAR, asset, buildTestSource, createAnalysisFixture, lore } from "./testing/fixtures.js";
 import { projectRoster } from "./workspace.js";
+import { createFakeHost } from "../testing/fake-host.js";
+import { createStorageService } from "../services/storage.js";
 
 const NAMES = [
   "alice_uniform_neutral.webp", "alice_uniform_angry.webp", "alice_uniform_smile.webp", "alice_uniform_cowgirl_orgasm.webp",
@@ -255,6 +257,30 @@ describe("outfit auto-picker: apply and get", () => {
     const again = await applyAutoPick(fx.services, { characterId: CHAR, items: [{ groupId: uniform.id, candidate: 0, label: "Again", parts }] });
     expect(again).toMatchObject({ added: 0, skipped: 1 });
     expect(resolveCharacterForms(fx.documents.get(CHAR)!.characterPrompt, ALICE).forms[0]!.outfits).toHaveLength(2);
+  });
+
+  test("a tag write landing during an apply keeps both: autopick.json is updated inside the storage queue", async () => {
+    const { fx, state } = await planned();
+    const fake = createFakeHost();
+    const real = createStorageService(fake.host, fake.userId);
+    await real.writeJson(AUTOPICK_PATH(CHAR), state);
+    Object.assign(fx.services.storage, { readJson: real.readJson, writeJson: real.writeJson, updateJson: real.updateJson });
+    const uniform = state.groups.find((g) => g.outfit === "uniform")!;
+    const dress = state.groups.find((g) => g.outfit === "dress")!;
+    const tags: AutoPickTags = { candidate: 0, framing: "full body", nude: false, explicit: false, legsVisible: true, feetVisible: true, label: "Sundress", outfit: { head: "", top: "yellow sundress", bottom: "", legs: "", feet: "" }, textLegs: "", textFeet: "", taggedAt: "" };
+    // The tag job's write lands while the apply is between its read and its write.
+    let tagWrite: Promise<unknown> | null = null;
+    const has = fx.services.storage.hasCharacterDocument;
+    fx.services.storage.hasCharacterDocument = async (id) => {
+      tagWrite ??= real.updateJson(AUTOPICK_PATH(CHAR), state, (current) => ({ ...current, groups: current.groups.map((g) => (g.id === dress.id ? { ...g, tags } : g)) }));
+      return has(id);
+    };
+    const parts = { head: "", top: "white sailor shirt", bottom: "navy skirt", legs: "", feet: "" };
+    await applyAutoPick(fx.services, { characterId: CHAR, items: [{ groupId: uniform.id, candidate: 0, label: "Sailor", parts }] });
+    await tagWrite;
+    const final = await readAutoPickState(fx.services, CHAR);
+    expect(final.groups.find((g) => g.id === uniform.id)!.appliedOutfitId).toBeTruthy();
+    expect(final.groups.find((g) => g.id === dress.id)!.tags?.label).toBe("Sundress");
   });
 
   test("characters seen in the chat's images", async () => {

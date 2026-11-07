@@ -52,6 +52,7 @@ const watchedSessions = new WeakSet<WorkspaceSessionStore>();
 /**
  * Ends a generation session when its outfit job finishes, from the app store, so a job that ends while no generation
  * pane is mounted (tab, pane or character switch) does not keep the session generating: its job entry is dropped later.
+ * Session changes are watched too: a job that finished before its `outfitImage.generate` answer stored the jobId.
  */
 export function watchOutfitJobs(app: AppController, sessions: WorkspaceSessionStore): void {
   if (watchedSessions.has(sessions)) return;
@@ -59,13 +60,14 @@ export function watchOutfitJobs(app: AppController, sessions: WorkspaceSessionSt
   const apply = () => {
     const jobs = app.state.outfitJobs;
     for (const [characterId, source] of Object.entries(sessions.store.get())) {
-      const g = source.generation;
-      const job = g?.jobId ? jobs[g.jobId] : undefined;
-      if (!g || !job?.done) continue;
-      sessions.updateGeneration(characterId, job.result ? addResult(g, job.result) : { jobId: null, error: job.error?.message ?? GENERATION_LABELS.unsupported });
+      const jobId = source.generation?.jobId;
+      const job = jobId ? jobs[jobId] : undefined;
+      if (!job?.done) continue;
+      sessions.updateGeneration(characterId, (g) => (g.jobId !== jobId ? {} : job.result ? addResult(g, job.result) : { jobId: null, error: job.error?.message ?? GENERATION_LABELS.unsupported }));
     }
   };
   app.store.subscribe(apply);
+  sessions.store.subscribe(apply);
   apply();
 }
 
@@ -92,7 +94,7 @@ export function GenerationPanel({ ctx, owner, draftKey, source }: GenerationProp
   const savedUrl = useAssetUrl(savedAsset);
   const shown = session.results.find((r) => r.resultId === session.shownResultId) ?? null;
   const previewUrl = shown?.url ?? savedUrl;
-  const generating = !!session.jobId;
+  const generating = !!session.jobId || session.requesting;
   const persona = owner.kind === "persona" ? personas?.find((p) => p.personaId === owner.personaId) : null;
   const update = (patch: Partial<GenerationSession>) => ctx.sessions.updateGeneration(ctx.characterId, patch);
   const patchDraft = (patch: Partial<GenerationSession["draft"]>) => ctx.sessions.updateGeneration(ctx.characterId, (g) => ({ draft: { ...g.draft, ...patch } }));
@@ -172,7 +174,7 @@ export function GenerationPanel({ ctx, owner, draftKey, source }: GenerationProp
 export function GenerationDock({ ctx, owner, draftKey, source }: GenerationProps) {
   const session = ctx.session.generation!;
   const draft = useFormDraftView(ctx.drafts, draftKey, source);
-  const generating = !!session.jobId;
+  const generating = !!session.jobId || session.requesting;
   const update = (patch: Partial<GenerationSession>) => ctx.sessions.updateGeneration(ctx.characterId, patch);
   const persona = owner.kind === "persona";
   const selectedCount = session.selectedResultIds.length;
@@ -195,7 +197,12 @@ export function GenerationDock({ ctx, owner, draftKey, source }: GenerationProps
   }), [session]);
 
   const generate = async () => {
-    update({ error: null });
+    // Read the store, not the render: a second click before the re-render must not start a second job.
+    const current = ctx.sessions.get(ctx.characterId).generation;
+    if (!current || current.id !== session.id || current.jobId || current.requesting) return;
+    // The answer belongs to this session only (the pane may be closed or reopened for another outfit meanwhile).
+    const own = (patch: Partial<GenerationSession>) => ctx.sessions.updateGeneration(ctx.characterId, (g) => (g.id === session.id ? patch : {}));
+    update({ error: null, requesting: true });
     // AM keeps the seed lock per prompt key: persist it so the next dock (and the chat pipeline) reuse it.
     const t = session.target;
     if (t.kind === "character" && t.characterId) {
@@ -206,9 +213,9 @@ export function GenerationDock({ ctx, owner, draftKey, source }: GenerationProps
     }
     try {
       const { jobId } = await ctx.app.call("outfitImage.generate", { target: session.target, formId: session.formId, ...(session.outfitId ? { outfitId: session.outfitId } : {}), draft: imageDraft });
-      update({ jobId });
+      own({ jobId, requesting: false });
     } catch (error) {
-      update({ error: error instanceof Error ? error.message : String(error) });
+      own({ requesting: false, error: error instanceof Error ? error.message : String(error) });
     }
   };
   const save = async () => {

@@ -101,13 +101,16 @@ export function AutoPickDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   const [applying, setApplying] = useState(false);
   const stopped = useRef(false);
   const mounted = useRef(true);
+  /** Character shown now: a scan / tag loop started for another one stops, and its answers are dropped. */
+  const shown = useRef(characterId);
+  shown.current = characterId;
   useEffect(() => () => { mounted.current = false; stopped.current = true; }, []);
 
   const reload = async () => {
     if (!characterId) return;
     try {
       const result = await app.call("autopick.get", { characterId, ...(chatId ? { chatId } : {}) });
-      if (!mounted.current) return;
+      if (!mounted.current || shown.current !== characterId) return;
       setState(result.state);
       setSeen(result.seenPromptKeys);
     } catch (error) {
@@ -170,11 +173,11 @@ export function AutoPickDialog({ open, onOpenChange }: { open: boolean; onOpenCh
     let done = 0;
     try {
       for (const job of jobs) {
-        if (stopped.current) break;
+        if (stopped.current || shown.current !== characterId) break;
         setTagging({ from: done + 1, to: done + job.length, total: sheetCount });
         const sheets = (await Promise.all(job.map((tiles) => renderSheet(tiles)))).filter((s) => s !== null);
         if (!sheets.length) { app.notify({ tone: "danger", message: L.sheetFailed }); break; }
-        if (stopped.current) break;
+        if (stopped.current || shown.current !== characterId) break;
         const jobId = await app.startAnalysis({ kind: "outfit-autopick", characterId, autopick: { phase: "tag", sheets } });
         if (!jobId) break;
         const result = await waitForJob(app, jobId);

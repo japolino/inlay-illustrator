@@ -225,6 +225,18 @@ interface JobRecord {
   retryErrors?: { run: readonly GenerationRetryError[]; engine: readonly GenerationRetryError[] };
   done: Promise<void>;
   dismissed?: boolean;
+  /** Settings and split revision of the job's run: Retry / Restart still work after the message's retry memory was evicted. */
+  retryFrom?: { settings: ChatImageGenerationSettings; splitRevisionId?: string };
+}
+
+/**
+ * Retry memory of one message, kept and evicted as a unit (<= 16): AM `ee` chat image settings snapshot, `z` split
+ * analysis revision, `_` analyzer completed in a failed run (the retry keeps the count policy).
+ */
+interface RetryMemory {
+  settings?: ChatImageGenerationSettings;
+  splitRevisionId?: string;
+  analyzerCompleted?: boolean;
 }
 
 interface CleanupRecord {
@@ -255,24 +267,28 @@ export interface ControllerOptions {
   now?: () => number;
   /** Feature modules (analysis: outfit image generator for free outfit generation). */
   getModules?: () => BackendModules;
+  /** Background re-publish of a streaming message (tests): delays per attempt (last one repeats) and the attempt limit. */
+  publishRetry?: { delaysMs?: readonly number[]; maxAttempts?: number };
 }
 
 export function createChatPipelineController(services: BackendServices, engine: EnginePort, options: ControllerOptions = {}): ChatPipeline {
   const now = options.now ?? (() => Date.now());
-  const tracker = new HostGenerationTracker();
+  // A generation older than the longest stream wait counts as ended (a lost end event must not block the chat forever).
+  const tracker = new HostGenerationTracker({ now, maxAgeMs: STREAM_WAIT_MAX_MS });
+  const publishDelays = options.publishRetry?.delaysMs?.length ? options.publishRetry.delaysMs : PUBLISH_RETRY_DELAYS;
+  const publishMaxAttempts = options.publishRetry?.maxAttempts ?? PUBLISH_MAX_ATTEMPTS;
   const jobs = new Map<string, JobRecord>();
   /** chatId \0 planKey -> running message job. */
   const messageJobs = new Map<string, JobRecord>();
   /** chatId \0 slotId -> running regeneration. */
   const slotJobs = new Map<string, JobRecord>();
-  /** AM `ee`: chat image settings snapshot per message for retries (<= 16). */
-  const settingsSnapshots = new Map<string, ChatImageGenerationSettings>();
-  /** AM `_`: analyzer completed in a failed run (retry keeps the count policy). */
-  const analyzerCompleted = new Set<string>();
-  /** AM `z`: split analysis revision per message. */
-  const splitRevisions = new Map<string, string>();
+  /** chatId \0 planKey -> retry memory (AM `ee` / `z` / `_`, <= 16), dropped when the message's run completes. */
+  const retryMemory = new Map<string, RetryMemory>();
   const publishChains = new Map<string, Promise<unknown>>();
-  const publishTimers = new Set<ReturnType<typeof setTimeout>>();
+  /** chatId \0 planKey -> the one pending background re-publish: its timer and the attempt it runs as. */
+  const publishRetries = new Map<string, { timer: ReturnType<typeof setTimeout>; attempt: number }>();
+  /** chatId -> plan keys whose background re-publish gave up; published again when a host generation of the chat ends. */
+  const stalePublishes = new Map<string, Set<string>>();
   const previews = new Map<string, DeletionPreviewRecord>();
   const deletionLocks = new Set<string>();
   const cleanups = new Map<string, CleanupRecord>();
@@ -350,14 +366,21 @@ export function createChatPipelineController(services: BackendServices, engine: 
   };
 
   const finishJob = (job: JobRecord, result: GenerationResultKind, status: JobStatus, error?: RpcError) => {
+    const key = k(job.target.chatId, job.planKey);
     job.snapshot.status = status;
     job.snapshot.progress = phaseProgress(result === "completed" ? "completed" : result === "cancelled" ? "cancelled" : "failed");
     job.snapshot.canRetry = status === "error" || status === "partial";
-    job.snapshot.canRestart = job.snapshot.canRetry && job.kind === "message" && settingsSnapshots.get(k(job.target.chatId, job.planKey))?.analysisMode === "split";
+    // A job that never reached its run (blocked) restarts from the message's memory; either way the job keeps what it
+    // advertises, so Restart still works after the memory is evicted.
+    const memory = retryMemory.get(key);
+    if (job.kind === "message" && !job.retryFrom && memory?.settings)
+      job.retryFrom = { settings: memory.settings, ...(memory.splitRevisionId ? { splitRevisionId: memory.splitRevisionId } : {}) };
+    job.snapshot.canRestart = job.snapshot.canRetry && job.kind === "message" && job.retryFrom?.settings.analysisMode === "split";
     if (error) job.snapshot.error = error;
     else delete job.snapshot.error;
-    if (error) lastErrors.set(k(job.target.chatId, job.planKey), error);
-    else if (result === "completed") lastErrors.delete(k(job.target.chatId, job.planKey));
+    // A blocked run (busy, message missing) never touched the message: its error is the toast's, not the message's.
+    if (error && result !== "blocked") lastErrors.set(key, error);
+    else if (result === "completed") lastErrors.delete(key);
     emitProgress(job);
     log(result === "failed" || result === "blocked" ? "warn" : "info", `Illustration ${job.kind} ${result}: ${job.planKey}`, {
       jobId: job.snapshot.jobId,
@@ -432,21 +455,42 @@ export function createChatPipelineController(services: BackendServices, engine: 
       () => publishOnce(chatId, planKey),
       () => publishOnce(chatId, planKey),
     );
-    publishChains.set(key, run.catch(() => undefined));
-    // A streaming message or a failed host write is published again later (AM `Ie` 213490 re-arms its timer).
+    const tail = run.catch(() => undefined);
+    publishChains.set(key, tail);
+    void tail.then(() => {
+      if (publishChains.get(key) === tail) publishChains.delete(key);
+    });
+    const retryKey = k(chatId, planKey);
+    // A streaming message or a failed host write is published again later (AM `Ie` 213490 re-arms its timer): one
+    // pending retry per message swipe; a new publish meanwhile restarts its attempt count instead of adding a chain.
     const retryLater = () => {
-      if (disposed || attempt >= PUBLISH_MAX_ATTEMPTS) return;
-      const timer = setTimeout(() => {
-        publishTimers.delete(timer);
-        void publish(chatId, planKey, attempt + 1)
-          .then((r) => r === "published" && emitChanged(chatId, [planKey]))
-          .catch((e) => log("warn", "Illustration publish retry failed", toRpcError(e)));
-      }, PUBLISH_RETRY_DELAYS[attempt] ?? PUBLISH_RETRY_DELAYS.at(-1)!);
-      publishTimers.add(timer);
+      if (disposed) return;
+      const pending = publishRetries.get(retryKey);
+      if (pending) {
+        pending.attempt = Math.min(pending.attempt, attempt + 1);
+        return;
+      }
+      if (attempt >= publishMaxAttempts) {
+        log("warn", "Gave up updating the illustrated message (still streaming, or the host write failed); retrying when a generation in the chat ends.", { chatId, planKey });
+        const keys = stalePublishes.get(chatId) ?? new Set<string>();
+        stalePublishes.set(chatId, keys.add(planKey));
+        return;
+      }
+      const entry = {
+        attempt: attempt + 1,
+        timer: setTimeout(() => {
+          publishRetries.delete(retryKey);
+          void publish(chatId, planKey, entry.attempt)
+            .then((r) => r === "published" && emitChanged(chatId, [planKey]))
+            .catch((e) => log("warn", "Illustration publish retry failed", toRpcError(e)));
+        }, publishDelays[attempt] ?? publishDelays.at(-1)!),
+      };
+      publishRetries.set(retryKey, entry);
     };
     return run.then(
       (result) => {
         if (result === "streaming") retryLater();
+        else stalePublishes.get(chatId)?.delete(planKey);
         return result;
       },
       (error: unknown) => {
@@ -454,6 +498,17 @@ export function createChatPipelineController(services: BackendServices, engine: 
         throw error;
       },
     );
+  };
+
+  /** Publishes that gave up while the chat streamed are tried again when a generation of the chat ends. */
+  const republishStale = (chatId: string) => {
+    const keys = stalePublishes.get(chatId);
+    stalePublishes.delete(chatId);
+    if (disposed || !keys?.size) return;
+    for (const planKey of keys)
+      void publish(chatId, planKey)
+        .then((r) => r === "published" && emitChanged(chatId, [planKey]))
+        .catch((e) => log("warn", "Illustration publish retry failed", toRpcError(e)));
   };
 
   /**
@@ -519,6 +574,21 @@ export function createChatPipelineController(services: BackendServices, engine: 
     });
   };
 
+  /**
+   * Retry memory of a message. After its eviction, the newest retained failed job of the message still knows the run it
+   * would retry (a newer successful job ends the search: there is nothing left to continue).
+   */
+  const memoryFor = (skey: string): RetryMemory | undefined => {
+    const kept = retryMemory.get(skey);
+    if (kept) return kept;
+    for (const job of [...jobs.values()].reverse()) {
+      if (job.kind !== "message" || k(job.target.chatId, job.planKey) !== skey) continue;
+      if (job.snapshot.status === "success") return undefined;
+      if (job.retryFrom && job.snapshot.canRetry) return { ...job.retryFrom };
+    }
+    return undefined;
+  };
+
   const runMessageOnce = async (job: JobRecord, opts: RunOptions): Promise<Outcome> => {
     const { chatId, messageId, swipeIndex } = job.target;
     const historyId = toHistoryMessageId(messageId, swipeIndex);
@@ -555,20 +625,24 @@ export function createChatPipelineController(services: BackendServices, engine: 
     const previous = { status: plan.status, error: plan.error };
     const attemptKind: AttemptKind = opts.automatic ? "automatic" : (opts.attemptKind ?? nextIllustrationAttempt(plan));
     job.snapshot.attemptKind = attemptKind;
-    const analyzerDone = attemptKind === "retry" && analyzerCompleted.has(skey);
-    if (attemptKind !== "retry" && !opts.revision) {
-      settingsSnapshots.delete(skey);
-      splitRevisions.delete(skey);
-    }
-    const settings =
-      opts.settings ?? (attemptKind === "retry" && settingsSnapshots.has(skey) ? settingsSnapshots.get(skey)! : await services.storage.loadChatImageGenerationSettings());
+    const memory = attemptKind === "retry" ? memoryFor(skey) : undefined;
+    const analyzerDone = !!memory?.analyzerCompleted;
+    if (attemptKind !== "retry" && !opts.revision) retryMemory.delete(skey);
+    // Nothing remembered (worker restart, or the message's memory and failed job are both gone): the retry runs with the
+    // current settings on the active revision; say so rather than switch silently.
+    if (attemptKind === "retry" && !opts.settings && !memory?.settings)
+      log("info", "No settings snapshot for this retry; it uses the current chat image settings.", { chatId, planKey });
+    const settings = opts.settings ?? memory?.settings ?? (await services.storage.loadChatImageGenerationSettings());
     const runSettings: ChatImageGenerationSettings = opts.countPolicy ? { ...settings, countPolicy: opts.countPolicy } : settings;
     const split = runSettings.analysisMode === "split" && !opts.revision;
     const countPolicy = split ? fixedCountPolicy(runSettings.splitAnalysis.totalCount ?? 1) : runSettings.countPolicy;
-    if (attemptKind !== "retry") analyzerCompleted.delete(skey);
+    if (attemptKind !== "retry") {
+      const kept = retryMemory.get(skey);
+      if (kept) delete kept.analyzerCompleted;
+    }
 
     // A retry continues the revision it failed on: a split run's own revision (even if the pager moved since), else the active one.
-    const retryId = attemptKind === "retry" && !opts.revision ? splitRevisions.get(skey) || plan.activeRevisionId : "";
+    const retryId = attemptKind === "retry" && !opts.revision ? memory?.splitRevisionId || plan.activeRevisionId : "";
     const errorRevision = retryId
       ? plan.revisions.find(
           (r) => r.revisionId === retryId && r.status === "error" && (distinctSlotCount(r.entries) < expectedSlotCount(plan) || !!r.deletedSlotIndices?.length),
@@ -580,21 +654,28 @@ export function createChatPipelineController(services: BackendServices, engine: 
     if (opts.revision && !revisionTarget) return { kind: "blocked", error: labelError("not-found", PIPELINE_TEXT.messageMissing) };
     const existingEntries = errorRevision?.entries ?? [];
     const revisionId =
-      (attemptKind === "retry" && !opts.revision ? splitRevisions.get(skey) : "") ||
+      (attemptKind === "retry" && !opts.revision ? memory?.splitRevisionId : "") ||
       errorRevision?.revisionId ||
       revisionTarget?.revisionId ||
       ["revision", now().toString(36), (++seq).toString(36)].join(":");
     const parentRevisionId = parentRevisionFor(plan, plan.activeRevisionId);
-    if (!opts.revision && !(attemptKind === "retry" && settingsSnapshots.has(skey))) {
-      settingsSnapshots.set(skey, jsonClone(runSettings));
-      while (settingsSnapshots.size > MAX_SETTINGS_SNAPSHOTS) {
-        const victim = [...settingsSnapshots.keys()].find((key) => key !== skey && !messageJobs.has(key));
+    if (!opts.revision) {
+      // A retry keeps the snapshot it ran with; anything else snapshots this run. The record moves to the newest place.
+      const splitRevisionId = split ? revisionId : memory?.splitRevisionId;
+      const record: RetryMemory = {
+        settings: memory?.settings ?? jsonClone(runSettings),
+        ...(splitRevisionId ? { splitRevisionId } : {}),
+        ...(memory?.analyzerCompleted ? { analyzerCompleted: true } : {}),
+      };
+      retryMemory.delete(skey);
+      retryMemory.set(skey, record);
+      job.retryFrom = { settings: record.settings!, ...(splitRevisionId ? { splitRevisionId } : {}) };
+      while (retryMemory.size > MAX_SETTINGS_SNAPSHOTS) {
+        const victim = [...retryMemory.keys()].find((key) => key !== skey && !messageJobs.has(key));
         if (!victim) break;
-        settingsSnapshots.delete(victim);
-        splitRevisions.delete(victim);
+        retryMemory.delete(victim);
       }
     }
-    if (split) splitRevisions.set(skey, revisionId);
 
     try {
       const characterId = await speakingCharacterId(services, chat, view);
@@ -657,8 +738,9 @@ export function createChatPipelineController(services: BackendServices, engine: 
           },
         },
       );
-      if (result.error && result.analyzerCompleted) analyzerCompleted.add(skey);
-      else analyzerCompleted.delete(skey);
+      const kept = retryMemory.get(skey);
+      if (kept && result.error && result.analyzerCompleted) kept.analyzerCompleted = true;
+      else if (kept) delete kept.analyzerCompleted;
       if (result.cancelled || signal.aborted) {
         await savePlan(chatId, { ...plan, status: previous.status, error: previous.error });
         return { kind: "cancelled" };
@@ -735,7 +817,11 @@ export function createChatPipelineController(services: BackendServices, engine: 
       const published = await publishCommitted(chatId, planKey);
       if (published === "missing") log("warn", "The illustrated message could not be resolved for publishing.", { chatId, planKey });
       emitChanged(chatId, [planKey]);
-      if (finalPlan.status === "complete") return { kind: "completed" };
+      if (finalPlan.status === "complete") {
+        // Only a failed message is retried or restarted: a later forced retry must not reopen this run's revision.
+        if (!opts.revision) retryMemory.delete(skey);
+        return { kind: "completed" };
+      }
       const active = finalPlan.revisions.find((r) => r.revisionId === finalPlan.activeRevisionId);
       job.snapshot.failedSlots = Math.max(0, expectedSlotCount(finalPlan) - distinctSlotCount(finalPlan.entries) - (active?.deletedSlotIndices?.length ?? 0));
       return {
@@ -746,7 +832,8 @@ export function createChatPipelineController(services: BackendServices, engine: 
       };
     } catch (e) {
       if (signal.aborted || isCancellation(e)) {
-        await savePlan(chatId, { ...plan, status: previous.status, error: previous.error }).catch(() => undefined);
+        // A failed restore leaves the plan "generating" on disk; getMessageStates shows such a plan as interrupted.
+        await savePlan(chatId, { ...plan, status: previous.status, error: previous.error }).catch((err) => log("warn", "Illustration plan restore failed", toRpcError(err)));
         return { kind: "cancelled" };
       }
       const error = errorOf(e);
@@ -1377,14 +1464,9 @@ export function createChatPipelineController(services: BackendServices, engine: 
       }
       for (const [key, value] of moved) map.set(key, value);
     };
-    rekey(settingsSnapshots, true);
-    rekey(splitRevisions, true);
+    rekey(retryMemory, true);
     rekey(lastErrors, true);
     rekey(replayOutfits, false);
-    const completed = new Map([...analyzerCompleted].map((key) => [key, true]));
-    rekey(completed, true);
-    analyzerCompleted.clear();
-    for (const key of completed.keys()) analyzerCompleted.add(key);
     for (const [id, job] of jobs) {
       if (job.target.chatId !== chatId) continue;
       const next = fate(job.planKey);
@@ -1401,15 +1483,28 @@ export function createChatPipelineController(services: BackendServices, engine: 
 
   /** Deletions of one chat run in host order: each one shifts the swipe keys the next one reads. */
   const dropChains = new Map<string, Promise<unknown>>();
+  /** chatId \0 messageId -> deletions of the message in flight: no new work on it until they finish (its keys move). */
+  const pendingDrops = new Map<string, number>();
   const dropMessageData = (chatId: string, messageId: string, swipe?: number): Promise<void> => {
+    const dropKey = k(chatId, messageId);
+    pendingDrops.set(dropKey, (pendingDrops.get(dropKey) ?? 0) + 1);
     const run = (dropChains.get(chatId) ?? Promise.resolve()).then(() => dropMessageDataNow(chatId, messageId, swipe));
     const tail = run.catch(() => undefined);
     dropChains.set(chatId, tail);
     void tail.then(() => {
+      const n = (pendingDrops.get(dropKey) ?? 1) - 1;
+      if (n > 0) pendingDrops.set(dropKey, n);
+      else pendingDrops.delete(dropKey);
       if (dropChains.get(chatId) === tail) dropChains.delete(chatId);
     });
     return run;
   };
+  /** Resolves when no deletion of the chat is in flight. */
+  const dropsSettled = async (chatId: string) => {
+    while (dropChains.has(chatId)) await dropChains.get(chatId);
+  };
+  /** A deletion of the message, or a slot deletion of this message key, is in flight. */
+  const messageLocked = (chatId: string, messageId: string, planKey: string) => pendingDrops.has(k(chatId, messageId)) || deletionLocks.has(k(chatId, planKey));
 
   const dropMessageDataNow = async (chatId: string, messageId: string, swipe?: number) => {
     const matches = (historyId: string) => {
@@ -1465,6 +1560,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
   const handleGenerationEnded = async (raw: unknown): Promise<void> => {
     const payload = rec(raw);
     tracker.ended(payload);
+    republishStale(str(payload.chatId));
     if (disposed || payload.error) return;
     const chatId = str(payload.chatId);
     const messageId = str(payload.messageId);
@@ -1476,12 +1572,14 @@ export function createChatPipelineController(services: BackendServices, engine: 
       // AM 215831: no automatic illustration for a chat the user has left (unknown active chat: go ahead).
       const active = await services.sources.getActiveChat();
       if (active && active.chatId !== chatId) return;
+      // A message / swipe deletion in flight moves this chat's keys: read the message once it is done.
+      await dropsSettled(chatId);
       const messages = await loadMessages(services.host, chatId);
       const { view } = findMessage(messages, messageId);
       if (!view || !isIllustratableMessage(view)) return;
       const target = { chatId, messageId, swipeIndex: view.swipeId };
       const planKey = illustrationMessageKey(toHistoryMessageId(messageId, view.swipeId));
-      if (messageBusy(chatId, planKey)) return;
+      if (messageBusy(chatId, planKey) || messageLocked(chatId, messageId, planKey)) return;
       startMessageJob(target, planKey, { automatic: true });
     } catch (e) {
       log("error", "Automatic illustration generation failed", toRpcError(e));
@@ -1497,6 +1595,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
         return;
       case "GENERATION_STOPPED":
         tracker.ended(payload);
+        republishStale(chatId);
         return;
       case "GENERATION_ENDED":
         return handleGenerationEnded(raw);
@@ -1567,8 +1666,9 @@ export function createChatPipelineController(services: BackendServices, engine: 
     dispose() {
       disposed = true;
       for (const job of jobs.values()) if (!job.controller.signal.aborted) job.controller.abort("pipeline-disposed");
-      for (const t of publishTimers) clearTimeout(t);
-      publishTimers.clear();
+      for (const r of publishRetries.values()) clearTimeout(r.timer);
+      publishRetries.clear();
+      stalePublishes.clear();
       tracker.clear();
       engine.dispose();
     },
@@ -1581,10 +1681,12 @@ export function createChatPipelineController(services: BackendServices, engine: 
       if (!chatId || !messageId || !Number.isSafeInteger(swipeIndex) || swipeIndex < 0) fail("bad-request", "chatId, messageId and swipeIndex are required.");
       const planKey = illustrationMessageKey(toHistoryMessageId(messageId, swipeIndex));
       if (messageBusy(chatId, planKey)) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
+      // The swipe index is the host's, after any deletion it already did: wait until our data has moved the same way.
+      await dropsSettled(chatId);
       const messages = await loadMessages(services.host, chatId);
       if (!isIllustratableMessage(findMessage(messages, messageId).view, swipeIndex)) throw new RpcFailure(labelError("not-found", PIPELINE_TEXT.messageMissing));
-      // Checked again: another start (or the automatic run) may have registered a job while the messages loaded.
-      if (messageBusy(chatId, planKey)) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
+      // Checked again: another start (or the automatic run, or a deletion) may have begun while the messages loaded.
+      if (messageBusy(chatId, planKey) || messageLocked(chatId, messageId, planKey)) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
       const job = startMessageJob({ chatId, messageId, swipeIndex }, planKey, {
         automatic: false,
         ...(params.attemptKind ? { attemptKind: params.attemptKind } : {}),
@@ -1606,9 +1708,14 @@ export function createChatPipelineController(services: BackendServices, engine: 
     async retry(jobId) {
       const job = jobs.get(jobId) ?? fail("not-found", `Job not found: ${jobId}`);
       if (job.snapshot.status === "queued" || job.snapshot.status === "running") throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
+      // Dismissed only once the retry is accepted: a refused retry keeps the failed job (and its Retry button) listed.
+      if (job.kind === "regenerate") {
+        const next = await api.regenerateSlot({ chatId: job.target.chatId, messageKey: job.planKey, slotId: job.slotId!, ...(job.regenerate?.entryId ? { entryId: job.regenerate.entryId } : {}), ...(job.regenerate?.overrides ? { overrides: job.regenerate.overrides } : {}) });
+        job.dismissed = true;
+        return next;
+      }
+      if (messageBusy(job.target.chatId, job.planKey) || messageLocked(job.target.chatId, job.target.messageId, job.planKey)) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
       job.dismissed = true;
-      if (job.kind === "regenerate") return api.regenerateSlot({ chatId: job.target.chatId, messageKey: job.planKey, slotId: job.slotId!, ...(job.regenerate?.entryId ? { entryId: job.regenerate.entryId } : {}), ...(job.regenerate?.overrides ? { overrides: job.regenerate.overrides } : {}) });
-      if (messageBusy(job.target.chatId, job.planKey)) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
       const next = job.kind === "revision" && job.revision
         ? startMessageJob(job.target, job.planKey, { automatic: false, attemptKind: "regenerate", revision: job.revision }, "revision")
         : startMessageJob(job.target, job.planKey, { automatic: false, attemptKind: "retry" });
@@ -1617,8 +1724,9 @@ export function createChatPipelineController(services: BackendServices, engine: 
 
     async restart(jobId) {
       const job = jobs.get(jobId) ?? fail("not-found", `Job not found: ${jobId}`);
-      if (messageBusy(job.target.chatId, job.planKey)) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
-      const snapshot = settingsSnapshots.get(k(job.target.chatId, job.planKey));
+      if (messageBusy(job.target.chatId, job.planKey) || messageLocked(job.target.chatId, job.target.messageId, job.planKey)) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
+      // The job's own run first (what its Restart button offered), else the message's snapshot (AM `ee`).
+      const snapshot = job.retryFrom?.settings ?? retryMemory.get(k(job.target.chatId, job.planKey))?.settings;
       if (!snapshot) throw new RpcFailure(labelError("conflict", PIPELINE_TEXT.noRestartSnapshot));
       job.dismissed = true;
       const next = startMessageJob(job.target, job.planKey, { automatic: false, attemptKind: "reroll", settings: snapshot });
@@ -1640,6 +1748,8 @@ export function createChatPipelineController(services: BackendServices, engine: 
 
     async regenerateSlot(params) {
       const chatId = str(params.chatId);
+      // The slot is resolved after any message / swipe deletion in flight has moved the chat's keys.
+      await dropsSettled(chatId);
       const doc = await services.storage.loadChatData(chatId);
       const resolved = resolveHistorySlot(doc.history, { slotId: params.slotId, messageKey: params.messageKey });
       if (!resolved) fail("not-found", `Image History slot not found: ${params.slotId}`);
@@ -1650,7 +1760,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
       })();
       const slotKey = k(chatId, params.slotId);
       if (slotJobs.has(slotKey)) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.regenerationRunning));
-      if (messageJobs.has(k(chatId, resolved.message.messageKey))) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
+      if (messageJobs.has(k(chatId, resolved.message.messageKey)) || messageLocked(chatId, target.messageId, resolved.message.messageKey)) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
       const job = createJob({ target, planKey: resolved.message.messageKey, kind: "regenerate", attemptKind: "regenerate", slotId: params.slotId, requestedCount: 1 });
       job.regenerate = { ...(params.entryId ? { entryId: params.entryId } : {}), ...(params.overrides ? { overrides: params.overrides } : {}) };
       slotJobs.set(slotKey, job);
@@ -1876,6 +1986,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
     async applyAiPromptEdit(chatId, slotId, proposalId) {
       const proposal = proposals.get(proposalId);
       if (!proposal || proposal.chatId !== chatId || proposal.slotId !== slotId) fail("not-found", "The AI edit proposal expired. Create it again.");
+      await dropsSettled(chatId);
       const doc = await services.storage.loadChatData(chatId);
       const resolved = resolveHistorySlot(doc.history, { slotId });
       if (!resolved || !resolved.entries.some((e) => e.entryId === proposal.entryId))
@@ -1909,15 +2020,21 @@ export function createChatPipelineController(services: BackendServices, engine: 
             }
           : {}),
       };
-      // Checked again after the reads above: a run started meanwhile (or the same proposal applied twice) keeps the message.
-      if (messageBusy(chatId, planKey)) throw new RpcFailure(rpcError("busy", "Another image operation is running.", { messageKo: "다른 이미지 작업이 진행 중입니다." }));
+      // Checked again after the reads above: a run started meanwhile (or the same proposal applied twice, or a deletion)
+      // keeps the message.
+      if (messageBusy(chatId, planKey) || messageLocked(chatId, target.messageId, planKey)) throw new RpcFailure(rpcError("busy", "Another image operation is running.", { messageKo: "다른 이미지 작업이 진행 중입니다." }));
       proposals.delete(proposalId);
       const job = startMessageJob(target, planKey, { automatic: false, attemptKind: "regenerate", revision }, "revision");
       return { jobId: job.snapshot.jobId };
     },
 
     async getMessageStates(chatId, messageIds) {
-      const [messages, doc] = await Promise.all([loadMessages(services.host, chatId), services.storage.loadChatData(chatId)]);
+      const [messages, stored] = await Promise.all([loadMessages(services.host, chatId), services.storage.loadChatData(chatId)]);
+      // A plan left "generating" with no job (its error or cancel write failed) shows as interrupted, as recover() stores it.
+      const stale = Object.values(stored.plans).filter((p) => p.status === "generating" && !messageJobs.has(k(chatId, p.key)));
+      const doc = stale.length
+        ? { ...stored, plans: { ...stored.plans, ...Object.fromEntries(stale.map((p) => [p.key, { ...p, status: "error" as const, error: PIPELINE_TEXT.interrupted.en }])) } }
+        : stored;
       const wanted = messageIds?.length ? new Set(messageIds) : null;
       const regenerating = new Set([...slotJobs.values()].filter((j) => j.target.chatId === chatId).map((j) => j.slotId!));
       const out: ChatMessageUiState[] = [];

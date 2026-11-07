@@ -87,15 +87,15 @@ async function loadRoster(services: BackendServices, characterId: string): Promi
   return { name: character.name, roster: projectRoster(source, parts.document) };
 }
 
+const validAutoPickState = (raw: AutoPickState | null | undefined): AutoPickState => (raw && raw.version === 1 && Array.isArray(raw.groups) ? raw : emptyAutoPickState());
+
 export async function readAutoPickState(services: BackendServices, characterId: string): Promise<AutoPickState> {
-  const raw = await services.storage.readJson<AutoPickState>(AUTOPICK_PATH(characterId), emptyAutoPickState());
-  return raw && raw.version === 1 && Array.isArray(raw.groups) ? raw : emptyAutoPickState();
+  return validAutoPickState(await services.storage.readJson<AutoPickState>(AUTOPICK_PATH(characterId), emptyAutoPickState()));
 }
 
-async function writeAutoPickState(services: BackendServices, characterId: string, state: AutoPickState): Promise<AutoPickState> {
-  const next = { ...state, updatedAt: new Date().toISOString() };
-  await services.storage.writeJson(AUTOPICK_PATH(characterId), next);
-  return next;
+/** Read-modify-write inside the path's storage queue, so a tag job and an apply never drop each other's changes. */
+async function updateAutoPickState(services: BackendServices, characterId: string, mutate: (current: AutoPickState) => AutoPickState | Promise<AutoPickState>): Promise<AutoPickState> {
+  return services.storage.updateJson<AutoPickState>(AUTOPICK_PATH(characterId), emptyAutoPickState(), async (raw) => ({ ...(await mutate(validAutoPickState(raw))), updatedAt: new Date().toISOString() }));
 }
 
 /** Drop `appliedOutfitId` once that outfit is gone from the character document (deleted on the Prompts tab, character reset). */
@@ -347,19 +347,21 @@ export function groupAssets(assets: NamedAsset[], result: SchemeResult, roster: 
 
 async function runPlan(ctx: JobContext, delays: readonly number[] = RETRY_DELAYS_MS): Promise<JobOutcome> {
   ctx.progress({ label: "Listing the card's images" });
-  const [images, { name, roster }, previous] = await Promise.all([
-    ctx.services.sources.listCharacterImages(ctx.characterId),
-    loadRoster(ctx.services, ctx.characterId),
-    readAutoPickState(ctx.services, ctx.characterId),
-  ]);
+  const [images, { name, roster }] = await Promise.all([ctx.services.sources.listCharacterImages(ctx.characterId), loadRoster(ctx.services, ctx.characterId)]);
   const assets = namedAssets(images);
   if (!assets.length) return { status: "no-evidence", message: "This card has no named image assets." };
   const result = await inferScheme(ctx, name, roster, assets.map((a) => a.stem), delays);
   if (!result.scheme.regex || result.scheme.coverage < 0.3) {
     return { status: "no-evidence", message: `Could not read the asset naming scheme (${Math.round(result.scheme.coverage * 100)}% of names matched).` };
   }
-  const groups = await withLiveOutfits(ctx.services, ctx.characterId, groupAssets(assets, result, roster, previous));
-  const state = await writeAutoPickState(ctx.services, ctx.characterId, { version: 1, scheme: result.scheme, groups, unmatched: sampleNames(result.unmatched, 30), updatedAt: "" });
+  // Grouped against the state at write time: tags or applies saved while the scheme was read are kept.
+  const state = await updateAutoPickState(ctx.services, ctx.characterId, async (current) => ({
+    version: 1,
+    scheme: result.scheme,
+    groups: await withLiveOutfits(ctx.services, ctx.characterId, groupAssets(assets, result, roster, current)),
+    unmatched: sampleNames(result.unmatched, 30),
+    updatedAt: "",
+  }));
   const characters = new Set(state.groups.filter((g) => g.promptKey).map((g) => g.promptKey)).size;
   const message = `${state.groups.length} outfit group(s) for ${characters} character(s) from ${assets.length} images (${Math.round(result.scheme.coverage * 100)}% of names matched, ${result.scheme.calls} call(s)).`;
   ctx.services.log.append("info", "outfit-autopick", `Naming scheme: ${result.scheme.regex} — ${message}`);
@@ -490,9 +492,8 @@ async function runTag(ctx: JobContext, sheets: AutoPickSheet[], delays: readonly
       if (a) updates.set(t.groupId, parseTile(a, t.candidate));
     }
     tagged += updates.size;
-    // Re-read: an apply may have written the file meanwhile.
-    const current = await readAutoPickState(ctx.services, ctx.characterId);
-    state = await writeAutoPickState(ctx.services, ctx.characterId, { ...current, groups: current.groups.map((g) => (updates.has(g.id) ? { ...g, tags: updates.get(g.id)! } : g)) });
+    // Merged into the current file: an apply may have written it meanwhile.
+    state = await updateAutoPickState(ctx.services, ctx.characterId, (current) => ({ ...current, groups: current.groups.map((g) => (updates.has(g.id) ? { ...g, tags: updates.get(g.id)! } : g)) }));
   }
   const message = `Tagged ${tagged} outfit group(s) from ${sheets.length} contact sheet(s)${failed ? `; ${failed} sheet(s) failed` : ""}.`;
   ctx.progress({ label: message, done: sheets.length, total: sheets.length, fraction: 1 });
@@ -565,9 +566,10 @@ export async function applyAutoPick(services: BackendServices, params: { charact
     },
     { expectedUpdatedAt: base.updatedAt, reason: "outfit-autopick" },
   );
-  const current = await readAutoPickState(services, characterId);
-  const groups = current.groups.map((g) => (applied.has(g.id) ? { ...g, appliedOutfitId: applied.get(g.id)! } : g));
-  const next = await writeAutoPickState(services, characterId, { ...current, groups: await withLiveOutfits(services, characterId, groups) });
+  const next = await updateAutoPickState(services, characterId, async (current) => ({
+    ...current,
+    groups: await withLiveOutfits(services, characterId, current.groups.map((g) => (applied.has(g.id) ? { ...g, appliedOutfitId: applied.get(g.id)! } : g))),
+  }));
   services.log.append("info", "outfit-autopick", `Added ${added} outfit(s) with reference images; ${skipped} already present or skipped.`);
   return { added, skipped, state: next };
 }

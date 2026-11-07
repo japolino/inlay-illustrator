@@ -75,6 +75,22 @@ describe("atelier store", () => {
     expect((await atelier.getState()).catalog.activeId).toBe(ATELIER_BUILTIN_DOCUMENT_ID);
     expect(log.list().some((e) => e.level === "warn" && e.scope === "atelier")).toBe(true);
   });
+
+  test("an unparseable file (truncated write) is kept in config/legacy/ and reset, so the Atelier and Repair work", async () => {
+    const { atelier, fake, stored } = setup();
+    const truncated = '{"schema":"inlay-illustrator.atelier","version":1,"catalog":{"rev';
+    fake.files.set(STORAGE_PATHS.atelier, truncated);
+    const state = await atelier.getState();
+    expect(state.catalog.activeId).toBe(ATELIER_BUILTIN_DOCUMENT_ID);
+    const backups = [...fake.files.keys()].filter((k) => k.startsWith("config/legacy/atelier-"));
+    expect(backups.length).toBe(1);
+    expect(new TextDecoder().decode(fake.files.get(backups[0]!) as Uint8Array)).toBe(truncated);
+    expect(stored().schema).toBe("inlay-illustrator.atelier");
+    // A write (Repair included) works on the same corruption too.
+    fake.files.set(STORAGE_PATHS.atelier, truncated);
+    await atelier.repair({ part: "catalog" });
+    expect(stored().catalog.activeId).toBe(ATELIER_BUILTIN_DOCUMENT_ID);
+  });
 });
 
 describe("atelier documents", () => {

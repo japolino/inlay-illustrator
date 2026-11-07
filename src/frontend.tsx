@@ -16,10 +16,8 @@ import { runtimeCornerPreference } from "./frontend/chat/corner.js";
 import { HOST_LAYERING_CSS } from "./frontend/chat/styles.js";
 import { answerFetchBridge } from "./frontend/fetch-bridge.js";
 import { createZoomViewer, type ZoomViewer } from "./frontend/zoom/index.js";
+import { watchConnection } from "./frontend/host-sync.js";
 import { isFetchBridgeRequest } from "./shared/contract/bridge.js";
-
-/** A tab hidden at least this long re-reads the backend state when it is shown again. */
-const RESYNC_AFTER_HIDDEN_MS = 5_000;
 
 /** Handles exposed to dev tools (preview page, tests). */
 export type FrontendHandles = { app: AppController; client: RpcClient; overlay: OverlayController; zoom: ZoomViewer };
@@ -151,18 +149,12 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
   const unsubChatSwitched = ctx.events.on("CHAT_SWITCHED", (payload) => {
     const chatId = (payload as { chatId?: unknown } | null)?.chatId;
     store.set({ chatId: typeof chatId === "string" ? chatId : "" });
-    void app.call("session.getStatus", {}).then((status) => app.setStatus(status)).catch(() => undefined);
+    void app.refreshStatus();
   });
 
   // Backend events sent while the page was disconnected are lost: re-read the state when the host connection is back,
-  // and when the tab is shown again after a while (a backgrounded phone tab can miss events without a reconnect).
-  const unsubConnected = ctx.events.on("CONNECTED", () => void app.resync());
-  let hiddenAt = 0;
-  const onVisibility = () => {
-    if (document.visibilityState === "hidden") hiddenAt = Date.now();
-    else if (hiddenAt && Date.now() - hiddenAt >= RESYNC_AFTER_HIDDEN_MS) void app.resync();
-  };
-  document.addEventListener("visibilitychange", onVisibility);
+  // and when the tab is shown again after a while (a failed handshake is retried instead).
+  const unwatchConnection = watchConnection(ctx.events, app, document);
 
   void app.init();
   ctx.ready();
@@ -171,8 +163,7 @@ export function setup(ctx: SpindleFrontendContext, options: SetupOptions = {}) {
   const cleanup = () => {
     unsubForeign();
     unsubChatSwitched();
-    unsubConnected();
-    document.removeEventListener("visibilitychange", onVisibility);
+    unwatchConnection();
     unsubOverlayDrawer();
     composer.stop();
     removeChatSide();

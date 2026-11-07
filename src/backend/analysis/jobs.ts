@@ -33,6 +33,8 @@ export interface JobInfo {
 }
 
 interface JobRecord extends JobInfo {
+  /** The AM controller the job drives (busy guard key); usually the kind. */
+  lane: string;
   controller: AbortController;
   done: Promise<JobOutcome>;
 }
@@ -43,16 +45,17 @@ export class AnalysisJobs {
 
   constructor(private readonly services: BackendServices) {}
 
-  start(kind: AnalysisKind, characterId: string, run: (ctx: JobContext) => Promise<JobOutcome>): { jobId: string; done: Promise<JobOutcome> } {
+  /** `lane`: the AM controller the run drives; two jobs on one lane and character conflict (AM runs one controller at a time). */
+  start(kind: AnalysisKind, characterId: string, run: (ctx: JobContext) => Promise<JobOutcome>, lane: string = kind): { jobId: string; done: Promise<JobOutcome> } {
     if (this.disposed) fail("internal", "The analysis module was disposed.");
     for (const job of this.jobs.values()) {
-      if (job.kind === kind && job.characterId === characterId) {
+      if (job.lane === lane && job.characterId === characterId) {
         fail("busy", "This analysis is already running for this character.", { messageKo: "다른 작업이 진행 중입니다. 완료 후 다시 실행해 주세요.", details: { jobId: job.jobId } });
       }
     }
     const jobId = createRequestId(`analysis-${kind}`);
     const controller = new AbortController();
-    const record = { jobId, kind, characterId, status: "running" as JobStatus, progress: { label: "Starting", fraction: 0 } as ProgressInfo, controller, done: Promise.resolve(null as unknown as JobOutcome) };
+    const record = { jobId, kind, lane, characterId, status: "running" as JobStatus, progress: { label: "Starting", fraction: 0 } as ProgressInfo, controller, done: Promise.resolve(null as unknown as JobOutcome) };
     const ctx: JobContext = {
       services: this.services,
       jobId,
@@ -72,7 +75,8 @@ export class AnalysisJobs {
         outcome = await run(ctx);
       } catch (error) {
         const rpc = toRpcError(error);
-        outcome = isAbortLike(error) || controller.signal.aborted
+        // A save that failed after the cancel is still a failure (the results may be half written).
+        outcome = isAbortLike(error) || (controller.signal.aborted && rpc.code !== "storage-error" && rpc.detailCode !== "storage-error")
           ? { status: "cancelled", message: "Analysis cancelled." }
           : { status: "error", message: rpc.message, ...(rpc.messageKo ? { messageKo: rpc.messageKo } : {}), error: rpc };
         if (outcome.status === "error") this.services.log.append("error", "analysis", `${kind} failed: ${rpc.message}`, rpc);

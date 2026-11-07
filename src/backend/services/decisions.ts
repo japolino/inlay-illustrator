@@ -44,12 +44,18 @@ export interface DecisionService {
  */
 export const CONNECTION_MODEL_PLACEHOLDER = "lumiverse-connection-model";
 
+/** Non-secret stand-in for the JEV API key: one value per decision connection (no id = the default connection). */
+export function jevKeyPlaceholder(connectionId: string | undefined): string {
+  return `lumiverse:${connectionId || "default"}`;
+}
+
 /** HTTP status for a failed host decision request, as AM's JEV client classifies it (401/403 auth, 429 rate limit, 5xx server, else http). */
 function jevErrorStatus(error: unknown): number {
   const status = httpStatusOf(error);
   if (status >= 400) return status;
   const message = errorMessage(error);
-  if (message.startsWith("PERMISSION_DENIED:")) return 403;
+  if (message.startsWith("PERMISSION_DENIED:") || /\bforbidden\b|permission denied|access denied/i.test(message)) return 403;
+  if (/unauthori[sz]ed|unauthenticated|(?:invalid|incorrect|missing|expired|revoked)\s+(?:api[ _-]?)?(?:key|token|credentials?)|authentication (?:failed|error|required)/i.test(message)) return 401;
   if (/rate.?limit|too many requests/i.test(message)) return 429;
   if (/not found|no longer exists|invalid/i.test(message)) return 400;
   return 502;
@@ -177,10 +183,11 @@ export function createDecisionService(host: SpindleHost, log: RunLog, defaultUse
           },
         },
         // AM checks `connection.apiKey` and `connection.model` before a JEV run; the key stays in the Lumiverse connection,
-        // so pass a placeholder, and an empty model becomes the connection-model placeholder.
+        // so pass a placeholder, and an empty model becomes the connection-model placeholder. The placeholder names the
+        // connection (never a key): AM bumps its credential revision, which keys JEV results, only when `apiKey` changes.
         getConfig: () => {
           const config = getConfig();
-          return { ...config, model: config.model || CONNECTION_MODEL_PLACEHOLDER, apiKey: "lumiverse" };
+          return { ...config, model: config.model || CONNECTION_MODEL_PLACEHOLDER, apiKey: jevKeyPlaceholder(config.connectionId) };
         },
       };
     },

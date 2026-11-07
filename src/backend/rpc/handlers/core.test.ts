@@ -234,3 +234,61 @@ describe("core handlers: charx settings, reset, artists, personas", () => {
     expect((await call("workspace.listCharacters", {})).characters.map((c) => c.name)).toEqual(["Alice"]);
   });
 });
+
+describe("core handlers: resets stop the jobs that write what they delete", () => {
+  test("character reset cancels and waits for that character's analysis; factory reset also stops outfit images and the pipeline", async () => {
+    const fake = createFakeHost();
+    const services = createServices(fake.host, fake.userId);
+    const order: string[] = [];
+    const analysisJobs = new Map<string, { characterId: string; settle: () => void; done: Promise<void> }>();
+    const addJob = (jobId: string, characterId: string) => {
+      let settle!: () => void;
+      const done = new Promise<void>((r) => (settle = r)).then(() => void order.push(`${jobId} settled`));
+      analysisJobs.set(jobId, { characterId, settle, done });
+    };
+    addJob("a1", "c1");
+    addJob("a2", "c2");
+    let pipelineRunning = true;
+    const modules = {
+      analysis: {
+        listActive: () => [...analysisJobs].map(([jobId, j]) => ({ jobId, kind: "character-prompts", characterId: j.characterId, status: "running", progress: { label: "" } })),
+        cancel: (filter: { jobId?: string }) => {
+          order.push(`cancel ${filter.jobId}`);
+          const job = analysisJobs.get(filter.jobId!)!;
+          setTimeout(() => {
+            analysisJobs.delete(filter.jobId!);
+            job.settle();
+          }, 5);
+          return 1;
+        },
+        wait: (jobId: string) => analysisJobs.get(jobId)?.done ?? Promise.resolve(),
+        outfitImages: { cancelAll: async () => void order.push("outfit images cancelled") },
+      },
+      pipeline: {
+        listActive: () => (pipelineRunning ? [{ jobId: "p1", status: "running" }] : []),
+        cancel: (params: { jobId?: string }) => {
+          order.push(`cancel pipeline ${params.jobId}`);
+          setTimeout(() => (pipelineRunning = false), 5);
+        },
+      },
+    };
+    const ctx = { ...services, modules } as unknown as RpcContext;
+    const resetCharacter = services.storage.resetCharacter;
+    services.storage.resetCharacter = async (id) => {
+      order.push(`reset ${id}`);
+      return resetCharacter(id);
+    };
+    const factoryReset = services.storage.factoryReset;
+    services.storage.factoryReset = async () => {
+      order.push("factory reset");
+      return factoryReset();
+    };
+    await coreHandlers["character.reset"]!({ characterId: "c1", confirm: true }, ctx);
+    expect(order).toEqual(["cancel a1", "a1 settled", "reset c1"]);
+    order.length = 0;
+    await coreHandlers["config.factoryReset"]!({ confirm: true }, ctx);
+    expect(order.slice(0, 3)).toEqual(["cancel a2", "outfit images cancelled", "cancel pipeline p1"]);
+    expect(order.slice(3)).toEqual(["a2 settled", "factory reset"]);
+    expect(pipelineRunning).toBe(false);
+  });
+});

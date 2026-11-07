@@ -5,7 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import { amFn } from "../core/index.js";
 import { ALICE, CHAR, createAnalysisFixture } from "../testing/fixtures.js";
-import { buildAmConfig, loadAmConfigParts, persistAmConfigChange } from "./config-store.js";
+import { AmConfigStore, buildAmConfig, loadAmConfigParts, persistAmConfigChange } from "./config-store.js";
 
 const itemId = (value: unknown) => (value && typeof value === "object" && typeof (value as { id?: unknown }).id === "string" ? (value as { id: string }).id : undefined);
 const merge = (before: unknown, after: unknown, stored: unknown) => amFn("Bs")(before, after, stored, itemId) as Record<string, unknown>;
@@ -70,5 +70,20 @@ describe("B3: analysis result adding the default outfit to a character without o
     const merged = merge({ outfits: [] }, { outfits: [{ id: "outfit_default", top: "t" }] }, { outfits: [], note: "kept" });
     expect(merged).toEqual({ outfits: [{ id: "outfit_default", top: "t" }], note: "kept" });
     expect(merge(undefined, { outfits: [{ id: "outfit_default" }] }, { other: 1 })).toEqual({ outfits: [{ id: "outfit_default" }], other: 1 });
+  });
+});
+
+describe("AmConfigStore persistence snapshot", () => {
+  test("pending while an update is being saved, then false; listeners hear the end", async () => {
+    const fx = createAnalysisFixture();
+    const store = await AmConfigStore.open(fx.services, CHAR);
+    let heard = 0;
+    store.subscribePersistence(() => (heard += 1));
+    expect(store.getPersistenceSnapshot().pending).toBe(false);
+    store.update((c) => ({ ...c, characterPrompt: { ...c.characterPrompt, selectedCharacters: ["x"] } }), { domains: ["prompts"] });
+    expect(store.getPersistenceSnapshot().pending).toBe(true);
+    await store.flushSave();
+    expect(store.getPersistenceSnapshot()).toEqual({ error: "", pending: false });
+    expect(heard).toBe(1);
   });
 });

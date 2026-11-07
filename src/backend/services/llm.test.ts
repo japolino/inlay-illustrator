@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { normalizeConfig, type InlayConfig } from "../../shared/contract/index.js";
 import { createFakeHost } from "../testing/fake-host.js";
-import { createLlmService, declaredVisionSupport, extractText, httpStatusOf, omitsTemperature, supportsJsonMode, unsupportedVisionError } from "./llm.js";
+import { CAPABILITY_RETRY_MS, createLlmService, declaredVisionSupport, extractText, httpStatusOf, omitsTemperature, supportsJsonMode, unsupportedVisionError } from "./llm.js";
 
 function setup(configPatch: Record<string, unknown> = {}) {
   const fake = createFakeHost();
@@ -141,6 +141,61 @@ describe("llm service", () => {
     expect(r2.imagesDropped).toBe(true);
     expect(s2.fake.generateCalls).toHaveLength(2);
     expect(await s2.llm.supportsVision()).toBe(false);
+  });
+
+  test("vision: a format/MIME rejection drops only those images for that request and does not mark the model text-only", async () => {
+    const { fake, llm } = setup();
+    const img = (mime: string) => ({ type: "image" as const, data: "AAAA", mime_type: mime });
+    const messages = [{ role: "user" as const, content: [{ type: "text" as const, text: "look" }, img("image/gif"), img("image/png")] }];
+    fake.scriptLlm(new Error("Google generate failed (400): Unsupported MIME type: image/gif"), { content: "{}" });
+    const r = await llm.complete({ purpose: "t", messages, responseMode: "json", visionFallback: "fail", retries: 0 });
+    expect(r.imagesDropped).toBe(true);
+    expect((fake.generateCalls[1]!.input.messages as Array<{ content: Array<{ mime_type?: string }> }>)[0]!.content.map((p) => p.mime_type ?? "text")).toEqual(["text", "image/png"]);
+    expect(await llm.supportsVision()).toBe(true);
+    // The OpenAI wording lists the allowed formats: the non-PNG/JPEG images go.
+    fake.scriptLlm(new Error("OpenAI generate failed (400): You uploaded an unsupported image. Please make sure your image has of one the following formats: ['png', 'jpeg']."), { content: "{}" });
+    await llm.complete({ purpose: "t", messages: [{ role: "user", content: [img("image/avif"), img("image/jpeg")] }], responseMode: "json", retries: 0 });
+    expect((fake.generateCalls[3]!.input.messages as Array<{ content: Array<{ mime_type?: string }> }>)[0]!.content.map((p) => p.mime_type)).toEqual(["image/jpeg"]);
+    expect(await llm.supportsVision()).toBe(true);
+    // Images go out again on the next request.
+    fake.scriptLlm({ content: "{}" });
+    expect((await llm.complete({ purpose: "t", messages, responseMode: "json" })).imagesDropped).toBe(false);
+  });
+
+  test("vision: a remembered 'no vision' is tried again after CAPABILITY_RETRY_MS", async () => {
+    const fake = createFakeHost();
+    fake.llmConnections.push({ id: "oa", name: "OpenAI", provider: "openai", api_url: "", model: "gpt-x", preset_id: null, is_default: true, has_api_key: true, metadata: {}, reasoning_bindings: null, created_at: 0, updated_at: 0 });
+    let clock = 0;
+    const llm = createLlmService({ host: fake.host, userId: fake.userId, loadConfig: async () => normalizeConfig({}), now: () => clock });
+    const messages = [{ role: "user" as const, content: [{ type: "text" as const, text: "look" }, { type: "image" as const, data: "AAAA", mime_type: "image/png" }] }];
+    fake.scriptLlm(new Error("failed (400): image input is not supported for this model"), { content: "{}" });
+    await llm.complete({ purpose: "t", messages, responseMode: "json" });
+    expect(await llm.supportsVision()).toBe(false);
+    clock = CAPABILITY_RETRY_MS - 1;
+    expect(await llm.supportsVision()).toBe(false);
+    clock = CAPABILITY_RETRY_MS;
+    expect(await llm.supportsVision()).toBe(true);
+    fake.scriptLlm({ content: "{}" });
+    expect((await llm.complete({ purpose: "t", messages, responseMode: "json" })).imagesDropped).toBe(false);
+  });
+
+  test("a partitioned request rejected with a 400 is resent flat once, and flat is remembered only when it works", async () => {
+    const { fake, llm } = setup({ analysis: { jsonMode: false } });
+    const flat = [{ role: "system" as const, content: "SYS" }, { role: "user" as const, content: "LIVE+STATIC" }];
+    const partitionShape = { cacheSegments: [{ messages: [{ role: "system", content: "SYS" }] }, { messages: [{ role: "user", content: "STATIC" }] }], liveMessages: [{ role: "user", content: "LIVE" }] };
+    fake.scriptLlm(new Error("failed (400): Conversation roles must alternate user/assistant/user/assistant"), new Error("failed (400): still bad"));
+    await expect(llm.analyzerClient().complete({}, flat, { cachePartition: partitionShape })).rejects.toMatchObject({ code: "ANALYZER_HTTP", httpStatus: 400 });
+    expect(fake.generateCalls).toHaveLength(2);
+    expect(sentMessages(fake)).toEqual(flat);
+    // Flat failed too: the partition is not blamed, the next call tries it again.
+    fake.scriptLlm(new Error("failed (400): Conversation roles must alternate user/assistant/user/assistant"), { content: "{}" });
+    await llm.analyzerClient().complete({}, flat, { cachePartition: partitionShape });
+    expect((fake.generateCalls[2]!.input.messages as unknown[]).length).toBe(3);
+    expect(sentMessages(fake)).toEqual(flat);
+    fake.scriptLlm({ content: "{}" });
+    await llm.analyzerClient().complete({}, flat, { cachePartition: partitionShape });
+    expect(fake.generateCalls).toHaveLength(5);
+    expect(sentMessages(fake)).toEqual(flat);
   });
 
   test("supportsVision rejects with the connection error instead of answering 'no vision'", async () => {

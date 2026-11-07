@@ -45,6 +45,8 @@ export interface ChatSideInternalOptions extends ChatSideOptions {
   debounceMs?: number;
   /** Keeps the optimistic busy state of a footer click until a job shows up (ms). */
   pendingTimeoutMs?: number;
+  /** First retry delay after a failed `chatDom.getMessageStates` (doubles per failure in a row, up to 30 s). */
+  fetchRetryMs?: number;
   /** Puppet renderer factory (tests: no WebGL in happy-dom). */
   createPuppetRenderer?: (options: PuppetRendererOptions) => PuppetRenderer;
 }
@@ -82,6 +84,7 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
   const win = doc.defaultView ?? window;
   const debounceMs = options.debounceMs ?? 60;
   const pendingTimeoutMs = options.pendingTimeoutMs ?? 20_000;
+  const fetchRetryMs = options.fetchRetryMs ?? 1_000;
   const runtime = new ChatRuntimeStore();
   const zoom = zoomVisibility(app);
   const disposers: Array<() => void> = [];
@@ -92,6 +95,14 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
   let timer: ReturnType<typeof setTimeout> | null = null;
   const states = new Map<string, ChatMessageUiState | null>();
   const inflight = new Set<string>();
+  /** messageId -> latest state request: an older answer never replaces a newer one (or an optimistic state). */
+  const latestRequest = new Map<string, number>();
+  let requestCounter = 0;
+  /** messageId -> time after which a state that failed to load is asked again (failures in a row back off). */
+  const retryAt = new Map<string, number>();
+  let fetchFailures = 0;
+  /** messageId -> active swipe from the last host swipe event (a footer state of another swipe is stale). */
+  const hostSwipes = new Map<string, number>();
   const footers = new Map<string, Element>();
   const edges = new Map<Element, Element>();
   /** messageKey -> click time (optimistic busy until a job arrives). */
@@ -100,6 +111,8 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
   const busySlots = new Set<string>();
   /** jobId -> slotId of single-slot regenerations started here. */
   const regenJobs = new Map<string, string>();
+  /** jobIds with a toast Retry / Restart in flight (a second click is ignored). */
+  const restarting = new Set<string>();
   const recentErrors = new Map<string, number>();
   /** imageId -> stored puppet state (null: none / unknown). Image ids are global, so the cache survives chat switches. */
   const puppetStates = new Map<string, PuppetState | null>();
@@ -193,25 +206,45 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
     const forChat = chatId;
     const forEpoch = epoch;
     if (!forChat || ids.length === 0) return;
-    for (const id of ids) inflight.add(id);
+    const request = ++requestCounter;
+    for (const id of ids) {
+      inflight.add(id);
+      latestRequest.set(id, request);
+    }
+    // Ids whose latest request is this one (a later fetch or an optimistic state supersedes the answer).
+    const own = () => ids.filter((id) => latestRequest.get(id) === request);
     try {
       const { messages } = await app.call("chatDom.getMessageStates", { chatId: forChat, messageIds: ids });
       if (forEpoch !== epoch) return;
-      for (const id of ids) if (!states.has(id)) states.set(id, null);
-      const answered = new Set<string>();
-      for (const message of messages) {
-        answered.add(message.messageId);
-        states.set(message.messageId, message);
+      fetchFailures = 0;
+      const mine = new Set(own());
+      for (const id of mine) {
+        states.set(id, null);
+        retryAt.delete(id);
       }
-      for (const id of ids) if (!answered.has(id)) states.set(id, null);
+      for (const message of messages) if (mine.has(message.messageId)) states.set(message.messageId, message);
     } catch (error) {
       if (forEpoch !== epoch) return;
-      for (const id of ids) if (!states.has(id)) states.set(id, null);
+      // Still unknown (not "no footer"): reconcile asks again after a delay that grows with failures in a row.
+      fetchFailures += 1;
+      const at = Date.now() + Math.min(30_000, fetchRetryMs * 2 ** (fetchFailures - 1));
+      for (const id of own()) if (!states.has(id)) retryAt.set(id, at);
       console.warn("[Inlay Illustrator] chatDom.getMessageStates failed:", error);
     } finally {
-      for (const id of ids) inflight.delete(id);
+      if (forEpoch === epoch) {
+        for (const id of own()) {
+          inflight.delete(id);
+          latestRequest.delete(id);
+        }
+      }
       schedule(0);
     }
+  }
+
+  /** A local state change (optimistic) supersedes the answers still in flight for that message. */
+  function supersede(messageId: string): void {
+    latestRequest.set(messageId, ++requestCounter);
+    inflight.delete(messageId);
   }
 
   async function fetchPuppets(ids: string[]): Promise<void> {
@@ -291,19 +324,26 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
       epoch += 1;
       states.clear();
       inflight.clear();
+      latestRequest.clear();
+      retryAt.clear();
+      hostSwipes.clear();
+      fetchFailures = 0;
       pendingFooter.clear();
       busySlots.clear();
     }
     runtime.setFlags({ chatActive: !!chatId, chatId, overlayOpen: isOverlayOpen() });
     const bubbles = chatId ? listBubbles() : [];
-    const missing = bubbles.map((b) => b.messageId).filter((id) => !states.has(id) && !inflight.has(id));
+    const now = Date.now();
+    const unknown = bubbles.map((b) => b.messageId).filter((id) => !states.has(id) && !inflight.has(id));
+    const missing = unknown.filter((id) => (retryAt.get(id) ?? 0) <= now);
     if (missing.length) void fetchStates(missing);
+    const nextRetry = Math.min(...unknown.map((id) => retryAt.get(id) ?? Infinity));
+    if (nextRetry !== Infinity && nextRetry > now) schedule(nextRetry - now);
     const blocksByBubble = new Map(bubbles.map((b) => [b.element, bakedBlocks(b.element)] as const));
     const unknownImages = [...new Set([...blocksByBubble.values()].flat().map((b) => b.attrs.imageId))].filter((id) => id && !puppetStates.has(id) && !puppetInflight.has(id));
     if (unknownImages.length) void fetchPuppets(unknownImages);
 
     const jobs = app.state.generationJobs;
-    const now = Date.now();
     for (const [key, at] of pendingFooter) if (now - at > pendingTimeoutMs) pendingFooter.delete(key);
     const liveFooters = new Set<string>();
     const liveFrames = new Set<Element>();
@@ -379,12 +419,20 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
 
   /* ---------------- actions ---------------- */
   async function onFooterAction(messageId: string, action: FooterAction): Promise<void> {
-    const state = states.get(messageId);
+    let state = states.get(messageId);
     if (!state || !chatId) {
       if (!chatId) runtime.notice({ tone: "warning", message: CHAT_ERROR_LABELS.noChat });
       return;
     }
     if (action === "generate") {
+      // The host shows another swipe than the footer state (its refetch is still on the way): read it first, so the
+      // job is not started for a swipe the user no longer sees.
+      const swipe = hostSwipes.get(messageId);
+      if (swipe !== undefined && swipe !== state.swipeIndex) {
+        await fetchStates([messageId]);
+        state = states.get(messageId);
+        if (!state?.eligible || state.swipeIndex !== swipe || !chatId) return;
+      }
       if (state.busy || pendingFooter.has(state.messageKey)) return;
       pendingFooter.set(state.messageKey, Date.now());
       schedule(0);
@@ -413,12 +461,14 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
     if (count < 2) return;
     const target = state.revisions[pagerStep(index, count, action === "revision-next" ? "next" : "previous")];
     if (!target) return;
+    supersede(messageId);
     states.set(messageId, { ...state, activeRevisionId: target.revisionId });
     schedule(0);
     try {
       await app.call("history.selectRevision", { chatId, messageKey: state.messageKey, revisionId: target.revisionId });
       void fetchStates([messageId]);
     } catch (error) {
+      supersede(messageId);
       states.set(messageId, state);
       chatError(CHAT_ERROR_LABELS.revisionFailed, error);
       schedule(0);
@@ -440,7 +490,8 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
       schedule(0);
       try {
         const { jobId } = await app.call("generation.regenerateSlot", { chatId: targetChat, messageKey: attrs.messageKey, slotId: attrs.slotId, ...(attrs.entryId ? { entryId: attrs.entryId } : {}) });
-        regenJobs.set(jobId, attrs.slotId);
+        // A job that failed fast may have finished before this answer: its spinner would never stop.
+        if (!app.isFinishedJob(jobId)) regenJobs.set(jobId, attrs.slotId);
       } catch (error) {
         chatError(CHAT_ERROR_LABELS.regenerateFailed, error);
       } finally {
@@ -507,17 +558,24 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
       return;
     }
     if (!jobId) return;
+    if (command !== "cancel") {
+      if (restarting.has(jobId)) return;
+      restarting.add(jobId);
+    }
     try {
       if (command === "cancel") await app.call("generation.cancel", { jobId });
+      // The failed toast (error details, Retry) stays until the new run is accepted.
       else if (command === "retry") {
-        runtime.dismiss(toast.key);
         await app.call("generation.retry", { jobId });
-      } else if (command === "restart") {
         runtime.dismiss(toast.key);
+      } else if (command === "restart") {
         await app.call("generation.restart", { jobId });
+        runtime.dismiss(toast.key);
       }
     } catch (error) {
       chatError(command === "cancel" ? CHAT_ERROR_LABELS.cancelFailed : CHAT_ERROR_LABELS.generateFailed, error);
+    } finally {
+      if (command !== "cancel") restarting.delete(jobId);
     }
   }
 
@@ -617,6 +675,8 @@ export function createChatSide(ctx: SpindleFrontendContext, app: AppController, 
   for (const name of ["MESSAGE_SWIPED", "MESSAGE_EDITED", "MESSAGE_DELETED", "SWIPE_EDITED", "CHARACTER_MESSAGE_RENDERED"]) {
     onHost(name, (payload) => {
       const id = payloadMessageId(payload);
+      const swipe = (payload as { message?: { swipe_id?: unknown } } | null)?.message?.swipe_id;
+      if (id && typeof swipe === "number") hostSwipes.set(id, swipe);
       if (id && states.has(id)) void fetchStates([id]);
       else schedule();
     });

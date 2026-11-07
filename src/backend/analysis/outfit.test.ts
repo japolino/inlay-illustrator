@@ -124,8 +124,8 @@ describe("outfit image controller", () => {
     const controller = createOutfitImageController(fx.services);
     const { jobId } = await controller.generate({ target, formId: "form_default", draft: draft() });
     await new Promise((r) => setTimeout(r, 20));
-    controller.cancelAll();
-    await new Promise((r) => setTimeout(r, 20));
+    // cancelAll resolves once the job has settled.
+    await controller.cancelAll();
     const fin = fx.events.find((e) => e.event === "outfitImage.finished")!.payload as { jobId: string; error: { code: string } };
     expect(fin).toMatchObject({ jobId, error: { code: "cancelled" } });
   });

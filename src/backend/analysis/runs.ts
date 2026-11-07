@@ -116,12 +116,26 @@ export async function driveAmController(ctx: JobContext, session: AnalysisSessio
     });
     if (pendingRows.size) flushRows();
     return outcomeOf(controller.getSnapshot(), returned);
+  } catch (error) {
+    // The job ends once the writes the run queued have landed (a reset waits for that), even when the controller threw.
+    await session.store.settle();
+    throw error;
   } finally {
     ctx.signal.removeEventListener("abort", onAbort);
     unsubscribe?.();
     rowUnsubs.forEach((u) => u?.());
     controller.dispose?.();
     session.dispose();
+  }
+}
+
+/** Run `build` for an open session; dispose the session if it throws (before `driveAmController` owns it). */
+async function prepared<T>(session: AnalysisSession, build: () => T | Promise<T>): Promise<T> {
+  try {
+    return await build();
+  } catch (error) {
+    session.dispose();
+    throw error;
   }
 }
 
@@ -159,15 +173,17 @@ const promptKeysOf = (session: AnalysisSession): string[] => session.source.memb
 
 export async function runCharacterPrompts(ctx: JobContext, params: AnalysisStartParams, explicit = false): Promise<JobOutcome> {
   const session = await open(ctx, "asset-analysis");
-  const controller = AM.ptt({
-    sourceCatalog: session.sourceCatalog,
-    metadata: session.metadata,
-    images: session.images,
-    analyzer: analyzer(ctx, "character-analysis", sessionLore(session)),
-    config: session.store,
-    priorityAssets: session.priorityAssets,
-    ensureSourceHydrated: async () => {},
-  });
+  const controller = await prepared(session, () =>
+    AM.ptt({
+      sourceCatalog: session.sourceCatalog,
+      metadata: session.metadata,
+      images: session.images,
+      analyzer: analyzer(ctx, "character-analysis", sessionLore(session)),
+      config: session.store,
+      priorityAssets: session.priorityAssets,
+      ensureSourceHydrated: async () => {},
+    }),
+  );
   const order = params.promptKeys?.length ? params.promptKeys : undefined;
   return driveAmController(
     ctx,
@@ -190,15 +206,17 @@ export async function runCharacterPrompts(ctx: JobContext, params: AnalysisStart
 export async function runReferences(ctx: JobContext, params: AnalysisStartParams): Promise<JobOutcome> {
   if ((params.evidenceMode ?? "image") === "text") return runCharacterPrompts(ctx, params, true);
   const session = await open(ctx, "reference-analysis");
-  const controller = AM.Ntt({
-    sourceCatalog: session.sourceCatalog,
-    metadata: session.metadata,
-    images: session.images,
-    analyzer: analyzer(ctx, "reference-analysis", sessionLore(session)),
-    config: session.store,
-    priorityAssets: session.priorityAssets,
-    ensureSourceHydrated: async () => {},
-  });
+  const controller = await prepared(session, () =>
+    AM.Ntt({
+      sourceCatalog: session.sourceCatalog,
+      metadata: session.metadata,
+      images: session.images,
+      analyzer: analyzer(ctx, "reference-analysis", sessionLore(session)),
+      config: session.store,
+      priorityAssets: session.priorityAssets,
+      ensureSourceHydrated: async () => {},
+    }),
+  );
   return driveAmController(ctx, session, controller, () =>
     controller.analyzeReferences({
       scope: "current-source",
@@ -212,16 +230,18 @@ export async function runReferences(ctx: JobContext, params: AnalysisStartParams
 
 export async function runPersona(ctx: JobContext, params: AnalysisStartParams): Promise<JobOutcome> {
   const session = await open(ctx, "persona-analysis");
-  await session.sourceCatalog.refreshPersonas();
-  const personas = await ctx.services.sources.listPersonas().catch(() => []);
-  const personaText = (key: string) => personas.find((p) => p.personaId === key.replace(/^persona:+/, ""))?.description;
-  const controller = AM.Att({
-    sourceCatalog: session.sourceCatalog,
-    metadata: session.metadata,
-    images: session.images,
-    analyzer: analyzer(ctx, "persona-analysis", outfitLore(session, personaText)),
-    config: session.store,
-    referenceCrops: session.referenceCrops,
+  const controller = await prepared(session, async () => {
+    await session.sourceCatalog.refreshPersonas();
+    const personas = await ctx.services.sources.listPersonas().catch(() => []);
+    const personaText = (key: string) => personas.find((p) => p.personaId === key.replace(/^persona:+/, ""))?.description;
+    return AM.Att({
+      sourceCatalog: session.sourceCatalog,
+      metadata: session.metadata,
+      images: session.images,
+      analyzer: analyzer(ctx, "persona-analysis", outfitLore(session, personaText)),
+      config: session.store,
+      referenceCrops: session.referenceCrops,
+    });
   });
   return driveAmController(ctx, session, controller, () =>
     controller.analyze({ personaKeys: params.personaIds ?? [], assetSelection: "analysis", evidenceMode: params.evidenceMode ?? "image", sourceId: ctx.characterId }),
@@ -230,7 +250,7 @@ export async function runPersona(ctx: JobContext, params: AnalysisStartParams): 
 
 export async function runAssetMatching(ctx: JobContext, params: AnalysisStartParams): Promise<JobOutcome> {
   const session = await open(ctx, "asset-matching");
-  const controller = AM.Hrt({ sourceCatalog: session.sourceCatalog, analyzer: analyzer(ctx, "asset-matching"), config: session.store, priorityAssets: session.priorityAssets });
+  const controller = await prepared(session, () => AM.Hrt({ sourceCatalog: session.sourceCatalog, analyzer: analyzer(ctx, "asset-matching"), config: session.store, priorityAssets: session.priorityAssets }));
   return driveAmController(ctx, session, controller, () =>
     controller.analyzeMatching({
       scope: "current-source",
@@ -244,27 +264,29 @@ export async function runAssetMatching(ctx: JobContext, params: AnalysisStartPar
 
 export async function runMetadataCheck(ctx: JobContext): Promise<JobOutcome> {
   const session = await open(ctx, "metadata-check");
-  const controller = AM.Vet({ config: session.store, sourceCatalog: session.sourceCatalog, metadata: session.metadata, priorityAssets: session.priorityAssets });
+  const controller = await prepared(session, () => AM.Vet({ config: session.store, sourceCatalog: session.sourceCatalog, metadata: session.metadata, priorityAssets: session.priorityAssets }));
   return driveAmController(ctx, session, controller, () => controller.analyzeMetadata({ scope: "current-source", sourceId: ctx.characterId }));
 }
 
 export async function runArtistExtraction(ctx: JobContext, params: AnalysisStartParams): Promise<JobOutcome> {
   const session = await open(ctx, "artist-extraction");
-  if (params.asset) {
-    // Same write as the picker target `artist-reference` (AM `artistExtractionAssetBySourceId[sourceId]`).
-    const stored = amFn("cn")(params.asset);
-    session.store.update(
-      (c) => ({ ...c, characterPrompt: { ...c.characterPrompt, artistExtractionAssetBySourceId: { ...c.characterPrompt.artistExtractionAssetBySourceId, [ctx.characterId]: { ...stored, ext: stored.extension } } } }),
-      { domains: ["asset-analysis"] },
-    );
-  }
-  const controller = AM.$et({
-    sourceCatalog: session.sourceCatalog,
-    metadata: session.metadata,
-    analyzer: analyzer(ctx, "artist-extraction"),
-    config: session.store,
-    priorityAssets: session.priorityAssets,
-    ensureSourceHydrated: async () => {},
+  const controller = await prepared(session, () => {
+    if (params.asset) {
+      // Same write as the picker target `artist-reference` (AM `artistExtractionAssetBySourceId[sourceId]`).
+      const stored = amFn("cn")(params.asset);
+      session.store.update(
+        (c) => ({ ...c, characterPrompt: { ...c.characterPrompt, artistExtractionAssetBySourceId: { ...c.characterPrompt.artistExtractionAssetBySourceId, [ctx.characterId]: { ...stored, ext: stored.extension } } } }),
+        { domains: ["asset-analysis"] },
+      );
+    }
+    return AM.$et({
+      sourceCatalog: session.sourceCatalog,
+      metadata: session.metadata,
+      analyzer: analyzer(ctx, "artist-extraction"),
+      config: session.store,
+      priorityAssets: session.priorityAssets,
+      ensureSourceHydrated: async () => {},
+    });
   });
   return driveAmController(ctx, session, controller, () => controller.extractArtistPrompt({ sourceId: ctx.characterId }));
 }
@@ -284,6 +306,7 @@ export async function runRepresentativePick(ctx: JobContext, params: AnalysisSta
     ctx.progress({ label: message, ...(messageKo ? { labelKo: messageKo } : {}), done: items.length, total: items.length, fraction: 1 });
     return { status: result.addedImages ? "success" : "no-evidence", message, ...(messageKo ? { messageKo } : {}) };
   } finally {
+    await session.store.settle();
     session.dispose();
   }
 }
@@ -298,7 +321,7 @@ export async function runReclassification(ctx: JobContext, params: AnalysisStart
   const session = await open(ctx, "reclassification");
   const personaMode = !!params.personaIds?.length;
   const keys = personaMode ? params.personaIds! : params.promptKeys?.length ? params.promptKeys : promptKeysOf(session);
-  const personas = personaMode ? (await buildPersonaCatalog(ctx.services)).records : [];
+  const personas = personaMode ? (await prepared(session, () => buildPersonaCatalog(ctx.services))).records : [];
   const adapter = personaMode
     ? {
         domain: "settings",
@@ -323,14 +346,16 @@ export async function runReclassification(ctx: JobContext, params: AnalysisStart
         topics: () => ["reclassification"],
       }
     : { domain: "prompts", capture: (t: Any, r: Any) => AM.tTe(t, r.targets), collection: AM.nTe, store: AM.l7, topics: () => ["reclassification"] };
-  const controller = AM.Bge({
-    config: session.store,
-    analyzer: analyzer(ctx, "prompt-reclassification"),
-    blocked: () => false,
-    drafts: { flush() {}, projectPending: (config: Any) => config },
-    adapter,
-    context: () => ({ sourceId: ctx.characterId, targets: keys.map((promptKey) => ({ promptKey })), generation: 0, available: keys.length > 0 }),
-  });
+  const controller = await prepared(session, () =>
+    AM.Bge({
+      config: session.store,
+      analyzer: analyzer(ctx, "prompt-reclassification"),
+      blocked: () => false,
+      drafts: { flush() {}, projectPending: (config: Any) => config },
+      adapter,
+      context: () => ({ sourceId: ctx.characterId, targets: keys.map((promptKey) => ({ promptKey })), generation: 0, available: keys.length > 0 }),
+    }),
+  );
   const unsubscribe = controller.subscribe(() => {
     const snap = controller.getSnapshot();
         ctx.progress({ ...amLabel(String(snap.message ?? "")), ...(snap.total ? { done: snap.completed, total: snap.total } : {}), ...(snap.retry ? { retry: { attempt: snap.retry.attempt, total: snap.retry.total }, retryCount: `${snap.retry.attempt}/${snap.retry.total}` } : {}) });
@@ -350,11 +375,22 @@ export async function runReclassification(ctx: JobContext, params: AnalysisStart
       ...(messageKo ? { messageKo } : {}),
       ...(status === "error" ? { error: rpcError("provider-error", message, { ...(messageKo ? { messageKo } : {}), retryable: true }) } : {}),
     };
+  } catch (error) {
+    await session.store.settle();
+    throw error;
   } finally {
     ctx.signal.removeEventListener("abort", onAbort);
     unsubscribe?.();
     session.dispose();
   }
+}
+
+/**
+ * The AM controller a run drives, which is the job registry's busy key: AM runs one controller at a time. Text-mode
+ * references run `Gwt` like character-prompts; every other kind has its own controller.
+ */
+export function analysisLane(params: Pick<AnalysisStartParams, "kind" | "evidenceMode">): string {
+  return params.kind === "references" && (params.evidenceMode ?? "image") === "text" ? "character-prompts" : params.kind;
 }
 
 export async function runAnalysis(ctx: JobContext, params: AnalysisStartParams): Promise<JobOutcome> {

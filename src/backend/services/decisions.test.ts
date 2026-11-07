@@ -72,7 +72,7 @@ describe("DecisionService", () => {
     const svc = createDecisionService(fake.host, log, fake.userId);
 
     const adapter = svc.createJevAdapter(() => ({ connectionId: "dec-1", model: "typesafe/jev-latest", rosterSelectionDefault: true }));
-    expect(adapter.getConfig().apiKey).toBe("lumiverse");
+    expect(adapter.getConfig().apiKey).toBe("lumiverse:dec-1");
     const res = await adapter.network.fetch("https://api.typesafe.ai/v1/systemone", {
       method: "POST",
       headers: {},
@@ -98,6 +98,19 @@ describe("DecisionService", () => {
     expect(capturedInput.model).toBeUndefined();
   });
 
+  test("createJevAdapter: the API key placeholder follows the decision connection so the engine's JEV cache key changes", async () => {
+    const fake = createFakeHost({ userId: "u" });
+    const log = createRunLog({ events: createEventBus(fake.host, fake.userId), host: fake.host });
+    let connectionId = "dec-1";
+    const adapter = createDecisionService(fake.host, log, fake.userId).createJevAdapter(() => ({ connectionId, model: "m", rosterSelectionDefault: false }));
+    const first = adapter.getConfig().apiKey;
+    expect(adapter.getConfig().apiKey).toBe(first);
+    connectionId = "dec-2";
+    expect(adapter.getConfig().apiKey).not.toBe(first);
+    connectionId = "";
+    expect(adapter.getConfig().apiKey).toBe("lumiverse:default");
+  });
+
   test("createJevAdapter answers host decision errors with a TypeSafe-style status and logs the host message", async () => {
     const fake = createFakeHost({ userId: "test-user-789" });
     let hostError: unknown;
@@ -117,6 +130,11 @@ describe("DecisionService", () => {
     expect(await statusOf(new Error("Rate limit exceeded"))).toBe(429);
     expect(await statusOf(new Error("Decision connection not found"))).toBe(400);
     expect(await statusOf(new Error("socket closed"))).toBe(502);
+    // Auth wording is auth, not a bad request.
+    expect(await statusOf(new Error("Invalid API key provided"))).toBe(401);
+    expect(await statusOf(new Error("Unauthorized"))).toBe(401);
+    expect(await statusOf(new Error("Forbidden: decision model not allowed"))).toBe(403);
+    expect(await statusOf(new Error("Invalid model id"))).toBe(400);
     expect(log.list().map((e) => e.message)).toContain("JEV decision request failed: PERMISSION_DENIED: decisions - Decision model permission not granted");
 
     // An aborted request still throws, so AM reports its own cancel / timeout.

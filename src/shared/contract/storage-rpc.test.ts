@@ -22,6 +22,10 @@ describe("storage layout", () => {
     expect(m.value).toMatchObject({ version: 1, entries: [{ id: "a", title: "a", text: "t" }], selection: { defaultId: "a", bySourceId: {} } });
     expect(migrateStoredFile("config-model", { version: 99 }).tooNew).toBe(true);
     expect(migrateStoredFile("chat-data", {}).value.version).toBe(STORAGE_FILE_VERSIONS["chat-data"]);
+    // A document without `version` (v0) still gets the v1 -> v2 hook rather than skipping to the current version.
+    const v0 = migrateStoredFile("character-document", { characterPrompt: { selectedArtistId: "detail_anime_illustration_style" } });
+    expect(v0.applied).toEqual(["character-document:1->2"]);
+    expect((v0.value.characterPrompt as { selectedArtistId: string }).selectedArtistId).toBe("");
   });
 });
 

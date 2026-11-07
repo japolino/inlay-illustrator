@@ -305,6 +305,24 @@ describe("image service", () => {
     expect(fake.deletedImageIds).toEqual(["late"]);
   });
 
+  test("queue: false skips the order but still waits for an abandoned NovelAI request", async () => {
+    const { fake, images, request } = holdSetup();
+    let finishFirst!: () => void;
+    fake.scriptImageGen(() => new Promise((resolve) => (finishFirst = () => resolve({ imageDataUrl: "", model: "m", provider: "novelai", imageId: "late", imageUrl: "/x" } as never))));
+    fake.addImage({ id: "late" });
+    const controller = new AbortController();
+    const first = images.generate({ ...request("1"), queue: false }, { signal: controller.signal });
+    await settle();
+    controller.abort();
+    await expect(first).rejects.toMatchObject({ name: "AbortError" });
+    const second = images.generate({ ...request("2"), queue: false });
+    await settle(30);
+    expect(fake.imageGenCalls).toHaveLength(1);
+    finishFirst();
+    await second;
+    expect(fake.imageGenCalls.map((c) => c.input.prompt)).toEqual(["1", "2"]);
+  });
+
   test("the hold ends after 60 s when the abandoned NovelAI request never settles", async () => {
     const { fake, images, request, endCap } = holdSetup();
     fake.scriptImageGen(() => new Promise(() => undefined));

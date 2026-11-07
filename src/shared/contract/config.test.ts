@@ -24,6 +24,7 @@ import {
   resolveEffectiveConfig,
   setCharxDefaults,
   setCharxOverride,
+  SPLIT_ANALYSIS_MAX_TOTAL,
   splitConfigForStorage,
   type CharxScopeConfig,
   type CharxSettingsPatch,
@@ -245,6 +246,11 @@ describe("chat image generation settings (Km parity)", () => {
     expect(loadChatImageGenerationSettings(undefined, { chatImageCount: "3" })).toMatchObject({ migrated: true, settings: { countPolicy: { mode: "fixed", min: 3, max: 3 } } });
     expect(loadChatImageGenerationSettings(undefined, { legacySettings: { runtime: { imageAutoGenerationEnabled: false } } }).settings.autoGenerationEnabled).toBe(false);
     expect(loadChatImageGenerationSettings({ analysisMode: "bogus" }).notice).toContain("Unknown analysis mode");
+  });
+  test("the split total is capped at SPLIT_ANALYSIS_MAX_TOTAL in the backend too", () => {
+    const settings = normalizeChatImageGenerationSettings({ analysisMode: "split", splitAnalysis: { totalCount: 500, batchSize: 10 } }, undefined, UNLIMITED_IMAGE_COUNT);
+    expect(settings.splitAnalysis).toEqual({ totalCount: SPLIT_ANALYSIS_MAX_TOTAL, batchSize: 10 });
+    expect(settings.analysisMode).toBe("split");
   });
 });
 

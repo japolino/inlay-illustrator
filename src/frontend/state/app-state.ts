@@ -111,6 +111,12 @@ export type NoticeTone = "info" | "success" | "warning" | "danger";
 export interface AppNotice { tone: NoticeTone; message: string; key?: string; durationMs?: number }
 type NoticeSink = (notice: AppNotice) => void;
 
+const isLive = (status: JobStatus) => status === "queued" || status === "running";
+function remove<T>(list: T[], item: T): void {
+  const index = list.indexOf(item);
+  if (index >= 0) list.splice(index, 1);
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -126,6 +132,13 @@ export function mergePatch<T>(base: T, patch: unknown): T {
 }
 
 const FINISHED_JOB_TTL_MS = 30_000;
+/**
+ * A finished job id is remembered this long: a job list read before the finish (resync, recover) or a late progress
+ * event never brings it back as running.
+ */
+const FINISHED_TOMBSTONE_TTL_MS = 60_000;
+/** A break in the event sequence (backend restart, dropped events) re-reads the state after this delay (one read per burst). */
+const STREAM_BREAK_RESYNC_MS = 1_000;
 /** Failed analysis jobs wait for their error to be dismissed; beyond this many the oldest are dropped. */
 const MAX_UNDISMISSED_ANALYSIS_ERRORS = 10;
 
@@ -139,11 +152,23 @@ export class AppController {
   /** A `document.changed` arrived while a load was in flight: load once more when it ends. */
   private reloadPending = false;
   private initPromise: Promise<void> | null = null;
+  /** jobId -> finish time of generation / analysis jobs (see FINISHED_TOMBSTONE_TTL_MS). */
+  private readonly finishedJobs = new Map<string, number>();
+  /** Bumped by every status read or `status.changed`: an older `session.getStatus` answer is dropped. */
+  private statusRequest = 0;
+  private breakTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Config patches in flight (oldest first) and the last config the backend sent. */
+  private readonly configPatches: Array<{ patch: DeepPartial<InlayConfig> }> = [];
+  private committedConfig: InlayConfig | null = null;
+  /** Chat image settings in flight (oldest first) and the last value the backend sent. */
+  private readonly chatSettingsPending: Array<{ settings: ChatImageGenerationSettings }> = [];
+  private committedChatSettings: ChatImageGenerationSettings | null = null;
 
   constructor(client: RpcClient, options: { surface?: "overlay" | "drawer" | "chat" } = {}) {
     this.client = client;
     this.surface = options.surface ?? "overlay";
     this.wireEvents();
+    this.disposers.push(client.onStreamBreak(() => this.scheduleBreakResync()));
   }
 
   get state(): AppState {
@@ -162,9 +187,11 @@ export class AppController {
     this.initPromise = (async () => {
       try {
         const hello = await this.call("session.hello", { protocol: 1, clientId: this.client.clientId, surface: this.surface });
+        this.statusRequest += 1;
         this.store.patch({ status: hello.status });
         const [cfg] = await Promise.all([this.call("config.get", {}), this.loadCharacters()]);
-        this.store.patch({ config: cfg.config, chatImageGeneration: cfg.chatImageGeneration, uiState: cfg.uiState, connection: "ready" });
+        this.applyServerConfig(cfg);
+        this.store.patch({ uiState: cfg.uiState, connection: "ready" });
         void this.recoverActiveJobs();
         if (!this.state.selectedCharacterId) {
           const preferred = hello.status.activeCharacterId ?? this.state.characters?.[0]?.characterId ?? null;
@@ -184,11 +211,11 @@ export class AppController {
       this.call("generation.listActive", {}).catch(() => ({ jobs: [] }))
     ]);
     for (const job of analysis.jobs) {
-      if (this.state.analysisJobs[job.jobId]) continue;
+      if (this.state.analysisJobs[job.jobId] || this.isFinishedJob(job.jobId)) continue;
       this.upsertAnalysisJob({ jobId: job.jobId, kind: job.kind, characterId: job.characterId, status: job.status, progress: job.progress, rows: [], startedAt: Date.now() });
     }
     const generationJobs = { ...this.state.generationJobs };
-    for (const job of generation.jobs) if (!generationJobs[job.jobId] && (job.status === "queued" || job.status === "running")) generationJobs[job.jobId] = job;
+    for (const job of generation.jobs) if (!generationJobs[job.jobId] && isLive(job.status) && !this.isFinishedJob(job.jobId)) generationJobs[job.jobId] = job;
     this.store.patch({ generationJobs });
   }
 
@@ -260,6 +287,7 @@ export class AppController {
    */
   async resync(): Promise<void> {
     if (this.state.connection !== "ready") return;
+    const statusRequest = ++this.statusRequest;
     try {
       const [status, cfg, analysis, generation] = await Promise.all([
         this.call("session.getStatus", {}),
@@ -267,23 +295,58 @@ export class AppController {
         this.call("analysis.listActive", {}),
         this.call("generation.listActive", {})
       ]);
-      this.setStatus(status);
-      this.store.patch({ config: cfg.config, chatImageGeneration: cfg.chatImageGeneration, uiState: cfg.uiState });
+      if (statusRequest === this.statusRequest) this.setStatus(status);
+      this.applyServerConfig(cfg);
+      this.store.patch({ uiState: cfg.uiState });
       const running = new Set(analysis.jobs.map((job) => job.jobId));
       const analysisJobs: Record<string, AnalysisJobState> = {};
       for (const [jobId, job] of Object.entries(this.state.analysisJobs)) if (job.finishedAt !== undefined || running.has(jobId)) analysisJobs[jobId] = job;
       for (const job of analysis.jobs) {
         const existing: AnalysisJobState | undefined = analysisJobs[job.jobId];
+        // The lists may predate a finish received while they were read: a finished job stays finished.
+        if (existing?.finishedAt !== undefined || this.isFinishedJob(job.jobId)) continue;
         analysisJobs[job.jobId] = { ...existing, jobId: job.jobId, kind: job.kind, characterId: job.characterId, status: job.status, progress: job.progress, rows: existing?.rows ?? [], startedAt: existing?.startedAt ?? Date.now() };
       }
       const generationJobs: Record<string, GenerationJobSnapshot> = {};
-      for (const job of generation.jobs) if (job.status === "queued" || job.status === "running") generationJobs[job.jobId] = job;
+      for (const job of generation.jobs) if (isLive(job.status) && !this.isFinishedJob(job.jobId)) generationJobs[job.jobId] = job;
       this.store.patch({ analysisJobs, generationJobs, resyncCount: this.state.resyncCount + 1 });
-      if (status.activeChatId) this.bump("chatDataRevision", status.activeChatId);
+      const activeChatId = this.state.status?.activeChatId;
+      if (activeChatId) this.bump("chatDataRevision", activeChatId);
       if (this.state.selectedCharacterId) await this.reloadWorkspace();
     } catch {
       // Still disconnected or a read failed: the next reconnect or visibility change tries again.
     }
+  }
+
+  /** Host reconnect, tab shown again, event stream break: re-reads the state, or retries a failed handshake. */
+  reconnect(): Promise<void> {
+    return this.state.connection === "error" ? this.init() : this.resync();
+  }
+
+  /** Re-reads the backend status (chat switch). An answer older than a later status read or event is dropped. */
+  async refreshStatus(): Promise<void> {
+    const request = ++this.statusRequest;
+    try {
+      const status = await this.call("session.getStatus", {});
+      if (request === this.statusRequest) this.setStatus(status);
+    } catch {
+      // The next switch, status.changed or resync brings the status.
+    }
+  }
+
+  /** The generation / analysis job finished recently: a job list naming it as running is older than that. */
+  isFinishedJob(jobId: string): boolean {
+    const now = Date.now();
+    for (const [id, at] of this.finishedJobs) if (now - at > FINISHED_TOMBSTONE_TTL_MS) this.finishedJobs.delete(id);
+    return this.finishedJobs.has(jobId);
+  }
+
+  private scheduleBreakResync(): void {
+    if (this.breakTimer) return;
+    this.breakTimer = setTimeout(() => {
+      this.breakTimer = null;
+      void this.reconnect();
+    }, STREAM_BREAK_RESYNC_MS);
   }
 
   /** Replaces the current snapshot with one returned by a mutation (ignored when the character changed). */
@@ -307,30 +370,66 @@ export class AppController {
     }
   }
 
-  /** Optimistic config patch: applied locally at once, replaced by the normalized result, rolled back on error. */
-  async updateConfig(patch: DeepPartial<InlayConfig>): Promise<InlayConfig | null> {
-    const before = this.state.config;
-    if (before) this.store.patch({ config: mergePatch(before, patch) });
+  /**
+   * Settings read from the backend (config.get, an answer, a `*.changed` echo). Optimistic changes still in flight stay
+   * on top, so the echo of an older change does not revert a newer one.
+   */
+  applyServerConfig(values: { config?: InlayConfig; chatImageGeneration?: ChatImageGenerationSettings }): void {
+    if (values.config) this.committedConfig = values.config;
+    if (values.chatImageGeneration) this.committedChatSettings = values.chatImageGeneration;
+    this.showConfig();
+  }
+
+  private showConfig(): void {
+    const config = this.committedConfig && this.configPatches.reduce((c, entry) => mergePatch(c, entry.patch), this.committedConfig);
+    const chat = this.chatSettingsPending.at(-1)?.settings ?? this.committedChatSettings;
+    this.store.patch({ ...(config ? { config } : {}), ...(chat ? { chatImageGeneration: chat } : {}) });
+  }
+
+  /**
+   * Optimistic config patch: applied locally at once, then the normalized result. A failure drops this patch only (the
+   * last backend config with the other patches in flight on top) and throws.
+   */
+  async updateConfigStrict(patch: DeepPartial<InlayConfig>): Promise<InlayConfig> {
+    const entry = { patch };
+    this.configPatches.push(entry);
+    const current = this.state.config;
+    if (current) this.store.patch({ config: mergePatch(current, patch) });
     try {
       const { config } = await this.call("config.update", { patch });
-      this.store.patch({ config });
+      remove(this.configPatches, entry);
+      this.applyServerConfig({ config });
       return config;
     } catch (error) {
-      if (before) this.store.patch({ config: before });
+      remove(this.configPatches, entry);
+      this.showConfig();
+      throw error;
+    }
+  }
+
+  /** {@link updateConfigStrict}; an error becomes a toast (null). */
+  async updateConfig(patch: DeepPartial<InlayConfig>): Promise<InlayConfig | null> {
+    try {
+      return await this.updateConfigStrict(patch);
+    } catch (error) {
       this.notifyError(error);
       return null;
     }
   }
 
+  /** Optimistic chat image settings (the newest value in flight is shown); a failure drops this value only. */
   async setChatImageGeneration(settings: ChatImageGenerationSettings): Promise<string | null> {
-    const before = this.state.chatImageGeneration;
+    const entry = { settings };
+    this.chatSettingsPending.push(entry);
     this.store.patch({ chatImageGeneration: settings });
     try {
       const result = await this.call("chatImageGeneration.set", { settings });
-      this.store.patch({ chatImageGeneration: result.settings });
+      remove(this.chatSettingsPending, entry);
+      this.applyServerConfig({ chatImageGeneration: result.settings });
       return result.notice;
     } catch (error) {
-      this.store.patch({ chatImageGeneration: before });
+      remove(this.chatSettingsPending, entry);
+      this.showConfig();
       this.notifyError(error);
       return null;
     }
@@ -435,6 +534,7 @@ export class AppController {
   destroy(): void {
     for (const dispose of this.disposers.splice(0)) dispose();
     if (this.uiStateTimer) clearTimeout(this.uiStateTimer);
+    if (this.breakTimer) clearTimeout(this.breakTimer);
     this.noticeSinks.clear();
   }
 
@@ -471,9 +571,12 @@ export class AppController {
   }
 
   private wireEvents(): void {
-    this.on("status.changed", (status) => this.setStatus(status));
-    this.on("config.changed", ({ config }) => this.store.patch({ config }));
-    this.on("chatImageGeneration.changed", ({ settings }) => this.store.patch({ chatImageGeneration: settings }));
+    this.on("status.changed", (status) => {
+      this.statusRequest += 1;
+      this.setStatus(status);
+    });
+    this.on("config.changed", ({ config }) => this.applyServerConfig({ config }));
+    this.on("chatImageGeneration.changed", ({ settings }) => this.applyServerConfig({ chatImageGeneration: settings }));
     this.on("document.changed", ({ characterId }) => this.documentChanged(characterId));
     this.on("chatData.changed", ({ chatId }) => this.bump("chatDataRevision", chatId));
     this.on("atelier.changed", (event) => {
@@ -494,6 +597,7 @@ export class AppController {
       });
     });
     this.on("analysis.finished", (payload) => {
+      this.finishedJobs.set(payload.jobId, Date.now());
       const existing = this.state.analysisJobs[payload.jobId];
       this.upsertAnalysisJob({
         jobId: payload.jobId,
@@ -522,9 +626,12 @@ export class AppController {
       this.scheduleJobCleanup("outfitJobs", jobId);
     });
     this.on("generation.progress", (job) => {
+      // A progress delivered after the finish would bring the job back as running for good.
+      if (this.isFinishedJob(job.jobId)) return;
       this.store.patch({ generationJobs: { ...this.state.generationJobs, [job.jobId]: job } });
     });
     this.on("generation.finished", ({ jobId }) => {
+      this.finishedJobs.set(jobId, Date.now());
       const jobs = { ...this.state.generationJobs };
       delete jobs[jobId];
       this.store.patch({ generationJobs: jobs });
@@ -625,12 +732,12 @@ export interface MutationState<M extends ClientMethod> {
 /** Wraps a mutation: tracks `pending`/`error`; errors are also shown as toasts unless `silent`. */
 export function useRpcMutation<M extends ClientMethod>(method: M, options: { silent?: boolean; onSuccess?: (result: ClientResult<M>) => void } = {}): MutationState<M> {
   const app = useApp();
-  const [pending, setPending] = useState(false);
+  const [running, setRunning] = useState(0);
   const [error, setError] = useState<RpcError | null>(null);
   const optionsRef = useRef(options);
   optionsRef.current = options;
   const run = useCallback(async (params: ClientParams<M>) => {
-    setPending(true);
+    setRunning((n) => n + 1);
     setError(null);
     try {
       const result = await app.call(method, params);
@@ -642,10 +749,10 @@ export function useRpcMutation<M extends ClientMethod>(method: M, options: { sil
       if (!optionsRef.current.silent) app.notifyError(caught);
       throw caught;
     } finally {
-      setPending(false);
+      setRunning((n) => n - 1);
     }
   }, [app, method]);
-  return { run, pending, error, reset: () => setError(null) };
+  return { run, pending: running > 0, error, reset: () => setError(null) };
 }
 
 export interface DraftState<T> {

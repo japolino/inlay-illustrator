@@ -332,6 +332,8 @@ function importLegacyDirectionsInto(am: Rec, config: InlayConfig, select: boolea
  * Service
  * ---------------------------------------------------------------------------------------------- */
 
+const isCorruptJson = (error: unknown) => error instanceof RpcFailure && error.error.detailCode === "STORAGE_CORRUPT_JSON";
+
 export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
   const { storage } = deps;
   const now = deps.now ?? (() => new Date());
@@ -340,11 +342,28 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
 
   interface Loaded { store: AtelierStoreDocument; issues: AtelierIssue[]; tooNew: boolean }
 
-  /** Read (no lock). A missing file is created (with the legacy migration) under the lock. */
+  /** Read (no lock). A missing or unparseable file is created / reset under the lock. */
   async function read(): Promise<Loaded> {
-    const raw = await storage.readJson<unknown>(PATH, null);
+    const raw = await storage.readJson<unknown>(PATH, null).catch((error: unknown) => {
+      if (isCorruptJson(error)) return null;
+      throw error;
+    });
     if (raw === null || raw === undefined) return serialize(storage, () => readLocked());
     return normalizeLoaded(raw);
+  }
+  /**
+   * A file that is not JSON (truncated write) is kept verbatim in config/legacy/ and replaced by the built-in store, like
+   * an invalid structure. Its legacy directions import already ran (or never can), so it is not run again.
+   */
+  async function resetCorrupt(): Promise<Loaded> {
+    const stamp = now().toISOString().replace(/:/gu, "-");
+    const bytes = await storage.readBinary(PATH);
+    if (bytes) await storage.writeBinary(STORAGE_PATHS.legacyAtelier(stamp), bytes);
+    const at = now().toISOString();
+    const store: AtelierStoreDocument = { ...createDefaultAtelierStore(at), migrations: { legacyDirections: { at, scene: [], imageRatio: [] } } };
+    await storage.writeJson(PATH, store);
+    log("warn", `config/atelier.json could not be read (not valid JSON); the built-in store was restored and the original kept in ${STORAGE_PATHS.legacyAtelier(stamp)}.`);
+    return { store, issues: [], tooNew: false };
   }
   function normalizeLoaded(raw: unknown): Loaded {
     const { document, issues } = normalizeAtelierStore(raw, now().toISOString());
@@ -353,7 +372,13 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
   }
   /** Read inside the lock; creates / repairs the file when needed. */
   async function readLocked(): Promise<Loaded> {
-    const raw = await storage.readJson<unknown>(PATH, null);
+    let raw: unknown;
+    try {
+      raw = await storage.readJson<unknown>(PATH, null);
+    } catch (error) {
+      if (isCorruptJson(error)) return resetCorrupt();
+      throw error;
+    }
     if (raw === null || raw === undefined) {
       const config = await storage.loadConfig();
       let store = createDefaultAtelierStore(now().toISOString());

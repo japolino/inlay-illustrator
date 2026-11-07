@@ -148,6 +148,10 @@ export class AtelierStore {
   readonly store: Store<AtelierSnapshot>;
   private disposeApp: (() => void) | null = null;
   private lastState: AtelierState | null = null;
+  /** Document / library / import calls running (`busy` while any is). */
+  private busyCount = 0;
+  /** Edits made while a save was in flight: "auto" ones only are saved by a follow-up save. */
+  private editedDuringSave: "none" | "auto" | "draft" = "none";
   /** Download sink (tests replace it). */
   download: (fileName: string, json: string) => void = (fileName, json) => downloadJson(fileName, json);
 
@@ -322,17 +326,23 @@ export class AtelierStore {
     const wasDirty = draft.dirty;
     const doc = fn(draft.doc);
     if (doc === draft.doc) return;
+    this.noteEditDuringSave(mode);
     this.store.patch({ draft: { ...draft, doc, dirty: true }, failure: null, saveError: null, diagnostics: [] });
     if (mode === "auto" && !wasDirty && !this.snapshot.stale) void this.save();
+  }
+  private noteEditDuringSave(mode: "auto" | "draft"): void {
+    if (this.snapshot.saving && this.editedDuringSave !== "draft") this.editedDuringSave = mode;
   }
   setRawText(text: string | null): void {
     const draft = this.snapshot.draft;
     if (!draft) return;
+    if (text !== null) this.noteEditDuringSave("draft");
     this.store.patch({ draft: { ...draft, rawText: text, dirty: text !== null ? true : draft.dirty } });
   }
   setRulesText(text: string | null): void {
     const draft = this.snapshot.draft;
     if (!draft) return;
+    if (text !== null) this.noteEditDuringSave("draft");
     this.store.patch({ draft: { ...draft, rulesText: text, dirty: text !== null ? text !== formatRulesJson(draft.doc?.content.rules ?? []) || draft.dirty : draft.dirty } });
   }
   isReadOnly(): boolean {
@@ -365,20 +375,30 @@ export class AtelierStore {
       this.store.patch({ failure: "validation", saveError: { code: "bad-request", message: error ?? L.raw.invalid }, diagnostics: [] });
       return false;
     }
+    const sent = s.draft;
+    this.editedDuringSave = "none";
     this.store.patch({ saving: true, saveError: null });
     try {
-      const result = await this.app.call("atelier.documents.save", { baseRevision: state.revision, id: s.draft.id, json });
-      const stored = result.state.catalog.documents.find((d) => d.id === s.draft!.id);
+      const result = await this.app.call("atelier.documents.save", { baseRevision: state.revision, id: sent.id, json });
+      const stored = result.state.catalog.documents.find((d) => d.id === sent.id);
       this.lastState = result.state;
+      const now = this.snapshot.draft;
+      // Edits made while saving stay in the draft, on the stored document (like FormDraftStore.save).
+      const edited = !!now && now !== sent && now.id === sent.id && now.dirty;
+      const followUp = edited && !!stored && (this.editedDuringSave as string) === "auto";
       this.store.patch({
         saving: false,
         failure: null,
         diagnostics: [],
         stale: false,
-        draft: stored ? { ...this.buildDraft(stored.id, stored.json, stored.readError), rulesText: s.draft.rulesText !== null ? formatRulesJson(parsePreset(stored.json).doc?.content.rules ?? []) : null } : null
+        draft: now && now.id !== sent.id ? now
+          : edited && stored ? { ...now, baseJson: stored.json }
+          : stored ? { ...this.buildDraft(stored.id, stored.json, stored.readError), rulesText: sent.rulesText !== null ? formatRulesJson(parsePreset(stored.json).doc?.content.rules ?? []) : null } : null
       });
-      if (stored && this.snapshot.draft && s.view.rawOpen) this.store.patch({ view: { ...this.snapshot.view, rawOpen: !!stored.readError } });
+      if (stored && !edited && this.snapshot.draft && s.view.rawOpen) this.store.patch({ view: { ...this.snapshot.view, rawOpen: !!stored.readError } });
       this.app.applyAtelier(result.state);
+      // Toggles made during the save are saved too (they did not start their own save: the draft was dirty).
+      if (followUp) void this.save();
       return true;
     } catch (caught) {
       const rpc = toRpcError(caught);
@@ -448,7 +468,7 @@ export class AtelierStore {
   /** Runs a document RPC; on a revision conflict reloads and reports. Returns the result or null. */
   private async documentCall<T extends { state: AtelierState }>(call: () => Promise<T>): Promise<T | null> {
     if (!this.state) return null;
-    this.store.patch({ busy: true });
+    this.store.patch({ busy: ++this.busyCount > 0 });
     try {
       const result = await call();
       this.app.applyAtelier(result.state);
@@ -461,7 +481,7 @@ export class AtelierStore {
       } else this.app.notify({ tone: "danger", message: [rpc.message, ...errorDiagnostics(rpc).map((d) => d.message)].join(" ") });
       return null;
     } finally {
-      this.store.patch({ busy: false });
+      this.store.patch({ busy: --this.busyCount > 0 });
     }
   }
 
@@ -511,7 +531,7 @@ export class AtelierStore {
     if (utf8Size(json) > PRESET_MAX_BYTES) return { ok: false, errors: [L.importing.tooLarge] };
     const state = this.state;
     if (!state) return { ok: false, errors: [L.importing.saveFailed] };
-    this.store.patch({ busy: true });
+    this.store.patch({ busy: ++this.busyCount > 0 });
     try {
       const r = await this.app.call("atelier.documents.import", { baseRevision: state.revision, fileName: file.name.replace(/\.json$/i, ""), json, activate: true });
       this.app.applyAtelier(r.state);
@@ -524,7 +544,7 @@ export class AtelierStore {
       if (errorKind(rpc) === "conflict") await this.app.loadAtelier();
       return { ok: false, errors: diagnostics.length ? [rpc.message, ...diagnostics] : [errorKind(rpc) === "other" ? L.importing.saveFailed : rpc.message] };
     } finally {
-      this.store.patch({ busy: false });
+      this.store.patch({ busy: --this.busyCount > 0 });
     }
   }
 
@@ -560,7 +580,7 @@ export class AtelierStore {
   /* ---------------------------------------------------------------------------------------------- guidelines */
 
   private async libraryCall<T extends { state: AtelierState }>(call: () => Promise<T>): Promise<T | null> {
-    this.store.patch({ busy: true, guidelineError: null });
+    this.store.patch({ busy: ++this.busyCount > 0, guidelineError: null });
     try {
       const result = await call();
       this.app.applyAtelier(result.state);
@@ -571,7 +591,7 @@ export class AtelierStore {
       this.store.patch({ guidelineError: { message: conflict ? (conflict.kind === "character" || conflict.kind === "outfit" ? L.recovery.freeChanged : L.recovery.guidelineChanged) : rpc.message, ...(conflict ? { conflict } : {}) } });
       return null;
     } finally {
-      this.store.patch({ busy: false });
+      this.store.patch({ busy: --this.busyCount > 0 });
     }
   }
 

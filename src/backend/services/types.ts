@@ -152,6 +152,8 @@ export interface LlmCompleteRequest {
   visionFallback?: "drop-images" | "fail";
   /** Indices of messages that end a reusable prompt prefix. Marked as cache breakpoints for Anthropic; other providers cache a matching prefix on their own. */
   cacheBreakpoints?: number[];
+  /** The same request as plain messages, for providers that reject the cache partition's message shape (sent once on a 400). */
+  flatMessages?: LlmMessage[];
 }
 
 export interface LlmCompleteResult {

@@ -745,7 +745,12 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
           req.onRetryErrors?.((Array.isArray(e.retryErrors) ? e.retryErrors : []) as GenerationRetryError[], imageRetry);
           return;
         }
-        const imageCount = Number.isFinite(Number(e.imageCount)) ? Number(e.imageCount) + skipSlotIndexes.length : undefined;
+        // The engine counts the slots it will generate: its plan minus the skipped slots in that plan. Adding all our
+        // skipped slots is safe at "planning" (a skipped slot outside the plan is also in `done` below). The split core's
+        // early count (first detail batch, AM `eI(..., "analyzing-preset")`) subtracts only that batch's skipped slots,
+        // so with ours added it can exceed the plan; the plan never exceeds the run's count ceiling, so neither may it.
+        const counted = Number.isFinite(Number(e.imageCount)) ? Number(e.imageCount) + skipSlotIndexes.length : undefined;
+        const imageCount = counted === undefined || e.phase === "planning" ? counted : Math.min(counted, Math.max(W.max, 1));
         if (imageCount !== undefined && (e.phase === "planning" || (e.analysisComplete === false && e.phase === "analyzing-preset"))) {
           resolvedCount = imageCount;
           req.onResolvedCount?.(imageCount);

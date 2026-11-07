@@ -36,7 +36,7 @@ async function until<T>(read: () => T | null | undefined | false, timeoutMs = 30
   }
 }
 
-interface Rig { mock: ReturnType<typeof createFullMockBackend>; app: AppController; chat: ChatSideController; zoom: ZoomViewer; opened: Array<{ slotId: string; entryId?: string }>; destroy(): void }
+interface Rig { mock: ReturnType<typeof createFullMockBackend>; app: AppController; chat: ChatSideController; zoom: ZoomViewer; opened: Array<{ slotId: string; entryId?: string }>; host: ReturnType<typeof createFakeSpindleContext>; destroy(): void }
 
 const rigs: Rig[] = [];
 function rig(extra: Partial<ChatSideOptions> = {}): Rig {
@@ -48,7 +48,7 @@ function rig(extra: Partial<ChatSideOptions> = {}): Rig {
   const opened: Rig["opened"] = [];
   const zoom = createZoomViewer(fake.ctx, app, { doc });
   const chat = createChatSide(fake.ctx, app, { doc, debounceMs: 0, getActiveChatId: () => "chat-1", openZoom: (target) => { opened.push(target); zoom.open(target); }, ...extra });
-  const r: Rig = { mock, app, chat, zoom, opened, destroy: () => { chat.destroy(); zoom.destroy(); app.destroy(); fixture.destroy(); } };
+  const r: Rig = { mock, app, chat, zoom, opened, host: fake, destroy: () => { chat.destroy(); zoom.destroy(); app.destroy(); fixture.destroy(); } };
   rigs.push(r);
   return r;
 }
@@ -293,6 +293,94 @@ describe("chat side (DOM, dev mock)", () => {
     await r.app.resync();
     await until(() => q(`${edge}[data-ii-busy="false"] [data-ii-action="regenerate"]`));
     chat.holdJobs = false;
+  });
+
+  test("a failed message-state read is asked again (the footer does not stay hidden)", async () => {
+    const r = rig({ fetchRetryMs: 20 } as Partial<ChatSideOptions>);
+    const original = r.mock.handlers["chatDom.getMessageStates"]!;
+    let failures = 1;
+    r.mock.handlers["chatDom.getMessageStates"] = (params, ctx) => (failures-- > 0 ? ctx.fail("timeout", "No answer from the backend.") : original(params, ctx));
+    await until(() => q('[data-message-id="msg-4"] .ii-am-chat-footer'));
+    expect(calls(r, "chatDom.getMessageStates").length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("an older message-state answer never replaces a newer one", async () => {
+    const r = rig();
+    await until(() => q('[data-message-id="msg-2"] .ii-am-chat-footer'));
+    const original = r.mock.handlers["chatDom.getMessageStates"]!;
+    let n = 0;
+    let release!: () => void;
+    r.mock.handlers["chatDom.getMessageStates"] = async (params, ctx) => {
+      const result = await original(params, ctx);
+      if (n++ > 0) return result;
+      await new Promise<void>((resolve) => (release = resolve));
+      return { messages: result.messages.map((m) => ({ ...m, revisions: [] })) };
+    };
+    const stale = r.chat.refresh();
+    await r.chat.refresh();
+    release();
+    await stale;
+    expect(r.chat.stateOf("msg-2")?.revisions.length).toBe(2);
+  });
+
+  test("a slot regeneration that finished before its answer does not keep spinning", async () => {
+    const r = rig();
+    await r.app.init();
+    const edge = '.ii-am-chat-edge[data-ii-slot-id="illustration:msg-2@0:slot:0"]';
+    let answered = false;
+    r.mock.handlers["generation.regenerateSlot"] = async ({ slotId }, ctx) => {
+      const snapshot = { jobId: "regen-fast", chatId: "chat-1", messageKey: "illustration:msg-2@0", slotId, attemptKind: "regenerate", status: "running", phase: "generating", progress: { label: "Image 1/1" }, requestedCount: 1, completedSlots: 0, failedSlots: 0, canRetry: false, canRestart: false } as const;
+      ctx.emit("generation.progress", snapshot);
+      ctx.emit("generation.finished", { jobId: "regen-fast", chatId: "chat-1", messageKey: "illustration:msg-2@0", result: "failed", error: { code: "unsupported", message: "The image provider changed." } });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      answered = true;
+      return { jobId: "regen-fast" };
+    };
+    (await until(() => q(`${edge} [data-ii-action="regenerate"]`))).click();
+    await until(() => answered);
+    // Poll rather than sleep a fixed time (slow under the full suite), then check the slot stays idle.
+    await until(() => q(edge)?.getAttribute("data-ii-busy") === "false");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(q(edge)?.getAttribute("data-ii-busy")).toBe("false");
+  });
+
+  test("a toast Retry that fails keeps the failed toast (error details, Retry)", async () => {
+    const r = rig();
+    await until(() => q(".ii-am-chat-footer"));
+    r.mock.emit("generation.progress", { jobId: "job-f", chatId: "chat-1", messageKey: "illustration:msg-4@0", attemptKind: "initial", status: "running", phase: "generating", progress: { label: "Image 1/2" }, requestedCount: 2, completedSlots: 0, failedSlots: 0, canRetry: true, canRestart: false });
+    r.mock.emit("generation.finished", { jobId: "job-f", chatId: "chat-1", messageKey: "illustration:msg-4@0", result: "failed", error: { code: "provider-error", message: "HTTP 500", retryable: true } });
+    const toast = '[data-ii-toast-key="generation:job-f"]';
+    const retry = await until(() => q(`${toast} [data-ii-toast-action="retry"]`));
+    r.mock.handlers["generation.retry"] = (_params, ctx) => ctx.fail("busy", "Another generation is running.");
+    retry.click();
+    await until(() => calls(r, "generation.retry").length === 1);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(q(toast)).not.toBeNull();
+  });
+
+  test("Generate right after a host swipe starts the swipe on screen, not the one of the old footer state", async () => {
+    const r = rig();
+    const button = await until(() => q('[data-message-id="msg-4"] .ii-am-chat-footer__generate'));
+    mockChat(r.mock.db).messages.find((m) => m.messageId === "msg-4")!.swipeIndex = 1;
+    r.host.emitHostEvent("MESSAGE_SWIPED", { chatId: "chat-1", action: "navigated", swipeId: 1, previousSwipeId: 0, message: { id: "msg-4", swipe_id: 1 } });
+    button.click();
+    await until(() => calls(r, "generation.start").length === 1);
+    expect(calls(r, "generation.start")[0]!.params).toMatchObject({ messageId: "msg-4", swipeIndex: 1 });
+  });
+
+  test("a resolution picked just before the count panel closes is saved, not dropped", async () => {
+    const r = rig();
+    const defaults = r.mock.db.config.characterPrompt.charxGenerationDefaults;
+    defaults.fixedResolution = { enabled: true, sizeId: 2 };
+    await r.app.init();
+    (await until(() => q(".ii-am-chat-count__toggle"))).click();
+    (await until(() => q('[data-am-action="toggle-resolution"][aria-label="Generation resolution: 1216 × 832"]'))).click();
+    (await until(() => q('[data-am-action="select-resolution"][data-am-resolution="auto"]'))).click();
+    // The overlay opens within the 300 ms debounce: the panel unmounts.
+    r.chat.runtime.setFlags({ overlayOpen: true });
+    await until(() => !q(".ii-am-chat-count__toggle"));
+    await until(() => calls(r, "config.update").length === 1);
+    expect((calls(r, "config.update")[0]!.params as { patch: { runtime: { analysisExecution: unknown } } }).patch.runtime.analysisExecution).toMatchObject({ resolution: null });
   });
 
   test("backend error events open the runtime error dialog", async () => {

@@ -22,7 +22,14 @@ describe("run log branding", () => {
     log.append("warn", "pipeline", "Illustration message failed: k@0", { jobId: "j", error: { code: "provider-error", message: "NovelAI 429" } });
     log.append("error", "pipeline", "Plan failed", new Error("boom"));
     log.append("error", "pipeline", "Saving failed: boom", { message: "boom" });
-    expect(mirrored).toEqual(["[Inlay:pipeline] Illustration message failed: k@0 (provider-error: NovelAI 429)", "[Inlay:pipeline] Plan failed (boom)", "[Inlay:pipeline] Saving failed: boom"]);
+    // The job registry's line already says the message: only the code is added, not the message again.
+    log.append("error", "analysis", "references failed: NovelAI 429", { code: "provider-error", message: "NovelAI 429" });
+    expect(mirrored).toEqual([
+      "[Inlay:pipeline] Illustration message failed: k@0 (provider-error: NovelAI 429)",
+      "[Inlay:pipeline] Plan failed (boom)",
+      "[Inlay:pipeline] Saving failed: boom",
+      "[Inlay:analysis] references failed: NovelAI 429 (provider-error)",
+    ]);
   });
 });
 

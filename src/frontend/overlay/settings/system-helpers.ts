@@ -44,20 +44,25 @@ function finish(settings: ChatImageGenerationSettings, limit: number): ChatImage
   return normalizeChatImageGenerationSettings(settings, settings, limit);
 }
 
+/** A count edit switches back to single analysis, as in the count panel (AM `setCountPolicy`). */
+function withCountPolicy(settings: ChatImageGenerationSettings, countPolicy: ChatImageGenerationSettings["countPolicy"], limit: number): ChatImageGenerationSettings {
+  return finish({ ...settings, countPolicy, analysisMode: "single" }, limit);
+}
+
 export function setCountMode(settings: ChatImageGenerationSettings, mode: "fixed" | "range", limit: number): ChatImageGenerationSettings {
   const values = countPolicyValues(settings.countPolicy, limit);
-  return finish({ ...settings, countPolicy: normalizeCountPolicy({ mode, values }, settings.countPolicy, limit) }, limit);
+  return withCountPolicy(settings, normalizeCountPolicy({ mode, values }, settings.countPolicy, limit), limit);
 }
 
 export function setFixedCount(settings: ChatImageGenerationSettings, count: number, limit: number): ChatImageGenerationSettings {
   const values = countPolicyValues(settings.countPolicy, limit);
   const fixed = fixedCountPolicy(count, limit);
-  return finish({ ...settings, countPolicy: { ...fixed, values: { ...values, fixed: fixed.max } } }, limit);
+  return withCountPolicy(settings, { ...fixed, values: { ...values, fixed: fixed.max } }, limit);
 }
 
 export function setCountRange(settings: ChatImageGenerationSettings, min: number, max: number, limit: number): ChatImageGenerationSettings {
   const values = countPolicyValues(settings.countPolicy, limit);
-  return finish({ ...settings, countPolicy: normalizeCountPolicy({ mode: "range", values: { fixed: values.fixed, min, max } }, settings.countPolicy, limit) }, limit);
+  return withCountPolicy(settings, normalizeCountPolicy({ mode: "range", values: { fixed: values.fixed, min, max } }, settings.countPolicy, limit), limit);
 }
 
 export function setAnalysisMode(settings: ChatImageGenerationSettings, mode: "single" | "split", limit: number): ChatImageGenerationSettings {

@@ -94,4 +94,26 @@ describe("built-in art style migration (AM 0.9.90 removal, port keeps the look)"
     expect(stored()).toEqual(edited);
     expect(fake.files.get(STORAGE_PATHS.artistsGlobal)).toBe(JSON.stringify(edited));
   });
+
+  test("a failed character listing does not mark the migration done; the next start migrates with the references", async () => {
+    const doc = createEmptyCharacterDocument("hero");
+    const { fake, storage, stored } = setup({
+      [STORAGE_PATHS.configModel]: { version: 1, analysis: { temperature: 0.3 } },
+      [STORAGE_PATHS.artistsGlobal]: { version: 1, characterPrompt: { artistPrompts: [], defaultArtistId: "none" } },
+      [STORAGE_PATHS.characterDocument("hero")]: { ...doc, characterPrompt: { ...doc.characterPrompt, selectedArtistId: DETAIL.id } },
+    });
+    const list = fake.host.userStorage.list;
+    fake.host.userStorage.list = (async () => {
+      throw new Error("host busy");
+    }) as typeof list;
+    await storage.loadConfig();
+    // An unrelated settings change does not write the half-migrated artist list either.
+    await storage.updateConfig((c) => ({ ...c, analysis: { ...c.analysis, temperature: 0.5 } }));
+    expect(stored().version).toBe(1);
+    fake.host.userStorage.list = list;
+    const next = createStorageService(fake.host, fake.userId);
+    const config = await next.loadConfig();
+    expect(stored().version).toBe(2);
+    expect(listNovelAIArtists(config.characterPrompt.artistPrompts).map((a) => a.id)).toContain(DETAIL.id);
+  });
 });

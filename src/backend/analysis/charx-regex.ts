@@ -66,7 +66,10 @@ export async function charxRegexCharacter(services: BackendServices, characterId
 
 export async function runCharxRegex(ctx: JobContext, params: { force?: boolean }): Promise<JobOutcome> {
   const session = await openAnalysisSession(ctx.services, ctx.characterId, { reason: "charx-regex" });
-  const character = await charxRegexCharacter(ctx.services, ctx.characterId);
+  const character = await charxRegexCharacter(ctx.services, ctx.characterId).catch((error: unknown) => {
+    session.dispose();
+    throw error;
+  });
   const controller = AM.Ort({
     data: { getCurrentCharacter: async () => character },
     sourceCatalog: { ...session.sourceCatalog, getCachedCharacter: () => ({ character }) },
@@ -102,6 +105,9 @@ export async function runCharxRegex(ctx: JobContext, params: { force?: boolean }
       ...(messageKo ? { messageKo } : {}),
       ...(status === "error" ? { error: rpcError("provider-error", amMessage(error).message || message, { retryable: true }) } : {}),
     };
+  } catch (error) {
+    await session.store.settle();
+    throw error;
   } finally {
     ctx.signal.removeEventListener("abort", onAbort);
     unsubscribe?.();

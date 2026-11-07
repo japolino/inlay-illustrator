@@ -77,9 +77,9 @@ export function SystemSettingsPage() {
     if (before) app.store.patch({ config: { ...before, runtime: { ...before.runtime, nsfwAlwaysEnabled: enabled } } });
     try {
       await app.call("charxSettings.setDefaults", { patch: { nsfwAlwaysEnabled: enabled } });
-      app.store.patch({ config: (await app.call("config.get", {})).config });
+      app.applyServerConfig({ config: (await app.call("config.get", {})).config });
     } catch (caught) {
-      if (before) app.store.patch({ config: before });
+      app.applyServerConfig({}); // back to the last backend config (changes still in flight stay on top)
       app.notifyError(caught);
     }
   };
@@ -90,7 +90,8 @@ export function SystemSettingsPage() {
     try {
       await app.call("config.factoryReset", { confirm: true });
       const fresh = await app.call("config.get", {});
-      app.store.patch({ config: fresh.config, chatImageGeneration: fresh.chatImageGeneration, uiState: fresh.uiState });
+      app.applyServerConfig(fresh);
+      app.store.patch({ uiState: fresh.uiState });
       form.reset();
       void app.reloadWorkspace();
       app.notify({ tone: "success", message: S.factoryResetDone });

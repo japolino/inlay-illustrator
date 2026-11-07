@@ -75,6 +75,7 @@ export class RpcClient {
   private readonly eventHandlers = new Map<string, Set<(payload: unknown, seq: number) => void>>();
   private readonly anyHandlers = new Set<AnyEventHandler>();
   private readonly foreignHandlers = new Set<(message: unknown) => void>();
+  private readonly breakHandlers = new Set<(kind: "restart" | "gap") => void>();
   private readonly unsubscribe: () => void;
   private lastSeq = -1;
   private destroyed = false;
@@ -166,14 +167,27 @@ export class RpcClient {
     this.eventHandlers.clear();
     this.anyHandlers.clear();
     this.foreignHandlers.clear();
+    this.breakHandlers.clear();
+  }
+
+  /**
+   * Breaks in the event sequence: "restart" (a seq not above the last one: the backend restarted, its jobs' events are
+   * gone) or "gap" (events were dropped). Either way the state built from events is stale.
+   */
+  onStreamBreak(handler: (kind: "restart" | "gap") => void): () => void {
+    this.breakHandlers.add(handler);
+    return () => this.breakHandlers.delete(handler);
   }
 
   private dispatchEvent(envelope: RpcEventEnvelope): void {
     // A smaller seq than the last one means the backend restarted; accept it and restart the counter.
+    const previous = this.lastSeq;
     this.lastSeq = envelope.seq;
     const set = this.eventHandlers.get(envelope.event);
     if (set) for (const handler of [...set]) safe(() => handler(envelope.payload, envelope.seq));
     for (const handler of [...this.anyHandlers]) safe(() => handler(envelope.event, envelope.payload, envelope.seq));
+    const kind = previous < 0 ? null : envelope.seq <= previous ? "restart" : envelope.seq > previous + 1 ? "gap" : null;
+    if (kind) for (const handler of [...this.breakHandlers]) safe(() => handler(kind));
   }
 
   /** Last event sequence number seen (-1 = none). */

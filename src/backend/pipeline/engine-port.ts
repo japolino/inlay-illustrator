@@ -69,6 +69,8 @@ export interface EnginePort {
 export interface EnginePortOptions {
   /** Diagnostics sink (analyzer events). */
   onAnalyzerDiagnostic?: (event: { event: string; detail?: unknown }) => void;
+  /** Engine factory (tests); default `createAssetMaidEngine`. */
+  createEngine?: typeof createAssetMaidEngine;
 }
 
 export function createEnginePort(services: BackendServices, options: EnginePortOptions = {}): EnginePort {
@@ -76,7 +78,13 @@ export function createEnginePort(services: BackendServices, options: EnginePortO
   const adapters = createImageProviderAdapters(services, registry);
   const references = createComfyReferencePreparer(services);
   let current: AssetMaidEngine | null = null;
+  /**
+   * Config of the latest run / dispatch: the fallback for engine callbacks that get no run context (`getRetryCount`,
+   * only used when a request has no `retryCount`, which runs and dispatches always pass; the JEV adapter's `getConfig`).
+   */
   let snapshot: InlayConfig | null = null;
+  /** Config per run, by `providerRef.queueScopeKey`: the provider queues ask `getIntervalMs(providerRef)` per request. */
+  const runConfigs = new Map<string, InlayConfig>();
   // Outfit parts of the runs in flight (outfit-awareness.ts): read by the analyzer wrapper and the batch repair.
   const outfitRuns = new OutfitIndexRegistry();
   const repairItems = (input: Record<string, unknown>, items: readonly unknown[]): unknown[] => {
@@ -92,14 +100,17 @@ export function createEnginePort(services: BackendServices, options: EnginePortO
 
   const engineFor = (): AssetMaidEngine => {
     if (current) return current;
-    const engine = createAssetMaidEngine({
+    const engine = (options.createEngine ?? createAssetMaidEngine)({
       analyzerClient: withOutfitAwareness(services.llm.analyzerClient({ purpose: "analyzer" }), outfitRuns, (n) =>
         services.log.append("info", "pipeline", `Analyzer request: outfit parts of ${n} registered outfit(s) added.`),
       ) as never,
       imageProviders: adapters,
       comfyUIReferences: references,
       getRetryCount: () => snapshot?.runtime.generationAutoRetryCount ?? 5,
-      getIntervalMs: () => Math.max(0, Math.min(30, Number(snapshot?.runtime.novelaiParallelIntervalSec) || 0)) * 1000,
+      getIntervalMs: (ref?: { queueScopeKey?: unknown }) => {
+        const config = (typeof ref?.queueScopeKey === "string" ? runConfigs.get(ref.queueScopeKey) : undefined) ?? snapshot;
+        return Math.max(0, Math.min(30, Number(config?.runtime.novelaiParallelIntervalSec) || 0)) * 1000;
+      },
       jev: services.decisions ? services.decisions.createJevAdapter(() => snapshot?.jevConnection ?? { rosterSelectionDefault: false, model: "jev-latest" }, { userId: services.userId }) : undefined,
       onAnalyzerDiagnostic: (event) => options.onAnalyzerDiagnostic?.(event),
       prepareBatchItems: repairItems,
@@ -114,6 +125,7 @@ export function createEnginePort(services: BackendServices, options: EnginePortO
       const engine = engineFor();
       const runId = registry.register(context);
       const ref = { providerId: context.engineProvider, queueScopeKey: registry.queueScopeKey(runId) };
+      runConfigs.set(ref.queueScopeKey, config);
       const outfitIndex = (input as { outfitIndex?: RunOutfitIndex }).outfitIndex;
       const releaseOutfits = outfitIndex ? outfitRuns.register(outfitIndex) : undefined;
       // JEV roster progress and retry errors only update the generation session (AM setPhase(..., {jevSelection}),
@@ -150,6 +162,7 @@ export function createEnginePort(services: BackendServices, options: EnginePortO
       } finally {
         unsubscribe();
         releaseOutfits?.();
+        runConfigs.delete(ref.queueScopeKey);
         registry.release(runId);
       }
     },
@@ -158,10 +171,12 @@ export function createEnginePort(services: BackendServices, options: EnginePortO
       const engine = engineFor();
       const runId = registry.register(context);
       const providerRef = { providerId: request.provider, queueScopeKey: registry.queueScopeKey(runId) };
+      runConfigs.set(providerRef.queueScopeKey, config);
       const dispatcher = engine.parts.dispatcher as { generate(r: unknown, o?: unknown): Promise<Record<string, unknown>> };
       try {
         return await dispatcher.generate({ ...request, providerRef, ...(opts.signal ? { signal: opts.signal } : {}) }, { retryCount: config.runtime.generationAutoRetryCount, ...(opts.onRetry ? { onRetry: opts.onRetry } : {}) });
       } finally {
+        runConfigs.delete(providerRef.queueScopeKey);
         registry.release(runId);
       }
     },

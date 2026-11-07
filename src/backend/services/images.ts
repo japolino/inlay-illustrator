@@ -555,7 +555,9 @@ export function createImageService(deps: ImageServiceDeps): ImageService {
       const retries = request.retries !== undefined ? clampInt(request.retries, 0, 10, 0) : clampInt(config.runtime.generationAutoRetryCount, 0, 10, 5);
       const gapMs = () => clampInt(config.runtime.novelaiParallelIntervalSec, 0, 30, 0) * 1000;
       const timeoutMs = imageRequestTimeoutMs(target.generationProvider, config);
-      const queue = request.queue === false ? null : queueFor(target.generationProvider);
+      // `queue: false` skips the serial order and gap, never the hold on an abandoned NovelAI request (account lock).
+      const shared = queueFor(target.generationProvider);
+      const queue = request.queue === false ? null : shared;
 
       const callOnce = async (): Promise<Record<string, unknown>> => {
         if (config.runtime.devPromptOnly) {
@@ -563,7 +565,7 @@ export function createImageService(deps: ImageServiceDeps): ImageService {
           return { imageId: str(stored.id), provider: "prompt-only", model: target.model };
         }
         // A retry after a timeout must not overlap the timed-out request NovelAI is still drawing.
-        await queue?.whenFree(signal);
+        await shared.whenFree(signal);
         const pending = host.imageGen.generate(input as unknown as Parameters<SpindleHost["imageGen"]["generate"]>[0]) as Promise<unknown>;
         // A result that arrives after an abort / our timeout is discarded: delete the persisted image.
         let abandoned = false;
@@ -594,7 +596,7 @@ export function createImageService(deps: ImageServiceDeps): ImageService {
           abandoned = true;
           // Stopped waiting (abort, timeout): NovelAI allows one image at a time per account and keeps drawing this one, so
           // the next request waits for it.
-          if (!settled && target.generationProvider === "novelai") queue?.holdUntil(pending, ABANDONED_REQUEST_HOLD_MS);
+          if (!settled && target.generationProvider === "novelai") shared.holdUntil(pending, ABANDONED_REQUEST_HOLD_MS);
           throw error;
         }
       };

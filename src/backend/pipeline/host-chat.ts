@@ -99,22 +99,35 @@ export async function writeSwipeContent(host: SpindleHost, chatId: string, view:
  * (swipe, regenerate, continue) rewrites that message: publishing into it waits (AM "streaming" retries).
  */
 export class HostGenerationTracker {
-  private readonly active = new Map<string, Map<string, string>>();
+  private readonly active = new Map<string, Map<string, { target: string; startedAt: number }>>();
+  private readonly now: () => number;
+  private readonly maxAgeMs: number;
+
+  /**
+   * `maxAgeMs`: a generation older than this counts as ended. A lost or misrouted ENDED / STOPPED event (or one without
+   * the generation id) would otherwise keep the chat "streaming" until the worker restarts.
+   */
+  constructor(options: { now?: () => number; maxAgeMs?: number } = {}) {
+    this.now = options.now ?? (() => Date.now());
+    this.maxAgeMs = options.maxAgeMs ?? Number.POSITIVE_INFINITY;
+  }
 
   started(payload: { generationId?: unknown; chatId?: unknown; targetMessageId?: unknown }): void {
     const chatId = typeof payload.chatId === "string" ? payload.chatId : "";
     const generationId = typeof payload.generationId === "string" ? payload.generationId : "";
     if (!chatId || !generationId) return;
-    const map = this.active.get(chatId) ?? new Map<string, string>();
-    map.set(generationId, typeof payload.targetMessageId === "string" ? payload.targetMessageId : "");
+    const map = this.active.get(chatId) ?? new Map<string, { target: string; startedAt: number }>();
+    map.set(generationId, { target: typeof payload.targetMessageId === "string" ? payload.targetMessageId : "", startedAt: this.now() });
     this.active.set(chatId, map);
   }
 
+  /** An end without a generation id ends every generation of the chat (it can't be matched to one). */
   ended(payload: { generationId?: unknown; chatId?: unknown }): void {
     const chatId = typeof payload.chatId === "string" ? payload.chatId : "";
     const map = this.active.get(chatId);
     if (!map) return;
-    if (typeof payload.generationId === "string") map.delete(payload.generationId);
+    if (typeof payload.generationId === "string" && payload.generationId) map.delete(payload.generationId);
+    else map.clear();
     if (!map.size) this.active.delete(chatId);
   }
 
@@ -122,8 +135,14 @@ export class HostGenerationTracker {
   isStreaming(chatId: string, messageId?: string): boolean {
     const map = this.active.get(chatId);
     if (!map?.size) return false;
+    const now = this.now();
+    for (const [id, g] of map) if (now - g.startedAt >= this.maxAgeMs) map.delete(id);
+    if (!map.size) {
+      this.active.delete(chatId);
+      return false;
+    }
     if (!messageId) return true;
-    for (const target of map.values()) if (target === messageId) return true;
+    for (const g of map.values()) if (g.target === messageId) return true;
     return false;
   }
 

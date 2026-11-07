@@ -214,7 +214,8 @@ describe("chat pipeline: races", () => {
   test("an automatic run waits while another generation streams in the chat, then illustrates the reply", async () => {
     const { fx, engine, pipeline } = setup();
     await pipeline.handleHostEvent("GENERATION_STARTED", { generationId: "g-next", chatId: CHAT_ID });
-    await pipeline.handleGenerationEnded({ chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
+    // The reply's own end carries its generation id (an end without one ends every generation of the chat).
+    await pipeline.handleGenerationEnded({ generationId: "g-m1", chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
     await new Promise((r) => setTimeout(r, 600));
     expect(engine.runs.length).toBe(0);
     expect(finished(fx).length).toBe(0);
@@ -227,7 +228,7 @@ describe("chat pipeline: races", () => {
   test("an automatic run that waited does not illustrate a swipe the user left", async () => {
     const { fx, engine, pipeline } = setup({ messages: [{ id: "m1", swipes: ["A one.\n\nA two.", "B one.\n\nB two."], swipe_id: 0 }] });
     await pipeline.handleHostEvent("GENERATION_STARTED", { generationId: "g-swipe", chatId: CHAT_ID, targetMessageId: "m1" });
-    await pipeline.handleGenerationEnded({ chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
+    await pipeline.handleGenerationEnded({ generationId: "g-m1", chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
     const m = fx.fakeHost!.messages.get(CHAT_ID)!.find((x) => x.id === "m1")!;
     m.swipe_id = 1;
     m.content = m.swipes[1]!;

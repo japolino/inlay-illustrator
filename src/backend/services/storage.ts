@@ -78,7 +78,8 @@ export function createStorageService(host: SpindleHost, userId: string | undefin
   const queue = new KeyedQueue();
   const now = options.now ?? (() => new Date());
   let schemaChecked: Promise<void> | null = null;
-  let configCache: { config: InlayConfig; stored: Partial<Record<keyof StoredGlobalConfig, string>>; tooNew: Set<string> } | null = null;
+  /** `keep`: files rewritten only when their part changes (the built-in art style migration failed and runs again on the next start). */
+  let configCache: { config: InlayConfig; stored: Partial<Record<keyof StoredGlobalConfig, string>>; tooNew: Set<string>; keep: Set<string> } | null = null;
   /** Bumped on every cache write or reset, so a read that started before a config write never caches its older result. */
   let configGeneration = 0;
   const setConfigCache = (state: typeof configCache) => {
@@ -169,14 +170,19 @@ export function createStorageService(host: SpindleHost, userId: string | undefin
     }
     const legacyIds = new Set(LEGACY_BUILTIN_ARTIST_PRESETS.map((p) => p.id));
     const referenced = new Set<string>();
-    let files: string[] = [];
+    // A listing or read failure throws (the caller logs it): the migration runs once, so it must not run on half the data.
+    let files: string[];
     try {
       files = (await us.list("characters/", userId)).map((e) => `characters/${normalizePath(String(e))}`).filter((e) => e.endsWith("/asset-maid.json"));
-    } catch {
-      files = [];
+    } catch (error) {
+      throw storageFailure("Could not list the characters.", error);
     }
     for (const file of files) {
-      const doc = asRecord(await readRaw(file).catch(() => undefined));
+      const doc = asRecord(await readRaw(file).catch((error: unknown) => {
+        // A corrupt document can't be repaired by waiting; anything else (I/O) may pass on a later start.
+        if (error instanceof RpcFailure && error.error.detailCode === "STORAGE_CORRUPT_JSON") return undefined;
+        throw error;
+      }));
       const id = String(asRecord(doc.characterPrompt).selectedArtistId ?? "").trim();
       if (legacyIds.has(id)) referenced.add(id);
     }
@@ -210,7 +216,11 @@ export function createStorageService(host: SpindleHost, userId: string | undefin
   async function loadConfigState() {
     if (configCache) return configCache;
     const generation = configGeneration;
-    await queue.run(STORAGE_PATHS.artistsGlobal, () => migrateLegacyArtists()).catch((error) => log("warn", "Could not migrate the built-in art styles.", errorMessage(error)));
+    const keep = new Set<string>();
+    await queue.run(STORAGE_PATHS.artistsGlobal, () => migrateLegacyArtists()).catch((error) => {
+      keep.add(STORAGE_PATHS.artistsGlobal);
+      log("warn", "Could not migrate the built-in art styles.", errorMessage(error));
+    });
     const parts: Partial<StoredGlobalConfig> = {};
     const stored: Partial<Record<keyof StoredGlobalConfig, string>> = {};
     const tooNew = new Set<string>();
@@ -222,7 +232,7 @@ export function createStorageService(host: SpindleHost, userId: string | undefin
       stored[part] = JSON.stringify(read.raw);
       if (read.tooNew) tooNew.add(path);
     }
-    const state = { config: mergeStoredConfig(parts), stored, tooNew };
+    const state = { config: mergeStoredConfig(parts), stored, tooNew, keep };
     // loadConfig reads outside the config queue: a write (or reset) during this read wins over the older files read here.
     if (generation !== configGeneration) return configCache ?? state;
     configCache = state;
@@ -319,16 +329,32 @@ export function createStorageService(host: SpindleHost, userId: string | undefin
         const state = await loadConfigState();
         const next = normalizeConfig(await mutate(jsonClone(state.config)));
         const split = splitConfigForStorage(next);
+        const previous = splitConfigForStorage(state.config);
         const stored = { ...state.stored };
+        // Check every part before writing any, so a refused part leaves no half-written config behind.
+        const writes: Array<{ part: keyof StoredGlobalConfig; path: string; value: Record<string, unknown>; text: string }> = [];
         for (const { part, kind, path } of CONFIG_PARTS) {
           const value = withVersion(kind, asRecord(split[part]));
           const text = JSON.stringify(value);
           if (stored[part] === text) continue;
-          assertWritable(state.tooNew.has(path), path);
-          await writeRaw(path, value);
-          stored[part] = text;
+          if (state.tooNew.has(path) || state.keep.has(path)) {
+            // A newer build's file keeps its own version: it only blocks updates that change its part.
+            if (JSON.stringify(split[part] ?? {}) === JSON.stringify(previous[part] ?? {})) continue;
+            assertWritable(state.tooNew.has(path), path);
+          }
+          writes.push({ part, path, value, text });
         }
-        setConfigCache({ config: next, stored, tooNew: state.tooNew });
+        try {
+          for (const write of writes) {
+            await writeRaw(write.path, write.value);
+            stored[write.part] = write.text;
+          }
+        } catch (error) {
+          // Some parts may be on disk already: reload from disk next time.
+          setConfigCache(null);
+          throw error;
+        }
+        setConfigCache({ config: next, stored, tooNew: state.tooNew, keep: state.keep });
         return next;
       });
       options.events?.emit("config.changed", { config: jsonClone(config) });
@@ -341,7 +367,17 @@ export function createStorageService(host: SpindleHost, userId: string | undefin
       const loaded = loadChatImageGenerationSettings(stored.value, { legacySettings: settingsRaw });
       if (loaded.notice) log("info", loaded.notice);
       if (loaded.migrated && !stored.tooNew) {
-        await queue.run(STORAGE_PATHS.chatImageGenerationSettings, () => writeRaw(STORAGE_PATHS.chatImageGenerationSettings, withVersion("chat-image-generation-settings", { ...loaded.settings }))).catch((error) => log("warn", "Could not save migrated chat image settings.", errorMessage(error)));
+        const path = STORAGE_PATHS.chatImageGenerationSettings;
+        // Read outside the queue: a save queued meanwhile wins, and its settings are the ones to return.
+        const saved = await queue
+          .run(path, async () => {
+            const current = await readVersioned("chat-image-generation-settings", path);
+            if (current.raw !== undefined) return current;
+            await writeRaw(path, withVersion("chat-image-generation-settings", { ...loaded.settings }));
+            return null;
+          })
+          .catch((error) => void log("warn", "Could not save migrated chat image settings.", errorMessage(error)));
+        if (saved) return loadChatImageGenerationSettings(saved.value).settings;
       }
       return loaded.settings;
     },

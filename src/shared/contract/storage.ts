@@ -181,8 +181,8 @@ export function storedVersion(raw: unknown): number {
 }
 
 /**
- * Run migration hooks until the file reaches the current version. Files without a hook for their version
- * are only re-stamped (normalizers of each kind accept older shapes).
+ * Run migration hooks until the file reaches the current version, one version at a time: a version without a hook is
+ * passed through (normalizers of each kind accept older shapes), so a file without `version` still gets later hooks.
  */
 export function migrateStoredFile(kind: StorageFileKind, raw: unknown, migrations: readonly StorageMigration[] = STORAGE_MIGRATIONS): MigrationResult {
   const target = STORAGE_FILE_VERSIONS[kind];
@@ -197,7 +197,7 @@ export function migrateStoredFile(kind: StorageFileKind, raw: unknown, migration
       value = step.migrate(value);
       applied.push(`${kind}:${step.from}->${step.to}`);
       version = step.to;
-    } else version = target;
+    } else version += 1;
   }
   return { value: { ...value, version: target }, fromVersion: from, toVersion: target, applied, tooNew: false };
 }

@@ -458,12 +458,13 @@ export interface OutfitImageController {
   save(params: RpcParams<"outfitImage.save">): Promise<RpcResult<"outfitImage.save">>;
   /** AM outfit image generator (`fOt` generate/save) for the chat pipeline's free outfit / character generation. */
   amGenerator(characterId: string): AmOutfitGenerator;
-  cancelAll(): void;
+  /** Cancel every running job; resolves once they have settled (their history writes included). */
+  cancelAll(): Promise<void>;
   dispose(): void;
 }
 
 export function createOutfitImageController(services: BackendServices): OutfitImageController {
-  const jobs = new Map<string, AbortController>();
+  const jobs = new Map<string, { controller: AbortController; done: Promise<void> }>();
   let disposed = false;
 
   const progress = (jobId: string, p: ProgressInfo) => services.events.emit("outfitImage.progress", { jobId, progress: p });
@@ -486,8 +487,9 @@ export function createOutfitImageController(services: BackendServices): OutfitIm
       if (disposed) fail("internal", "The outfit image module was disposed.");
       const jobId = `outfit-${randomUuid()}`;
       const controller = new AbortController();
-      jobs.set(jobId, controller);
-      void (async () => {
+      const job = { controller, done: Promise.resolve() };
+      jobs.set(jobId, job);
+      job.done = (async () => {
         try {
           progress(jobId, { label: "Preparing outfit image", labelKo: "의상 이미지 생성 준비 중", fraction: 0 });
           const { request } = await buildOutfitImageRequest(services, params.target, params.formId, params.draft);
@@ -588,12 +590,14 @@ export function createOutfitImageController(services: BackendServices): OutfitIm
     amGenerator(characterId) {
       return createAmOutfitGenerator(services, characterId);
     },
-    cancelAll() {
-      for (const c of jobs.values()) c.abort();
+    async cancelAll() {
+      const running = [...jobs.values()];
+      for (const job of running) job.controller.abort();
+      await Promise.all(running.map((job) => job.done));
     },
     dispose() {
       disposed = true;
-      for (const c of jobs.values()) c.abort();
+      for (const job of jobs.values()) job.controller.abort();
     },
   };
 }

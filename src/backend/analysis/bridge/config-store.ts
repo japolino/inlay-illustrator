@@ -191,6 +191,8 @@ export class AmConfigStore {
   private error: unknown = null;
   private readonly persistenceListeners = new Set<() => void>();
   private writes = 0;
+  /** Updates queued and not yet persisted (AM `getPersistenceSnapshot().pending`). */
+  private pending = 0;
 
   constructor(
     private readonly services: BackendServices,
@@ -221,14 +223,18 @@ export class AmConfigStore {
     this.current = after;
     for (const domain of options.domains ?? ["*"]) this.domainRevisions.set(domain, (this.domainRevisions.get(domain) ?? 0) + 1);
     this.writes += 1;
+    this.pending += 1;
     this.queue = this.queue.then(async () => {
+      let failed = false;
       try {
         await persistAmConfigChange(this.services, this.characterId, before, after, { reason: this.reason });
       } catch (error) {
+        failed = true;
         this.error ??= error;
         this.services.log.append("error", "analysis", `Saving analysis results failed: ${error instanceof Error ? error.message : String(error)}`);
-        this.persistenceListeners.forEach((l) => l());
       }
+      this.pending -= 1;
+      if (failed || this.pending === 0) this.persistenceListeners.forEach((l) => l());
     });
     return after;
   }
@@ -256,7 +262,7 @@ export class AmConfigStore {
   }
 
   getPersistenceSnapshot(): { error: string; pending: boolean } {
-    return { error: this.error ? String(this.error instanceof Error ? this.error.message : this.error) : "", pending: false };
+    return { error: this.error ? String(this.error instanceof Error ? this.error.message : this.error) : "", pending: this.pending > 0 };
   }
 
   subscribePersistence(listener: () => void): () => void {

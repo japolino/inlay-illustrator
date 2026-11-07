@@ -1343,7 +1343,8 @@ export function normalizeChatImageGenerationSettings(value: unknown, fallback: C
   const r = asRecord(value);
   const split = asRecord(r.splitAnalysis);
   const positive = (n: unknown): n is number => Number.isSafeInteger(n) && Number(n) > 0;
-  const total = positive(split.totalCount) ? split.totalCount : null;
+  // AM caps the split total (the UI clamps too; a hand-edited or out-of-band value must not run a larger split).
+  const total = positive(split.totalCount) ? Math.min(split.totalCount, SPLIT_ANALYSIS_MAX_TOTAL) : null;
   const batch = positive(split.batchSize) ? split.batchSize : 3;
   // Rebuilt from the known fields: keys of removed features (`webtoonMode`, `comicFormat`) are dropped on the next write.
   return {

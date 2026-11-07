@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
 import { h, render } from "preact";
+import { createEvent } from "../../shared/contract/rpc.js";
 import { createMockBackend } from "../dev/mock-backend.js";
 import { coreMockHandlers } from "../dev/mock/core.js";
 import { RpcClient, type ClientResult } from "../rpc/client.js";
-import { AppContext, AppController, mergePatch, useRpcQuery, type QueryState } from "./app-state.js";
+import { AppContext, AppController, mergePatch, useRpcMutation, useRpcQuery, type MutationState, type QueryState } from "./app-state.js";
 
 function setup() {
   const mock = createMockBackend({ latencyMs: 0, timeScale: 0, handlers: [coreMockHandlers()] });
@@ -148,8 +149,178 @@ describe("AppController", () => {
     expect(app.state.analysisJobs.bad).toBeUndefined();
   });
 
+  test("a job that finishes while resync reads the job lists is not brought back as running", async () => {
+    const { app, mock } = setup();
+    await app.init();
+    const job = { jobId: "g1", chatId: "c1", messageKey: "illustration:m1@0", attemptKind: "initial", status: "running", phase: "generating", progress: { label: "x" }, requestedCount: 1, completedSlots: 0, failedSlots: 0, canRetry: false, canRestart: false } as const;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    mock.handlers["analysis.listActive"] = () => ({ jobs: [{ jobId: "a1", kind: "persona", characterId: "char-seoyeon", status: "running", progress: { label: "Reading" } }] });
+    mock.handlers["generation.listActive"] = async () => {
+      await gate;
+      return { jobs: [job] };
+    };
+    const resync = app.resync();
+    await tick();
+    // Both jobs end after the backend read its lists, before the answers arrive.
+    mock.emit("generation.finished", { jobId: "g1", chatId: "c1", messageKey: job.messageKey, result: "failed" });
+    mock.emit("analysis.finished", { jobId: "a1", kind: "persona", characterId: "char-seoyeon", status: "error", message: "Failed", error: { code: "internal", message: "boom" } });
+    await tick();
+    release();
+    await resync;
+    expect(app.state.generationJobs.g1).toBeUndefined();
+    expect(app.state.analysisJobs.a1?.status).toBe("error");
+    // A progress delivered after the finish does not bring it back either.
+    mock.emit("generation.progress", job);
+    await tick();
+    expect(app.state.generationJobs.g1).toBeUndefined();
+  });
+
+  test("a failed config patch drops only itself; an echo does not revert a patch still in flight", async () => {
+    const { app, mock } = setup();
+    await app.init();
+    const original = mock.handlers["config.update"]!;
+    const gates: Array<() => void> = [];
+    mock.handlers["config.update"] = async (params, ctx) => {
+      await new Promise<void>((resolve) => gates.push(resolve));
+      if (params.patch.runtime?.generationAutoRetryCount === 9) ctx.fail("internal", "nope");
+      return original(params, ctx);
+    };
+    const failing = app.updateConfig({ runtime: { generationAutoRetryCount: 9 } });
+    const succeeding = app.updateConfig({ ui: { developerModeEnabled: true } });
+    while (gates.length < 2) await tick();
+    mock.emit("config.changed", { config: structuredClone(mock.db.config) });
+    await tick();
+    expect(app.state.config?.ui.developerModeEnabled).toBe(true);
+    expect(app.state.config?.runtime.generationAutoRetryCount).toBe(9);
+    gates[1]!();
+    await succeeding;
+    gates[0]!();
+    await failing;
+    expect(app.state.config?.ui.developerModeEnabled).toBe(true);
+    expect(app.state.config?.runtime.generationAutoRetryCount).not.toBe(9);
+  });
+
+  test("a failed chat image settings save does not undo a later successful one", async () => {
+    const { app, mock } = setup();
+    await app.init();
+    const base = app.state.chatImageGeneration!;
+    const original = mock.handlers["chatImageGeneration.set"]!;
+    const gates: Array<() => void> = [];
+    let n = 0;
+    mock.handlers["chatImageGeneration.set"] = async (params, ctx) => {
+      const failing = n++ === 0;
+      await new Promise<void>((resolve) => gates.push(resolve));
+      if (failing) ctx.fail("internal", "nope");
+      return original(params, ctx);
+    };
+    const first = { ...base, autoGenerationEnabled: !base.autoGenerationEnabled };
+    const second = { ...first, splitAnalysis: { ...first.splitAnalysis, batchSize: first.splitAnalysis.batchSize + 1 } };
+    const failing = app.setChatImageGeneration(first);
+    const succeeding = app.setChatImageGeneration(second);
+    while (gates.length < 2) await tick();
+    gates[1]!();
+    await succeeding;
+    gates[0]!();
+    await failing;
+    expect(app.state.chatImageGeneration).toEqual(second);
+  });
+
+  test("status reads on chat switches: an older answer never replaces a newer read or a status.changed", async () => {
+    const { app, mock } = setup();
+    await app.init();
+    const base = app.state.status!;
+    const releases: Array<() => void> = [];
+    let answers = [{ ...base, activeChatId: "chat-A" }, { ...base, activeChatId: "chat-B" }];
+    mock.handlers["session.getStatus"] = async () => {
+      const status = answers.shift()!;
+      await new Promise<void>((resolve) => releases.push(resolve));
+      return status;
+    };
+    const first = app.refreshStatus();
+    const second = app.refreshStatus();
+    while (releases.length < 2) await tick();
+    releases[1]!();
+    await second;
+    releases[0]!();
+    await first;
+    expect(app.state.status?.activeChatId).toBe("chat-B");
+    answers = [{ ...base, activeChatId: "chat-stale" }];
+    const third = app.refreshStatus();
+    while (releases.length < 3) await tick();
+    mock.emit("status.changed", { ...base, activeChatId: "chat-C" });
+    await tick();
+    releases[2]!();
+    await third;
+    expect(app.state.status?.activeChatId).toBe("chat-C");
+  });
+
+  test("reconnect retries a failed handshake (resync alone did nothing in the error state)", async () => {
+    const { app, mock } = setup();
+    const hello = mock.handlers["session.hello"]!;
+    mock.handlers["session.hello"] = (_params, ctx) => ctx.fail("timeout", "No answer from the backend.");
+    await app.init();
+    expect(app.state.connection).toBe("error");
+    mock.handlers["session.hello"] = hello;
+    await app.reconnect();
+    expect(app.state.connection).toBe("ready");
+    expect(app.state.config).not.toBeNull();
+  });
+
+  test("an event sequence break (backend restart) re-reads the state", async () => {
+    const { app, mock } = setup();
+    await app.init();
+    const reads = () => mock.calls.filter((c) => c.method === "session.getStatus").length;
+    const before = reads();
+    const realSetTimeout = globalThis.setTimeout;
+    globalThis.setTimeout = ((handler: () => void, delay?: number) => realSetTimeout(handler, delay === 1_000 ? 0 : delay)) as typeof setTimeout;
+    try {
+      app.client.receive(createEvent("notice", { tone: "info", message: "a" }, 40));
+      app.client.receive(createEvent("notice", { tone: "info", message: "b" }, 1));
+    } finally {
+      globalThis.setTimeout = realSetTimeout;
+    }
+    await tick();
+    await tick();
+    expect(reads()).toBe(before + 1);
+  });
+
   test("mergePatch deep-merges objects and replaces arrays", () => {
     expect(mergePatch({ a: { b: 1, c: [1, 2] }, d: 1 }, { a: { c: [3] } })).toEqual({ a: { b: 1, c: [3] }, d: 1 });
+  });
+});
+
+describe("useRpcMutation", () => {
+  test("stays pending while any of several overlapping runs is in flight", async () => {
+    const { app, mock } = setup();
+    const win = new Window();
+    const root = win.document.createElement("div") as unknown as Element;
+    let release!: () => void;
+    let n = 0;
+    mock.handlers["uiState.set"] = async () => {
+      if (n++ === 0) await new Promise<void>((resolve) => (release = resolve));
+      return { ok: true };
+    };
+    let mutation!: MutationState<"uiState.set">;
+    function Probe() {
+      mutation = useRpcMutation("uiState.set");
+      return null;
+    }
+    render(h(AppContext.Provider, { value: app }, h(Probe, {})), root);
+    try {
+      const params = { uiState: {} } as never;
+      const first = mutation.run(params);
+      await mutation.run(params);
+      await tick();
+      expect(mutation.pending).toBe(true);
+      release();
+      await first;
+      await tick();
+      expect(mutation.pending).toBe(false);
+    } finally {
+      render(null, root);
+      win.happyDOM.abort();
+    }
   });
 });
 

@@ -16,7 +16,7 @@ import type { BackendModules } from "../rpc/types.js";
 import type { BackendServices } from "../services/types.js";
 import { AnalysisJobs, type JobOutcome } from "./jobs.js";
 import { createOutfitImageController, type OutfitImageController } from "./outfit.js";
-import { runAnalysis, SUPPORTED_ANALYSIS_KINDS } from "./runs.js";
+import { analysisLane, runAnalysis, SUPPORTED_ANALYSIS_KINDS } from "./runs.js";
 import { shareProfiles } from "./shared-profiles.js";
 
 export interface AnalysisController {
@@ -49,7 +49,7 @@ export function createAnalysisModule(services: BackendServices, _getModules?: ()
           detailCode: "ANALYSIS_KIND_UNSUPPORTED",
         });
       }
-      const started = jobs.start(params.kind, params.characterId, (ctx) => runAnalysis(ctx, params));
+      const started = jobs.start(params.kind, params.characterId, (ctx) => runAnalysis(ctx, params), analysisLane(params));
       done.set(started.jobId, started.done.finally(() => done.delete(started.jobId)));
       return { jobId: started.jobId };
     },

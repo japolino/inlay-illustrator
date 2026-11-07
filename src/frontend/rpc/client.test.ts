@@ -76,6 +76,15 @@ describe("RpcClient", () => {
     expect(client.lastEventSeq).toBe(2);
   });
 
+  test("reports breaks in the event sequence: a restart (seq not above the last) and a gap", () => {
+    const t = loopback();
+    const client = new RpcClient(t.transport);
+    const breaks: string[] = [];
+    client.onStreamBreak((kind) => breaks.push(kind));
+    for (const seq of [7, 8, 10, 2, 3]) t.deliver(createEvent("notice", { tone: "info", message: String(seq) }, seq));
+    expect(breaks).toEqual(["gap", "restart"]);
+  });
+
   test("destroy rejects pending calls", async () => {
     const t = loopback();
     const client = new RpcClient(t.transport);

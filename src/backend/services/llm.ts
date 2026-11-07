@@ -9,7 +9,8 @@
  *   retry) and remembered per provider/model only when the error names JSON mode.
  * - Parsing: the engine's lenient parser (AM `iQe` @79678) -> ANALYZER_JSON_PARSE with `analyzerRaw`.
  * - Vision: `analysis.vision` auto/supported/unsupported + connection metadata + a per connection/model cache (AM `Rde` @81538).
- *   An image-unsupported error (AM `oP` @81557) marks the model unsupported and the call is repeated text-only.
+ *   An image-unsupported error (AM `oP` @81557) marks the model unsupported (for CAPABILITY_RETRY_MS) and the call is
+ *   repeated text-only. An error about one image's format or MIME type only drops those images from that request.
  * - Retries: AM `hw` @81304 / `Not` (0.9.90): `runtime.generationAutoRetryCount` (0..10, default 5), fixed 100 ms delay
  *   (`jQe`). Only transport failures retry: HTTP 408/429/5xx, timeout, provider interrupted, network errors. Content errors
  *   (empty response, JSON parse, ...) fail at once since 0.9.90.
@@ -65,7 +66,12 @@ export interface LlmServiceDeps {
   getJson?: <T>(url: string, options?: { signal?: AbortSignal; timeoutMs?: number }) => Promise<T>;
   /** Test hook for the retry delay. */
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  /** Test hook for the capability caches' clock. */
+  now?: () => number;
 }
+
+/** A remembered "no vision" / "no JSON mode" is tried again after this long (a provider or model can change). */
+export const CAPABILITY_RETRY_MS = 30 * 60_000;
 
 interface ResolvedConnection {
   id: string;
@@ -187,6 +193,33 @@ export function unsupportedVisionError(error: unknown): boolean {
     /(?:image|image_url|vision).{0,160}only supported by.{0,80}models?/iu,
     /model.{0,120}(?:is not multimodal|is text[- ]only)/iu,
   ].some((pattern) => pattern.test(message));
+}
+
+const SAFE_IMAGE_TYPES = new Set(["image/png", "image/jpeg"]);
+
+/**
+ * Image types to drop when a vision error is about one image's format or MIME type ("Unsupported MIME type: image/gif",
+ * "unsupported image ... formats: ['png', 'jpeg']") rather than the model's vision. Null when the error is not about a
+ * format. Named types first, else the non-PNG/JPEG ones, else every type sent (all for this request only).
+ */
+export function rejectedImageTypes(error: unknown, messages: LlmMessage[]): Set<string> | null {
+  const message = errorMessage(error);
+  if (!/\bmime\b|\bmedia[ _-]?type|image\/[a-z]|\bformats?\b|\b(?:gif|avif|webp|heic|heif|bmp|tiff?|svg)\b/i.test(message)) return null;
+  const sent = new Set(messages.flatMap((m) => (Array.isArray(m.content) ? m.content.filter((p): p is LlmImagePart => p.type === "image").map((p) => p.mime_type.toLowerCase()) : [])));
+  const named = [...sent].filter((type) => message.toLowerCase().includes(type));
+  const namedUnusual = named.filter((type) => !SAFE_IMAGE_TYPES.has(type));
+  if (namedUnusual.length || named.length) return new Set(namedUnusual.length ? namedUnusual : named);
+  const unusual = [...sent].filter((type) => !SAFE_IMAGE_TYPES.has(type));
+  return new Set(unusual.length ? unusual : sent);
+}
+
+function dropImageTypes(messages: LlmMessage[], types: ReadonlySet<string>): LlmMessage[] {
+  if (!types.size) return messages;
+  return messages.map((m) => {
+    if (!Array.isArray(m.content) || !m.content.some((p) => p.type === "image" && types.has(p.mime_type.toLowerCase()))) return m;
+    const kept = m.content.filter((p) => p.type !== "image" || !types.has(p.mime_type.toLowerCase()));
+    return { ...m, content: kept.every((p) => p.type === "text") && kept.length === 1 ? (kept[0] as LlmTextPart).text : kept };
+  });
 }
 
 /** A rejection that names JSON mode: remembered per provider/model. */
@@ -360,8 +393,13 @@ function clampRetries(value: unknown, fallback: number): number {
 export function createLlmService(deps: LlmServiceDeps): LlmService {
   const { host, userId } = deps;
   const connectionCache = new TtlCache<ResolvedConnection>(5000, 32);
-  const jsonModeRejected = new Set<string>();
-  const visionCache = new Map<string, boolean>();
+  /** provider/model -> when JSON mode was rejected; tried again after CAPABILITY_RETRY_MS. */
+  const jsonModeRejected = new Map<string, number>();
+  /** connection/model -> vision verdict; a "no" is tried again after CAPABILITY_RETRY_MS. */
+  const visionCache = new Map<string, { value: boolean; at: number }>();
+  /** provider/model whose provider rejected the cache partition's message shape but took the flat messages. */
+  const partitionRejected = new Set<string>();
+  const now = deps.now ?? Date.now;
   const wait = deps.sleep ?? sleep;
   const log = (level: "debug" | "info" | "warn" | "error", message: string, details?: unknown) => deps.log?.append(level, "llm", message, details);
 
@@ -402,8 +440,10 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
   function visionFor(settings: AnalyzerSettings, connection: ResolvedConnection, model: string): boolean {
     if (settings.vision === "supported") return true;
     if (settings.vision === "unsupported") return false;
-    const cached = visionCache.get(visionKey(connection, model));
-    if (cached !== undefined) return cached;
+    const key = visionKey(connection, model);
+    const cached = visionCache.get(key);
+    if (cached && !cached.value && now() - cached.at >= CAPABILITY_RETRY_MS) visionCache.delete(key);
+    else if (cached) return cached.value;
     const declared = declaredVisionSupport(connection.metadata);
     if (declared !== null) return declared;
     // AM `ym`: deepseek is always "unsupported"; everything else is tried and classified on error.
@@ -476,15 +516,23 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
     const reasoning = reasoningDto(settings.reasoning);
     const capKey = JSON.stringify([connection.provider, model]);
 
-    let messages = request.messages;
+    // The messages sent = source (partition or flat) minus the images dropped so far.
+    const flat = request.flatMessages;
+    let partitionFallback = false;
+    let source = request.messages;
+    let breakpoints = request.cacheBreakpoints;
+    if (flat && partitionRejected.has(capKey)) [source, breakpoints] = [flat, undefined];
+    let textOnly = false;
+    const rejectedTypes = new Set<string>();
+    const prepare = () => withCacheBreakpoints(textOnly ? dropImages(source) : dropImageTypes(source, rejectedTypes), breakpoints, connection);
     let imagesDropped = false;
-    if (hasImages(messages) && !visionFor(settings, connection, model)) {
+    if (hasImages(source) && !visionFor(settings, connection, model)) {
       if (request.visionFallback === "fail") throw makeAnalyzerError("The selected analyzer model cannot read images.", { code: "ANALYZER_VISION_UNSUPPORTED" });
-      messages = dropImages(messages);
+      textOnly = true;
       imagesDropped = true;
       log("info", `Images dropped: ${model} cannot read images (${request.purpose}).`);
     }
-    messages = withCacheBreakpoints(messages, request.cacheBreakpoints, connection);
+    let messages = prepare();
 
     const baseParameters: Record<string, unknown> = { ...(request.parameters ?? {}) };
     const temperature = request.temperature ?? settings.temperature;
@@ -496,7 +544,7 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
     for (;;) {
       attempt += 1;
       let jsonMode =
-        request.responseMode === "json" && settings.jsonMode && baseParameters.response_format === undefined && supportsJsonMode(connection.provider, model) && !jsonModeRejected.has(capKey);
+        request.responseMode === "json" && settings.jsonMode && baseParameters.response_format === undefined && supportsJsonMode(connection.provider, model) && now() - (jsonModeRejected.get(capKey) ?? -Infinity) >= CAPABILITY_RETRY_MS;
       try {
         let result: unknown;
         for (;;) {
@@ -507,25 +555,47 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
           } catch (error) {
             if (isAbortLike(error) || error instanceof AnalyzerClientErrorClass) throw error;
             // Image errors first: their wording ("unsupported image ... formats") must not read as a JSON mode rejection.
-            if (!imagesDropped && hasImages(messages) && unsupportedVisionError(error)) {
-              visionCache.set(visionKey(connection, model), false);
+            if (hasImages(messages) && unsupportedVisionError(error)) {
+              const types = rejectedImageTypes(error, messages);
+              if (types) {
+                // One image's format, not the model's vision: drop those images for this request only, remember nothing.
+                const before = rejectedTypes.size;
+                for (const type of types) rejectedTypes.add(type);
+                if (rejectedTypes.size === before) textOnly = true;
+                messages = prepare();
+                if (request.visionFallback === "fail" && !hasImages(messages)) throw classifyLlmError(error);
+                imagesDropped = true;
+                log("warn", `${model} rejected ${textOnly ? "the images" : [...types].join(", ")}; resending without ${textOnly ? "them" : "those"} (${request.purpose}).`, errorMessage(error));
+                continue;
+              }
+              visionCache.set(visionKey(connection, model), { value: false, at: now() });
               if (request.visionFallback === "fail") throw makeAnalyzerError("The selected analyzer model cannot read images.", { code: "ANALYZER_VISION_UNSUPPORTED", cause: error });
-              messages = dropImages(messages);
+              textOnly = true;
+              messages = prepare();
               imagesDropped = true;
               log("warn", `${model} rejected images; resending text-only (${request.purpose}).`, errorMessage(error));
               continue;
             }
             if (jsonMode && (isJsonModeRejection(error) || mayBeJsonModeRejection(error))) {
               const named = isJsonModeRejection(error);
-              if (named) jsonModeRejected.add(capKey);
+              if (named) jsonModeRejected.set(capKey, now());
               jsonMode = false;
               log("warn", `${named ? "JSON mode rejected" : "Possible JSON mode rejection"} by ${connection.provider}/${model}; resending without it.`, errorMessage(error));
+              continue;
+            }
+            // Some providers (strict role alternation) reject the partition's [system, user, user, ...] shape: resend flat once.
+            if (flat && source !== flat && httpStatusOf(error) === 400 && !isJsonModeRejection(error) && !unsupportedVisionError(error)) {
+              [source, breakpoints] = [flat, undefined];
+              partitionFallback = true;
+              messages = prepare();
+              log("warn", `${connection.provider}/${model} rejected the cache partition; resending the flat messages.`, errorMessage(error));
               continue;
             }
             throw classifyLlmError(error);
           }
         }
-        if (hasImages(messages) && settings.vision === "auto") visionCache.set(visionKey(connection, model), true);
+        if (partitionFallback) partitionRejected.add(capKey);
+        if (hasImages(messages) && settings.vision === "auto") visionCache.set(visionKey(connection, model), { value: true, at: now() });
         const raw = extractText(result);
         const finishReason = extractFinishReason(result);
         if (!raw.trim()) {
@@ -576,7 +646,7 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
             {
               purpose: str(o.purpose) || clientOptions.purpose || "analyzer",
               messages: partitioned?.messages ?? messages.map(toLlmMessage),
-              ...(partitioned ? { cacheBreakpoints: partitioned.cacheBreakpoints } : {}),
+              ...(partitioned ? { cacheBreakpoints: partitioned.cacheBreakpoints, flatMessages: messages.map(toLlmMessage) } : {}),
               responseMode: o.responseMode === "text" ? "text" : "json",
               ...(o.structuredOutputSchema && typeof o.structuredOutputSchema === "object" ? { schema: o.structuredOutputSchema as Record<string, unknown> } : {}),
               ...(Number.isFinite(maxOutputTokens) && maxOutputTokens > 0 ? { maxTokens: maxOutputTokens } : {}),

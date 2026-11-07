@@ -5339,6 +5339,7 @@ function applyAtelierOverlay(runtime, atelier, source) {
   runtime.presetCatalog = { ...runtime.presetCatalog, atelier: jsonClone(atelier.catalog) };
   return runtime;
 }
+var SPLIT_ANALYSIS_MAX_TOTAL = 30;
 var MAX_SPLIT_BATCH_SIZE = 10;
 function createDefaultChatImageGenerationSettings() {
   return { autoGenerationEnabled: true, countPolicy: fixedCountPolicy(1), analysisMode: "single", splitAnalysis: { totalCount: null, batchSize: 3 } };
@@ -5351,7 +5352,7 @@ function normalizeChatImageGenerationSettings(value, fallback = DEFAULT_CHAT_IMA
   const r = asRecord(value);
   const split = asRecord(r.splitAnalysis);
   const positive = (n) => Number.isSafeInteger(n) && Number(n) > 0;
-  const total = positive(split.totalCount) ? split.totalCount : null;
+  const total = positive(split.totalCount) ? Math.min(split.totalCount, SPLIT_ANALYSIS_MAX_TOTAL) : null;
   const batch = positive(split.batchSize) ? split.batchSize : 3;
   return {
     analysisMode: r.analysisMode === "split" && total !== null ? "split" : "single",
@@ -5527,7 +5528,7 @@ function migrateStoredFile(kind, raw, migrations = STORAGE_MIGRATIONS) {
       applied.push(`${kind}:${step.from}->${step.to}`);
       version = step.to;
     } else
-      version = target;
+      version += 1;
   }
   return { value: { ...value, version: target }, fromVersion: from, toVersion: target, applied, tooNew: false };
 }
@@ -6086,17 +6087,17 @@ class AnalysisJobs {
   constructor(services) {
     this.services = services;
   }
-  start(kind, characterId, run) {
+  start(kind, characterId, run, lane = kind) {
     if (this.disposed)
       fail2("internal", "The analysis module was disposed.");
     for (const job of this.jobs.values()) {
-      if (job.kind === kind && job.characterId === characterId) {
+      if (job.lane === lane && job.characterId === characterId) {
         fail2("busy", "This analysis is already running for this character.", { messageKo: "다른 작업이 진행 중입니다. 완료 후 다시 실행해 주세요.", details: { jobId: job.jobId } });
       }
     }
     const jobId = createRequestId(`analysis-${kind}`);
     const controller = new AbortController;
-    const record = { jobId, kind, characterId, status: "running", progress: { label: "Starting", fraction: 0 }, controller, done: Promise.resolve(null) };
+    const record = { jobId, kind, lane, characterId, status: "running", progress: { label: "Starting", fraction: 0 }, controller, done: Promise.resolve(null) };
     const ctx = {
       services: this.services,
       jobId,
@@ -6116,7 +6117,7 @@ class AnalysisJobs {
         outcome = await run(ctx);
       } catch (error) {
         const rpc = toRpcError(error);
-        outcome = isAbortLike(error) || controller.signal.aborted ? { status: "cancelled", message: "Analysis cancelled." } : { status: "error", message: rpc.message, ...rpc.messageKo ? { messageKo: rpc.messageKo } : {}, error: rpc };
+        outcome = isAbortLike(error) || controller.signal.aborted && rpc.code !== "storage-error" && rpc.detailCode !== "storage-error" ? { status: "cancelled", message: "Analysis cancelled." } : { status: "error", message: rpc.message, ...rpc.messageKo ? { messageKo: rpc.messageKo } : {}, error: rpc };
         if (outcome.status === "error")
           this.services.log.append("error", "analysis", `${kind} failed: ${rpc.message}`, rpc);
       } finally {
@@ -43279,6 +43280,7 @@ class AmConfigStore {
   error = null;
   persistenceListeners = new Set;
   writes = 0;
+  pending = 0;
   constructor(services, characterId, parts, reason = "analysis") {
     this.services = services;
     this.characterId = characterId;
@@ -43303,14 +43305,19 @@ class AmConfigStore {
     for (const domain of options.domains ?? ["*"])
       this.domainRevisions.set(domain, (this.domainRevisions.get(domain) ?? 0) + 1);
     this.writes += 1;
+    this.pending += 1;
     this.queue = this.queue.then(async () => {
+      let failed = false;
       try {
         await persistAmConfigChange(this.services, this.characterId, before, after, { reason: this.reason });
       } catch (error) {
+        failed = true;
         this.error ??= error;
         this.services.log.append("error", "analysis", `Saving analysis results failed: ${error instanceof Error ? error.message : String(error)}`);
-        this.persistenceListeners.forEach((l) => l());
       }
+      this.pending -= 1;
+      if (failed || this.pending === 0)
+        this.persistenceListeners.forEach((l) => l());
     });
     return after;
   }
@@ -43332,7 +43339,7 @@ class AmConfigStore {
     return this.writes;
   }
   getPersistenceSnapshot() {
-    return { error: this.error ? String(this.error instanceof Error ? this.error.message : this.error) : "", pending: false };
+    return { error: this.error ? String(this.error instanceof Error ? this.error.message : this.error) : "", pending: this.pending > 0 };
   }
   subscribePersistence(listener) {
     this.persistenceListeners.add(listener);
@@ -43958,8 +43965,9 @@ function createOutfitImageController(services) {
         fail2("internal", "The outfit image module was disposed.");
       const jobId = `outfit-${randomUuid()}`;
       const controller = new AbortController;
-      jobs.set(jobId, controller);
-      (async () => {
+      const job = { controller, done: Promise.resolve() };
+      jobs.set(jobId, job);
+      job.done = (async () => {
         try {
           progress(jobId, { label: "Preparing outfit image", labelKo: "의상 이미지 생성 준비 중", fraction: 0 });
           const { request } = await buildOutfitImageRequest(services, params.target, params.formId, params.draft);
@@ -44053,14 +44061,16 @@ function createOutfitImageController(services) {
     amGenerator(characterId) {
       return createAmOutfitGenerator(services, characterId);
     },
-    cancelAll() {
-      for (const c of jobs.values())
-        c.abort();
+    async cancelAll() {
+      const running = [...jobs.values()];
+      for (const job of running)
+        job.controller.abort();
+      await Promise.all(running.map((job) => job.done));
     },
     dispose() {
       disposed = true;
-      for (const c of jobs.values())
-        c.abort();
+      for (const job of jobs.values())
+        job.controller.abort();
     }
   };
 }
@@ -44249,7 +44259,10 @@ async function charxRegexCharacter(services, characterId) {
 }
 async function runCharxRegex(ctx, params) {
   const session = await openAnalysisSession(ctx.services, ctx.characterId, { reason: "charx-regex" });
-  const character = await charxRegexCharacter(ctx.services, ctx.characterId);
+  const character = await charxRegexCharacter(ctx.services, ctx.characterId).catch((error) => {
+    session.dispose();
+    throw error;
+  });
   const controller = AM.Ort({
     data: { getCurrentCharacter: async () => character },
     sourceCatalog: { ...session.sourceCatalog, getCachedCharacter: () => ({ character }) },
@@ -44282,6 +44295,9 @@ async function runCharxRegex(ctx, params) {
       ...messageKo ? { messageKo } : {},
       ...status === "error" ? { error: rpcError("provider-error", amMessage(error).message || message, { retryable: true }) } : {}
     };
+  } catch (error) {
+    await session.store.settle();
+    throw error;
   } finally {
     ctx.signal.removeEventListener("abort", onAbort);
     unsubscribe?.();
@@ -45121,14 +45137,12 @@ async function loadRoster(services, characterId) {
   const source = amFn("r5")(rawSource, parts.document.customCharacters, "all") ?? rawSource;
   return { name: character.name, roster: projectRoster(source, parts.document) };
 }
+var validAutoPickState = (raw) => raw && raw.version === 1 && Array.isArray(raw.groups) ? raw : emptyAutoPickState();
 async function readAutoPickState(services, characterId) {
-  const raw = await services.storage.readJson(AUTOPICK_PATH(characterId), emptyAutoPickState());
-  return raw && raw.version === 1 && Array.isArray(raw.groups) ? raw : emptyAutoPickState();
+  return validAutoPickState(await services.storage.readJson(AUTOPICK_PATH(characterId), emptyAutoPickState()));
 }
-async function writeAutoPickState(services, characterId, state) {
-  const next = { ...state, updatedAt: new Date().toISOString() };
-  await services.storage.writeJson(AUTOPICK_PATH(characterId), next);
-  return next;
+async function updateAutoPickState(services, characterId, mutate) {
+  return services.storage.updateJson(AUTOPICK_PATH(characterId), emptyAutoPickState(), async (raw) => ({ ...await mutate(validAutoPickState(raw)), updatedAt: new Date().toISOString() }));
 }
 async function withLiveOutfits(services, characterId, groups) {
   if (!groups.some((g) => g.appliedOutfitId))
@@ -45371,11 +45385,7 @@ function groupAssets(assets, result, roster, previous) {
 }
 async function runPlan(ctx, delays = RETRY_DELAYS_MS) {
   ctx.progress({ label: "Listing the card's images" });
-  const [images, { name, roster }, previous] = await Promise.all([
-    ctx.services.sources.listCharacterImages(ctx.characterId),
-    loadRoster(ctx.services, ctx.characterId),
-    readAutoPickState(ctx.services, ctx.characterId)
-  ]);
+  const [images, { name, roster }] = await Promise.all([ctx.services.sources.listCharacterImages(ctx.characterId), loadRoster(ctx.services, ctx.characterId)]);
   const assets = namedAssets(images);
   if (!assets.length)
     return { status: "no-evidence", message: "This card has no named image assets." };
@@ -45383,8 +45393,13 @@ async function runPlan(ctx, delays = RETRY_DELAYS_MS) {
   if (!result.scheme.regex || result.scheme.coverage < 0.3) {
     return { status: "no-evidence", message: `Could not read the asset naming scheme (${Math.round(result.scheme.coverage * 100)}% of names matched).` };
   }
-  const groups = await withLiveOutfits(ctx.services, ctx.characterId, groupAssets(assets, result, roster, previous));
-  const state = await writeAutoPickState(ctx.services, ctx.characterId, { version: 1, scheme: result.scheme, groups, unmatched: sampleNames(result.unmatched, 30), updatedAt: "" });
+  const state = await updateAutoPickState(ctx.services, ctx.characterId, async (current) => ({
+    version: 1,
+    scheme: result.scheme,
+    groups: await withLiveOutfits(ctx.services, ctx.characterId, groupAssets(assets, result, roster, current)),
+    unmatched: sampleNames(result.unmatched, 30),
+    updatedAt: ""
+  }));
   const characters = new Set(state.groups.filter((g) => g.promptKey).map((g) => g.promptKey)).size;
   const message = `${state.groups.length} outfit group(s) for ${characters} character(s) from ${assets.length} images (${Math.round(result.scheme.coverage * 100)}% of names matched, ${result.scheme.calls} call(s)).`;
   ctx.services.log.append("info", "outfit-autopick", `Naming scheme: ${result.scheme.regex} — ${message}`);
@@ -45506,8 +45521,7 @@ async function runTag(ctx, sheets, delays = RETRY_DELAYS_MS) {
         updates.set(t.groupId, parseTile(a, t.candidate));
     }
     tagged += updates.size;
-    const current = await readAutoPickState(ctx.services, ctx.characterId);
-    state = await writeAutoPickState(ctx.services, ctx.characterId, { ...current, groups: current.groups.map((g) => updates.has(g.id) ? { ...g, tags: updates.get(g.id) } : g) });
+    state = await updateAutoPickState(ctx.services, ctx.characterId, (current) => ({ ...current, groups: current.groups.map((g) => updates.has(g.id) ? { ...g, tags: updates.get(g.id) } : g) }));
   }
   const message = `Tagged ${tagged} outfit group(s) from ${sheets.length} contact sheet(s)${failed ? `; ${failed} sheet(s) failed` : ""}.`;
   ctx.progress({ label: message, done: sheets.length, total: sheets.length, fraction: 1 });
@@ -45574,9 +45588,10 @@ async function applyAutoPick(services, params) {
     }
     return { ...doc, characterPrompt: { ...doc.characterPrompt, characterForms: forms } };
   }, { expectedUpdatedAt: base.updatedAt, reason: "outfit-autopick" });
-  const current = await readAutoPickState(services, characterId);
-  const groups = current.groups.map((g) => applied.has(g.id) ? { ...g, appliedOutfitId: applied.get(g.id) } : g);
-  const next = await writeAutoPickState(services, characterId, { ...current, groups: await withLiveOutfits(services, characterId, groups) });
+  const next = await updateAutoPickState(services, characterId, async (current) => ({
+    ...current,
+    groups: await withLiveOutfits(services, characterId, current.groups.map((g) => applied.has(g.id) ? { ...g, appliedOutfitId: applied.get(g.id) } : g))
+  }));
   services.log.append("info", "outfit-autopick", `Added ${added} outfit(s) with reference images; ${skipped} already present or skipped.`);
   return { added, skipped, state: next };
 }
@@ -45650,12 +45665,23 @@ async function driveAmController(ctx, session, controller, invoke, rowKeys = [])
     if (pendingRows.size)
       flushRows();
     return outcomeOf(controller.getSnapshot(), returned);
+  } catch (error) {
+    await session.store.settle();
+    throw error;
   } finally {
     ctx.signal.removeEventListener("abort", onAbort);
     unsubscribe?.();
     rowUnsubs.forEach((u) => u?.());
     controller.dispose?.();
     session.dispose();
+  }
+}
+async function prepared(session, build) {
+  try {
+    return await build();
+  } catch (error) {
+    session.dispose();
+    throw error;
   }
 }
 async function open(ctx, reason) {
@@ -45680,7 +45706,7 @@ var sessionLore = (session) => outfitLore(session, (promptKey) => loreBodiesByPr
 var promptKeysOf = (session) => session.source.members.flatMap((m) => m.lorebooks.map((l) => amFn("Is")(m, l)));
 async function runCharacterPrompts(ctx, params, explicit = false) {
   const session = await open(ctx, "asset-analysis");
-  const controller = AM.ptt({
+  const controller = await prepared(session, () => AM.ptt({
     sourceCatalog: session.sourceCatalog,
     metadata: session.metadata,
     images: session.images,
@@ -45688,7 +45714,7 @@ async function runCharacterPrompts(ctx, params, explicit = false) {
     config: session.store,
     priorityAssets: session.priorityAssets,
     ensureSourceHydrated: async () => {}
-  });
+  }));
   const order = params.promptKeys?.length ? params.promptKeys : undefined;
   return driveAmController(ctx, session, controller, () => controller.analyzePrompts({
     scope: "current-source",
@@ -45704,7 +45730,7 @@ async function runReferences(ctx, params) {
   if ((params.evidenceMode ?? "image") === "text")
     return runCharacterPrompts(ctx, params, true);
   const session = await open(ctx, "reference-analysis");
-  const controller = AM.Ntt({
+  const controller = await prepared(session, () => AM.Ntt({
     sourceCatalog: session.sourceCatalog,
     metadata: session.metadata,
     images: session.images,
@@ -45712,7 +45738,7 @@ async function runReferences(ctx, params) {
     config: session.store,
     priorityAssets: session.priorityAssets,
     ensureSourceHydrated: async () => {}
-  });
+  }));
   return driveAmController(ctx, session, controller, () => controller.analyzeReferences({
     scope: "current-source",
     sourceId: ctx.characterId,
@@ -45723,22 +45749,24 @@ async function runReferences(ctx, params) {
 }
 async function runPersona(ctx, params) {
   const session = await open(ctx, "persona-analysis");
-  await session.sourceCatalog.refreshPersonas();
-  const personas = await ctx.services.sources.listPersonas().catch(() => []);
-  const personaText = (key) => personas.find((p) => p.personaId === key.replace(/^persona:+/, ""))?.description;
-  const controller = AM.Att({
-    sourceCatalog: session.sourceCatalog,
-    metadata: session.metadata,
-    images: session.images,
-    analyzer: analyzer(ctx, "persona-analysis", outfitLore(session, personaText)),
-    config: session.store,
-    referenceCrops: session.referenceCrops
+  const controller = await prepared(session, async () => {
+    await session.sourceCatalog.refreshPersonas();
+    const personas = await ctx.services.sources.listPersonas().catch(() => []);
+    const personaText = (key) => personas.find((p) => p.personaId === key.replace(/^persona:+/, ""))?.description;
+    return AM.Att({
+      sourceCatalog: session.sourceCatalog,
+      metadata: session.metadata,
+      images: session.images,
+      analyzer: analyzer(ctx, "persona-analysis", outfitLore(session, personaText)),
+      config: session.store,
+      referenceCrops: session.referenceCrops
+    });
   });
   return driveAmController(ctx, session, controller, () => controller.analyze({ personaKeys: params.personaIds ?? [], assetSelection: "analysis", evidenceMode: params.evidenceMode ?? "image", sourceId: ctx.characterId }));
 }
 async function runAssetMatching(ctx, params) {
   const session = await open(ctx, "asset-matching");
-  const controller = AM.Hrt({ sourceCatalog: session.sourceCatalog, analyzer: analyzer(ctx, "asset-matching"), config: session.store, priorityAssets: session.priorityAssets });
+  const controller = await prepared(session, () => AM.Hrt({ sourceCatalog: session.sourceCatalog, analyzer: analyzer(ctx, "asset-matching"), config: session.store, priorityAssets: session.priorityAssets }));
   return driveAmController(ctx, session, controller, () => controller.analyzeMatching({
     scope: "current-source",
     sourceId: ctx.characterId,
@@ -45749,22 +45777,24 @@ async function runAssetMatching(ctx, params) {
 }
 async function runMetadataCheck(ctx) {
   const session = await open(ctx, "metadata-check");
-  const controller = AM.Vet({ config: session.store, sourceCatalog: session.sourceCatalog, metadata: session.metadata, priorityAssets: session.priorityAssets });
+  const controller = await prepared(session, () => AM.Vet({ config: session.store, sourceCatalog: session.sourceCatalog, metadata: session.metadata, priorityAssets: session.priorityAssets }));
   return driveAmController(ctx, session, controller, () => controller.analyzeMetadata({ scope: "current-source", sourceId: ctx.characterId }));
 }
 async function runArtistExtraction(ctx, params) {
   const session = await open(ctx, "artist-extraction");
-  if (params.asset) {
-    const stored = amFn("cn")(params.asset);
-    session.store.update((c) => ({ ...c, characterPrompt: { ...c.characterPrompt, artistExtractionAssetBySourceId: { ...c.characterPrompt.artistExtractionAssetBySourceId, [ctx.characterId]: { ...stored, ext: stored.extension } } } }), { domains: ["asset-analysis"] });
-  }
-  const controller = AM.$et({
-    sourceCatalog: session.sourceCatalog,
-    metadata: session.metadata,
-    analyzer: analyzer(ctx, "artist-extraction"),
-    config: session.store,
-    priorityAssets: session.priorityAssets,
-    ensureSourceHydrated: async () => {}
+  const controller = await prepared(session, () => {
+    if (params.asset) {
+      const stored = amFn("cn")(params.asset);
+      session.store.update((c) => ({ ...c, characterPrompt: { ...c.characterPrompt, artistExtractionAssetBySourceId: { ...c.characterPrompt.artistExtractionAssetBySourceId, [ctx.characterId]: { ...stored, ext: stored.extension } } } }), { domains: ["asset-analysis"] });
+    }
+    return AM.$et({
+      sourceCatalog: session.sourceCatalog,
+      metadata: session.metadata,
+      analyzer: analyzer(ctx, "artist-extraction"),
+      config: session.store,
+      priorityAssets: session.priorityAssets,
+      ensureSourceHydrated: async () => {}
+    });
   });
   return driveAmController(ctx, session, controller, () => controller.extractArtistPrompt({ sourceId: ctx.characterId }));
 }
@@ -45782,6 +45812,7 @@ async function runRepresentativePick(ctx, params) {
     ctx.progress({ label: message, ...messageKo ? { labelKo: messageKo } : {}, done: items.length, total: items.length, fraction: 1 });
     return { status: result.addedImages ? "success" : "no-evidence", message, ...messageKo ? { messageKo } : {} };
   } finally {
+    await session.store.settle();
     session.dispose();
   }
 }
@@ -45789,7 +45820,7 @@ async function runReclassification(ctx, params) {
   const session = await open(ctx, "reclassification");
   const personaMode = !!params.personaIds?.length;
   const keys = personaMode ? params.personaIds : params.promptKeys?.length ? params.promptKeys : promptKeysOf(session);
-  const personas = personaMode ? (await buildPersonaCatalog(ctx.services)).records : [];
+  const personas = personaMode ? (await prepared(session, () => buildPersonaCatalog(ctx.services))).records : [];
   const adapter = personaMode ? {
     domain: "settings",
     capture: (t, r) => [...new Set(r.targets.map((n) => n.promptKey))].flatMap((key) => {
@@ -45808,14 +45839,14 @@ async function runReclassification(ctx, params) {
     store: (t, r, n) => AM.vf(t, r, AM.N2(AM.w_(t.characterPrompt.personaSettings.profiles[r]).forms, AM.Il(t, r), n)),
     topics: () => ["reclassification"]
   } : { domain: "prompts", capture: (t, r) => AM.tTe(t, r.targets), collection: AM.nTe, store: AM.l7, topics: () => ["reclassification"] };
-  const controller = AM.Bge({
+  const controller = await prepared(session, () => AM.Bge({
     config: session.store,
     analyzer: analyzer(ctx, "prompt-reclassification"),
     blocked: () => false,
     drafts: { flush() {}, projectPending: (config) => config },
     adapter,
     context: () => ({ sourceId: ctx.characterId, targets: keys.map((promptKey) => ({ promptKey })), generation: 0, available: keys.length > 0 })
-  });
+  }));
   const unsubscribe = controller.subscribe(() => {
     const snap = controller.getSnapshot();
     ctx.progress({ ...amLabel(String(snap.message ?? "")), ...snap.total ? { done: snap.completed, total: snap.total } : {}, ...snap.retry ? { retry: { attempt: snap.retry.attempt, total: snap.retry.total }, retryCount: `${snap.retry.attempt}/${snap.retry.total}` } : {} });
@@ -45835,11 +45866,17 @@ async function runReclassification(ctx, params) {
       ...messageKo ? { messageKo } : {},
       ...status === "error" ? { error: rpcError("provider-error", message, { ...messageKo ? { messageKo } : {}, retryable: true }) } : {}
     };
+  } catch (error) {
+    await session.store.settle();
+    throw error;
   } finally {
     ctx.signal.removeEventListener("abort", onAbort);
     unsubscribe?.();
     session.dispose();
   }
+}
+function analysisLane(params) {
+  return params.kind === "references" && (params.evidenceMode ?? "image") === "text" ? "character-prompts" : params.kind;
 }
 async function runAnalysis(ctx, params) {
   switch (params.kind) {
@@ -46088,7 +46125,7 @@ function createAnalysisModule(services, _getModules) {
           detailCode: "ANALYSIS_KIND_UNSUPPORTED"
         });
       }
-      const started = jobs.start(params.kind, params.characterId, (ctx) => runAnalysis(ctx, params));
+      const started = jobs.start(params.kind, params.characterId, (ctx) => runAnalysis(ctx, params), analysisLane(params));
       done.set(started.jobId, started.done.finally(() => done.delete(started.jobId)));
       return { jobId: started.jobId };
     },
@@ -46990,16 +47027,32 @@ function importLegacyDirectionsInto(am, config, select, newId) {
   validateLibraryEdit(library, next);
   return { am: commitLibrary(am, next, catalogOf(am).activeId), created };
 }
+var isCorruptJson = (error) => error instanceof RpcFailure && error.error.detailCode === "STORAGE_CORRUPT_JSON";
 function createAtelierService(deps) {
   const { storage } = deps;
   const now = deps.now ?? (() => new Date);
   const newId = deps.newId ?? (() => crypto.randomUUID());
   const log = (level, message, details) => deps.log?.append(level, "atelier", message, details);
   async function read() {
-    const raw = await storage.readJson(PATH, null);
+    const raw = await storage.readJson(PATH, null).catch((error) => {
+      if (isCorruptJson(error))
+        return null;
+      throw error;
+    });
     if (raw === null || raw === undefined)
       return serialize(storage, () => readLocked());
     return normalizeLoaded(raw);
+  }
+  async function resetCorrupt() {
+    const stamp = now().toISOString().replace(/:/gu, "-");
+    const bytes = await storage.readBinary(PATH);
+    if (bytes)
+      await storage.writeBinary(STORAGE_PATHS.legacyAtelier(stamp), bytes);
+    const at = now().toISOString();
+    const store = { ...createDefaultAtelierStore(at), migrations: { legacyDirections: { at, scene: [], imageRatio: [] } } };
+    await storage.writeJson(PATH, store);
+    log("warn", `config/atelier.json could not be read (not valid JSON); the built-in store was restored and the original kept in ${STORAGE_PATHS.legacyAtelier(stamp)}.`);
+    return { store, issues: [], tooNew: false };
   }
   function normalizeLoaded(raw) {
     const { document: document2, issues } = normalizeAtelierStore(raw, now().toISOString());
@@ -47007,7 +47060,14 @@ function createAtelierService(deps) {
     return { store: document2, issues, tooNew: Number.isFinite(version) && version > ATELIER_VERSION };
   }
   async function readLocked() {
-    const raw = await storage.readJson(PATH, null);
+    let raw;
+    try {
+      raw = await storage.readJson(PATH, null);
+    } catch (error) {
+      if (isCorruptJson(error))
+        return resetCorrupt();
+      throw error;
+    }
     if (raw === null || raw === undefined) {
       const config = await storage.loadConfig();
       let store = createDefaultAtelierStore(now().toISOString());
@@ -52359,7 +52419,8 @@ async function generateMessageIllustrations(deps, req) {
           req.onRetryErrors?.(Array.isArray(e.retryErrors) ? e.retryErrors : [], imageRetry);
           return;
         }
-        const imageCount = Number.isFinite(Number(e.imageCount)) ? Number(e.imageCount) + skipSlotIndexes.length : undefined;
+        const counted = Number.isFinite(Number(e.imageCount)) ? Number(e.imageCount) + skipSlotIndexes.length : undefined;
+        const imageCount = counted === undefined || e.phase === "planning" ? counted : Math.min(counted, Math.max(W.max, 1));
         if (imageCount !== undefined && (e.phase === "planning" || e.analysisComplete === false && e.phase === "analyzing-preset")) {
           resolvedCount = imageCount;
           req.onResolvedCount?.(imageCount);
@@ -52482,13 +52543,19 @@ async function writeSwipeContent(host, chatId, view, swipeIndex, content) {
 
 class HostGenerationTracker {
   active = new Map;
+  now;
+  maxAgeMs;
+  constructor(options = {}) {
+    this.now = options.now ?? (() => Date.now());
+    this.maxAgeMs = options.maxAgeMs ?? Number.POSITIVE_INFINITY;
+  }
   started(payload) {
     const chatId = typeof payload.chatId === "string" ? payload.chatId : "";
     const generationId = typeof payload.generationId === "string" ? payload.generationId : "";
     if (!chatId || !generationId)
       return;
     const map = this.active.get(chatId) ?? new Map;
-    map.set(generationId, typeof payload.targetMessageId === "string" ? payload.targetMessageId : "");
+    map.set(generationId, { target: typeof payload.targetMessageId === "string" ? payload.targetMessageId : "", startedAt: this.now() });
     this.active.set(chatId, map);
   }
   ended(payload) {
@@ -52496,8 +52563,10 @@ class HostGenerationTracker {
     const map = this.active.get(chatId);
     if (!map)
       return;
-    if (typeof payload.generationId === "string")
+    if (typeof payload.generationId === "string" && payload.generationId)
       map.delete(payload.generationId);
+    else
+      map.clear();
     if (!map.size)
       this.active.delete(chatId);
   }
@@ -52505,10 +52574,18 @@ class HostGenerationTracker {
     const map = this.active.get(chatId);
     if (!map?.size)
       return false;
+    const now = this.now();
+    for (const [id, g] of map)
+      if (now - g.startedAt >= this.maxAgeMs)
+        map.delete(id);
+    if (!map.size) {
+      this.active.delete(chatId);
+      return false;
+    }
     if (!messageId)
       return true;
-    for (const target of map.values())
-      if (target === messageId)
+    for (const g of map.values())
+      if (g.target === messageId)
         return true;
     return false;
   }
@@ -52583,15 +52660,16 @@ function findPromptSegment(text, segment) {
 }
 function createChatPipelineController(services, engine, options = {}) {
   const now = options.now ?? (() => Date.now());
-  const tracker = new HostGenerationTracker;
+  const tracker = new HostGenerationTracker({ now, maxAgeMs: STREAM_WAIT_MAX_MS });
+  const publishDelays = options.publishRetry?.delaysMs?.length ? options.publishRetry.delaysMs : PUBLISH_RETRY_DELAYS;
+  const publishMaxAttempts = options.publishRetry?.maxAttempts ?? PUBLISH_MAX_ATTEMPTS;
   const jobs = new Map;
   const messageJobs = new Map;
   const slotJobs = new Map;
-  const settingsSnapshots = new Map;
-  const analyzerCompleted = new Set;
-  const splitRevisions = new Map;
+  const retryMemory = new Map;
   const publishChains = new Map;
-  const publishTimers = new Set;
+  const publishRetries = new Map;
+  const stalePublishes = new Map;
   const previews = new Map;
   const deletionLocks = new Set;
   const cleanups = new Map;
@@ -52664,18 +52742,22 @@ function createChatPipelineController(services, engine, options = {}) {
       delete job.snapshot.retryErrors;
   };
   const finishJob = (job, result, status, error) => {
+    const key = k(job.target.chatId, job.planKey);
     job.snapshot.status = status;
     job.snapshot.progress = phaseProgress(result === "completed" ? "completed" : result === "cancelled" ? "cancelled" : "failed");
     job.snapshot.canRetry = status === "error" || status === "partial";
-    job.snapshot.canRestart = job.snapshot.canRetry && job.kind === "message" && settingsSnapshots.get(k(job.target.chatId, job.planKey))?.analysisMode === "split";
+    const memory = retryMemory.get(key);
+    if (job.kind === "message" && !job.retryFrom && memory?.settings)
+      job.retryFrom = { settings: memory.settings, ...memory.splitRevisionId ? { splitRevisionId: memory.splitRevisionId } : {} };
+    job.snapshot.canRestart = job.snapshot.canRetry && job.kind === "message" && job.retryFrom?.settings.analysisMode === "split";
     if (error)
       job.snapshot.error = error;
     else
       delete job.snapshot.error;
-    if (error)
-      lastErrors.set(k(job.target.chatId, job.planKey), error);
+    if (error && result !== "blocked")
+      lastErrors.set(key, error);
     else if (result === "completed")
-      lastErrors.delete(k(job.target.chatId, job.planKey));
+      lastErrors.delete(key);
     emitProgress(job);
     log(result === "failed" || result === "blocked" ? "warn" : "info", `Illustration ${job.kind} ${result}: ${job.planKey}`, {
       jobId: job.snapshot.jobId,
@@ -52736,26 +52818,56 @@ function createChatPipelineController(services, engine, options = {}) {
   const publish = (chatId, planKey, attempt = 0) => {
     const key = k(chatId, parseHistoryMessageId(planKey.replace(/^illustration:/u, ""))?.messageId ?? planKey);
     const run = (publishChains.get(key) ?? Promise.resolve()).then(() => publishOnce(chatId, planKey), () => publishOnce(chatId, planKey));
-    publishChains.set(key, run.catch(() => {
+    const tail = run.catch(() => {
       return;
-    }));
+    });
+    publishChains.set(key, tail);
+    tail.then(() => {
+      if (publishChains.get(key) === tail)
+        publishChains.delete(key);
+    });
+    const retryKey = k(chatId, planKey);
     const retryLater = () => {
-      if (disposed || attempt >= PUBLISH_MAX_ATTEMPTS)
+      if (disposed)
         return;
-      const timer = setTimeout(() => {
-        publishTimers.delete(timer);
-        publish(chatId, planKey, attempt + 1).then((r) => r === "published" && emitChanged(chatId, [planKey])).catch((e) => log("warn", "Illustration publish retry failed", toRpcError(e)));
-      }, PUBLISH_RETRY_DELAYS[attempt] ?? PUBLISH_RETRY_DELAYS.at(-1));
-      publishTimers.add(timer);
+      const pending = publishRetries.get(retryKey);
+      if (pending) {
+        pending.attempt = Math.min(pending.attempt, attempt + 1);
+        return;
+      }
+      if (attempt >= publishMaxAttempts) {
+        log("warn", "Gave up updating the illustrated message (still streaming, or the host write failed); retrying when a generation in the chat ends.", { chatId, planKey });
+        const keys = stalePublishes.get(chatId) ?? new Set;
+        stalePublishes.set(chatId, keys.add(planKey));
+        return;
+      }
+      const entry = {
+        attempt: attempt + 1,
+        timer: setTimeout(() => {
+          publishRetries.delete(retryKey);
+          publish(chatId, planKey, entry.attempt).then((r) => r === "published" && emitChanged(chatId, [planKey])).catch((e) => log("warn", "Illustration publish retry failed", toRpcError(e)));
+        }, publishDelays[attempt] ?? publishDelays.at(-1))
+      };
+      publishRetries.set(retryKey, entry);
     };
     return run.then((result) => {
       if (result === "streaming")
         retryLater();
+      else
+        stalePublishes.get(chatId)?.delete(planKey);
       return result;
     }, (error) => {
       retryLater();
       throw error;
     });
+  };
+  const republishStale = (chatId) => {
+    const keys = stalePublishes.get(chatId);
+    stalePublishes.delete(chatId);
+    if (disposed || !keys?.size)
+      return;
+    for (const planKey of keys)
+      publish(chatId, planKey).then((r) => r === "published" && emitChanged(chatId, [planKey])).catch((e) => log("warn", "Illustration publish retry failed", toRpcError(e)));
   };
   const publishCommitted = (chatId, planKey) => publish(chatId, planKey).catch((e) => {
     log("warn", "The illustrated message could not be updated; retrying in the background.", toRpcError(e));
@@ -52791,6 +52903,20 @@ function createChatPipelineController(services, engine, options = {}) {
       storePlanAndTree(doc, plan);
       return doc;
     });
+  };
+  const memoryFor = (skey) => {
+    const kept = retryMemory.get(skey);
+    if (kept)
+      return kept;
+    for (const job of [...jobs.values()].reverse()) {
+      if (job.kind !== "message" || k(job.target.chatId, job.planKey) !== skey)
+        continue;
+      if (job.snapshot.status === "success")
+        return;
+      if (job.retryFrom && job.snapshot.canRetry)
+        return { ...job.retryFrom };
+    }
+    return;
   };
   const runMessageOnce = async (job, opts) => {
     const { chatId, messageId, swipeIndex } = job.target;
@@ -52829,37 +52955,46 @@ function createChatPipelineController(services, engine, options = {}) {
     const previous = { status: plan.status, error: plan.error };
     const attemptKind = opts.automatic ? "automatic" : opts.attemptKind ?? nextIllustrationAttempt(plan);
     job.snapshot.attemptKind = attemptKind;
-    const analyzerDone = attemptKind === "retry" && analyzerCompleted.has(skey);
-    if (attemptKind !== "retry" && !opts.revision) {
-      settingsSnapshots.delete(skey);
-      splitRevisions.delete(skey);
-    }
-    const settings = opts.settings ?? (attemptKind === "retry" && settingsSnapshots.has(skey) ? settingsSnapshots.get(skey) : await services.storage.loadChatImageGenerationSettings());
+    const memory = attemptKind === "retry" ? memoryFor(skey) : undefined;
+    const analyzerDone = !!memory?.analyzerCompleted;
+    if (attemptKind !== "retry" && !opts.revision)
+      retryMemory.delete(skey);
+    if (attemptKind === "retry" && !opts.settings && !memory?.settings)
+      log("info", "No settings snapshot for this retry; it uses the current chat image settings.", { chatId, planKey });
+    const settings = opts.settings ?? memory?.settings ?? await services.storage.loadChatImageGenerationSettings();
     const runSettings = opts.countPolicy ? { ...settings, countPolicy: opts.countPolicy } : settings;
     const split = runSettings.analysisMode === "split" && !opts.revision;
     const countPolicy = split ? fixedCountPolicy(runSettings.splitAnalysis.totalCount ?? 1) : runSettings.countPolicy;
-    if (attemptKind !== "retry")
-      analyzerCompleted.delete(skey);
-    const retryId = attemptKind === "retry" && !opts.revision ? splitRevisions.get(skey) || plan.activeRevisionId : "";
+    if (attemptKind !== "retry") {
+      const kept = retryMemory.get(skey);
+      if (kept)
+        delete kept.analyzerCompleted;
+    }
+    const retryId = attemptKind === "retry" && !opts.revision ? memory?.splitRevisionId || plan.activeRevisionId : "";
     const errorRevision = retryId ? plan.revisions.find((r) => r.revisionId === retryId && r.status === "error" && (distinctSlotCount(r.entries) < expectedSlotCount(plan) || !!r.deletedSlotIndices?.length)) : undefined;
     const revisionTarget = opts.revision ? plan.revisions.find((r) => r.revisionId === opts.revision.revisionId && r.entries.some((e) => e.slotId === opts.revision.slotId)) : undefined;
     if (opts.revision && !revisionTarget)
       return { kind: "blocked", error: labelError("not-found", PIPELINE_TEXT.messageMissing) };
     const existingEntries = errorRevision?.entries ?? [];
-    const revisionId = (attemptKind === "retry" && !opts.revision ? splitRevisions.get(skey) : "") || errorRevision?.revisionId || revisionTarget?.revisionId || ["revision", now().toString(36), (++seq).toString(36)].join(":");
+    const revisionId = (attemptKind === "retry" && !opts.revision ? memory?.splitRevisionId : "") || errorRevision?.revisionId || revisionTarget?.revisionId || ["revision", now().toString(36), (++seq).toString(36)].join(":");
     const parentRevisionId = parentRevisionFor(plan, plan.activeRevisionId);
-    if (!opts.revision && !(attemptKind === "retry" && settingsSnapshots.has(skey))) {
-      settingsSnapshots.set(skey, jsonClone(runSettings));
-      while (settingsSnapshots.size > MAX_SETTINGS_SNAPSHOTS) {
-        const victim = [...settingsSnapshots.keys()].find((key) => key !== skey && !messageJobs.has(key));
+    if (!opts.revision) {
+      const splitRevisionId = split ? revisionId : memory?.splitRevisionId;
+      const record = {
+        settings: memory?.settings ?? jsonClone(runSettings),
+        ...splitRevisionId ? { splitRevisionId } : {},
+        ...memory?.analyzerCompleted ? { analyzerCompleted: true } : {}
+      };
+      retryMemory.delete(skey);
+      retryMemory.set(skey, record);
+      job.retryFrom = { settings: record.settings, ...splitRevisionId ? { splitRevisionId } : {} };
+      while (retryMemory.size > MAX_SETTINGS_SNAPSHOTS) {
+        const victim = [...retryMemory.keys()].find((key) => key !== skey && !messageJobs.has(key));
         if (!victim)
           break;
-        settingsSnapshots.delete(victim);
-        splitRevisions.delete(victim);
+        retryMemory.delete(victim);
       }
     }
-    if (split)
-      splitRevisions.set(skey, revisionId);
     try {
       const characterId = await speakingCharacterId(services, chat, view);
       const document2 = await services.storage.loadCharacterDocument(characterId);
@@ -52919,10 +53054,11 @@ function createChatPipelineController(services, engine, options = {}) {
           emitProgress(job);
         }
       });
-      if (result.error && result.analyzerCompleted)
-        analyzerCompleted.add(skey);
-      else
-        analyzerCompleted.delete(skey);
+      const kept = retryMemory.get(skey);
+      if (kept && result.error && result.analyzerCompleted)
+        kept.analyzerCompleted = true;
+      else if (kept)
+        delete kept.analyzerCompleted;
       if (result.cancelled || signal.aborted) {
         await savePlan(chatId, { ...plan, status: previous.status, error: previous.error });
         return { kind: "cancelled" };
@@ -52999,8 +53135,11 @@ function createChatPipelineController(services, engine, options = {}) {
       if (published === "missing")
         log("warn", "The illustrated message could not be resolved for publishing.", { chatId, planKey });
       emitChanged(chatId, [planKey]);
-      if (finalPlan.status === "complete")
+      if (finalPlan.status === "complete") {
+        if (!opts.revision)
+          retryMemory.delete(skey);
         return { kind: "completed" };
+      }
       const active = finalPlan.revisions.find((r) => r.revisionId === finalPlan.activeRevisionId);
       job.snapshot.failedSlots = Math.max(0, expectedSlotCount(finalPlan) - distinctSlotCount(finalPlan.entries) - (active?.deletedSlotIndices?.length ?? 0));
       return {
@@ -53011,9 +53150,7 @@ function createChatPipelineController(services, engine, options = {}) {
       };
     } catch (e) {
       if (signal.aborted || isCancellation(e)) {
-        await savePlan(chatId, { ...plan, status: previous.status, error: previous.error }).catch(() => {
-          return;
-        });
+        await savePlan(chatId, { ...plan, status: previous.status, error: previous.error }).catch((err) => log("warn", "Illustration plan restore failed", toRpcError(err)));
         return { kind: "cancelled" };
       }
       const error = errorOf(e);
@@ -53611,15 +53748,9 @@ function createChatPipelineController(services, engine, options = {}) {
       for (const [key, value] of moved)
         map.set(key, value);
     };
-    rekey(settingsSnapshots, true);
-    rekey(splitRevisions, true);
+    rekey(retryMemory, true);
     rekey(lastErrors, true);
     rekey(replayOutfits, false);
-    const completed = new Map([...analyzerCompleted].map((key) => [key, true]));
-    rekey(completed, true);
-    analyzerCompleted.clear();
-    for (const key of completed.keys())
-      analyzerCompleted.add(key);
     for (const [id, job] of jobs) {
       if (job.target.chatId !== chatId)
         continue;
@@ -53636,18 +53767,31 @@ function createChatPipelineController(services, engine, options = {}) {
     }
   };
   const dropChains = new Map;
+  const pendingDrops = new Map;
   const dropMessageData = (chatId, messageId, swipe) => {
+    const dropKey = k(chatId, messageId);
+    pendingDrops.set(dropKey, (pendingDrops.get(dropKey) ?? 0) + 1);
     const run = (dropChains.get(chatId) ?? Promise.resolve()).then(() => dropMessageDataNow(chatId, messageId, swipe));
     const tail = run.catch(() => {
       return;
     });
     dropChains.set(chatId, tail);
     tail.then(() => {
+      const n = (pendingDrops.get(dropKey) ?? 1) - 1;
+      if (n > 0)
+        pendingDrops.set(dropKey, n);
+      else
+        pendingDrops.delete(dropKey);
       if (dropChains.get(chatId) === tail)
         dropChains.delete(chatId);
     });
     return run;
   };
+  const dropsSettled = async (chatId) => {
+    while (dropChains.has(chatId))
+      await dropChains.get(chatId);
+  };
+  const messageLocked = (chatId, messageId, planKey) => pendingDrops.has(k(chatId, messageId)) || deletionLocks.has(k(chatId, planKey));
   const dropMessageDataNow = async (chatId, messageId, swipe) => {
     const matches = (historyId) => {
       const p = parseHistoryMessageId(historyId);
@@ -53697,6 +53841,7 @@ function createChatPipelineController(services, engine, options = {}) {
   const handleGenerationEnded = async (raw) => {
     const payload = rec7(raw);
     tracker.ended(payload);
+    republishStale(str6(payload.chatId));
     if (disposed || payload.error)
       return;
     const chatId = str6(payload.chatId);
@@ -53712,13 +53857,14 @@ function createChatPipelineController(services, engine, options = {}) {
       const active = await services.sources.getActiveChat();
       if (active && active.chatId !== chatId)
         return;
+      await dropsSettled(chatId);
       const messages = await loadMessages(services.host, chatId);
       const { view } = findMessage(messages, messageId);
       if (!view || !isIllustratableMessage(view))
         return;
       const target = { chatId, messageId, swipeIndex: view.swipeId };
       const planKey = illustrationMessageKey(toHistoryMessageId(messageId, view.swipeId));
-      if (messageBusy(chatId, planKey))
+      if (messageBusy(chatId, planKey) || messageLocked(chatId, messageId, planKey))
         return;
       startMessageJob(target, planKey, { automatic: true });
     } catch (e) {
@@ -53734,6 +53880,7 @@ function createChatPipelineController(services, engine, options = {}) {
         return;
       case "GENERATION_STOPPED":
         tracker.ended(payload);
+        republishStale(chatId);
         return;
       case "GENERATION_ENDED":
         return handleGenerationEnded(raw);
@@ -53806,9 +53953,10 @@ function createChatPipelineController(services, engine, options = {}) {
       for (const job of jobs.values())
         if (!job.controller.signal.aborted)
           job.controller.abort("pipeline-disposed");
-      for (const t of publishTimers)
-        clearTimeout(t);
-      publishTimers.clear();
+      for (const r of publishRetries.values())
+        clearTimeout(r.timer);
+      publishRetries.clear();
+      stalePublishes.clear();
       tracker.clear();
       engine.dispose();
     },
@@ -53823,10 +53971,11 @@ function createChatPipelineController(services, engine, options = {}) {
       const planKey = illustrationMessageKey(toHistoryMessageId(messageId, swipeIndex));
       if (messageBusy(chatId, planKey))
         throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
+      await dropsSettled(chatId);
       const messages = await loadMessages(services.host, chatId);
       if (!isIllustratableMessage(findMessage(messages, messageId).view, swipeIndex))
         throw new RpcFailure(labelError("not-found", PIPELINE_TEXT.messageMissing));
-      if (messageBusy(chatId, planKey))
+      if (messageBusy(chatId, planKey) || messageLocked(chatId, messageId, planKey))
         throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
       const job = startMessageJob({ chatId, messageId, swipeIndex }, planKey, {
         automatic: false,
@@ -53846,19 +53995,22 @@ function createChatPipelineController(services, engine, options = {}) {
       const job = jobs.get(jobId) ?? fail2("not-found", `Job not found: ${jobId}`);
       if (job.snapshot.status === "queued" || job.snapshot.status === "running")
         throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
-      job.dismissed = true;
-      if (job.kind === "regenerate")
-        return api.regenerateSlot({ chatId: job.target.chatId, messageKey: job.planKey, slotId: job.slotId, ...job.regenerate?.entryId ? { entryId: job.regenerate.entryId } : {}, ...job.regenerate?.overrides ? { overrides: job.regenerate.overrides } : {} });
-      if (messageBusy(job.target.chatId, job.planKey))
+      if (job.kind === "regenerate") {
+        const next = await api.regenerateSlot({ chatId: job.target.chatId, messageKey: job.planKey, slotId: job.slotId, ...job.regenerate?.entryId ? { entryId: job.regenerate.entryId } : {}, ...job.regenerate?.overrides ? { overrides: job.regenerate.overrides } : {} });
+        job.dismissed = true;
+        return next;
+      }
+      if (messageBusy(job.target.chatId, job.planKey) || messageLocked(job.target.chatId, job.target.messageId, job.planKey))
         throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
+      job.dismissed = true;
       const next = job.kind === "revision" && job.revision ? startMessageJob(job.target, job.planKey, { automatic: false, attemptKind: "regenerate", revision: job.revision }, "revision") : startMessageJob(job.target, job.planKey, { automatic: false, attemptKind: "retry" });
       return { jobId: next.snapshot.jobId };
     },
     async restart(jobId) {
       const job = jobs.get(jobId) ?? fail2("not-found", `Job not found: ${jobId}`);
-      if (messageBusy(job.target.chatId, job.planKey))
+      if (messageBusy(job.target.chatId, job.planKey) || messageLocked(job.target.chatId, job.target.messageId, job.planKey))
         throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
-      const snapshot = settingsSnapshots.get(k(job.target.chatId, job.planKey));
+      const snapshot = job.retryFrom?.settings ?? retryMemory.get(k(job.target.chatId, job.planKey))?.settings;
       if (!snapshot)
         throw new RpcFailure(labelError("conflict", PIPELINE_TEXT.noRestartSnapshot));
       job.dismissed = true;
@@ -53879,6 +54031,7 @@ function createChatPipelineController(services, engine, options = {}) {
     },
     async regenerateSlot(params) {
       const chatId = str6(params.chatId);
+      await dropsSettled(chatId);
       const doc = await services.storage.loadChatData(chatId);
       const resolved = resolveHistorySlot(doc.history, { slotId: params.slotId, messageKey: params.messageKey });
       if (!resolved)
@@ -53892,7 +54045,7 @@ function createChatPipelineController(services, engine, options = {}) {
       const slotKey = k(chatId, params.slotId);
       if (slotJobs.has(slotKey))
         throw new RpcFailure(labelError("busy", PIPELINE_TEXT.regenerationRunning));
-      if (messageJobs.has(k(chatId, resolved.message.messageKey)))
+      if (messageJobs.has(k(chatId, resolved.message.messageKey)) || messageLocked(chatId, target.messageId, resolved.message.messageKey))
         throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
       const job = createJob({ target, planKey: resolved.message.messageKey, kind: "regenerate", attemptKind: "regenerate", slotId: params.slotId, requestedCount: 1 });
       job.regenerate = { ...params.entryId ? { entryId: params.entryId } : {}, ...params.overrides ? { overrides: params.overrides } : {} };
@@ -54145,6 +54298,7 @@ function createChatPipelineController(services, engine, options = {}) {
       const proposal = proposals.get(proposalId);
       if (!proposal || proposal.chatId !== chatId || proposal.slotId !== slotId)
         fail2("not-found", "The AI edit proposal expired. Create it again.");
+      await dropsSettled(chatId);
       const doc = await services.storage.loadChatData(chatId);
       const resolved = resolveHistorySlot(doc.history, { slotId });
       if (!resolved || !resolved.entries.some((e) => e.entryId === proposal.entryId))
@@ -54177,14 +54331,16 @@ function createChatPipelineController(services, engine, options = {}) {
           imageToImageNoise: Math.min(1, Math.max(0, Number(req.noise) || 0))
         } : {}
       };
-      if (messageBusy(chatId, planKey))
+      if (messageBusy(chatId, planKey) || messageLocked(chatId, target.messageId, planKey))
         throw new RpcFailure(rpcError("busy", "Another image operation is running.", { messageKo: "다른 이미지 작업이 진행 중입니다." }));
       proposals.delete(proposalId);
       const job = startMessageJob(target, planKey, { automatic: false, attemptKind: "regenerate", revision }, "revision");
       return { jobId: job.snapshot.jobId };
     },
     async getMessageStates(chatId, messageIds) {
-      const [messages, doc] = await Promise.all([loadMessages(services.host, chatId), services.storage.loadChatData(chatId)]);
+      const [messages, stored] = await Promise.all([loadMessages(services.host, chatId), services.storage.loadChatData(chatId)]);
+      const stale = Object.values(stored.plans).filter((p) => p.status === "generating" && !messageJobs.has(k(chatId, p.key)));
+      const doc = stale.length ? { ...stored, plans: { ...stored.plans, ...Object.fromEntries(stale.map((p) => [p.key, { ...p, status: "error", error: PIPELINE_TEXT.interrupted.en }])) } } : stored;
       const wanted = messageIds?.length ? new Set(messageIds) : null;
       const regenerating = new Set([...slotJobs.values()].filter((j) => j.target.chatId === chatId).map((j) => j.slotId));
       const out = [];
@@ -54876,6 +55032,7 @@ function createEnginePort(services, options = {}) {
   const references = createComfyReferencePreparer(services);
   let current = null;
   let snapshot = null;
+  const runConfigs = new Map;
   const outfitRuns = new OutfitIndexRegistry;
   const repairItems = (input, items) => {
     try {
@@ -54888,12 +55045,15 @@ function createEnginePort(services, options = {}) {
   const engineFor = () => {
     if (current)
       return current;
-    const engine = createAssetMaidEngine({
+    const engine = (options.createEngine ?? createAssetMaidEngine)({
       analyzerClient: withOutfitAwareness(services.llm.analyzerClient({ purpose: "analyzer" }), outfitRuns, (n) => services.log.append("info", "pipeline", `Analyzer request: outfit parts of ${n} registered outfit(s) added.`)),
       imageProviders: adapters,
       comfyUIReferences: references,
       getRetryCount: () => snapshot?.runtime.generationAutoRetryCount ?? 5,
-      getIntervalMs: () => Math.max(0, Math.min(30, Number(snapshot?.runtime.novelaiParallelIntervalSec) || 0)) * 1000,
+      getIntervalMs: (ref) => {
+        const config = (typeof ref?.queueScopeKey === "string" ? runConfigs.get(ref.queueScopeKey) : undefined) ?? snapshot;
+        return Math.max(0, Math.min(30, Number(config?.runtime.novelaiParallelIntervalSec) || 0)) * 1000;
+      },
       jev: services.decisions ? services.decisions.createJevAdapter(() => snapshot?.jevConnection ?? { rosterSelectionDefault: false, model: "jev-latest" }, { userId: services.userId }) : undefined,
       onAnalyzerDiagnostic: (event) => options.onAnalyzerDiagnostic?.(event),
       prepareBatchItems: repairItems
@@ -54907,6 +55067,7 @@ function createEnginePort(services, options = {}) {
       const engine = engineFor();
       const runId = registry.register(context);
       const ref = { providerId: context.engineProvider, queueScopeKey: registry.queueScopeKey(runId) };
+      runConfigs.set(ref.queueScopeKey, config);
       const outfitIndex = input.outfitIndex;
       const releaseOutfits = outfitIndex ? outfitRuns.register(outfitIndex) : undefined;
       const sessions = engine.parts.sessions;
@@ -54944,6 +55105,7 @@ function createEnginePort(services, options = {}) {
       } finally {
         unsubscribe();
         releaseOutfits?.();
+        runConfigs.delete(ref.queueScopeKey);
         registry.release(runId);
       }
     },
@@ -54952,10 +55114,12 @@ function createEnginePort(services, options = {}) {
       const engine = engineFor();
       const runId = registry.register(context);
       const providerRef = { providerId: request.provider, queueScopeKey: registry.queueScopeKey(runId) };
+      runConfigs.set(providerRef.queueScopeKey, config);
       const dispatcher = engine.parts.dispatcher;
       try {
         return await dispatcher.generate({ ...request, providerRef, ...opts.signal ? { signal: opts.signal } : {} }, { retryCount: config.runtime.generationAutoRetryCount, ...opts.onRetry ? { onRetry: opts.onRetry } : {} });
       } finally {
+        runConfigs.delete(providerRef.queueScopeKey);
         registry.release(runId);
       }
     },
@@ -55069,6 +55233,42 @@ function requireId(value, name) {
   if (!id)
     fail2("bad-request", `${name} is required.`);
   return id;
+}
+var RESET_SETTLE_TIMEOUT_MS = 15000;
+async function stopWriters(ctx, characterId) {
+  const { analysis, pipeline } = ctx.modules;
+  const waits = [];
+  let settled = false;
+  for (const job of analysis?.listActive() ?? []) {
+    if (characterId !== undefined && job.characterId !== characterId)
+      continue;
+    analysis.cancel({ jobId: job.jobId });
+    waits.push(analysis.wait(job.jobId));
+  }
+  if (characterId === undefined) {
+    if (analysis)
+      waits.push(analysis.outfitImages.cancelAll());
+    if (pipeline) {
+      const running = () => pipeline.listActive().filter((j) => j.status === "queued" || j.status === "running");
+      for (const job of running())
+        pipeline.cancel({ jobId: job.jobId });
+      waits.push((async () => {
+        while (!settled && running().length)
+          await new Promise((r) => setTimeout(r, 25));
+      })());
+    }
+  }
+  if (!waits.length)
+    return;
+  let timer;
+  const timedOut = await Promise.race([
+    Promise.allSettled(waits).then(() => false),
+    new Promise((resolve) => timer = setTimeout(() => resolve(true), RESET_SETTLE_TIMEOUT_MS))
+  ]);
+  clearTimeout(timer);
+  settled = true;
+  if (timedOut)
+    ctx.log.append("warn", "storage", "Reset: some cancelled jobs were still running; resetting anyway.");
 }
 function requireConfirm(params) {
   if (params.confirm !== true)
@@ -55191,6 +55391,7 @@ var coreHandlers = {
   },
   async "config.factoryReset"(params, ctx) {
     requireConfirm(params);
+    await stopWriters(ctx);
     await ctx.storage.factoryReset();
     ctx.sources.invalidate();
     ctx.log.clear();
@@ -55247,6 +55448,7 @@ var coreHandlers = {
   async "character.reset"(params, ctx) {
     requireConfirm(params);
     const characterId = requireId(params.characterId, "characterId");
+    await stopWriters(ctx, characterId);
     await ctx.storage.resetCharacter(characterId);
     await ctx.storage.updateConfig((c) => applyScopeToConfig(c, recomputeCharxDirtyFields(charxScopeFor(c, null), characterId)));
     ctx.sources.invalidate(characterId);
@@ -56610,13 +56812,14 @@ function createImageService(deps) {
       const retries = request.retries !== undefined ? clampInt2(request.retries, 0, 10, 0) : clampInt2(config.runtime.generationAutoRetryCount, 0, 10, 5);
       const gapMs = () => clampInt2(config.runtime.novelaiParallelIntervalSec, 0, 30, 0) * 1000;
       const timeoutMs = imageRequestTimeoutMs(target.generationProvider, config);
-      const queue = request.queue === false ? null : queueFor(target.generationProvider);
+      const shared = queueFor(target.generationProvider);
+      const queue = request.queue === false ? null : shared;
       const callOnce = async () => {
         if (config.runtime.devPromptOnly) {
           const stored = asRecord3(await host.images.uploadFromDataUrl(PROMPT_ONLY_PLACEHOLDER, "inlay-prompt-only.png", userId));
           return { imageId: str3(stored.id), provider: "prompt-only", model: target.model };
         }
-        await queue?.whenFree(signal);
+        await shared.whenFree(signal);
         const pending = host.imageGen.generate(input);
         let abandoned = false;
         let settled = false;
@@ -56645,7 +56848,7 @@ function createImageService(deps) {
         } catch (error) {
           abandoned = true;
           if (!settled && target.generationProvider === "novelai")
-            queue?.holdUntil(pending, ABANDONED_REQUEST_HOLD_MS);
+            shared.holdUntil(pending, ABANDONED_REQUEST_HOLD_MS);
           throw error;
         }
       };
@@ -56755,6 +56958,7 @@ var DEFAULT_RETRY_COUNT = 5;
 var MAX_RETRY_COUNT = 10;
 var RETRY_DELAY_MS = 100;
 var DEFAULT_TEST_MESSAGE = "Hello. Please greet me briefly.";
+var CAPABILITY_RETRY_MS = 30 * 60000;
 function supportsJsonMode(provider, _model) {
   return !/anthropic|claude/.test(provider.toLowerCase());
 }
@@ -56856,6 +57060,29 @@ function unsupportedVisionError(error) {
     /(?:image|image_url|vision).{0,160}only supported by.{0,80}models?/iu,
     /model.{0,120}(?:is not multimodal|is text[- ]only)/iu
   ].some((pattern) => pattern.test(message));
+}
+var SAFE_IMAGE_TYPES = new Set(["image/png", "image/jpeg"]);
+function rejectedImageTypes(error, messages) {
+  const message = errorMessage(error);
+  if (!/\bmime\b|\bmedia[ _-]?type|image\/[a-z]|\bformats?\b|\b(?:gif|avif|webp|heic|heif|bmp|tiff?|svg)\b/i.test(message))
+    return null;
+  const sent = new Set(messages.flatMap((m) => Array.isArray(m.content) ? m.content.filter((p) => p.type === "image").map((p) => p.mime_type.toLowerCase()) : []));
+  const named = [...sent].filter((type) => message.toLowerCase().includes(type));
+  const namedUnusual = named.filter((type) => !SAFE_IMAGE_TYPES.has(type));
+  if (namedUnusual.length || named.length)
+    return new Set(namedUnusual.length ? namedUnusual : named);
+  const unusual = [...sent].filter((type) => !SAFE_IMAGE_TYPES.has(type));
+  return new Set(unusual.length ? unusual : sent);
+}
+function dropImageTypes(messages, types) {
+  if (!types.size)
+    return messages;
+  return messages.map((m) => {
+    if (!Array.isArray(m.content) || !m.content.some((p) => p.type === "image" && types.has(p.mime_type.toLowerCase())))
+      return m;
+    const kept = m.content.filter((p) => p.type !== "image" || !types.has(p.mime_type.toLowerCase()));
+    return { ...m, content: kept.every((p) => p.type === "text") && kept.length === 1 ? kept[0].text : kept };
+  });
 }
 function isJsonModeRejection(error) {
   return /response_format|json_object|json[ _-]?mode|response_?mime_?type|structured output/i.test(errorMessage(error));
@@ -57008,8 +57235,10 @@ function clampRetries(value, fallback) {
 function createLlmService(deps) {
   const { host, userId } = deps;
   const connectionCache = new TtlCache(5000, 32);
-  const jsonModeRejected = new Set;
+  const jsonModeRejected = new Map;
   const visionCache = new Map;
+  const partitionRejected = new Set;
+  const now = deps.now ?? Date.now;
   const wait = deps.sleep ?? sleep2;
   const log = (level, message, details) => deps.log?.append(level, "llm", message, details);
   async function resolveConnection(connectionId) {
@@ -57050,9 +57279,12 @@ function createLlmService(deps) {
       return true;
     if (settings.vision === "unsupported")
       return false;
-    const cached = visionCache.get(visionKey(connection, model));
-    if (cached !== undefined)
-      return cached;
+    const key = visionKey(connection, model);
+    const cached = visionCache.get(key);
+    if (cached && !cached.value && now() - cached.at >= CAPABILITY_RETRY_MS)
+      visionCache.delete(key);
+    else if (cached)
+      return cached.value;
     const declared = declaredVisionSupport(connection.metadata);
     if (declared !== null)
       return declared;
@@ -57115,16 +57347,24 @@ function createLlmService(deps) {
     const timeoutMs = Math.max(ANALYZER_TIMEOUT_MIN_MS, Math.min(ANALYZER_TIMEOUT_MAX_MS, Math.round(settings.timeoutMs)));
     const reasoning = reasoningDto(settings.reasoning);
     const capKey = JSON.stringify([connection.provider, model]);
-    let messages = request.messages;
+    const flat = request.flatMessages;
+    let partitionFallback = false;
+    let source = request.messages;
+    let breakpoints = request.cacheBreakpoints;
+    if (flat && partitionRejected.has(capKey))
+      [source, breakpoints] = [flat, undefined];
+    let textOnly = false;
+    const rejectedTypes = new Set;
+    const prepare = () => withCacheBreakpoints(textOnly ? dropImages(source) : dropImageTypes(source, rejectedTypes), breakpoints, connection);
     let imagesDropped = false;
-    if (hasImages(messages) && !visionFor(settings, connection, model)) {
+    if (hasImages(source) && !visionFor(settings, connection, model)) {
       if (request.visionFallback === "fail")
         throw makeAnalyzerError("The selected analyzer model cannot read images.", { code: "ANALYZER_VISION_UNSUPPORTED" });
-      messages = dropImages(messages);
+      textOnly = true;
       imagesDropped = true;
       log("info", `Images dropped: ${model} cannot read images (${request.purpose}).`);
     }
-    messages = withCacheBreakpoints(messages, request.cacheBreakpoints, connection);
+    let messages = prepare();
     const baseParameters = { ...request.parameters ?? {} };
     const temperature = request.temperature ?? settings.temperature;
     if (baseParameters.temperature === undefined && Number.isFinite(temperature) && !omitsTemperature(model))
@@ -57135,7 +57375,7 @@ function createLlmService(deps) {
     let attempt = 0;
     for (;; ) {
       attempt += 1;
-      let jsonMode = request.responseMode === "json" && settings.jsonMode && baseParameters.response_format === undefined && supportsJsonMode(connection.provider, model) && !jsonModeRejected.has(capKey);
+      let jsonMode = request.responseMode === "json" && settings.jsonMode && baseParameters.response_format === undefined && supportsJsonMode(connection.provider, model) && now() - (jsonModeRejected.get(capKey) ?? -Infinity) >= CAPABILITY_RETRY_MS;
       try {
         let result;
         for (;; ) {
@@ -57146,11 +57386,26 @@ function createLlmService(deps) {
           } catch (error) {
             if (isAbortLike(error) || error instanceof AnalyzerClientErrorClass)
               throw error;
-            if (!imagesDropped && hasImages(messages) && unsupportedVisionError(error)) {
-              visionCache.set(visionKey(connection, model), false);
+            if (hasImages(messages) && unsupportedVisionError(error)) {
+              const types = rejectedImageTypes(error, messages);
+              if (types) {
+                const before = rejectedTypes.size;
+                for (const type of types)
+                  rejectedTypes.add(type);
+                if (rejectedTypes.size === before)
+                  textOnly = true;
+                messages = prepare();
+                if (request.visionFallback === "fail" && !hasImages(messages))
+                  throw classifyLlmError(error);
+                imagesDropped = true;
+                log("warn", `${model} rejected ${textOnly ? "the images" : [...types].join(", ")}; resending without ${textOnly ? "them" : "those"} (${request.purpose}).`, errorMessage(error));
+                continue;
+              }
+              visionCache.set(visionKey(connection, model), { value: false, at: now() });
               if (request.visionFallback === "fail")
                 throw makeAnalyzerError("The selected analyzer model cannot read images.", { code: "ANALYZER_VISION_UNSUPPORTED", cause: error });
-              messages = dropImages(messages);
+              textOnly = true;
+              messages = prepare();
               imagesDropped = true;
               log("warn", `${model} rejected images; resending text-only (${request.purpose}).`, errorMessage(error));
               continue;
@@ -57158,16 +57413,25 @@ function createLlmService(deps) {
             if (jsonMode && (isJsonModeRejection(error) || mayBeJsonModeRejection(error))) {
               const named = isJsonModeRejection(error);
               if (named)
-                jsonModeRejected.add(capKey);
+                jsonModeRejected.set(capKey, now());
               jsonMode = false;
               log("warn", `${named ? "JSON mode rejected" : "Possible JSON mode rejection"} by ${connection.provider}/${model}; resending without it.`, errorMessage(error));
+              continue;
+            }
+            if (flat && source !== flat && httpStatusOf(error) === 400 && !isJsonModeRejection(error) && !unsupportedVisionError(error)) {
+              [source, breakpoints] = [flat, undefined];
+              partitionFallback = true;
+              messages = prepare();
+              log("warn", `${connection.provider}/${model} rejected the cache partition; resending the flat messages.`, errorMessage(error));
               continue;
             }
             throw classifyLlmError(error);
           }
         }
+        if (partitionFallback)
+          partitionRejected.add(capKey);
         if (hasImages(messages) && settings.vision === "auto")
-          visionCache.set(visionKey(connection, model), true);
+          visionCache.set(visionKey(connection, model), { value: true, at: now() });
         const raw = extractText(result);
         const finishReason = extractFinishReason(result);
         if (!raw.trim()) {
@@ -57219,7 +57483,7 @@ function createLlmService(deps) {
           const result = await run({
             purpose: str3(o.purpose) || clientOptions.purpose || "analyzer",
             messages: partitioned?.messages ?? messages.map(toLlmMessage),
-            ...partitioned ? { cacheBreakpoints: partitioned.cacheBreakpoints } : {},
+            ...partitioned ? { cacheBreakpoints: partitioned.cacheBreakpoints, flatMessages: messages.map(toLlmMessage) } : {},
             responseMode: o.responseMode === "text" ? "text" : "json",
             ...o.structuredOutputSchema && typeof o.structuredOutputSchema === "object" ? { schema: o.structuredOutputSchema } : {},
             ...Number.isFinite(maxOutputTokens) && maxOutputTokens > 0 ? { maxTokens: maxOutputTokens } : {},
@@ -57335,12 +57599,16 @@ function safeDetails(details) {
     return truncateLog(redactSensitive(String(details)));
   }
 }
-function detailReason(details) {
+function detailReason(details, line) {
   const d = details && typeof details === "object" ? details : {};
   const error = d.error && typeof d.error === "object" ? d.error : d;
   const message = typeof error.message === "string" ? error.message.trim() : "";
   const code = typeof error.code === "string" ? error.code : "";
-  return message ? (code ? `${code}: ${message}` : message).slice(0, 500) : "";
+  if (!message)
+    return "";
+  if (line.includes(message))
+    return code;
+  return (code ? `${code}: ${message}` : message).slice(0, 500);
 }
 function createRunLog(options = {}) {
   const limit = options.limit ?? RUN_LOG_LIMIT;
@@ -57360,8 +57628,8 @@ function createRunLog(options = {}) {
         entries = entries.slice(entries.length - limit);
       if (level === "warn" || level === "error") {
         try {
-          const reason = detailReason(d);
-          options.host?.log[level](`[Inlay:${scope}] ${entry.message}${reason && !entry.message.includes(reason) ? ` (${reason})` : ""}`);
+          const reason = detailReason(d, entry.message);
+          options.host?.log[level](`[Inlay:${scope}] ${entry.message}${reason ? ` (${reason})` : ""}`);
         } catch {}
       }
       options.events?.emit("log.appended", { entry });
@@ -57948,6 +58216,7 @@ function createSourcesService(deps) {
       cache.clear("wb:");
       cache.clear("wbcount:");
       cache.delete("worldbooks");
+      cache.delete("personas");
     }
   };
   return service;
@@ -58054,15 +58323,17 @@ function createStorageService(host, userId, options = {}) {
     }
     const legacyIds = new Set(LEGACY_BUILTIN_ARTIST_PRESETS.map((p) => p.id));
     const referenced = new Set;
-    let files = [];
+    let files;
     try {
       files = (await us.list("characters/", userId)).map((e) => `characters/${normalizePath(String(e))}`).filter((e) => e.endsWith("/asset-maid.json"));
-    } catch {
-      files = [];
+    } catch (error) {
+      throw storageFailure("Could not list the characters.", error);
     }
     for (const file of files) {
-      const doc = asRecord3(await readRaw(file).catch(() => {
-        return;
+      const doc = asRecord3(await readRaw(file).catch((error) => {
+        if (error instanceof RpcFailure && error.error.detailCode === "STORAGE_CORRUPT_JSON")
+          return;
+        throw error;
       }));
       const id = String(asRecord3(doc.characterPrompt).selectedArtistId ?? "").trim();
       if (legacyIds.has(id))
@@ -58093,7 +58364,11 @@ function createStorageService(host, userId, options = {}) {
     if (configCache)
       return configCache;
     const generation = configGeneration;
-    await queue.run(STORAGE_PATHS.artistsGlobal, () => migrateLegacyArtists()).catch((error) => log("warn", "Could not migrate the built-in art styles.", errorMessage(error)));
+    const keep = new Set;
+    await queue.run(STORAGE_PATHS.artistsGlobal, () => migrateLegacyArtists()).catch((error) => {
+      keep.add(STORAGE_PATHS.artistsGlobal);
+      log("warn", "Could not migrate the built-in art styles.", errorMessage(error));
+    });
     const parts = {};
     const stored = {};
     const tooNew = new Set;
@@ -58108,7 +58383,7 @@ function createStorageService(host, userId, options = {}) {
       if (read.tooNew)
         tooNew.add(path);
     }
-    const state = { config: mergeStoredConfig(parts), stored, tooNew };
+    const state = { config: mergeStoredConfig(parts), stored, tooNew, keep };
     if (generation !== configGeneration)
       return configCache ?? state;
     configCache = state;
@@ -58198,17 +58473,31 @@ function createStorageService(host, userId, options = {}) {
         const state = await loadConfigState();
         const next = normalizeConfig(await mutate(jsonClone2(state.config)));
         const split = splitConfigForStorage(next);
+        const previous = splitConfigForStorage(state.config);
         const stored = { ...state.stored };
+        const writes = [];
         for (const { part, kind, path } of CONFIG_PARTS) {
           const value = withVersion(kind, asRecord3(split[part]));
           const text = JSON.stringify(value);
           if (stored[part] === text)
             continue;
-          assertWritable(state.tooNew.has(path), path);
-          await writeRaw(path, value);
-          stored[part] = text;
+          if (state.tooNew.has(path) || state.keep.has(path)) {
+            if (JSON.stringify(split[part] ?? {}) === JSON.stringify(previous[part] ?? {}))
+              continue;
+            assertWritable(state.tooNew.has(path), path);
+          }
+          writes.push({ part, path, value, text });
         }
-        setConfigCache({ config: next, stored, tooNew: state.tooNew });
+        try {
+          for (const write of writes) {
+            await writeRaw(write.path, write.value);
+            stored[write.part] = write.text;
+          }
+        } catch (error) {
+          setConfigCache(null);
+          throw error;
+        }
+        setConfigCache({ config: next, stored, tooNew: state.tooNew, keep: state.keep });
         return next;
       });
       options.events?.emit("config.changed", { config: jsonClone2(config) });
@@ -58223,7 +58512,16 @@ function createStorageService(host, userId, options = {}) {
       if (loaded.notice)
         log("info", loaded.notice);
       if (loaded.migrated && !stored.tooNew) {
-        await queue.run(STORAGE_PATHS.chatImageGenerationSettings, () => writeRaw(STORAGE_PATHS.chatImageGenerationSettings, withVersion("chat-image-generation-settings", { ...loaded.settings }))).catch((error) => log("warn", "Could not save migrated chat image settings.", errorMessage(error)));
+        const path = STORAGE_PATHS.chatImageGenerationSettings;
+        const saved = await queue.run(path, async () => {
+          const current = await readVersioned("chat-image-generation-settings", path);
+          if (current.raw !== undefined)
+            return current;
+          await writeRaw(path, withVersion("chat-image-generation-settings", { ...loaded.settings }));
+          return null;
+        }).catch((error) => void log("warn", "Could not save migrated chat image settings.", errorMessage(error)));
+        if (saved)
+          return loadChatImageGenerationSettings(saved.value).settings;
       }
       return loaded.settings;
     },
@@ -58353,13 +58651,18 @@ function createStorageService(host, userId, options = {}) {
 
 // src/backend/services/decisions.ts
 var CONNECTION_MODEL_PLACEHOLDER = "lumiverse-connection-model";
+function jevKeyPlaceholder(connectionId) {
+  return `lumiverse:${connectionId || "default"}`;
+}
 function jevErrorStatus(error) {
   const status = httpStatusOf(error);
   if (status >= 400)
     return status;
   const message = errorMessage(error);
-  if (message.startsWith("PERMISSION_DENIED:"))
+  if (message.startsWith("PERMISSION_DENIED:") || /\bforbidden\b|permission denied|access denied/i.test(message))
     return 403;
+  if (/unauthori[sz]ed|unauthenticated|(?:invalid|incorrect|missing|expired|revoked)\s+(?:api[ _-]?)?(?:key|token|credentials?)|authentication (?:failed|error|required)/i.test(message))
+    return 401;
   if (/rate.?limit|too many requests/i.test(message))
     return 429;
   if (/not found|no longer exists|invalid/i.test(message))
@@ -58477,7 +58780,7 @@ function createDecisionService(host, log, defaultUserId) {
         },
         getConfig: () => {
           const config = getConfig();
-          return { ...config, model: config.model || CONNECTION_MODEL_PLACEHOLDER, apiKey: "lumiverse" };
+          return { ...config, model: config.model || CONNECTION_MODEL_PLACEHOLDER, apiKey: jevKeyPlaceholder(config.connectionId) };
         }
       };
     }
@@ -58666,6 +58969,13 @@ function createServicesRegistry(host, factory = createServices) {
 }
 
 // src/backend/runtime.ts
+function disposeAll(mods) {
+  for (const mod of Object.values(mods)) {
+    try {
+      mod?.dispose?.();
+    } catch {}
+  }
+}
 function createBackendRuntime(options) {
   const servicesByUser = createServicesRegistry(options.host, options.createServices);
   const modulesByUser = new Map;
@@ -58692,8 +59002,14 @@ function createBackendRuntime(options) {
     current = {};
     modulesByUser.set(key, current);
     const get = () => modulesByUser.get(key);
-    for (const factory of options.modules)
-      Object.assign(current, factory(services, get));
+    try {
+      for (const factory of options.modules)
+        Object.assign(current, factory(services, get));
+    } catch (error) {
+      modulesByUser.delete(key);
+      disposeAll(current);
+      throw error;
+    }
     return current;
   };
   const context = (userId, meta = {}) => ({
@@ -58724,13 +59040,8 @@ function createBackendRuntime(options) {
       return router.handleFrontendMessage(payload, userId, frontendSessionId);
     },
     dispose() {
-      for (const mods of modulesByUser.values()) {
-        for (const mod of Object.values(mods)) {
-          try {
-            mod?.dispose?.();
-          } catch {}
-        }
-      }
+      for (const mods of modulesByUser.values())
+        disposeAll(mods);
       modulesByUser.clear();
     }
   };

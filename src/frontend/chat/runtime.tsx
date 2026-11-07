@@ -50,7 +50,7 @@ export function ChatRuntime({ app, store, getActiveChatId, generateLatest, openO
       data-ii-zoom={store.zoomOpen ? "true" : undefined}
       data-ii-count={showCount && !floating ? "true" : undefined}
     >
-      {showCount ? <CountPanel app={app} settings={settings!} config={config!} chatId={getActiveChatId()} generateLatest={generateLatest} openOverview={openOverview} /> : null}
+      {showCount ? <CountPanel key={getActiveChatId()} app={app} settings={settings!} config={config!} chatId={getActiveChatId()} generateLatest={generateLatest} openOverview={openOverview} /> : null}
       <ToastStack app={app} store={store} onCommand={onToastCommand} />
       <ErrorDialog store={store} onDismiss={(item) => { if (item?.jobId) onToastCommand({ key: `generation:${item.jobId}`, jobId: item.jobId } as RuntimeToastModel, "dismiss"); }} />
     </div>
@@ -287,6 +287,9 @@ function useExecutionSettings(app: AppController, config: InlayConfig) {
   const [failed, setFailed] = useState(false);
   const failedValue = useRef<Required<AnalysisExecution> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Value waiting for the debounce, and the latest `persist` (the unmount flush uses both). */
+  const queued = useRef<Required<AnalysisExecution> | null>(null);
+  const persistRef = useRef<(next: Required<AnalysisExecution>) => Promise<void>>(async () => undefined);
   useEffect(() => {
     if (!needsSeed || !characterId || source?.characterId === characterId) return;
     let live = true;
@@ -296,7 +299,11 @@ function useExecutionSettings(app: AppController, config: InlayConfig) {
     );
     return () => { live = false; };
   }, [needsSeed, characterId]);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+    // Unmounted within the debounce (overlay opened, chat switched, ...): save now instead of dropping the pick.
+    if (queued.current) void persistRef.current(queued.current);
+  }, []);
   const provider = (config.image.provider ? generationProviderFromLumiverse(config.image.provider) : null) ?? config.runtime.generationProvider;
   const seed = needsSeed && source?.characterId === characterId ? source.settings : null;
   const view = executionView(pending ? { ...config.runtime, analysisExecution: pending } : config.runtime, seed, COUNT_LABELS.resolutionAuto);
@@ -311,12 +318,14 @@ function useExecutionSettings(app: AppController, config: InlayConfig) {
       setPending((current) => (current === next ? null : current));
     }
   };
+  persistRef.current = persist;
   const apply = (action: ExecutionAction) => {
     const next = applyExecutionAction(view, action);
     if (!next) return;
     setPending(next);
+    queued.current = next;
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => { timer.current = null; void persist(next); }, EXECUTION_SAVE_DELAY_MS);
+    timer.current = setTimeout(() => { timer.current = null; queued.current = null; void persist(next); }, EXECUTION_SAVE_DELAY_MS);
   };
   const retry = () => { if (failedValue.current) void persist(failedValue.current); };
   return { view, novelai: provider === "novelai", apply, retry, failed };

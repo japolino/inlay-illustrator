@@ -69,14 +69,9 @@ export function useConfigForm(): ConfigForm {
   const apply = useCallback((patch: ConfigPatch) => app.updateConfig(patch), [app]);
 
   const applyStrict = useCallback(async (patch: ConfigPatch) => {
-    const before = app.state.config;
-    if (before) app.store.patch({ config: mergePatch(before, patch) });
     try {
-      const result = await app.call("config.update", { patch });
-      app.store.patch({ config: result.config });
-      return result.config;
+      return await app.updateConfigStrict(patch);
     } catch (caught) {
-      if (before) app.store.patch({ config: before });
       throw new Error(toRpcError(caught).message);
     }
   }, [app]);
@@ -87,7 +82,7 @@ export function useConfigForm(): ConfigForm {
     setError(null);
     try {
       const result = await app.call("config.update", { patch: pending });
-      app.store.patch({ config: result.config });
+      app.applyServerConfig({ config: result.config });
       setDraftPatch({});
       return true;
     } catch (caught) {

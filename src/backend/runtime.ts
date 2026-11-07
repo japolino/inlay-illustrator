@@ -33,6 +33,16 @@ export interface BackendRuntimeOptions {
 
 interface Disposable { dispose?: () => void }
 
+function disposeAll(mods: BackendModules): void {
+  for (const mod of Object.values(mods as unknown as Record<string, Disposable>)) {
+    try {
+      mod?.dispose?.();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 export function createBackendRuntime(options: BackendRuntimeOptions): BackendRuntime {
   const servicesByUser = createServicesRegistry(options.host, options.createServices);
   const modulesByUser = new Map<string, BackendModules>();
@@ -62,7 +72,14 @@ export function createBackendRuntime(options: BackendRuntimeOptions): BackendRun
     current = {} as BackendModules;
     modulesByUser.set(key, current);
     const get = () => modulesByUser.get(key)!;
-    for (const factory of options.modules) Object.assign(current, factory(services, get));
+    try {
+      for (const factory of options.modules) Object.assign(current, factory(services, get));
+    } catch (error) {
+      // No half-built modules for good: drop what was built, so the next call builds again.
+      modulesByUser.delete(key);
+      disposeAll(current);
+      throw error;
+    }
     return current;
   };
 
@@ -94,15 +111,7 @@ export function createBackendRuntime(options: BackendRuntimeOptions): BackendRun
       return router.handleFrontendMessage(payload, userId, frontendSessionId);
     },
     dispose() {
-      for (const mods of modulesByUser.values()) {
-        for (const mod of Object.values(mods as unknown as Record<string, Disposable>)) {
-          try {
-            mod?.dispose?.();
-          } catch {
-            /* ignore */
-          }
-        }
-      }
+      for (const mods of modulesByUser.values()) disposeAll(mods);
       modulesByUser.clear();
     },
   };

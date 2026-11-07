@@ -111,12 +111,16 @@ describe("sources service", () => {
   });
 
   test("character images carry AssetRefs; personas; chats", async () => {
-    const { sources } = setup();
+    const { fake, sources } = setup();
     const images = await sources.listCharacterImages("c1");
     expect(images.find((i) => i.imageId === "gal1")).toMatchObject({ origin: "gallery", name: "beach.webp", kind: "original", url: "/api/v1/images/gal1", thumbnailUrl: "/api/v1/images/gal1?size=sm", width: 10, asset: { key: "gal1", extension: "webp", sourceType: "character", characterTarget: { chaId: "c1" } } });
     expect(images.find((i) => i.imageId === "gen2")).toMatchObject({ origin: "generated", kind: "outfit", asset: { sourceType: "generated" } });
     expect((await sources.listPersonas()).map((p) => p.personaId)).toEqual(["p1"]);
     expect((await sources.getActivePersona())?.personaId).toBe("p1");
+    // A character invalidation also drops the persona list (persona edits have no event of their own here).
+    fake.addPersona({ id: "p2" });
+    sources.invalidate("c1");
+    expect((await sources.listPersonas()).map((p) => p.personaId)).toEqual(["p1", "p2"]);
     expect(await sources.getChat("chat2")).toMatchObject({ characterId: "c1", groupCharacterIds: ["c1", "c2"] });
     expect(await sources.getActiveChat()).toBeNull();
   });

@@ -656,6 +656,8 @@ export function createSourcesService(deps: SourcesServiceDeps): SourcesService {
       cache.clear("wb:");
       cache.clear("wbcount:");
       cache.delete("worldbooks");
+      // Personas are not tied to a character, and no persona event reaches here: any invalidation reloads them (cheap).
+      cache.delete("personas");
     },
   };
   return service;

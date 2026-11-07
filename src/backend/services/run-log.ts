@@ -66,13 +66,18 @@ export function safeDetails(details: unknown): unknown {
   }
 }
 
-/** The error message inside log details (`{message}` or `{error: {message}}`), for the one-line host log. */
-function detailReason(details: unknown): string {
+/**
+ * The error reason inside log details (`{message}` or `{error: {message}}`) for the one-line host log: "code: message",
+ * or just the code when the line already says the message.
+ */
+function detailReason(details: unknown, line: string): string {
   const d = details && typeof details === "object" ? (details as Record<string, unknown>) : {};
   const error = d.error && typeof d.error === "object" ? (d.error as Record<string, unknown>) : d;
   const message = typeof error.message === "string" ? error.message.trim() : "";
   const code = typeof error.code === "string" ? error.code : "";
-  return message ? (code ? `${code}: ${message}` : message).slice(0, 500) : "";
+  if (!message) return "";
+  if (line.includes(message)) return code;
+  return (code ? `${code}: ${message}` : message).slice(0, 500);
 }
 
 export function createRunLog(options: { events?: EventBus; host?: Pick<SpindleHost, "log">; limit?: number; now?: () => Date } = {}): RunLog {
@@ -91,8 +96,8 @@ export function createRunLog(options: { events?: EventBus; host?: Pick<SpindleHo
       if (entries.length > limit) entries = entries.slice(entries.length - limit);
       if (level === "warn" || level === "error") {
         try {
-          const reason = detailReason(d);
-          options.host?.log[level](`[Inlay:${scope}] ${entry.message}${reason && !entry.message.includes(reason) ? ` (${reason})` : ""}`);
+          const reason = detailReason(d, entry.message);
+          options.host?.log[level](`[Inlay:${scope}] ${entry.message}${reason ? ` (${reason})` : ""}`);
         } catch {
           /* host log unavailable */
         }
