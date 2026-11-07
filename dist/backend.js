@@ -1422,10 +1422,31 @@ function novelAISamplingOptions(model) {
 }
 
 // src/shared/contract/character.ts
+var LORE_KEY_SEPARATOR = "::lore::";
 var CHARACTER_DESCRIPTION_LORE_ID = "asset-maid:charx-description:v1";
 var CUSTOM_CHARACTER_ID_PREFIX = "character_";
+var PERSONA_PROMPT_KEY_PREFIX = "persona::";
 function loreSelectionId(worldBookId, entryId) {
   return `${trimString(worldBookId)}:${trimString(entryId)}`;
+}
+function parsePromptKey(promptKey) {
+  const raw = trimString(promptKey);
+  if (raw.startsWith(PERSONA_PROMPT_KEY_PREFIX))
+    return { kind: "persona", personaId: raw.slice(PERSONA_PROMPT_KEY_PREFIX.length) };
+  if (raw.startsWith(CUSTOM_CHARACTER_ID_PREFIX) && !raw.includes(LORE_KEY_SEPARATOR))
+    return { kind: "custom", customId: raw };
+  const at = raw.indexOf(LORE_KEY_SEPARATOR);
+  if (at > 0) {
+    const characterId = raw.slice(0, at);
+    const rest = raw.slice(at + LORE_KEY_SEPARATOR.length);
+    if (rest === CHARACTER_DESCRIPTION_LORE_ID)
+      return { kind: "description", characterId, selectionId: rest };
+    const colon = rest.indexOf(":");
+    if (colon > 0 && colon < rest.length - 1) {
+      return { kind: "lore", characterId, worldBookId: rest.slice(0, colon), entryId: rest.slice(colon + 1), selectionId: rest };
+    }
+  }
+  return { kind: "unknown", raw };
 }
 function extensionOf(name, key, ext) {
   const explicit = trimString(ext).replace(/^\./, "").toLowerCase();
@@ -58293,9 +58314,150 @@ function shareArtists(host, userId, loadConfig) {
   };
 }
 
+// src/backend/services/shared-characters.ts
+var SHARED_CHARACTERS_CHANNEL = "characters";
+var SHARED_CHARACTERS_VERSION = 1;
+var STORAGE_KEY_PREFIX2 = "storage:";
+var CHANNEL_SEGMENT2 = /^[a-z0-9][a-z0-9_-]*$/u;
+function sharedCharacterChannel(userId, characterId) {
+  const id = characterId.trim().toLowerCase();
+  if (!CHANNEL_SEGMENT2.test(id))
+    return null;
+  const user = sharedArtistsChannel(userId).slice("artists.".length);
+  return `${SHARED_CHARACTERS_CHANNEL}.${user}.${id}`;
+}
+function imageIdOf(asset) {
+  const key = typeof asset?.key === "string" ? asset.key.trim() : "";
+  return key && !key.startsWith(STORAGE_KEY_PREFIX2) ? key : null;
+}
+function uniqueText(values) {
+  const out = [];
+  const seen = new Set;
+  for (const value of values) {
+    const text = typeof value === "string" ? value.trim() : "";
+    const key = text.toLowerCase();
+    if (!text || seen.has(key))
+      continue;
+    seen.add(key);
+    out.push(text);
+  }
+  return out;
+}
+function outfitOf(outfit) {
+  const tags = uniqueText(OUTFIT_PARTS.map((part) => outfit[part])).join(", ");
+  return { id: outfit.id, label: outfit.label, tags, referenceImageId: outfit.referenceEnabled === false ? null : imageIdOf(outfit.referenceAsset) };
+}
+function formOf(form, fallbackTags) {
+  const reference = form.reference && form.reference.enabled !== false ? imageIdOf(form.reference.defaultAsset) : null;
+  return {
+    id: form.id,
+    label: form.label,
+    gender: form.gender,
+    humanlike: form.humanlike,
+    tags: compileMainPrompt(form.basePromptGroups, form.gender) || fallbackTags,
+    negative: form.negativePrompt ?? "",
+    referenceImageId: reference,
+    defaultOutfitId: form.defaultOutfitId,
+    outfits: (form.outfits ?? []).map(outfitOf)
+  };
+}
+function sharedCharacterValue(doc, names) {
+  const cp = doc.characterPrompt;
+  const customs = new Map((doc.customCharacters ?? []).map((c) => [c.id, c]));
+  const entries = new Map(names.books.flatMap((book) => book.entries.map((e) => [`${e.worldBookId}:${e.entryId}`, e])));
+  const members = [];
+  for (const [key, collection] of Object.entries(cp.characterForms ?? {})) {
+    const parsed = parsePromptKey(key);
+    let kind;
+    let name = "";
+    let aliases = [];
+    if (parsed.kind === "custom") {
+      const custom = customs.get(parsed.customId);
+      if (!custom || custom.workspaceEnabled === false)
+        continue;
+      kind = "custom";
+      name = custom.title;
+      aliases = uniqueText(custom.recognitionKeys ?? []);
+    } else if (parsed.kind === "description" && parsed.selectionId === CHARACTER_DESCRIPTION_LORE_ID) {
+      kind = "description";
+      name = names.characterName;
+    } else if (parsed.kind === "lore") {
+      const entry = entries.get(parsed.selectionId);
+      if (!entry)
+        continue;
+      kind = "lore";
+      name = entry.comment || entry.keys[0] || "";
+      aliases = uniqueText(entry.keys);
+    } else
+      continue;
+    name = name.trim();
+    if (!name)
+      continue;
+    const fallbackTags = typeof cp.lorebookPrompts?.[key] === "string" ? String(cp.lorebookPrompts[key]).trim() : "";
+    const forms = (collection?.forms ?? []).map((form) => formOf(form, fallbackTags));
+    if (!forms.length)
+      continue;
+    members.push({ key, kind, name, aliases: uniqueText(aliases).filter((a) => a.toLowerCase() !== name.toLowerCase()), defaultFormId: collection.defaultFormId, forms });
+  }
+  return { version: SHARED_CHARACTERS_VERSION, characterId: doc.characterId, updatedAt: doc.updatedAt, members };
+}
+function shareCharacters(host, userId, deps) {
+  const pool = host.rpcPool;
+  const registered = new Set;
+  const load = async (characterId) => {
+    if (!await deps.storage.hasCharacterDocument(characterId))
+      return null;
+    const doc = await deps.storage.loadCharacterDocument(characterId);
+    const needsBooks = Object.keys(doc.characterPrompt.characterForms ?? {}).some((key) => parsePromptKey(key).kind === "lore");
+    const character = await deps.sources.getCharacter(characterId).catch(() => null);
+    const books = needsBooks ? await deps.sources.loadWorldBooks(characterId, doc).catch(() => []) : [];
+    return sharedCharacterValue(doc, { characterName: character?.name ?? "", books });
+  };
+  const ensure = (characterId) => {
+    if (!pool?.handle)
+      return;
+    const channel = sharedCharacterChannel(userId, characterId);
+    if (!channel || registered.has(channel))
+      return;
+    try {
+      pool.handle(channel, () => load(characterId), { requires: ["characters", "images"] });
+      registered.add(channel);
+    } catch {}
+  };
+  return {
+    ensure,
+    async registerStored() {
+      if (!pool?.handle)
+        return;
+      const files = await deps.storage.list("characters/").catch(() => []);
+      for (const file of files) {
+        const id = /^(?:characters\/)?([^/]+)\/asset-maid\.json$/u.exec(file)?.[1];
+        if (id)
+          ensure(id);
+      }
+    },
+    unregisterAll() {
+      for (const channel of registered) {
+        try {
+          pool?.unregister(channel);
+        } catch {}
+      }
+      registered.clear();
+    }
+  };
+}
+
 // src/backend/services/index.ts
 function createServices(host, userId) {
-  const events = createEventBus(host, userId);
+  const bus = createEventBus(host, userId);
+  let onDocument = () => {};
+  const events = {
+    emit(event, payload) {
+      bus.emit(event, payload);
+      if (event === "document.changed")
+        onDocument(String(payload.characterId ?? ""));
+    }
+  };
   const log = createRunLog({ events, host });
   const storage = createStorageService(host, userId, { events, log });
   const loadConfig = () => storage.loadConfig();
@@ -58305,6 +58467,11 @@ function createServices(host, userId) {
   const sources = createSourcesService({ host, userId, imageBytes, storage, log });
   const decisions = createDecisionService(host, log, userId);
   shareArtists(host, userId, loadConfig);
+  const characters = shareCharacters(host, userId, { storage, sources });
+  onDocument = characters.ensure;
+  characters.registerStored().catch(() => {
+    return;
+  });
   const atelier = createAtelierService({ storage, events, log });
   return { host, userId, storage, llm, images, imageBytes, sources, events, log, decisions, atelier };
 }
