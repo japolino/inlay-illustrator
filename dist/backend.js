@@ -52115,7 +52115,7 @@ async function generateMessageIllustrations(deps, req) {
       runtime.chatImageGenerationSettings = jsonClone(req.settings);
       if (atelier)
         applyAtelierOverlay(runtime, atelier, resolveSourceGenerationSettings2(runtime, primaryId));
-      return runtime;
+      return req.directing ? req.directing(runtime) : runtime;
     };
     const runtime = decorate(auto ? auto.store.getCurrentSnapshot() : buildRuntimeConfig(config, primaryDoc, { resolvedImageModel: imageTarget.model }));
     const getConfig = () => auto ? decorate(auto.store.getCurrentSnapshot()) : runtime;
@@ -55141,6 +55141,236 @@ function sessionRetryErrors(progress) {
   }).slice(-20);
 }
 
+// src/backend/pipeline/shared-pictures.ts
+var SHARED_PICTURES_CHANNEL = "pictures";
+var SHARED_PICTURES_VERSION = 1;
+var MAX_PER_READ = 8;
+var MAX_KEPT = 200;
+var ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:#-]{0,159}$/u;
+var PICTURE_END = "* * *";
+var RETRY_FAILED_MS = 60000;
+var rec10 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var GAMBIT_PARLEY_NAME = "Gambit: Parley";
+var GAMBIT_CUTIN_NAME = "Gambit: Cut-in";
+var GAMBIT_RATIO_NAME = "Gambit: Wide";
+var GAMBIT_PARLEY_INSTRUCTION = "One image of the beat the text describes in a contest of words: the person the persona is talking to, reacting to what the persona just said or did. " + "Show it through the persona's eyes at conversation distance: the other person faces the viewer, waist up or chest up, and their face, eyes and hands carry the beat (caught off guard, suspicious, furious, amused, tempted, giving in, turning away). " + "Keep the place of the scene behind them, softer than they are, lit like a film still. Show nobody else unless the text puts them right there. " + "Show the persona only as hands, and only when the text has them doing something (offering, pointing, holding coin); never their face or body.";
+var GAMBIT_CUTIN_INSTRUCTION = "One image of a combat cut-in: the acting character alone, mid-move, as fighting-game or gacha special-move splash art. " + "A dynamic, foreshortened action pose at a slanted camera angle (lunging, swinging a weapon through the frame, casting with an arm thrust at the viewer, bracing behind a barrier), intense eyes, hair and clothes whipped by the motion. " + "The move's own effects surround them (fire and embers, ice, lightning, holy light, a dark aura, water, flying rock, a magic circle). " + "No scenery and no floor: a plain white background behind them. No other people, no text.";
+var GAMBIT_RATIO_INSTRUCTION = "Always choose sizeId 2 (landscape).";
+var pathRule = (id, direction, action, path, value) => ({
+  id,
+  condition: { direction },
+  effect: { kind: "path", action, path, ...value !== undefined ? { value } : {} }
+});
+function gambitGuidelines(_library, ids) {
+  const parley = {
+    name: GAMBIT_PARLEY_NAME,
+    instruction: GAMBIT_PARLEY_INSTRUCTION,
+    outputMode: "illustration",
+    system: {
+      options: [],
+      values: {},
+      rules: [
+        pathRule("gambit-parley-pov", ids.parley, "add", "scene.group.camera.view", ["pov"]),
+        pathRule("gambit-parley-no-dialogue", ids.parley, "remove", "actor.text.dialogue")
+      ]
+    }
+  };
+  const cutin = {
+    name: GAMBIT_CUTIN_NAME,
+    instruction: GAMBIT_CUTIN_INSTRUCTION,
+    outputMode: "illustration",
+    system: {
+      options: [],
+      values: {},
+      rules: [
+        pathRule("gambit-cutin-no-dialogue", ids.cutin, "remove", "actor.text.dialogue"),
+        pathRule("gambit-cutin-no-place-tags", ids.cutin, "remove", "scene.free.location"),
+        pathRule("gambit-cutin-no-place-text", ids.cutin, "remove", "scene.text.location"),
+        pathRule("gambit-cutin-no-props", ids.cutin, "remove", "scene.free.object")
+      ]
+    }
+  };
+  return { parley, cutin };
+}
+var nameOf = (item) => String(rec10(item).name ?? "").trim();
+function selectGambitGuideline(runtime, direction) {
+  const library = resolveStoredLibrary(runtime);
+  const want = direction === "parley" ? GAMBIT_PARLEY_NAME : GAMBIT_CUTIN_NAME;
+  const own = Object.entries(library.scene.items).find(([, item]) => nameOf(item) === want)?.[0];
+  let sceneId = own;
+  if (!sceneId) {
+    sceneId = direction === "parley" ? "gambit-parley" : "gambit-cutin";
+    const made = gambitGuidelines(library, { parley: "gambit-parley", cutin: "gambit-cutin" });
+    library.scene.items[sceneId] = direction === "parley" ? made.parley : made.cutin;
+  }
+  library.scene.selected = sceneId;
+  const ownRatio = Object.entries(library.imageRatio.items).find(([, item]) => nameOf(item) === GAMBIT_RATIO_NAME)?.[0];
+  const ratioId = ownRatio ?? "gambit-wide";
+  if (!ownRatio)
+    library.imageRatio.items[ratioId] = { name: GAMBIT_RATIO_NAME, instruction: GAMBIT_RATIO_INSTRUCTION, allowedSizeIds: [2] };
+  library.imageRatio.selected = ratioId;
+  return commitLibrary(runtime, library);
+}
+function sharedPicturesChannel(userId) {
+  return `${SHARED_PICTURES_CHANNEL}.${sharedArtistsChannel(userId).slice("artists.".length)}`;
+}
+function picturesEndpoint(readerExtensionId, userId) {
+  return `${readerExtensionId}.inlay.pictures.${sharedArtistsChannel(userId).slice("artists.".length)}`;
+}
+var text4 = (v, max) => typeof v === "string" ? v.replace(/[ \t]+/g, " ").trim().slice(0, max) : "";
+function parsePictureRequests(raw) {
+  const o = rec10(raw);
+  if (o.version !== 1 || !Array.isArray(o.pictures))
+    return [];
+  const out = [];
+  for (const p of o.pictures) {
+    const x = rec10(p);
+    const id = text4(x.id, 160);
+    const chatId = text4(x.chatId, 80);
+    const direction = x.direction === "parley" || x.direction === "cutin" ? x.direction : null;
+    const body = text4(x.text, 2000);
+    if (!ID_RE.test(id) || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/u.test(chatId) || !direction || !body)
+      continue;
+    if (!out.some((r) => r.id === id))
+      out.push({ id, chatId, direction, text: body });
+    if (out.length >= 32)
+      break;
+  }
+  return out;
+}
+function sharePictures(services, engine, getModules) {
+  const host = services.host;
+  const pool = host.rpcPool;
+  if (!pool?.handle)
+    return { dispose() {} };
+  const channel = sharedPicturesChannel(services.userId);
+  const kept = new Map;
+  const queue = [];
+  const abort = new AbortController;
+  let running = false;
+  const keep = (key, status) => {
+    kept.delete(key);
+    kept.set(key, status);
+    while (kept.size > MAX_KEPT)
+      kept.delete(kept.keys().next().value);
+  };
+  async function draw(reader, req) {
+    const chat = await services.sources.getChat(req.chatId);
+    const characterId = chat.characterId || chat.groupCharacterIds[0] || "";
+    const character = characterId ? await services.sources.getCharacter(characterId) : { name: "" };
+    const messages = await loadMessages(services.host, req.chatId);
+    const messageId = `${reader}:${req.id}`.replace(/[^A-Za-z0-9_.:-]/gu, "_");
+    const content = `${req.text}
+
+${PICTURE_END}`;
+    const view = { id: messageId, index: messages.length, role: "assistant", isUser: false, name: character.name, swipeId: 0, swipes: [content], content, extra: {} };
+    const all = [...messages, view];
+    const document2 = characterId ? await services.storage.loadCharacterDocument(characterId) : null;
+    const built = messageSlots(messageId, content, characterId ? nativeDetectorsFor(characterId, "", document2) : []);
+    const slots = built.slots.slice(-1).map((s) => ({ ...s }));
+    if (!slots.length)
+      throw new Error("Nothing to draw in the request text.");
+    const config = await services.storage.loadConfig();
+    const settings = { ...await services.storage.loadChatImageGenerationSettings(), analysisMode: "single", countPolicy: fixedCountPolicy(1) };
+    const result = await generateMessageIllustrations({ services, engine, ...getModules ? { getModules } : {} }, {
+      chatId: req.chatId,
+      chat,
+      messages: all,
+      target: all.length - 1,
+      swipeIndex: 0,
+      historyId: `${messageId}@0`,
+      planKey: messageId,
+      clean: built.clean,
+      slots,
+      countPolicy: fixedCountPolicy(1),
+      attemptKind: "initial",
+      automatic: false,
+      revisionId: `picture:${messageId}`,
+      existingEntries: [],
+      deletedSlotIndices: [],
+      jobId: `picture:${messageId}`,
+      activityLabel: reader,
+      config,
+      settings,
+      chatData: await services.storage.loadChatData(req.chatId),
+      signal: abort.signal,
+      assertTarget: async () => {
+        return;
+      },
+      directing: (runtime) => selectGambitGuideline(runtime, req.direction)
+    });
+    const record = result.records[0];
+    if (!record)
+      throw new Error(result.error || "No picture was made.");
+    return { status: "ready", imageId: record.imageId, url: `/api/v1/images/${record.imageId}`, ...record.width ? { width: record.width } : {}, ...record.height ? { height: record.height } : {}, at: Date.now() };
+  }
+  async function pump() {
+    if (running)
+      return;
+    running = true;
+    try {
+      while (queue.length && !abort.signal.aborted) {
+        const { reader, req } = queue.shift();
+        const key = `${reader}\x00${req.id}`;
+        keep(key, { status: "running", at: Date.now() });
+        try {
+          const done = await draw(reader, req);
+          keep(key, done);
+          services.log.append("info", "pictures", `${reader}: ${req.direction} picture ${req.id} ready`, { chatId: req.chatId, imageId: done.imageId });
+        } catch (err) {
+          const error = err instanceof Error ? err.message : String(err);
+          keep(key, { status: "failed", error, at: Date.now() });
+          services.log.append("warn", "pictures", `${reader}: ${req.direction} picture ${req.id} failed: ${error}`, { chatId: req.chatId });
+        }
+      }
+    } finally {
+      running = false;
+    }
+  }
+  const starter = setInterval(() => {
+    if (queue.length && !running)
+      pump();
+  }, 500);
+  starter.unref?.();
+  async function answer(reader) {
+    const raw = await pool.read(picturesEndpoint(reader, services.userId)).catch(() => null);
+    const pictures = {};
+    let added = 0;
+    for (const req of parsePictureRequests(raw)) {
+      const key = `${reader}\x00${req.id}`;
+      const known = kept.get(key);
+      if (known && !(known.status === "failed" && Date.now() - known.at > RETRY_FAILED_MS)) {
+        pictures[req.id] = known;
+        continue;
+      }
+      if (added >= MAX_PER_READ)
+        continue;
+      added += 1;
+      const status = { status: "queued", at: Date.now() };
+      keep(key, status);
+      queue.push({ reader, req });
+      pictures[req.id] = status;
+      services.log.append("info", "pictures", `${reader} asked for a ${req.direction} picture (${req.id})`, { chatId: req.chatId });
+    }
+    return { version: SHARED_PICTURES_VERSION, pictures };
+  }
+  try {
+    pool.handle(channel, (ctx) => answer(ctx.requesterExtensionId), { requires: ["characters", "generation"] });
+  } catch {
+    clearInterval(starter);
+    return { dispose() {} };
+  }
+  return {
+    dispose() {
+      abort.abort("pictures-disposed");
+      clearInterval(starter);
+      try {
+        pool.unregister(channel);
+      } catch {}
+    }
+  };
+}
+
 // src/backend/pipeline/index.ts
 function createPipelineModule(services, getModules, options = {}) {
   const engine = options.engine ?? createEnginePort(services, {
@@ -55151,7 +55381,16 @@ function createPipelineModule(services, getModules, options = {}) {
       } catch {}
     }
   });
-  return { pipeline: createChatPipelineController(services, engine, { ...getModules ? { getModules } : {}, ...options }) };
+  const pipeline = createChatPipelineController(services, engine, { ...getModules ? { getModules } : {}, ...options });
+  const pictures = options.engine ? null : sharePictures(services, engine, getModules);
+  if (pictures) {
+    const dispose = pipeline.dispose.bind(pipeline);
+    pipeline.dispose = () => {
+      pictures.dispose();
+      dispose();
+    };
+  }
+  return { pipeline };
 }
 
 // src/backend/rpc/router.ts

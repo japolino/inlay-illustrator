@@ -15,6 +15,7 @@ import type { BackendModules } from "../rpc/types.js";
 import type { BackendServices } from "../services/types.js";
 import { createChatPipelineController, type ChatPipeline, type ControllerOptions } from "./controller.js";
 import { createEnginePort, type EnginePort } from "./engine-port.js";
+import { sharePictures } from "./shared-pictures.js";
 
 export type { ChatPipeline, PublishResult } from "./controller.js";
 export type { EnginePort, EngineRunContext } from "./engine-port.js";
@@ -45,5 +46,15 @@ export function createPipelineModule(services: BackendServices, getModules?: () 
         }
       },
     });
-  return { pipeline: createChatPipelineController(services, engine, { ...(getModules ? { getModules } : {}), ...options }) };
+  const pipeline = createChatPipelineController(services, engine, { ...(getModules ? { getModules } : {}), ...options });
+  // Pictures for other extensions (Gambit's Parley moments and cut-ins), made by the same engine.
+  const pictures = options.engine ? null : sharePictures(services, engine, getModules);
+  if (pictures) {
+    const dispose = pipeline.dispose.bind(pipeline);
+    pipeline.dispose = () => {
+      pictures.dispose();
+      dispose();
+    };
+  }
+  return { pipeline };
 }

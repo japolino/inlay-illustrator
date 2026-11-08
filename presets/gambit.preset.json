@@ -1,0 +1,116 @@
+{
+  "format": "asset-maid-preset",
+  "title": "Gambit",
+  "content": {
+    "analysis": {
+      "scene": {
+        "selected": "default",
+        "items": {
+          "gambit-parley": {
+            "name": "Gambit: Parley",
+            "instruction": "One image of the beat the text describes in a contest of words: the person the persona is talking to, reacting to what the persona just said or did. Show it through the persona's eyes at conversation distance: the other person faces the viewer, waist up or chest up, and their face, eyes and hands carry the beat (caught off guard, suspicious, furious, amused, tempted, giving in, turning away). Keep the place of the scene behind them, softer than they are, lit like a film still. Show nobody else unless the text puts them right there. Show the persona only as hands, and only when the text has them doing something (offering, pointing, holding coin); never their face or body.",
+            "outputMode": "illustration",
+            "system": {
+              "options": [],
+              "values": {},
+              "rules": [
+                {
+                  "id": "gambit-parley-pov",
+                  "condition": {
+                    "direction": "gambit-parley"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "add",
+                    "path": "scene.group.camera.view",
+                    "value": [
+                      "pov"
+                    ]
+                  }
+                },
+                {
+                  "id": "gambit-parley-no-dialogue",
+                  "condition": {
+                    "direction": "gambit-parley"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "remove",
+                    "path": "actor.text.dialogue"
+                  }
+                }
+              ]
+            }
+          },
+          "gambit-cutin": {
+            "name": "Gambit: Cut-in",
+            "instruction": "One image of a combat cut-in: the acting character alone, mid-move, as fighting-game or gacha special-move splash art. A dynamic, foreshortened action pose at a slanted camera angle (lunging, swinging a weapon through the frame, casting with an arm thrust at the viewer, bracing behind a barrier), intense eyes, hair and clothes whipped by the motion. The move's own effects surround them (fire and embers, ice, lightning, holy light, a dark aura, water, flying rock, a magic circle). No scenery and no floor: a plain white background behind them. No other people, no text.",
+            "outputMode": "illustration",
+            "system": {
+              "options": [],
+              "values": {},
+              "rules": [
+                {
+                  "id": "gambit-cutin-no-dialogue",
+                  "condition": {
+                    "direction": "gambit-cutin"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "remove",
+                    "path": "actor.text.dialogue"
+                  }
+                },
+                {
+                  "id": "gambit-cutin-no-place-tags",
+                  "condition": {
+                    "direction": "gambit-cutin"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "remove",
+                    "path": "scene.free.location"
+                  }
+                },
+                {
+                  "id": "gambit-cutin-no-place-text",
+                  "condition": {
+                    "direction": "gambit-cutin"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "remove",
+                    "path": "scene.text.location"
+                  }
+                },
+                {
+                  "id": "gambit-cutin-no-props",
+                  "condition": {
+                    "direction": "gambit-cutin"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "remove",
+                    "path": "scene.free.object"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "imageRatio": {
+        "selected": "default",
+        "items": {
+          "gambit-wide": {
+            "name": "Gambit: Wide",
+            "instruction": "Always choose sizeId 2 (landscape).",
+            "allowedSizeIds": [
+              2
+            ]
+          }
+        }
+      }
+    }
+  }
+}

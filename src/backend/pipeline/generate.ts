@@ -177,6 +177,11 @@ export interface GenerateMessageRequest {
   onJevSelection?: (selection: JevSelectionProgress) => void;
   /** Engine retry state: image request retry counter + retry errors (AM session `imageRetry` / `retryErrors`). */
   onRetryErrors?: (errors: GenerationRetryError[], imageRetry: { attempt: number; total: number } | undefined) => void;
+  /**
+   * Last word on the run's directing (pictures for other extensions, shared-pictures.ts): gets the runtime config with
+   * the Atelier overlay applied and returns the one the run uses (another scene guideline selected). Not stored.
+   */
+  directing?: (runtime: Rec) => Rec;
 }
 
 /** AM session `progress.jevSelection` -> job snapshot shape. */
@@ -408,7 +413,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       runtime.chatImageGenerationSettings = jsonClone(req.settings);
       // Maid Atelier (config/atelier.json): active preset, guideline library, free-generation guidelines, execution.
       if (atelier) applyAtelierOverlay(runtime as Rec & { runtime: unknown }, atelier, resolveSourceGenerationSettings(runtime as unknown as AssetMaidConfig, primaryId) as Pick<EffectiveCharxSettings, "fixedResolution" | "forceAiChoiceCoordinates">);
-      return runtime;
+      return req.directing ? req.directing(runtime) : runtime;
     };
     const runtime = decorate(auto ? (auto.store.getCurrentSnapshot() as Rec) : (buildRuntimeConfig(config, primaryDoc, { resolvedImageModel: imageTarget.model }) as unknown as Rec));
     const getConfig = () => (auto ? decorate(auto.store.getCurrentSnapshot() as Rec) : runtime) as unknown as AssetMaidConfig;
