@@ -173,6 +173,42 @@
                 }
               ]
             }
+          },
+          "gambit-intimate": {
+            "name": "Gambit: Intimate",
+            "instruction": "One wide image of an adult scene between the persona and the character the text is about, as an event CG in a visual novel: the moment the text has reached by its end, as it is (who is where, what they are doing, how far it has gone, what they still wear). Both are adults. Rate it as the text is: an explicit moment is an explicit picture. Show it through the persona's eyes: the other character in full view, their face and body carrying the moment, the persona only as much of their body as the moment needs (hands, chest, hips, legs), never their face. Draw the character with the body and looks their profile gives them, every trait of their kind kept (a tail, scales, wings, horns, fur, a lower body that isn't human). Keep the place of the scene around them, lit to the mood. Nobody else, no text and no panels.",
+            "outputMode": "illustration",
+            "system": {
+              "options": [],
+              "values": {},
+              "rules": [
+                {
+                  "id": "gambit-intimate-pov",
+                  "condition": {
+                    "direction": "gambit-intimate"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "add",
+                    "path": "scene.group.camera.view",
+                    "value": [
+                      "pov"
+                    ]
+                  }
+                },
+                {
+                  "id": "gambit-intimate-no-dialogue",
+                  "condition": {
+                    "direction": "gambit-intimate"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "remove",
+                    "path": "actor.text.dialogue"
+                  }
+                }
+              ]
+            }
           }
         }
       },

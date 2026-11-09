@@ -55203,12 +55203,13 @@ var MAX_KEPT = 200;
 var ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:#-]{0,159}$/u;
 var PICTURE_END = "* * *";
 var RETRY_FAILED_MS = 60000;
-var PICTURE_DIRECTIONS = ["parley", "cutin", "figure", "scene"];
+var PICTURE_DIRECTIONS = ["parley", "cutin", "figure", "scene", "intimate"];
 var rec10 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 var GAMBIT_PARLEY_NAME = "Gambit: Parley";
 var GAMBIT_CUTIN_NAME = "Gambit: Cut-in";
 var GAMBIT_FIGURE_NAME = "Gambit: Figure";
 var GAMBIT_SCENE_NAME = "Gambit: Scene";
+var GAMBIT_INTIMATE_NAME = "Gambit: Intimate";
 var GAMBIT_RATIO_NAME = "Gambit: Wide";
 var GAMBIT_TALL_RATIO_NAME = "Gambit: Tall";
 var GAMBIT_PARLEY_INSTRUCTION = "One image of the beat the text describes in a contest of words: the person the persona is talking to, reacting to what the persona just said or did. " + "Show it through the persona's eyes at conversation distance: the other person faces the viewer, waist up or chest up, and their face, eyes and hands carry the beat (caught off guard, suspicious, furious, amused, tempted, giving in, turning away). " + "Keep the place of the scene behind them, softer than they are, lit like a film still. Show nobody else unless the text puts them right there. " + "Show the persona only as hands, and only when the text has them doing something (offering, pointing, holding coin); never their face or body.";
@@ -55220,6 +55221,7 @@ var CUT_OUT_GROUND = {
   negative: "scenery, indoors, outdoors, room, furniture, floor, cast shadow",
   drop: ["vignette", "negative space", "blank page"]
 };
+var GAMBIT_INTIMATE_INSTRUCTION = "One wide image of an adult scene between the persona and the character the text is about, as an event CG in a visual novel: the moment the text has reached by its end, as it is (who is where, what they are doing, how far it has gone, what they still wear). " + "Both are adults. Rate it as the text is: an explicit moment is an explicit picture. " + "Show it through the persona's eyes: the other character in full view, their face and body carrying the moment, the persona only as much of their body as the moment needs (hands, chest, hips, legs), never their face. " + "Draw the character with the body and looks their profile gives them, every trait of their kind kept (a tail, scales, wings, horns, fur, a lower body that isn't human). Keep the place of the scene around them, lit to the mood. Nobody else, no text and no panels.";
 var GAMBIT_RATIO_INSTRUCTION = "Always choose sizeId 2 (landscape).";
 var GAMBIT_TALL_RATIO_INSTRUCTION = "Always choose sizeId 1 (portrait).";
 var pathRule = (id, direction, action, path, value) => ({
@@ -55277,9 +55279,22 @@ function gambitGuidelines(_library, ids) {
     outputMode: "illustration",
     system: { options: [], values: {}, rules: [pathRule("gambit-scene-no-dialogue", ids.scene, "remove", "actor.text.dialogue")] }
   };
-  return { parley, cutin, figure, scene };
+  const intimate = {
+    name: GAMBIT_INTIMATE_NAME,
+    instruction: GAMBIT_INTIMATE_INSTRUCTION,
+    outputMode: "illustration",
+    system: {
+      options: [],
+      values: {},
+      rules: [
+        pathRule("gambit-intimate-pov", ids.intimate, "add", "scene.group.camera.view", ["pov"]),
+        pathRule("gambit-intimate-no-dialogue", ids.intimate, "remove", "actor.text.dialogue")
+      ]
+    }
+  };
+  return { parley, cutin, figure, scene, intimate };
 }
-var GUIDELINE_NAME = { parley: GAMBIT_PARLEY_NAME, cutin: GAMBIT_CUTIN_NAME, figure: GAMBIT_FIGURE_NAME, scene: GAMBIT_SCENE_NAME };
+var GUIDELINE_NAME = { parley: GAMBIT_PARLEY_NAME, cutin: GAMBIT_CUTIN_NAME, figure: GAMBIT_FIGURE_NAME, scene: GAMBIT_SCENE_NAME, intimate: GAMBIT_INTIMATE_NAME };
 var nameOf = (item) => String(rec10(item).name ?? "").trim();
 function selectGambitGuideline(runtime, direction) {
   const library = resolveStoredLibrary(runtime);
@@ -55287,7 +55302,7 @@ function selectGambitGuideline(runtime, direction) {
   let sceneId = own;
   if (!sceneId) {
     sceneId = `gambit-${direction}`;
-    const made = gambitGuidelines(library, { parley: "gambit-parley", cutin: "gambit-cutin", figure: "gambit-figure", scene: "gambit-scene" });
+    const made = gambitGuidelines(library, { parley: "gambit-parley", cutin: "gambit-cutin", figure: "gambit-figure", scene: "gambit-scene", intimate: "gambit-intimate" });
     library.scene.items[sceneId] = made[direction];
   }
   library.scene.selected = sceneId;

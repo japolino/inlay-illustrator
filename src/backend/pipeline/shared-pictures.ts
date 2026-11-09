@@ -6,7 +6,7 @@
  *
  * - Endpoint `inlay_illustrator.pictures.<user>`. The pool passes a handler no arguments, so the request is the
  *   reader's own endpoint `<readerExtensionId>.inlay.pictures.<user>`:
- *   `{ version: 1, pictures: [{ id, chatId, direction: "parley" | "cutin" | "figure" | "scene", text }] }`.
+ *   `{ version: 1, pictures: [{ id, chatId, direction: "parley" | "cutin" | "figure" | "scene" | "intimate", text }] }`.
  * - Reading the endpoint queues every picture it has not seen (one run at a time, started outside the request's
  *   permission scope, like profiles) and answers the status of each requested id:
  *   `{ version: 1, pictures: { [id]: { status, imageId?, url?, width?, height?, error? } } }`. Readers read again to
@@ -34,7 +34,7 @@ const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:#-]{0,159}$/u;
 export const PICTURE_END = "* * *";
 const RETRY_FAILED_MS = 60_000;
 
-export const PICTURE_DIRECTIONS = ["parley", "cutin", "figure", "scene"] as const;
+export const PICTURE_DIRECTIONS = ["parley", "cutin", "figure", "scene", "intimate"] as const;
 export type PictureDirection = (typeof PICTURE_DIRECTIONS)[number];
 export interface PictureRequest {
   id: string;
@@ -67,6 +67,7 @@ export const GAMBIT_PARLEY_NAME = "Gambit: Parley";
 export const GAMBIT_CUTIN_NAME = "Gambit: Cut-in";
 export const GAMBIT_FIGURE_NAME = "Gambit: Figure";
 export const GAMBIT_SCENE_NAME = "Gambit: Scene";
+export const GAMBIT_INTIMATE_NAME = "Gambit: Intimate";
 export const GAMBIT_RATIO_NAME = "Gambit: Wide";
 export const GAMBIT_TALL_RATIO_NAME = "Gambit: Tall";
 
@@ -101,6 +102,12 @@ export const CUT_OUT_GROUND = {
   drop: ["vignette", "negative space", "blank page"],
 } as const;
 
+export const GAMBIT_INTIMATE_INSTRUCTION =
+  "One wide image of an adult scene between the persona and the character the text is about, as an event CG in a visual novel: the moment the text has reached by its end, as it is (who is where, what they are doing, how far it has gone, what they still wear). " +
+  "Both are adults. Rate it as the text is: an explicit moment is an explicit picture. " +
+  "Show it through the persona's eyes: the other character in full view, their face and body carrying the moment, the persona only as much of their body as the moment needs (hands, chest, hips, legs), never their face. " +
+  "Draw the character with the body and looks their profile gives them, every trait of their kind kept (a tail, scales, wings, horns, fur, a lower body that isn't human). Keep the place of the scene around them, lit to the mood. Nobody else, no text and no panels.";
+
 export const GAMBIT_RATIO_INSTRUCTION = "Always choose sizeId 2 (landscape).";
 export const GAMBIT_TALL_RATIO_INSTRUCTION = "Always choose sizeId 1 (portrait).";
 
@@ -115,7 +122,7 @@ const pathRule = (id: string, direction: string, action: "add" | "remove", path:
  * The library items of the Gambit guidelines under the given ids. The Parley one asks for a POV camera but, unlike the
  * built-in POV guideline, does not require the persona: a persona without an Inlay profile made the run fail.
  */
-export function gambitGuidelines(_library: A.AtelierLibrary, ids: { parley: string; cutin: string; figure: string; scene: string }): Record<PictureDirection, Rec> {
+export function gambitGuidelines(_library: A.AtelierLibrary, ids: { parley: string; cutin: string; figure: string; scene: string; intimate: string }): Record<PictureDirection, Rec> {
   const parley: Rec = {
     name: GAMBIT_PARLEY_NAME,
     instruction: GAMBIT_PARLEY_INSTRUCTION,
@@ -165,10 +172,24 @@ export function gambitGuidelines(_library: A.AtelierLibrary, ids: { parley: stri
     outputMode: "illustration",
     system: { options: [], values: {}, rules: [pathRule("gambit-scene-no-dialogue", ids.scene, "remove", "actor.text.dialogue")] },
   };
-  return { parley, cutin, figure, scene };
+  // Like the Parley one: the persona's eyes, without requiring a persona profile.
+  const intimate: Rec = {
+    name: GAMBIT_INTIMATE_NAME,
+    instruction: GAMBIT_INTIMATE_INSTRUCTION,
+    outputMode: "illustration",
+    system: {
+      options: [],
+      values: {},
+      rules: [
+        pathRule("gambit-intimate-pov", ids.intimate, "add", "scene.group.camera.view", ["pov"]),
+        pathRule("gambit-intimate-no-dialogue", ids.intimate, "remove", "actor.text.dialogue"),
+      ],
+    },
+  };
+  return { parley, cutin, figure, scene, intimate };
 }
 
-const GUIDELINE_NAME: Record<PictureDirection, string> = { parley: GAMBIT_PARLEY_NAME, cutin: GAMBIT_CUTIN_NAME, figure: GAMBIT_FIGURE_NAME, scene: GAMBIT_SCENE_NAME };
+const GUIDELINE_NAME: Record<PictureDirection, string> = { parley: GAMBIT_PARLEY_NAME, cutin: GAMBIT_CUTIN_NAME, figure: GAMBIT_FIGURE_NAME, scene: GAMBIT_SCENE_NAME, intimate: GAMBIT_INTIMATE_NAME };
 
 const nameOf = (item: unknown): string => String(rec(item).name ?? "").trim();
 
@@ -182,7 +203,7 @@ export function selectGambitGuideline<T extends object>(runtime: T, direction: P
   let sceneId = own;
   if (!sceneId) {
     sceneId = `gambit-${direction}`;
-    const made = gambitGuidelines(library, { parley: "gambit-parley", cutin: "gambit-cutin", figure: "gambit-figure", scene: "gambit-scene" });
+    const made = gambitGuidelines(library, { parley: "gambit-parley", cutin: "gambit-cutin", figure: "gambit-figure", scene: "gambit-scene", intimate: "gambit-intimate" });
     library.scene.items[sceneId] = made[direction] as never;
   }
   library.scene.selected = sceneId;

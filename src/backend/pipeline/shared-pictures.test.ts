@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import * as A from "../../engine/v5/atelier.js";
 import { applyAtelierOverlay, buildRuntimeConfig, createDefaultConfig } from "../../shared/contract/index.js";
-import { GAMBIT_CUTIN_NAME, GAMBIT_FIGURE_INSTRUCTION, GAMBIT_FIGURE_NAME, GAMBIT_PARLEY_NAME, GAMBIT_RATIO_NAME, GAMBIT_SCENE_NAME, GAMBIT_TALL_RATIO_NAME, parsePictureRequests, picturesEndpoint, selectGambitGuideline, sharedPicturesChannel } from "./shared-pictures.js";
+import { GAMBIT_CUTIN_NAME, GAMBIT_FIGURE_INSTRUCTION, GAMBIT_FIGURE_NAME, GAMBIT_INTIMATE_NAME, GAMBIT_PARLEY_NAME, GAMBIT_RATIO_NAME, GAMBIT_SCENE_NAME, GAMBIT_TALL_RATIO_NAME, parsePictureRequests, picturesEndpoint, selectGambitGuideline, sharedPicturesChannel } from "./shared-pictures.js";
 
 const runtime = () => buildRuntimeConfig(createDefaultConfig(), null) as unknown as Record<string, unknown> & { runtime: unknown };
 
@@ -64,6 +64,16 @@ describe("shared pictures", () => {
   test("a scene stays wide", () => {
     const lib = A.resolveLibrary(selectGambitGuideline(runtime(), "scene"));
     expect(lib.scene.items[lib.scene.selected]?.name).toBe(GAMBIT_SCENE_NAME);
+    expect(lib.imageRatio.items[lib.imageRatio.selected]?.name).toBe(GAMBIT_RATIO_NAME);
+  });
+
+  test("an intimate scene is wide and seen from the persona's eyes, without requiring the persona", () => {
+    expect(parsePictureRequests({ version: 1, pictures: [{ id: "afterglow:a.0", chatId: "chat-1", direction: "intimate", text: "She pulls him down." }] })).toHaveLength(1);
+    const lib = A.resolveLibrary(selectGambitGuideline(runtime(), "intimate"));
+    const item = lib.scene.items[lib.scene.selected] as { name: string; system?: { rules?: Array<{ condition: { direction: string }; effect: { path: string } }> } };
+    expect(item.name).toBe(GAMBIT_INTIMATE_NAME);
+    expect(item.system?.rules?.some((r) => r.effect.path === "scene.group.camera.view" && r.condition.direction === lib.scene.selected)).toBe(true);
+    expect(item.system?.rules?.some((r) => r.effect.path === "persona.required")).toBe(false);
     expect(lib.imageRatio.items[lib.imageRatio.selected]?.name).toBe(GAMBIT_RATIO_NAME);
   });
 });
