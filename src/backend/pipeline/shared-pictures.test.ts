@@ -26,6 +26,32 @@ describe("shared pictures", () => {
     expect(parsePictureRequests({ version: 2, pictures: [] })).toEqual([]);
   });
 
+  test("a picture can name a base; a base that isn't an image id is left out", () => {
+    const got = parsePictureRequests({
+      version: 1,
+      pictures: [
+        { id: "scene:a.1", chatId: "chat-1", direction: "intimate", text: "x", base: "20667637-cb99-41b4-8ac4-00bfcd95cc60" },
+        { id: "scene:a.2", chatId: "chat-1", direction: "intimate", text: "x", base: "../etc" },
+      ],
+    });
+    expect(got.map((p) => p.base)).toEqual(["20667637-cb99-41b4-8ac4-00bfcd95cc60", undefined]);
+  });
+
+  test("a picture drawn on a base leaves the analyzer's place out, in the user's own guideline too", () => {
+    type Rule = { condition: { direction: string }; effect: { action: string; path: string } };
+    const placeRules = (runtime: Record<string, unknown>) => {
+      const lib = A.resolveLibrary(runtime);
+      const rules = ((lib.scene.items[lib.scene.selected] as { system?: { rules?: Rule[] } }).system?.rules ?? []).filter((r) => r.condition.direction === lib.scene.selected && r.effect.action === "remove");
+      return rules.map((r) => r.effect.path).filter((p) => p.startsWith("scene."));
+    };
+    expect(placeRules(selectGambitGuideline(runtime(), "intimate"))).toEqual([]);
+    expect(placeRules(selectGambitGuideline(runtime(), "intimate", true))).toEqual(["scene.free.location", "scene.text.location", "scene.free.object"]);
+    const base = runtime();
+    const lib = A.resolveStoredLibrary(base);
+    lib.scene.items["mine"] = { name: GAMBIT_INTIMATE_NAME, instruction: "my scene", outputMode: "illustration" } as never;
+    expect(placeRules(selectGambitGuideline(A.commitLibrary(base, lib), "intimate", true))).toEqual(["scene.free.location", "scene.text.location", "scene.free.object"]);
+  });
+
   test("a run selects the Gambit guideline and ratio without touching the stored selection", () => {
     const base = runtime();
     const parley = selectGambitGuideline(base, "parley");

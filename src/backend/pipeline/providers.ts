@@ -25,6 +25,7 @@ import { normalizeSeed, randomSeed } from "../../engine/compose/size-count-seed.
 import type { ImageProviderAdapter, ImageProviderId } from "../../engine/engine.js";
 import { isAbortLike, RpcFailure } from "../rpc/errors.js";
 import type { BackendServices, ImageBytes, ImageGenerateRequest, ImageGenerateResult, NovelAIImageOptions } from "../services/types.js";
+import type { Infill } from "./scene-infill.js";
 
 /* ------------------------------------------------------------------------------------------------
  * Run registry
@@ -59,6 +60,8 @@ export interface ProviderRunContext {
   purpose: ImageGenerateRequest["purpose"];
   /** Pictures that get cut out stand on this. */
   ground?: RequestGround;
+  /** NovelAI pictures drawn into another's setting (scene-infill.ts). */
+  infill?: Infill;
   connectionId?: string;
   model?: string;
   ownerChatId?: string;
@@ -332,6 +335,20 @@ export function buildNovelAIRequest(
   return { request: generateRequest, body, effectivePrompt: body.input, finalizedPrompt: weighted.finalizedPrompt as unknown as Rec };
 }
 
+/** The request as an infill on its base: the inpainting model, the base's canvas, the base and mask in the override. */
+export function onInfill(request: ImageGenerateRequest, infill: Infill | undefined): ImageGenerateRequest {
+  if (!infill) return request;
+  const novelai = request.novelai ?? {};
+  const raw = novelai.rawOverride ?? {};
+  return {
+    ...request,
+    model: infill.model,
+    width: infill.width,
+    height: infill.height,
+    novelai: { ...novelai, rawOverride: { ...raw, action: "infill", parameters: { ...rec(raw.parameters), image: infill.image, mask: infill.mask, add_original_image: true, inpaintImg2ImgStrength: 1 } } },
+  };
+}
+
 /* ------------------------------------------------------------------------------------------------
  * Adapters
  * ---------------------------------------------------------------------------------------------- */
@@ -392,7 +409,7 @@ export function createNovelAIAdapter(services: BackendServices, registry: Provid
         ...(i2iImage ? { imageToImage: { ...i2iImage, strength: num(i2iRaw.strength, 0.4, 0.4, 1), noise: num(i2iRaw.noise, 0, 0, 1) } } : {}),
       });
       onEvent?.({ type: "stage", provider: "novelai", requestId: "", stage: "generating" });
-      const result = await generateImage(services, build.request, { signal, onProgress: (p) => emitProgress("novelai", onEvent, ctx, p) });
+      const result = await generateImage(services, onInfill(build.request, ctx.infill), { signal, onProgress: (p) => emitProgress("novelai", onEvent, ctx, p) });
       onEvent?.({ type: "stage", provider: "novelai", requestId: "", stage: "completed" });
       return engineResult("novelai", result, {
         effectivePrompt: build.effectivePrompt,

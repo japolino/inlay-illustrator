@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { rpcError } from "../../shared/contract/index.js";
+import { createDefaultConfig, rpcError } from "../../shared/contract/index.js";
 import { RpcFailure } from "../rpc/errors.js";
+import { buildNovelAIParameters } from "../services/images.js";
 import { createFakeServices } from "../testing/fake-services.js";
 import { buildNovelAIRequest, onGround, createComfyReferencePreparer, createImageProviderAdapters, ProviderRunRegistry, toProviderError } from "./providers.js";
 
@@ -91,6 +92,22 @@ describe("NovelAI request (AM jut / gge / Cut; 0.9.90 rating wrapper Mht)", () =
 });
 
 describe("adapters over ImageService", () => {
+  test("a run with an infill draws on its base with the inpainting model, and the host gets the infill", async () => {
+    const fx = createFakeServices();
+    const registry = new ProviderRunRegistry();
+    const adapters = createImageProviderAdapters(fx.services, registry);
+    const infill = { image: "BASE", mask: "MASK", model: "nai-diffusion-5-full-inpainting", width: 1216, height: 832 };
+    const runId = registry.register({ ...ctx, model: "nai-diffusion-5-full", infill });
+    await adapters.novelai!.generate({ provider: "novelai", providerRef: { providerId: "novelai", queueScopeKey: registry.queueScopeKey(runId) }, prompt: "1girl", negativePrompt: "", seed: "5", width: 1024, height: 1024, config: {} });
+    const sent = fx.imageRequests[0]!;
+    expect([sent.model, sent.width, sent.height]).toEqual(["nai-diffusion-5-full-inpainting", 1216, 832]);
+    const built = buildNovelAIParameters(sent, createDefaultConfig(), { model: sent.model!, isNovelAIV5: true });
+    const raw = JSON.parse(String(built.parameters.rawRequestOverride));
+    expect(raw.action).toBe("infill");
+    expect(raw.parameters).toMatchObject({ image: "BASE", mask: "MASK", add_original_image: true, inpaintImg2ImgStrength: 1 });
+    expect(built.parameters.resolution).toBe("1216x832");
+  });
+
   test("run context is routed through providerRef.queueScopeKey; references only for V4.5 models", async () => {
     const fx = createFakeServices();
     const registry = new ProviderRunRegistry();

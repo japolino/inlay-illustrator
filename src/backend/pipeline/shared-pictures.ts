@@ -6,7 +6,10 @@
  *
  * - Endpoint `inlay_illustrator.pictures.<user>`. The pool passes a handler no arguments, so the request is the
  *   reader's own endpoint `<readerExtensionId>.inlay.pictures.<user>`:
- *   `{ version: 1, pictures: [{ id, chatId, direction: "parley" | "cutin" | "figure" | "scene" | "intimate", text }] }`.
+ *   `{ version: 1, pictures: [{ id, chatId, direction: "parley" | "cutin" | "figure" | "scene" | "intimate", text, base? }] }`.
+ * - `base` (optional, a Lumiverse image id): the picture is drawn into that picture's setting, as a NovelAI infill on it
+ *   (scene-infill.ts), with the analyzer's place left out (the kept frame is the place). Without a NovelAI connection,
+ *   with a base that cannot be read, or when the infill fails, it is drawn on its own.
  * - Reading the endpoint queues every picture it has not seen (one run at a time, started outside the request's
  *   permission scope, like profiles) and answers the status of each requested id:
  *   `{ version: 1, pictures: { [id]: { status, imageId?, url?, width?, height?, error? } } }`. Readers read again to
@@ -25,12 +28,14 @@ import type { EnginePort } from "./engine-port.js";
 import { generateMessageIllustrations, nativeDetectorsFor } from "./generate.js";
 import { loadMessages, type ChatMessageView } from "./host-chat.js";
 import { messageSlots } from "./markup.js";
+import { infillOn, type Infill } from "./scene-infill.js";
 
 export const SHARED_PICTURES_CHANNEL = "pictures";
 export const SHARED_PICTURES_VERSION = 1;
 const MAX_PER_READ = 8;
 const MAX_KEPT = 200;
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:#-]{0,159}$/u;
+const LUMIVERSE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]*$/u;
 /** The closing line of a picture's text (see draw). */
 export const PICTURE_END = "* * *";
 const RETRY_FAILED_MS = 60_000;
@@ -42,6 +47,8 @@ export interface PictureRequest {
   chatId: string;
   direction: PictureDirection;
   text: string;
+  /** A Lumiverse image id: drawn into that picture's setting. */
+  base?: string;
 }
 export interface PictureStatus {
   status: "queued" | "running" | "ready" | "failed";
@@ -119,6 +126,13 @@ const pathRule = (id: string, direction: string, action: "add" | "remove", path:
   effect: { kind: "path", action, path, ...(value !== undefined ? { value } : {}) },
 });
 
+/** Rules that leave the analyzer's place (its tags, its words, the things standing in it) out of the picture. */
+const noPlace = (prefix: string, direction: string): Rec[] => [
+  pathRule(`${prefix}-no-place-tags`, direction, "remove", "scene.free.location"),
+  pathRule(`${prefix}-no-place-text`, direction, "remove", "scene.text.location"),
+  pathRule(`${prefix}-no-props`, direction, "remove", "scene.free.object"),
+];
+
 /**
  * The library items of the Gambit guidelines under the given ids. The Parley one asks for a POV camera but, unlike the
  * built-in POV guideline, does not require the persona: a persona without an Inlay profile made the run fail.
@@ -144,12 +158,7 @@ export function gambitGuidelines(_library: A.AtelierLibrary, ids: { parley: stri
     system: {
       options: [],
       values: {},
-      rules: [
-        pathRule("gambit-cutin-no-dialogue", ids.cutin, "remove", "actor.text.dialogue"),
-        pathRule("gambit-cutin-no-place-tags", ids.cutin, "remove", "scene.free.location"),
-        pathRule("gambit-cutin-no-place-text", ids.cutin, "remove", "scene.text.location"),
-        pathRule("gambit-cutin-no-props", ids.cutin, "remove", "scene.free.object"),
-      ],
+      rules: [pathRule("gambit-cutin-no-dialogue", ids.cutin, "remove", "actor.text.dialogue"), ...noPlace("gambit-cutin", ids.cutin)],
     },
   };
   const figure: Rec = {
@@ -159,12 +168,7 @@ export function gambitGuidelines(_library: A.AtelierLibrary, ids: { parley: stri
     system: {
       options: [],
       values: {},
-      rules: [
-        pathRule("gambit-figure-no-dialogue", ids.figure, "remove", "actor.text.dialogue"),
-        pathRule("gambit-figure-no-place-tags", ids.figure, "remove", "scene.free.location"),
-        pathRule("gambit-figure-no-place-text", ids.figure, "remove", "scene.text.location"),
-        pathRule("gambit-figure-no-props", ids.figure, "remove", "scene.free.object"),
-      ],
+      rules: [pathRule("gambit-figure-no-dialogue", ids.figure, "remove", "actor.text.dialogue"), ...noPlace("gambit-figure", ids.figure)],
     },
   };
   const scene: Rec = {
@@ -196,9 +200,11 @@ const nameOf = (item: unknown): string => String(rec(item).name ?? "").trim();
 
 /**
  * The run's runtime config with the request's guideline selected: the user's own item of that name when their library
- * has one, else the bundled one added for this run. Nothing is stored; the user's selection stays as it is.
+ * has one, else the bundled one added for this run. Nothing is stored; the user's selection stays as it is. A picture
+ * drawn into another's setting (`onBase`) leaves the analyzer's place out: a place it names is painted into the kept
+ * frame (a bed in the middle of a forest floor).
  */
-export function selectGambitGuideline<T extends object>(runtime: T, direction: PictureDirection): T {
+export function selectGambitGuideline<T extends object>(runtime: T, direction: PictureDirection, onBase = false): T {
   const library = A.resolveStoredLibrary(runtime);
   const own = Object.entries(library.scene.items).find(([, item]) => nameOf(item) === GUIDELINE_NAME[direction])?.[0];
   let sceneId = own;
@@ -208,6 +214,12 @@ export function selectGambitGuideline<T extends object>(runtime: T, direction: P
     library.scene.items[sceneId] = made[direction] as never;
   }
   library.scene.selected = sceneId;
+  if (onBase) {
+    const item = rec(library.scene.items[sceneId]);
+    const system = rec(item.system);
+    const rules = Array.isArray(system.rules) ? system.rules : [];
+    library.scene.items[sceneId] = { ...item, system: { options: [], values: {}, ...system, rules: [...rules, ...noPlace("gambit-base", sceneId)] } } as never;
+  }
   // A figure stands in a tall frame; everything else is wide.
   const tall = direction === "figure";
   const ratioName = tall ? GAMBIT_TALL_RATIO_NAME : GAMBIT_RATIO_NAME;
@@ -244,8 +256,9 @@ export function parsePictureRequests(raw: unknown): PictureRequest[] {
     const chatId = text(x.chatId, 80);
     const direction = PICTURE_DIRECTIONS.find((d) => d === x.direction) ?? null;
     const body = text(x.text, 2000);
-    if (!ID_RE.test(id) || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/u.test(chatId) || !direction || !body) continue;
-    if (!out.some((r) => r.id === id)) out.push({ id, chatId, direction, text: body });
+    const base = text(x.base, 80);
+    if (!ID_RE.test(id) || !LUMIVERSE_ID_RE.test(chatId) || !direction || !body) continue;
+    if (!out.some((r) => r.id === id)) out.push({ id, chatId, direction, text: body, ...(LUMIVERSE_ID_RE.test(base) ? { base } : {}) });
     if (out.length >= 32) break;
   }
   return out;
@@ -283,7 +296,33 @@ export function sharePictures(services: BackendServices, engine: EnginePort, get
     while (kept.size > MAX_KEPT) kept.delete(kept.keys().next().value!);
   };
 
+  /** The infill on a base, or null when the image connection is not NovelAI or the base is not a PNG. */
+  async function infillFor(imageId: string): Promise<Infill | null> {
+    const target = await services.images.resolveTarget();
+    if (target.generationProvider !== "novelai") return null;
+    return infillOn(await services.imageBytes.getImage({ imageId }, { signal: abort.signal }), target.model);
+  }
+
+  /** A picture with a base is drawn into its setting; one that can't be is drawn on its own. */
   async function draw(reader: string, req: PictureRequest): Promise<PictureStatus> {
+    if (!req.base) return drawOn(reader, req, null);
+    const why = (err: unknown) => (err instanceof Error ? err.message : String(err));
+    const infill = await infillFor(req.base).catch((err: unknown) => {
+      if (abort.signal.aborted) throw err;
+      services.log.append("warn", "pictures", `${reader}: base ${req.base} of picture ${req.id} can't be read (${why(err)}); drawn on its own`, { chatId: req.chatId });
+      return null;
+    });
+    if (!infill) return drawOn(reader, req, null);
+    try {
+      return await drawOn(reader, req, infill);
+    } catch (err) {
+      if (abort.signal.aborted) throw err;
+      services.log.append("warn", "pictures", `${reader}: picture ${req.id} couldn't be drawn into its base (${why(err)}); drawn on its own`, { chatId: req.chatId });
+      return drawOn(reader, req, null);
+    }
+  }
+
+  async function drawOn(reader: string, req: PictureRequest, infill: Infill | null): Promise<PictureStatus> {
     const chat = await services.sources.getChat(req.chatId);
     const characterId = chat.characterId || chat.groupCharacterIds[0] || "";
     const character = characterId ? await services.sources.getCharacter(characterId) : { name: "" };
@@ -326,8 +365,9 @@ export function sharePictures(services: BackendServices, engine: EnginePort, get
         chatData: await services.storage.loadChatData(req.chatId),
         signal: abort.signal,
         assertTarget: async () => undefined,
-        directing: (runtime) => selectGambitGuideline(runtime, req.direction),
+        directing: (runtime) => selectGambitGuideline(runtime, req.direction, !!infill),
         ...(req.direction === "figure" || req.direction === "cutin" ? { ground: CUT_OUT_GROUND } : {}),
+        ...(infill ? { infill } : {}),
       },
     );
     const record = result.records[0];

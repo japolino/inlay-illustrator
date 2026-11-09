@@ -9,6 +9,7 @@
  * markup), continuity rebuilt from the chat data checkpoints at the target message (AM 0.9.90: no accumulated actor state).
  */
 import type { RequestGround } from "./providers.js";
+import type { Infill } from "./scene-infill.js";
 import {
   applyAtelierOverlay,
   buildRuntimeConfig,
@@ -185,6 +186,8 @@ export interface GenerateMessageRequest {
   directing?: (runtime: Rec) => Rec;
   /** The ground the picture stands on, for one that gets cut out. */
   ground?: RequestGround;
+  /** Drawn into another picture's setting (NovelAI). */
+  infill?: Infill;
 }
 
 /** AM session `progress.jevSelection` -> job snapshot shape. */
@@ -798,6 +801,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
         comfyuiWorkflowId: imageTarget.comfyuiWorkflowId,
         forceRating: () => fixedRating,
         ...(req.ground ? { ground: req.ground } : {}),
+        ...(req.infill ? { infill: req.infill } : {}),
         // AM `rW`: the analyzer of the active Atelier preset, prepared from the job-start config snapshot.
         analysisConfig: amConfig,
       }, config);
