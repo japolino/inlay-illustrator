@@ -55342,6 +55342,12 @@ function parsePictureRequests(raw) {
   }
   return out;
 }
+function pictureSlot(messageId, content, detectors) {
+  const built = messageSlots(messageId, content, detectors);
+  const last = built.slots.at(-1);
+  const before = built.clean.slice(0, built.clean.lastIndexOf(PICTURE_END)).trim();
+  return { ...built, slots: last ? [{ ...last, beforeText: before }] : [] };
+}
 function sharePictures(services, engine, getModules) {
   const host = services.host;
   const pool = host.rpcPool;
@@ -55370,8 +55376,8 @@ ${PICTURE_END}`;
     const view = { id: messageId, index: messages.length, role: "assistant", isUser: false, name: character.name, swipeId: 0, swipes: [content], content, extra: {} };
     const all = [...messages, view];
     const document2 = characterId ? await services.storage.loadCharacterDocument(characterId) : null;
-    const built = messageSlots(messageId, content, characterId ? nativeDetectorsFor(characterId, "", document2) : []);
-    const slots = built.slots.slice(-1).map((s) => ({ ...s }));
+    const built = pictureSlot(messageId, content, characterId ? nativeDetectorsFor(characterId, "", document2) : []);
+    const slots = built.slots;
     if (!slots.length)
       throw new Error("Nothing to draw in the request text.");
     const config = await services.storage.loadConfig();

@@ -17,6 +17,7 @@
  */
 import { fixedCountPolicy, type ChatImageGenerationSettings } from "../../shared/contract/index.js";
 import * as A from "../../engine/v5/atelier.js";
+import type { NativeAssetDetector } from "../../engine/text/index.js";
 import { sharedArtistsChannel } from "../services/shared-artists.js";
 import type { BackendServices, SpindleHost } from "../services/types.js";
 import type { BackendModules } from "../rpc/types.js";
@@ -250,6 +251,18 @@ export function parsePictureRequests(raw: unknown): PictureRequest[] {
   return out;
 }
 
+/**
+ * The one slot of a picture's text (`text` + PICTURE_END), after its last paragraph, with the whole text before it.
+ * The analyzer's scene is a slot's text before it, and a slot's own is one paragraph: a name or place said earlier
+ * (the "who and where" line readers start with) was lost, and someone else was drawn.
+ */
+export function pictureSlot(messageId: string, content: string, detectors: readonly NativeAssetDetector[]): ReturnType<typeof messageSlots> {
+  const built = messageSlots(messageId, content, detectors);
+  const last = built.slots.at(-1);
+  const before = built.clean.slice(0, built.clean.lastIndexOf(PICTURE_END)).trim();
+  return { ...built, slots: last ? [{ ...last, beforeText: before }] : [] };
+}
+
 export interface SharedPictures {
   dispose(): void;
 }
@@ -283,8 +296,8 @@ export function sharePictures(services: BackendServices, engine: EnginePort, get
     const view: ChatMessageView = { id: messageId, index: messages.length, role: "assistant", isUser: false, name: character.name, swipeId: 0, swipes: [content], content, extra: {} };
     const all = [...messages, view];
     const document = characterId ? await services.storage.loadCharacterDocument(characterId) : null;
-    const built = messageSlots(messageId, content, characterId ? nativeDetectorsFor(characterId, "", document) : []);
-    const slots = built.slots.slice(-1).map((s) => ({ ...s }));
+    const built = pictureSlot(messageId, content, characterId ? nativeDetectorsFor(characterId, "", document) : []);
+    const slots = built.slots;
     if (!slots.length) throw new Error("Nothing to draw in the request text.");
     const config = await services.storage.loadConfig();
     const settings: ChatImageGenerationSettings = { ...(await services.storage.loadChatImageGenerationSettings()), analysisMode: "single", countPolicy: fixedCountPolicy(1) };

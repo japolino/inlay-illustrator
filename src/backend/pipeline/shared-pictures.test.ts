@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import * as A from "../../engine/v5/atelier.js";
 import { applyAtelierOverlay, buildRuntimeConfig, createDefaultConfig } from "../../shared/contract/index.js";
-import { GAMBIT_CUTIN_NAME, GAMBIT_FIGURE_INSTRUCTION, GAMBIT_FIGURE_NAME, GAMBIT_INTIMATE_NAME, GAMBIT_PARLEY_NAME, GAMBIT_RATIO_NAME, GAMBIT_SCENE_NAME, GAMBIT_TALL_RATIO_NAME, parsePictureRequests, picturesEndpoint, selectGambitGuideline, sharedPicturesChannel } from "./shared-pictures.js";
+import { GAMBIT_CUTIN_NAME, GAMBIT_FIGURE_INSTRUCTION, GAMBIT_FIGURE_NAME, GAMBIT_INTIMATE_NAME, GAMBIT_PARLEY_NAME, GAMBIT_RATIO_NAME, GAMBIT_SCENE_NAME, GAMBIT_TALL_RATIO_NAME, PICTURE_END, parsePictureRequests, pictureSlot, picturesEndpoint, selectGambitGuideline, sharedPicturesChannel } from "./shared-pictures.js";
 
 const runtime = () => buildRuntimeConfig(createDefaultConfig(), null) as unknown as Record<string, unknown> & { runtime: unknown };
 
@@ -49,6 +49,14 @@ describe("shared pictures", () => {
     const eff = A.resolveLibrary(selectGambitGuideline(withMine, "cutin"));
     expect(eff.scene.selected).toBe("mine");
     expect(eff.scene.items.mine?.instruction).toBe("my cut-in");
+  });
+
+  test("a picture's one slot has the whole text before it, not just its last paragraph", () => {
+    const text = "Rook and Tobin, at Hollowfang Wood.\n\nShe rides him into the moss.\n\n\"Hear that?\" she murmured. \"Fen and the girls are coming.\"";
+    const { slots } = pictureSlot("gambit:scene.0", `${text}\n\n${PICTURE_END}`, []);
+    expect(slots).toHaveLength(1);
+    expect(slots[0]!.beforeText).toBe(text);
+    expect(slots[0]!.afterText).toBe(PICTURE_END);
   });
 
   test("a figure asks for one person in a tall frame, in the body their profile gives them", () => {
