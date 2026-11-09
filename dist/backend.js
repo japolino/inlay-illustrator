@@ -52489,6 +52489,7 @@ async function generateMessageIllustrations(deps, req) {
         comfyuiWorkflowId: imageTarget.comfyuiWorkflowId,
         forceRating: () => fixedRating,
         ...req.ground ? { ground: req.ground } : {},
+        ...req.infill ? { infill: req.infill } : {},
         analysisConfig: amConfig
       }, config);
       await req.assertTarget();
@@ -54638,6 +54639,19 @@ function buildNovelAIRequest(given, ctx, extras = {}) {
   };
   return { request: generateRequest, body, effectivePrompt: body.input, finalizedPrompt: weighted.finalizedPrompt };
 }
+function onInfill(request, infill) {
+  if (!infill)
+    return request;
+  const novelai = request.novelai ?? {};
+  const raw = novelai.rawOverride ?? {};
+  return {
+    ...request,
+    model: infill.model,
+    width: infill.width,
+    height: infill.height,
+    novelai: { ...novelai, rawOverride: { ...raw, action: "infill", parameters: { ...rec8(raw.parameters), image: infill.image, mask: infill.mask, add_original_image: true, inpaintImg2ImgStrength: 1 } } }
+  };
+}
 var DEFAULT_CONTEXT = { purpose: "chat", forceRating: () => false };
 function withCrop(reference) {
   const asset = rec8(reference.asset);
@@ -54688,7 +54702,7 @@ function createNovelAIAdapter(services, registry) {
         ...i2iImage ? { imageToImage: { ...i2iImage, strength: num2(i2iRaw.strength, 0.4, 0.4, 1), noise: num2(i2iRaw.noise, 0, 0, 1) } } : {}
       });
       onEvent?.({ type: "stage", provider: "novelai", requestId: "", stage: "generating" });
-      const result = await generateImage(services, build.request, { signal, onProgress: (p) => emitProgress("novelai", onEvent, ctx, p) });
+      const result = await generateImage(services, onInfill(build.request, ctx.infill), { signal, onProgress: (p) => emitProgress("novelai", onEvent, ctx, p) });
       onEvent?.({ type: "stage", provider: "novelai", requestId: "", stage: "completed" });
       return engineResult("novelai", result, {
         effectivePrompt: build.effectivePrompt,
@@ -55195,12 +55209,86 @@ function sessionRetryErrors(progress) {
   }).slice(-20);
 }
 
+// src/backend/pipeline/scene-infill.ts
+var INFILL_FRAME = 64;
+function inpaintingModel(model) {
+  const base = model.replace(/-medium$/u, "");
+  return base.endsWith("-inpainting") ? base : `${base}-inpainting`;
+}
+function pngSize(bytes) {
+  const sig = [137, 80, 78, 71, 13, 10, 26, 10];
+  if (bytes.length < 24 || sig.some((b, i) => bytes[i] !== b))
+    return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return { width: view.getUint32(16), height: view.getUint32(20) };
+}
+var CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0;n < 256; n += 1) {
+    let c = n;
+    for (let k = 0;k < 8; k += 1)
+      c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
+    table[n] = c >>> 0;
+  }
+  return table;
+})();
+function crc32(bytes) {
+  let crc = 4294967295;
+  for (const byte of bytes)
+    crc = CRC_TABLE[(crc ^ byte) & 255] ^ crc >>> 8;
+  return (crc ^ 4294967295) >>> 0;
+}
+function chunk(type, data) {
+  const out = new Uint8Array(12 + data.length);
+  const view = new DataView(out.buffer);
+  view.setUint32(0, data.length);
+  for (let i = 0;i < 4; i += 1)
+    out[4 + i] = type.charCodeAt(i);
+  out.set(data, 8);
+  view.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length)));
+  return out;
+}
+async function deflate(data) {
+  const stream = new Blob([data]).stream().pipeThrough(new CompressionStream("deflate"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function infillMask(width, height, frame = INFILL_FRAME) {
+  const row = width + 1;
+  const raw = new Uint8Array(row * height);
+  for (let y = frame;y < height; y += 1)
+    raw.fill(255, y * row + 1 + frame, y * row + 1 + width - frame);
+  const header = new Uint8Array(13);
+  const view = new DataView(header.buffer);
+  view.setUint32(0, width);
+  view.setUint32(4, height);
+  header[8] = 8;
+  header[9] = 0;
+  const parts = [Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", header), chunk("IDAT", await deflate(raw)), chunk("IEND", new Uint8Array(0))];
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let at = 0;
+  for (const p of parts) {
+    out.set(p, at);
+    at += p.length;
+  }
+  return out;
+}
+async function infillOn(base, model) {
+  const image = base.data.replace(/^data:[^;,]+;base64,/u, "");
+  const size = pngSize(base64ToBytes2(image.slice(0, 32)));
+  if (!size)
+    return null;
+  return { image, mask: bytesToBase642(await infillMask(size.width, size.height)), model: inpaintingModel(model), ...size };
+}
+
 // src/backend/pipeline/shared-pictures.ts
 var SHARED_PICTURES_CHANNEL = "pictures";
 var SHARED_PICTURES_VERSION = 1;
 var MAX_PER_READ = 8;
 var MAX_KEPT = 200;
 var ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:#-]{0,159}$/u;
+var LUMIVERSE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]*$/u;
+var ARTIST_ID_RE = /^[A-Za-z0-9][A-Za-z0-9 _.:-]{0,119}$/u;
+var READER_STYLE_ARTIST_ID = "shared-picture-style";
 var PICTURE_END = "* * *";
 var RETRY_FAILED_MS = 60000;
 var PICTURE_DIRECTIONS = ["parley", "cutin", "figure", "scene", "intimate"];
@@ -55229,6 +55317,11 @@ var pathRule = (id, direction, action, path, value) => ({
   condition: { direction },
   effect: { kind: "path", action, path, ...value !== undefined ? { value } : {} }
 });
+var noPlace = (prefix, direction) => [
+  pathRule(`${prefix}-no-place-tags`, direction, "remove", "scene.free.location"),
+  pathRule(`${prefix}-no-place-text`, direction, "remove", "scene.text.location"),
+  pathRule(`${prefix}-no-props`, direction, "remove", "scene.free.object")
+];
 function gambitGuidelines(_library, ids) {
   const parley = {
     name: GAMBIT_PARLEY_NAME,
@@ -55250,12 +55343,7 @@ function gambitGuidelines(_library, ids) {
     system: {
       options: [],
       values: {},
-      rules: [
-        pathRule("gambit-cutin-no-dialogue", ids.cutin, "remove", "actor.text.dialogue"),
-        pathRule("gambit-cutin-no-place-tags", ids.cutin, "remove", "scene.free.location"),
-        pathRule("gambit-cutin-no-place-text", ids.cutin, "remove", "scene.text.location"),
-        pathRule("gambit-cutin-no-props", ids.cutin, "remove", "scene.free.object")
-      ]
+      rules: [pathRule("gambit-cutin-no-dialogue", ids.cutin, "remove", "actor.text.dialogue"), ...noPlace("gambit-cutin", ids.cutin)]
     }
   };
   const figure = {
@@ -55265,12 +55353,7 @@ function gambitGuidelines(_library, ids) {
     system: {
       options: [],
       values: {},
-      rules: [
-        pathRule("gambit-figure-no-dialogue", ids.figure, "remove", "actor.text.dialogue"),
-        pathRule("gambit-figure-no-place-tags", ids.figure, "remove", "scene.free.location"),
-        pathRule("gambit-figure-no-place-text", ids.figure, "remove", "scene.text.location"),
-        pathRule("gambit-figure-no-props", ids.figure, "remove", "scene.free.object")
-      ]
+      rules: [pathRule("gambit-figure-no-dialogue", ids.figure, "remove", "actor.text.dialogue"), ...noPlace("gambit-figure", ids.figure)]
     }
   };
   const scene = {
@@ -55296,7 +55379,7 @@ function gambitGuidelines(_library, ids) {
 }
 var GUIDELINE_NAME = { parley: GAMBIT_PARLEY_NAME, cutin: GAMBIT_CUTIN_NAME, figure: GAMBIT_FIGURE_NAME, scene: GAMBIT_SCENE_NAME, intimate: GAMBIT_INTIMATE_NAME };
 var nameOf = (item) => String(rec10(item).name ?? "").trim();
-function selectGambitGuideline(runtime, direction) {
+function selectGambitGuideline(runtime, direction, onBase = false) {
   const library = resolveStoredLibrary(runtime);
   const own = Object.entries(library.scene.items).find(([, item]) => nameOf(item) === GUIDELINE_NAME[direction])?.[0];
   let sceneId = own;
@@ -55306,6 +55389,12 @@ function selectGambitGuideline(runtime, direction) {
     library.scene.items[sceneId] = made[direction];
   }
   library.scene.selected = sceneId;
+  if (onBase) {
+    const item = rec10(library.scene.items[sceneId]);
+    const system = rec10(item.system);
+    const rules = Array.isArray(system.rules) ? system.rules : [];
+    library.scene.items[sceneId] = { ...item, system: { options: [], values: {}, ...system, rules: [...rules, ...noPlace("gambit-base", sceneId)] } };
+  }
   const tall = direction === "figure";
   const ratioName = tall ? GAMBIT_TALL_RATIO_NAME : GAMBIT_RATIO_NAME;
   const ownRatio = Object.entries(library.imageRatio.items).find(([, item]) => nameOf(item) === ratioName)?.[0];
@@ -55322,6 +55411,24 @@ function picturesEndpoint(readerExtensionId, userId) {
   return `${readerExtensionId}.inlay.pictures.${sharedArtistsChannel(userId).slice("artists.".length)}`;
 }
 var text4 = (v, max) => typeof v === "string" ? v.replace(/[ \t]+/g, " ").trim().slice(0, max) : "";
+function pictureStyle(raw) {
+  const s = rec10(raw);
+  const artist = text4(s.artist, 120);
+  const positive = text4(s.positive, 1500);
+  if (ARTIST_ID_RE.test(artist))
+    return { artist };
+  return positive ? { positive, negative: text4(s.negative, 1500) } : undefined;
+}
+function withPictureStyle(runtime, style) {
+  if (!style)
+    return runtime;
+  const cp = rec10(runtime.characterPrompt);
+  if ("artist" in style)
+    return listNovelAIArtists(cp.artistPrompts).some((a) => a.id === style.artist) ? { ...runtime, characterPrompt: { ...cp, selectedArtistId: style.artist } } : runtime;
+  const entries = (Array.isArray(cp.artistPrompts) ? cp.artistPrompts : []).filter((e) => rec10(e).id !== READER_STYLE_ARTIST_ID);
+  const entry = { id: READER_STYLE_ARTIST_ID, title: "Requested style", prompt: style.positive, negativePrompt: style.negative };
+  return { ...runtime, characterPrompt: { ...cp, artistPrompts: [...entries, entry], selectedArtistId: READER_STYLE_ARTIST_ID } };
+}
 function parsePictureRequests(raw) {
   const o = rec10(raw);
   if (o.version !== 1 || !Array.isArray(o.pictures))
@@ -55333,10 +55440,12 @@ function parsePictureRequests(raw) {
     const chatId = text4(x.chatId, 80);
     const direction = PICTURE_DIRECTIONS.find((d) => d === x.direction) ?? null;
     const body = text4(x.text, 2000);
-    if (!ID_RE.test(id) || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/u.test(chatId) || !direction || !body)
+    const base = text4(x.base, 80);
+    const style = pictureStyle(x.style);
+    if (!ID_RE.test(id) || !LUMIVERSE_ID_RE.test(chatId) || !direction || !body)
       continue;
     if (!out.some((r) => r.id === id))
-      out.push({ id, chatId, direction, text: body });
+      out.push({ id, chatId, direction, text: body, ...LUMIVERSE_ID_RE.test(base) ? { base } : {}, ...style ? { style } : {} });
     if (out.length >= 32)
       break;
   }
@@ -55364,7 +55473,34 @@ function sharePictures(services, engine, getModules) {
     while (kept.size > MAX_KEPT)
       kept.delete(kept.keys().next().value);
   };
+  async function infillFor(imageId) {
+    const target = await services.images.resolveTarget();
+    if (target.generationProvider !== "novelai")
+      return null;
+    return infillOn(await services.imageBytes.getImage({ imageId }, { signal: abort.signal }), target.model);
+  }
   async function draw(reader, req) {
+    if (!req.base)
+      return drawOn(reader, req, null);
+    const why = (err) => err instanceof Error ? err.message : String(err);
+    const infill = await infillFor(req.base).catch((err) => {
+      if (abort.signal.aborted)
+        throw err;
+      services.log.append("warn", "pictures", `${reader}: base ${req.base} of picture ${req.id} can't be read (${why(err)}); drawn on its own`, { chatId: req.chatId });
+      return null;
+    });
+    if (!infill)
+      return drawOn(reader, req, null);
+    try {
+      return await drawOn(reader, req, infill);
+    } catch (err) {
+      if (abort.signal.aborted)
+        throw err;
+      services.log.append("warn", "pictures", `${reader}: picture ${req.id} couldn't be drawn into its base (${why(err)}); drawn on its own`, { chatId: req.chatId });
+      return drawOn(reader, req, null);
+    }
+  }
+  async function drawOn(reader, req, infill) {
     const chat = await services.sources.getChat(req.chatId);
     const characterId = chat.characterId || chat.groupCharacterIds[0] || "";
     const character = characterId ? await services.sources.getCharacter(characterId) : { name: "" };
@@ -55407,8 +55543,9 @@ ${PICTURE_END}`;
       assertTarget: async () => {
         return;
       },
-      directing: (runtime) => selectGambitGuideline(runtime, req.direction),
-      ...req.direction === "figure" || req.direction === "cutin" ? { ground: CUT_OUT_GROUND } : {}
+      directing: (runtime) => withPictureStyle(selectGambitGuideline(runtime, req.direction, !!infill), req.style),
+      ...req.direction === "figure" || req.direction === "cutin" ? { ground: CUT_OUT_GROUND } : {},
+      ...infill ? { infill } : {}
     });
     const record = result.records[0];
     if (!record)
