@@ -46034,6 +46034,7 @@ function shareProfiles(services, analysis) {
     }
   }, 500);
   drain.unref?.();
+  const oneByOne = new Set;
   async function answer(reader) {
     const raw = await pool.read(wantedEndpoint(reader, services.userId)).catch(() => null);
     const req = parseProfileRequest(raw);
@@ -46042,7 +46043,7 @@ function shareProfiles(services, analysis) {
     const { characterId } = req;
     const ended = last.get(characterId);
     const withLast = (a) => ended ? { ...a, last: ended } : a;
-    const running = analysis().listActive().find((j) => j.characterId === characterId && j.kind === "character-prompts" && (j.status === "running" || j.status === "queued"));
+    const running = analysis().listActive().find((j) => j.characterId === characterId && j.kind === "character-prompts" && (j.status === "running" || j.status === "queued")) ?? (oneByOne.has(characterId) ? { jobId: `one-by-one:${characterId}` } : undefined);
     let snap = await loadWorkspaceSnapshot(services, characterId);
     if (!running) {
       const stale = staleRequestMade((await services.storage.loadCharacterDocument(characterId)).customCharacters, snap.roster, req.people);
@@ -46103,13 +46104,31 @@ function shareProfiles(services, analysis) {
       await setCustomCharactersRegistered(services, characterId, customs, true);
     for (const row of go)
       tried.set(`${characterId}\x00${row.promptKey}`, now);
+    const analyse = async (rows) => {
+      const { jobId } = analysis().start({ kind: "character-prompts", characterId, evidenceMode: "text", promptKeys: rows.map((r) => r.promptKey), explicit: true });
+      services.log.append("info", "profiles", `${reader} asked for ${rows.map((r) => r.title).join(", ")}: analysing`, { characterId, jobId });
+      const o = await analysis().outcome(jobId);
+      if (!o)
+        return;
+      last.set(characterId, { status: o.status, message: o.message, ...o.error ? { error: o.error.message } : {}, at: Date.now() });
+      services.log.append(o.status === "error" ? "warn" : "info", "profiles", `profile analysis for ${reader}: ${o.status} (${o.error?.message ?? o.message})`, { characterId, jobId });
+      return o.status;
+    };
     outside.push(() => {
-      const { jobId } = analysis().start({ kind: "character-prompts", characterId, evidenceMode: "text", promptKeys: go.map((r) => r.promptKey), explicit: true });
-      services.log.append("info", "profiles", `${reader} asked for ${go.map((r) => r.title).join(", ")}: analysing`, { characterId, jobId });
-      analysis().outcome(jobId)?.then((o) => {
-        last.set(characterId, { status: o.status, message: o.message, ...o.error ? { error: o.error.message } : {}, at: Date.now() });
-        services.log.append(o.status === "error" ? "warn" : "info", "profiles", `profile analysis for ${reader}: ${o.status} (${o.error?.message ?? o.message})`, { characterId, jobId });
-      }).catch(() => {
+      (async () => {
+        const status = await analyse(go);
+        if (status !== "error" || go.length < 2)
+          return;
+        oneByOne.add(characterId);
+        try {
+          for (const row of go)
+            await analyse([row]).catch(() => {
+              return;
+            });
+        } finally {
+          oneByOne.delete(characterId);
+        }
+      })().catch(() => {
         return;
       });
     });
@@ -52469,6 +52488,7 @@ async function generateMessageIllustrations(deps, req) {
         ownerCharacterId: primaryId,
         comfyuiWorkflowId: imageTarget.comfyuiWorkflowId,
         forceRating: () => fixedRating,
+        ...req.ground ? { ground: req.ground } : {},
         analysisConfig: amConfig
       }, config);
       await req.assertTarget();
@@ -54393,6 +54413,17 @@ function createChatPipelineController(services, engine, options = {}) {
 }
 
 // src/backend/pipeline/providers.ts
+var withoutTags = (prompt, drop) => {
+  const out = new Set(drop.map((t) => t.toLowerCase()));
+  return prompt.split(",").map((t) => t.trim()).filter((t) => t && !out.has(t.toLowerCase())).join(", ");
+};
+function onGround(request, ground) {
+  if (!ground)
+    return request;
+  const prompt = withoutTags(str7(request.prompt), ground.drop);
+  const negative = withoutTags(str7(request.negativePrompt), ground.drop);
+  return { ...request, prompt: [prompt, ground.add].filter(Boolean).join(", "), negativePrompt: [negative, ground.negative].filter(Boolean).join(", ") };
+}
 var SCOPE_PREFIX = "inlay-run:";
 
 class ProviderRunRegistry {
@@ -54532,7 +54563,8 @@ function normalizeCharacterPrompts(value) {
     };
   }).filter((c) => c.prompt || c.uc);
 }
-function buildNovelAIRequest(request, ctx, extras = {}) {
+function buildNovelAIRequest(given, ctx, extras = {}) {
+  const request = onGround(given, ctx.ground);
   const rawPrompt = typeof request.prompt === "string" ? request.prompt : "";
   const rating = request.forceRating ?? ctx.forceRating() ?? false;
   const prompt = rating && rawPrompt.trim() ? prependRatingTag2(rawPrompt, rating) : rawPrompt;
@@ -54673,8 +54705,9 @@ function createNovelAIAdapter(services, registry) {
 function createComfyAdapter(services, registry) {
   return {
     provider: "comfy-ui",
-    async generate(request, options = {}) {
-      const ctx = registry.resolve(request) ?? DEFAULT_CONTEXT;
+    async generate(given, options = {}) {
+      const ctx = registry.resolve(given) ?? DEFAULT_CONTEXT;
+      const request = onGround(given, ctx.ground);
       const signal = request.signal ?? options.signal;
       options.onEvent?.({ type: "stage", provider: "comfy-ui", requestId: "", stage: "connecting" });
       const source = toImageBytes(request.outfitReference) ?? toImageBytes(request.characterReference);
@@ -55182,6 +55215,11 @@ var GAMBIT_PARLEY_INSTRUCTION = "One image of the beat the text describes in a c
 var GAMBIT_CUTIN_INSTRUCTION = "One image of a combat cut-in: the acting character alone, mid-move, as fighting-game or gacha special-move splash art. " + "A dynamic, foreshortened action pose at a slanted camera angle (lunging, swinging a weapon through the frame, casting with an arm thrust at the viewer, bracing behind a barrier), intense eyes, hair and clothes whipped by the motion. " + "The move's own effects surround them (fire and embers, ice, lightning, holy light, a dark aura, water, flying rock, a magic circle). " + "No scenery and no floor: a plain white background behind them. No other people, no text.";
 var GAMBIT_FIGURE_INSTRUCTION = "One image of one person alone, as a character figure: the whole of their body in view, centred, facing the viewer, relaxed, with a calm expression. " + "Draw the body their profile gives them: if it isn't two legs (a snake's coils, a horse's body, a fish's tail, spider legs, no legs at all), show all of it and never give them human legs. " + "No scenery and no floor: a plain white background behind them, with no cast shadow. No other people, no text, no effects.";
 var GAMBIT_SCENE_INSTRUCTION = "One wide image of the moment the text describes, as an event illustration in a visual novel: the people it names, doing what it says, in the place it says. " + "Show only who the text puts there, each with the body and looks their profile gives them. No text and no panels.";
+var CUT_OUT_GROUND = {
+  add: "white background, simple background",
+  negative: "scenery, indoors, outdoors, room, furniture, floor, cast shadow",
+  drop: ["vignette", "negative space", "blank page"]
+};
 var GAMBIT_RATIO_INSTRUCTION = "Always choose sizeId 2 (landscape).";
 var GAMBIT_TALL_RATIO_INSTRUCTION = "Always choose sizeId 1 (portrait).";
 var pathRule = (id, direction, action, path, value) => ({
@@ -55348,7 +55386,8 @@ ${PICTURE_END}`;
       assertTarget: async () => {
         return;
       },
-      directing: (runtime) => selectGambitGuideline(runtime, req.direction)
+      directing: (runtime) => selectGambitGuideline(runtime, req.direction),
+      ...req.direction === "figure" || req.direction === "cutin" ? { ground: CUT_OUT_GROUND } : {}
     });
     const record = result.records[0];
     if (!record)
@@ -57729,7 +57768,7 @@ function createLlmService(deps) {
             throw makeAnalyzerError("The analyzer response was truncated before any output.", { code: "ANALYZER_OUTPUT_TRUNCATED" });
           if (finishReason === "content_filter")
             throw makeAnalyzerError("The provider filtered the analyzer response.", { code: "ANALYZER_CONTENT_FILTERED" });
-          throw makeAnalyzerError("The analyzer returned an empty response.", { code: "ANALYZER_EMPTY_RESPONSE" });
+          throw makeAnalyzerError(`The analyzer returned an empty response${finishReason ? ` (${finishReason})` : ""}.`, { code: "ANALYZER_EMPTY_RESPONSE" });
         }
         const parsed = request.responseMode === "json" ? parseLenientJson2(raw) : raw;
         log("debug", `${request.purpose}: ${model} answered (${raw.length} chars, attempt ${attempt}/${total}).`);

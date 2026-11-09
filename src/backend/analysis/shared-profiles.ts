@@ -152,6 +152,9 @@ export function shareProfiles(services: BackendServices, analysis: () => Analysi
   }, 500);
   (drain as { unref?: () => void }).unref?.();
 
+  /** Characters whose failed batch is being gone through one person at a time. */
+  const oneByOne = new Set<string>();
+
   async function answer(reader: string): Promise<ProfileAnswer> {
     const raw = await pool!.read(wantedEndpoint(reader, services.userId)).catch(() => null);
     const req = parseProfileRequest(raw);
@@ -159,9 +162,11 @@ export function shareProfiles(services: BackendServices, analysis: () => Analysi
     const { characterId } = req;
     const ended = last.get(characterId);
     const withLast = <T extends ProfileAnswer>(a: T): T => (ended ? { ...a, last: ended } : a);
-    const running = analysis()
-      .listActive()
-      .find((j) => j.characterId === characterId && j.kind === "character-prompts" && (j.status === "running" || j.status === "queued"));
+    const running =
+      analysis()
+        .listActive()
+        .find((j) => j.characterId === characterId && j.kind === "character-prompts" && (j.status === "running" || j.status === "queued")) ??
+      (oneByOne.has(characterId) ? { jobId: `one-by-one:${characterId}` } : undefined);
     let snap = await loadWorkspaceSnapshot(services, characterId);
     if (!running) {
       const stale = staleRequestMade((await services.storage.loadCharacterDocument(characterId)).customCharacters, snap.roster, req.people);
@@ -213,16 +218,27 @@ export function shareProfiles(services: BackendServices, analysis: () => Analysi
     const customs = go.filter((r) => r.kind === "custom" && !r.registered).map((r) => r.selectionId);
     if (customs.length) await setCustomCharactersRegistered(services, characterId, customs, true);
     for (const row of go) tried.set(`${characterId}\u0000${row.promptKey}`, now);
+    const analyse = async (rows: readonly RosterItem[]): Promise<string | undefined> => {
+      const { jobId } = analysis().start({ kind: "character-prompts", characterId, evidenceMode: "text", promptKeys: rows.map((r) => r.promptKey), explicit: true });
+      services.log.append("info", "profiles", `${reader} asked for ${rows.map((r) => r.title).join(", ")}: analysing`, { characterId, jobId });
+      const o = await analysis().outcome(jobId);
+      if (!o) return undefined;
+      last.set(characterId, { status: o.status, message: o.message, ...(o.error ? { error: o.error.message } : {}), at: Date.now() });
+      services.log.append(o.status === "error" ? "warn" : "info", "profiles", `profile analysis for ${reader}: ${o.status} (${o.error?.message ?? o.message})`, { characterId, jobId });
+      return o.status;
+    };
     outside.push(() => {
-      const { jobId } = analysis().start({ kind: "character-prompts", characterId, evidenceMode: "text", promptKeys: go.map((r) => r.promptKey), explicit: true });
-      services.log.append("info", "profiles", `${reader} asked for ${go.map((r) => r.title).join(", ")}: analysing`, { characterId, jobId });
-      void analysis()
-        .outcome(jobId)
-        ?.then((o) => {
-          last.set(characterId, { status: o.status, message: o.message, ...(o.error ? { error: o.error.message } : {}), at: Date.now() });
-          services.log.append(o.status === "error" ? "warn" : "info", "profiles", `profile analysis for ${reader}: ${o.status} (${o.error?.message ?? o.message})`, { characterId, jobId });
-        })
-        .catch(() => undefined);
+      void (async () => {
+        const status = await analyse(go);
+        // A provider can answer a whole batch with nothing because of one person: then each on their own, so the rest get done.
+        if (status !== "error" || go.length < 2) return;
+        oneByOne.add(characterId);
+        try {
+          for (const row of go) await analyse([row]).catch(() => undefined);
+        } finally {
+          oneByOne.delete(characterId);
+        }
+      })().catch(() => undefined);
     });
     for (const row of go) pending.push(row.title);
     return withLast({ version: SHARED_PROFILES_VERSION, status: "started", characterId, ready, pending, ...(skipped.length ? { skipped } : {}) });

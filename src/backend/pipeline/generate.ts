@@ -8,6 +8,7 @@
  * `buildRuntimeConfig(global, document)`, personas from Lumiverse, chat messages before the target (stripped of our
  * markup), continuity rebuilt from the chat data checkpoints at the target message (AM 0.9.90: no accumulated actor state).
  */
+import type { RequestGround } from "./providers.js";
 import {
   applyAtelierOverlay,
   buildRuntimeConfig,
@@ -182,6 +183,8 @@ export interface GenerateMessageRequest {
    * the Atelier overlay applied and returns the one the run uses (another scene guideline selected). Not stored.
    */
   directing?: (runtime: Rec) => Rec;
+  /** The ground the picture stands on, for one that gets cut out. */
+  ground?: RequestGround;
 }
 
 /** AM session `progress.jevSelection` -> job snapshot shape. */
@@ -794,6 +797,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
         ownerCharacterId: primaryId,
         comfyuiWorkflowId: imageTarget.comfyuiWorkflowId,
         forceRating: () => fixedRating,
+        ...(req.ground ? { ground: req.ground } : {}),
         // AM `rW`: the analyzer of the active Atelier preset, prepared from the job-start config snapshot.
         analysisConfig: amConfig,
       }, config);

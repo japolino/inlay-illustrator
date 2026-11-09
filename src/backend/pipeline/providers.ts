@@ -30,8 +30,35 @@ import type { BackendServices, ImageBytes, ImageGenerateRequest, ImageGenerateRe
  * Run registry
  * ---------------------------------------------------------------------------------------------- */
 
+/** What a run's picture stands on, for pictures that get cut out: no scene tags would leave the image model to invent a room. */
+export interface RequestGround {
+  add: string;
+  negative: string;
+  /** Tags of the user's preset that fight it. */
+  drop: readonly string[];
+}
+
+const withoutTags = (prompt: string, drop: readonly string[]): string => {
+  const out = new Set(drop.map((t) => t.toLowerCase()));
+  return prompt
+    .split(",")
+    .map((t) => t.trim())
+    .filter((t) => t && !out.has(t.toLowerCase()))
+    .join(", ");
+};
+
+/** The request on that ground. The user's other tags stay as they are. */
+export function onGround<T extends Rec>(request: T, ground: RequestGround | undefined): T {
+  if (!ground) return request;
+  const prompt = withoutTags(str(request.prompt), ground.drop);
+  const negative = withoutTags(str(request.negativePrompt), ground.drop);
+  return { ...request, prompt: [prompt, ground.add].filter(Boolean).join(", "), negativePrompt: [negative, ground.negative].filter(Boolean).join(", ") };
+}
+
 export interface ProviderRunContext {
   purpose: ImageGenerateRequest["purpose"];
+  /** Pictures that get cut out stand on this. */
+  ground?: RequestGround;
   connectionId?: string;
   model?: string;
   ownerChatId?: string;
@@ -219,10 +246,11 @@ function normalizeCharacterPrompts(value: unknown) {
  * `references` / `imageToImage` are resolved by the caller (bytes).
  */
 export function buildNovelAIRequest(
-  request: Rec,
-  ctx: Pick<ProviderRunContext, "purpose" | "connectionId" | "model" | "ownerChatId" | "ownerCharacterId" | "forceRating">,
+  given: Rec,
+  ctx: Pick<ProviderRunContext, "purpose" | "connectionId" | "model" | "ownerChatId" | "ownerCharacterId" | "forceRating" | "ground">,
   extras: { characterReferences?: NovelAIImageOptions["characterReferences"]; imageToImage?: NovelAIImageOptions["imageToImage"] } = {},
 ): NovelAIBuild {
+  const request = onGround(given, ctx.ground);
   const rawPrompt = typeof request.prompt === "string" ? request.prompt : "";
   // AM 0.9.90 `Mht` @158848: `o.forceRating ?? r.forceRating?.() ?? false`; the rating replaces any rating tag of the
   // prompt and is stripped from every character prompt.
@@ -382,8 +410,9 @@ export function createNovelAIAdapter(services: BackendServices, registry: Provid
 export function createComfyAdapter(services: BackendServices, registry: ProviderRunRegistry): ImageProviderAdapter {
   return {
     provider: "comfy-ui",
-    async generate(request, options = {}) {
-      const ctx = registry.resolve(request as Rec) ?? DEFAULT_CONTEXT;
+    async generate(given, options = {}) {
+      const ctx = registry.resolve(given as Rec) ?? DEFAULT_CONTEXT;
+      const request = onGround(given as Rec, ctx.ground) as typeof given;
       const signal = (request.signal as AbortSignal | undefined) ?? options.signal;
       options.onEvent?.({ type: "stage", provider: "comfy-ui", requestId: "", stage: "connecting" });
       // AM lht 114092: outfit / character reference bytes prepared by comfyUIReferences.prepare

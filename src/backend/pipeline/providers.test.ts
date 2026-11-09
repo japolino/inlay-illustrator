@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { rpcError } from "../../shared/contract/index.js";
 import { RpcFailure } from "../rpc/errors.js";
 import { createFakeServices } from "../testing/fake-services.js";
-import { buildNovelAIRequest, createComfyReferencePreparer, createImageProviderAdapters, ProviderRunRegistry, toProviderError } from "./providers.js";
+import { buildNovelAIRequest, onGround, createComfyReferencePreparer, createImageProviderAdapters, ProviderRunRegistry, toProviderError } from "./providers.js";
 
 const ctx = { purpose: "chat" as const, connectionId: "img-1", model: "nai-diffusion-4-5-full", ownerChatId: "c1", ownerCharacterId: "ch1", forceRating: () => false as const };
 
@@ -165,5 +165,17 @@ describe("adapters over ImageService", () => {
     const t = toProviderError(new RpcFailure(rpcError("timeout", "slow"))) as { code: string; retryable: boolean };
     expect(t.code).toBe("REQUEST_TIMEOUT");
     expect(t.retryable).toBe(true);
+  });
+});
+
+describe("a picture that gets cut out", () => {
+  const ground = { add: "white background", negative: "room", drop: ["vignette", "blank page"] };
+  test("is told its ground, and the preset's tags against it go; everything else stays", () => {
+    const got = onGround({ prompt: "1girl, 1.8::artist:someone ::, vignette, rim light", negativePrompt: "lowres, blank page", seed: 1 }, ground);
+    expect(got).toEqual({ prompt: "1girl, 1.8::artist:someone ::, rim light, white background", negativePrompt: "lowres, room", seed: 1 });
+  });
+  test("any other picture is left as it is", () => {
+    const request = { prompt: "1girl, vignette", negativePrompt: "lowres" };
+    expect(onGround(request, undefined)).toBe(request);
   });
 });

@@ -91,6 +91,16 @@ export const GAMBIT_SCENE_INSTRUCTION =
   "One wide image of the moment the text describes, as an event illustration in a visual novel: the people it names, doing what it says, in the place it says. " +
   "Show only who the text puts there, each with the body and looks their profile gives them. No text and no panels.";
 
+/**
+ * The picture is cut out of its ground afterwards. The guideline takes the place's tags away, and with none the image
+ * model invents a room, so it's told outright. A vignette darkens the ground's edges and the cut fails.
+ */
+export const CUT_OUT_GROUND = {
+  add: "white background, simple background",
+  negative: "scenery, indoors, outdoors, room, furniture, floor, cast shadow",
+  drop: ["vignette", "negative space", "blank page"],
+} as const;
+
 export const GAMBIT_RATIO_INSTRUCTION = "Always choose sizeId 2 (landscape).";
 export const GAMBIT_TALL_RATIO_INSTRUCTION = "Always choose sizeId 1 (portrait).";
 
@@ -283,6 +293,7 @@ export function sharePictures(services: BackendServices, engine: EnginePort, get
         signal: abort.signal,
         assertTarget: async () => undefined,
         directing: (runtime) => selectGambitGuideline(runtime, req.direction),
+        ...(req.direction === "figure" || req.direction === "cutin" ? { ground: CUT_OUT_GROUND } : {}),
       },
     );
     const record = result.records[0];

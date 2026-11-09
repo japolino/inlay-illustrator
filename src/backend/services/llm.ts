@@ -602,7 +602,7 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
           // AM checks the finish reason only for DeepSeek (`JUe` 80056); elsewhere an empty reply is an empty response (not retried).
           if (finishReason === "length" && /deepseek/i.test(connection.provider)) throw makeAnalyzerError("The analyzer response was truncated before any output.", { code: "ANALYZER_OUTPUT_TRUNCATED" });
           if (finishReason === "content_filter") throw makeAnalyzerError("The provider filtered the analyzer response.", { code: "ANALYZER_CONTENT_FILTERED" });
-          throw makeAnalyzerError("The analyzer returned an empty response.", { code: "ANALYZER_EMPTY_RESPONSE" });
+          throw makeAnalyzerError(`The analyzer returned an empty response${finishReason ? ` (${finishReason})` : ""}.`, { code: "ANALYZER_EMPTY_RESPONSE" });
         }
         const parsed = request.responseMode === "json" ? parseLenientJson(raw) : raw;
         log("debug", `${request.purpose}: ${model} answered (${raw.length} chars, attempt ${attempt}/${total}).`);
