@@ -7,6 +7,9 @@
  * - Endpoint `inlay_illustrator.pictures.<user>`. The pool passes a handler no arguments, so the request is the
  *   reader's own endpoint `<readerExtensionId>.inlay.pictures.<user>`:
  *   `{ version: 1, pictures: [{ id, chatId, direction: "parley" | "cutin" | "figure" | "scene" | "intimate", text, base? }] }`.
+ * - `style` (optional): the art style of the run in place of the user's artist, `{ artist }` (one of their NovelAI art
+ *   styles, by id; an id they no longer have leaves their own) or `{ positive, negative }` (style tags of the reader's
+ *   own look). Only this run uses it; the stored settings stay.
  * - `base` (optional, a Lumiverse image id): the picture is drawn into that picture's setting, as a NovelAI infill on it
  *   (scene-infill.ts), with the analyzer's place left out (the kept frame is the place). Without a NovelAI connection,
  *   with a base that cannot be read, or when the infill fails, it is drawn on its own.
@@ -18,7 +21,7 @@
  *   (import presets/gambit.preset.json into the Maid Atelier and edit it there): the user's copy wins.
  * - Readers need `characters` and `generation` (a picture is an LLM analysis plus an image generation).
  */
-import { fixedCountPolicy, type ChatImageGenerationSettings } from "../../shared/contract/index.js";
+import { fixedCountPolicy, listNovelAIArtists, type ChatImageGenerationSettings } from "../../shared/contract/index.js";
 import * as A from "../../engine/v5/atelier.js";
 import type { NativeAssetDetector } from "../../engine/text/index.js";
 import { sharedArtistsChannel } from "../services/shared-artists.js";
@@ -36,6 +39,9 @@ const MAX_PER_READ = 8;
 const MAX_KEPT = 200;
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:#-]{0,159}$/u;
 const LUMIVERSE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]*$/u;
+const ARTIST_ID_RE = /^[A-Za-z0-9][A-Za-z0-9 _.:-]{0,119}$/u;
+/** The artist entry a run in a reader's own style tags draws with. */
+export const READER_STYLE_ARTIST_ID = "shared-picture-style";
 /** The closing line of a picture's text (see draw). */
 export const PICTURE_END = "* * *";
 const RETRY_FAILED_MS = 60_000;
@@ -49,7 +55,9 @@ export interface PictureRequest {
   text: string;
   /** A Lumiverse image id: drawn into that picture's setting. */
   base?: string;
+  style?: PictureStyle;
 }
+export type PictureStyle = { artist: string } | { positive: string; negative: string };
 export interface PictureStatus {
   status: "queued" | "running" | "ready" | "failed";
   imageId?: string;
@@ -246,6 +254,24 @@ export function picturesEndpoint(readerExtensionId: string, userId: string | und
 
 const text = (v: unknown, max: number): string => (typeof v === "string" ? v.replace(/[ \t]+/g, " ").trim().slice(0, max) : "");
 
+function pictureStyle(raw: unknown): PictureStyle | undefined {
+  const s = rec(raw);
+  const artist = text(s.artist, 120);
+  const positive = text(s.positive, 1500);
+  if (ARTIST_ID_RE.test(artist)) return { artist };
+  return positive ? { positive, negative: text(s.negative, 1500) } : undefined;
+}
+
+/** The run's runtime config drawing in the request's style instead of the user's artist. Nothing is stored. */
+export function withPictureStyle<T extends object>(runtime: T, style: PictureStyle | undefined): T {
+  if (!style) return runtime;
+  const cp = rec((runtime as Rec).characterPrompt);
+  if ("artist" in style) return listNovelAIArtists(cp.artistPrompts).some((a) => a.id === style.artist) ? { ...runtime, characterPrompt: { ...cp, selectedArtistId: style.artist } } : runtime;
+  const entries = (Array.isArray(cp.artistPrompts) ? cp.artistPrompts : []).filter((e) => rec(e).id !== READER_STYLE_ARTIST_ID);
+  const entry = { id: READER_STYLE_ARTIST_ID, title: "Requested style", prompt: style.positive, negativePrompt: style.negative };
+  return { ...runtime, characterPrompt: { ...cp, artistPrompts: [...entries, entry], selectedArtistId: READER_STYLE_ARTIST_ID } };
+}
+
 export function parsePictureRequests(raw: unknown): PictureRequest[] {
   const o = rec(raw);
   if (o.version !== 1 || !Array.isArray(o.pictures)) return [];
@@ -257,8 +283,9 @@ export function parsePictureRequests(raw: unknown): PictureRequest[] {
     const direction = PICTURE_DIRECTIONS.find((d) => d === x.direction) ?? null;
     const body = text(x.text, 2000);
     const base = text(x.base, 80);
+    const style = pictureStyle(x.style);
     if (!ID_RE.test(id) || !LUMIVERSE_ID_RE.test(chatId) || !direction || !body) continue;
-    if (!out.some((r) => r.id === id)) out.push({ id, chatId, direction, text: body, ...(LUMIVERSE_ID_RE.test(base) ? { base } : {}) });
+    if (!out.some((r) => r.id === id)) out.push({ id, chatId, direction, text: body, ...(LUMIVERSE_ID_RE.test(base) ? { base } : {}), ...(style ? { style } : {}) });
     if (out.length >= 32) break;
   }
   return out;
@@ -365,7 +392,7 @@ export function sharePictures(services: BackendServices, engine: EnginePort, get
         chatData: await services.storage.loadChatData(req.chatId),
         signal: abort.signal,
         assertTarget: async () => undefined,
-        directing: (runtime) => selectGambitGuideline(runtime, req.direction, !!infill),
+        directing: (runtime) => withPictureStyle(selectGambitGuideline(runtime, req.direction, !!infill), req.style),
         ...(req.direction === "figure" || req.direction === "cutin" ? { ground: CUT_OUT_GROUND } : {}),
         ...(infill ? { infill } : {}),
       },

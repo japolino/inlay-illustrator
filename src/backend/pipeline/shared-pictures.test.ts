@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import * as A from "../../engine/v5/atelier.js";
-import { applyAtelierOverlay, buildRuntimeConfig, createDefaultConfig } from "../../shared/contract/index.js";
-import { GAMBIT_CUTIN_NAME, GAMBIT_FIGURE_INSTRUCTION, GAMBIT_FIGURE_NAME, GAMBIT_INTIMATE_NAME, GAMBIT_PARLEY_NAME, GAMBIT_RATIO_NAME, GAMBIT_SCENE_NAME, GAMBIT_TALL_RATIO_NAME, PICTURE_END, parsePictureRequests, pictureSlot, picturesEndpoint, selectGambitGuideline, sharedPicturesChannel } from "./shared-pictures.js";
+import { resolveArtistPromptSelection, type AssetMaidConfig } from "../../engine/context/context.js";
+import { applyAtelierOverlay, buildRuntimeConfig, createDefaultConfig, normalizeConfig } from "../../shared/contract/index.js";
+import { GAMBIT_CUTIN_NAME, GAMBIT_FIGURE_INSTRUCTION, GAMBIT_FIGURE_NAME, GAMBIT_INTIMATE_NAME, GAMBIT_PARLEY_NAME, GAMBIT_RATIO_NAME, GAMBIT_SCENE_NAME, GAMBIT_TALL_RATIO_NAME, PICTURE_END, parsePictureRequests, pictureSlot, picturesEndpoint, selectGambitGuideline, sharedPicturesChannel, withPictureStyle } from "./shared-pictures.js";
 
 const runtime = () => buildRuntimeConfig(createDefaultConfig(), null) as unknown as Record<string, unknown> & { runtime: unknown };
 
@@ -50,6 +51,26 @@ describe("shared pictures", () => {
     const lib = A.resolveStoredLibrary(base);
     lib.scene.items["mine"] = { name: GAMBIT_INTIMATE_NAME, instruction: "my scene", outputMode: "illustration" } as never;
     expect(placeRules(selectGambitGuideline(A.commitLibrary(base, lib), "intimate", true))).toEqual(["scene.free.location", "scene.text.location", "scene.free.object"]);
+  });
+
+  test("a requested style replaces the user's artist for the run: one of theirs by id, or the reader's tags", () => {
+    const got = parsePictureRequests({
+      version: 1,
+      pictures: [
+        { id: "a", chatId: "c", direction: "scene", text: "x", style: { artist: "artist_1" } },
+        { id: "b", chatId: "c", direction: "scene", text: "x", style: { positive: "ink wash painting, sumi-e", negative: "3d" } },
+        { id: "c", chatId: "c", direction: "scene", text: "x", style: { positive: "" } },
+      ],
+    });
+    expect(got.map((p) => p.style)).toEqual([{ artist: "artist_1" }, { positive: "ink wash painting, sumi-e", negative: "3d" }, undefined]);
+    const config = normalizeConfig({ characterPrompt: { artistPrompts: [{ id: "artist_1", title: "One", prompt: "artist:one" }, { id: "artist_2", title: "Two", prompt: "artist:two" }], defaultArtistId: "artist_2" } });
+    const base = buildRuntimeConfig(config, null) as unknown as AssetMaidConfig;
+    const artist = (r: object) => resolveArtistPromptSelection(r as AssetMaidConfig, { provider: "novelai" });
+    expect(artist(base).id).toBe("artist_2");
+    expect(artist(withPictureStyle(base, { artist: "artist_1" })).prompt).toBe("artist:one");
+    expect(artist(withPictureStyle(base, { artist: "gone" })).id).toBe("artist_2");
+    expect(artist(withPictureStyle(base, { positive: "ink wash painting", negative: "3d" }))).toMatchObject({ prompt: "ink wash painting", negativePrompt: "3d" });
+    expect(artist(base).id).toBe("artist_2");
   });
 
   test("a run selects the Gambit guideline and ratio without touching the stored selection", () => {
