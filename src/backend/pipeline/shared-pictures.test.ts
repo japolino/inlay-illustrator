@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import * as A from "../../engine/v5/atelier.js";
 import { applyAtelierOverlay, buildRuntimeConfig, createDefaultConfig } from "../../shared/contract/index.js";
-import { GAMBIT_CUTIN_NAME, GAMBIT_PARLEY_NAME, parsePictureRequests, picturesEndpoint, selectGambitGuideline, sharedPicturesChannel } from "./shared-pictures.js";
+import { GAMBIT_CUTIN_NAME, GAMBIT_FIGURE_INSTRUCTION, GAMBIT_FIGURE_NAME, GAMBIT_PARLEY_NAME, GAMBIT_RATIO_NAME, GAMBIT_SCENE_NAME, GAMBIT_TALL_RATIO_NAME, parsePictureRequests, picturesEndpoint, selectGambitGuideline, sharedPicturesChannel } from "./shared-pictures.js";
 
 const runtime = () => buildRuntimeConfig(createDefaultConfig(), null) as unknown as Record<string, unknown> & { runtime: unknown };
 
@@ -49,5 +49,21 @@ describe("shared pictures", () => {
     const eff = A.resolveLibrary(selectGambitGuideline(withMine, "cutin"));
     expect(eff.scene.selected).toBe("mine");
     expect(eff.scene.items.mine?.instruction).toBe("my cut-in");
+  });
+
+  test("a figure asks for one person in a tall frame, in the body their profile gives them", () => {
+    const got = parsePictureRequests({ version: 1, pictures: [{ id: "figure:a", chatId: "chat-1", direction: "figure", text: "Wren alone." }, { id: "cg:b", chatId: "chat-1", direction: "scene", text: "They shake on it." }] });
+    expect(got.map((p) => p.direction)).toEqual(["figure", "scene"]);
+    expect(GAMBIT_FIGURE_INSTRUCTION).toContain("never give them human legs");
+    const lib = A.resolveLibrary(selectGambitGuideline(runtime(), "figure"));
+    expect(lib.scene.items[lib.scene.selected]?.name).toBe(GAMBIT_FIGURE_NAME);
+    expect(lib.imageRatio.items[lib.imageRatio.selected]?.name).toBe(GAMBIT_TALL_RATIO_NAME);
+    expect(lib.imageRatio.items[lib.imageRatio.selected]?.allowedSizeIds).toEqual([1]);
+  });
+
+  test("a scene stays wide", () => {
+    const lib = A.resolveLibrary(selectGambitGuideline(runtime(), "scene"));
+    expect(lib.scene.items[lib.scene.selected]?.name).toBe(GAMBIT_SCENE_NAME);
+    expect(lib.imageRatio.items[lib.imageRatio.selected]?.name).toBe(GAMBIT_RATIO_NAME);
   });
 });

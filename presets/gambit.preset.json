@@ -96,6 +96,83 @@
                 }
               ]
             }
+          },
+          "gambit-figure": {
+            "name": "Gambit: Figure",
+            "instruction": "One image of one person alone, as a character figure: the whole of their body in view, centred, facing the viewer, relaxed, with a calm expression. Draw the body their profile gives them: if it isn't two legs (a snake's coils, a horse's body, a fish's tail, spider legs, no legs at all), show all of it and never give them human legs. No scenery and no floor: a plain white background behind them, with no cast shadow. No other people, no text, no effects.",
+            "outputMode": "illustration",
+            "system": {
+              "options": [],
+              "values": {},
+              "rules": [
+                {
+                  "id": "gambit-figure-no-dialogue",
+                  "condition": {
+                    "direction": "gambit-figure"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "remove",
+                    "path": "actor.text.dialogue"
+                  }
+                },
+                {
+                  "id": "gambit-figure-no-place-tags",
+                  "condition": {
+                    "direction": "gambit-figure"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "remove",
+                    "path": "scene.free.location"
+                  }
+                },
+                {
+                  "id": "gambit-figure-no-place-text",
+                  "condition": {
+                    "direction": "gambit-figure"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "remove",
+                    "path": "scene.text.location"
+                  }
+                },
+                {
+                  "id": "gambit-figure-no-props",
+                  "condition": {
+                    "direction": "gambit-figure"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "remove",
+                    "path": "scene.free.object"
+                  }
+                }
+              ]
+            }
+          },
+          "gambit-scene": {
+            "name": "Gambit: Scene",
+            "instruction": "One wide image of the moment the text describes, as an event illustration in a visual novel: the people it names, doing what it says, in the place it says. Show only who the text puts there, each with the body and looks their profile gives them. No text and no panels.",
+            "outputMode": "illustration",
+            "system": {
+              "options": [],
+              "values": {},
+              "rules": [
+                {
+                  "id": "gambit-scene-no-dialogue",
+                  "condition": {
+                    "direction": "gambit-scene"
+                  },
+                  "effect": {
+                    "kind": "path",
+                    "action": "remove",
+                    "path": "actor.text.dialogue"
+                  }
+                }
+              ]
+            }
           }
         }
       },
@@ -107,6 +184,13 @@
             "instruction": "Always choose sizeId 2 (landscape).",
             "allowedSizeIds": [
               2
+            ]
+          },
+          "gambit-tall": {
+            "name": "Gambit: Tall",
+            "instruction": "Always choose sizeId 1 (portrait).",
+            "allowedSizeIds": [
+              1
             ]
           }
         }

@@ -1,12 +1,12 @@
 /**
- * Pictures on request, for other extensions (Gambit asks for its Parley moments and combat cut-ins), over the Spindle
+ * Pictures on request, for other extensions (Gambit asks for its Parley moments, combat cut-ins, figures and scenes), over the Spindle
  * shared RPC pool. The picture is made by Inlay's own chat pipeline, as a message illustration would be: the chat's
  * cast and their looks, the user's active Atelier preset (its analyzer and parser), continuity read but not written.
  * Only the scene guideline and the image ratio of the run change, to the guideline the request names (below).
  *
  * - Endpoint `inlay_illustrator.pictures.<user>`. The pool passes a handler no arguments, so the request is the
  *   reader's own endpoint `<readerExtensionId>.inlay.pictures.<user>`:
- *   `{ version: 1, pictures: [{ id, chatId, direction: "parley" | "cutin", text }] }`.
+ *   `{ version: 1, pictures: [{ id, chatId, direction: "parley" | "cutin" | "figure" | "scene", text }] }`.
  * - Reading the endpoint queues every picture it has not seen (one run at a time, started outside the request's
  *   permission scope, like profiles) and answers the status of each requested id:
  *   `{ version: 1, pictures: { [id]: { status, imageId?, url?, width?, height?, error? } } }`. Readers read again to
@@ -34,7 +34,8 @@ const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:#-]{0,159}$/u;
 export const PICTURE_END = "* * *";
 const RETRY_FAILED_MS = 60_000;
 
-export type PictureDirection = "parley" | "cutin";
+export const PICTURE_DIRECTIONS = ["parley", "cutin", "figure", "scene"] as const;
+export type PictureDirection = (typeof PICTURE_DIRECTIONS)[number];
 export interface PictureRequest {
   id: string;
   chatId: string;
@@ -64,7 +65,10 @@ const rec = (v: unknown): Rec => (v && typeof v === "object" && !Array.isArray(v
 
 export const GAMBIT_PARLEY_NAME = "Gambit: Parley";
 export const GAMBIT_CUTIN_NAME = "Gambit: Cut-in";
+export const GAMBIT_FIGURE_NAME = "Gambit: Figure";
+export const GAMBIT_SCENE_NAME = "Gambit: Scene";
 export const GAMBIT_RATIO_NAME = "Gambit: Wide";
+export const GAMBIT_TALL_RATIO_NAME = "Gambit: Tall";
 
 export const GAMBIT_PARLEY_INSTRUCTION =
   "One image of the beat the text describes in a contest of words: the person the persona is talking to, reacting to what the persona just said or did. " +
@@ -78,7 +82,17 @@ export const GAMBIT_CUTIN_INSTRUCTION =
   "The move's own effects surround them (fire and embers, ice, lightning, holy light, a dark aura, water, flying rock, a magic circle). " +
   "No scenery and no floor: a plain white background behind them. No other people, no text.";
 
+export const GAMBIT_FIGURE_INSTRUCTION =
+  "One image of one person alone, as a character figure: the whole of their body in view, centred, facing the viewer, relaxed, with a calm expression. " +
+  "Draw the body their profile gives them: if it isn't two legs (a snake's coils, a horse's body, a fish's tail, spider legs, no legs at all), show all of it and never give them human legs. " +
+  "No scenery and no floor: a plain white background behind them, with no cast shadow. No other people, no text, no effects.";
+
+export const GAMBIT_SCENE_INSTRUCTION =
+  "One wide image of the moment the text describes, as an event illustration in a visual novel: the people it names, doing what it says, in the place it says. " +
+  "Show only who the text puts there, each with the body and looks their profile gives them. No text and no panels.";
+
 export const GAMBIT_RATIO_INSTRUCTION = "Always choose sizeId 2 (landscape).";
+export const GAMBIT_TALL_RATIO_INSTRUCTION = "Always choose sizeId 1 (portrait).";
 
 /** A rule of a scene guideline (`{id, condition, effect}`); `direction` is the guideline's own id. */
 const pathRule = (id: string, direction: string, action: "add" | "remove", path: string, value?: unknown): Rec => ({
@@ -91,7 +105,7 @@ const pathRule = (id: string, direction: string, action: "add" | "remove", path:
  * The library items of the Gambit guidelines under the given ids. The Parley one asks for a POV camera but, unlike the
  * built-in POV guideline, does not require the persona: a persona without an Inlay profile made the run fail.
  */
-export function gambitGuidelines(_library: A.AtelierLibrary, ids: { parley: string; cutin: string }): { parley: Rec; cutin: Rec } {
+export function gambitGuidelines(_library: A.AtelierLibrary, ids: { parley: string; cutin: string; figure: string; scene: string }): Record<PictureDirection, Rec> {
   const parley: Rec = {
     name: GAMBIT_PARLEY_NAME,
     instruction: GAMBIT_PARLEY_INSTRUCTION,
@@ -120,8 +134,31 @@ export function gambitGuidelines(_library: A.AtelierLibrary, ids: { parley: stri
       ],
     },
   };
-  return { parley, cutin };
+  const figure: Rec = {
+    name: GAMBIT_FIGURE_NAME,
+    instruction: GAMBIT_FIGURE_INSTRUCTION,
+    outputMode: "illustration",
+    system: {
+      options: [],
+      values: {},
+      rules: [
+        pathRule("gambit-figure-no-dialogue", ids.figure, "remove", "actor.text.dialogue"),
+        pathRule("gambit-figure-no-place-tags", ids.figure, "remove", "scene.free.location"),
+        pathRule("gambit-figure-no-place-text", ids.figure, "remove", "scene.text.location"),
+        pathRule("gambit-figure-no-props", ids.figure, "remove", "scene.free.object"),
+      ],
+    },
+  };
+  const scene: Rec = {
+    name: GAMBIT_SCENE_NAME,
+    instruction: GAMBIT_SCENE_INSTRUCTION,
+    outputMode: "illustration",
+    system: { options: [], values: {}, rules: [pathRule("gambit-scene-no-dialogue", ids.scene, "remove", "actor.text.dialogue")] },
+  };
+  return { parley, cutin, figure, scene };
 }
+
+const GUIDELINE_NAME: Record<PictureDirection, string> = { parley: GAMBIT_PARLEY_NAME, cutin: GAMBIT_CUTIN_NAME, figure: GAMBIT_FIGURE_NAME, scene: GAMBIT_SCENE_NAME };
 
 const nameOf = (item: unknown): string => String(rec(item).name ?? "").trim();
 
@@ -131,18 +168,20 @@ const nameOf = (item: unknown): string => String(rec(item).name ?? "").trim();
  */
 export function selectGambitGuideline<T extends object>(runtime: T, direction: PictureDirection): T {
   const library = A.resolveStoredLibrary(runtime);
-  const want = direction === "parley" ? GAMBIT_PARLEY_NAME : GAMBIT_CUTIN_NAME;
-  const own = Object.entries(library.scene.items).find(([, item]) => nameOf(item) === want)?.[0];
+  const own = Object.entries(library.scene.items).find(([, item]) => nameOf(item) === GUIDELINE_NAME[direction])?.[0];
   let sceneId = own;
   if (!sceneId) {
-    sceneId = direction === "parley" ? "gambit-parley" : "gambit-cutin";
-    const made = gambitGuidelines(library, { parley: "gambit-parley", cutin: "gambit-cutin" });
-    library.scene.items[sceneId] = (direction === "parley" ? made.parley : made.cutin) as never;
+    sceneId = `gambit-${direction}`;
+    const made = gambitGuidelines(library, { parley: "gambit-parley", cutin: "gambit-cutin", figure: "gambit-figure", scene: "gambit-scene" });
+    library.scene.items[sceneId] = made[direction] as never;
   }
   library.scene.selected = sceneId;
-  const ownRatio = Object.entries(library.imageRatio.items).find(([, item]) => nameOf(item) === GAMBIT_RATIO_NAME)?.[0];
-  const ratioId = ownRatio ?? "gambit-wide";
-  if (!ownRatio) library.imageRatio.items[ratioId] = { name: GAMBIT_RATIO_NAME, instruction: GAMBIT_RATIO_INSTRUCTION, allowedSizeIds: [2] } as never;
+  // A figure stands in a tall frame; everything else is wide.
+  const tall = direction === "figure";
+  const ratioName = tall ? GAMBIT_TALL_RATIO_NAME : GAMBIT_RATIO_NAME;
+  const ownRatio = Object.entries(library.imageRatio.items).find(([, item]) => nameOf(item) === ratioName)?.[0];
+  const ratioId = ownRatio ?? (tall ? "gambit-tall" : "gambit-wide");
+  if (!ownRatio) library.imageRatio.items[ratioId] = { name: ratioName, instruction: tall ? GAMBIT_TALL_RATIO_INSTRUCTION : GAMBIT_RATIO_INSTRUCTION, allowedSizeIds: tall ? [1] : [2] } as never;
   library.imageRatio.selected = ratioId;
   return A.commitLibrary(runtime, library);
 }
@@ -171,7 +210,7 @@ export function parsePictureRequests(raw: unknown): PictureRequest[] {
     const x = rec(p);
     const id = text(x.id, 160);
     const chatId = text(x.chatId, 80);
-    const direction = x.direction === "parley" || x.direction === "cutin" ? x.direction : null;
+    const direction = PICTURE_DIRECTIONS.find((d) => d === x.direction) ?? null;
     const body = text(x.text, 2000);
     if (!ID_RE.test(id) || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/u.test(chatId) || !direction || !body) continue;
     if (!out.some((r) => r.id === id)) out.push({ id, chatId, direction, text: body });

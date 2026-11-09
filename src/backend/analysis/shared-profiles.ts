@@ -87,13 +87,17 @@ const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").tri
 
 /**
  * Custom characters a reader's request made for someone a lorebook does describe, from before those books could be read
- * here. Only one still holding exactly what the request wrote: a person's edits are theirs, and keep it.
+ * here. Only one still holding what a request wrote (this one, or the start of it from an older reader): a person's edits are theirs, and keep it.
  */
 export function staleRequestMade<C extends { id: string; title: string; appearanceDescription?: string }>(custom: readonly C[], roster: readonly RosterItem[], people: readonly WantedPerson[]): C[] {
   const lore = roster.filter((row) => row.kind === "lore");
   return people.flatMap((person) => {
     if (!person.description || !rowFor(lore, person)) return [];
-    return custom.filter((c) => norm(c.title) === norm(person.name) && (c.appearanceDescription ?? "").trim() === person.description!.trim());
+    const wrote = person.description.trim();
+    return custom.filter((c) => {
+      const has = (c.appearanceDescription ?? "").trim();
+      return norm(c.title) === norm(person.name) && !!has && wrote.startsWith(has);
+    });
   });
 }
 

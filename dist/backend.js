@@ -45982,7 +45982,11 @@ function staleRequestMade(custom, roster, people) {
   return people.flatMap((person) => {
     if (!person.description || !rowFor(lore, person))
       return [];
-    return custom.filter((c) => norm2(c.title) === norm2(person.name) && (c.appearanceDescription ?? "").trim() === person.description.trim());
+    const wrote = person.description.trim();
+    return custom.filter((c) => {
+      const has = (c.appearanceDescription ?? "").trim();
+      return norm2(c.title) === norm2(person.name) && !!has && wrote.startsWith(has);
+    });
   });
 }
 function rowFor(roster, person) {
@@ -55166,13 +55170,20 @@ var MAX_KEPT = 200;
 var ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:#-]{0,159}$/u;
 var PICTURE_END = "* * *";
 var RETRY_FAILED_MS = 60000;
+var PICTURE_DIRECTIONS = ["parley", "cutin", "figure", "scene"];
 var rec10 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 var GAMBIT_PARLEY_NAME = "Gambit: Parley";
 var GAMBIT_CUTIN_NAME = "Gambit: Cut-in";
+var GAMBIT_FIGURE_NAME = "Gambit: Figure";
+var GAMBIT_SCENE_NAME = "Gambit: Scene";
 var GAMBIT_RATIO_NAME = "Gambit: Wide";
+var GAMBIT_TALL_RATIO_NAME = "Gambit: Tall";
 var GAMBIT_PARLEY_INSTRUCTION = "One image of the beat the text describes in a contest of words: the person the persona is talking to, reacting to what the persona just said or did. " + "Show it through the persona's eyes at conversation distance: the other person faces the viewer, waist up or chest up, and their face, eyes and hands carry the beat (caught off guard, suspicious, furious, amused, tempted, giving in, turning away). " + "Keep the place of the scene behind them, softer than they are, lit like a film still. Show nobody else unless the text puts them right there. " + "Show the persona only as hands, and only when the text has them doing something (offering, pointing, holding coin); never their face or body.";
 var GAMBIT_CUTIN_INSTRUCTION = "One image of a combat cut-in: the acting character alone, mid-move, as fighting-game or gacha special-move splash art. " + "A dynamic, foreshortened action pose at a slanted camera angle (lunging, swinging a weapon through the frame, casting with an arm thrust at the viewer, bracing behind a barrier), intense eyes, hair and clothes whipped by the motion. " + "The move's own effects surround them (fire and embers, ice, lightning, holy light, a dark aura, water, flying rock, a magic circle). " + "No scenery and no floor: a plain white background behind them. No other people, no text.";
+var GAMBIT_FIGURE_INSTRUCTION = "One image of one person alone, as a character figure: the whole of their body in view, centred, facing the viewer, relaxed, with a calm expression. " + "Draw the body their profile gives them: if it isn't two legs (a snake's coils, a horse's body, a fish's tail, spider legs, no legs at all), show all of it and never give them human legs. " + "No scenery and no floor: a plain white background behind them, with no cast shadow. No other people, no text, no effects.";
+var GAMBIT_SCENE_INSTRUCTION = "One wide image of the moment the text describes, as an event illustration in a visual novel: the people it names, doing what it says, in the place it says. " + "Show only who the text puts there, each with the body and looks their profile gives them. No text and no panels.";
 var GAMBIT_RATIO_INSTRUCTION = "Always choose sizeId 2 (landscape).";
+var GAMBIT_TALL_RATIO_INSTRUCTION = "Always choose sizeId 1 (portrait).";
 var pathRule = (id, direction, action, path, value) => ({
   id,
   condition: { direction },
@@ -55207,24 +55218,47 @@ function gambitGuidelines(_library, ids) {
       ]
     }
   };
-  return { parley, cutin };
+  const figure = {
+    name: GAMBIT_FIGURE_NAME,
+    instruction: GAMBIT_FIGURE_INSTRUCTION,
+    outputMode: "illustration",
+    system: {
+      options: [],
+      values: {},
+      rules: [
+        pathRule("gambit-figure-no-dialogue", ids.figure, "remove", "actor.text.dialogue"),
+        pathRule("gambit-figure-no-place-tags", ids.figure, "remove", "scene.free.location"),
+        pathRule("gambit-figure-no-place-text", ids.figure, "remove", "scene.text.location"),
+        pathRule("gambit-figure-no-props", ids.figure, "remove", "scene.free.object")
+      ]
+    }
+  };
+  const scene = {
+    name: GAMBIT_SCENE_NAME,
+    instruction: GAMBIT_SCENE_INSTRUCTION,
+    outputMode: "illustration",
+    system: { options: [], values: {}, rules: [pathRule("gambit-scene-no-dialogue", ids.scene, "remove", "actor.text.dialogue")] }
+  };
+  return { parley, cutin, figure, scene };
 }
+var GUIDELINE_NAME = { parley: GAMBIT_PARLEY_NAME, cutin: GAMBIT_CUTIN_NAME, figure: GAMBIT_FIGURE_NAME, scene: GAMBIT_SCENE_NAME };
 var nameOf = (item) => String(rec10(item).name ?? "").trim();
 function selectGambitGuideline(runtime, direction) {
   const library = resolveStoredLibrary(runtime);
-  const want = direction === "parley" ? GAMBIT_PARLEY_NAME : GAMBIT_CUTIN_NAME;
-  const own = Object.entries(library.scene.items).find(([, item]) => nameOf(item) === want)?.[0];
+  const own = Object.entries(library.scene.items).find(([, item]) => nameOf(item) === GUIDELINE_NAME[direction])?.[0];
   let sceneId = own;
   if (!sceneId) {
-    sceneId = direction === "parley" ? "gambit-parley" : "gambit-cutin";
-    const made = gambitGuidelines(library, { parley: "gambit-parley", cutin: "gambit-cutin" });
-    library.scene.items[sceneId] = direction === "parley" ? made.parley : made.cutin;
+    sceneId = `gambit-${direction}`;
+    const made = gambitGuidelines(library, { parley: "gambit-parley", cutin: "gambit-cutin", figure: "gambit-figure", scene: "gambit-scene" });
+    library.scene.items[sceneId] = made[direction];
   }
   library.scene.selected = sceneId;
-  const ownRatio = Object.entries(library.imageRatio.items).find(([, item]) => nameOf(item) === GAMBIT_RATIO_NAME)?.[0];
-  const ratioId = ownRatio ?? "gambit-wide";
+  const tall = direction === "figure";
+  const ratioName = tall ? GAMBIT_TALL_RATIO_NAME : GAMBIT_RATIO_NAME;
+  const ownRatio = Object.entries(library.imageRatio.items).find(([, item]) => nameOf(item) === ratioName)?.[0];
+  const ratioId = ownRatio ?? (tall ? "gambit-tall" : "gambit-wide");
   if (!ownRatio)
-    library.imageRatio.items[ratioId] = { name: GAMBIT_RATIO_NAME, instruction: GAMBIT_RATIO_INSTRUCTION, allowedSizeIds: [2] };
+    library.imageRatio.items[ratioId] = { name: ratioName, instruction: tall ? GAMBIT_TALL_RATIO_INSTRUCTION : GAMBIT_RATIO_INSTRUCTION, allowedSizeIds: tall ? [1] : [2] };
   library.imageRatio.selected = ratioId;
   return commitLibrary(runtime, library);
 }
@@ -55244,7 +55278,7 @@ function parsePictureRequests(raw) {
     const x = rec10(p);
     const id = text4(x.id, 160);
     const chatId = text4(x.chatId, 80);
-    const direction = x.direction === "parley" || x.direction === "cutin" ? x.direction : null;
+    const direction = PICTURE_DIRECTIONS.find((d) => d === x.direction) ?? null;
     const body = text4(x.text, 2000);
     if (!ID_RE.test(id) || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/u.test(chatId) || !direction || !body)
       continue;
