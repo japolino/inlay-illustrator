@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { RosterItem } from "../../shared/contract/index.js";
-import { parseProfileRequest, rowFor, sharedProfilesChannel, wantedEndpoint } from "./shared-profiles.js";
+import { parseProfileRequest, rowFor, sharedProfilesChannel, staleRequestMade, wantedEndpoint } from "./shared-profiles.js";
 
 const row = (title: string, extra: Partial<RosterItem> = {}): RosterItem =>
   ({ promptKey: `k:${title}`, kind: "lore", memberKey: "m", selectionId: title, title, keys: [], primaryKeys: [], secondaryKeys: [], recognitionKeys: [], content: "", score: 0, registered: false, workspaceEnabled: false, mainPrompt: "", analyzeEnabled: true, selectedAssetCount: 0, thumbnailUrl: null, ...extra }) as RosterItem;
@@ -21,6 +21,18 @@ describe("shared profiles", () => {
       characterId: "abc-1",
       people: [{ name: "Wren", aliases: ["W"], description: "a red scarf" }],
     });
+  });
+
+  test("a profile made without the lorebook gives way to the entry, unless someone has edited it", () => {
+    const roster = [row("\u2764 Wren Ashby"), row("Corvin", { kind: "custom" })];
+    const wren = { name: "Wren Ashby", description: "Wren Ashby: a clerk." };
+    const made = { id: "c1", title: "Wren Ashby", appearanceDescription: "Wren Ashby: a clerk." };
+    const edited = { id: "c2", title: "Wren Ashby", appearanceDescription: "Wren Ashby: a clerk with a red scarf." };
+    expect(staleRequestMade([made, edited], roster, [wren]).map((c) => c.id)).toEqual(["c1"]);
+    // Nobody in the lorebooks: the custom character is all they have.
+    expect(staleRequestMade([{ id: "c3", title: "Corvin", appearanceDescription: "Corvin: a monk." }], roster, [{ name: "Corvin", description: "Corvin: a monk." }])).toEqual([]);
+    // No description to compare: it can't be told apart from one a person wrote.
+    expect(staleRequestMade([made], roster, [{ name: "Wren Ashby" }])).toEqual([]);
   });
 
   test("a person is found by title, then keys, then the title's first word; profiled rows win ties", () => {

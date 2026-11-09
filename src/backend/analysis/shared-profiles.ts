@@ -11,14 +11,16 @@
  *   a known character's Danbooru tag) runs for the ones without a profile yet.
  * - It answers at once with what it did; the profiles appear on `characters.<user>.<characterId>` when the analysis
  *   ends. A person analysed without a result is not retried for RETRY_MS.
- * - Readers need `characters` (they learn the card's roster names) and `generation` (reading may start an LLM
- *   analysis, which runs later with Inlay's own permissions, outside the request).
+ * - Readers need `characters` (they learn the card's roster names), `world_books` (the roster is read from the lorebooks
+ *   while answering) and `generation` (reading may start an LLM analysis, which runs later with Inlay's own permissions,
+ *   outside the request). A handler runs with exactly what its policy requires: without `world_books` every book reads as
+ *   missing, and everyone in a lorebook looks like someone the card lacks.
  */
 import type { AnalysisController } from "./index.js";
 import type { RosterItem } from "../../shared/contract/index.js";
 import type { BackendServices, SpindleHost } from "../services/types.js";
 import { sharedArtistsChannel } from "../services/shared-artists.js";
-import { createCustomCharacterEntry, loadWorkspaceSnapshot, setCustomCharactersRegistered, setRosterRegistered } from "./workspace.js";
+import { createCustomCharacterEntry, loadWorkspaceSnapshot, removeCustomCharacterEntry, setCustomCharactersRegistered, setRosterRegistered } from "./workspace.js";
 
 export const SHARED_PROFILES_CHANNEL = "profiles";
 export const SHARED_PROFILES_VERSION = 1;
@@ -83,6 +85,18 @@ export function parseProfileRequest(raw: unknown): ProfileRequest | null {
 
 const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
+/**
+ * Custom characters a reader's request made for someone a lorebook does describe, from before those books could be read
+ * here. Only one still holding exactly what the request wrote: a person's edits are theirs, and keep it.
+ */
+export function staleRequestMade<C extends { id: string; title: string; appearanceDescription?: string }>(custom: readonly C[], roster: readonly RosterItem[], people: readonly WantedPerson[]): C[] {
+  const lore = roster.filter((row) => row.kind === "lore");
+  return people.flatMap((person) => {
+    if (!person.description || !rowFor(lore, person)) return [];
+    return custom.filter((c) => norm(c.title) === norm(person.name) && (c.appearanceDescription ?? "").trim() === person.description!.trim());
+  });
+}
+
 /** The roster row that is this person: their name or an alias as the row's title, a key, or the title's first words. */
 export function rowFor(roster: readonly RosterItem[], person: WantedPerson): RosterItem | null {
   const names = [person.name, ...(person.aliases ?? [])].map(norm).filter(Boolean);
@@ -145,6 +159,14 @@ export function shareProfiles(services: BackendServices, analysis: () => Analysi
       .listActive()
       .find((j) => j.characterId === characterId && j.kind === "character-prompts" && (j.status === "running" || j.status === "queued"));
     let snap = await loadWorkspaceSnapshot(services, characterId);
+    if (!running) {
+      const stale = staleRequestMade((await services.storage.loadCharacterDocument(characterId)).customCharacters, snap.roster, req.people);
+      for (const made of stale) {
+        await removeCustomCharacterEntry(services, characterId, made.id);
+        services.log.append("info", "profiles", `${made.title}: using their lorebook entry instead of a profile made without it`, { characterId });
+      }
+      if (stale.length) snap = await loadWorkspaceSnapshot(services, characterId);
+    }
     const ready: string[] = [];
     const pending: string[] = [];
     const skipped: string[] = [];
@@ -204,7 +226,7 @@ export function shareProfiles(services: BackendServices, analysis: () => Analysi
 
   try {
     // Readers that may make Inlay analyse (an LLM call) must hold generation themselves.
-    pool.handle(channel, (ctx) => answer(ctx.requesterExtensionId), { requires: ["characters", "generation"] });
+    pool.handle(channel, (ctx) => answer(ctx.requesterExtensionId), { requires: ["characters", "generation", "world_books"] });
   } catch {
     return { dispose() {} };
   }

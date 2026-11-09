@@ -84,7 +84,7 @@ describe("shared character library", () => {
     shared.ensure(ID);
     shared.ensure("other-id");
     expect([...handlers.keys()]).toEqual([`characters.u1.${ID}`, "characters.u1.other-id"]);
-    expect(handlers.get(`characters.u1.${ID}`)!.policy).toEqual({ requires: ["characters", "images"] });
+    expect(handlers.get(`characters.u1.${ID}`)!.policy).toEqual({ requires: ["characters", "images", "world_books"] });
     const value = (await handlers.get(`characters.u1.${ID}`)!.handler()) as { members: unknown[] };
     expect(value.members).toHaveLength(3);
     expect(await handlers.get("characters.u1.other-id")!.handler()).toBeNull();

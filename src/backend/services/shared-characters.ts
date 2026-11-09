@@ -8,7 +8,8 @@
  * - Members are the document's roster people (custom characters, lorebook entries, the card description) with their
  *   compiled appearance tags, forms, outfits, and reference image ids. Persona entries are left out.
  * - Image ids are Lumiverse image ids; references kept in extension storage are not shared (other extensions cannot read them).
- * - Readers need `characters` and `images`; nothing is delegated.
+ * - Readers need `characters`, `images` and `world_books` (a lorebook person's name is read from their book, and a handler
+ *   only has what its policy requires); nothing is delegated.
  */
 import {
   CHARACTER_DESCRIPTION_LORE_ID,
@@ -182,7 +183,7 @@ export function shareCharacters(
     const channel = sharedCharacterChannel(userId, characterId);
     if (!channel || registered.has(channel)) return;
     try {
-      pool.handle(channel, () => load(characterId), { requires: ["characters", "images"] });
+      pool.handle(channel, () => load(characterId), { requires: ["characters", "images", "world_books"] });
       registered.add(channel);
     } catch {
       /* the pool refused it; readers fall back */

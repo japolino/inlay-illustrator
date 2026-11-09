@@ -45977,6 +45977,14 @@ function parseProfileRequest(raw) {
   return people.length ? { version: 1, characterId: characterId.toLowerCase(), people } : null;
 }
 var norm2 = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+function staleRequestMade(custom, roster, people) {
+  const lore = roster.filter((row) => row.kind === "lore");
+  return people.flatMap((person) => {
+    if (!person.description || !rowFor(lore, person))
+      return [];
+    return custom.filter((c) => norm2(c.title) === norm2(person.name) && (c.appearanceDescription ?? "").trim() === person.description.trim());
+  });
+}
 function rowFor(roster, person) {
   const names = [person.name, ...person.aliases ?? []].map(norm2).filter(Boolean);
   const score = (row) => {
@@ -46032,6 +46040,15 @@ function shareProfiles(services, analysis) {
     const withLast = (a) => ended ? { ...a, last: ended } : a;
     const running = analysis().listActive().find((j) => j.characterId === characterId && j.kind === "character-prompts" && (j.status === "running" || j.status === "queued"));
     let snap = await loadWorkspaceSnapshot(services, characterId);
+    if (!running) {
+      const stale = staleRequestMade((await services.storage.loadCharacterDocument(characterId)).customCharacters, snap.roster, req.people);
+      for (const made of stale) {
+        await removeCustomCharacterEntry(services, characterId, made.id);
+        services.log.append("info", "profiles", `${made.title}: using their lorebook entry instead of a profile made without it`, { characterId });
+      }
+      if (stale.length)
+        snap = await loadWorkspaceSnapshot(services, characterId);
+    }
     const ready = [];
     const pending = [];
     const skipped = [];
@@ -46097,7 +46114,7 @@ function shareProfiles(services, analysis) {
     return withLast({ version: SHARED_PROFILES_VERSION, status: "started", characterId, ready, pending, ...skipped.length ? { skipped } : {} });
   }
   try {
-    pool.handle(channel, (ctx) => answer(ctx.requesterExtensionId), { requires: ["characters", "generation"] });
+    pool.handle(channel, (ctx) => answer(ctx.requesterExtensionId), { requires: ["characters", "generation", "world_books"] });
   } catch {
     return { dispose() {} };
   }
@@ -59132,7 +59149,7 @@ function shareCharacters(host, userId, deps) {
     if (!channel || registered.has(channel))
       return;
     try {
-      pool.handle(channel, () => load(characterId), { requires: ["characters", "images"] });
+      pool.handle(channel, () => load(characterId), { requires: ["characters", "images", "world_books"] });
       registered.add(channel);
     } catch {}
   };
