@@ -1811,6 +1811,37 @@ function isOutfitEmpty(outfit) {
 function formCollectionRevision(value) {
   return fnv1a32Base36(JSON.stringify(normalizeFormCollection(value)));
 }
+function addForm(collection, input) {
+  const c = normalizeFormCollection(collection);
+  const label = trimString(input.label);
+  if (!label)
+    return { collection: c, formId: "" };
+  const id = formIdFor(label, new Set(c.forms.map((f) => f.id)), input.id);
+  const source = c.forms.find((f) => f.id === trimString(input.sourceFormId));
+  const outfits = [createDefaultOutfit(defaultOutfitIdFor(id, new Set(c.forms.flatMap((f) => f.outfits.map((o) => o.id)))))];
+  const form = source ? { id, label, description: trimString(input.description ?? source.description), humanlike: source.humanlike, gender: source.gender, basePromptGroups: deepCopy(source.basePromptGroups), negativePrompt: source.negativePrompt, reference: null, defaultOutfitId: outfits[0].id, outfits } : { id, label, description: trimString(input.description), humanlike: input.humanlike !== false, gender: input.gender ?? "unknown", basePromptGroups: {}, negativePrompt: "", reference: null, defaultOutfitId: outfits[0].id, outfits };
+  return { collection: normalizeFormCollection({ ...c, forms: [...c.forms, form] }), formId: id };
+}
+function patchForm(collection, formId, patch) {
+  const index = collection.forms.findIndex((f) => f.id === formId);
+  if (index < 0)
+    return collection;
+  const form = collection.forms[index];
+  const label = hasOwn(patch, "label") ? trimString(patch.label) : form.label;
+  if (!label)
+    return collection;
+  const next = {
+    ...form,
+    label,
+    description: hasOwn(patch, "description") ? trimString(patch.description) : form.description,
+    humanlike: hasOwn(patch, "humanlike") ? patch.humanlike !== false : form.humanlike,
+    gender: hasOwn(patch, "gender") ? normalizeGender(patch.gender, form.gender) : form.gender,
+    basePromptGroups: hasOwn(patch, "basePromptGroups") ? normalizeBasePromptGroups(patch.basePromptGroups, { allowPromptFragments: true }) : form.basePromptGroups,
+    negativePrompt: hasOwn(patch, "negativePrompt") ? String(patch.negativePrompt ?? "") : form.negativePrompt,
+    reference: hasOwn(patch, "reference") ? patch.reference == null || typeof patch.reference !== "object" || Array.isArray(patch.reference) ? null : deepCopy(patch.reference) : form.reference
+  };
+  return { ...collection, forms: collection.forms.map((f, i) => i === index ? next : f) };
+}
 function patchOutfit(collection, formId, outfitId, patch) {
   const c = normalizeFormCollection(collection);
   const fi = c.forms.findIndex((f) => f.id === trimString(formId));
@@ -5005,7 +5036,8 @@ function normalizeConfigWithIssues(raw) {
     comfyuiOutfitReferenceEnabled: rt.comfyuiOutfitReferenceEnabled === true,
     ...normalizeAnalysisExecution(rt.analysisExecution) ? { analysisExecution: normalizeAnalysisExecution(rt.analysisExecution) } : {},
     ...rt.devPromptOnly === true ? { devPromptOnly: true } : {},
-    ...rt.outfitAwarenessDisabled === true ? { outfitAwarenessDisabled: true } : {}
+    ...rt.outfitAwarenessDisabled === true ? { outfitAwarenessDisabled: true } : {},
+    ...rt.formDetectionDisabled === true ? { formDetectionDisabled: true } : {}
   };
   const config = {
     version: CONFIG_VERSION,
@@ -49380,6 +49412,353 @@ function augmentPartition(partition, lookup) {
   };
 }
 
+// src/backend/pipeline/form-awareness.ts
+var rec6 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var arr3 = (v) => Array.isArray(v) ? v : [];
+var str5 = (v) => typeof v === "string" ? v.trim() : "";
+var pick2 = (r, keys) => {
+  for (const k of keys)
+    if (r[k] !== undefined)
+      return r[k];
+  return;
+};
+var MAX_FORMS_PER_OWNER = 12;
+var MAX_LABEL = 80;
+var OUTFIT_PARTS4 = ["head", "top", "bottom", "legs", "feet"];
+function readFormOwners(context) {
+  const ctx = rec6(context);
+  const owners = new Map;
+  const personaKey = str5(ctx.personaPromptKey);
+  const labels = new Map;
+  for (const list of [ctx.actorCandidates, ctx.personaCandidates, ctx.v5PersonaCatalogCandidates])
+    for (const c of arr3(list).map(rec6))
+      for (const f of arr3(c.appearanceForms).map(rec6))
+        labels.set(`${str5(c.key)}\x00${str5(f.formId)}`, str5(f.label));
+  let bindings = {};
+  try {
+    bindings = rec6(buildV5CandidateBindings(ctx, null));
+  } catch {
+    return owners;
+  }
+  const sourceKeys = rec6(bindings.sourceKeyByCandidateKey);
+  for (const r of arr3(bindings.response).map(rec6)) {
+    const candidateKey = str5(r.candidateKey);
+    const source = str5(sourceKeys[candidateKey]) || str5(arr3(r.identityReferences)[0]);
+    const identityKey = source === "__persona__" ? personaKey : source;
+    if (!candidateKey || !identityKey)
+      continue;
+    owners.set(candidateKey.toLowerCase(), {
+      candidateKey,
+      identityKey,
+      forms: arr3(r.appearanceForms).map(rec6).map((f) => ({ formId: str5(f.formId), formRef: str5(f.formRef), label: labels.get(`${source}\x00${str5(f.formId)}`) || labels.get(`${identityKey}\x00${str5(f.formId)}`) || str5(f.label) }))
+    });
+  }
+  return owners;
+}
+function createRunFormWatch(context, options) {
+  return { owners: readFormOwners(context), created: options.created ?? [], allowProposals: options.allowProposals, proposals: [], rejected: [], stopped: false, stop: options.stop };
+}
+
+class FormWatchRegistry {
+  active = [];
+  register(watch) {
+    this.active.unshift(watch);
+    return () => {
+      const i = this.active.indexOf(watch);
+      if (i >= 0)
+        this.active.splice(i, 1);
+    };
+  }
+  get size() {
+    return this.active.length;
+  }
+  match(payload) {
+    const keys = arr3(payload.actor_candidates).map((c) => str5(rec6(c).candidateKey).toLowerCase()).filter(Boolean);
+    if (!keys.length)
+      return;
+    return this.active.find((watch) => keys.every((k) => watch.owners.has(k)));
+  }
+}
+var FORM_CHANGE_POLICY = Object.freeze({
+  when: "A registered Actor's own body has changed in the story in a real and lasting way (a transformation, a different species or body structure, becoming another being, a lasting change of age or sex), and none of that Actor's forms in actor_candidates shows the body it has now.",
+  not_for: "Clothing, costumes, armor, makeup, wigs, accessories, injuries, dirt, wetness, emotions, poses, lighting, illusions, dreams, imagined or hypothetical bodies, a disguise the text treats as a disguise, an effect that ends within the scene, or a change the text does not state as real. A new unregistered being is a generated actor, never a form.",
+  existing_form: "When one of the Actor's forms already shows the new body, select that formRef and declare nothing.",
+  action: "Declare the change once in the root field form_proposals and return an empty illustrations array: the form is created from the proposal and this analysis is then repeated with it. Never use a formRef that is not in actor_candidates.",
+  item: "{candidateKey, formLabel, humanlike, sex, basePromptGroups, defaultOutfit, copyFrom, evidence}. candidateKey is the registered Actor that changed.",
+  profile: "formLabel, humanlike, basePromptGroups and defaultOutfit follow free_character_profile_contract exactly as for a generated actor. Describe the whole body the Actor has now, not only what changed; sex is female, male or unknown. defaultOutfit is what the Actor wears in that body.",
+  copyFrom: "Only when the Actor now has the body of another registered Actor: {candidateKey, formRef} of that Actor's form. Its look is copied, so basePromptGroups may be omitted; formLabel still names the result.",
+  evidence: "A short quote or paraphrase of the text that states the lasting change."
+});
+var FORM_PROPOSALS_ROOT = Object.freeze({
+  cardinality: "zero_or_more_but_one_per_registered_actor_whose_body_lastingly_changed",
+  requiredWhen: "Only under analysis_policy.actors.form_changes.",
+  itemFields: ["candidateKey", "formLabel", "humanlike", "sex", "basePromptGroups", "defaultOutfit", "copyFrom", "evidence"]
+});
+function isDecidingRequest(payload) {
+  if (str5(payload.analysis_stage) === "detail")
+    return false;
+  const contract = rec6(payload.response_contract);
+  return Array.isArray(rec6(contract.root).itemFields) && rec6(contract.analysis_policy).actors !== undefined && Array.isArray(payload.actor_candidates);
+}
+function createdFormsNote(watch) {
+  const lines = watch.created.flatMap((c) => {
+    const owner = watch.owners.get(c.candidateKey.toLowerCase());
+    const form = owner?.forms.find((f) => f.label.toLowerCase() === c.label.toLowerCase());
+    return owner && form ? [`${owner.candidateKey}: formRef "${form.formRef}"`] : [];
+  });
+  return lines.length ? `These forms were just created for the lasting body change this message states (${lines.join("; ")}). Select that formRef for the Actor in every scene after the change, and the earlier form only for a scene before it.` : "";
+}
+function applyFormPolicy(payload, watch) {
+  const contract = rec6(payload.response_contract);
+  if (contract !== payload.response_contract)
+    return false;
+  const policy = rec6(contract.analysis_policy);
+  const actors = policy.actors;
+  if (contract.analysis_policy !== policy || !actors || typeof actors !== "object" || Array.isArray(actors))
+    return false;
+  let changed = false;
+  if (watch.allowProposals) {
+    actors.form_changes = FORM_CHANGE_POLICY;
+    const root = rec6(contract.root);
+    if (contract.root === root && Array.isArray(root.itemFields) && !root.itemFields.includes("form_proposals")) {
+      root.itemFields = ["form_proposals", ...root.itemFields];
+      root.form_proposals = FORM_PROPOSALS_ROOT;
+    }
+    changed = true;
+  }
+  const note = createdFormsNote(watch);
+  if (note) {
+    actors.created_forms = note;
+    changed = true;
+  }
+  return changed;
+}
+function parseObject2(text) {
+  if (!text.startsWith("{"))
+    return null;
+  try {
+    const v = JSON.parse(text);
+    return v && typeof v === "object" && !Array.isArray(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+function readAnalyzerPayload(messages) {
+  for (let i = messages.length - 1;i >= 0; i -= 1) {
+    const m = messages[i];
+    if (m.role !== "user")
+      continue;
+    const text = typeof m.content === "string" ? m.content : arr3(m.content).map((part) => typeof rec6(part).text === "string" ? rec6(part).text : "").join("");
+    const start = text.indexOf("{");
+    const payload = start >= 0 ? parseObject2(text.slice(start)) : null;
+    return payload && payload.response_contract ? payload : null;
+  }
+  return null;
+}
+var PARTITION_HEADER2 = /^(?:STATIC|CURRENT) V5 [A-Z ]+\n/u;
+function editContractTexts(message, edit) {
+  const m = rec6(message);
+  if (m.role !== "user")
+    return message;
+  const editText = (text) => {
+    if (typeof text !== "string")
+      return null;
+    const header = PARTITION_HEADER2.exec(text)?.[0] ?? "";
+    const payload = parseObject2(text.slice(header.length));
+    return payload && payload.response_contract && edit(payload) ? header + JSON.stringify(payload) : null;
+  };
+  if (typeof m.content === "string") {
+    const next = editText(m.content);
+    return next === null ? message : { ...m, content: next };
+  }
+  if (!Array.isArray(m.content))
+    return message;
+  let changed = false;
+  const content = m.content.map((part) => {
+    const p = rec6(part);
+    const next = p.type === "text" ? editText(p.text) : null;
+    if (next === null)
+      return part;
+    changed = true;
+    return { ...p, text: next };
+  });
+  return changed ? { ...m, content } : message;
+}
+var SEXES = new Set(["female", "male", "unknown"]);
+function readFormProposals(reply, watch, rejected = []) {
+  const out = [];
+  const seen = new Set;
+  for (const raw of arr3(pick2(reply, ["form_proposals", "formProposals"]))) {
+    const p = rec6(raw);
+    const candidateKey = str5(pick2(p, ["candidateKey", "candidate_key"]));
+    const owner = watch.owners.get(candidateKey.toLowerCase());
+    const label = str5(pick2(p, ["formLabel", "form_label", "label"])).slice(0, MAX_LABEL);
+    if (!owner) {
+      rejected.push(`${candidateKey || "(no character)"}: not a registered character of this request`);
+      continue;
+    }
+    if (seen.has(owner.candidateKey)) {
+      rejected.push(`${owner.candidateKey}: a second proposal for the same character`);
+      continue;
+    }
+    if (!label || /^(?:default(?:\s*form)?|form(?:[\s_.-]*\d+)?|기본(?:\s*폼)?|폼\s*\d+)$/iu.test(label)) {
+      rejected.push(`${owner.candidateKey}: no usable form label`);
+      continue;
+    }
+    const copy = rec6(pick2(p, ["copyFrom", "copy_from"]));
+    const copyOwner = watch.owners.get(str5(pick2(copy, ["candidateKey", "candidate_key"])).toLowerCase());
+    const copyRef = str5(pick2(copy, ["formRef", "form_ref"]));
+    const copyForm = copyOwner ? copyOwner.forms.find((f) => f.formRef === copyRef) ?? (copyOwner.forms.length === 1 || !copyRef ? copyOwner.forms[0] : undefined) : undefined;
+    const groups = rec6(pick2(p, ["basePromptGroups", "base_prompt_groups"]));
+    const hasTags = Object.values(groups).some((v) => Array.isArray(v) ? v.some((t) => str5(t)) : !!str5(v));
+    if (!hasTags && !(copyOwner && copyForm && copyOwner.candidateKey !== owner.candidateKey)) {
+      rejected.push(`${owner.candidateKey}: "${label}" has neither body tags nor a character to copy`);
+      continue;
+    }
+    const outfit = rec6(pick2(p, ["defaultOutfit", "default_outfit"]));
+    const parts = Object.fromEntries(OUTFIT_PARTS4.flatMap((part) => str5(outfit[part]) ? [[part, str5(outfit[part])]] : []));
+    const sex = str5(p.sex).toLowerCase();
+    seen.add(owner.candidateKey);
+    out.push({
+      candidateKey: owner.candidateKey,
+      label,
+      humanlike: p.humanlike !== false,
+      sex: SEXES.has(sex) ? sex : "unknown",
+      basePromptGroups: hasTags ? groups : {},
+      ...str5(outfit.name) || Object.keys(parts).length ? { defaultOutfit: { name: str5(outfit.name) || label, ...parts } } : {},
+      ...copyOwner && copyForm && copyOwner.candidateKey !== owner.candidateKey ? { copyFrom: { candidateKey: copyOwner.candidateKey, formRef: copyForm.formRef } } : {},
+      evidence: str5(p.evidence).slice(0, 240)
+    });
+  }
+  return out;
+}
+function formRestartAbort() {
+  return new DOMException("The analysis stops to add a new appearance form and starts again.", "AbortError");
+}
+function withFormAwareness(client, registry, onProposals) {
+  return {
+    async complete(config, messages, options) {
+      const payload = registry.size ? readAnalyzerPayload(messages) : null;
+      const watch = payload && isDecidingRequest(payload) ? registry.match(payload) : undefined;
+      if (!watch || !watch.allowProposals && !watch.created.length)
+        return client.complete(config, messages, options);
+      const edit = (p) => applyFormPolicy(p, watch);
+      const sent = messages.map((m) => editContractTexts(m, edit));
+      const partition = rec6(options?.cachePartition);
+      const hasPartition = Array.isArray(partition.cacheSegments) && Array.isArray(partition.liveMessages);
+      const sentOptions = hasPartition ? {
+        ...options,
+        cachePartition: {
+          ...partition,
+          cacheSegments: arr3(partition.cacheSegments).map((segment) => {
+            const s = rec6(segment);
+            return Array.isArray(s.messages) ? { ...s, messages: s.messages.map((m) => editContractTexts(m, edit)) } : segment;
+          }),
+          liveMessages: arr3(partition.liveMessages).map((m) => editContractTexts(m, edit))
+        }
+      } : options;
+      const result = await client.complete(config, sent, sentOptions);
+      const reply = rec6(result.parsed);
+      if (reply !== result.parsed || pick2(reply, ["form_proposals", "formProposals"]) === undefined)
+        return result;
+      const declared = arr3(pick2(reply, ["form_proposals", "formProposals"]));
+      if (watch.allowProposals && declared.length) {
+        watch.proposals = readFormProposals(reply, watch, watch.rejected);
+        watch.stopped = true;
+        onProposals?.(watch.proposals, watch.rejected);
+        watch.stop();
+        throw formRestartAbort();
+      }
+      const cleaned = { ...reply };
+      delete cleaned.form_proposals;
+      delete cleaned.formProposals;
+      return { ...result, raw: JSON.stringify(cleaned), parsed: cleaned };
+    }
+  };
+}
+function addProposedForm(collection, proposal, copied) {
+  const current = normalizeFormCollection(collection);
+  const existing = current.forms.find((f) => f.label.trim().toLowerCase() === proposal.label.toLowerCase());
+  if (existing)
+    return { collection: current, formId: existing.id, label: existing.label, added: false };
+  if (current.forms.length >= MAX_FORMS_PER_OWNER)
+    return null;
+  const description = `Added automatically from the story${proposal.evidence ? `: ${proposal.evidence}` : "."}`;
+  const added = addForm(current, { label: proposal.label, description, humanlike: copied ? copied.humanlike : proposal.humanlike, gender: proposal.sex !== "unknown" ? proposal.sex : copied?.gender ?? "unknown" });
+  if (!added.formId)
+    return null;
+  const hasTags = Object.keys(proposal.basePromptGroups).length > 0;
+  let next = patchForm(added.collection, added.formId, {
+    basePromptGroups: hasTags || !copied ? proposal.basePromptGroups : copied.basePromptGroups,
+    ...copied ? { negativePrompt: copied.negativePrompt, reference: copied.reference } : {}
+  });
+  const form = next.forms.find((f) => f.id === added.formId);
+  const copiedOutfit = copied?.outfits.find((o) => o.id === copied.defaultOutfitId) ?? copied?.outfits[0];
+  const outfit = proposal.defaultOutfit;
+  if (outfit) {
+    next = patchOutfit(next, form.id, form.defaultOutfitId, { label: outfit.name, ...Object.fromEntries(OUTFIT_PARTS4.map((part) => [part, outfit[part] ?? ""])), candidateEnabled: true });
+  } else if (copiedOutfit) {
+    const { id: _id, ...rest } = copiedOutfit;
+    next = patchOutfit(next, form.id, form.defaultOutfitId, { ...rest, candidateEnabled: true });
+  }
+  return { collection: next, formId: form.id, label: form.label, added: true };
+}
+
+// src/backend/pipeline/form-save.ts
+var isPersona = (identityKey) => identityKey.startsWith(PERSONA_PROMPT_KEY_PREFIX);
+async function loadForms(services, restart, identityKey) {
+  if (isPersona(identityKey)) {
+    const config = await services.storage.loadConfig();
+    return resolvePersonaForms(normalizePersonaSettings(config.characterPrompt.personaSettings), config.characterPrompt.personaGender, identityKey.slice(PERSONA_PROMPT_KEY_PREFIX.length));
+  }
+  return currentForms(await services.storage.loadCharacterDocument(restart.documentOf(identityKey)), identityKey);
+}
+async function saveProposedForms(services, restart) {
+  const created = [];
+  const skipped = [...restart.rejected];
+  for (const proposal of restart.proposals) {
+    const owner = restart.owners.get(proposal.candidateKey.toLowerCase());
+    if (!owner)
+      continue;
+    const ownerName = restart.nameOf(owner.identityKey) || owner.candidateKey;
+    let copied;
+    if (proposal.copyFrom) {
+      const source = restart.owners.get(proposal.copyFrom.candidateKey.toLowerCase());
+      const formId = source?.forms.find((f) => f.formRef === proposal.copyFrom.formRef)?.formId;
+      copied = source && formId ? (await loadForms(services, restart, source.identityKey)).forms.find((f) => f.id === formId) : undefined;
+      if (!copied && !Object.keys(proposal.basePromptGroups).length) {
+        skipped.push(`${ownerName}: "${proposal.label}" copies a form that could not be read`);
+        continue;
+      }
+    }
+    let result = null;
+    if (isPersona(owner.identityKey)) {
+      const personaId = owner.identityKey.slice(PERSONA_PROMPT_KEY_PREFIX.length);
+      await services.storage.updateConfig((config) => {
+        const settings = normalizePersonaSettings(config.characterPrompt.personaSettings);
+        result = addProposedForm(resolvePersonaForms(settings, config.characterPrompt.personaGender, personaId), proposal, copied);
+        if (!result?.added)
+          return config;
+        const profile = { ...settings.profiles[personaId] ?? {}, forms: result.collection };
+        return { ...config, characterPrompt: { ...config.characterPrompt, personaSettings: { ...settings, profiles: { ...settings.profiles, [personaId]: profile } } } };
+      });
+    } else {
+      await services.storage.updateCharacterDocument(restart.documentOf(owner.identityKey), (doc) => {
+        result = addProposedForm(currentForms(doc, owner.identityKey), proposal, copied);
+        const added = result;
+        return added?.added ? withForms(doc, owner.identityKey, () => added.collection) : doc;
+      }, { reason: "form-detection" });
+    }
+    const saved = result;
+    if (!saved) {
+      skipped.push(`${ownerName}: "${proposal.label}" was not added, the character already has ${MAX_FORMS_PER_OWNER} forms`);
+      continue;
+    }
+    created.push({ candidateKey: owner.candidateKey, label: saved.label, identityKey: owner.identityKey, ownerName, added: saved.added, persona: isPersona(owner.identityKey) });
+  }
+  return { created, skipped };
+}
+
 // src/backend/pipeline/core/auto-core.ts
 var K33 = "For identity.character_tag only, you may use model knowledge to return at most one known existing Danbooru character tag when the designated evidence or scene context clearly identifies that character. Preserve an explicit metadata character tag when applicable. Omit the tag when uncertain, ambiguous, or newly invented. Never fabricate a tag by translating a name, substitute a merely similar character or the character being cosplayed, or return a standalone copyright, artist, or style tag.";
 var $33 = `${K33} This permission does not authorize inferring unobserved appearance, clothing, gender, or form differences during evidence analysis; a character tag alone is not physical appearance evidence.`;
@@ -53125,19 +53504,19 @@ function labelError(code, label, extra = {}) {
 }
 
 // src/backend/pipeline/generate.ts
-var rec6 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
-var str5 = (v) => v == null ? "" : String(v).trim();
+var rec7 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var str6 = (v) => v == null ? "" : String(v).trim();
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 function jevSelectionProgress(s) {
   const status = s.status === "completed" || s.status === "failed" || s.status === "cancelled" ? s.status : "running";
   const total = Math.max(0, Number(s.total) || 0);
-  const actors = Number(rec6(s.counts).actors);
+  const actors = Number(rec7(s.counts).actors);
   return {
     status,
     completed: Math.min(total, Math.max(0, Number(s.completed) || 0)),
     total,
     ...Number.isFinite(actors) ? { selectedActors: actors } : {},
-    ...str5(s.error) ? { error: str5(s.error) } : {}
+    ...str6(s.error) ? { error: str6(s.error) } : {}
   };
 }
 function originForAttempt(kind) {
@@ -53264,6 +53643,32 @@ function continuityLookbackIds(messages, target, historyId) {
   return messages.map((m, i) => i === target ? historyId : m.role === "assistant" ? `${m.id}@${m.swipeId}` : "");
 }
 async function generateMessageIllustrations(deps, req) {
+  const { services } = deps;
+  const { formRestart, ...first } = await generateOnce(deps, req, { created: [], allowProposals: true });
+  if (!formRestart)
+    return first;
+  let created = [];
+  let skipped = [];
+  try {
+    ({ created, skipped } = await saveProposedForms(services, formRestart));
+  } catch (e) {
+    services.log.append("warn", "pipeline", "The proposed appearance form could not be saved; the message is analyzed without it.", { error: e instanceof Error ? e.message : String(e) });
+  }
+  if (skipped.length)
+    services.log.append("warn", "pipeline", `Appearance form proposals not used: ${skipped.join("; ")}`);
+  for (const form of created.filter((f) => f.added)) {
+    services.log.append("info", "pipeline", `New appearance form "${form.label}" added to ${form.ownerName} (${form.identityKey}) for a lasting body change in the story.`);
+    try {
+      services.events.emit("notice", { tone: "info", message: `New form for ${form.ownerName}: ${form.label}`, key: `form:${form.identityKey}:${form.label}` });
+    } catch {}
+  }
+  if (req.signal.aborted)
+    throw new DOMException("Image generation preparation was cancelled.", "AbortError");
+  const config = created.some((f) => f.persona && f.added) ? { ...req.config, characterPrompt: { ...req.config.characterPrompt, personaSettings: (await services.storage.loadConfig()).characterPrompt.personaSettings } } : req.config;
+  const { formRestart: _again, ...second } = await generateOnce(deps, { ...req, config }, { created, allowProposals: false });
+  return second;
+}
+async function generateOnce(deps, req, forms) {
   const { services, engine } = deps;
   const W = resolveImageCountConstraint2(req.countPolicy, req.slots.length);
   let resolvedCount = W.max;
@@ -53311,14 +53716,14 @@ async function generateMessageIllustrations(deps, req) {
     } catch (e) {
       services.log.append("warn", "pipeline", "The Maid Atelier settings could not be read; this run uses the built-in preset.", { error: e instanceof Error ? e.message : String(e) });
     }
-    const otherPrompts = memberIds.slice(1).map((id) => rec6(docs.get(id)?.characterPrompt));
+    const otherPrompts = memberIds.slice(1).map((id) => rec7(docs.get(id)?.characterPrompt));
     const decorate = (base) => {
       const runtime = jsonClone(base);
-      const novelai = rec6(runtime.novelai);
+      const novelai = rec7(runtime.novelai);
       runtime.novelai = { ...novelai, naiModel: imageTarget.model, characterReferenceEnabled: imageTarget.isNovelAIV5 ? false : novelai.characterReferenceEnabled };
-      const cp = mergeCharacterPrompts(rec6(runtime.characterPrompt), otherPrompts);
-      runtime.characterPrompt = { ...cp, characterForms: { ...rec6(cp.characterForms), ...generatedForms } };
-      runtime.runtime = { ...rec6(runtime.runtime), generationProvider: engineProvider };
+      const cp = mergeCharacterPrompts(rec7(runtime.characterPrompt), otherPrompts);
+      runtime.characterPrompt = { ...cp, characterForms: { ...rec7(cp.characterForms), ...generatedForms } };
+      runtime.runtime = { ...rec7(runtime.runtime), generationProvider: engineProvider };
       runtime.chatImageGenerationSettings = jsonClone(req.settings);
       if (atelier)
         applyAtelierOverlay(runtime, atelier, resolveSourceGenerationSettings2(runtime, primaryId));
@@ -53395,6 +53800,13 @@ async function generateMessageIllustrations(deps, req) {
     });
     assembled.context.freeCharacterGenerationEnabled = freeCharacters;
     const outfitIndex = config.runtime.outfitAwarenessDisabled ? undefined : createRunOutfitIndex(assembled.context);
+    const runAbort = new AbortController;
+    const forwardAbort = () => runAbort.abort(req.signal.reason);
+    if (req.signal.aborted)
+      forwardAbort();
+    else
+      req.signal.addEventListener("abort", forwardAbort, { once: true });
+    const formWatch = !config.runtime.formDetectionDisabled && !req.revision && (forms.allowProposals || forms.created.length) ? createRunFormWatch(assembled.context, { created: forms.created, allowProposals: forms.allowProposals, stop: () => runAbort.abort(formRestartAbort()) }) : undefined;
     const revisionImage = req.revision?.image && await services.llm.supportsVision().catch(() => false) ? [await req.revision.image()] : [];
     if (req.signal.aborted)
       throw new DOMException("Image generation preparation was cancelled.", "AbortError");
@@ -53429,7 +53841,7 @@ async function generateMessageIllustrations(deps, req) {
       }
       return "";
     };
-    const comfyTimeout = Number(rec6(runtime.runtime).comfyuiCompletionTimeoutMs) || 600000;
+    const comfyTimeout = Number(rec7(runtime.runtime).comfyuiCompletionTimeoutMs) || 600000;
     const creationMode = auto?.imagesAvailable ? resolveOutfitCreationMode(amConfig) : "tags-only";
     const prepareOutfits = auto ? async ({ actors, signal }) => {
       const requested = outfitIndex ? reuseSameOutfits(outfitIndex, withoutAbsenceProposals(actors), (r) => services.log.append("info", "pipeline", `Outfit reuse: proposal "${r.proposal}" for ${r.identityKey} matches "${r.reused}"; no new outfit.`)) : actors;
@@ -53501,11 +53913,12 @@ async function generateMessageIllustrations(deps, req) {
       ...prepareCharacters ? { prepareCharacters } : {},
       ...prepareOutfits ? { prepareOutfits } : {},
       ...outfitIndex ? { outfitIndex } : {},
+      ...formWatch ? { formWatch } : {},
       v5PromptContext: ft.v5PromptContext,
       references: ft.references,
       outfitReference: ft.outfitReference,
       characterReference: ft.characterReference,
-      seedSetting: req.revision ? () => ({ seed: str5(req.revision.seed), fixed: !!(req.revision.seedFixed && str5(req.revision.seed)) }) : ft.seedSetting,
+      seedSetting: req.revision ? () => ({ seed: str6(req.revision.seed), fixed: !!(req.revision.seedFixed && str6(req.revision.seed)) }) : ft.seedSetting,
       previousCharacterStateMap: ft.previousCharacterStateMap,
       previousContinuitySnapshot: getLatestContinuityCheckpointSnapshot2(hr, chatKey, "novelai-v5"),
       previousGlobalModifierRefs: previousGlobalModifierRefs(ft.visualContinuity),
@@ -53528,19 +53941,19 @@ async function generateMessageIllustrations(deps, req) {
       },
       persistGeneratedImage: async (image) => {
         await req.assertTarget();
-        const decision = rec6(image.decision);
+        const decision = rec7(image.decision);
         const slotNumber = Number(decision.slot_number ?? decision.slotNumber);
         const slot = Number.isInteger(slotNumber) ? req.slots.find((s) => s.index === slotNumber) : undefined;
         if (!slot)
           throw new Error(PIPELINE_TEXT.slotMismatch.en);
-        const generation = rec6(image.generation);
-        const meta = rec6(generation.providerMetadata);
-        const imageId = str5(meta.imageId) || str5(generation.requestId);
+        const generation = rec7(image.generation);
+        const meta = rec7(generation.providerMetadata);
+        const imageId = str6(meta.imageId) || str6(generation.requestId);
         if (!imageId)
           throw new Error("The image provider returned no image id.");
-        const actors = (Array.isArray(image.actors) ? image.actors : []).map(rec6);
-        const key = str5(actors.find((a) => str5(a.identityKey))?.identityKey) || str5(decision.lorebook_prompt_key);
-        const label = idLabel(key) || str5(actors[0]?.identityName) || character.name;
+        const actors = (Array.isArray(image.actors) ? image.actors : []).map(rec7);
+        const key = str6(actors.find((a) => str6(a.identityKey))?.identityKey) || str6(decision.lorebook_prompt_key);
+        const label = idLabel(key) || str6(actors[0]?.identityName) || character.name;
         const assetName = createGeneratedAssetName({ label, kind: "chat", ...UUID_RE.test(imageId) ? { id: imageId } : {} });
         const width = Math.max(0, Math.round(Number(generation.width) || 0));
         const height = Math.max(0, Math.round(Number(generation.height) || 0));
@@ -53550,18 +53963,18 @@ async function generateMessageIllustrations(deps, req) {
           slotIndex: slot.index,
           assetName,
           savedPath: imageResultUrl(imageId),
-          extension: str5(generation.extension) || "png",
+          extension: str6(generation.extension) || "png",
           entryId: `generated:${assetName}`,
           ...width ? { width } : {},
           ...height ? { height } : {},
           generationOrigin: origin,
           ...req.revision?.sourceEntryId ? { parentEntryId: req.revision.sourceEntryId } : {}
         };
-        const providerPrompt = rec6(image.providerPrompt);
-        const record = rec6(image.generationRecord);
-        const recordRequest = rec6(record.request);
-        const plan = rec6(image.promptPlan);
-        const novelAIConfig = image.novelAIConfig ? { ...rec6(image.novelAIConfig) } : undefined;
+        const providerPrompt = rec7(image.providerPrompt);
+        const record = rec7(image.generationRecord);
+        const recordRequest = rec7(record.request);
+        const plan = rec7(image.promptPlan);
+        const novelAIConfig = image.novelAIConfig ? { ...rec7(image.novelAIConfig) } : undefined;
         if (novelAIConfig)
           delete novelAIConfig.apiKey;
         const analysis = analysisRecordOf(image);
@@ -53574,20 +53987,20 @@ async function generateMessageIllustrations(deps, req) {
           revisionId: req.revisionId,
           createdAt: Date.now(),
           engineProvider,
-          lumiverseProvider: str5(meta.lumiverseProvider) || imageTarget.lumiverseProvider,
-          model: str5(meta.model) || imageTarget.model,
-          seed: str5(generation.seed),
+          lumiverseProvider: str6(meta.lumiverseProvider) || imageTarget.lumiverseProvider,
+          model: str6(meta.model) || imageTarget.model,
+          seed: str6(generation.seed),
           seedFixed: image.seedFixed === true,
           width,
           height,
           sizeId: Number(plan.sizeId) || 0,
-          positivePrompt: str5(recordRequest.positive) || str5(providerPrompt.positivePrompt),
-          negativePrompt: str5(recordRequest.negative) || str5(providerPrompt.negativePrompt),
+          positivePrompt: str6(recordRequest.positive) || str6(providerPrompt.positivePrompt),
+          negativePrompt: str6(recordRequest.negative) || str6(providerPrompt.negativePrompt),
           characters: (Array.isArray(recordRequest.characters) ? recordRequest.characters : Array.isArray(providerPrompt.characterPrompts) ? providerPrompt.characterPrompts : []).map((c) => {
-            const r = rec6(c);
+            const r = rec7(c);
             return {
-              prompt: str5(r.prompt),
-              negativePrompt: str5(r.negativePrompt ?? r.uc),
+              prompt: str6(r.prompt),
+              negativePrompt: str6(r.negativePrompt ?? r.uc),
               ...Number.isFinite(Number(r.actorIndex)) ? { actorIndex: Number(r.actorIndex) } : {},
               ...Number.isFinite(Number(r.centerX)) ? { centerX: Number(r.centerX), centerY: Number(r.centerY) } : {}
             };
@@ -53595,18 +54008,18 @@ async function generateMessageIllustrations(deps, req) {
           ...novelAIConfig ? { novelAIConfig } : {},
           ...meta.novelaiSampling ? { novelaiSampling: meta.novelaiSampling } : {},
           actors: actors.map((a) => ({
-            identityKey: str5(a.identityKey),
-            identityName: str5(a.identityName),
-            kind: str5(a.kind),
+            identityKey: str6(a.identityKey),
+            identityName: str6(a.identityName),
+            kind: str6(a.kind),
             actorIndex: Number(a.actorIndex) || 0,
-            ...str5(a.selectedFormId) ? { selectedFormId: str5(a.selectedFormId) } : {},
-            ...str5(a.selectedOutfitId) ? { selectedOutfitId: str5(a.selectedOutfitId) } : {}
+            ...str6(a.selectedFormId) ? { selectedFormId: str6(a.selectedFormId) } : {},
+            ...str6(a.selectedOutfitId) ? { selectedOutfitId: str6(a.selectedOutfitId) } : {}
           })),
-          ...str5(plan.artistId) ? { artistId: str5(plan.artistId) } : {},
+          ...str6(plan.artistId) ? { artistId: str6(plan.artistId) } : {},
           promptKey: key,
-          presetId: str5(decision.preset_id ?? decision.composition_id),
-          analyzerText: str5(decision.reason ?? decision.body_action),
-          sentParameters: rec6(meta.sentParameters),
+          presetId: str6(decision.preset_id ?? decision.composition_id),
+          analyzerText: str6(decision.reason ?? decision.body_action),
+          sentParameters: rec7(meta.sentParameters),
           generationOrigin: origin,
           ...entry.parentEntryId ? { parentEntryId: entry.parentEntryId } : {},
           ...analysis ? { analysis } : {}
@@ -53615,14 +54028,14 @@ async function generateMessageIllustrations(deps, req) {
       },
       skipSlotNumbers: skipSlotIndexes,
       cancelPrevious: true,
-      signal: req.signal,
+      signal: runAbort.signal,
       onEvent(e) {
         if (e.type === "jev-selection") {
-          req.onJevSelection?.(jevSelectionProgress(rec6(e.jevSelection)));
+          req.onJevSelection?.(jevSelectionProgress(rec7(e.jevSelection)));
           return;
         }
         if (e.type === "retry-errors") {
-          const retry = rec6(e.imageRetry);
+          const retry = rec7(e.imageRetry);
           const imageRetry = Number(retry.attempt) > 0 ? { attempt: Number(retry.attempt), total: Number(retry.total) || 0 } : undefined;
           req.onRetryErrors?.(Array.isArray(e.retryErrors) ? e.retryErrors : [], imageRetry);
           return;
@@ -53636,13 +54049,13 @@ async function generateMessageIllustrations(deps, req) {
         const phase = e.analysisComplete === false || e.phase === "analyzing-preset" ? "analyzing-preset" : e.phase === "analyzing-modifiers" ? "analyzing-modifiers" : e.phase === "planning" ? "planning" : e.phase === "generating" || e.phase === "saving" ? "generating" : e.phase === "applying-continuity" || e.phase === "complete" ? "committing" : null;
         if (phase === "planning" || phase === "generating" || phase === "committing")
           analyzerCompleted = true;
-        const session = rec6(e.session);
-        const progress = rec6(session.progress);
+        const session = rec7(e.session);
+        const progress = rec7(session.progress);
         if (phase)
           req.onPhase?.(phase, {
             imageIndex: Number.isFinite(Number(e.imageIndex)) ? Number(e.imageIndex) : undefined,
             imageCount: imageCount ?? (Number.isFinite(Number(progress.imageCount)) ? Number(progress.imageCount) : undefined),
-            providerStage: str5(progress.providerStage) || undefined
+            providerStage: str6(progress.providerStage) || undefined
           });
       }
     };
@@ -53668,11 +54081,11 @@ async function generateMessageIllustrations(deps, req) {
         const context = remainderAnalyzerContext(assembled.context, skipSlotIndexes, W.max);
         services.log.append("warn", "pipeline", context ? `The saved analysis plan of this partial run is gone (the extension restarted, or the settings changed). Analyzing again for the ${context.targetImageCount} missing image(s); the saved ones are kept.` : "The saved analysis plan of this partial run is gone, and no image is missing; nothing to generate.");
         if (context)
-          await runEngine({ ...input, skipSlotNumbers: [], analyzerInput: { ...rec6(input.analyzerInput), checkpointPolicy: "restart-analysis", context } });
+          await runEngine({ ...input, skipSlotNumbers: [], analyzerInput: { ...rec7(input.analyzerInput), checkpointPolicy: "restart-analysis", context } });
       }
       await req.assertTarget();
     } catch (e) {
-      if (isCancellation(e) || req.signal.aborted)
+      if (formWatch?.stopped && !req.signal.aborted && !entries.length) {} else if (isCancellation(e) || req.signal.aborted)
         cancelled = true;
       else {
         error = e instanceof Error ? e.message : String(e);
@@ -53689,7 +54102,18 @@ async function generateMessageIllustrations(deps, req) {
     }
     const done = new Set([...req.attemptKind === "retry" ? req.existingEntries : [], ...entries].map((e) => e.slotId));
     const missing = Math.max(0, resolvedCount - done.size - (req.attemptKind === "retry" ? req.deletedSlotIndices.length : 0));
-    if (!cancelled && !error && missing) {
+    req.signal.removeEventListener("abort", forwardAbort);
+    const formRestart = formWatch?.stopped && !req.signal.aborted && !entries.length ? {
+      proposals: formWatch.proposals,
+      rejected: formWatch.rejected,
+      owners: formWatch.owners,
+      nameOf: idLabel,
+      documentOf: (key) => memberIds.find((id, i) => {
+        const doc = docs.get(id);
+        return rawSources[i]?.members.some((m) => m.key === key || m.lorebooks.some((l) => (l.runtimePromptKey || `${m.key}::lore::${l.id}`) === key)) || doc?.customCharacters.some((c) => c.id === key) || Object.hasOwn(doc?.characterPrompt.characterForms ?? {}, key);
+      }) ?? primaryId
+    } : undefined;
+    if (!cancelled && !error && missing && !formRestart) {
       const label = formatLabel(PIPELINE_TEXT.failedCount, { n: missing });
       error = label.en;
       errorKo = label.ko;
@@ -53705,7 +54129,8 @@ async function generateMessageIllustrations(deps, req) {
       ...analyzerCompleted ? { analyzerCompleted: true } : {},
       analysisConfig,
       ...cancelled ? { cancelled: true } : {},
-      ...commitContinuity ? { commitContinuity } : {}
+      ...commitContinuity ? { commitContinuity } : {},
+      ...formRestart ? { formRestart } : {}
     };
   } finally {
     auto?.dispose();
@@ -53816,8 +54241,8 @@ class HostGenerationTracker {
 }
 
 // src/backend/pipeline/controller.ts
-var rec7 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
-var str6 = (v) => v == null ? "" : String(v).trim();
+var rec8 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var str7 = (v) => v == null ? "" : String(v).trim();
 var sleep3 = (ms, signal) => new Promise((resolve) => {
   const t = setTimeout(done, ms);
   function done() {
@@ -54097,19 +54522,19 @@ function createChatPipelineController(services, engine, options = {}) {
   const autoRetryable = (error) => {
     if (!error || isCancellation(error))
       return false;
-    const r = rec7(error);
-    const inner = error instanceof RpcFailure ? rec7(error.error) : rec7(r.rpcError);
+    const r = rec8(error);
+    const inner = error instanceof RpcFailure ? rec8(error.error) : rec8(r.rpcError);
     const retryable = r.retryable ?? inner.retryable;
     if (retryable === false)
       return false;
     if (error instanceof RpcFailure && error.error.code === "timeout")
       return true;
-    const code = str6(r.code) || str6(inner.detailCode) || (error instanceof TypeError ? str6(rec7(r.cause).code) : "");
+    const code = str7(r.code) || str7(inner.detailCode) || (error instanceof TypeError ? str7(rec8(r.cause).code) : "");
     if (["ANALYZER_NETWORK", "ANALYZER_TIMEOUT", "ANALYZER_PROVIDER_INTERRUPTED", "REQUEST_TIMEOUT"].includes(code))
       return true;
     if (code && code !== "ANALYZER_HTTP")
       return false;
-    const details = rec7(inner.details);
+    const details = rec8(inner.details);
     const status = Number(r.httpStatus ?? r.status ?? details.httpStatus ?? details.status);
     return status === 408 || status === 429 || status >= 500 && status < 600;
   };
@@ -54457,7 +54882,7 @@ function createChatPipelineController(services, engine, options = {}) {
   const charactersOf = (record) => {
     const configChars = Array.isArray(record.novelAIConfig?.characterPrompts) ? record.novelAIConfig.characterPrompts : [];
     return record.characters.map((c, i) => {
-      const cfg = rec7(configChars[i]);
+      const cfg = rec8(configChars[i]);
       return {
         prompt: c.prompt,
         uc: c.negativePrompt,
@@ -54515,21 +54940,21 @@ function createChatPipelineController(services, engine, options = {}) {
         const list = listNovelAIArtists(config.characterPrompt.artistPrompts);
         const next = list.find((a) => a.id === overrides.artistId) ?? fail2("not-found", `Artist not found: ${overrides.artistId}`);
         const old = list.find((a) => a.id === record.artistId);
-        const tracked = rec7(rec7(record.novelAIConfig).nonArtistPromptWeightArtist);
-        const own = str6(tracked.id) === str6(record.artistId) || out.positive.includes(str6(tracked.positive));
-        out.positive = replaceSegment(out.positive, [own && str6(tracked.positive) || "", str6(old?.prompt)], str6(next.prompt));
-        out.negative = replaceSegment(out.negative, [own && str6(tracked.negative) || "", str6(old?.negativePrompt)], str6(next.negativePrompt));
-        out.trackedArtist = { id: next.id, name: next.title, positive: str6(next.prompt), negative: str6(next.negativePrompt) };
-        const o = rec7(next.novelAIOverrides);
+        const tracked = rec8(rec8(record.novelAIConfig).nonArtistPromptWeightArtist);
+        const own = str7(tracked.id) === str7(record.artistId) || out.positive.includes(str7(tracked.positive));
+        out.positive = replaceSegment(out.positive, [own && str7(tracked.positive) || "", str7(old?.prompt)], str7(next.prompt));
+        out.negative = replaceSegment(out.negative, [own && str7(tracked.negative) || "", str7(old?.negativePrompt)], str7(next.negativePrompt));
+        out.trackedArtist = { id: next.id, name: next.title, positive: str7(next.prompt), negative: str7(next.negativePrompt) };
+        const o = rec8(next.novelAIOverrides);
         for (const key of ["sampler", "noiseSchedule"])
-          out.configPatch[key] = str6(o[key]) || config.novelai[key];
+          out.configPatch[key] = str7(o[key]) || config.novelai[key];
         for (const key of ["steps", "scale", "cfgRescale"])
           if (Number.isFinite(Number(o[key])))
             out.configPatch[key] = Number(o[key]);
       } else {
         const entries = config.animaArtists.entries;
         const next = entries.find((a) => a.id === overrides.artistId) ?? fail2("not-found", `Artist not found: ${overrides.artistId}`);
-        out.positive = replaceSegment(out.positive, [str6(entries.find((a) => a.id === record.artistId)?.text)], str6(next.text));
+        out.positive = replaceSegment(out.positive, [str7(entries.find((a) => a.id === record.artistId)?.text)], str7(next.text));
       }
       out.artistId = overrides.artistId;
     }
@@ -54584,10 +55009,10 @@ function createChatPipelineController(services, engine, options = {}) {
         ...keepCoords ? kept ? { centerX: kept.x, centerY: kept.y, coordinateMode: "fixed" } : { coordinateMode: "automatic" } : {}
       };
     }).filter((_c, i) => !excluded.has(i));
-    const seed = keepSeed ? str6(o.seed) || record.seed : "";
+    const seed = keepSeed ? str7(o.seed) || record.seed : "";
     if (record.engineProvider === "comfy-ui")
       return { provider: "comfy-ui", prompt: positive, negativePrompt: negative, seed, width, height };
-    const cfg = { ...rec7(record.novelAIConfig) };
+    const cfg = { ...rec8(record.novelAIConfig) };
     cfg.effort = record.novelaiSampling?.effort === "medium" ? "medium" : "high";
     delete cfg.nonArtistPromptWeight;
     delete cfg.nonArtistPromptSource;
@@ -54666,7 +55091,7 @@ function createChatPipelineController(services, engine, options = {}) {
       const document2 = await services.storage.loadCharacterDocument(characterId);
       const effective = resolveEffectiveConfig(config, { characterId, document: document2 });
       const rating = resolveFixedRating2(effective);
-      if (request.provider === "novelai" && rec7(request.config).forceCharacterCoordinates !== true)
+      if (request.provider === "novelai" && rec8(request.config).forceCharacterCoordinates !== true)
         request.config.useCoords = effectiveAnalysisExecution(config.runtime, effective).aiCoordinates;
       const result = await engine.dispatch(request, {
         engineProvider: record.engineProvider,
@@ -54693,8 +55118,8 @@ function createChatPipelineController(services, engine, options = {}) {
       if (signal.aborted)
         throw new DOMException("Regeneration was cancelled.", "AbortError");
       await targetGuard(job.target)();
-      const meta = rec7(result.providerMetadata);
-      const imageId = str6(meta.imageId) || str6(result.requestId);
+      const meta = rec8(result.providerMetadata);
+      const imageId = str7(meta.imageId) || str7(result.requestId);
       if (!imageId)
         throw new Error("The image provider returned no image id.");
       const sourceLabel = /^(.+?)\.__am__\./u.exec(source.assetName ?? "")?.[1] ?? "";
@@ -54708,7 +55133,7 @@ function createChatPipelineController(services, engine, options = {}) {
         kind: "generated",
         assetName,
         savedPath: imageResultUrl(imageId),
-        extension: str6(result.extension) || "png",
+        extension: str7(result.extension) || "png",
         createdAt: now(),
         width,
         height,
@@ -54722,9 +55147,9 @@ function createChatPipelineController(services, engine, options = {}) {
         storePlanAndTree(d, plan, tree);
         return d;
       });
-      const finalized = rec7(result.finalizedPrompt);
+      const finalized = rec8(result.finalizedPrompt);
       const excluded = new Set(overrides?.excludedCharacterIndexes ?? []);
-      const cfg = rec7(record.novelAIConfig);
+      const cfg = rec8(record.novelAIConfig);
       const novelAIConfig = record.novelAIConfig && {
         ...cfg,
         ...rebuilt.configPatch,
@@ -54746,14 +55171,14 @@ function createChatPipelineController(services, engine, options = {}) {
           imageId,
           assetName,
           createdAt: entry.createdAt,
-          seed: str6(result.seed),
+          seed: str7(result.seed),
           seedFixed: keepSeed,
           width,
           height,
           sizeId: overrides?.sizeId ?? record.sizeId,
-          positivePrompt: str6(result.effectivePrompt) || str6(finalized.positivePrompt) || String(request.prompt ?? ""),
+          positivePrompt: str7(result.effectivePrompt) || str7(finalized.positivePrompt) || String(request.prompt ?? ""),
           negativePrompt: String(request.negativePrompt ?? ""),
-          sentParameters: rec7(meta.sentParameters),
+          sentParameters: rec8(meta.sentParameters),
           ...meta.novelaiSampling ? { novelaiSampling: meta.novelaiSampling } : {},
           generationOrigin: "regenerate",
           parentEntryId: source.entryId,
@@ -54761,8 +55186,8 @@ function createChatPipelineController(services, engine, options = {}) {
           ...rebuilt.artistId ? { artistId: rebuilt.artistId } : {},
           ...novelAIConfig ? { novelAIConfig } : {},
           characters: (request.config && Array.isArray(request.config.characterPrompts) ? request.config.characterPrompts : []).map((ch, i) => ({
-            prompt: str6(ch.prompt),
-            negativePrompt: str6(ch.uc),
+            prompt: str7(ch.prompt),
+            negativePrompt: str7(ch.uc),
             actorIndex: Number.isFinite(Number(ch.actorIndex)) ? Number(ch.actorIndex) : i,
             centerX: Number(ch.centerX ?? 0.5),
             centerY: Number(ch.centerY ?? 0.5),
@@ -55069,16 +55494,16 @@ function createChatPipelineController(services, engine, options = {}) {
     emitChanged(chatId, []);
   };
   const handleGenerationEnded = async (raw) => {
-    const payload = rec7(raw);
+    const payload = rec8(raw);
     tracker.ended(payload);
-    republishStale(str6(payload.chatId));
+    republishStale(str7(payload.chatId));
     if (disposed || payload.error)
       return;
-    const chatId = str6(payload.chatId);
-    const messageId = str6(payload.messageId);
+    const chatId = str7(payload.chatId);
+    const messageId = str7(payload.messageId);
     if (!chatId || !messageId)
       return;
-    if (!AUTO_GENERATION_TYPES.has(str6(payload.generationType).toLowerCase()))
+    if (!AUTO_GENERATION_TYPES.has(str7(payload.generationType).toLowerCase()))
       return;
     try {
       const [settings, config] = await Promise.all([services.storage.loadChatImageGenerationSettings(), services.storage.loadConfig()]);
@@ -55102,8 +55527,8 @@ function createChatPipelineController(services, engine, options = {}) {
     }
   };
   const handleHostEvent = async (event, raw) => {
-    const payload = rec7(raw);
-    const chatId = str6(payload.chatId) || str6(rec7(payload.message).chat_id);
+    const payload = rec8(raw);
+    const chatId = str7(payload.chatId) || str7(rec8(payload.message).chat_id);
     switch (event) {
       case "GENERATION_STARTED":
         tracker.started(payload);
@@ -55115,22 +55540,22 @@ function createChatPipelineController(services, engine, options = {}) {
       case "GENERATION_ENDED":
         return handleGenerationEnded(raw);
       case "MESSAGE_DELETED": {
-        const ids = [str6(payload.messageId), str6(rec7(payload.message).id), ...Array.isArray(payload.messageIds) ? payload.messageIds.map(str6) : []].filter(Boolean);
+        const ids = [str7(payload.messageId), str7(rec8(payload.message).id), ...Array.isArray(payload.messageIds) ? payload.messageIds.map(str7) : []].filter(Boolean);
         for (const id of ids)
           if (chatId)
             await dropMessageData(chatId, id).catch((e) => log("warn", "Message data cleanup failed", toRpcError(e)));
         return;
       }
       case "MESSAGE_SWIPED": {
-        const message = rec7(payload.message);
-        if (payload.action === "deleted" && chatId && str6(message.id) && Number.isSafeInteger(payload.swipeId))
-          await dropMessageData(chatId, str6(message.id), Number(payload.swipeId)).catch((e) => log("warn", "Swipe data cleanup failed", toRpcError(e)));
+        const message = rec8(payload.message);
+        if (payload.action === "deleted" && chatId && str7(message.id) && Number.isSafeInteger(payload.swipeId))
+          await dropMessageData(chatId, str7(message.id), Number(payload.swipeId)).catch((e) => log("warn", "Swipe data cleanup failed", toRpcError(e)));
         else if (chatId)
           emitChanged(chatId, []);
         return;
       }
       case "CHARACTER_EDITED": {
-        const id = str6(payload.characterId) || str6(payload.id) || str6(rec7(payload.character).id);
+        const id = str7(payload.characterId) || str7(payload.id) || str7(rec8(payload.character).id);
         services.sources.invalidate(id || undefined);
         return;
       }
@@ -55193,8 +55618,8 @@ function createChatPipelineController(services, engine, options = {}) {
     async start(params) {
       if (disposed)
         fail2("unsupported", "The pipeline was disposed.");
-      const chatId = str6(params.chatId);
-      const messageId = str6(params.messageId);
+      const chatId = str7(params.chatId);
+      const messageId = str7(params.messageId);
       const swipeIndex = Number(params.swipeIndex);
       if (!chatId || !messageId || !Number.isSafeInteger(swipeIndex) || swipeIndex < 0)
         fail2("bad-request", "chatId, messageId and swipeIndex are required.");
@@ -55266,7 +55691,7 @@ function createChatPipelineController(services, engine, options = {}) {
       return [...jobs.values()].filter((j) => !j.dismissed && (!chatId || j.target.chatId === chatId) && (j.snapshot.status === "queued" || j.snapshot.status === "running" || j.snapshot.canRetry)).map((j) => jsonClone(j.snapshot));
     },
     async regenerateSlot(params) {
-      const chatId = str6(params.chatId);
+      const chatId = str7(params.chatId);
       await dropsSettled(chatId);
       const doc = await services.storage.loadChatData(chatId);
       const resolved = resolveHistorySlot(doc.history, { slotId: params.slotId, messageKey: params.messageKey });
@@ -55502,7 +55927,7 @@ function createChatPipelineController(services, engine, options = {}) {
       return zoomDetails(chatId, slotId);
     },
     async requestAiPromptEdit(chatId, slotId, entryId, request) {
-      const instruction = str6(request.instruction);
+      const instruction = str7(request.instruction);
       if (!instruction)
         throw new RpcFailure(labelError("bad-request", PIPELINE_TEXT.editInstructionEmpty));
       if (instruction.length > 2000)
@@ -55615,8 +56040,8 @@ var withoutTags = (prompt, drop) => {
 function onGround(request, ground) {
   if (!ground)
     return request;
-  const prompt = withoutTags(str7(request.prompt), ground.drop);
-  const negative = withoutTags(str7(request.negativePrompt), ground.drop);
+  const prompt = withoutTags(str8(request.prompt), ground.drop);
+  const negative = withoutTags(str8(request.negativePrompt), ground.drop);
   return { ...request, prompt: [prompt, ground.add].filter(Boolean).join(", "), negativePrompt: [negative, ground.negative].filter(Boolean).join(", ") };
 }
 var SCOPE_PREFIX = "inlay-run:";
@@ -55644,8 +56069,8 @@ class ProviderRunRegistry {
     return this.runs.size;
   }
 }
-var rec8 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
-var str7 = (v) => v == null ? "" : String(v).trim();
+var rec9 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var str8 = (v) => v == null ? "" : String(v).trim();
 var num2 = (v, fallback, min, max) => {
   const n = Number(v);
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
@@ -55677,11 +56102,11 @@ function toImageBytes(value, fallbackMime = "image/png") {
   }
   if (value instanceof Uint8Array)
     return value.length ? { data: bytesToBase642(value), mimeType: fallbackMime } : null;
-  const r = rec8(value);
+  const r = rec9(value);
   if (typeof r.data === "string" && r.data)
-    return { data: r.data, mimeType: str7(r.mimeType) || str7(r.mime_type) || fallbackMime };
+    return { data: r.data, mimeType: str8(r.mimeType) || str8(r.mime_type) || fallbackMime };
   if (r.bytes instanceof Uint8Array && r.bytes.length)
-    return { data: bytesToBase642(r.bytes), mimeType: str7(r.mimeType) || fallbackMime };
+    return { data: bytesToBase642(r.bytes), mimeType: str8(r.mimeType) || fallbackMime };
   if (r.image !== undefined)
     return toImageBytes(r.image, fallbackMime);
   return null;
@@ -55690,7 +56115,7 @@ function toProviderError(error) {
   if (isAbortLike(error) || !(error instanceof RpcFailure))
     return error;
   const e = error.error;
-  const details = rec8(e.details);
+  const details = rec9(e.details);
   const status = Number(details.status ?? details.httpStatus);
   return Object.assign(new Error(e.message, { cause: error }), {
     code: e.detailCode || (e.code === "timeout" ? "REQUEST_TIMEOUT" : e.code === "cancelled" ? "REQUEST_ABORTED" : e.code),
@@ -55741,19 +56166,19 @@ function engineResult(provider, result, extra = {}) {
       attempts: result.attempts,
       sentParameters: result.sentParameters,
       ...result.sampling ? { novelaiSampling: result.sampling } : {},
-      ...rec8(extra.providerMetadata)
+      ...rec9(extra.providerMetadata)
     }
   };
 }
 function normalizeCharacterPrompts(value) {
   return (Array.isArray(value) ? value : []).map((raw) => {
-    const r = rec8(raw);
+    const r = rec9(raw);
     return {
-      prompt: str7(r.prompt),
-      uc: str7(r.uc),
+      prompt: str8(r.prompt),
+      uc: str8(r.uc),
       centerX: num2(r.centerX, 0.5, 0, 1),
       centerY: num2(r.centerY, 0.5, 0, 1),
-      actorSlot: str7(r.actorSlot) || undefined,
+      actorSlot: str8(r.actorSlot) || undefined,
       coordinateMode: r.coordinateMode === "automatic" ? "automatic" : "fixed"
     };
   }).filter((c) => c.prompt || c.uc);
@@ -55763,19 +56188,19 @@ function buildNovelAIRequest(given, ctx, extras = {}) {
   const rawPrompt = typeof request.prompt === "string" ? request.prompt : "";
   const rating = request.forceRating ?? ctx.forceRating() ?? false;
   const prompt = rating && rawPrompt.trim() ? prependRatingTag2(rawPrompt, rating) : rawPrompt;
-  const baseConfig = rec8(request.config);
+  const baseConfig = rec9(request.config);
   const config = {
     ...baseConfig,
-    ...rating && Array.isArray(baseConfig.characterPrompts) ? { characterPrompts: baseConfig.characterPrompts.map((c) => ({ ...rec8(c), prompt: stripPromptTags(str7(rec8(c).prompt)) })) } : {},
+    ...rating && Array.isArray(baseConfig.characterPrompts) ? { characterPrompts: baseConfig.characterPrompts.map((c) => ({ ...rec9(c), prompt: stripPromptTags(str8(rec9(c).prompt)) })) } : {},
     width: request.width,
     height: request.height,
     negativePrompt: request.negativePrompt,
     seed: request.seed
   };
-  const input = str7(prompt);
+  const input = str8(prompt);
   if (!input)
     throw Object.assign(new Error("NovelAI prompt is empty."), { code: "NOVELAI_PROMPT_EMPTY", retryable: false });
-  const model = str7(ctx.model) || str7(config.naiModel) || "nai-diffusion-5-full";
+  const model = str8(ctx.model) || str8(config.naiModel) || "nai-diffusion-5-full";
   const v4 = /^nai-diffusion-(?:4|5)(?:-|$)/u.test(model);
   const v5Profile = config.analysisProfile === "v5-hybrid";
   if (v5Profile && !v4)
@@ -55784,7 +56209,7 @@ function buildNovelAIRequest(given, ctx, extras = {}) {
   const characters = normalizeCharacterPrompts(config.characterPrompts);
   const anyFixed = characters.some((c) => c.coordinateMode !== "automatic");
   const useCoords = forced ? characters.length > 0 && anyFixed : v5Profile ? !!config.useCoords && characters.length > 0 && anyFixed : !!config.useCoords && characters.length > 1 && anyFixed;
-  const negative = str7(config.negativePrompt);
+  const negative = str8(config.negativePrompt);
   const parameters = { negative_prompt: negative };
   if (v4) {
     parameters.v4_prompt = { caption: { base_caption: input, char_captions: toNovelAICharacterCaptions2(characters, "prompt", v5Profile || forced) }, use_coords: useCoords, use_order: config.useOrder !== false };
@@ -55797,8 +56222,8 @@ function buildNovelAIRequest(given, ctx, extras = {}) {
   const pos = body.parameters.v4_prompt?.caption.char_captions ?? [];
   const neg = body.parameters.v4_negative_prompt?.caption.char_captions ?? [];
   const novelai = {
-    sampler: str7(config.sampler) || "k_euler_ancestral",
-    noiseSchedule: str7(config.noiseSchedule) || "karras",
+    sampler: str8(config.sampler) || "k_euler_ancestral",
+    noiseSchedule: str8(config.noiseSchedule) || "karras",
     steps: Math.round(num2(config.steps, 28, 1, 50)),
     scale: Number(config.scale) || 6,
     cfgRescale: Number.isFinite(Number(config.cfgRescale)) ? Number(config.cfgRescale) : 0.5,
@@ -55843,23 +56268,23 @@ function onInfill(request, infill) {
     model: infill.model,
     width: infill.width,
     height: infill.height,
-    novelai: { ...novelai, rawOverride: { ...raw, action: "infill", parameters: { ...rec8(raw.parameters), image: infill.image, mask: infill.mask, add_original_image: true, inpaintImg2ImgStrength: 1 } } }
+    novelai: { ...novelai, rawOverride: { ...raw, action: "infill", parameters: { ...rec9(raw.parameters), image: infill.image, mask: infill.mask, add_original_image: true, inpaintImg2ImgStrength: 1 } } }
   };
 }
 var DEFAULT_CONTEXT = { purpose: "chat", forceRating: () => false };
 function withCrop(reference) {
-  const asset = rec8(reference.asset);
+  const asset = rec9(reference.asset);
   return reference.cropReference === undefined ? asset : { ...asset, cropReference: reference.cropReference };
 }
 async function prepareReferences(services, refs, signal) {
   const references = [];
   const failures = [];
   for (const raw of refs) {
-    const r = rec8(raw);
+    const r = rec9(raw);
     const asset = withCrop(r);
     try {
       const prepared = toImageBytes(r.image) ?? await services.imageBytes.getAsset(asset, { signal });
-      const type = str7(r.type);
+      const type = str8(r.type);
       references.push({
         ...prepared,
         strength: num2(r.strength, 0.6, 0, 1),
@@ -55869,7 +56294,7 @@ async function prepareReferences(services, refs, signal) {
     } catch (error) {
       if (signal?.aborted)
         throw error;
-      failures.push({ asset: str7(asset.key) || str7(asset.name), error: error instanceof Error ? error.message : String(error) });
+      failures.push({ asset: str8(asset.key) || str8(asset.name), error: error instanceof Error ? error.message : String(error) });
     }
   }
   return { references, failures };
@@ -55884,10 +56309,10 @@ function createNovelAIAdapter(services, registry) {
       const signal = request.signal ?? options.signal;
       onEvent?.({ type: "stage", provider: "novelai", requestId: "", stage: "queued" });
       const refs = Array.isArray(request.references) ? request.references : [];
-      const refModel = str7(ctx.model) || str7(rec8(request.config).naiModel);
-      const sendsRefs = rec8(request.config).characterReferenceEnabled !== false && /^nai-diffusion-4-5/u.test(refModel);
+      const refModel = str8(ctx.model) || str8(rec9(request.config).naiModel);
+      const sendsRefs = rec9(request.config).characterReferenceEnabled !== false && /^nai-diffusion-4-5/u.test(refModel);
       const prepared = refs.length && sendsRefs ? await prepareReferences(services, refs, signal) : { references: [], failures: [] };
-      const i2iRaw = rec8(request.imageToImage);
+      const i2iRaw = rec9(request.imageToImage);
       const i2iImage = request.imageToImage ? toImageBytes(i2iRaw.image) : null;
       if (request.imageToImage && !i2iImage)
         throw Object.assign(new Error("NovelAI img2img source image is empty."), { code: "NOVELAI_IMG2IMG_EMPTY", retryable: false });
@@ -55902,7 +56327,7 @@ function createNovelAIAdapter(services, registry) {
         effectivePrompt: build.effectivePrompt,
         finalizedPrompt: build.finalizedPrompt,
         providerMetadata: {
-          nonArtistPromptWeight: rec8(build.finalizedPrompt).weight,
+          nonArtistPromptWeight: rec9(build.finalizedPrompt).weight,
           referenceFailures: prepared.failures,
           requestBody: build.body
         }
@@ -55922,8 +56347,8 @@ function createComfyAdapter(services, registry) {
       const seedText = normalizeSeed(request.seed);
       const result = await generateImage(services, {
         purpose: ctx.purpose,
-        prompt: str7(request.prompt),
-        negativePrompt: str7(request.negativePrompt),
+        prompt: str8(request.prompt),
+        negativePrompt: str8(request.negativePrompt),
         width: Math.max(1, Math.round(Number(request.width) || 832)),
         height: Math.max(1, Math.round(Number(request.height) || 1216)),
         seed: seedText ? Number(seedText) : randomSeed2(),
@@ -55956,9 +56381,9 @@ function createComfyReferencePreparer(services) {
 }
 
 // src/backend/pipeline/outfit-visibility.ts
-var rec9 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
-var arr3 = (v) => Array.isArray(v) ? v : [];
-var str8 = (v) => typeof v === "string" ? v : "";
+var rec10 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var arr4 = (v) => Array.isArray(v) ? v : [];
+var str9 = (v) => typeof v === "string" ? v : "";
 var WEIGHT_PREFIX = /^(-?\d+(?:\.\d+)?)::/;
 function chunkAt(segment, pos, chunk) {
   const done = (end) => end === segment.length || segment.startsWith(", ", end);
@@ -56240,23 +56665,23 @@ function repairBatchItems(items, index, onRepair) {
   if (!index)
     return [...items];
   return items.map((item) => {
-    const it = rec9(item);
-    const plan = rec9(it.promptPlan);
-    const characters = arr3(plan.characters).map(rec9);
+    const it = rec10(item);
+    const plan = rec10(it.promptPlan);
+    const characters = arr4(plan.characters).map(rec10);
     if (!characters.length)
       return item;
-    const segments = rec9(it.promptSegments);
-    const outfits = { ...rec9(segments.outfits) };
-    const actors = arr3(it.actors).map(rec9);
+    const segments = rec10(it.promptSegments);
+    const outfits = { ...rec10(segments.outfits) };
+    const actors = arr4(it.actors).map(rec10);
     const replacements = [];
     const nextCharacters = characters.map((c, i) => {
       const actor = actors.find((a) => Number(a.actorIndex) === i) ?? actors[i] ?? {};
-      const parts = index.parts(str8(actor.identityKey) || str8(c.identityKey), str8(actor.selectedFormId), str8(actor.selectedOutfitId) || str8(c.selectedOutfitId));
+      const parts = index.parts(str9(actor.identityKey) || str9(c.identityKey), str9(actor.selectedFormId), str9(actor.selectedOutfitId) || str9(c.selectedOutfitId));
       const key = `actor_${i + 1}`;
-      const span = rec9(outfits[key]);
+      const span = rec10(outfits[key]);
       const segment = Number.isInteger(span.start) && Number.isInteger(span.end) ? { start: Number(span.start), end: Number(span.end) } : undefined;
-      const prompt = str8(c.prompt);
-      const repair = prompt ? repairActorPrompt({ prompt, segment, parts, framing: str8(plan.selectedFraming), globalPositive: str8(plan.globalPositive) }) : null;
+      const prompt = str9(c.prompt);
+      const repair = prompt ? repairActorPrompt({ prompt, segment, parts, framing: str9(plan.selectedFraming), globalPositive: str9(plan.globalPositive) }) : null;
       if (!repair)
         return c;
       replacements.push([prompt, repair.prompt]);
@@ -56264,7 +56689,7 @@ function repairBatchItems(items, index, onRepair) {
         outfits[key] = Object.freeze({ ...repair.segment });
       else
         delete outfits[key];
-      onRepair?.({ sourceImageToken: str8(it.sourceImageToken), actorId: str8(actor.actorId) || key, changes: repair.changes });
+      onRepair?.({ sourceImageToken: str9(it.sourceImageToken), actorId: str9(actor.actorId) || key, changes: repair.changes });
       return Object.freeze({ ...c, prompt: repair.prompt });
     });
     if (!replacements.length)
@@ -56296,6 +56721,7 @@ function createEnginePort(services, options = {}) {
   let snapshot = null;
   const runConfigs = new Map;
   const outfitRuns = new OutfitIndexRegistry;
+  const formRuns = new FormWatchRegistry;
   const repairItems = (input, items) => {
     try {
       return repairBatchItems(items, input.outfitIndex, (log) => services.log.append("info", "pipeline", `Outfit repair ${log.actorId} (${log.sourceImageToken}): ${log.changes.join("; ")}`));
@@ -56308,7 +56734,7 @@ function createEnginePort(services, options = {}) {
     if (current)
       return current;
     const engine = (options.createEngine ?? createAssetMaidEngine)({
-      analyzerClient: withOutfitAwareness(services.llm.analyzerClient({ purpose: "analyzer" }), outfitRuns, (n) => services.log.append("info", "pipeline", `Analyzer request: outfit parts of ${n} registered outfit(s) added.`), (repairs) => services.log.append("warn", "pipeline", `Analyzer reply: ${repairs.length} outfit proposal problem(s) repaired instead of failing the analysis.`, repairs.map((r) => `${r.proposalKey || "inline proposal"} for ${r.candidateKey || "(no character)"}: ${r.action}, ${r.reason}`).join("; "))),
+      analyzerClient: withFormAwareness(withOutfitAwareness(services.llm.analyzerClient({ purpose: "analyzer" }), outfitRuns, (n) => services.log.append("info", "pipeline", `Analyzer request: outfit parts of ${n} registered outfit(s) added.`), (repairs) => services.log.append("warn", "pipeline", `Analyzer reply: ${repairs.length} outfit proposal problem(s) repaired instead of failing the analysis.`, repairs.map((r) => `${r.proposalKey || "inline proposal"} for ${r.candidateKey || "(no character)"}: ${r.action}, ${r.reason}`).join("; "))), formRuns, (proposals, rejected) => services.log.append("info", "pipeline", `Analyzer reply: ${proposals.length} new appearance form(s) proposed for a lasting body change; the analysis starts again with them.`, [...proposals.map((p) => `${p.candidateKey}: "${p.label}"${p.copyFrom ? ` (look of ${p.copyFrom.candidateKey})` : ""}${p.evidence ? `, ${p.evidence}` : ""}`), ...rejected.map((r) => `not used, ${r}`)].join("; "))),
       imageProviders: adapters,
       comfyUIReferences: references,
       getRetryCount: () => snapshot?.runtime.generationAutoRetryCount ?? 5,
@@ -56332,6 +56758,8 @@ function createEnginePort(services, options = {}) {
       runConfigs.set(ref.queueScopeKey, config);
       const outfitIndex = input.outfitIndex;
       const releaseOutfits = outfitIndex ? outfitRuns.register(outfitIndex) : undefined;
+      const formWatch = input.formWatch;
+      const releaseForms = formWatch ? formRuns.register(formWatch) : undefined;
       const sessions = engine.parts.sessions;
       const onEvent = input.onEvent;
       let session;
@@ -56367,6 +56795,7 @@ function createEnginePort(services, options = {}) {
       } finally {
         unsubscribe();
         releaseOutfits?.();
+        releaseForms?.();
         runConfigs.delete(ref.queueScopeKey);
         registry.release(runId);
       }
@@ -56486,7 +56915,7 @@ var READER_STYLE_ARTIST_ID = "shared-picture-style";
 var PICTURE_END = "* * *";
 var RETRY_FAILED_MS = 60000;
 var PICTURE_DIRECTIONS = ["parley", "cutin", "figure", "scene", "intimate"];
-var rec10 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var rec11 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 var GAMBIT_PARLEY_NAME = "Gambit: Parley";
 var GAMBIT_CUTIN_NAME = "Gambit: Cut-in";
 var GAMBIT_FIGURE_NAME = "Gambit: Figure";
@@ -56572,7 +57001,7 @@ function gambitGuidelines(_library, ids) {
   return { parley, cutin, figure, scene, intimate };
 }
 var GUIDELINE_NAME = { parley: GAMBIT_PARLEY_NAME, cutin: GAMBIT_CUTIN_NAME, figure: GAMBIT_FIGURE_NAME, scene: GAMBIT_SCENE_NAME, intimate: GAMBIT_INTIMATE_NAME };
-var nameOf = (item) => String(rec10(item).name ?? "").trim();
+var nameOf = (item) => String(rec11(item).name ?? "").trim();
 function selectGambitGuideline(runtime, direction, onBase = false) {
   const library = resolveStoredLibrary(runtime);
   const own = Object.entries(library.scene.items).find(([, item]) => nameOf(item) === GUIDELINE_NAME[direction])?.[0];
@@ -56584,8 +57013,8 @@ function selectGambitGuideline(runtime, direction, onBase = false) {
   }
   library.scene.selected = sceneId;
   if (onBase) {
-    const item = rec10(library.scene.items[sceneId]);
-    const system = rec10(item.system);
+    const item = rec11(library.scene.items[sceneId]);
+    const system = rec11(item.system);
     const rules = Array.isArray(system.rules) ? system.rules : [];
     library.scene.items[sceneId] = { ...item, system: { options: [], values: {}, ...system, rules: [...rules, ...noPlace("gambit-base", sceneId)] } };
   }
@@ -56606,7 +57035,7 @@ function picturesEndpoint(readerExtensionId, userId) {
 }
 var text4 = (v, max) => typeof v === "string" ? v.replace(/[ \t]+/g, " ").trim().slice(0, max) : "";
 function pictureStyle(raw) {
-  const s = rec10(raw);
+  const s = rec11(raw);
   const artist = text4(s.artist, 120);
   const positive = text4(s.positive, 1500);
   if (ARTIST_ID_RE.test(artist))
@@ -56616,20 +57045,20 @@ function pictureStyle(raw) {
 function withPictureStyle(runtime, style) {
   if (!style)
     return runtime;
-  const cp = rec10(runtime.characterPrompt);
+  const cp = rec11(runtime.characterPrompt);
   if ("artist" in style)
     return listNovelAIArtists(cp.artistPrompts).some((a) => a.id === style.artist) ? { ...runtime, characterPrompt: { ...cp, selectedArtistId: style.artist } } : runtime;
-  const entries = (Array.isArray(cp.artistPrompts) ? cp.artistPrompts : []).filter((e) => rec10(e).id !== READER_STYLE_ARTIST_ID);
+  const entries = (Array.isArray(cp.artistPrompts) ? cp.artistPrompts : []).filter((e) => rec11(e).id !== READER_STYLE_ARTIST_ID);
   const entry = { id: READER_STYLE_ARTIST_ID, title: "Requested style", prompt: style.positive, negativePrompt: style.negative };
   return { ...runtime, characterPrompt: { ...cp, artistPrompts: [...entries, entry], selectedArtistId: READER_STYLE_ARTIST_ID } };
 }
 function parsePictureRequests(raw) {
-  const o = rec10(raw);
+  const o = rec11(raw);
   if (o.version !== 1 || !Array.isArray(o.pictures))
     return [];
   const out = [];
   for (const p of o.pictures) {
-    const x = rec10(p);
+    const x = rec11(p);
     const id = text4(x.id, 160);
     const chatId = text4(x.chatId, 80);
     const direction = PICTURE_DIRECTIONS.find((d) => d === x.direction) ?? null;
