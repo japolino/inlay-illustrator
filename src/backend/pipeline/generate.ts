@@ -245,6 +245,35 @@ export function checkpointPolicyFor(kind: AttemptKind): "restart-analysis" | "re
 export function generationTypeFor(origin: GenerationOrigin, forced: boolean, revision: boolean): string {
   return revision ? "ai-prompt-edit" : origin === "retry" ? "illustration-retry" : forced ? "manual-all" : "chat-auto";
 }
+/**
+ * The split core refused to continue a partial run because its stored analysis plan is gone (AM `Ol` scope "expired",
+ * "부분 생성의 분석 계획이 변경되었거나 만료되었습니다"). The plan lives in memory only, keyed by a fingerprint of the request, so
+ * an extension restart or update, a changed setting or model, or its expiry all lose it. Follows `cause`.
+ */
+export function isLostSplitPlan(error: unknown, depth = 0): boolean {
+  if (!error || typeof error !== "object" || depth > 4) return false;
+  const e = error as { name?: unknown; scope?: unknown; message?: unknown; cause?: unknown };
+  if (e.name === "SplitAnalysisError" && e.scope === "expired") return true;
+  if (typeof e.message === "string" && e.message.includes("부분 생성의 분석 계획")) return true;
+  return isLostSplitPlan(e.cause, depth + 1);
+}
+/**
+ * The analyzer context for the images a partial run still lacks: the saved and deleted slots leave the candidates and
+ * the count, so the engine analyzes only what is missing and needs no stored plan. Null when nothing is missing.
+ */
+export function remainderAnalyzerContext<T extends { candidateSlots: ReadonlyArray<{ slot_number: number }>; splitAnalysis?: unknown }>(context: T, skipSlotNumbers: readonly number[], total: number): T | null {
+  const skipped = new Set(skipSlotNumbers);
+  const candidateSlots = context.candidateSlots.filter((slot) => !skipped.has(slot.slot_number));
+  const count = Math.min(candidateSlots.length, total - skipped.size);
+  if (count <= 0) return null;
+  return {
+    ...context,
+    candidateSlots,
+    targetImageCount: count,
+    imageCountConstraint: { mode: "fixed", min: count, max: count },
+    ...(context.splitAnalysis ? { splitAnalysis: { ...(context.splitAnalysis as object), totalCount: count } } : {}),
+  };
+}
 /** AM `Id` 113714: cancellation test (follows `cause`). */
 export function isCancellation(error: unknown, depth = 0): boolean {
   if (!error || typeof error !== "object" || depth > 4) return false;
@@ -802,8 +831,8 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       },
     };
 
-    try {
-      await engine.run(input as never, {
+    const runEngine = (engineInput: typeof input) =>
+      engine.run(engineInput as never, {
         engineProvider,
         purpose: req.revision ? "regenerate" : "chat",
         connectionId: imageTarget.connectionId,
@@ -818,6 +847,24 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
         // original run's snapshot on a retry / restart.
         analysisConfig,
       }, config);
+    try {
+      try {
+        await runEngine(input);
+      } catch (e) {
+        // A retry of a partial split run needs the plan the engine kept in memory; AM stops here and asks for a restart
+        // from the initial decision, which would leave the message failing on every retry. Inlay keeps the saved images
+        // and analyzes again for the missing ones only.
+        if (!isLostSplitPlan(e) || !skipSlotIndexes.length || entries.length || req.signal.aborted) throw e;
+        const context = remainderAnalyzerContext(assembled.context, skipSlotIndexes, W.max);
+        services.log.append(
+          "warn",
+          "pipeline",
+          context
+            ? `The saved analysis plan of this partial run is gone (the extension restarted, or the settings changed). Analyzing again for the ${context.targetImageCount} missing image(s); the saved ones are kept.`
+            : "The saved analysis plan of this partial run is gone, and no image is missing; nothing to generate.",
+        );
+        if (context) await runEngine({ ...input, skipSlotNumbers: [], analyzerInput: { ...rec(input.analyzerInput), checkpointPolicy: "restart-analysis", context } });
+      }
       await req.assertTarget();
     } catch (e) {
       if (isCancellation(e) || req.signal.aborted) cancelled = true;
