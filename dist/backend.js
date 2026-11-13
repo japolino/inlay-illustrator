@@ -290,6 +290,7 @@ __export(exports_analysis_core, {
   PEe: () => PEe,
   PF: () => PF,
   PYe: () => PYe,
+  Pb_91: () => Pb_91,
   Pce: () => Pce2,
   Pfe: () => Pfe,
   Ph: () => Ph2,
@@ -6183,11 +6184,69 @@ var amEnv = Object.freeze({
 });
 
 // src/engine/core/asset-maid-core.ts
+var oC_91 = Object.freeze({ enabled: true });
+var d8_91 = (e) => e !== null && typeof e == "object" && !Array.isArray(e);
+function u8_91(e) {
+  if (!d8_91(e))
+    return e;
+  if (e.kind === "object") {
+    const t = Object.hasOwn(e, "changed") ? e.changed : {};
+    return {
+      ...e,
+      added: Object.hasOwn(e, "added") ? e.added : {},
+      changed: d8_91(t) ? Object.fromEntries(Object.entries(t).map(([r, n]) => [r, u8_91(n)])) : t
+    };
+  }
+  return e.kind === "list" ? { ...e, entries: u8_91(e.entries) } : e;
+}
+function S2e_91(e, t = oC_91.enabled) {
+  return t && d8_91(e) && e.selected === "default" && !Object.hasOwn(e, "items") ? { ...e, items: {} } : e;
+}
 var em = (e) => !!e && typeof e == "object" && !Array.isArray(e);
 var Ru = (e) => e === undefined ? e : JSON.parse(JSON.stringify(e));
 var XI = (e, t) => JSON.stringify(e) === JSON.stringify(t) || em(e) && em(t) && Object.keys(e).length === Object.keys(t).length && Object.keys(e).every((r) => XI(e[r], t[r]));
 var VI = (e) => e.every((t) => em(t) && typeof t.id == "string") && new Set(e.map((t) => t.id)).size === e.length;
 var P0 = (e) => Object.fromEntries(e.map((t) => [t.id, t]));
+function L0_91(e, t = oC_91.enabled) {
+  return f8_91(t ? u8_91(e) : e);
+}
+function f8_91(e) {
+  if (e !== undefined) {
+    if (!em(e))
+      throw Error("Invalid default changes");
+    if (e.kind === "value") {
+      if (!Object.hasOwn(e, "value"))
+        throw Error("Missing default change value");
+      return e;
+    }
+    if (e.kind === "object") {
+      const { added: t, changed: r } = e;
+      if (!em(t) || !em(r) || !Array.isArray(e.removed) || !e.removed.every((n) => typeof n == "string"))
+        throw Error("Invalid object changes");
+      for (const n of [...Object.keys(t), ...Object.keys(r), ...e.removed])
+        LP(n);
+      return {
+        ...e,
+        kind: "object",
+        added: t,
+        removed: e.removed,
+        changed: Object.fromEntries(Object.entries(r).map(([n, a]) => {
+          const o = f8_91(a);
+          if (!o)
+            throw Error("Missing nested default changes");
+          return [n, o];
+        }))
+      };
+    }
+    if (e.kind === "list") {
+      const t = f8_91(e.entries);
+      if (!t || !Array.isArray(e.moves) || !e.moves.every((r) => em(r) && typeof r.id == "string" && Array.isArray(r.before) && r.before.every((n) => typeof n == "string") && Array.isArray(r.after) && r.after.every((n) => typeof n == "string")))
+        throw Error("Invalid list changes");
+      return { ...e, kind: "list", entries: t, moves: e.moves };
+    }
+    throw Error("Invalid default changes");
+  }
+}
 function WI(e) {
   return e ? e.kind === "value" ? true : e.kind === "list" ? e.moves.length > 0 || WI(e.entries) : Object.keys(e.added).length > 0 || e.removed.length > 0 || Object.values(e.changed).some(WI) : false;
 }
@@ -6225,7 +6284,7 @@ function FP(e, t) {
   }
 }
 function tm(e, t) {
-  if (!t)
+  if (t = L0_91(t), !t)
     return Ru(e);
   if (t.kind === "value")
     return Ru(t.value);
@@ -6254,9 +6313,10 @@ function tm(e, t) {
   return n;
 }
 function Nv(e, t, r = "") {
-  return !t || t.kind === "value" ? [] : t.kind === "list" ? Nv(P0(Array.isArray(e) ? e : []), t.entries, r) : Object.entries(t.changed).flatMap(([n, a]) => em(e) && Object.hasOwn(e, n) ? Nv(e[n], a, `${r}/${n}`) : [`${r}/${n}`]);
+  return t = L0_91(t), !t || t.kind === "value" ? [] : t.kind === "list" ? Nv(P0(Array.isArray(e) ? e : []), t.entries, r) : Object.entries(t.changed).flatMap(([n, a]) => em(e) && Object.hasOwn(e, n) ? Nv(e[n], a, `${r}/${n}`) : [`${r}/${n}`]);
 }
 function Rv(e, t, r) {
+  r = L0_91(r);
   const n = tm(e, r);
   if (XI(n, Ru(t)))
     return WI(r) ? Ru(r) : undefined;
@@ -6280,7 +6340,7 @@ function Rv(e, t, r) {
     return a;
 }
 function KP(e, t) {
-  if (!e || !t.length)
+  if (e = L0_91(e), !e || !t.length)
     return;
   const r = Ru(e), [n, ...a] = t;
   if (r.kind === "list")
@@ -6688,10 +6748,10 @@ function u2e(e) {
 function Dv(e) {
   const t = f2e(), r = e.runtime.freeGenerationInstructions;
   for (const n of nm) {
-    const a = e.runtime.freeGenerationLibrary?.[n];
-    a ? (BP({ [n]: a }), t[n] = {
-      ...structuredClone(a),
-      items: { ...t[n].items, ...structuredClone(a.items), default: t[n].items.default }
+    const a = e.runtime.freeGenerationLibrary?.[n], o = S2e_91(a);
+    o ? (BP({ [n]: o }), t[n] = {
+      ...structuredClone(o),
+      items: { ...t[n].items, ...structuredClone(o.items), default: t[n].items.default }
     }) : typeof r?.[n] == "string" && r[n].trim() && r[n] !== Kf[n] && (t[n].items.legacy = { name: n === "character" ? "기존 인물 지침" : "기존 의상 지침", instruction: r[n] }, t[n].selected = "legacy");
   }
   return t;
@@ -6868,13 +6928,14 @@ function XP(e) {
   }), n = (a) => t[a]?.items ? { selected: true, items: [r(a)] } : r(a);
   return Ci(e, { scene: n("scene"), imageRatio: n("imageRatio"), customSizes: [q3] });
 }
-function readAtelierDirectingRules(e) {
-  const t = e.presetCatalog.atelier, r = t?.documents.find((o) => o.id === (t.activeId ?? "default"));
-  if (!r)
+function vS_91(e, t) {
+  const r = e.presetCatalog.atelier, n = r?.documents.find((i) => i.id === (t ?? r.activeId ?? "default"));
+  if (!n)
     return;
-  const n = JSON.parse(r.json), a = n.content?.analysis?.scene?.rules;
-  return a ? { document: r, parsed: n, rules: a } : undefined;
+  const a = JSON.parse(n.json), o = a.content?.analysis?.scene?.rules;
+  return o ? { document: n, parsed: a, rules: o } : undefined;
 }
+var readAtelierDirectingRules = (e) => vS_91(e);
 function mergeDirectingRules(e, t) {
   if (!t)
     return e;
@@ -6892,42 +6953,44 @@ function mergeDirectingRules(e, t) {
   }
   return r;
 }
-function v2e(e, t, r) {
-  const n = readAtelierDirectingRules(e);
-  if (!n)
+function v2e(e, t, r, n) {
+  if (n && e.presetCatalog.atelier && !e.presetCatalog.atelier.documents.some((l) => l.id === n))
+    throw Error("편집하던 프리셋이 없어 규칙을 저장하지 못했습니다.");
+  const a = vS_91(e, n);
+  if (!a)
     return { config: e, library: t };
-  const a = structuredClone(t), o = {};
-  for (const [c, l] of Object.entries(n.rules)) {
-    const d = new Set(l.map((p) => p.id)), u = t.scene.items[c]?.system?.rules ?? [];
-    o[c] = u.flatMap((p, g) => {
-      if (!d.has(p.id))
+  const o = structuredClone(t), i = {};
+  for (const [l, d] of Object.entries(a.rules)) {
+    const u = new Set(d.map((h) => h.id)), m = t.scene.items[l]?.system?.rules ?? [];
+    i[l] = m.flatMap((h, b) => {
+      if (!u.has(h.id))
         return [];
-      const b = u.slice(g + 1).find((v) => !d.has(v.id))?.id;
-      return [{ ...p, ...b ? { before: b } : {} }];
+      const v = m.slice(b + 1).find((x) => !u.has(x.id))?.id;
+      return [{ ...h, ...v ? { before: v } : {} }];
     });
-    const m = a.scene.items[c]?.system;
-    if (m) {
-      m.rules = m.rules.filter((p) => !d.has(p.id));
-      for (const p of r.scene.items[c]?.system?.rules ?? [])
-        d.has(p.id) && m.rules.push(structuredClone(p));
+    const p = o.scene.items[l]?.system;
+    if (p) {
+      p.rules = p.rules.filter((h) => !u.has(h.id));
+      for (const h of r.scene.items[l]?.system?.rules ?? [])
+        u.has(h.id) && p.rules.push(structuredClone(h));
     }
   }
-  const i = JSON.stringify(n.rules) !== JSON.stringify(o);
-  i && (n.parsed.content.analysis.scene.rules = o);
-  const s = e.presetCatalog.atelier;
+  const s = JSON.stringify(a.rules) !== JSON.stringify(i);
+  s && (a.parsed.content.analysis.scene.rules = i);
+  const c = e.presetCatalog.atelier;
   return {
-    config: i ? {
+    config: s ? {
       ...e,
       presetCatalog: {
         ...e.presetCatalog,
         atelier: {
-          ...s,
-          revision: s.revision + 1,
-          documents: s.documents.map((c) => c.id === n.document.id ? { ...c, json: JSON.stringify(n.parsed) } : c)
+          ...c,
+          revision: c.revision + 1,
+          documents: c.documents.map((l) => l.id === a.document.id ? { ...l, json: JSON.stringify(a.parsed) } : l)
         }
       }
     } : e,
-    library: a
+    library: o
   };
 }
 var y2e = ["when", "include", "exclude", "only", "select", "add", "remove", "replace", "require", "weight", "route"];
@@ -9223,7 +9286,7 @@ function JV(e, t) {
   return i[zd(n.items[n.selected])] = n.selected, n.lastSelectedByMode = i, r;
 }
 function hS(e, t, r, n) {
-  const a = wAe(e, e.novelai.v5UserDirections), o = v2e(e, t, resolveStoredAnalysisDocument(e));
+  const a = wAe(e, e.novelai.v5UserDirections), o = v2e(e, t, resolveStoredAnalysisDocument(e), r);
   e = o.config;
   const i = JV(o.library, a.mode), { "comic.speech-bubble": s, ...c } = a.controls, { instructionLibrary: l, presetInstructionLibraries: d, ...u } = e.runtime;
   return {
@@ -9382,20 +9445,20 @@ function ZV(e, t, r, n = {}) {
   return a;
 }
 function resolveStoredAnalysisDocument(e) {
-  const t = bC(tm(createDefaultAnalysisDocument(), e.runtime.instructionChanges));
-  for (const r of ["scene", "imageRatio"])
-    t[r].items[t[r].selected] || (t[r].selected = "default");
-  for (const [r, n] of Object.entries(t.scene.items))
-    if (sm("scene", r)) {
-      let a = e.runtime.instructionChanges;
-      for (const o of ["scene", "items", r])
-        a = a?.kind === "object" ? a.changed[o] : undefined;
-      n.inheritance = { base: r, ...a ? { changes: a } : {} };
+  const t = L0_91(e.runtime.instructionChanges), r = bC(tm(createDefaultAnalysisDocument(), t));
+  for (const n of ["scene", "imageRatio"])
+    r[n].items[r[n].selected] || (r[n].selected = "default");
+  for (const [n, a] of Object.entries(r.scene.items))
+    if (sm("scene", n)) {
+      let o = t;
+      for (const i of ["scene", "items", n])
+        o = o?.kind === "object" ? o.changed[i] : undefined;
+      a.inheritance = { base: n, ...o ? { changes: o } : {} };
     }
-  return bS(t, "stored"), GX(t);
+  return bS(r, "stored"), GX(r);
 }
 function resolveAnalysisDocument(e, t) {
-  return mergeDirectingRules(resolveStoredAnalysisDocument(e), readAtelierDirectingRules(e)?.rules);
+  return mergeDirectingRules(resolveStoredAnalysisDocument(e), vS_91(e, t)?.rules);
 }
 function k8(e) {
   e = GX(e);
@@ -10100,22 +10163,22 @@ function uO(e) {
 function wPe(e, t) {
   return Bu(Bu(e.characterPrompt.charxSettings.overrides)[wh(t)]);
 }
-function resolveSourceGenerationSettings(e, t) {
-  const r = fy(e), n = wh(t), a = wPe(e, n), o = new Set(uO(r)[n] ?? []), i = normalizeSourceGenerationSettings(e);
+function resolveSourceGenerationSettings(e, t, r = wPe(e, wh(t))) {
+  const n = fy(e), a = wh(t), o = new Set(uO(n)[a] ?? []), i = normalizeSourceGenerationSettings(e);
   return {
-    nativeAssetVisibility: ol(r, a, "nativeAssetVisibility", o) ? a.nativeAssetVisibility === "shown" ? "shown" : "hidden" : i.nativeAssetVisibility,
-    freeCharacterGenerationEnabled: ol(r, a, "freeCharacterGeneration", o) && typeof a.freeCharacterGeneration == "boolean" ? a.freeCharacterGeneration : i.freeCharacterGenerationEnabled,
-    freeOutfitGenerationEnabled: ol(r, a, "freeOutfitGeneration", o) && typeof a.freeOutfitGeneration == "boolean" ? a.freeOutfitGeneration : i.freeOutfitGenerationEnabled,
-    rosterSelectionEnabled: ol(r, a, "rosterSelectionEnabled", o) && typeof a.rosterSelectionEnabled == "boolean" ? a.rosterSelectionEnabled : i.rosterSelectionEnabled,
-    fixedRating: ol(r, a, "fixedRating", o) ? O8(a.fixedRating) : i.fixedRating,
-    nsfwAlwaysEnabled: ol(r, a, "nsfwAlwaysEnabled", o) && typeof a.nsfwAlwaysEnabled == "boolean" ? a.nsfwAlwaysEnabled : i.nsfwAlwaysEnabled,
-    forceAiChoiceCoordinates: ol(r, a, "forceAiChoiceCoordinates", o) && typeof a.forceAiChoiceCoordinates == "boolean" ? a.forceAiChoiceCoordinates : i.forceAiChoiceCoordinates,
-    autoRemoveConflictingRegex: ol(r, a, "autoRemoveConflictingRegex", o) && typeof a.autoRemoveConflictingRegex == "boolean" ? a.autoRemoveConflictingRegex : i.autoRemoveConflictingRegex,
-    fixedResolution: ol(r, a, "fixedResolution", o) ? LD(a.fixedResolution, e) : i.fixedResolution,
-    fixedPositivePrompt: ol(r, a, "fixedPositivePrompt", o) ? kh(a.fixedPositivePrompt) : i.fixedPositivePrompt,
-    negativePrompt: ol(r, a, "negativePrompt", o) ? kh(a.negativePrompt) : i.negativePrompt,
-    animaPositivePrompt: ol(r, a, "animaPositivePrompt", o) ? kh(a.animaPositivePrompt) : i.animaPositivePrompt,
-    animaNegativePrompt: ol(r, a, "animaNegativePrompt", o) ? kh(a.animaNegativePrompt) : i.animaNegativePrompt
+    nativeAssetVisibility: ol(n, r, "nativeAssetVisibility", o) ? r.nativeAssetVisibility === "shown" ? "shown" : "hidden" : i.nativeAssetVisibility,
+    freeCharacterGenerationEnabled: ol(n, r, "freeCharacterGeneration", o) && typeof r.freeCharacterGeneration == "boolean" ? r.freeCharacterGeneration : i.freeCharacterGenerationEnabled,
+    freeOutfitGenerationEnabled: ol(n, r, "freeOutfitGeneration", o) && typeof r.freeOutfitGeneration == "boolean" ? r.freeOutfitGeneration : i.freeOutfitGenerationEnabled,
+    rosterSelectionEnabled: ol(n, r, "rosterSelectionEnabled", o) && typeof r.rosterSelectionEnabled == "boolean" ? r.rosterSelectionEnabled : i.rosterSelectionEnabled,
+    fixedRating: ol(n, r, "fixedRating", o) ? O8(r.fixedRating) : i.fixedRating,
+    nsfwAlwaysEnabled: ol(n, r, "nsfwAlwaysEnabled", o) && typeof r.nsfwAlwaysEnabled == "boolean" ? r.nsfwAlwaysEnabled : i.nsfwAlwaysEnabled,
+    forceAiChoiceCoordinates: ol(n, r, "forceAiChoiceCoordinates", o) && typeof r.forceAiChoiceCoordinates == "boolean" ? r.forceAiChoiceCoordinates : i.forceAiChoiceCoordinates,
+    autoRemoveConflictingRegex: ol(n, r, "autoRemoveConflictingRegex", o) && typeof r.autoRemoveConflictingRegex == "boolean" ? r.autoRemoveConflictingRegex : i.autoRemoveConflictingRegex,
+    fixedResolution: ol(n, r, "fixedResolution", o) ? LD(r.fixedResolution, e) : i.fixedResolution,
+    fixedPositivePrompt: ol(n, r, "fixedPositivePrompt", o) ? kh(r.fixedPositivePrompt) : i.fixedPositivePrompt,
+    negativePrompt: ol(n, r, "negativePrompt", o) ? kh(r.negativePrompt) : i.negativePrompt,
+    animaPositivePrompt: ol(n, r, "animaPositivePrompt", o) ? kh(r.animaPositivePrompt) : i.animaPositivePrompt,
+    animaNegativePrompt: ol(n, r, "animaNegativePrompt", o) ? kh(r.animaNegativePrompt) : i.animaNegativePrompt
   };
 }
 function normalizeSourceGenerationSettings(e) {
@@ -13378,11 +13441,23 @@ function sL(e, t = []) {
 function OO(e, t, r) {
   return !e?.groups.includes(r) || !!(t && e.bindings[t]?.includes(r));
 }
+function NO(e) {
+  return e.some(({ impact: t }) => t === "unusable") ? "unusable" : e.some(({ impact: t }) => t === "degraded") ? "degraded" : e.some(({ impact: t }) => t === "recovered") ? "recovered" : "exact";
+}
+function Lt(e, t, r, n) {
+  return Object.freeze({ code: e, impact: t, path: r, message: n });
+}
+var yA_91 = 512;
 function ZCe(e, t) {
   return e?.filter((r) => !di(r.id) && Bf(r, t)).flatMap((r) => {
     const n = Hl(r);
     return [...n.includes("scene") ? ["scene"] : [], ...t8(r) ? ["actor"] : []].map((a) => ({
-      id: r.id,
+      channelId: r.id,
+      returnFields: [
+        "channelId",
+        ...a === "actor" ? ["actorId", "placementIndex"] : [],
+        r.kind === "free" ? "tags" : "text"
+      ],
       kind: r.kind,
       scope: a,
       instruction: r.instruction,
@@ -13396,7 +13471,7 @@ function ZCe(e, t) {
 function QCe(e) {
   return {
     type: "array",
-    maxItems: 512,
+    maxItems: yA_91,
     description: "Optional custom descriptive channels. Omit empty values. Each channel appears once per binding: scene or exact Actor occurrence. Never broadcast across Actors or panels. Scene channels have no Actor binding. Respect Actor sex restrictions from the selected form.",
     items: {
       anyOf: e.map((t) => ({
@@ -13404,7 +13479,7 @@ function QCe(e) {
         additionalProperties: false,
         description: `${t.instruction}${t.subjects?.length ? ` Apply only to Actors whose selected form sex is ${t.subjects.join(" or ")}.` : ""}`,
         properties: {
-          channelId: { type: "string", enum: [t.id] },
+          channelId: { type: "string", enum: [t.channelId] },
           ...t.scope !== "scene" ? { actorId: { type: "string", minLength: 1 }, placementIndex: { type: "integer", minimum: 0 } } : {},
           ...t.kind === "free" ? {
             tags: {
@@ -13415,11 +13490,7 @@ function QCe(e) {
             }
           } : { text: { type: "string", maxLength: t.maxLength, description: t.instruction } }
         },
-        required: [
-          "channelId",
-          ...t.scope === "scene" ? [] : ["actorId", "placementIndex"],
-          t.kind === "free" ? "tags" : "text"
-        ]
+        required: t.returnFields
       }))
     }
   };
@@ -13428,52 +13499,80 @@ var eOe = (e) => !!e && typeof e == "object" && !Array.isArray(e);
 function oZ(e) {
   if (e === undefined)
     return [];
-  if (!Array.isArray(e) || e.length > 512)
+  if (!Array.isArray(e) || e.length > yA_91)
     throw new Error("표현요소 응답은 512개 이하 배열이어야 합니다.");
-  return e.map((t) => {
-    if (!eOe(t) || typeof t.channelId != "string" || !t.channelId.startsWith("custom."))
-      throw new Error("알 수 없는 표현요소 채널입니다.");
-    for (const r of Object.keys(t))
-      if (!["channelId", "actorId", "placementIndex", "tags", "text"].includes(r))
-        throw new Error("표현요소 응답에 지원하지 않는 필드가 있습니다.");
-    if (t.actorId !== undefined && (typeof t.actorId != "string" || !t.actorId))
-      throw new Error("인물 연결이 잘못되었습니다.");
-    for (const r of ["placementIndex"])
-      if (t[r] !== undefined && (!Number.isInteger(t[r]) || Number(t[r]) < 0))
-        throw new Error("표현요소 연결 인덱스가 잘못되었습니다.");
-    if (t.tags === undefined == (t.text === undefined))
-      throw new Error("태그 또는 자연어 하나가 필요합니다.");
-    if (t.tags !== undefined && (!Array.isArray(t.tags) || t.tags.length > 64 || t.tags.some((r) => typeof r != "string" || r.length > 160)))
-      throw new Error("자유태그 응답이 잘못되었습니다.");
-    if (t.text !== undefined && (typeof t.text != "string" || t.text.length > 1000))
-      throw new Error("자연어 응답이 잘못되었습니다.");
-    return {
-      ...t,
-      ...Array.isArray(t.tags) ? { tags: [...new Set(t.tags.map((r) => r.trim()).filter(Boolean))] } : {},
-      ...typeof t.text == "string" ? { text: t.text.trim() } : {}
-    };
-  });
+  return e.map(VZ_91);
+}
+function VZ_91(e) {
+  if (!eOe(e) || typeof e.channelId != "string" || !e.channelId.startsWith("custom."))
+    throw new Error("알 수 없는 표현요소 채널입니다.");
+  for (const t of Object.keys(e))
+    if (!["channelId", "actorId", "placementIndex", "tags", "text"].includes(t))
+      throw new Error("표현요소 응답에 지원하지 않는 필드가 있습니다.");
+  if (e.actorId !== undefined && (typeof e.actorId != "string" || !e.actorId))
+    throw new Error("인물 연결이 잘못되었습니다.");
+  for (const t of ["placementIndex"])
+    if (e[t] !== undefined && (!Number.isInteger(e[t]) || Number(e[t]) < 0))
+      throw new Error("표현요소 연결 인덱스가 잘못되었습니다.");
+  if (e.tags === undefined == (e.text === undefined))
+    throw new Error("태그 또는 자연어 하나가 필요합니다.");
+  if (e.tags !== undefined && (!Array.isArray(e.tags) || e.tags.length > 64 || e.tags.some((t) => typeof t != "string" || t.length > 160)))
+    throw new Error("자유태그 응답이 잘못되었습니다.");
+  if (e.text !== undefined && (typeof e.text != "string" || e.text.length > 1000))
+    throw new Error("자연어 응답이 잘못되었습니다.");
+  return {
+    ...e,
+    ...Array.isArray(e.tags) ? { tags: [...new Set(e.tags.map((t) => t.trim()).filter(Boolean))] } : {},
+    ...typeof e.text == "string" ? { text: e.text.trim() } : {}
+  };
 }
 function iZ(e, t, r, n, a = []) {
-  const o = oZ(e), i = new Set;
-  return o.map((s) => {
-    const c = t?.find((d) => d.id === s.channelId);
-    if (!c || di(c.id) || !Bf(c, r))
-      throw new Error(`사용할 수 없는 표현요소: ${s.channelId}`);
-    if (!N2e(c, s, a.find((d) => d.actorId === s.actorId)?.sex))
-      throw new Error("표현요소가 채널의 적용 범위 또는 성별과 일치하지 않습니다.");
-    if (hV(s) === "scene") {
-      if (s.actorId !== undefined || s.placementIndex !== undefined)
-        throw new Error("장면 채널에 인물 연결을 지정할 수 없습니다.");
-    } else if (!n.some((d) => d.actorId === s.actorId && d.placementIndex === s.placementIndex))
-      throw new Error("표현요소가 현재 인물 등장 위치와 일치하지 않습니다.");
-    if (c.kind === "free" ? !s.tags || s.tags.length > (c.maxTags ?? 8) || s.tags.some((d) => d.length > (c.maxLength ?? 100)) : s.text === undefined || s.text.length > r8(c))
-      throw new Error("표현요소의 종류 또는 출력 길이가 정의와 다릅니다.");
-    const l = JSON.stringify([s.channelId, s.actorId, s.placementIndex]);
-    if (i.has(l))
-      throw new Error("동일한 표현요소 연결이 중복되었습니다.");
-    return i.add(l), s;
-  });
+  const o = new Set;
+  return oZ(e).map((i) => XZ_91(i, t, r, n, a, o));
+}
+function XZ_91(e, t, r, n, a, o) {
+  const i = t?.find((c) => c.id === e.channelId);
+  if (!i || di(i.id) || !Bf(i, r))
+    throw new Error(`사용할 수 없는 표현요소: ${e.channelId}`);
+  if (!N2e(i, e, a.find((c) => c.actorId === e.actorId)?.sex))
+    throw new Error("표현요소가 채널의 적용 범위 또는 성별과 일치하지 않습니다.");
+  if (hV(e) === "scene") {
+    if (e.actorId !== undefined || e.placementIndex !== undefined)
+      throw new Error("장면 채널에 인물 연결을 지정할 수 없습니다.");
+  } else if (!n.some((c) => c.actorId === e.actorId && c.placementIndex === e.placementIndex))
+    throw new Error("표현요소가 현재 인물 등장 위치와 일치하지 않습니다.");
+  if (i.kind === "free" ? !e.tags || e.tags.length > (i.maxTags ?? 8) || e.tags.some((c) => c.length > (i.maxLength ?? 100)) : e.text === undefined || e.text.length > r8(i))
+    throw new Error("표현요소의 종류 또는 출력 길이가 정의와 다릅니다.");
+  const s = JSON.stringify([e.channelId, e.actorId, e.placementIndex]);
+  if (o.has(s))
+    throw new Error("동일한 표현요소 연결이 중복되었습니다.");
+  return o.add(s), e;
+}
+function bEe_91(e, t, r, n, a, o, i) {
+  if (e === undefined)
+    return [];
+  if (!Array.isArray(e))
+    return i.push(Lt("invalid-expression-channel", "degraded", o, "Expected an expressionChannels array.")), [];
+  const s = new Set, c = [];
+  e.length > yA_91 && i.push(Lt("invalid-expression-channel", "degraded", o, `Ignored entries beyond the ${yA_91}-row limit.`));
+  for (const [l, d] of e.slice(0, yA_91).entries()) {
+    const u = `${o}[${l}]`;
+    try {
+      let m = d;
+      const p = eOe(d) && Object.hasOwn(d, "id");
+      if (p) {
+        const { id: b, ...v } = d;
+        if (Object.hasOwn(v, "channelId") && v.channelId !== b)
+          throw new Error("Conflicting id and channelId.");
+        m = { ...v, channelId: b };
+      }
+      const h = XZ_91(VZ_91(m), t, r, n, a, s);
+      c.push(h), p && i.push(Lt("expression-channel-id-recovered", "recovered", u, "Read id as channelId."));
+    } catch (m) {
+      i.push(Lt("invalid-expression-channel", "degraded", u, String(m)));
+    }
+  }
+  return c;
 }
 function tOe(e, t, r) {
   if (!e)
@@ -15011,12 +15110,6 @@ function buildV5StructuredOutputSchema(e) {
     title: "NovelAI V5 Analyzer response"
   });
 }
-function NO(e) {
-  return e.some(({ impact: t }) => t === "unusable") ? "unusable" : e.some(({ impact: t }) => t === "degraded") ? "degraded" : e.some(({ impact: t }) => t === "recovered") ? "recovered" : "exact";
-}
-function Lt(e, t, r, n) {
-  return Object.freeze({ code: e, impact: t, path: r, message: n });
-}
 function op(e) {
   return e !== null && typeof e == "object" && !Array.isArray(e);
 }
@@ -15178,8 +15271,30 @@ function yZ(e, t = false) {
       l.includes(d) || r.push([u, `${o}.${d}`, i + 1]);
   }
 }
-function XOe(e) {
-  const t = typeof e == "string" ? vZ(e)?.[0] : e, r = [t];
+function dze_91(e) {
+  return typeof e == "string" ? vZ(e)?.[0] : e;
+}
+function uze_91(e) {
+  const t = yZ(e, true);
+  if (!t || t.diagnostics.some((r) => r.code === "invalid-slot-map-key-omitted"))
+    throw Object.assign(new Error("응답의 슬롯 목록을 손실 없이 복구할 수 없습니다."), {
+      code: "V5_RESPONSE_ENVELOPE",
+      diagnostics: t?.diagnostics ?? [
+        Lt(e === undefined ? "invalid-response-json" : "missing-illustration-list", "unusable", "$", e === undefined ? "응답 JSON을 해석할 수 없습니다." : "illustrations 배열 또는 슬롯 번호별 객체를 찾을 수 없습니다.")
+      ]
+    });
+  return t.entries;
+}
+function fze_91(e) {
+  if (!op(e.value))
+    throw new Error("응답 슬롯은 객체여야 합니다.");
+  const t = s2(e.value, ["slot_number", "slotNumber", "slot"]), r = CS(t?.[1]).value;
+  if (e.slotNumber !== undefined && t && r !== e.slotNumber)
+    throw new Error("슬롯 map key와 명시적인 슬롯 번호가 충돌합니다.");
+  return { row: e.value, slot_number: e.slotNumber ?? r };
+}
+function pze_91(e) {
+  const t = dze_91(e), r = [t];
   for (let a = 0;a < r.length && a < 64; a++) {
     const o = r[a];
     if (op(o)) {
@@ -15189,34 +15304,20 @@ function XOe(e) {
         i in o && r.push(o[i]);
     }
   }
-  const n = yZ(t, true);
-  if (!n || n.diagnostics.some((a) => a.code === "invalid-slot-map-key-omitted"))
-    throw Object.assign(new Error("응답의 슬롯 목록을 손실 없이 복구할 수 없습니다."), {
-      code: "V5_RESPONSE_ENVELOPE",
-      diagnostics: n?.diagnostics ?? [
-        Lt(t === undefined ? "invalid-response-json" : "missing-illustration-list", "unusable", "$", t === undefined ? "응답 JSON을 해석할 수 없습니다." : "illustrations 배열 또는 슬롯 번호별 객체를 찾을 수 없습니다.")
-      ]
-    });
+  const n = uze_91(t);
   return {
     generated_actor_proposals: xZ(t)?.value,
     generated_outfit_proposals: wZ(t)?.value,
-    illustrations: n.entries.map((a) => {
-      if (!op(a.value))
-        throw new Error("응답 슬롯은 객체여야 합니다.");
-      const o = kZ(a.value, a.sourcePath, a.slotNumber);
-      if (a.slotNumber !== undefined) {
-        const i = s2(a.value, ["slot_number", "slotNumber", "slot"]);
-        if (i && CS(i[1]).value !== a.slotNumber)
-          throw new Error("슬롯 map key와 명시적인 슬롯 번호가 충돌합니다.");
-      }
+    illustrations: n.map((a) => {
+      const { row: o, slot_number: i } = fze_91(a), s = kZ(o, a.sourcePath, a.slotNumber);
       return {
-        ...a.value,
-        slot_number: CS(o.slotNumber).value,
-        actor_roster: o.actorRoster,
-        frame_placement: o.framePlacement,
-        actor_detail: o.actorDetail,
-        interaction: o.interaction,
-        camera: o.camera
+        ...o,
+        slot_number: i,
+        actor_roster: s.actorRoster,
+        frame_placement: s.framePlacement,
+        actor_detail: s.actorDetail,
+        interaction: s.interaction,
+        camera: s.camera
       };
     })
   };
@@ -17221,47 +17322,40 @@ function WTe(e, t) {
   return t ? e.map((r) => r.impact === "unusable" && rre.has(r.code) ? Lt(r.code, "degraded", r.path, `${r.message} Reconstructed the illustration from unique request-local slot identity evidence.`) : r) : e;
 }
 function JTe(e, t, r, n, a, o, i) {
-  const s = e.sourcePath, c = r.slotNumber, l = VTe(n, a, c), d = r.usable && l.length === 1, u = [...t, ...e.diagnostics], m = d && u.some((q) => q.impact === "unusable" && rre.has(q.code)), p = [...WTe(u, d), ...r.diagnostics];
+  const s = e.sourcePath, c = r.slotNumber, l = VTe(n, a, c), d = r.usable && l.length === 1, u = [...t, ...e.diagnostics], m = d && u.some((ee) => ee.impact === "unusable" && rre.has(ee.code)), p = [...WTe(u, d), ...r.diagnostics];
   m && p.push(Lt("illustration-structure-local-recovered", "recovered", s, "Recovered an unusable response structure without another Analyzer request."));
-  const g = e.sceneDefinitionId == null || n.enabledModifierRefs?.includes("scene.text.page") ? undefined : n.catalog.analyzer.sceneDefinitions?.find((q) => q.id === e.sceneDefinitionId);
-  e.sceneDefinitionId != null && !g && p.push(Lt("unavailable-scene-definition", "unusable", `${s}.sceneDefinitionId`, "선택된 장면 정의가 삭제·비활성화되었거나 현재 형식에서 허용되지 않습니다. 다시 분석해주세요.")), g && (e = {
+  const h = e.sceneDefinitionId == null || n.enabledModifierRefs?.includes("scene.text.page") ? undefined : n.catalog.analyzer.sceneDefinitions?.find((ee) => ee.id === e.sceneDefinitionId);
+  e.sceneDefinitionId != null && !h && p.push(Lt("unavailable-scene-definition", "unusable", `${s}.sceneDefinitionId`, "선택된 장면 정의가 삭제·비활성화되었거나 현재 형식에서 허용되지 않습니다. 다시 분석해주세요.")), h && (e = {
     ...e,
     actorRoster: [],
     actorDetail: [],
     interaction: { items: [] },
     framePlacement: { ...Ln(e.framePlacement) ? e.framePlacement : {}, items: [] }
   });
-  const b = kTe(e), v = ATe(e.actorRoster, `${s}.actor_roster`, a, o, p, n.requiredParticipants, l, Zte(e), !b && n.actorRosterRecoveryMode !== "preserve-response-membership"), x = [...a.byKey.values()].map(({ candidateKey: q }) => q), w = new Set(n.enabledModifierRefs ?? []), I = tEe(n.catalog, n.enabledModifierRefs), S = RTe(e.interaction, `${s}.interaction`, v, n.catalog, i, x, p), A = DTe(e.framePlacement, `${s}.frame_placement`, p), P = KTe(A.sizeId, `${s}.frame_placement.sizeId`, n.catalog, p, n.allowedSizeIds, n.customSizes), k = $Te(A, `${s}.frame_placement`, n.catalog, i, w, x, p), C = qte(k.modifiers), j = k.modifiers.findIndex(({ id: q }) => q === D2), O = Object.freeze({ id: D2, options: Object.freeze([C]) }), N = [...k.modifiers];
-  j >= 0 ? N[j] = O : (N.unshift(O), p.push(Lt("scene-rating-defaulted", "recovered", `${s}.frame_placement.modifiers`, `Applied the effective '${C}' scene rating because the Analyzer omitted it.`)));
+  const b = kTe(e), v = ATe(e.actorRoster, `${s}.actor_roster`, a, o, p, n.requiredParticipants, l, Zte(e), !b && n.actorRosterRecoveryMode !== "preserve-response-membership"), x = [...a.byKey.values()].map(({ candidateKey: ee }) => ee), w = new Set(n.enabledModifierRefs ?? []), k = tEe(n.catalog, n.enabledModifierRefs), I = RTe(e.interaction, `${s}.interaction`, v, n.catalog, i, x, p), A = DTe(e.framePlacement, `${s}.frame_placement`, p), O = KTe(A.sizeId, `${s}.frame_placement.sizeId`, n.catalog, p, n.allowedSizeIds, n.customSizes), S = $Te(A, `${s}.frame_placement`, n.catalog, i, w, x, p), _ = qte(S.modifiers), C = S.modifiers.findIndex(({ id: ee }) => ee === D2), P = Object.freeze({ id: D2, options: Object.freeze([_]) }), z = [...S.modifiers];
+  C >= 0 ? z[C] = P : (z.unshift(P), p.push(Lt("scene-rating-defaulted", "recovered", `${s}.frame_placement.modifiers`, `Applied the effective '${_}' scene rating because the Analyzer omitted it.`)));
   const R = w.has("scene.text.page");
   !R && A.comicPanels !== undefined && p.push(Lt("unavailable-comic-panels-omitted", "degraded", `${s}.frame_placement.comicPanels`, "Omitted comic panel inventory because the active request is not a comic page.")), !R && A.comicPageModifiers !== undefined && p.push(Lt("unavailable-comic-page-modifiers-omitted", "degraded", `${s}.frame_placement.comicPageModifiers`, "Omitted Comic page planning selections because the active request is not a comic page.")), !R && A.comicCrossPanelActors !== undefined && p.push(Lt("unavailable-comic-cross-panel-actors-omitted", "degraded", `${s}.frame_placement.comicCrossPanelActors`, "Omitted cross-panel Actor planning because the active request is not a comic page."));
-  const D = R ? LTe(n.catalog, A.comicPanels, `${s}.frame_placement.comicPanels`, v, x, p) : Object.freeze([]);
-  R && !D.length && p.push(Lt("comic-panel-inventory-missing", "degraded", `${s}.frame_placement.comicPanels`, "The comic response did not provide a usable panel inventory; legacy occurrence recovery was retained."));
-  const B = R ? FTe(A.comicCrossPanelActors, `${s}.frame_placement.comicCrossPanelActors`, D, v, x, p) : Object.freeze([]), G = Object.freeze({
-    ...k,
-    modifiers: Object.freeze(g ? [...N.filter((q) => q.id !== g.definitionId), { id: g.definitionId, options: Object.freeze([g.id]) }] : N),
-    ...g ? { sceneDefinitionId: g.id } : {},
-    comicPanels: D,
-    comicCrossPanelActors: B
-  }), T = BTe(A.items, `${s}.frame_placement.items`, v, R, D, x, p), F = HTe(e.actorDetail, `${s}.actor_detail`, v, T, a, o, S.refByRawIndex, n.catalog, i, w, x, p, R).map((q) => Object.freeze({ ...q, modifiers: I(q.modifiers) })), L = GTe(e.camera, `${s}.camera`, n.catalog, i, x, p), V = R ? eEe(S.values, D, T, F, p) : QOe(S.values, T, F, p), X = Object.freeze({ ...L, modifiers: _Te(L.modifiers, "camera", n) });
-  let Y = [];
-  try {
-    Y = iZ(e.expressionChannels, n.catalog.analyzer.expressionChannels, R ? "comic" : "illustration", T, v.actors);
-  } catch (q) {
-    p.push(Lt("invalid-expression-channel", "unusable", `${s}.expressionChannels`, String(q)));
-  }
-  const M = R ? D.length > 0 : !!(g || k.instruction || k.freeTags.length || k.objectTags?.length || Y.some((q) => q.actorId === undefined && (q.tags?.length || q.text)));
-  return !v.actors.length && !(b && M) && p.push(Lt("illustration-has-no-actor", "unusable", `${s}.actor_roster`, "No Actor identity could be recovered, and no explicit actorless scene with visual content was supplied.")), Object.freeze({
+  const T = R ? LTe(n.catalog, A.comicPanels, `${s}.frame_placement.comicPanels`, v, x, p) : Object.freeze([]);
+  R && !T.length && p.push(Lt("comic-panel-inventory-missing", "degraded", `${s}.frame_placement.comicPanels`, "The comic response did not provide a usable panel inventory; legacy occurrence recovery was retained."));
+  const G = R ? FTe(A.comicCrossPanelActors, `${s}.frame_placement.comicCrossPanelActors`, T, v, x, p) : Object.freeze([]), $ = Object.freeze({
+    ...S,
+    modifiers: Object.freeze(h ? [...z.filter((ee) => ee.id !== h.definitionId), { id: h.definitionId, options: Object.freeze([h.id]) }] : z),
+    ...h ? { sceneDefinitionId: h.id } : {},
+    comicPanels: T,
+    comicCrossPanelActors: G
+  }), M = BTe(A.items, `${s}.frame_placement.items`, v, R, T, x, p), D = HTe(e.actorDetail, `${s}.actor_detail`, v, M, a, o, I.refByRawIndex, n.catalog, i, w, x, p, R).map((ee) => Object.freeze({ ...ee, modifiers: k(ee.modifiers) })), L = GTe(e.camera, `${s}.camera`, n.catalog, i, x, p), K = R ? eEe(I.values, T, M, D, p) : QOe(I.values, M, D, p), Q = Object.freeze({ ...L, modifiers: _Te(L.modifiers, "camera", n) }), U = bEe_91(e.expressionChannels, n.catalog.analyzer.expressionChannels, R ? "comic" : "illustration", M, v.actors, `${s}.expressionChannels`, p), B = R ? T.length > 0 : !!(h || S.instruction || S.freeTags.length || S.objectTags?.length || U.some((ee) => ee.actorId === undefined && (ee.tags?.length || ee.text)));
+  return !v.actors.length && !(b && B) && p.push(Lt("illustration-has-no-actor", "unusable", `${s}.actor_roster`, "No Actor identity could be recovered, and no explicit actorless scene with visual content was supplied.")), Object.freeze({
     slotNumber: c,
     status: NO(p),
     presentationMode: R ? "multi-frame" : "single-frame",
     actors: v.actors,
-    interactions: V.interactions,
-    location: Y.length ? { ...G, expressionChannels: Y } : G,
-    ...P ? { analyzerSizeId: P } : {},
-    framePlacement: T,
-    actorDetails: V.actorDetails,
-    camera: X,
+    interactions: K.interactions,
+    location: U.length ? { ...$, expressionChannels: U } : $,
+    ...O ? { analyzerSizeId: O } : {},
+    framePlacement: M,
+    actorDetails: K.actorDetails,
+    camera: Q,
     diagnostics: Object.freeze(p)
   });
 }
@@ -17708,181 +17802,181 @@ function f3e(e, t, r) {
   }).sort((a, o) => a.candidateKey.localeCompare(o.candidateKey)));
 }
 function buildV5AnalyzerRequestCore(e, t = {}) {
-  const r = Va(e.context.scene, "scene"), n = Object.freeze(e.context.actorCandidates.map((ue, Oe) => ure(ue, Oe)).sort((ue, Oe) => ue.candidateKey.localeCompare(Oe.candidateKey))), a = Object.freeze((e.context.actorCandidateOverlay ?? []).map((ue, Oe) => ure(ue, n.length + Oe)).sort((ue, Oe) => ue.candidateKey.localeCompare(Oe.candidateKey))), o = Object.freeze([...n, ...a]);
-  if (new Set(o.map(({ candidateKey: ue }) => ue)).size !== o.length)
+  const r = Va(e.context.scene, "scene"), n = Object.freeze(e.context.actorCandidates.map((ge, Ve) => ure(ge, Ve)).sort((ge, Ve) => ge.candidateKey.localeCompare(Ve.candidateKey))), a = Object.freeze((e.context.actorCandidateOverlay ?? []).map((ge, Ve) => ure(ge, n.length + Ve)).sort((ge, Ve) => ge.candidateKey.localeCompare(Ve.candidateKey))), o = Object.freeze([...n, ...a]);
+  if (new Set(o.map(({ candidateKey: ge }) => ge)).size !== o.length)
     throw new TypeError("actorCandidates candidateKey values must be unique.");
   const i = e.context.activePersonaCandidateKey === undefined ? "" : Va(e.context.activePersonaCandidateKey, "activePersonaCandidateKey");
   if (i) {
-    const ue = o.find(({ candidateKey: Oe }) => Oe === i);
-    if (!ue || ue.kind !== "protagonist")
+    const ge = o.find(({ candidateKey: Ve }) => Ve === i);
+    if (!ge || ge.kind !== "protagonist")
       throw new TypeError("activePersonaCandidateKey must reference a protagonist actor candidate.");
   }
-  const s = Object.freeze(o.filter((ue) => ue.kind !== "protagonist" || ue.candidateKey === i)), c = new Set(a.map(({ candidateKey: ue }) => ue)), l = Object.freeze(s.filter(({ candidateKey: ue }) => !c.has(ue))), d = Object.freeze(s.filter(({ candidateKey: ue }) => c.has(ue))), u = new Set(s.map(({ candidateKey: ue }) => ue)), m = new Map(s.map((ue) => [ue.candidateKey, new Set(ue.forms?.map(({ formRef: Oe }) => Oe) ?? [])])), p = a3e(e.context.slotHints, u), g = l3e(e.context.outfitCatalog, u, m), b = d3e(e.context.generatedOutfitCandidates, u, m);
-  u3e(g, b);
-  const v = f3e(e.context.outfitContinuity, u, m), x = i3e(e.context.naturalLanguageContinuity, u), w = e.context.freeOutfitGenerationEnabled ?? (g?.some(({ allowCreation: ue }) => ue) === true || b?.some(({ allowCreation: ue }) => ue) === true), I = e.context.responseEnvelopeMode ?? "array", S = tOe(t.systemExecution, i, e.projection), A = rOe(nre(e.projection, V2e(t.scenePresetId, t.systemExecution ? { ...t.scenePresetControlOverrides, "comic.speech-bubble": true } : t.scenePresetControlOverrides)), S), P = oOe(e.projection, A, S), { stages: k, projection: C } = P, j = (ue) => Gs(ue, !!e.projection.interactionDetails?.groups.includes(ue)), O = (ue, Oe) => {
-    const Je = Pm(S, Oe, ue, !Oe);
-    return Je !== undefined ? !Je : !(Oe ? e.context.referenceExclusions?.actors[Oe] : e.context.referenceExclusions?.scene)?.some(($e) => Gv($e.path, ue.path) && ($e.group === undefined || $e.group === ue.group) && ($e.option === undefined || $e.option === ue.option));
-  }, N = v?.flatMap((ue) => {
-    const Oe = Mu.outfit.filter((et) => O({ path: `outfit.${et}` }, ue.candidateKey)), Je = Oe.length === Mu.outfit.length, $e = ue.parts ? Object.fromEntries(Oe.flatMap((et) => Object.hasOwn(ue.parts, et) ? [[et, ue.parts[et]]] : [])) : undefined;
-    return !Oe.length || (!Je || !ue.currentOutfitId) && !Object.keys($e ?? {}).length ? [] : [
+  const s = Object.freeze(o.filter((ge) => ge.kind !== "protagonist" || ge.candidateKey === i)), c = new Set(a.map(({ candidateKey: ge }) => ge)), l = Object.freeze(s.filter(({ candidateKey: ge }) => !c.has(ge))), d = Object.freeze(s.filter(({ candidateKey: ge }) => c.has(ge))), u = new Set(s.map(({ candidateKey: ge }) => ge)), m = new Map(s.map((ge) => [ge.candidateKey, new Set(ge.forms?.map(({ formRef: Ve }) => Ve) ?? [])])), p = a3e(e.context.slotHints, u), h = l3e(e.context.outfitCatalog, u, m), b = d3e(e.context.generatedOutfitCandidates, u, m);
+  u3e(h, b);
+  const v = f3e(e.context.outfitContinuity, u, m), x = i3e(e.context.naturalLanguageContinuity, u), w = e.context.freeOutfitGenerationEnabled ?? (h?.some(({ allowCreation: ge }) => ge) === true || b?.some(({ allowCreation: ge }) => ge) === true), k = e.context.responseEnvelopeMode ?? "array", I = tOe(t.systemExecution, i, e.projection), A = rOe(nre(e.projection, V2e(t.scenePresetId, t.systemExecution ? { ...t.scenePresetControlOverrides, "comic.speech-bubble": true } : t.scenePresetControlOverrides)), I), O = oOe(e.projection, A, I), { stages: S, projection: _ } = O, C = (ge) => Gs(ge, !!e.projection.interactionDetails?.groups.includes(ge)), P = (ge, Ve) => {
+    const We = Pm(I, Ve, ge, !Ve);
+    return We !== undefined ? !We : !(Ve ? e.context.referenceExclusions?.actors[Ve] : e.context.referenceExclusions?.scene)?.some((Xe) => Gv(Xe.path, ge.path) && (Xe.group === undefined || Xe.group === ge.group) && (Xe.option === undefined || Xe.option === ge.option));
+  }, z = v?.flatMap((ge) => {
+    const Ve = Mu.outfit.filter((dt) => P({ path: `outfit.${dt}` }, ge.candidateKey)), We = Ve.length === Mu.outfit.length, Xe = ge.parts ? Object.fromEntries(Ve.flatMap((dt) => Object.hasOwn(ge.parts, dt) ? [[dt, ge.parts[dt]]] : [])) : undefined;
+    return !Ve.length || (!We || !ge.currentOutfitId) && !Object.keys(Xe ?? {}).length ? [] : [
       {
-        candidateKey: ue.candidateKey,
-        ...ue.currentFormRef && Mu.base.every((et) => O({ path: `base.${et}` }, ue.candidateKey)) ? { currentFormRef: ue.currentFormRef } : {},
-        ...Je && ue.currentOutfitId ? { currentOutfitId: ue.currentOutfitId } : {},
-        ...(!Je || !ue.currentOutfitId) && $e ? { parts: $e } : {}
+        candidateKey: ge.candidateKey,
+        ...ge.currentFormRef && Mu.base.every((dt) => P({ path: `base.${dt}` }, ge.candidateKey)) ? { currentFormRef: ge.currentFormRef } : {},
+        ...We && ge.currentOutfitId ? { currentOutfitId: ge.currentOutfitId } : {},
+        ...(!We || !ge.currentOutfitId) && Xe ? { parts: Xe } : {}
       }
     ];
-  }), R = Object.values(k).some((ue) => ue.modifierRefs.includes("scene.text.page")) ? "comic" : "illustration", D = (ue, Oe, Je) => {
-    const $e = e.projection.expressionChannels?.find((dt) => dt.id === ue), et = $e ?? (di(ue) ? { id: ue, ...$f[ue] } : undefined);
-    if (!et || et.kind !== Oe || !Lv(et) || $e && !Bf($e, R) || P.channelExcluded(ue, Oe, !Je) || !O({ path: Io(Oe, ue), group: ue }, Je))
+  }), R = Object.values(S).some((ge) => ge.modifierRefs.includes("scene.text.page")) ? "comic" : "illustration", T = (ge, Ve, We) => {
+    const Xe = e.projection.expressionChannels?.find((ut) => ut.id === ge), dt = Xe ?? (di(ge) ? { id: ge, ...$f[ge] } : undefined);
+    if (!dt || dt.kind !== Ve || !Lv(dt) || Xe && !Bf(Xe, R) || O.channelExcluded(ge, Ve, !We) || !P({ path: Io(Ve, ge), group: ge }, We))
       return false;
-    const Ze = Je ? s.find((dt) => dt.candidateKey === Je)?.gender : undefined;
-    return Je ? Ze ? YP(et, Ze) : t8(et) : Hl(et).includes("scene");
-  }, B = (ue, Oe) => (ue ?? []).filter((Je) => D(Je.id, "text", Oe)).map((Je) => ({
-    ...Je,
-    text: Je.text.slice(0, r8(e.projection.expressionChannels?.find(($e) => $e.id === Je.id) ?? { id: Je.id }))
-  })), G = x?.location && D("scene.text.location", "text") ? x.location : undefined, T = B(x?.channels), F = x?.actors?.flatMap((ue) => {
-    const Oe = B(ue.channels, ue.candidateKey), Je = ue.pose && D("actor.text.pose", "text", ue.candidateKey) ? ue.pose : undefined;
-    return Je || Oe.length ? [{ candidateKey: ue.candidateKey, ...Je ? { pose: Je } : {}, ...Oe.length ? { channels: Oe } : {} }] : [];
-  }), L = G || T.length || F?.length ? { ...G ? { location: G } : {}, ...T.length ? { channels: T } : {}, ...F?.length ? { actors: F } : {} } : undefined, V = (ue) => !e.projection.expressionGroupFormats?.[ue] || e.projection.expressionGroupFormats[ue].includes(R), X = e.projection.expressionGroupFormats ? Object.fromEntries(Object.entries(k).map(([ue, Oe]) => [
-    ue,
+    const Fe = We ? s.find((ut) => ut.candidateKey === We)?.gender : undefined;
+    return We ? Fe ? YP(dt, Fe) : t8(dt) : Hl(dt).includes("scene");
+  }, G = (ge, Ve) => (ge ?? []).filter((We) => T(We.id, "text", Ve)).map((We) => ({
+    ...We,
+    text: We.text.slice(0, r8(e.projection.expressionChannels?.find((Xe) => Xe.id === We.id) ?? { id: We.id }))
+  })), $ = x?.location && T("scene.text.location", "text") ? x.location : undefined, M = G(x?.channels), D = x?.actors?.flatMap((ge) => {
+    const Ve = G(ge.channels, ge.candidateKey), We = ge.pose && T("actor.text.pose", "text", ge.candidateKey) ? ge.pose : undefined;
+    return We || Ve.length ? [{ candidateKey: ge.candidateKey, ...We ? { pose: We } : {}, ...Ve.length ? { channels: Ve } : {} }] : [];
+  }), L = $ || M.length || D?.length ? { ...$ ? { location: $ } : {}, ...M.length ? { channels: M } : {}, ...D?.length ? { actors: D } : {} } : undefined, K = (ge) => !e.projection.expressionGroupFormats?.[ge] || e.projection.expressionGroupFormats[ge].includes(R), Q = e.projection.expressionGroupFormats ? Object.fromEntries(Object.entries(S).map(([ge, Ve]) => [
+    ge,
     {
-      ...Oe,
-      modifierRefs: Oe.modifierRefs.filter(V),
-      ...Oe.modifierDefaults ? {
-        modifierDefaults: Object.fromEntries(Object.entries(Oe.modifierDefaults).filter(([Je]) => V(Je)))
+      ...Ve,
+      modifierRefs: Ve.modifierRefs.filter(K),
+      ...Ve.modifierDefaults ? {
+        modifierDefaults: Object.fromEntries(Object.entries(Ve.modifierDefaults).filter(([We]) => K(We)))
       } : {}
     }
-  ])) : k, Y = e.projection.expressionChannels?.filter((ue) => ue.kind === "free" && Lv(ue) && Bf(ue, Object.values(X).some((Oe) => Oe.modifierRefs.includes("scene.text.page")) ? "comic" : "illustration")) ?? [], M = (ue) => {
-    const Oe = ue.freeTags?.filter(($e) => D($e.id, "free", ue.candidateKey)), Je = ue.modifiers ? P.filterSelections(ue.modifiers.filter(($e) => V($e.id) && e.projection.referenceGroupIds?.includes($e.id))).flatMap(($e) => {
-      const et = j($e.id), Ze = $e.options.filter((dt) => O({ path: `group.${et}`, group: et, option: dt }, ue.candidateKey));
-      return Ze.length ? [{ ...$e, options: Ze }] : [];
+  ])) : S, U = e.projection.expressionChannels?.filter((ge) => ge.kind === "free" && Lv(ge) && Bf(ge, Object.values(Q).some((Ve) => Ve.modifierRefs.includes("scene.text.page")) ? "comic" : "illustration")) ?? [], B = (ge) => {
+    const Ve = ge.freeTags?.filter((Xe) => T(Xe.id, "free", ge.candidateKey)), We = ge.modifiers ? O.filterSelections(ge.modifiers.filter((Xe) => K(Xe.id) && e.projection.referenceGroupIds?.includes(Xe.id))).flatMap((Xe) => {
+      const dt = C(Xe.id), Fe = Xe.options.filter((ut) => P({ path: `group.${dt}`, group: dt, option: ut }, ge.candidateKey));
+      return Fe.length ? [{ ...Xe, options: Fe }] : [];
     }) : undefined;
-    return Je?.length || Oe?.length ? { ...ue, ...Oe ? { freeTags: Oe } : {}, ...Je ? { modifiers: Je } : {} } : undefined;
-  }, q = s3e(e.context.actorModifierContinuity?.flatMap((ue) => {
-    const Oe = M(ue);
-    return Oe ? [Oe] : [];
+    return We?.length || Ve?.length ? { ...ge, ...Ve ? { freeTags: Ve } : {}, ...We ? { modifiers: We } : {} } : undefined;
+  }, ee = s3e(e.context.actorModifierContinuity?.flatMap((ge) => {
+    const Ve = B(ge);
+    return Ve ? [Ve] : [];
   }), u, new Set([
-    ...X.actor_detail.modifierRefs,
+    ...Q.actor_detail.modifierRefs,
     ...e.projection.actorActions.length ? ["action.general"] : [],
-    ...Y.filter(t8).map((ue) => ue.id)
-  ])), te = c3e(e.context.sceneModifierContinuity ? M(e.context.sceneModifierContinuity) : undefined, new Set([...X.frame_placement.modifierRefs, ...Y.filter((ue) => Hl(ue).includes("scene")).map((ue) => ue.id)])), K = e.context.interactionModifierContinuity?.flatMap((ue, Oe) => {
-    const Je = `interactionModifierContinuity[${Oe}]`;
-    if (!u.has(ue.sourceCandidateKey) || !u.has(ue.targetCandidateKey))
-      throw new TypeError(`${Je} references unknown participants.`);
-    const $e = [ue.sourceCandidateKey, ue.targetCandidateKey], et = ue.referenceForCandidateKeys?.filter((Q) => $e.includes(Q));
-    if (et && !et.length)
+    ...U.filter(t8).map((ge) => ge.id)
+  ])), Z = c3e(e.context.sceneModifierContinuity ? B(e.context.sceneModifierContinuity) : undefined, new Set([...Q.frame_placement.modifierRefs, ...U.filter((ge) => Hl(ge).includes("scene")).map((ge) => ge.id)])), F = e.context.interactionModifierContinuity?.flatMap((ge, Ve) => {
+    const We = `interactionModifierContinuity[${Ve}]`;
+    if (!u.has(ge.sourceCandidateKey) || !u.has(ge.targetCandidateKey))
+      throw new TypeError(`${We} references unknown participants.`);
+    const Xe = [ge.sourceCandidateKey, ge.targetCandidateKey], dt = ge.referenceForCandidateKeys?.filter((te) => Xe.includes(te));
+    if (dt && !dt.length)
       return [];
-    const Ze = e.interactionOutputPaths?.[ue.id] ?? `interaction.${ue.id}`, dt = [...e.projection.sharedModifiers, ...e.projection.v5OnlyModifiers], Pe = new Set(dt.filter((Q) => V(Q.id) && OO(C.interactionDetails, ue.id, Q.id)).map((Q) => Q.id)), Ce = P.filterSelections(ue.modifiers.filter((Q) => Pe.has(Q.id))).flatMap((Q) => {
-      const be = dt.find((Ie) => Ie.id === Q.id), Me = Q.options.filter((Ie) => be.subjects.some((ze) => ze === "global" ? O({ path: Ze, group: j(Q.id), option: Ie, interaction: ue.id }) : $e.some((ie) => (ze === "actor" || ze === "interaction" || ze === s.find((nt) => nt.candidateKey === ie)?.gender) && O({ path: Ze, group: j(Q.id), option: Ie, interaction: ue.id }, ie))));
-      return Me.length ? [{ ...Q, options: Me }] : [];
+    const Fe = e.interactionOutputPaths?.[ge.id] ?? `interaction.${ge.id}`, ut = [...e.projection.sharedModifiers, ...e.projection.v5OnlyModifiers], ye = new Set(ut.filter((te) => K(te.id) && OO(_.interactionDetails, ge.id, te.id)).map((te) => te.id)), Re = O.filterSelections(ge.modifiers.filter((te) => ye.has(te.id))).flatMap((te) => {
+      const Se = ut.find((be) => be.id === te.id), Ce = te.options.filter((be) => Se.subjects.some((ze) => ze === "global" ? P({ path: Fe, group: C(te.id), option: be, interaction: ge.id }) : Xe.some((ae) => (ze === "actor" || ze === "interaction" || ze === s.find((et) => et.candidateKey === ae)?.gender) && P({ path: Fe, group: C(te.id), option: be, interaction: ge.id }, ae))));
+      return Ce.length ? [{ ...te, options: Ce }] : [];
     });
-    return $e.some((Q) => O({ path: Ze, interaction: ue.id }, Q)) || Ce.length ? [
+    return Xe.some((te) => P({ path: Fe, interaction: ge.id }, te)) || Re.length ? [
       Object.freeze({
-        id: Va(ue.id, `${Je}.id`),
-        sourceCandidateKey: ue.sourceCandidateKey,
-        targetCandidateKey: ue.targetCandidateKey,
-        ...ue.mode ? { mode: ue.mode } : {},
-        ...et ? { referenceForCandidateKeys: et } : {},
-        modifiers: Ce.length ? w7({ modifiers: Ce }, Je, Pe).modifiers : []
+        id: Va(ge.id, `${We}.id`),
+        sourceCandidateKey: ge.sourceCandidateKey,
+        targetCandidateKey: ge.targetCandidateKey,
+        ...ge.mode ? { mode: ge.mode } : {},
+        ...dt ? { referenceForCandidateKeys: dt } : {},
+        modifiers: Re.length ? w7({ modifiers: Re }, We, ye).modifiers : []
       })
     ] : [];
-  }), H = Object.freeze([...new Set(Object.values(X).flatMap(({ modifierRefs: ue }) => ue))]), J = R === "comic", U = e.projection.expressionGroupFormats ? {
-    ...C,
-    sharedModifiers: C.sharedModifiers.filter((ue) => V(ue.id)),
-    v5OnlyModifiers: C.v5OnlyModifiers.filter((ue) => V(ue.id)),
-    actorActions: V("action.general") ? C.actorActions : []
-  } : C, ee = ZCe(e.projection.expressionChannels, R).filter((ue) => !P.channelExcluded(ue.id, ue.kind, ue.scope === "scene")), ae = e.projection.expressionChannels?.length ? Object.fromEntries(Object.entries(C.freeformModifiers).map(([ue, Oe]) => [
-    ue,
-    Oe.map((Je) => {
-      const $e = e.projection.expressionChannels?.find((Ze) => Ze.id === Je.id);
-      if (!$e)
-        return Je;
-      const et = Bf($e, R) && !P.channelExcluded(Je.id, $e.kind, $e.scope === "scene") ? [$e.instruction, $e.maxTags === undefined ? "" : `Return at most ${$e.maxTags} tags.`].filter(Boolean).join(" ") : "This channel is disabled for this request. Return an empty array or empty string; do not generate its content.";
-      return { ...Je, instruction: et };
+  }), H = Object.freeze([...new Set(Object.values(Q).flatMap(({ modifierRefs: ge }) => ge))]), J = R === "comic", V = e.projection.expressionGroupFormats ? {
+    ..._,
+    sharedModifiers: _.sharedModifiers.filter((ge) => K(ge.id)),
+    v5OnlyModifiers: _.v5OnlyModifiers.filter((ge) => K(ge.id)),
+    actorActions: K("action.general") ? _.actorActions : []
+  } : _, Y = ZCe(e.projection.expressionChannels, R).filter((ge) => !O.channelExcluded(ge.channelId, ge.kind, ge.scope === "scene")), re = e.projection.expressionChannels?.length ? Object.fromEntries(Object.entries(_.freeformModifiers).map(([ge, Ve]) => [
+    ge,
+    Ve.map((We) => {
+      const Xe = e.projection.expressionChannels?.find((Fe) => Fe.id === We.id);
+      if (!Xe)
+        return We;
+      const dt = Bf(Xe, R) && !O.channelExcluded(We.id, Xe.kind, Xe.scope === "scene") ? [Xe.instruction, Xe.maxTags === undefined ? "" : `Return at most ${Xe.maxTags} tags.`].filter(Boolean).join(" ") : "This channel is disabled for this request. Return an empty array or empty string; do not generate its content.";
+      return { ...We, instruction: dt };
     })
-  ])) : C.freeformModifiers, me = t.imageRatioAllowedSizeIds, se = me?.length ? (e.availableSizes ?? e.projection.sizes).filter(({ id: ue }) => me.includes(ue)) : [];
-  if (!J && me?.length && !se.length)
+  ])) : _.freeformModifiers, se = t.imageRatioAllowedSizeIds, oe = se?.length ? (e.availableSizes ?? e.projection.sizes).filter(({ id: ge }) => se.includes(ge)) : [];
+  if (!J && se?.length && !oe.length)
     throw new Error("이미지 비율 지침에 사용 가능한 크기가 없습니다. 크기를 다시 선택해주세요.");
-  const ge = J ? e.projection.sizes.filter(({ id: ue }) => ue === 1 || ue === 2) : se.length ? se : e.projection.sizes, le = !J && me?.length ? {
-    allowedSizeIds: Object.freeze(ge.map(({ id: ue }) => ue)),
+  const he = J ? e.projection.sizes.filter(({ id: ge }) => ge === 1 || ge === 2) : oe.length ? oe : e.projection.sizes, me = !J && se?.length ? {
+    allowedSizeIds: Object.freeze(he.map(({ id: ge }) => ge)),
     ...t.imageRatioCustomSizes?.length ? {
-      customSizes: Object.freeze(t.imageRatioCustomSizes.filter(({ id: ue }) => ge.some((Oe) => Oe.id === ue)).map(({ id: ue, sizeId: Oe, width: Je, height: $e }) => Object.freeze({ id: ue, sizeId: Oe, width: Je, height: $e })))
+      customSizes: Object.freeze(t.imageRatioCustomSizes.filter(({ id: ge }) => he.some((Ve) => Ve.id === ge)).map(({ id: ge, sizeId: Ve, width: We, height: Xe }) => Object.freeze({ id: ge, sizeId: Ve, width: We, height: Xe })))
     } : {}
-  } : {}, Ae = new Map(le.customSizes?.map(({ id: ue, sizeId: Oe }) => [ue, Oe])), fe = ge.map((ue) => ({ ...ue, id: Ae.get(ue.id) ?? ue.id })), ke = o3e(e.context.layoutContinuity?.flatMap((ue) => {
-    const Oe = Ae.get(ue.sizeId) ?? (ue.sizeId <= 5 ? ue.sizeId : undefined);
-    return Oe === undefined ? [] : [{ ...ue, sizeId: Oe }];
-  }), u), he = Object.freeze((X.actor_roster.requiredParticipants ?? []).flatMap((ue) => ue.actor === "persona" && i ? [Object.freeze({ candidateKey: i, role: ue.role })] : [])), pe = Object.freeze(Object.entries(X).flatMap(([ue, Oe]) => ue === "actor_roster" ? [] : Object.entries(Oe.modifierDefaults ?? {}).map(([Je, $e]) => Object.freeze({ stage: ue, id: Je, options: Object.freeze([...$e]) })))), Ee = !!e.context.knownCharacterIdentities?.length, je = Object.values(e.projection.objects).some((ue) => ue.length), He = {
+  } : {}, je = new Map(me.customSizes?.map(({ id: ge, sizeId: Ve }) => [ge, Ve])), pe = he.map((ge) => ({ ...ge, id: je.get(ge.id) ?? ge.id })), Ne = o3e(e.context.layoutContinuity?.flatMap((ge) => {
+    const Ve = je.get(ge.sizeId) ?? (ge.sizeId <= 5 ? ge.sizeId : undefined);
+    return Ve === undefined ? [] : [{ ...ge, sizeId: Ve }];
+  }), u), xe = Object.freeze((Q.actor_roster.requiredParticipants ?? []).flatMap((ge) => ge.actor === "persona" && i ? [Object.freeze({ candidateKey: i, role: ge.role })] : [])), we = Object.freeze(Object.entries(Q).flatMap(([ge, Ve]) => ge === "actor_roster" ? [] : Object.entries(Ve.modifierDefaults ?? {}).map(([We, Xe]) => Object.freeze({ stage: ge, id: We, options: Object.freeze([...Xe]) })))), fe = !!e.context.knownCharacterIdentities?.length, ve = Object.values(e.projection.objects).some((ge) => ge.length), Ee = {
     freeCharacterGenerationEnabled: e.context.freeCharacterGenerationEnabled,
-    knownCharacterIdentitiesProvided: Ee,
+    knownCharacterIdentitiesProvided: fe,
     allowOutfitCreation: w,
     comicPageEnabled: J,
-    responseEnvelopeMode: I,
+    responseEnvelopeMode: k,
     ...t,
-    ...S ? {
-      sceneDirection: [t.sceneDirection, nOe(S)].filter(Boolean).join(`
+    ...I ? {
+      sceneDirection: [t.sceneDirection, nOe(I)].filter(Boolean).join(`
 
 `)
     } : {},
-    legacyObjects: je
+    legacyObjects: ve
   };
   return Object.freeze({
-    systemInstruction: renderV5AnalyzerSystemInstruction(He),
-    instructionModules: buildV5InstructionModules(He),
+    systemInstruction: renderV5AnalyzerSystemInstruction(Ee),
+    instructionModules: buildV5InstructionModules(Ee),
     payload: Object.freeze({
       scene: r,
       image_count: n3e(e.context.imageCount),
       ...i ? { active_persona_candidate_key: i } : {},
       actor_candidates: l,
       ...d.length ? { actor_candidate_overlay: d } : {},
-      ...Ee ? { known_character_identities: e.context.knownCharacterIdentities } : {},
-      ...g?.length ? { appearance_catalog: g } : {},
+      ...fe ? { known_character_identities: e.context.knownCharacterIdentities } : {},
+      ...h?.length ? { appearance_catalog: h } : {},
       ...b?.length ? { generated_appearance_catalog: b } : {},
-      ...N?.length ? { outfit_continuity: N } : {},
+      ...z?.length ? { outfit_continuity: z } : {},
       ...p ? { slot_hints: p } : {},
-      ...ke ? { layout_continuity: ke } : {},
-      ...q?.length ? { actor_modifier_continuity: q } : {},
-      ...te ? { scene_modifier_continuity: te } : {},
-      ...K?.length ? { interaction_modifier_continuity: K } : {},
+      ...Ne ? { layout_continuity: Ne } : {},
+      ...ee?.length ? { actor_modifier_continuity: ee } : {},
+      ...Z ? { scene_modifier_continuity: Z } : {},
+      ...F?.length ? { interaction_modifier_continuity: F } : {},
       ...L ? { natural_language_continuity: L } : {},
-      analyzer_catalog: e3e({ ...U, sizes: fe }, X),
-      response_contract: POe(X, ae, fe, e.projection.generatedActors, {
+      analyzer_catalog: e3e({ ...V, sizes: pe }, Q),
+      response_contract: POe(Q, re, pe, e.projection.generatedActors, {
         freeGenerationDesignInstructions: t.freeGenerationDesignInstructions,
         freeGenerationInstructions: t.freeGenerationInstructions,
-        expressionChannels: ee,
+        expressionChannels: Y,
         excludedChannels: [
-          ...e.projection.freeformModifiers.freeTags.filter((ue) => P.channelExcluded(ue.id, "free", ue.subjects.includes("global"))),
-          ...e.projection.freeformModifiers.naturalLanguage.filter((ue) => P.channelExcluded(ue.id, "text", ue.subjects.includes("global")))
-        ].map((ue) => ue.id),
-        systemExpressionSettings: e.projection.expressionChannels?.filter((ue) => di(ue.id)).map((ue) => ({
-          id: ue.id,
-          enabled: Bf(ue, R),
-          instruction: ue.instruction,
-          ...ue.kind === "text" && ue.maxLength !== undefined ? { outputLimit: { maxLength: ue.maxLength } } : {},
-          ...ue.maxTags === undefined ? {} : { maxTags: ue.maxTags }
+          ...e.projection.freeformModifiers.freeTags.filter((ge) => O.channelExcluded(ge.id, "free", ge.subjects.includes("global"))),
+          ...e.projection.freeformModifiers.naturalLanguage.filter((ge) => O.channelExcluded(ge.id, "text", ge.subjects.includes("global")))
+        ].map((ge) => ge.id),
+        systemExpressionSettings: e.projection.expressionChannels?.filter((ge) => di(ge.id)).map((ge) => ({
+          id: ge.id,
+          enabled: Bf(ge, R),
+          instruction: ge.instruction,
+          ...ge.kind === "text" && ge.maxLength !== undefined ? { outputLimit: { maxLength: ge.maxLength } } : {},
+          ...ge.maxTags === undefined ? {} : { maxTags: ge.maxTags }
         })),
         allowOutfitCreation: w,
-        responseEnvelopeMode: I,
+        responseEnvelopeMode: k,
         freeCharacterGenerationEnabled: e.context.freeCharacterGenerationEnabled,
-        knownCharacterIdentitiesProvided: Ee,
+        knownCharacterIdentitiesProvided: fe,
         comicPanels: e.projection.comicPanels,
         sceneDefinitions: e.projection.sceneDefinitions,
         analysisGuidance: e.projection.analysisGuidance,
         interactionDetails: e.projection.interactionDetails,
-        legacyObjects: je
+        legacyObjects: ve
       })
     }),
     enabledModifierRefs: H,
     localRecovery: Object.freeze({
-      ...S ? { systemDirection: S } : {},
-      ...le,
-      requiredParticipants: he,
-      modifierDefaults: pe
+      ...I ? { systemDirection: I } : {},
+      ...me,
+      requiredParticipants: xe,
+      modifierDefaults: we
     }),
     localProjection: Object.freeze({
-      ...le,
-      characterCoordinates: X.frame_placement.projection?.characterCoordinates ?? "fixed",
-      ...X.frame_placement.projection?.sizeId ? { sizeId: X.frame_placement.projection.sizeId } : {}
+      ...me,
+      characterCoordinates: Q.frame_placement.projection?.characterCoordinates ?? "fixed",
+      ...Q.frame_placement.projection?.sizeId ? { sizeId: Q.frame_placement.projection.sizeId } : {}
     })
   });
 }
@@ -22971,6 +23065,42 @@ function DN(e, t) {
   const r = yb(e);
   return t === "image-generation" && r.enabled && r.visible;
 }
+var Jde_91 = {
+  ANALYZER_STREAM_INVALID: "스트림 응답 형식 오류",
+  ANALYZER_STREAM_ERROR: "스트림 응답 오류",
+  USER_CANCELLED: "요청 취소",
+  REQUEST_ABORTED: "요청 취소",
+  ANALYZER_EMPTY_RESPONSE: "빈 응답",
+  ANALYZER_JSON_PARSE: "응답 형식 오류",
+  ANALYZER_RISU_RESPONSE: "호스트 응답 형식 오류",
+  ANALYZER_RISU_FAILED: "호스트 모델 요청 실패",
+  ANALYZER_TIMEOUT: "응답 시간 초과",
+  ANALYZER_NETWORK: "네트워크 오류",
+  ANALYZER_CONTENT_FILTERED: "콘텐츠 필터",
+  ANALYZER_REFUSAL: "모델 응답 거부",
+  ANALYZER_OUTPUT_TRUNCATED: "응답 길이 초과",
+  ANALYZER_PROVIDER_INTERRUPTED: "응답 중단"
+};
+function HK_91(e, t) {
+  if (e instanceof Error) {
+    if (e.name === "AbortError")
+      return "요청 취소";
+    if (e instanceof SyntaxError)
+      return "응답 형식 오류";
+    if ("code" in e && typeof e.code == "string" && Object.hasOwn(Jde_91, e.code))
+      return Jde_91[e.code];
+  }
+  if (t === 400 || t === 422)
+    return "요청 형식 거부";
+  if (t === 404)
+    return "요청 대상 없음";
+  if (t === 429)
+    return "요청 한도 초과";
+  if (t === 401 || t === 403)
+    return "인증·권한 오류";
+  if (t && t >= 500)
+    return "공급자 서버 오류";
+}
 function LN(e, t) {
   const r = new Map;
   for (const n of [...e, ...t]) {
@@ -22985,16 +23115,6 @@ function gK(e) {
     usage: Object.freeze({ ...t.usage }),
     calls: Object.freeze(t.calls.map((r) => Object.freeze({ ...r })))
   })));
-}
-function hK(e) {
-  const t = LN([], e), r = (a) => t.length && t.every((o) => a(o) !== undefined) ? t.reduce((o, i) => o + a(i), 0) : undefined, n = t.filter((a) => a.creationConfirmed || (a.usage.cacheWriteTokens ?? 0) > 0);
-  return {
-    created: n.length > 0,
-    hit: t.some((a) => (a.usage.cacheReadTokens ?? 0) > 0 || a.responseCacheHit),
-    inputTokens: r((a) => a.usage.inputTokens),
-    readTokens: r((a) => a.usage.cacheReadTokens),
-    writeTokens: n.length && n.every((a) => (a.creationTokens ?? a.usage.cacheWriteTokens) !== undefined) ? n.reduce((a, o) => a + (o.creationTokens ?? o.usage.cacheWriteTokens), 0) : undefined
-  };
 }
 function EUe(e, t) {
   let r = 0, n = false, a = false;
@@ -23017,6 +23137,18 @@ function EUe(e, t) {
   }
   return "";
 }
+function Vpe(e) {
+  return {
+    namespace: e.namespace,
+    protocolVersion: e.protocolVersion,
+    cacheSegments: e.cacheSegments,
+    liveMessages: e.liveMessages,
+    ...e.prefixPreparation ? { prefixPreparation: e.prefixPreparation } : {},
+    ...e.layout ? { layout: e.layout } : {},
+    ...e.providerRoutingKey ? { providerRoutingKey: e.providerRoutingKey } : {},
+    ...e.diagnostic ? { diagnostic: e.diagnostic } : {}
+  };
+}
 var AnalyzerClientError = class extends Error {
   code;
   httpStatus;
@@ -23029,6 +23161,9 @@ var AnalyzerClientError = class extends Error {
     super(e, { cause: t.cause }), this.name = "AnalyzerClientError", this.code = t.code ?? "ANALYZER_ERROR", this.httpStatus = t.httpStatus ?? 0, this.retryAfterMs = t.retryAfterMs ?? 0, this.analyzerRaw = t.analyzerRaw, this.responseText = t.responseText, this.context = t.context, this.retryable = t.retryable;
   }
 };
+function Ibt(e) {
+  return !(e instanceof AnalyzerClientError) || !["ANALYZER_JSON_PARSE", "ANALYZER_EMPTY_RESPONSE"].includes(e.code) ? null : e.analyzerRaw ?? e.responseText ?? "";
+}
 function pn(e) {
   return typeof e == "string" || typeof e == "number" ? String(e).trim() : "";
 }
@@ -23269,17 +23404,6 @@ function Y$(e) {
   const r = t.httpStatus || t.status || 0;
   return r === 408 || r === 429 || r >= 500 && r < 600;
 }
-function Vpe(e) {
-  return {
-    namespace: e.namespace,
-    protocolVersion: e.protocolVersion,
-    cacheSegments: e.cacheSegments,
-    liveMessages: e.liveMessages,
-    ...e.layout ? { layout: e.layout } : {},
-    ...e.providerRoutingKey ? { providerRoutingKey: e.providerRoutingKey } : {},
-    ...e.diagnostic ? { diagnostic: e.diagnostic } : {}
-  };
-}
 function t_(e) {
   return e == null ? "" : String(e).trim();
 }
@@ -23348,19 +23472,6 @@ function mM(e) {
     /(?:image|image_url|vision).{0,160}only supported by.{0,80}models?/iu,
     /model.{0,120}(?:is not multimodal|is text[- ]only)/iu
   ].some((n) => n.test(r)) : false;
-}
-function zet(e, t) {
-  const r = t.cacheUsage;
-  if (r)
-    return {
-      stage: e,
-      ...t.requestObservation ? { requests: [t.requestObservation] } : {},
-      status: r.status,
-      inputTokensComplete: r.inputTokens !== undefined,
-      ...r.inputTokens !== undefined ? { inputTokens: r.inputTokens } : {},
-      ...r.cacheReadTokens !== undefined ? { cacheReadTokens: r.cacheReadTokens } : {},
-      ...r.cacheWriteTokens !== undefined ? { cacheWriteTokens: r.cacheWriteTokens } : {}
-    };
 }
 function io(e) {
   return e == null ? "" : String(e).trim();
@@ -25660,16 +25771,10 @@ function Exe(e) {
   });
 }
 function tht(e) {
-  const t = e.observation, r = t ? hK([t]) : undefined;
+  const t = e.observation;
   return {
     ...t ? {
       analyzerRequests: [t],
-      analyzerCacheNoticeId: t.requestId,
-      analyzerInputTokens: r?.inputTokens ?? 0,
-      analyzerInputTokensComplete: r?.inputTokens !== undefined,
-      analyzerCacheReadTokens: r?.readTokens ?? 0,
-      analyzerCacheWriteTokens: r?.writeTokens ?? 0,
-      analyzerCacheStatus: t.usage.status,
       ...t.phase === "started" ? {
         analyzerStructuredOutputFallback: false,
         analyzerStructuredOutputFallbackProtocol: "",
@@ -25680,17 +25785,6 @@ function tht(e) {
     analyzerPdfBytes: e.bytes ?? 0,
     analyzerPdfPages: e.pages ?? 0
   };
-}
-function rht(e) {
-  return e ? {
-    ...e.requests ? { analyzerRequests: e.requests } : {},
-    analyzerCacheNoticeId: e.requests?.at(-1)?.requestId ?? e.stage,
-    analyzerInputTokens: e.inputTokens ?? 0,
-    analyzerInputTokensComplete: e.inputTokensComplete,
-    analyzerCacheReadTokens: e.cacheReadTokens ?? 0,
-    analyzerCacheWriteTokens: e.cacheWriteTokens ?? 0,
-    analyzerCacheStatus: e.status
-  } : {};
 }
 function nht(e) {
   if (e?.structuredOutputFallback !== true)
@@ -25754,15 +25848,9 @@ function lht() {
     providerValue: 0,
     providerMax: 0,
     providerProgress: 0,
-    analyzerCacheNoticeId: "",
     analyzerPdf: false,
     analyzerPdfBytes: 0,
     analyzerPdfPages: 0,
-    analyzerInputTokens: 0,
-    analyzerInputTokensComplete: false,
-    analyzerCacheReadTokens: 0,
-    analyzerCacheWriteTokens: 0,
-    analyzerCacheStatus: "",
     analyzerStructuredOutputFallback: false,
     analyzerStructuredOutputFallbackProtocol: "",
     analyzerStructuredOutputFallbackHttpStatus: 0,
@@ -25804,15 +25892,9 @@ function uht(e, t) {
     providerMax: r(t.providerMax, e.providerMax),
     providerProgress: t.providerProgress === undefined ? e.providerProgress : Math.max(0, Math.min(1, Number(t.providerProgress) || 0)),
     analyzerRequests: t.analyzerRequests ? gK(LN(e.analyzerRequests ?? [], t.analyzerRequests)) : e.analyzerRequests,
-    analyzerCacheNoticeId: t.analyzerCacheNoticeId === undefined ? e.analyzerCacheNoticeId : ia(t.analyzerCacheNoticeId),
     analyzerPdf: t.analyzerPdf === undefined ? e.analyzerPdf : t.analyzerPdf === true,
     analyzerPdfBytes: r(t.analyzerPdfBytes, e.analyzerPdfBytes),
     analyzerPdfPages: r(t.analyzerPdfPages, e.analyzerPdfPages),
-    analyzerInputTokens: r(t.analyzerInputTokens, e.analyzerInputTokens),
-    analyzerInputTokensComplete: t.analyzerInputTokensComplete === undefined ? e.analyzerInputTokensComplete : t.analyzerInputTokensComplete === true,
-    analyzerCacheReadTokens: r(t.analyzerCacheReadTokens, e.analyzerCacheReadTokens),
-    analyzerCacheWriteTokens: r(t.analyzerCacheWriteTokens, e.analyzerCacheWriteTokens),
-    analyzerCacheStatus: t.analyzerCacheStatus === undefined ? e.analyzerCacheStatus : ia(t.analyzerCacheStatus),
     analyzerStructuredOutputFallback: t.analyzerStructuredOutputFallback === undefined ? e.analyzerStructuredOutputFallback : t.analyzerStructuredOutputFallback === true,
     analyzerStructuredOutputFallbackProtocol: t.analyzerStructuredOutputFallbackProtocol === undefined ? e.analyzerStructuredOutputFallbackProtocol : ia(t.analyzerStructuredOutputFallbackProtocol),
     analyzerStructuredOutputFallbackHttpStatus: r(t.analyzerStructuredOutputFallbackHttpStatus, e.analyzerStructuredOutputFallbackHttpStatus),
@@ -26764,6 +26846,9 @@ function Zht(e, t) {
     ...e.generatedOutfitCandidates ? { generatedOutfitCandidates: n(e.generatedOutfitCandidates) } : {},
     ...e.outfitContinuity ? { outfitContinuity: n(e.outfitContinuity) } : {},
     ...e.actorModifierContinuity ? { actorModifierContinuity: n(e.actorModifierContinuity) } : {},
+    ...e.interactionModifierContinuity ? {
+      interactionModifierContinuity: e.interactionModifierContinuity.filter((o) => r.has(o.sourceCandidateKey) && r.has(o.targetCandidateKey))
+    } : {},
     ...e.slotHints ? {
       slotHints: Object.fromEntries(Object.entries(e.slotHints).map(([o, i]) => [o, i.filter((s) => r.has(s))]).filter(([, o]) => o.length))
     } : {},
@@ -27040,51 +27125,26 @@ function Vxe(e, t) {
     throw !(r instanceof Error) || "diagnostics" in r || "retryable" in r ? r : cs(`슬롯 ${String(e)}`, "split-binding", r.message);
   }
 }
-var Wxe = (e) => e.normalize("NFKC").replace(/\s+/gu, " ").trim();
-var ebt = { '"': '"', "'": "'", "“": "”", "‘": "’", "「": "」", "『": "』" };
-function tq(e, t) {
-  let r = Wxe(e);
-  const n = Wxe(t);
-  for (let a = 0;a < 4 && r; a++) {
-    if (n.includes(r))
-      return r;
-    if (ebt[r[0]] !== r.at(-1))
-      break;
-    r = r.slice(1, -1).trim();
-  }
-}
-function tbt(e, t, r) {
-  const n = { ...e };
-  for (const [i, s] of [
+function $vt_91(e) {
+  const t = { ...e };
+  for (const [r, n] of [
     ["scene_intent", "sceneIntent"],
     ["temporal_state", "temporalState"],
     ["state_constraints", "stateConstraints"]
   ])
-    n[i] ??= e[s];
-  for (const i of ["scene_intent", "temporal_state", "state_constraints"]) {
-    const s = n[i], c = s == null ? [] : Array.isArray(s) ? s : [s], l = [
-      ...new Set(c.filter((d) => typeof d == "string").map((d) => d.trim()).filter(Boolean))
+    t[r] ??= e[n];
+  for (const r of ["scene_intent", "temporal_state", "state_constraints"]) {
+    const n = t[r], a = n == null ? [] : Array.isArray(n) ? n : [n], o = [
+      ...new Set(a.filter((i) => typeof i == "string").map((i) => i.trim()).filter(Boolean))
     ];
-    c.some((d) => d != null && typeof d != "string") && O_e({
+    a.some((i) => i != null && typeof i != "string") && O_e({
       type: "split-optional-note-skipped",
-      message: `슬롯 ${e.slot_number}.${i}: 해석할 수 없는 선택 메모 항목을 생략했습니다.`,
-      data: { slot: e.slot_number, field: i }
-    }), n[i] = i === "state_constraints" ? l : l.join(`
+      message: `슬롯 ${e.slot_number}.${r}: 해석할 수 없는 선택 메모 항목을 생략했습니다.`,
+      data: { slot: e.slot_number, field: r }
+    }), t[r] = r === "state_constraints" ? o : o.join(`
 `);
   }
-  const a = e.evidence ?? e.sourceQuote ?? e.source_quote;
-  if (a != null && typeof a != "string")
-    throw cs(`슬롯 ${e.slot_number}.evidence`, "invalid-evidence", "원문 근거는 인용 문자열이어야 합니다.");
-  let o = typeof a == "string" && a.trim() ? tq(a, t) : undefined;
-  if (typeof a == "string" && a.trim() && !o)
-    throw cs(`슬롯 ${e.slot_number}.evidence`, "unmatched-evidence", "인용 근거가 원문과 일치하지 않습니다.");
-  if (!o) {
-    const i = r.slotEvidence?.filter((s) => s.slot_number === e.slot_number) ?? [];
-    i.length === 1 && (o = tq(i[0].after, t) ?? tq(i[0].before, t));
-  }
-  if (!o)
-    throw cs(`슬롯 ${e.slot_number}.evidence`, "missing-evidence", "선택 슬롯의 원문 근거를 복원할 수 없습니다.");
-  return n.evidence = o, n;
+  return delete t.evidence, delete t.sourceQuote, delete t.source_quote, t;
 }
 var rbt = class extends Error {
   code = "SPLIT_RESPONSE_VALIDATION";
@@ -27097,23 +27157,25 @@ function nbt(e) {
   return Object.assign(new rbt(`${r}${n ? ` ${n}` : ""}`, { cause: e }), { diagnostics: t });
 }
 var abt = "Preserve locked actor_roster entries; append distinct actorIds only for additional depictions of locked candidateKey/form/outfit definitions. Resolve omitted or empty occurrence outfit from actor_roster.outfit; explicitly repeating the same effective outfit is equivalent. Detail owns frame placement order, panel IDs and panel composition. Place every locked actorId at least once and preserve its ordered effective outfit transitions. In every preset, additional depictions in one image, one panel or across panels may repeat the same identity and effective outfit; never introduce a new identity/form/outfit or omit/reorder a locked actorId's outfit transition. Bind actor_detail 1:1 to the FINAL frame_placement.items by actorId and placementIndex, not to initial occurrences indices. Initial panelId is only a planning hint; final panel references must be internally consistent.";
-var Jxe = Object.freeze({
-  version: 8,
-  initial: "Return illustrations with slot_number, actor_roster, evidence (exact source quote), scene_intent, temporal_state, state_constraints and occurrences (actorId, placementIndex, optional panelId/outfit). Select exactly image_count unique source slots. Apply original discovery and outfit policies before selecting slots; complete shared generated_actor_proposals/generated_outfit_proposals once. Record binding reasons, explicit state transitions and applicable user constraints without adding new facts or presentation restrictions. A comic page is one slot; assign each visible occurrence once with sequential placementIndex. Preserve actorless scenes with empty roster/occurrences. Leave pose, expression, camera, coordinates, modifiers and tags for detail.",
-  detail: "Analyze exactly assigned_slots using the detailed V5 illustration contract. Read the locked definitions and per-slot evidence, scene_intent, temporal_state and state_constraints as planning evidence subordinate to original source and user/preset authority. On source/plan conflict return only {conflict: reason}. Otherwise return only illustrations, with frame_placement, actor_detail, interaction and camera for assigned slots. Never borrow unassigned slots to fill coverage."
+var uwe_91 = Object.freeze({
+  version: 10,
+  initial: "Return illustrations with slot_number, actor_roster, scene_intent, temporal_state, state_constraints and occurrences (actorId, placementIndex, optional panelId/outfit). Choose image_count distinct slot numbers from slot_context; before and after are zero-based indices into the scene paragraph array. Honor assigned_slots when present. Apply original discovery and outfit policies to those slots; complete shared generated_actor_proposals/generated_outfit_proposals once. Record binding reasons, explicit state transitions and applicable user constraints without adding new facts or presentation restrictions. A comic page is one slot; assign each visible occurrence once with sequential placementIndex. Preserve actorless scenes with empty roster/occurrences. Leave pose, expression, camera, coordinates, modifiers and tags for detail.",
+  detail: "Analyze exactly assigned_slots using the detailed V5 illustration contract. Read the locked definitions and slot_context before/after source paragraphs, scene_intent, temporal_state and state_constraints as planning evidence subordinate to original source and user/preset authority. On source/plan conflict return only {conflict: reason}. Otherwise return only illustrations, with frame_placement, actor_detail, interaction and camera for assigned slots. Never borrow unassigned slots to fill coverage."
 });
 function Pa(e) {
   if (!e || typeof e != "object" || Array.isArray(e))
     throw new Error("분할 분석 응답은 객체여야 합니다.");
   return e;
 }
-function Yxe(e) {
+function qvt_91(e) {
   if (new TextEncoder().encode(typeof e == "string" ? e : JSON.stringify(e)).byteLength > 8 * 1024 * 1024)
     throw Object.assign(new Error("분할 분석 응답이 8MiB를 초과했습니다."), {
       retryable: false,
       code: "SPLIT_RESOURCE_LIMIT"
     });
-  return XOe(e);
+}
+function Yxe(e) {
+  return qvt_91(e), pze_91(e);
 }
 function Zxe(e) {
   return Array.isArray(e.illustrations) ? e.illustrations.map(Pa) : Object.entries(Pa(e.illustrations)).map(([t, r]) => ({ ...Pa(r), slot_number: Number(t) }));
@@ -27133,16 +27195,17 @@ var Ts = (e) => JSON.stringify(e, (t, r) => r && typeof r == "object" && !Array.
 var e0e = (e) => Ts([e.candidateKey, e.formRef]);
 var rq = (e) => e.filter((t, r) => r === 0 || t !== e[r - 1]);
 var pj = (e, t) => Ts(e === undefined || e && typeof e == "object" && !Object.keys(e).length ? t : e);
-function obt(e, t, r, n, a = [], o = {}) {
-  const i = Yxe(e), s = Zxe(i).map((c) => Vxe(c.slot_number, () => {
+function obt(e, t, r, n = [], a = {}) {
+  const o = Yxe(e), i = Zxe(o);
+  Qxe(i, t, r);
+  const s = i.map((c) => Vxe(c.slot_number, () => {
     if (c.sceneDefinitionId != null) {
-      if (o.comic || typeof c.sceneDefinitionId != "string" || !o.sceneDefinitionIds?.includes(c.sceneDefinitionId))
+      if (a.comic || typeof c.sceneDefinitionId != "string" || !a.sceneDefinitionIds?.includes(c.sceneDefinitionId))
         throw cs(`슬롯 ${c.slot_number}.sceneDefinitionId`, "unavailable-scene-definition", "현재 요청에서 선택할 수 없는 장면 정의입니다.");
       c = { ...c, actor_roster: [], occurrences: [] };
     }
-    return tbt(B4(c, a, undefined, o.comic), n, o);
+    return $vt_91(B4(c, n, undefined, a.comic));
   }));
-  Qxe(s, t, r);
   for (const c of s) {
     if (!Array.isArray(c.actor_roster))
       throw cs(`슬롯 ${c.slot_number}.actor_roster`, "missing-roster", "인물 결정을 복구할 수 없습니다.");
@@ -27166,11 +27229,11 @@ function obt(e, t, r, n, a = [], o = {}) {
       throw cs(`슬롯 ${c.slot_number}.occurrences`, "missing-actor-occurrence", "초기 결정에 배치되지 않은 인물이 있습니다.");
   }
   for (const c of ["generated_actor_proposals", "generated_outfit_proposals"])
-    if (i[c] == null)
-      delete i[c];
-    else if (!Array.isArray(i[c]))
+    if (o[c] == null)
+      delete o[c];
+    else if (!Array.isArray(o[c]))
       throw cs(c, "invalid-proposals", "초기 결정의 공유 제안 목록이 올바르지 않습니다.");
-  return JSON.parse(JSON.stringify({ ...i, illustrations: s.sort((c, l) => Number(c.slot_number) - Number(l.slot_number)) }));
+  return JSON.parse(JSON.stringify({ ...o, illustrations: s.sort((c, l) => Number(c.slot_number) - Number(l.slot_number)) }));
 }
 function t0e(e) {
   return {
@@ -27299,7 +27362,7 @@ function sbt(e) {
   };
   return {
     ...e,
-    title: "V5 split initial decision",
+    title: "V5 initial slot, actor and outfit plan",
     properties: {
       ...t,
       illustrations: {
@@ -27311,7 +27374,6 @@ function sbt(e) {
             ...r.sceneDefinitionId ? ["sceneDefinitionId"] : [],
             "slot_number",
             "actor_roster",
-            "evidence",
             "scene_intent",
             "temporal_state",
             "state_constraints",
@@ -27321,7 +27383,6 @@ function sbt(e) {
             ...r.sceneDefinitionId ? { sceneDefinitionId: r.sceneDefinitionId } : {},
             slot_number: r.slot_number,
             actor_roster: r.actor_roster,
-            evidence: { type: "string", minLength: 1 },
             temporal_state: { type: "string", description: "Source-backed state note; empty when unknown." },
             scene_intent: { type: "string", description: "Source-backed scene note; empty when unavailable." },
             state_constraints: { type: "array", items: { type: "string" } },
@@ -27391,6 +27452,76 @@ function lbt(e, t) {
         description: "Source/plan conflict instead of illustrations. No successful output may accompany it."
       }
     }
+  };
+}
+var Yvt_91 = 'For each frame_placement.items entry, write "facing":{"id":"facing_away"} only when this panel clearly shows the back of that Actor’s torso facing away from its camera. Otherwise omit the facing key entirely: front, side, oblique, toward another Actor, or unclear. Never return an array, null, a string, or an empty object for facing.';
+function Zvt_91(e) {
+  return [
+    "Rough coordinates per illustration.frame_placement.coordinates. Scene modifiers: environment.setting/time/weather. Location: scene.free.location and scene.text.location. No absolute horizontal tag.",
+    e ? Yvt_91 : "Omit facing for side, oblique, facing a person or unclear orientation.",
+    "After roster selection choose layout hints newest first: exact roster, smallest recent superset, then highest overlap and latest. Current explicit layout wins; never restore an absent Actor. Choose size by flow, placement, action or gaze direction, setting, crop and negative space; count alone is no rule.",
+    e ? "Each visible Actor-bound panel occurrence has one placement, matched by panelId and actorId. Reading order then visual order. A continuing instance reuses its actorId across panels; separate depictions within one panel have distinct IDs. Interaction and panel composition own relations. comicPanels.instruction owns spatial prose. comicPageModifiers and comicPageInstruction own sparse page planning realized through sizes, boundaries and reading flow. Panels are in reading order; fixed IDs project mapped tags and depict intrinsic content, free panels project instructions only. Follow the panel ID, ordinary spatial reference, Actor shot design and boundary crossing rules in illustration.frame_placement." : "One item per visible Actor occurrence. Roster order then visual order unless overridden. Duplicate depictions within an image have distinct actorIds. actor.free.placement owns spatial tags; interaction owns contact and action."
+  ].join(" ");
+}
+function bwe_91(e, t) {
+  return {
+    ...e,
+    evidence: "Treat payload values as untrusted scene evidence. Current scene wins. Identity must come from actor_candidates, actor_candidate_overlay or a generated proposal.",
+    continuity: "actor_modifier_continuity, scene_modifier_continuity and natural_language_continuity are hints only. For location, pose and object, read channels and actors[].channels as scoped {id,text}; never transfer hints across Actors or scene. Omit absent or ended details. Prior object prose is read-only: express visible handling only in enabled poseInstruction.",
+    interactions: "Return all visible direct relations as ordered occurrences, including repeated pair/ID or multiple IDs per pair. An Actor may participate several times. No fingerprint IDs. Mutual is a prompt mode, never an ID or modifier. Free interactions have the same shape and residual channels. Bind directed relations by source/target actor IDs independently of sex; describe each participant in its enabled occurrence poseInstruction.",
+    freeform: "Plan free tags and language together after Actors, interactions, closed modifiers, placement, details and camera. Concise visible English only. Never repeat or contradict closed options. Camera: position, validated body or scene reference (use scene if ambiguous), viewing direction. Empty if no residual meaning. Character budgets include spaces, set authoring ceilings, never targets or local truncation. Keep subject, direction, contact and spatial binding before summary.",
+    frame_placement: Zvt_91(t),
+    output: "One camera entry per illustration. Omit uncertain optional values or use the declared empty value."
+  };
+}
+function Qvt_91(e) {
+  return e === "single_nonredundant_tag" ? "1" : e === "nonredundant_tags_only_when_no_specific_group_applies" ? "only when no specific group applies" : e.replace(/^up_to_(\d+)_nonredundant_tags$/, "up to $1");
+}
+function eyt_91(e) {
+  const { actors: t, outfits: r, catalog_guidance: n } = e.analysis_policy, a = e.root.generated_actor_proposals, o = a.profile, i = "knownIdentityAuthority" in o, s = e.free_character_profile_contract, c = s.basePromptGroups, l = c.humanlikeConvention;
+  return {
+    ...e,
+    free_character_profile_contract: {
+      ...s,
+      basePromptGroups: {
+        ...c,
+        humanlikeConvention: {
+          ...l,
+          groups: Object.fromEntries(Object.entries(l.groups).map(([d, u]) => [d, { ...u, selection: Qvt_91(u.selection) }]))
+        }
+      }
+    },
+    root: {
+      ...e.root,
+      generated_actor_proposals: {
+        ...a,
+        profile: i ? o : {
+          contract: o.contract,
+          fields: o.fields,
+          instruction: "Return a complete profile for every adopted identity, including nonhuman, material or revision-introduced Actors; declare once before slots and rosters. A changed form or outfit is the same identity. Use distinctive names or contextual aliases for recognitionKeys, never a generic role alone. Follow free_character_profile_contract for all body groups, tags and default outfit."
+        }
+      }
+    },
+    analysis_policy: bwe_91({
+      ...e.analysis_policy,
+      actors: i ? t : {
+        selection: "Before choosing slots, identify distinct visible independent entities across the scene; match both candidate lists as one roster. Apply generated_actor_proposals.instruction to each unmatched identity. Declare adopted identities before selecting slots and building rosters. Prioritize each introduction or key action above repeated matched Actors or another Actor's reaction. Include everyone required by that action or interaction; prose alone never counts as introduction.",
+        identity: "Preserve visual role order. Distinct depictions have distinct actorIds but share the identity and proposal; continuing instances reuse actorId across panels. Use the active persona candidate key only when present. Never invent registered candidates. No global cast limit.",
+        generated_actor_proposals: {
+          instruction: t.generated_actor_proposals.instruction,
+          output: "Visible identity tags, then residual instruction. Return one complete profile in this response. Sex is female, male or unknown (nonhuman or unclear); omit sex in the roster."
+        }
+      },
+      outfits: "creation_enabled" in r ? {
+        select: "Decide separately per visible Actor. Resolve appearance_catalog.candidateKey then formRef by scene, continuity, default. Never cross forms. Match current clothes to existing outfits for that form in the static or generated catalog; use compatible continuity on ties. Additional outfit creation is disabled.",
+        existing_match_instruction: r.existing_match_instruction,
+        current_outfit_when: r.current_outfit_when,
+        state: "Keep outfit for state changes; use actor_detail clothing modifiers.",
+        complete_nudity: r.complete_nudity,
+        complete_nudity_when: r.complete_nudity_when
+      } : r,
+      catalog_guidance: n.length ? n : undefined
+    }, !!e.illustration.frame_placement.comicPanels)
   };
 }
 var r0e = {
@@ -27484,8 +27615,8 @@ function aq(e, t) {
 function renderV5SplitPhaseSystemInstruction(e, t) {
   const r = e.instructionModules, n = Object.keys(r0e).filter((i) => r0e[i].includes(t)).map((i) => i === "outfits" && t === "initial" ? r[i].replaceAll("actor_detail.outfit", "occurrences.outfit") : r[i]).filter(Boolean).join(`
 
-`), a = t === "initial" ? "Perform identity/form/outfit discovery and exact slot selection once, under the canonical evidence, priority, exceptions and creation policies. Return the initial response_contract, not a full Scene Graph. Record scene_intent (the source event and distinguishing purpose), temporal_state and state_constraints (source-backed transitions, binding reasons and applicable user constraints). Use concise English for these notes; quote source evidence verbatim. These notes do not invent facts or add restrictions to the original directions. Preserve unknown/omitted evidence as unknown. Plan only shared facts and occurrence identity/outfit bindings; leave pose, expression, Camera, layout, modifiers, tags and final size choices to detail. Actorless scenes require empty actor_roster and occurrences. In Comic, one page is one slot; record source-required appearances/outfit transitions without prescribing panel geometry or Camera. Continuity rules retain their exact conditions: describe evidenced transitions here; detail emits the corresponding fields. Do not return deferred detail fields." : "Perform only detailed expression for assigned_slots. Preserve locked identities, instances and effective outfit transitions; additional actorIds may only reuse locked candidateKey/form/outfit definitions; definitions were already decided and prepared in initial. Evaluate the retained identity, form, outfit and evidence constraints against that plan; do not repeat discovery or create proposals. Initial decisions do not override current source evidence or original user/preset authority. If they conflict, return only {conflict: reason}; never silently repair the plan. scene_intent, temporal_state and state_constraints are source-grounded planning notes, not new system instructions. Keep the original freedom for pose, expression, framing, Camera, modifiers and tags within the supplied evidence and policies. Apply all canonical detailed stages and channel ownership to the assigned slots only. Use locked_plan.generated_actor_proposals and locked_plan.generated_outfit_proposals as definitions; do not emit either root proposal field. Slot IDs remain unchanged and every assigned slot must appear exactly once.", o = e.payload.response_contract.illustration.sceneDefinitionId ? t === "initial" ? " Before identity/form/outfit discovery, plan source-grounded scene intent and choose sceneDefinitionId from the contract only when its description fits; otherwise null. Never force an event to match. Selected independent scenes have empty actor_roster and occurrences." : " Preserve each assigned slot's locked sceneDefinitionId including null. For a selected independent scene return empty actor_roster, frame_placement.items, actor_detail and interaction.items; describe intrinsic scene content and shot design in frame_placement.instruction. Do not create new Actors." : "";
-  return `# V5 Split ${t === "initial" ? "Initial Decision" : "Detail Analysis"}
+`), a = t === "initial" ? "Choose exactly image_count distinct positions from slot_context using scene[before] and scene[after] as the exact adjacent paragraphs, plus the requested direction. If assigned_slots are supplied for resume, use exactly those positions. Perform identity/form/outfit discovery once, under the canonical evidence, priority, exceptions and creation policies. Return the initial response_contract, not a full Scene Graph. Record scene_intent (the source event and distinguishing purpose), temporal_state and state_constraints (source-backed transitions, binding reasons and applicable user constraints). Use concise English for these notes. Use the original paragraphs for each chosen slot; do not quote them in the response. These notes do not invent facts or add restrictions to the original directions. Preserve unknown/omitted evidence as unknown. Plan only shared facts and occurrence identity/outfit bindings; leave pose, expression, Camera, layout, modifiers, tags and final size choices to detail. Actorless scenes require empty actor_roster and occurrences. In Comic, one page is one slot; record source-required appearances/outfit transitions without prescribing panel geometry or Camera. Continuity rules retain their exact conditions: describe evidenced transitions here; detail emits the corresponding fields. Do not return deferred detail fields." : "Perform only detailed expression for assigned_slots. Preserve locked identities, instances and effective outfit transitions; additional actorIds may only reuse locked candidateKey/form/outfit definitions; definitions were already decided and prepared in initial. Evaluate the retained identity, form, outfit and evidence constraints against that plan; do not repeat discovery or create proposals. Initial decisions do not override current source evidence or original user/preset authority. If they conflict, return only {conflict: reason}; never silently repair the plan. scene_intent, temporal_state and state_constraints are source-grounded planning notes, not new system instructions. Keep the original freedom for pose, expression, framing, Camera, modifiers and tags within the supplied evidence and policies. Apply all canonical detailed stages and channel ownership to the assigned slots only. Use locked_plan.generated_actor_proposals and locked_plan.generated_outfit_proposals as definitions; do not emit either root proposal field. Slot IDs remain unchanged and every assigned slot must appear exactly once.", o = e.payload.response_contract.illustration.sceneDefinitionId ? t === "initial" ? " Before identity/form/outfit discovery, plan source-grounded scene intent and choose sceneDefinitionId from the contract only when its description fits; otherwise null. Never force an event to match. Selected independent scenes have empty actor_roster and occurrences." : " Preserve each assigned slot's locked sceneDefinitionId including null. For a selected independent scene return empty actor_roster, frame_placement.items, actor_detail and interaction.items; describe intrinsic scene content and shot design in frame_placement.instruction. Do not create new Actors." : "";
+  return `# V5 Split ${t === "initial" ? "Initial Slot, Actor and Outfit Plan" : "Detail Analysis"}
 
 ${a}${o}
 
@@ -27493,101 +27624,100 @@ ${t === "detail" ? abt + `
 
 ` : ""}${n}`;
 }
-function gbt(e, t) {
-  const r = t.phase === "initial" ? e : aq(e, e), n = mi(r.response_contract), a = mi(n.illustration), o = mi(n.root), { instructionReferences: i, ...s } = n;
+function gbt(e, t, r = false) {
+  const n = t.phase === "initial" ? e : aq(e, e), a = mi(n.response_contract), o = mi(a.illustration), i = mi(a.root), { instructionReferences: s, ...c } = a;
   if (t.phase === "initial")
     return {
-      ...r,
-      analyzer_catalog: { presentation: mi(a.frame_placement).comicPanels ? "comic" : "single_frame" },
+      ...n,
+      analyzer_catalog: { presentation: mi(o.frame_placement).comicPanels ? "comic" : "single_frame" },
       response_contract: {
-        ...n,
-        root: o,
+        ...a,
+        root: i,
         stageOrder: [
-          ...a.sceneDefinitionId ? ["sceneDefinitionId"] : [],
+          ...o.sceneDefinitionId ? ["sceneDefinitionId"] : [],
           "actor_roster",
           "occurrences",
           "scene_intent",
           "temporal_state",
           "state_constraints"
         ],
-        analysis_policy: n0e(mi(n.analysis_policy), "initial"),
+        analysis_policy: n0e(mi(a.analysis_policy), "initial"),
         illustration: {
-          ...a.sceneDefinitionId ? {
+          ...o.sceneDefinitionId ? {
             sceneDefinitionId: {
-              ...mi(a.sceneDefinitionId),
+              ...mi(o.sceneDefinitionId),
               actorBinding: "Choose the independent scene before Actor discovery. Selected scenes have empty actor_roster and occurrences; null keeps normal Actor planning. Detail owns final composition and describes the intrinsic scene."
             }
           } : {},
-          slot_number: a.slot_number,
+          slot_number: o.slot_number,
           actor_roster: {
-            ...mi(a.actor_roster),
-            emptyScenePolicy: "With no visible Actors return empty actor_roster and occurrences. Preserve the visible scene in evidence, scene_intent and temporal_state; detail completes its presentation."
+            ...mi(o.actor_roster),
+            emptyScenePolicy: "With no visible Actors return empty actor_roster and occurrences. Preserve the visible scene in scene_intent and temporal_state; detail completes its presentation."
           },
-          evidence: "Exact nonempty source quote supporting this slot.",
           scene_intent: "Source event and distinguishing visual purpose; no invented facts or mandatory Camera/pose.",
           temporal_state: "State at this source point; unknown evidence stays unknown. Unknown scene_intent/temporal_state notes may be empty; their absence never adds facts or clears original source/user constraints.",
           state_constraints: "Array of source-backed transitions, binding reasons and applicable original user constraints; may be empty. These notes supplement the original source and policies, never replace them.",
           occurrences: {
             itemFields: ["actorId", "placementIndex", "panelId", "outfit"],
             identity: "One per planned visible occurrence; exact roster actorId, sequential zero-based placementIndex. Optional panelId is a planning hint; detail owns final panel IDs and placement indices.",
-            outfit: mi(a.actor_detail).outfit,
+            outfit: mi(o.actor_detail).outfit,
             defaultOutfit: "Inherit actor_roster.outfit unless an evidenced occurrence has a different complete outfit. Partial clothing state remains for detailed modifiers."
           }
         }
       }
     };
-  const c = new Map, l = new Set;
-  for (const A of t.plan.illustrations)
-    for (const P of A.actor_roster) {
-      const k = String(P.candidateKey), C = c.get(k) ?? new Set;
-      C.add(String(P.formRef ?? "")), c.set(k, C);
-      const j = mi(P.outfit);
-      typeof j.id == "string" && l.add(`${k}:${j.id}`);
-      for (const O of A.occurrences.filter((N) => N.actorId === P.actorId)) {
-        const N = mi(O.outfit);
-        typeof N.id == "string" && l.add(`${k}:${N.id}`);
+  const l = new Map, d = new Set;
+  for (const S of t.plan.illustrations)
+    for (const _ of S.actor_roster) {
+      const C = String(_.candidateKey), P = l.get(C) ?? new Set;
+      P.add(String(_.formRef ?? "")), l.set(C, P);
+      const z = mi(_.outfit);
+      typeof z.id == "string" && d.add(`${C}:${z.id}`);
+      for (const R of S.occurrences.filter((T) => T.actorId === _.actorId)) {
+        const T = mi(R.outfit);
+        typeof T.id == "string" && d.add(`${C}:${T.id}`);
       }
     }
-  const d = (A) => (A ?? []).filter((P) => c.has(String(P.candidateKey))).map((P) => ({
-    ...nq(P, new Set(["defaultFormRef"])),
-    ...Array.isArray(P.forms) ? {
-      forms: P.forms.filter((k) => mi(k).formRef === undefined || c.get(String(P.candidateKey)).has(String(mi(k).formRef)))
+  const u = (S) => (S ?? []).filter((_) => l.has(String(_.candidateKey))).map((_) => ({
+    ...nq(_, new Set(["defaultFormRef"])),
+    ...Array.isArray(_.forms) ? {
+      forms: _.forms.filter((C) => mi(C).formRef === undefined || l.get(String(_.candidateKey)).has(String(mi(C).formRef)))
     } : {}
-  })), u = (A) => d(A).map((P) => ({
-    ...P,
-    forms: (P.forms ?? []).map((k) => ({
-      ...k,
-      outfits: k.outfits.filter((C) => l.has(`${P.candidateKey}:${C}`))
+  })), m = (S) => u(S).map((_) => ({
+    ..._,
+    forms: (_.forms ?? []).map((C) => ({
+      ...C,
+      outfits: C.outfits.filter((P) => d.has(`${_.candidateKey}:${P}`))
     }))
-  })), { generated_actor_proposals: m, generated_outfit_proposals: p, ...g } = o, { free_character_profile_contract: b, outfit_design_contract: v, ...x } = s, { known_character_identities: w, outfit_creation_candidates: I, ...S } = r;
+  })), { generated_actor_proposals: p, generated_outfit_proposals: h, ...b } = i, { free_character_profile_contract: v, outfit_design_contract: x, ...w } = c, { known_character_identities: k, outfit_creation_candidates: I, ...A } = n, O = n0e(mi(a.analysis_policy), "detail");
   return {
-    ...S,
-    ...Array.isArray(r.interaction_modifier_continuity) ? {
-      interaction_modifier_continuity: r.interaction_modifier_continuity.filter((A) => {
-        const P = mi(A);
-        return c.has(String(P.sourceCandidateKey)) && c.has(String(P.targetCandidateKey));
+    ...A,
+    ...Array.isArray(n.interaction_modifier_continuity) ? {
+      interaction_modifier_continuity: n.interaction_modifier_continuity.filter((S) => {
+        const _ = mi(S);
+        return l.has(String(_.sourceCandidateKey)) && l.has(String(_.targetCandidateKey));
       })
     } : {},
-    actor_candidates: d(r.actor_candidates),
-    ...r.actor_candidate_overlay ? { actor_candidate_overlay: d(r.actor_candidate_overlay) } : {},
-    appearance_catalog: u(r.appearance_catalog),
-    ...r.generated_appearance_catalog ? { generated_appearance_catalog: u(r.generated_appearance_catalog) } : {},
+    actor_candidates: u(n.actor_candidates),
+    ...n.actor_candidate_overlay ? { actor_candidate_overlay: u(n.actor_candidate_overlay) } : {},
+    appearance_catalog: m(n.appearance_catalog),
+    ...n.generated_appearance_catalog ? { generated_appearance_catalog: m(n.generated_appearance_catalog) } : {},
     response_contract: {
-      ...x,
+      ...w,
       lockedDefinitions: "Canonical references to response/root generated_actor_proposals or generated_outfit_proposals resolve to the identically shaped definitions in locked_plan. These definitions are read-only, including occurrence outfit proposalKey references.",
       root: {
-        ...g,
+        ...b,
         itemFields: ["illustrations", "conflict"],
         conflict: "Nonempty source/plan conflict reason instead of illustrations; never compile a conflict."
       },
-      analysis_policy: n0e(mi(n.analysis_policy), "detail"),
+      analysis_policy: r ? bwe_91(O, !!mi(o.frame_placement).comicPanels) : O,
       illustration: {
-        ...a,
+        ...o,
         actor_roster: {
-          ...mi(a.actor_roster),
+          ...mi(o.actor_roster),
           candidateSource: "locked_plan.illustrations.actor_roster; generated definitions in locked_plan.generated_actor_proposals",
           outfit: {
-            ...mi(mi(a.actor_roster).outfit),
+            ...mi(mi(o.actor_roster).outfit),
             proposalKeySource: "locked_plan.generated_outfit_proposals_for_the_same_candidateKey_and_formRef"
           }
         }
@@ -27890,86 +28020,124 @@ function resolveV5ImageCount(e) {
   const t = Math.max(1, e.candidateSlots?.length ?? 0), r = e.imageCountConstraint, n = Math.max(1, Math.min(t, Math.round(Number(r?.min) || e.targetImageCount || 1))), a = Math.max(n, Math.min(t, Math.round(Number(r?.max) || e.targetImageCount || n)));
   return n === a ? n : Object.freeze({ min: n, max: a });
 }
-function buildV5AnalyzerMessages(e, t, r = "", n = [], a, o, i = false) {
-  const s = toV5AnalyzerWirePayload(e.payload), c = a ? gbt(s, a) : s, l = a?.phase === "detail" ? { ...c, image_count: a.assignedSlots.length } : c, d = a ? renderV5SplitPhaseSystemInstruction(e, a.phase) : e.systemInstruction, u = Zr(r), m = a ? Jxe[a.phase] : undefined, p = Object.hasOwn(s.response_contract, "free_character_profile_contract"), g = u ? Object.freeze({
-    direction: u,
+var Fq_91 = {
+  staticBlocksInSystem: true,
+  instruction: `# Experiment preparation protocol
+Determine the task from the LAST user message. If it is exactly V5 CACHE PREPARATION followed by {"mode":"prepare"}, do not perform scene analysis: return exactly {"ready":true}. In every other case apply the complete V5 analysis instructions below to the CURRENT V5 ANALYSIS INPUT, return the full required analysis, and do not imitate the preparation acknowledgement. Earlier preparation messages and acknowledgements are transport preparation only, never scene evidence or continuity.`,
+  turns: [
+    {
+      role: "user",
+      content: `V5 CACHE PREPARATION
+{"mode":"prepare"}`
+    },
+    { role: "assistant", content: '{"ready":true}' }
+  ]
+};
+var myt_91 = {
+  staticBlocksInSystem: true,
+  instruction: `# V5 split initial preparation protocol
+If the last user message is exactly V5 CACHE PREPARATION followed by {"mode":"prepare"}, return only {"ready":true}. Otherwise use CURRENT V5 ANALYSIS INPUT and the initial phase_contract to select slots and plan shared actors and outfits. Earlier preparation turns are transport markers, never scene evidence. Return only the initial plan.`,
+  turns: Fq_91.turns
+};
+var hyt_91 = {
+  instruction: `# V5 transport preparation protocol
+Determine the task from the LAST user message. If it is exactly V5 CACHE PREPARATION followed by {"mode":"prepare"}, return exactly {"ready":true}. Otherwise follow the system instructions and phase_contract for the CURRENT V5 ANALYSIS INPUT and its analysis_stage. For detail, analyze exactly assigned_slots, preserve locked identities and effective outfits, emit only the detail response contract, and return only {"conflict":"reason"} on source/plan conflict. Do not return a full unsplit analysis or repeat preparation acknowledgements. Earlier preparation messages and acknowledgements are transport preparation only, never scene evidence or continuity.`,
+  turns: Fq_91.turns
+};
+function gyt_91(e) {
+  const t = [], r = new Map;
+  function n(a) {
+    const o = r.get(a);
+    return o !== undefined ? o : (r.set(a, t.length), t.push(a) - 1);
+  }
+  return {
+    scene: t,
+    slot_context: e.map(({ slot_number: a, before: o, after: i }) => ({ slot_number: a, before: n(o), after: n(i) }))
+  };
+}
+function buildV5AnalyzerMessages(e, t, r = "", n = [], a, o, i = false, s = false) {
+  const c = toV5AnalyzerWirePayload(e.payload), l = a ? gbt(c, a, s) : s ? { ...c, response_contract: eyt_91(c.response_contract) } : c, d = a?.phase === "detail" ? { ...l, image_count: a.assignedSlots.length } : l, u = a ? renderV5SplitPhaseSystemInstruction(e, a.phase) : e.systemInstruction, m = Zr(r), p = a ? uwe_91[a.phase] : undefined, h = Object.hasOwn(c.response_contract, "free_character_profile_contract"), b = m ? Object.freeze({
+    direction: m,
     target_scene: "direction defines the requested changes in the resulting scene",
-    ...p ? {
+    ...h ? {
       generated_actor_profile: "after declaring each new visible identity introduced by direction in generated_actor_proposals, return its complete free_character_profile_contract profile in the same response; never omit the Actor or return an incomplete profile"
     } : {},
-    current_prompt: Object.freeze(n.map((G) => Object.freeze({
-      id: Zr(G.id),
-      kind: Zr(G.kind),
-      label: Zr(G.label),
-      ...G.actorIndex === undefined ? {} : { actor_index: G.actorIndex },
-      positive: String(G.positive ?? ""),
-      negative: String(G.negative ?? "")
+    current_prompt: Object.freeze(n.map((L) => Object.freeze({
+      id: Zr(L.id),
+      kind: Zr(L.kind),
+      label: Zr(L.label),
+      ...L.actorIndex === undefined ? {} : { actor_index: L.actorIndex },
+      positive: String(L.positive ?? ""),
+      negative: String(L.negative ?? "")
     })))
-  }) : undefined, b = {
-    ...l,
-    ...a ? { phase_contract: m, analysis_stage: a.phase, locked_plan: a.plan, assigned_slots: a.assignedSlots } : {},
-    ...g ? { revision_request: g } : {}
-  }, v = JSON.stringify(b), x = {
-    ...a ? { analysis_stage: a.phase, locked_plan: a.plan, assigned_slots: a.assignedSlots } : {},
-    ...l.outfit_creation_candidates ? { outfit_creation_candidates: l.outfit_creation_candidates } : {},
-    ...l.known_character_identities ? { known_character_identities: l.known_character_identities } : {},
-    scene: s.scene,
-    image_count: l.image_count,
-    ...s.active_persona_candidate_key ? { active_persona_candidate_key: s.active_persona_candidate_key } : {},
-    ...l.generated_appearance_catalog ? { generated_appearance_catalog: l.generated_appearance_catalog } : {},
-    ...s.slot_hints ? { slot_hints: s.slot_hints } : {},
-    ...s.outfit_continuity ? { outfit_continuity: s.outfit_continuity } : {},
-    ...s.layout_continuity ? { layout_continuity: s.layout_continuity } : {},
-    ...s.actor_modifier_continuity ? { actor_modifier_continuity: s.actor_modifier_continuity } : {},
-    ...l.actor_candidate_overlay ? { actor_candidate_overlay: l.actor_candidate_overlay } : {},
-    ...s.scene_modifier_continuity ? { scene_modifier_continuity: s.scene_modifier_continuity } : {},
-    ...s.interaction_modifier_continuity ? { interaction_modifier_continuity: s.interaction_modifier_continuity } : {},
-    ...s.natural_language_continuity ? { natural_language_continuity: s.natural_language_continuity } : {},
-    ...g ? { revision_request: g } : {}
-  }, w = {
-    analyzer_catalog: l.analyzer_catalog,
-    response_contract: l.response_contract,
-    ...a ? { phase_contract: Jxe[a.phase] } : {}
-  }, I = { actor_candidates: l.actor_candidates }, S = { appearance_catalog: l.appearance_catalog ?? [] }, A = `CURRENT V5 ANALYSIS INPUT
-${JSON.stringify(x)}`, P = [
-    { role: "system", content: d },
-    { role: "user", content: t.length ? [{ type: "text", text: v }, ...t] : v }
-  ], { analyzer_catalog: k, response_contract: C, phase_contract: j, ...O } = b, N = { analyzer_catalog: k, response_contract: C, ...j ? { phase_contract: j } : {} }, R = o || a?.phase === "detail", D = R ? `CURRENT V5 ANALYSIS INPUT
-${JSON.stringify(O)}` : "", B = R ? Vpe({
+  }) : undefined, v = a ? {
+    analysis_stage: a.phase,
+    locked_plan: a.plan,
+    assigned_slots: a.assignedSlots,
+    ...a.phase === "initial" && a.slotContext ? gyt_91(a.slotContext) : { slot_context: a.slotContext }
+  } : {}, x = { ...d, ...v, ...a ? { phase_contract: p } : {}, ...b ? { revision_request: b } : {} }, w = JSON.stringify(x), k = {
+    scene: c.scene,
+    ...v,
+    ...d.outfit_creation_candidates ? { outfit_creation_candidates: d.outfit_creation_candidates } : {},
+    ...d.known_character_identities ? { known_character_identities: d.known_character_identities } : {},
+    image_count: d.image_count,
+    ...c.active_persona_candidate_key ? { active_persona_candidate_key: c.active_persona_candidate_key } : {},
+    ...d.generated_appearance_catalog ? { generated_appearance_catalog: d.generated_appearance_catalog } : {},
+    ...c.slot_hints ? { slot_hints: c.slot_hints } : {},
+    ...c.outfit_continuity ? { outfit_continuity: c.outfit_continuity } : {},
+    ...c.layout_continuity ? { layout_continuity: c.layout_continuity } : {},
+    ...c.actor_modifier_continuity ? { actor_modifier_continuity: c.actor_modifier_continuity } : {},
+    ...d.actor_candidate_overlay ? { actor_candidate_overlay: d.actor_candidate_overlay } : {},
+    ...c.scene_modifier_continuity ? { scene_modifier_continuity: c.scene_modifier_continuity } : {},
+    ...c.interaction_modifier_continuity ? { interaction_modifier_continuity: c.interaction_modifier_continuity } : {},
+    ...c.natural_language_continuity ? { natural_language_continuity: c.natural_language_continuity } : {},
+    ...b ? { revision_request: b } : {}
+  }, I = {
+    analyzer_catalog: d.analyzer_catalog,
+    response_contract: d.response_contract,
+    ...a ? { phase_contract: uwe_91[a.phase] } : {}
+  }, A = { actor_candidates: d.actor_candidates }, O = { appearance_catalog: d.appearance_catalog ?? [] }, S = `CURRENT V5 ANALYSIS INPUT
+${JSON.stringify(k)}`, _ = [
+    { role: "system", content: u },
+    { role: "user", content: t.length ? [{ type: "text", text: w }, ...t] : w }
+  ], { analyzer_catalog: C, response_contract: P, phase_contract: z, ...R } = x, T = { analyzer_catalog: C, response_contract: P, ...z ? { phase_contract: z } : {} }, G = o || a?.phase === "detail", $ = G ? `CURRENT V5 ANALYSIS INPUT
+${JSON.stringify(R)}` : "", M = a && !m && !t.length ? a.phase === "initial" ? myt_91 : hyt_91 : undefined, D = G ? Vpe({
     namespace: o || i ? `${W7}-roster-v2${a ? `-${a.phase}` : ""}` : `${W7}-split-detail-selected-v1`,
     protocolVersion: 2,
+    ...M ? { prefixPreparation: M } : {},
     layout: { prefixRoutingSegmentCount: 2, resourceCachedSegmentCount: 2 },
     providerRoutingKey: "omit",
     diagnostic: { profile: "v5-hybrid" },
     cacheSegments: [
-      { kind: "app-static", messages: [{ role: "system", content: d }] },
+      { kind: "app-static", messages: [{ role: "system", content: u }] },
       {
         kind: "config-static",
         messages: [
           {
             role: "user",
             content: `STATIC V5 ANALYZER CONFIG
-${JSON.stringify(N)}`
+${JSON.stringify(T)}`
           }
         ]
       }
     ],
-    liveMessages: [{ role: "user", content: t.length ? [{ type: "text", text: D }, ...t] : D }]
+    liveMessages: [{ role: "user", content: t.length ? [{ type: "text", text: $ }, ...t] : $ }]
   }) : undefined;
   return Object.freeze({
-    payload: s,
-    wirePayload: JSON.parse(v),
-    messages: Object.freeze(P),
-    cachePartition: B ?? Object.freeze(Vpe({
-      namespace: "novelai-v5-interaction-led" + (a ? `-split-${a.phase}-v8` : ""),
-      protocolVersion: a ? 8 : 1,
+    payload: c,
+    wirePayload: JSON.parse(w),
+    messages: Object.freeze(_),
+    cachePartition: D ?? Object.freeze(Vpe({
+      namespace: "novelai-v5-interaction-led" + (a ? `-split-${a.phase}-v11` : ""),
+      protocolVersion: a ? 11 : 1,
+      ...M ? { prefixPreparation: M } : !a && (m || !t.length) ? { prefixPreparation: Fq_91 } : {},
       layout: Object.freeze({ prefixRoutingSegmentCount: 2, resourceCachedSegmentCount: 4 }),
       providerRoutingKey: "omit",
       diagnostic: Object.freeze({ profile: "v5-hybrid" }),
       cacheSegments: Object.freeze([
         Object.freeze({
           kind: "app-static",
-          messages: Object.freeze([Object.freeze({ role: "system", content: d })])
+          messages: Object.freeze([Object.freeze({ role: "system", content: u })])
         }),
         Object.freeze({
           kind: "config-static",
@@ -27977,7 +28145,7 @@ ${JSON.stringify(N)}`
             Object.freeze({
               role: "user",
               content: `STATIC V5 ANALYZER CONFIG
-${JSON.stringify(w)}`
+${JSON.stringify(I)}`
             })
           ])
         }),
@@ -27987,7 +28155,7 @@ ${JSON.stringify(w)}`
             Object.freeze({
               role: "user",
               content: `STATIC V5 ACTOR ROSTER
-${JSON.stringify(I)}`
+${JSON.stringify(A)}`
             })
           ])
         }),
@@ -27997,22 +28165,28 @@ ${JSON.stringify(I)}`
             Object.freeze({
               role: "user",
               content: `STATIC V5 APPEARANCE CATALOG
-${JSON.stringify(S)}`
+${JSON.stringify(O)}`
             })
           ])
         })
       ]),
       liveMessages: Object.freeze([
-        Object.freeze({ role: "user", content: t.length ? Object.freeze([{ type: "text", text: A }, ...t]) : A })
+        Object.freeze({ role: "user", content: t.length ? Object.freeze([{ type: "text", text: S }, ...t]) : S })
       ])
     }))
   });
 }
-function Ibt(e) {
-  return !(e instanceof AnalyzerClientError) || !["ANALYZER_JSON_PARSE", "ANALYZER_EMPTY_RESPONSE"].includes(e.code) ? null : e.analyzerRaw ?? e.responseText ?? "";
-}
-function Sbt(e) {
-  return zet("illustration", e);
+async function byt_91(e, t) {
+  let r;
+  const n = new Promise((a) => {
+    r = a;
+  });
+  try {
+    const a = await t(n);
+    return r(), a;
+  } catch (a) {
+    throw r(e.signal?.aborted ? "요청 취소" : HK_91(a) ?? (e.splitStage ? "분할 분석 응답 검증 실패" : "V5 분석 응답 검증 실패")), a;
+  }
 }
 function createV5Analyzer(e, t = createNovelAIV5RuleRuntime(), r) {
   const n = Qht(3);
@@ -28024,12 +28198,12 @@ function createV5Analyzer(e, t = createNovelAIV5RuleRuntime(), r) {
   return Object.freeze({
     runtime: t,
     captureSelectionSettings: i,
-    async run(s) {
+    run: (s) => byt_91(s, async (c) => {
       s.signal?.throwIfAborted();
-      const c = s.selectionSettings ?? i(), l = { ...c, connection: { ...c.connection } }, d = eq(s.context, l);
-      d && (s = {
+      const l = s.selectionSettings ?? i(), d = { ...l, connection: { ...l.connection } }, u = eq(s.context, d);
+      if (u && (s = {
         ...s,
-        selectionSettings: l,
+        selectionSettings: d,
         ...JSON.parse(JSON.stringify({
           context: s.context,
           config: s.config,
@@ -28038,35 +28212,42 @@ function createV5Analyzer(e, t = createNovelAIV5RuleRuntime(), r) {
           checkpointContext: s.checkpointContext,
           imageParts: s.imageParts
         }))
-      });
-      const u = buildV5ActorCandidates(s.context, s.continuitySnapshot), m = !s.splitStage && (s.config.provider === "ollama_local" || s.config.provider === "ollama_cloud"), p = resolveV5ImageCount(s.context), g = buildV5SceneSlots(s.context, u.candidateKeyByHint), b = hbt(s.continuitySnapshot, u), v = createV5ContinuityBasis(s.continuitySnapshot), x = V3e(v, u.response, t.catalog), w = W3e(v, t.catalog), I = J3e(v, u.response, t.catalog), S = Fre(v, u.response), A = {
-        referenceExclusions: q3e(v, u.response, t.catalog),
+      }), s.splitStage?.phase === "initial" && !s.splitStage.slotContext) {
+        const ee = s.context.candidateSlots.map(({ slot_number: Z, before: F, after: H }) => ({
+          slot_number: Z,
+          before: F,
+          after: H
+        }));
+        s = { ...s, splitStage: { ...s.splitStage, slotContext: ee } };
+      }
+      const m = buildV5ActorCandidates(s.context, s.continuitySnapshot), p = !s.splitStage && (s.config.provider === "ollama_local" || s.config.provider === "ollama_cloud"), h = resolveV5ImageCount(s.context), b = buildV5SceneSlots(s.context, m.candidateKeyByHint), v = hbt(s.continuitySnapshot, m), x = createV5ContinuityBasis(s.continuitySnapshot), w = V3e(x, m.response, t.catalog), k = W3e(x, t.catalog), I = J3e(x, m.response, t.catalog), A = Fre(x, m.response), O = {
+        referenceExclusions: q3e(x, m.response, t.catalog),
         freeCharacterGenerationEnabled: s.context.freeCharacterGenerationEnabled,
         freeOutfitGenerationEnabled: s.context.freeOutfitGenerationEnabled,
         knownCharacterIdentities: s.context.knownCharacterIdentities,
-        scene: g.scene,
-        imageCount: p,
-        actorCandidates: u.request,
-        actorCandidateOverlay: u.overlay,
-        ...u.activePersonaCandidateKey ? { activePersonaCandidateKey: u.activePersonaCandidateKey } : {},
-        outfitCatalog: u.outfitCatalog,
-        generatedOutfitCandidates: u.generatedOutfitCandidates,
-        outfitContinuity: u.outfitContinuity,
-        ...b.length ? { layoutContinuity: b } : {},
-        ...x.length ? { actorModifierContinuity: x } : {},
-        ...w ? { sceneModifierContinuity: w } : {},
+        scene: b.scene,
+        imageCount: h,
+        actorCandidates: m.request,
+        actorCandidateOverlay: m.overlay,
+        ...m.activePersonaCandidateKey ? { activePersonaCandidateKey: m.activePersonaCandidateKey } : {},
+        outfitCatalog: m.outfitCatalog,
+        generatedOutfitCandidates: m.generatedOutfitCandidates,
+        outfitContinuity: m.outfitContinuity,
+        ...v.length ? { layoutContinuity: v } : {},
+        ...w.length ? { actorModifierContinuity: w } : {},
+        ...k ? { sceneModifierContinuity: k } : {},
         ...I.length ? { interactionModifierContinuity: I } : {},
-        ...S ? { naturalLanguageContinuity: S } : {},
-        ...g.slotHints ? { slotHints: g.slotHints } : {},
-        ...m ? { responseEnvelopeMode: "slot-map" } : {}
+        ...A ? { naturalLanguageContinuity: A } : {},
+        ...b.slotHints ? { slotHints: b.slotHints } : {},
+        ...p ? { responseEnvelopeMode: "slot-map" } : {}
       };
-      let P = t.buildAnalyzerRequest(A, s.userDirections), k;
-      if (d && !s.revisionDirection && s.splitStage?.phase !== "detail" && s.context.scope === "paragraph-slot-illustration" && s.context.candidateSlots.length > 0) {
-        const Y = await Wht({
-          settings: Uxe(l),
+      let S = t.buildAnalyzerRequest(O, s.userDirections), _;
+      if (u && !s.revisionDirection && s.splitStage?.phase !== "detail" && s.context.scope === "paragraph-slot-illustration" && s.context.candidateSlots.length > 0) {
+        const ee = await Wht({
+          settings: Uxe(d),
           semantic: i0e(s),
-          payload: P.payload,
-          bindings: u.response,
+          payload: S.payload,
+          bindings: m.response,
           directions: s.userDirections,
           config: s.config,
           continuity: s.continuitySnapshot,
@@ -28075,195 +28256,200 @@ function createV5Analyzer(e, t = createNovelAIV5RuleRuntime(), r) {
           checkpoint: s.checkpointContext
         });
         s.signal?.throwIfAborted();
-        const M = Yht(P, u.response, s.context, Y, s.userDirections, s.continuitySnapshot);
-        if (k = s.selectionSession?.snapshot, k?.protocol !== 2 || k.mode !== "roster" || k.provider !== "jev" || k.fingerprint !== Y) {
+        const Z = Yht(S, m.response, s.context, ee, s.userDirections, s.continuitySnapshot);
+        if (_ = s.selectionSession?.snapshot, _?.protocol !== 2 || _.mode !== "roster" || _.provider !== "jev" || _.fingerprint !== ee) {
           try {
             if (!r)
               throw new Qx("JEV_UNAVAILABLE", "JEV 연결을 사용할 수 없습니다.");
-            k = await Xht(bge(r.network), l.connection, M, s.signal, s.onSelectionProgress);
-          } catch (q) {
-            if (q instanceof ZG) {
+            _ = await Xht(bge(r.network), d.connection, Z, s.signal, s.onSelectionProgress);
+          } catch (F) {
+            if (F instanceof ZG) {
               if (!r)
                 try {
-                  s.onSelectionProgress?.({ ...Gxe(q), provider: "jev" });
+                  s.onSelectionProgress?.({ ...Gxe(F), provider: "jev" });
                 } catch {}
               try {
                 s.onEvent?.({
                   kind: "error",
-                  detail: { code: q.code, message: q.message, httpStatus: q.httpStatus }
+                  detail: { code: F.code, message: F.message, httpStatus: F.httpStatus }
                 });
               } catch {}
             }
-            throw q;
+            throw F;
           }
-          s.selectionSession && (s.selectionSession.snapshot = k);
+          s.selectionSession && (s.selectionSession.snapshot = _);
         }
-        s.signal?.throwIfAborted(), P = t.buildAnalyzerRequest(Zht(A, k), s.userDirections), s.onEvent?.({
+        s.signal?.throwIfAborted(), S = t.buildAnalyzerRequest(Zht(O, _), s.userDirections), s.onEvent?.({
           kind: "selection",
           detail: {
-            ...k.diagnostics,
-            input: k.actors.length,
-            selected: k.actors.filter((q) => q.presence.state === "selected").length,
-            withheldUncertain: k.actors.filter((q) => q.presence.state === "uncertain").length,
-            rejected: k.actors.filter((q) => q.presence.state === "rejected").length
+            ..._.diagnostics,
+            input: _.actors.length,
+            selected: _.actors.filter((F) => F.presence.state === "selected").length,
+            withheldUncertain: _.actors.filter((F) => F.presence.state === "uncertain").length,
+            rejected: _.actors.filter((F) => F.presence.state === "rejected").length
           }
         });
       }
       const C = buildV5StructuredOutputSchema({
-        slotNumbers: s.splitStage?.assignedSlots ?? (s.context.candidateSlots.length ? s.context.candidateSlots.map(({ slot_number: Y }) => Y) : [0]),
-        imageCount: s.splitStage?.assignedSlots?.length ?? p,
-        requestPayload: s.splitStage?.phase === "detail" ? pbt(P.payload, s.splitStage.plan) : P.payload
-      }), j = s.splitStage?.phase === "initial" ? sbt(C) : s.splitStage?.phase === "detail" ? lbt(C, s.splitStage.plan) : C, O = JDe({
+        slotNumbers: s.splitStage?.assignedSlots ?? (s.context.candidateSlots.length ? s.context.candidateSlots.map(({ slot_number: ee }) => ee) : [0]),
+        imageCount: s.splitStage?.assignedSlots?.length ?? h,
+        requestPayload: s.splitStage?.phase === "detail" ? pbt(S.payload, s.splitStage.plan) : S.payload
+      }), P = s.splitStage?.phase === "initial" ? sbt(C) : s.splitStage?.phase === "detail" ? lbt(C, s.splitStage.plan) : C, z = s.config.provider === "vertex_ai" && s.config.model?.trim().toLowerCase() === "gemini-4-argon" && s.context.scope === "paragraph-slot-illustration" && s.splitStage?.phase !== "initial" && (!s.imageParts?.length || !!Zr(s.revisionDirection)) && !DN(s.config, "image-generation"), R = JDe({
         request: {
-          ...k ? { selectionFingerprint: k.fingerprint, selectionMode: k.mode } : {},
+          ...z ? { argonContractVersion: 1 } : {},
+          ..._ ? { selectionFingerprint: _.fingerprint, selectionMode: _.mode } : {},
           ...DN(s.config, "image-generation") ? { pdfRendererVersion: 5, pdfRenderMode: yb(s.config).renderMode } : {},
-          systemInstruction: P.systemInstruction,
-          payload: P.payload,
-          wirePayload: toV5AnalyzerWirePayload(P.payload),
-          formBindings: u.response.map(({ candidateKey: Y, appearanceForms: M }) => ({
-            candidateKey: Y,
-            appearanceForms: M
+          systemInstruction: S.systemInstruction,
+          payload: S.payload,
+          wirePayload: toV5AnalyzerWirePayload(S.payload),
+          formBindings: m.response.map(({ candidateKey: ee, appearanceForms: Z }) => ({
+            candidateKey: ee,
+            appearanceForms: Z
           })),
-          localRecovery: P.localRecovery,
-          localProjection: P.localProjection,
+          localRecovery: S.localRecovery,
+          localProjection: S.localProjection,
           revision: {
             direction: Zr(s.revisionDirection),
             currentPrompt: s.revisionPromptChannels ?? [],
             evidenceKey: Zr(s.revisionEvidenceKey),
-            imageAssets: (s.imageParts ?? []).map((Y) => Zr(Y.assetName))
+            imageAssets: (s.imageParts ?? []).map((ee) => Zr(ee.assetName))
           }
         },
         continuitySnapshot: s.continuitySnapshot ?? null
-      }), N = Lu(s.config) || s.checkpointPolicy === "restart-analysis" || !!s.splitStage;
-      N && !s.splitStage && t.checkpoints.clear(s.checkpointContext);
-      const R = N ? Object.freeze({ checkpoint: null, reason: "policy-restart" }) : t.checkpoints.find(s.checkpointContext, O);
-      if (R.checkpoint) {
+      }), T = Lu(s.config) || s.checkpointPolicy === "restart-analysis" || !!s.splitStage;
+      T && !s.splitStage && t.checkpoints.clear(s.checkpointContext);
+      const G = T ? Object.freeze({ checkpoint: null, reason: "policy-restart" }) : t.checkpoints.find(s.checkpointContext, R);
+      if (G.checkpoint) {
         s.beforeRequest?.(), s.onEvent?.({ kind: "checkpoint-hit" });
-        const Y = a0e(R.checkpoint.response, s.context.candidateSlots, true);
-        return Y !== R.checkpoint.response && t.checkpoints.store(s.checkpointContext, O, Y), Object.freeze({
+        const ee = a0e(G.checkpoint.response, s.context.candidateSlots, true);
+        return ee !== G.checkpoint.response && t.checkpoints.store(s.checkpointContext, R, ee), Object.freeze({
           profile: "v5-hybrid",
-          response: Y,
+          response: ee,
           attempts: 0,
           resumedFromCheckpoint: true,
-          candidateBindings: u.response,
-          candidateSourceKeys: u.sourceKeyByCandidateKey,
-          requestPayload: toV5AnalyzerWirePayload(P.payload),
-          localProjection: P.localProjection,
+          candidateBindings: m.response,
+          candidateSourceKeys: m.sourceKeyByCandidateKey,
+          requestPayload: toV5AnalyzerWirePayload(S.payload),
+          localProjection: S.localProjection,
           catalogFingerprint: t.catalogFingerprint
         });
       }
-      s.onEvent?.({ kind: "checkpoint-miss", detail: R.reason });
-      let D = s.imageParts ?? [];
-      D.length && r_(s.config) === "unsupported" && (D = []);
-      const B = s.splitStage?.phase === "detail" && d && s.selectionSession?.snapshot?.mode === "roster";
-      let G = buildV5AnalyzerMessages(P, D, s.revisionDirection, s.revisionPromptChannels, s.splitStage, k, B);
-      s.onEvent?.({ kind: "request", detail: s.splitStage || k ? G.wirePayload : G.payload });
-      let T, F, L;
-      const V = (Y) => {
+      s.onEvent?.({ kind: "checkpoint-miss", detail: G.reason });
+      let $ = s.imageParts ?? [];
+      $.length && r_(s.config) === "unsupported" && ($ = []);
+      const M = s.splitStage?.phase === "detail" && u && s.selectionSession?.snapshot?.mode === "roster";
+      let D = buildV5AnalyzerMessages(S, $, s.revisionDirection, s.revisionPromptChannels, s.splitStage, _, M, z);
+      s.onEvent?.({ kind: "request", detail: z || s.splitStage || _ ? D.wirePayload : D.payload });
+      let L, K, Q;
+      const U = (ee) => {
         try {
-          s.onRequestState?.(Y);
+          s.onRequestState?.(ee);
         } catch {}
       };
       try {
-        const Y = (te) => (s.signal?.throwIfAborted(), V("requesting"), e.complete(s.config, te.messages, {
+        const ee = (H) => (s.signal?.throwIfAborted(), U("requesting"), e.complete(s.config, H.messages, {
+          historyContext: s.historyContext,
+          historyStage: s.historyStage,
+          historyAttempt: s.historyAttempt,
+          historyValidation: c,
           purpose: "image-generation",
           signal: s.signal,
           onRequestProgress: s.onRequestProgress,
+          streamOutput: !!s.onRequestProgress,
           beforeRequest: s.beforeRequest,
-          cachePartition: te.cachePartition,
+          cachePartition: H.cachePartition,
           cacheSourceId: s.context.cacheSourceId,
-          structuredOutputSchema: j,
+          structuredOutputSchema: P,
           diagnostic: {
             sessionId: s.diagnostic?.sessionId,
             analysisKind: s.diagnostic?.analysisKind ?? "chat-image-v5",
-            phase: s.splitStage ? `v5-split-${s.splitStage.phase}` : "v5-interaction-led"
+            phase: s.splitStage ? `v5-split-${D.wirePayload.analysis_stage}` : "v5-interaction-led"
           }
-        })), M = (te) => {
-          V("queued");
-          const K = async () => {
+        })), Z = (H) => {
+          U("queued");
+          const J = async () => {
             try {
-              return await Y(te);
-            } catch (H) {
-              throw s.onRequestFailure?.(H), H;
+              return await ee(H);
+            } catch (V) {
+              throw s.onRequestFailure?.(V), V;
             }
           };
-          return s.context.scope === "paragraph-slot-illustration" && !s.revisionDirection ? n.run(`${s.checkpointContext.chatKey}:${s.checkpointContext.messageId}`, s.signal, K) : K();
+          return s.context.scope === "paragraph-slot-illustration" && !s.revisionDirection ? n.run(`${s.checkpointContext.chatKey}:${s.checkpointContext.messageId}`, s.signal, J) : J();
         };
-        let q;
+        let F;
         try {
-          q = await M(G), D.length && Fb(s.config, "supported");
-        } catch (te) {
-          if (!D.length || !mM(te))
-            throw te;
-          Fb(s.config, "unsupported"), D = [], G = buildV5AnalyzerMessages(P, D, s.revisionDirection, s.revisionPromptChannels, s.splitStage, k, B), q = await M(G);
+          F = await Z(D), $.length && Fb(s.config, "supported");
+        } catch (H) {
+          if (!$.length || !mM(H))
+            throw H;
+          Fb(s.config, "unsupported"), $ = [], D = buildV5AnalyzerMessages(S, $, s.revisionDirection, s.revisionPromptChannels, s.splitStage, _, M, z), F = await Z(D);
         }
-        F = Sbt(q), V("validating"), L = q.transportDiagnostic, T = q.raw || q.parsed, s.onEvent?.({ kind: "raw-response", detail: q.raw });
-      } catch (Y) {
-        const M = Ibt(Y);
-        if (M === null)
-          throw s.onEvent?.({ kind: "error", detail: Y }), Y;
-        T = M, s.onEvent?.({ kind: "raw-response", detail: M });
+        K = F.requestObservation, U("validating"), Q = F.transportDiagnostic, L = F.raw || F.parsed, s.onEvent?.({ kind: "raw-response", detail: F.raw });
+      } catch (ee) {
+        const Z = Ibt(ee);
+        if (Z === null)
+          throw s.onEvent?.({ kind: "error", detail: ee }), ee;
+        L = Z, s.onEvent?.({ kind: "raw-response", detail: Z });
       }
-      let X;
+      let B;
       try {
-        s.signal?.throwIfAborted(), s.splitStage?.phase === "initial" ? (X = obt(T, s.context.candidateSlots.map((te) => te.slot_number), Number(p), P.payload.scene, u.response, {
-          comic: !!P.payload.response_contract.illustration.frame_placement.comicPanels,
-          slotEvidence: s.context.candidateSlots,
-          sceneDefinitionIds: P.payload.response_contract.illustration.sceneDefinitionId?.definitions.map((te) => te.id)
-        }), T = t0e(X)) : s.splitStage && (T = ibt(T, s.splitStage, !!P.payload.response_contract.illustration.frame_placement.comicPanels, u.response));
-        const Y = (te) => t.recoverAnalyzerResponse(te, u.response, P.enabledModifierRefs, P.payload.scene, P.localRecovery, P.payload.slot_hints, s.context.candidateSlots.map(({ slot_number: K }) => K), s.splitStage || Zr(s.revisionDirection) ? "preserve-response-membership" : "complete-from-request", s.context.freeCharacterGenerationEnabled), M = Y(T), q = s.splitStage ? M : a0e(M, s.context.candidateSlots, true);
+        s.signal?.throwIfAborted(), s.splitStage?.phase === "initial" ? (B = obt(L, s.splitStage.assignedSlots ?? s.context.candidateSlots.map((H) => H.slot_number), Number(h), m.response, {
+          comic: !!S.payload.response_contract.illustration.frame_placement.comicPanels,
+          sceneDefinitionIds: S.payload.response_contract.illustration.sceneDefinitionId?.definitions.map((H) => H.id)
+        }), L = t0e(B)) : s.splitStage && (L = ibt(L, s.splitStage, !!S.payload.response_contract.illustration.frame_placement.comicPanels, m.response));
+        const ee = (H) => t.recoverAnalyzerResponse(H, m.response, S.enabledModifierRefs, S.payload.scene, S.localRecovery, S.payload.slot_hints, s.context.candidateSlots.map(({ slot_number: J }) => J), s.splitStage || Zr(s.revisionDirection) ? "preserve-response-membership" : "complete-from-request", s.context.freeCharacterGenerationEnabled), Z = ee(L), F = s.splitStage ? Z : a0e(Z, s.context.candidateSlots, true);
         if (s.splitStage) {
-          const te = X ?? s.splitStage.plan;
-          s.splitStage.phase === "detail" && cbt(q, Y(t0e(te)), !!P.payload.response_contract.illustration.frame_placement.comicPanels);
-          const K = [...q.diagnostics, ...q.illustrations.flatMap((H) => H.diagnostics)].filter((H) => H.impact !== "recovered" && /(?:unknown-form-ref|outfit.*(?:omitted|mismatch|not-allowed)|generated-actor.*omitted|generated-character-creation-omitted|generated-outfit.*omitted)/u.test(H.code));
-          if (K.length)
-            throw Object.assign(new Error(`초기 결정의 인물·폼·의상 검증 실패: ${K.map((H) => `${H.path}: ${H.message}`).join("; ")}`), { diagnostics: K });
-          for (const H of q.illustrations) {
-            const J = te.illustrations.find((U) => U.slot_number === H.slotNumber);
-            if (!J || s.splitStage.phase === "initial" && H.actors.length !== J.actor_roster.length || J.actor_roster.some((U) => !H.actors.some((ee) => U.actorId === ee.actorId && U.candidateKey === ee.candidateKey)))
+          const H = B ?? s.splitStage.plan;
+          s.splitStage.phase === "detail" && cbt(F, ee(t0e(H)), !!S.payload.response_contract.illustration.frame_placement.comicPanels);
+          const J = [...F.diagnostics, ...F.illustrations.flatMap((V) => V.diagnostics)].filter((V) => V.impact !== "recovered" && /(?:unknown-form-ref|outfit.*(?:omitted|mismatch|not-allowed)|generated-actor.*omitted|generated-character-creation-omitted|generated-outfit.*omitted)/u.test(V.code));
+          if (J.length)
+            throw Object.assign(new Error(`초기 결정의 인물·폼·의상 검증 실패: ${J.map((V) => `${V.path}: ${V.message}`).join("; ")}`), { diagnostics: J });
+          for (const V of F.illustrations) {
+            const Y = H.illustrations.find((re) => re.slot_number === V.slotNumber);
+            if (!Y || s.splitStage.phase === "initial" && V.actors.length !== Y.actor_roster.length || Y.actor_roster.some((re) => !V.actors.some((se) => re.actorId === se.actorId && re.candidateKey === se.candidateKey)))
               throw new Error("분할 분석 인물 선택을 복구 과정에서 변경할 수 없습니다.");
           }
-          if (q.illustrations.length !== (s.splitStage.assignedSlots?.length ?? X.illustrations.length))
+          if (F.illustrations.length !== (s.splitStage.assignedSlots?.length ?? B.illustrations.length))
             throw new Error("분할 분석 복구 후 장수 불일치");
         }
-        if (s.onEvent?.({ kind: "normalized", detail: q }), s.splitStage?.phase !== "initial" && (!q.illustrations.some(({ status: te }) => te !== "unusable") || s.splitStage && q.illustrations.some(({ status: te }) => te === "unusable"))) {
-          const te = new Error("NovelAI V5 Analyzer returned no usable illustration."), K = new Set, H = [...q.diagnostics, ...q.illustrations.flatMap((J) => J.diagnostics)].filter((J) => {
-            const U = `${J.impact}\x00${J.code}\x00${J.path}\x00${J.message}`;
-            return K.has(U) ? false : (K.add(U), true);
+        if (s.onEvent?.({ kind: "normalized", detail: F }), s.splitStage?.phase !== "initial" && (!F.illustrations.some(({ status: H }) => H !== "unusable") || s.splitStage && F.illustrations.some(({ status: H }) => H === "unusable"))) {
+          const H = new Error("NovelAI V5 Analyzer returned no usable illustration."), J = new Set, V = [...F.diagnostics, ...F.illustrations.flatMap((Y) => Y.diagnostics)].filter((Y) => {
+            const re = `${Y.impact}\x00${Y.code}\x00${Y.path}\x00${Y.message}`;
+            return J.has(re) ? false : (J.add(re), true);
           });
-          throw Object.assign(te, {
+          throw Object.assign(H, {
             name: "NovelAIV5AnalyzerResultError",
             code: "V5_ANALYZER_NO_USABLE_ILLUSTRATION",
             retryable: false,
-            diagnostics: Object.freeze(H)
-          }), te;
+            diagnostics: Object.freeze(V)
+          }), H;
         }
-        return !s.splitStage && !Lu(s.config) && t.checkpoints.store(s.checkpointContext, O, q), Object.freeze({
-          ...X ? { splitPlan: X } : {},
+        return !s.splitStage && !Lu(s.config) && t.checkpoints.store(s.checkpointContext, R, F), Object.freeze({
+          ...B ? { splitPlan: B } : {},
           profile: "v5-hybrid",
-          response: q,
+          response: F,
           attempts: 1,
           resumedFromCheckpoint: false,
-          candidateBindings: u.response,
-          candidateSourceKeys: u.sourceKeyByCandidateKey,
-          requestPayload: G.payload,
-          localProjection: P.localProjection,
+          candidateBindings: m.response,
+          candidateSourceKeys: m.sourceKeyByCandidateKey,
+          requestPayload: D.payload,
+          localProjection: S.localProjection,
           catalogFingerprint: t.catalogFingerprint,
-          ...F ? { cacheNotice: F } : {},
-          ...L ? { transportDiagnostic: L } : {}
+          ...K ? { requestObservation: K } : {},
+          ...Q ? { transportDiagnostic: Q } : {}
         });
-      } catch (Y) {
-        if (Y instanceof ZG) {
+      } catch (ee) {
+        if (ee instanceof ZG) {
           try {
-            s.onSelectionProgress?.({ ...Gxe(Y), provider: "jev" });
+            s.onSelectionProgress?.({ ...Gxe(ee), provider: "jev" });
           } catch {}
           try {
-            s.onEvent?.({ kind: "error", detail: { code: Y.code, message: Y.message } });
+            s.onEvent?.({ kind: "error", detail: { code: ee.code, message: ee.message } });
           } catch {}
         }
-        throw s.splitStage ? nbt(Y) : Y;
+        throw s.splitStage ? nbt(ee) : ee;
       }
-    }
+    })
   });
 }
 var oq = Object.freeze(["text"]);
@@ -28738,20 +28924,20 @@ function createV5SplitAnalysisRunner(e, t) {
     },
     async run(a, o, i, s, c) {
       a = { ...a, selectionSettings: a.selectionSettings ?? e.captureSelectionSettings?.() };
-      const l = (...F) => {
+      const l = (...D) => {
         try {
-          i(...F);
+          i(...D);
         } catch {}
-      }, d = a.context.splitAnalysis, u = Lu(a.config), m = `${a.checkpointContext.chatKey}:${a.checkpointContext.messageId}`, p = a.context.candidateSlots.filter((F, L, V) => Number.isSafeInteger(F.slot_number) && F.slot_number >= 0 && V.findIndex((X) => X.slot_number === F.slot_number) === L), g = Math.min(d.totalCount, p.length);
-      if (!g)
+      }, d = a.context.splitAnalysis, u = Lu(a.config), m = `${a.checkpointContext.chatKey}:${a.checkpointContext.messageId}`, p = a.context.candidateSlots.filter((D, L, K) => Number.isSafeInteger(D.slot_number) && D.slot_number >= 0 && K.findIndex((Q) => Q.slot_number === D.slot_number) === L), h = Math.min(d.totalCount, p.length);
+      if (!h)
         throw new Ol("삽입 가능한 슬롯이 없습니다.", "preflight");
-      const b = Rbt(g, d.batchSize), v = await Promise.all((a.imageParts ?? []).map(async (F) => {
-        const L = new TextEncoder().encode(JSON.stringify(F)), V = await amEnv.crypto.subtle.digest("SHA-256", L);
-        return Array.from(new Uint8Array(V), (X) => X.toString(16).padStart(2, "0")).join("");
+      const b = Rbt(h, d.batchSize), v = await Promise.all((a.imageParts ?? []).map(async (D) => {
+        const L = new TextEncoder().encode(JSON.stringify(D)), K = await amEnv.crypto.subtle.digest("SHA-256", L);
+        return Array.from(new Uint8Array(K), (Q) => Q.toString(16).padStart(2, "0")).join("");
       }));
       a.signal?.throwIfAborted();
       const x = JSON.stringify({
-        protocol: 8,
+        protocol: 11,
         batchLimit: 10,
         sizes: b,
         selection: d,
@@ -28769,8 +28955,8 @@ function createV5SplitAnalysisRunner(e, t) {
         context: JSON.parse(JSON.stringify({
           ...a.context,
           candidateSlots: p,
-          targetImageCount: g,
-          imageCountConstraint: { mode: "fixed", min: g, max: g }
+          targetImageCount: h,
+          imageCountConstraint: { mode: "fixed", min: h, max: h }
         })),
         prepared: {},
         batches: {},
@@ -28778,14 +28964,11 @@ function createV5SplitAnalysisRunner(e, t) {
         selectionSession: {}
       }));
       if (u) {
-        const F = c?.requireRetainedPlan ? w.retainedSlots : undefined;
+        const D = c?.requireRetainedPlan ? w.retainedSlots : undefined;
         w = {
           responseKey: w.responseKey,
-          context: {
-            ...w.context,
-            candidateSlots: c?.requireRetainedPlan && F ? p.filter((L) => F.includes(L.slot_number)) : p
-          },
-          retainedSlots: F,
+          context: w.context,
+          retainedSlots: D,
           executionPrepared: w.executionPrepared,
           prepared: {},
           batches: {},
@@ -28793,184 +28976,209 @@ function createV5SplitAnalysisRunner(e, t) {
           selectionSession: {}
         };
       }
-      const I = (F) => {
-        a.signal?.throwIfAborted(), n.update(m, F), w = F;
-      }, S = async (F, L, V = "analysis") => {
-        const X = V === "execution" ? "executionPrepared" : "prepared", Y = w[X] ?? {};
-        if (Object.hasOwn(Y, F))
-          return Y[F];
-        const M = await L();
-        return I({ ...w, [X]: { ...w[X], [F]: M } }), M;
+      const k = (D) => {
+        a.signal?.throwIfAborted(), n.update(m, D), w = D;
+      }, I = async (D, L, K = "analysis") => {
+        const Q = K === "execution" ? "executionPrepared" : "prepared", U = w[Q] ?? {};
+        if (Object.hasOwn(U, D))
+          return U[D];
+        const B = await L();
+        return k({ ...w, [Q]: { ...w[Q], [D]: B } }), B;
       }, A = Math.max(0, Math.min(10, d.retries));
-      let P = true, k, C, j = 1;
-      const O = (F, L, V, X, Y) => w.analysisProgress?.steps.find((M) => M.id === F) ?? {
-        id: F,
+      let O = true, S, _, C = 1;
+      const P = (D, L, K, Q, U) => w.analysisProgress?.steps.find((B) => B.id === D) ?? {
+        id: D,
         phase: L,
-        index: V,
-        firstImage: X,
-        imageCount: Y,
+        index: K,
+        firstImage: Q,
+        imageCount: U,
         status: "queued",
         attempt: 1,
         retryLimit: A,
         requests: [],
         history: []
       };
-      let N = {
+      let z = {
         phase: "initial",
         steps: [
-          O("initial", "initial", 0, 1, g),
-          ...b.map((F, L) => {
-            const V = O(`detail-${L}`, "detail", L + 1, j, F);
-            return j += F, V;
+          P("initial", "initial", 0, 1, h),
+          ...b.map((D, L) => {
+            const K = P(`detail-${L}`, "detail", L + 1, C, D);
+            return C += D, K;
           })
         ]
       };
       const R = () => {
-        const F = Exe(N);
-        I({ ...w, analysisProgress: F });
+        const D = Exe(z);
+        k({ ...w, analysisProgress: D });
         try {
-          s?.(F);
+          s?.(D);
         } catch {}
-      }, D = (F, L) => {
-        N = { ...N, steps: N.steps.map((V) => V.id === F ? { ...V, ...L } : V) }, R();
-      }, B = (F) => {
-        N = { ...N, phase: F }, R();
-      }, G = (F) => {
-        if (!(!P || a.signal?.aborted)) {
-          F.observation && I({ ...w, observations: LN(w.observations, [F.observation]) });
+      }, T = (D, L) => {
+        z = { ...z, steps: z.steps.map((K) => K.id === D ? { ...K, ...L } : K) }, R();
+      }, G = (D) => {
+        z = { ...z, phase: D }, R();
+      }, $ = (D) => {
+        if (!(!O || a.signal?.aborted)) {
+          D.observation && k({ ...w, observations: LN(w.observations, [D.observation]) });
           try {
-            a.onRequestProgress?.(F);
+            a.onRequestProgress?.(D);
           } catch {}
         }
-      }, T = async (F, L, V) => {
+      }, M = async (D, L, K, Q) => {
         try {
-          const X = await Dbt(L, A, V.signal, async (Y) => {
-            const M = N.steps.find((K) => K.id === F), q = M.requests.length || M.error ? [...M.history, { attempt: M.attempt, error: M.error, requests: M.requests }].slice(-20) : M.history;
-            D(F, { attempt: Y, status: "queued", error: undefined, requests: [], history: q });
-            let te = true;
+          const U = z.steps.find((Z) => Z.id === D), B = U.requests.length || U.error ? U.historyAttempt ?? U.attempt : 0, ee = await Dbt(L, A, K.signal, async (Z) => {
+            const F = z.steps.find((Y) => Y.id === D), H = F.requests.length || F.error ? [...F.history, { attempt: F.attempt, error: F.error, requests: F.requests }].slice(-20) : F.history, J = B + Z;
+            T(D, { attempt: Z, historyAttempt: J, status: "queued", error: undefined, requests: [], history: H });
+            let V = true;
             try {
-              return await e.run({
-                ...V,
+              return await Q({
+                ...K,
+                historyStage: L,
+                historyAttempt: J,
                 selectionSession: w.selectionSession,
-                onRequestState: (K) => {
-                  P && te && !V.signal?.aborted && (D(F, { status: K }), V.onRequestState?.(K));
+                onRequestState: (Y) => {
+                  if (!(!O || !V || K.signal?.aborted)) {
+                    T(D, { status: Y });
+                    try {
+                      K.onRequestState?.(Y);
+                    } catch {}
+                  }
                 },
-                onRequestProgress: (K) => {
-                  if (!(!P || !te || V.signal?.aborted)) {
-                    if (K.observation) {
-                      const H = N.steps.find((J) => J.id === F);
-                      D(F, { requests: LN(H.requests, [K.observation]) });
+                onRequestProgress: (Y) => {
+                  if (!(!O || !V || K.signal?.aborted)) {
+                    if (Y.observation) {
+                      const re = z.steps.find((se) => se.id === D);
+                      T(D, { requests: LN(re.requests, [Y.observation]) });
                     }
-                    G(K);
+                    $(Y);
                   }
                 }
               });
-            } catch (K) {
-              if (!a.signal?.aborted && (!V.signal?.aborted || k === F)) {
-                const H = N.steps.find((J) => J.id === F);
-                D(F, {
-                  error: K instanceof Error ? K.message : String(K),
-                  retryErrors: appendRetryError(H.retryErrors, retryErrorRecord(K, Y, L))
+            } catch (Y) {
+              if (!a.signal?.aborted && (!K.signal?.aborted || S === D)) {
+                const re = z.steps.find((se) => se.id === D);
+                T(D, {
+                  error: Y instanceof Error ? Y.message : String(Y),
+                  retryErrors: appendRetryError(re.retryErrors, retryErrorRecord(Y, Z, L))
                 });
               }
-              throw K;
+              throw Y;
             } finally {
-              te = false;
+              V = false;
             }
           }, () => {
-            D(F, { status: "retrying" });
+            T(D, { status: "retrying" });
           });
-          if (F === "initial" && !X.splitPlan)
-            throw new Ol("초기 결정 계획이 누락되었습니다.", "initial");
-          return D(F, { status: "completed", error: undefined }), X;
-        } catch (X) {
-          throw a.signal?.aborted || D(F, {
-            status: V.signal?.aborted && k !== F ? "cancelled" : "failed",
-            error: X instanceof Error ? X.message : String(X)
-          }), X;
+          return D !== "initial" && T(D, { status: "completed", error: undefined }), ee;
+        } catch (U) {
+          throw a.signal?.aborted || T(D, {
+            status: K.signal?.aborted && S !== D ? "cancelled" : "failed",
+            error: U instanceof Error ? U.message : String(U)
+          }), U;
         }
       };
       try {
-        if (c?.requireRetainedPlan && !w.initial && !(u && w.retainedSlots?.length === g))
+        if (c?.requireRetainedPlan && !w.initial && !(u && w.retainedSlots?.length === h))
           throw new Ol("부분 생성의 분석 계획이 변경되었거나 만료되었습니다. 초기 결정부터 다시 시작하세요.", "expired");
         R();
-        for (const H of w.observations)
+        for (const re of w.observations)
           try {
-            a.onRequestProgress?.({ mode: H.mode, observation: H });
+            a.onRequestProgress?.({ mode: re.mode, observation: re });
           } catch {}
-        if (l(w.initial ? 1 : 0, b.length + 1, g < d.totalCount ? `후보 부족: ${d.totalCount}장 중 ${g}장 분석` : "초기 결정"), w.initial)
-          a.beforeRequest?.(), D("initial", { status: "reused" });
+        const D = b.length + 1;
+        l(w.initial ? 1 : 0, D, h < d.totalCount ? `후보 부족: ${d.totalCount}장 중 ${h}장 분석` : "분할 초기 분석");
+        const L = new Map(w.context.candidateSlots.map(({ slot_number: re, before: se, after: oe }) => [
+          re,
+          { slot_number: re, before: se, after: oe }
+        ])), K = (re) => re.map((se) => L.get(se)), Q = !!w.initial;
+        if (w.initial)
+          a.beforeRequest?.();
         else {
-          const H = await T("initial", "초기 결정", { ...a, context: w.context, splitStage: { phase: "initial" } }), J = H.splitPlan.illustrations.map((U) => U.slot_number);
-          if (u && c?.requireRetainedPlan && (J.length !== g || new Set(J).size !== g || J.some((U) => !w.retainedSlots.includes(U))))
-            throw new Ol("재분석 결과가 이미 생성한 이미지의 슬롯과 일치하지 않습니다.", "coverage");
-          I({ ...w, initial: H, ...u ? { retainedSlots: J } : {} });
+          const re = await M("initial", "분할 초기 분석", { ...a, context: w.context, splitStage: { phase: "initial", assignedSlots: w.retainedSlots } }, async (se) => {
+            const oe = await e.run(se);
+            if (!oe.splitPlan)
+              throw new Ol("분할 초기 계획이 누락되었습니다.", "initial");
+            return { ...oe, splitPlan: oe.splitPlan };
+          });
+          k({
+            ...w,
+            initial: re,
+            ...u ? { retainedSlots: re.splitPlan.illustrations.map((se) => se.slot_number) } : {}
+          });
         }
-        const F = w.initial;
-        B("preparation"), l(1, b.length + 1, "인물·의상 준비");
-        let L;
+        const U = w.initial, B = U.splitPlan.illustrations.map((re) => re.slot_number);
+        let ee;
+        T("initial", { status: "validating", error: undefined });
         try {
-          L = await o(F, S);
-        } catch (H) {
-          throw a.signal?.throwIfAborted(), new Ol(`인물·의상 준비: ${H instanceof Error ? H.message : String(H)}`, "preparation", { cause: H });
+          ee = await o(U, I), T("initial", { status: Q ? "reused" : "completed" });
+        } catch (re) {
+          a.signal?.throwIfAborted();
+          const se = re instanceof Error ? re.message : String(re);
+          throw T("initial", { status: "failed", error: se }), new Ol(`인물·의상 준비: ${se}`, "preparation", { cause: re });
         }
-        const V = F.splitPlan.illustrations.map((H) => H.slot_number);
-        let X = 0;
-        const Y = b.map((H) => {
-          const J = V.slice(X, X + H);
-          return X += H, J;
-        }), M = new AbortController, q = () => M.abort(a.signal?.reason);
-        a.signal?.addEventListener("abort", q, { once: true }), a.signal?.aborted && q();
-        const te = (H, J) => {
-          const U = J instanceof Error ? J.cause : undefined;
-          !k && (m0e(J) || m0e(U)) && (k = H, C = J, M.abort(J));
+        let Z = 0;
+        const F = b.map((re) => {
+          const se = B.slice(Z, Z + re);
+          return Z += re, se;
+        }), H = new AbortController, J = () => H.abort(a.signal?.reason);
+        a.signal?.addEventListener("abort", J, { once: true }), a.signal?.aborted && J();
+        const V = (re, se) => {
+          const oe = se instanceof Error ? se.cause : undefined;
+          !S && (m0e(se) || m0e(oe)) && (S = re, _ = se, H.abort(se));
         };
         try {
-          B("detail"), l(1 + Object.keys(w.batches).length, b.length + 1, `상세 분석 ${Object.keys(w.batches).length}/${b.length}`);
-          const H = (await Promise.allSettled(Y.map(async (J, U) => {
-            const ee = `detail-${U}`;
-            if (w.batches[U]) {
-              D(ee, { status: "reused" }), c?.ready({ initial: F, prepared: L, batchIndex: U, response: w.batches[U], signal: M.signal });
+          G("detail"), l(1 + Object.keys(w.batches).length, D, `상세 분석 ${Object.keys(w.batches).length}/${b.length}`);
+          const re = (await Promise.allSettled(F.map(async (se, oe) => {
+            const he = `detail-${oe}`;
+            if (w.batches[oe]) {
+              T(he, { status: "reused" }), c?.ready({
+                initial: U,
+                prepared: ee,
+                batchIndex: oe,
+                response: w.batches[oe],
+                signal: H.signal
+              });
               return;
             }
             try {
-              const ae = await T(ee, `상세 분석 ${U + 1}/${b.length}`, {
+              const me = await M(he, `상세 분석 ${oe + 1}/${b.length}`, {
                 ...a,
                 context: w.context,
-                signal: M.signal,
-                onRequestFailure: (me) => te(ee, me),
-                splitStage: { phase: "detail", plan: F.splitPlan, assignedSlots: J }
-              });
-              I({ ...w, batches: { ...w.batches, [U]: ae.response } }), c?.ready({ initial: F, prepared: L, batchIndex: U, response: ae.response, signal: M.signal }), l(1 + Object.keys(w.batches).length, b.length + 1, `상세 분석 ${Object.keys(w.batches).length}/${b.length}`);
-            } catch (ae) {
-              throw te(ee, ae), ae;
+                signal: H.signal,
+                onRequestFailure: (je) => V(he, je),
+                splitStage: { phase: "detail", plan: U.splitPlan, assignedSlots: se, slotContext: K(se) }
+              }, (je) => e.run(je));
+              k({ ...w, batches: { ...w.batches, [oe]: me.response } }), c?.ready({ initial: U, prepared: ee, batchIndex: oe, response: me.response, signal: H.signal }), l(1 + Object.keys(w.batches).length, D, `상세 분석 ${Object.keys(w.batches).length}/${b.length}`);
+            } catch (me) {
+              throw V(he, me), me;
             }
-          }))).find((J) => J.status === "rejected");
-          if (k)
-            throw new Ol(C instanceof Error ? C.message : String(C), "detail", { cause: C });
-          if (H)
-            throw H.reason;
+          }))).find((se) => se.status === "rejected");
+          if (S)
+            throw new Ol(_ instanceof Error ? _.message : String(_), "detail", { cause: _ });
+          if (re)
+            throw re.reason;
         } finally {
-          a.signal?.removeEventListener("abort", q);
+          a.signal?.removeEventListener("abort", J);
         }
-        a.signal?.throwIfAborted(), B("validation"), l(b.length + 1, b.length + 1, "분석 결과 확인 중");
-        const K = Y.flatMap((H, J) => w.batches[J].illustrations).sort((H, J) => H.slotNumber - J.slotNumber);
-        if (K.length !== g || new Set(K.map((H) => H.slotNumber)).size !== g || K.some((H) => !V.includes(H.slotNumber)))
+        a.signal?.throwIfAborted(), G("validation"), l(D, D, "분석 결과 확인 중");
+        const Y = F.flatMap((re, se) => w.batches[se].illustrations).sort((re, se) => re.slotNumber - se.slotNumber);
+        if (Y.length !== h || new Set(Y.map((re) => re.slotNumber)).size !== h || Y.some((re) => !B.includes(re.slotNumber)))
           throw new Ol("전체 슬롯 검증에 실패했습니다.", "coverage");
         return {
-          prepared: L,
+          prepared: ee,
           result: {
-            ...F,
-            response: { illustrations: K, diagnostics: Object.values(w.batches).flatMap((H) => H.diagnostics) }
+            ...U,
+            response: { illustrations: Y, diagnostics: Object.values(w.batches).flatMap((re) => re.diagnostics) }
           }
         };
-      } catch (F) {
-        throw c?.stop(), F;
+      } catch (D) {
+        throw c?.stop(), D;
       } finally {
         try {
           await c?.drain();
         } finally {
-          P = false, u && (w = {
+          O = false, u && (w = {
             responseKey: w.responseKey,
             context: w.context,
             retainedSlots: w.retainedSlots,
@@ -28979,7 +29187,7 @@ function createV5SplitAnalysisRunner(e, t) {
             batches: {},
             observations: [],
             selectionSession: {}
-          }, n.update(m, w)), n.release(m), r(w.responseKey, u ? "저장된 이미지 유지 · Risu AI 재분석 후 이어서 생성" : w.initial ? Object.keys(w.batches).length < b.length ? "준비 또는 실패한 상세 묶음 재시도 · 성공 묶음 유지" : "에셋 생성·저장 재시도 · 분석 결과 재사용" : "초기 결정 다시 분석");
+          }, n.update(m, w)), n.release(m), r(w.responseKey, u ? "저장된 이미지 유지 · Risu AI 재분석 후 이어서 생성" : w.initial ? Object.keys(w.batches).length < b.length ? "준비 또는 실패한 상세 묶음 재시도 · 성공 묶음 유지" : "에셋 생성·저장 재시도 · 분석 결과 재사용" : "분할 초기 분석 다시 시도");
         }
       }
     }
@@ -29011,17 +29219,17 @@ function eI(e, t, r, n = {}) {
   e.onEvent?.({ phase: r, session: t, ...n });
 }
 function $bt(e, t, r) {
-  const n = e !== null && typeof e == "object" && !Array.isArray(e) ? e : {}, a = r?.steps.find((i) => i.status === "failed"), o = !r?.steps.some((i) => i.generation?.status === "failed") && (a || typeof n.scope == "string" || ["analyzing-preset", "analyzing-modifiers", "planning"].includes(t)) ? `v5-split-${a?.phase ?? r?.phase ?? "initial"}` : "";
+  const n = e !== null && typeof e == "object" && !Array.isArray(e) ? e : {}, a = r?.steps.find((c) => c.status === "failed"), o = r?.steps.some((c) => c.generation?.status === "failed"), i = a?.phase ?? r?.phase ?? "initial", s = !o && (a || typeof n.scope == "string" || ["analyzing-preset", "analyzing-modifiers", "planning"].includes(t)) ? `v5-split-${i === "initial" ? "allocation" : i}` : "";
   return {
     message: e instanceof Error ? e.message : String(e),
     code: Hp(n.code) || "V5_GENERATION_FAILED",
     phase: t,
-    analyzerStage: r ? o : "v5-interaction-led",
-    analyzerStageNumber: a ? a.index + 1 : 1,
+    analyzerStage: r ? s : "v5-interaction-led",
+    analyzerStageNumber: r && a ? r.steps.indexOf(a) + 1 : 1,
     analyzerAttempts: a?.attempt ?? 1,
     analyzerUnifiedAttempts: a?.attempt ?? 1,
     analyzerRepairAttempts: 0,
-    analyzerCheckpointAvailable: !!r?.steps.some((i) => ["completed", "reused"].includes(i.status)),
+    analyzerCheckpointAvailable: !!r?.steps.some((c) => ["completed", "reused"].includes(c.status)),
     retryable: n.retryable === true
   };
 }
@@ -29115,28 +29323,30 @@ function createV5Orchestrator(e, t, r, n = Object.freeze({ build: buildV5Execute
       }), m = r.reserve(u), p = () => t.cancel(u, "external-abort");
       l.signal?.addEventListener("abort", p, { once: true }), l.signal?.aborted && p();
       try {
-        const g = await (l.prepareAnalysis ?? a.prepareAnalysis)?.(), b = g?.analysis ?? (a.captureAnalysis ? await a.captureAnalysis() : undefined), v = g?.analyzer ?? a.captureAnalyzer?.() ?? e;
+        const h = await (l.prepareAnalysis ?? a.prepareAnalysis)?.(), b = h?.analysis ?? (a.captureAnalysis ? await a.captureAnalysis() : undefined), v = h?.analyzer ?? a.captureAnalyzer?.() ?? e;
         b && (l = applyAnalysisToRunInput(l, b)), d = s = v, i.set(v, (i.get(v) ?? 0) + 1);
         let x = o.get(v);
         x || (x = createV5SplitAnalysisRunner(v, a.onSplitResumeState), o.set(v, x)), t.setPhase(u, "analyzing-preset", "v5-analyzer-start"), eI(l, u, "analyzing-preset");
-        const w = resolveV5UserDirections(l), I = sL(v.runtime.catalog, w.imageRatioCustomSizes), S = I === v.runtime.catalog ? v.runtime.sceneCompiler : createV5SceneCompiler(I), A = {
+        const w = resolveV5UserDirections(l), k = sL(v.runtime.catalog, w.imageRatioCustomSizes), I = k === v.runtime.catalog ? v.runtime.sceneCompiler : createV5SceneCompiler(k), A = {
           ...l,
           forceRating: l.forceRating,
           ...w.scenePresetId === "comic" ? { requestedSizeId: undefined, requestedSize: undefined } : {}
-        }, P = `${l.analyzerInput.checkpointContext.chatKey}:${l.analyzerInput.checkpointContext.messageId}`, k = l.signal ? c.get(l.signal) ?? new Map : new Map;
-        l.signal && c.set(l.signal, k);
-        const C = k.get(P) ?? {};
-        k.set(P, C);
-        const j = {
-          selectionSession: C,
+        }, O = `${l.analyzerInput.checkpointContext.chatKey}:${l.analyzerInput.checkpointContext.messageId}`, S = l.signal ? c.get(l.signal) ?? new Map : new Map;
+        l.signal && c.set(l.signal, S);
+        const _ = S.get(O) ?? {};
+        S.set(O, _);
+        const C = {
+          historyContext: l.analyzerInput.historyContext,
+          historyAttempt: l.analyzerInput.historyAttempt,
+          selectionSession: _,
           selectionSettings: v.captureSelectionSettings?.(),
-          onSelectionProgress(je) {
-            const He = t.get(u.sessionId);
-            He?.status === "active" && t.setPhase(u, He.phase, He.reason, { jevSelection: je });
+          onSelectionProgress(ve) {
+            const Ee = t.get(u.sessionId);
+            Ee?.status === "active" && t.setPhase(u, Ee.phase, Ee.reason, { jevSelection: ve });
           },
           onRequestState() {
-            const je = t.get(u.sessionId);
-            je?.status === "active" && t.setPhase(u, je.phase, "v5-analyzer-start");
+            const ve = t.get(u.sessionId);
+            ve?.status === "active" && t.setPhase(u, ve.phase, "v5-analyzer-start");
           },
           config: l.analysisConfig,
           userDirections: w,
@@ -29154,393 +29364,393 @@ function createV5Orchestrator(e, t, r, n = Object.freeze({ build: buildV5Execute
           revisionEvidenceKey: l.revisionEvidenceKey,
           signal: u.signal,
           beforeRequest: l.analyzerInput.beforeRequest,
-          onRequestProgress(je) {
-            const He = t.get(u.sessionId);
-            He?.status === "active" && t.setPhase(u, He.phase, He.reason, tht(je));
+          onRequestProgress(ve) {
+            const Ee = t.get(u.sessionId);
+            Ee?.status === "active" && t.setPhase(u, Ee.phase, Ee.reason, tht(ve));
           },
           diagnostic: { sessionId: u.sessionId, analysisKind: "chat-image-v5" }
-        }, O = new Set((l.skipSourceImageTokens ?? []).map(Hp).filter(Boolean)), N = new Set((l.skipSlotNumbers ?? []).filter((je) => Number.isSafeInteger(je) && je >= 0)), R = createV5ContinuityBasis(l.previousContinuitySnapshot ?? { characters: l.previousCharacterStateMap ?? {} }), D = async (je, He) => {
-          let ue = je.response.illustrations.filter((Q) => je.splitPlan || Q.status !== "unusable" && !N.has(Q.slotNumber) && !O.has(iq(Q, l)));
-          ue = [...ue].sort((Q, be) => Q.slotNumber - be.slotNumber);
-          const Oe = Nbt(ue), Je = Oe.length && l.prepareCharacters ? await He("characters", () => l.prepareCharacters({ actors: Oe, signal: u.signal, persistenceSignal: l.signal ?? null })) : [], $e = {
-            ...je.candidateSourceKeys,
-            ...Object.fromEntries(Je.map((Q) => [Q.candidateKey, Q.identityKey]))
+        }, P = new Set((l.skipSourceImageTokens ?? []).map(Hp).filter(Boolean)), z = new Set((l.skipSlotNumbers ?? []).filter((ve) => Number.isSafeInteger(ve) && ve >= 0)), R = createV5ContinuityBasis(l.previousContinuitySnapshot ?? { characters: l.previousCharacterStateMap ?? {} }), T = async (ve, Ee) => {
+          let ge = ve.response.illustrations.filter((te) => ve.splitPlan || te.status !== "unusable" && !z.has(te.slotNumber) && !P.has(iq(te, l)));
+          ge = [...ge].sort((te, Se) => te.slotNumber - Se.slotNumber);
+          const Ve = Nbt(ge), We = Ve.length && l.prepareCharacters ? await Ee("characters", () => l.prepareCharacters({ actors: Ve, signal: u.signal, persistenceSignal: l.signal ?? null })) : [], Xe = {
+            ...ve.candidateSourceKeys,
+            ...Object.fromEntries(We.map((te) => [te.candidateKey, te.identityKey]))
           };
-          Je.length && (ue = U4(ue, Je));
-          const et = Hbt(ue, $e), Ze = Object.fromEntries(et.flatMap((Q) => Q.selectedOutfitId ? [[Q.requestKey, Q.selectedOutfitId]] : [])), dt = {};
-          if (et.some(({ proposal: Q }) => !!Q) && l.prepareOutfits) {
-            const Q = await He("outfits", () => l.prepareOutfits({ actors: et, signal: u.signal }));
-            Object.assign(Ze, Q.selectedOutfitIds), Object.assign(dt, Q.preparedOutfits ?? {});
+          We.length && (ge = U4(ge, We));
+          const dt = Hbt(ge, Xe), Fe = Object.fromEntries(dt.flatMap((te) => te.selectedOutfitId ? [[te.requestKey, te.selectedOutfitId]] : [])), ut = {};
+          if (dt.some(({ proposal: te }) => !!te) && l.prepareOutfits) {
+            const te = await Ee("outfits", () => l.prepareOutfits({ actors: dt, signal: u.signal }));
+            Object.assign(Fe, te.selectedOutfitIds), Object.assign(ut, te.preparedOutfits ?? {});
           }
-          const Pe = je.splitPlan ? await He("image-seed", async () => createSeedResolver().resolve(ue.map((Q) => {
-            const be = Q.actors.map((ze, ie) => ({
+          const ye = ve.splitPlan ? await Ee("image-seed", async () => createSeedResolver().resolve(ge.map((te) => {
+            const Se = te.actors.map((ze, ae) => ({
               actorId: ze.actorId,
-              actorIndex: ie,
+              actorIndex: ae,
               kind: ze.continuityIdentity?.kind === "persona_reference" ? "persona" : "character",
               gender: "",
-              identityKey: ze.continuityIdentity?.value ?? $e[ze.candidateKey] ?? "",
+              identityKey: ze.continuityIdentity?.value ?? Xe[ze.candidateKey] ?? "",
               identityName: "",
               selectedFormId: ze.formId ?? "",
               selectedOutfitId: ze.outfit?.selectedId ?? "",
               identitySuppressed: false,
               prompt: "",
               negativePrompt: ""
-            })), Me = l.seedSetting?.(be), Ie = Wi(Me?.seed ?? l.novelAIConfig.seed);
-            return { configuredSeed: Ie, configuredSeedFixed: Me ? !!(Me.fixed && Ie) : !!Ie };
-          })), "execution") : undefined, Ce = await He("continuity-basis", async () => R, "execution");
+            })), Ce = l.seedSetting?.(Se), be = Wi(Ce?.seed ?? l.novelAIConfig.seed);
+            return { configuredSeed: be, configuredSeedFixed: Ce ? !!(Ce.fixed && be) : !!be };
+          })), "execution") : undefined, Re = await Ee("continuity-basis", async () => R, "execution");
           return {
-            graphs: ue,
-            preparedCharacters: Je,
-            candidateSourceKeys: $e,
-            selectedOutfitIds: Ze,
-            preparedOutfits: dt,
-            seed: Pe,
-            continuityBasis: Ce
+            graphs: ge,
+            preparedCharacters: We,
+            candidateSourceKeys: Xe,
+            selectedOutfitIds: Fe,
+            preparedOutfits: ut,
+            seed: ye,
+            continuityBasis: Re
           };
-        }, B = !!(j.context.splitAnalysis && !l.revisionDirection), G = (je, He, ue = He.graphs.map((Oe) => Oe.slotNumber)) => {
+        }, G = !!(C.context.splitAnalysis && !l.revisionDirection), $ = (ve, Ee, ge = Ee.graphs.map((Ve) => Ve.slotNumber)) => {
           const {
-            graphs: Oe,
-            preparedCharacters: Je,
-            candidateSourceKeys: $e,
-            selectedOutfitIds: et,
-            preparedOutfits: Ze
-          } = He;
-          let dt = He.continuityBasis, Pe;
-          const Ce = Bbt(l, $e), Q = new Set(Je.map((ze) => ze.identityKey)), be = {
-            ...Ce,
-            identities: [...Ce.identities.filter((ze) => !Q.has(ze.key)), ...Je.map((ze) => ze.promptContext)]
-          }, Me = new WeakMap, Ie = Oe.map((ze, ie) => {
-            B && (dt = He.continuityBasis);
-            const nt = iq(ze, l), re = je.localProjection.sizeId ?? (w.scenePresetId === "comic" ? ze.analyzerSizeId === 2 ? 2 : 1 : undefined), Se = buildV5PromptContext({
+            graphs: Ve,
+            preparedCharacters: We,
+            candidateSourceKeys: Xe,
+            selectedOutfitIds: dt,
+            preparedOutfits: Fe
+          } = Ee;
+          let ut = Ee.continuityBasis, ye;
+          const Re = Bbt(l, Xe), te = new Set(We.map((ze) => ze.identityKey)), Se = {
+            ...Re,
+            identities: [...Re.identities.filter((ze) => !te.has(ze.key)), ...We.map((ze) => ze.promptContext)]
+          }, Ce = new WeakMap, be = Ve.map((ze, ae) => {
+            G && (ut = Ee.continuityBasis);
+            const et = iq(ze, l), ne = ve.localProjection.sizeId ?? (w.scenePresetId === "comic" ? ze.analyzerSizeId === 2 ? 2 : 1 : undefined), _e = buildV5PromptContext({
               graph: ze,
-              candidateSourceKeys: $e,
-              context: be,
+              candidateSourceKeys: Xe,
+              context: Se,
               scenePresetId: w.scenePresetId,
-              selectedOutfitIds: Object.freeze(Object.fromEntries(ze.actors.flatMap((Zt) => {
-                const xr = Hp(et[tI(ie, Zt.actorId)]);
-                return xr ? [[Zt.actorId, xr]] : [];
+              selectedOutfitIds: Object.freeze(Object.fromEntries(ze.actors.flatMap((Gt) => {
+                const ir = Hp(dt[tI(ae, Gt.actorId)]);
+                return ir ? [[Gt.actorId, ir]] : [];
               }))),
-              preparedOutfits: Object.freeze(Object.fromEntries(ze.actors.flatMap((Zt) => {
-                const xr = Ze[tI(ie, Zt.actorId)];
-                return xr ? [[Zt.actorId, xr]] : [];
+              preparedOutfits: Object.freeze(Object.fromEntries(ze.actors.flatMap((Gt) => {
+                const ir = Fe[tI(ae, Gt.actorId)];
+                return ir ? [[Gt.actorId, ir]] : [];
               }))),
-              selectedOutfitIdsByOccurrence: Object.freeze(Object.fromEntries(ze.actorDetails.flatMap((Zt) => {
-                if (!Zt.outfit)
+              selectedOutfitIdsByOccurrence: Object.freeze(Object.fromEntries(ze.actorDetails.flatMap((Gt) => {
+                if (!Gt.outfit)
                   return [];
-                const xr = Hp(et[tI(ie, Zt.actorId, Zt.placementIndex)]);
-                return xr ? [[`${Zt.actorId}:${Zt.placementIndex}`, xr]] : [];
+                const ir = Hp(dt[tI(ae, Gt.actorId, Gt.placementIndex)]);
+                return ir ? [[`${Gt.actorId}:${Gt.placementIndex}`, ir]] : [];
               }))),
-              preparedOutfitsByOccurrence: Object.freeze(Object.fromEntries(ze.actorDetails.flatMap((Zt) => {
-                if (!Zt.outfit)
+              preparedOutfitsByOccurrence: Object.freeze(Object.fromEntries(ze.actorDetails.flatMap((Gt) => {
+                if (!Gt.outfit)
                   return [];
-                const xr = Ze[tI(ie, Zt.actorId, Zt.placementIndex)];
-                return xr ? [[`${Zt.actorId}:${Zt.placementIndex}`, xr]] : [];
+                const ir = Fe[tI(ae, Gt.actorId, Gt.placementIndex)];
+                return ir ? [[`${Gt.actorId}:${Gt.placementIndex}`, ir]] : [];
               })))
-            }), _e = resolveImageProviderRef(l, r, {
-              decision: { source_image_token: nt, slot_id: nt, slot_number: ze.slotNumber },
-              index: ue.indexOf(ze.slotNumber),
-              imageCount: ue.length,
+            }), ot = resolveImageProviderRef(l, r, {
+              decision: { source_image_token: et, slot_id: et, slot_number: ze.slotNumber },
+              index: ge.indexOf(ze.slotNumber),
+              imageCount: ge.length,
               defaultProvider: Fbt(l)
-            }), ne = S.compile(ze, {
-              selectionKey: `${u.messageId || u.responseKey || u.sessionKey}:${nt}:${ue.indexOf(ze.slotNumber)}`,
-              actorHumanlike: Se.actorHumanlike,
-              allowedSizeIds: je.localProjection.allowedSizeIds,
-              provider: _e.providerId,
-              completelyNudeActorIds: Se.completelyNudeActorIds,
-              completelyNudeByOccurrence: Se.completelyNudeByOccurrence,
-              ruleContinuityByActorId: Object.fromEntries(ze.actors.flatMap((Zt) => {
-                const xr = Zt.continuityIdentity ? fc(Zt.continuityIdentity) : undefined, hr = xr ? He.continuityBasis.actors[xr] : undefined;
-                return hr ? [[Zt.actorId, { groups: hr.groups, counters: hr.counters }]] : [];
+            }), de = I.compile(ze, {
+              selectionKey: `${u.messageId || u.responseKey || u.sessionKey}:${et}:${ge.indexOf(ze.slotNumber)}`,
+              actorHumanlike: _e.actorHumanlike,
+              allowedSizeIds: ve.localProjection.allowedSizeIds,
+              provider: ot.providerId,
+              completelyNudeActorIds: _e.completelyNudeActorIds,
+              completelyNudeByOccurrence: _e.completelyNudeByOccurrence,
+              ruleContinuityByActorId: Object.fromEntries(ze.actors.flatMap((Gt) => {
+                const ir = Gt.continuityIdentity ? fc(Gt.continuityIdentity) : undefined, Fr = ir ? Ee.continuityBasis.actors[ir] : undefined;
+                return Fr ? [[Gt.actorId, { groups: Fr.groups, counters: Fr.counters }]] : [];
               })),
-              ...re ? { requestedSizeId: re } : Number.isSafeInteger(l.requestedSizeId) && Number(l.requestedSizeId) > 0 ? { requestedSizeId: Number(l.requestedSizeId) } : {}
-            }), tt = ane({
+              ...ne ? { requestedSizeId: ne } : Number.isSafeInteger(l.requestedSizeId) && Number(l.requestedSizeId) > 0 ? { requestedSizeId: Number(l.requestedSizeId) } : {}
+            }), At = ane({
               scene: ze,
-              draft: ne,
-              catalog: I,
-              state: dt,
-              eventScopeId: `${u.sessionId}:${nt}`,
+              draft: de,
+              catalog: k,
+              state: ut,
+              eventScopeId: `${u.sessionId}:${et}`,
               advanceTurn: l.advanceContinuityTurn,
-              completelyNudeActorIds: Se.completelyNudeActorIds
+              completelyNudeActorIds: _e.completelyNudeActorIds
             });
-            dt = tt.continuity.state;
-            const Ue = reconcileV5SceneContinuity(ne, tt, I, { completelyNudeActorIds: Se.completelyNudeActorIds });
-            dt = Kre(dt, ze, Se, ne), dt = Lre(dt, ze, ne, I), dt = Mre(dt, ze, ne, I), dt = Tre(Pe, dt), Pe = dt;
-            const We = n.build({
-              reconciled: Ue,
-              catalog: I,
+            ut = At.continuity.state;
+            const rt = reconcileV5SceneContinuity(de, At, k, { completelyNudeActorIds: _e.completelyNudeActorIds });
+            ut = Kre(ut, ze, _e, de), ut = Lre(ut, ze, de, k), ut = Mre(ut, ze, de, k), ut = Tre(ye, ut), ye = ut;
+            const tt = n.build({
+              reconciled: rt,
+              catalog: k,
               includeRegisteredActorSexTags: l.generationType !== "ai-prompt-edit" && !Hp(l.revisionDirection),
-              actorHumanlike: Se.actorHumanlike,
-              externalEntries: Se.externalEntries,
-              globalNegativePrompt: Se.globalNegativePrompt,
-              actorNegativePrompts: Se.actorNegativePrompts
-            }), mt = VDe({
-              catalogFingerprint: je.catalogFingerprint,
+              actorHumanlike: _e.actorHumanlike,
+              externalEntries: _e.externalEntries,
+              globalNegativePrompt: _e.globalNegativePrompt,
+              actorNegativePrompts: _e.actorNegativePrompts
+            }), $t = VDe({
+              catalogFingerprint: ve.catalogFingerprint,
               normalizedGraph: ze,
-              diagnostics: Object.freeze([...je.response.diagnostics, ...ze.diagnostics]),
-              executedPromptPlan: We
-            }), kt = buildV5PromptView(We, Se), De = buildV5PromptSegments(We, Se.artistNegativePrompt), vt = buildV5ImageActors(kt);
-            Me.set(vt, vt.map((Zt) => {
-              const xr = ze.actors.find((lr) => lr.actorId === Zt.actorId), hr = xr ? $e[xr.candidateKey] : "";
-              return Zt.identityKey || !hr ? Zt : { ...Zt, identityKey: hr };
+              diagnostics: Object.freeze([...ve.response.diagnostics, ...ze.diagnostics]),
+              executedPromptPlan: tt
+            }), Rt = buildV5PromptView(tt, _e), Oe = buildV5PromptSegments(tt, _e.artistNegativePrompt), Ae = buildV5ImageActors(Rt);
+            Ce.set(Ae, Ae.map((Gt) => {
+              const ir = ze.actors.find((zr) => zr.actorId === Gt.actorId), Fr = ir ? Xe[ir.candidateKey] : "";
+              return Gt.identityKey || !Fr ? Gt : { ...Gt, identityKey: Fr };
             }));
-            const zt = vt.flatMap((Zt) => {
-              const xr = ze.actors.find((lr) => lr.actorId === Zt.actorId), hr = Je.find((lr) => lr.candidateKey === xr?.candidateKey);
-              return hr?.temporaryLabel ? [[Zt.actorIndex + 1, hr.temporaryLabel]] : [];
-            }), Ct = {
+            const De = Ae.flatMap((Gt) => {
+              const ir = ze.actors.find((zr) => zr.actorId === Gt.actorId), Fr = We.find((zr) => zr.candidateKey === ir?.candidateKey);
+              return Fr?.temporaryLabel ? [[Gt.actorIndex + 1, Fr.temporaryLabel]] : [];
+            }), st = {
               ...PDe({
-                history: mt,
-                continuity: tt,
-                savedContinuityState: dt,
-                candidateBindings: je.candidateBindings,
-                selectedFormIds: Se.selectedFormIds,
-                selectedOutfitIdsByOccurrence: Object.freeze(Object.fromEntries(kt.characters.flatMap((Zt) => Zt.placementIndex === undefined ? [] : [[`${Zt.actorId}:${Zt.placementIndex}`, Zt.selectedOutfitId ?? ""]]))),
+                history: $t,
+                continuity: At,
+                savedContinuityState: ut,
+                candidateBindings: ve.candidateBindings,
+                selectedFormIds: _e.selectedFormIds,
+                selectedOutfitIdsByOccurrence: Object.freeze(Object.fromEntries(Rt.characters.flatMap((Gt) => Gt.placementIndex === undefined ? [] : [[`${Gt.actorId}:${Gt.placementIndex}`, Gt.selectedOutfitId ?? ""]]))),
                 ...w.scenePresetId ? { scenePresetId: w.scenePresetId } : {},
-                requestPayload: je.requestPayload,
-                ...je.transportDiagnostic ? { transportDiagnostic: je.transportDiagnostic } : {},
-                continuityCatalog: I.continuity,
-                actorOrdinalByActorId: Object.freeze(Object.fromEntries(vt.map((Zt) => [Zt.actorId, Zt.actorIndex + 1])))
+                requestPayload: ve.requestPayload,
+                ...ve.transportDiagnostic ? { transportDiagnostic: ve.transportDiagnostic } : {},
+                continuityCatalog: k.continuity,
+                actorOrdinalByActorId: Object.freeze(Object.fromEntries(Ae.map((Gt) => [Gt.actorId, Gt.actorIndex + 1])))
               }),
-              ...zt.length ? { ta: zt } : {}
-            }, ht = bre(dt, "novelai-v5"), Ve = buildV5HistoryDecision({
-              baseDecision: Object.freeze({ source_image_token: nt, slot_id: nt, slot_number: ze.slotNumber }),
-              history: mt,
-              continuitySnapshot: ht
+              ...De.length ? { ta: De } : {}
+            }, ct = bre(ut, "novelai-v5"), $e = buildV5HistoryDecision({
+              baseDecision: Object.freeze({ source_image_token: et, slot_id: et, slot_number: ze.slotNumber }),
+              history: $t,
+              continuitySnapshot: ct
             });
             return Object.freeze({
-              token: nt,
+              token: et,
               graph: ze,
-              decision: Ve,
-              promptView: kt,
-              actors: vt,
-              promptSegments: De,
-              analysisMetadata: Ct,
-              providerRef: _e,
-              executedPromptPlan: We,
-              projectedContext: Se,
-              draft: ne,
-              layoutKeyframe: nne(ze, ne)
+              decision: $e,
+              promptView: Rt,
+              actors: Ae,
+              promptSegments: Oe,
+              analysisMetadata: st,
+              providerRef: ot,
+              executedPromptPlan: tt,
+              projectedContext: _e,
+              draft: de,
+              layoutKeyframe: nne(ze, de)
             });
           });
-          return dt = mre(dt, Object.freeze([...Ie].sort((ze, ie) => ie.graph.slotNumber - ze.graph.slotNumber).flatMap(({ layoutKeyframe: ze }) => ze ? [ze] : []))), {
-            planned: Ie,
-            continuityState: dt,
-            referenceActors: Me,
-            graphs: Oe,
-            preparedCharacters: Je,
-            candidateSourceKeys: $e
+          return ut = mre(ut, Object.freeze([...be].sort((ze, ae) => ae.graph.slotNumber - ze.graph.slotNumber).flatMap(({ layoutKeyframe: ze }) => ze ? [ze] : []))), {
+            planned: be,
+            continuityState: ut,
+            referenceActors: Ce,
+            graphs: Ve,
+            preparedCharacters: We,
+            candidateSourceKeys: Xe
           };
-        }, T = async (je, He, ue) => {
-          const { planned: Oe, referenceActors: Je, preparedCharacters: $e } = je;
-          if (Oe.some((dt) => dt.providerRef.providerId === "novelai") && !Hp(l.novelAIConfig.apiKey))
+        }, M = async (ve, Ee, ge) => {
+          const { planned: Ve, referenceActors: We, preparedCharacters: Xe } = ve;
+          if (Ve.some((ut) => ut.providerRef.providerId === "novelai") && !Hp(l.novelAIConfig.apiKey))
             throw Object.assign(new Error("NovelAI API 키가 설정되지 않았습니다."), {
               code: "NOVELAI_API_KEY_REQUIRED"
             });
           t.setPhase(u, "generating", "v5-prompt-plans-ready", {
-            imageIndex: ue?.completedCount ?? 0,
-            imageCount: ue?.totalCount ?? Oe.length
-          }), ue || eI(l, u, "generating", { imageIndex: 0, imageCount: Oe.length });
-          const et = (dt, Pe) => {
-            const Ce = Oe[Pe];
-            if (!Ce)
+            imageIndex: ge?.completedCount ?? 0,
+            imageCount: ge?.totalCount ?? Ve.length
+          }), ge || eI(l, u, "generating", { imageIndex: 0, imageCount: Ve.length });
+          const dt = (ut, ye) => {
+            const Re = Ve[ye];
+            if (!Re)
               return;
-            const Q = $e.filter((ie) => ie.persisted !== false);
-            if (!Q.length)
+            const te = Xe.filter((ae) => ae.persisted !== false);
+            if (!te.length)
               return;
-            const be = U4([Ce.graph], Q)[0], Me = { ...Ce.projectedContext.identityKeyByActorId };
-            for (const ie of be.actors)
-              ie.continuityIdentity && (Me[ie.actorId] = ie.continuityIdentity.value);
-            const Ie = buildV5PromptView(Ce.executedPromptPlan, { ...Ce.projectedContext, identityKeyByActorId: Me }), ze = dt.promptPlan;
-            dt.actors = dt.actors.map((ie) => ({ ...ie, identityKey: Me[ie.actorId] ?? ie.identityKey })), dt.promptPlan = {
+            const Se = U4([Re.graph], te)[0], Ce = { ...Re.projectedContext.identityKeyByActorId };
+            for (const ae of Se.actors)
+              ae.continuityIdentity && (Ce[ae.actorId] = ae.continuityIdentity.value);
+            const be = buildV5PromptView(Re.executedPromptPlan, { ...Re.projectedContext, identityKeyByActorId: Ce }), ze = ut.promptPlan;
+            ut.actors = ut.actors.map((ae) => ({ ...ae, identityKey: Ce[ae.actorId] ?? ae.identityKey })), ut.promptPlan = {
               ...ze,
-              matchedIdentityKeys: Ie.matchedIdentityKeys,
-              actorIdentities: Ie.actorIdentities,
-              characters: ze.characters.map((ie, nt) => ({
-                ...ie,
-                ...Ie.characters[nt]?.identityKey ? { identityKey: Ie.characters[nt].identityKey, identity: Ie.characters[nt].identity } : {}
+              matchedIdentityKeys: be.matchedIdentityKeys,
+              actorIdentities: be.actorIdentities,
+              characters: ze.characters.map((ae, et) => ({
+                ...ae,
+                ...be.characters[et]?.identityKey ? { identityKey: be.characters[et].identityKey, identity: be.characters[et].identity } : {}
               }))
-            }, dt.decision = { ...dt.decision, [gp]: { ...g0e(g0e(dt.decision)[gp]), normalizedGraph: be } };
-          }, Ze = await m.execute({
+            }, ut.decision = { ...ut.decision, [gp]: { ...g0e(g0e(ut.decision)[gp]), normalizedGraph: Se } };
+          }, Fe = await m.execute({
             ...A,
-            ...ue ? { onEvent: (dt) => l.onEvent?.({ ...dt, analysisComplete: false }) } : {},
-            references: (dt) => l.references?.(Je.get(dt) ?? dt) ?? [],
-            outfitReference: (dt) => l.outfitReference?.(Je.get(dt) ?? dt) ?? null,
-            characterReference: (dt) => l.characterReference?.(Je.get(dt) ?? dt) ?? null,
+            ...ge ? { onEvent: (ut) => l.onEvent?.({ ...ut, analysisComplete: false }) } : {},
+            references: (ut) => l.references?.(We.get(ut) ?? ut) ?? [],
+            outfitReference: (ut) => l.outfitReference?.(We.get(ut) ?? ut) ?? null,
+            characterReference: (ut) => l.characterReference?.(We.get(ut) ?? ut) ?? null,
             ...l.persistGeneratedImage ? {
-              persistGeneratedImage: async (dt, Pe, Ce, Q) => {
-                et(dt, Pe), await l.persistGeneratedImage(dt, ue ? l.analyzerInput.context.candidateSlots.findIndex((be) => be.slot_number === Oe[Pe].graph.slotNumber) : Pe, ue?.totalCount ?? Ce, Q);
+              persistGeneratedImage: async (ut, ye, Re, te) => {
+                dt(ut, ye), await l.persistGeneratedImage(ut, ge ? l.analyzerInput.context.candidateSlots.findIndex((Se) => Se.slot_number === Ve[ye].graph.slotNumber) : ye, ge?.totalCount ?? Re, te);
               }
             } : {}
-          }, Oe.map((dt) => ({
-            sourceImageToken: dt.token,
-            providerRef: dt.providerRef,
-            actors: dt.actors,
-            promptSegments: dt.promptSegments ?? { outfits: {} },
-            analysisMetadata: dt.analysisMetadata,
-            decision: dt.decision,
-            promptPlan: dt.promptView,
+          }, Ve.map((ut) => ({
+            sourceImageToken: ut.token,
+            providerRef: ut.providerRef,
+            actors: ut.actors,
+            promptSegments: ut.promptSegments ?? { outfits: {} },
+            analysisMetadata: ut.analysisMetadata,
+            decision: ut.decision,
+            promptPlan: ut.promptView,
             analyzerContinuity: l.analyzerInput.context.visualContinuity,
             queueSource: "novelai-v5-interaction-led",
-            createNovelAIConfig: (Pe) => createV5NovelAIConfig(l, dt.executedPromptPlan, Pe, He.localProjection.characterCoordinates, He.requestPayload.active_persona_candidate_key),
-            prepareProviderPrompt: (Pe) => prepareV5ProviderPrompt({
-              plan: dt.executedPromptPlan,
-              provider: Pe.provider,
-              config: Pe.novelAIConfig,
-              comfyUIProfile: Pe.comfyUIProfile,
-              outfitReferenceEnabled: Pe.outfitReferenceEnabled,
+            createNovelAIConfig: (ye) => createV5NovelAIConfig(l, ut.executedPromptPlan, ye, Ee.localProjection.characterCoordinates, Ee.requestPayload.active_persona_candidate_key),
+            prepareProviderPrompt: (ye) => prepareV5ProviderPrompt({
+              plan: ut.executedPromptPlan,
+              provider: ye.provider,
+              config: ye.novelAIConfig,
+              comfyUIProfile: ye.comfyUIProfile,
+              outfitReferenceEnabled: ye.outfitReferenceEnabled,
               animaPositivePrefix: l.comfyUI?.animaPositivePrefix,
               animaNegativePrefix: l.comfyUI?.animaNegativePrefix
             })
-          })), ue);
-          return Ze.forEach(et), Ze;
-        }, F = new Map, L = new Set, V = new Map, X = new Map;
-        let Y, M = false, q = false, te, K = false, H = 0, J = 0, U = Promise.resolve();
-        const ee = () => {
-          const je = t.get(u.sessionId);
-          !Y || je?.status !== "active" || t.setPhase(u, je.phase, je.reason, {
+          })), ge);
+          return Fe.forEach(dt), Fe;
+        }, D = new Map, L = new Set, K = new Map, Q = new Map;
+        let U, B = false, ee = false, Z, F = false, H = 0, J = 0, V = Promise.resolve();
+        const Y = () => {
+          const ve = t.get(u.sessionId);
+          !U || ve?.status !== "active" || t.setPhase(u, ve.phase, ve.reason, {
             splitAnalysis: {
-              ...Y,
+              ...U,
               imageCount: H,
               savedImageCount: J,
-              analysisComplete: M,
-              steps: Y.steps.map((He) => ({ ...He, ...X.has(He.id) ? { generation: X.get(He.id) } : {} }))
+              analysisComplete: B,
+              steps: U.steps.map((Ee) => ({ ...Ee, ...Q.has(Ee.id) ? { generation: Q.get(Ee.id) } : {} }))
             }
           });
-        }, ae = (je, He) => {
-          const ue = U4([...He].sort((Je, $e) => Je.slotNumber - $e.slotNumber), je.preparedCharacters), Oe = (Je) => zbt(je.graphs, ue, Je);
+        }, re = (ve, Ee) => {
+          const ge = U4([...Ee].sort((We, Xe) => We.slotNumber - Xe.slotNumber), ve.preparedCharacters), Ve = (We) => zbt(ve.graphs, ge, We);
           return {
-            ...je,
-            graphs: ue,
-            selectedOutfitIds: Oe(je.selectedOutfitIds),
-            preparedOutfits: Oe(je.preparedOutfits)
+            ...ve,
+            graphs: ge,
+            selectedOutfitIds: Ve(ve.selectedOutfitIds),
+            preparedOutfits: Ve(ve.preparedOutfits)
           };
-        }, me = (je) => N.has(je.slotNumber) || O.has(iq(je, l)), se = (je) => {
-          if (!(K || te || u.signal.aborted || L.has(je.batchIndex)))
+        }, se = (ve) => z.has(ve.slotNumber) || P.has(iq(ve, l)), oe = (ve) => {
+          if (!(F || Z || u.signal.aborted || L.has(ve.batchIndex)))
             try {
-              const He = [...je.initial.splitPlan.illustrations].map((Ze) => Ze.slot_number).sort((Ze, dt) => Ze - dt);
+              const Ee = [...ve.initial.splitPlan.illustrations].map((Fe) => Fe.slot_number).sort((Fe, ut) => Fe - ut);
               H || eI(l, u, "analyzing-preset", {
-                imageCount: He.length - je.prepared.graphs.filter(me).length,
+                imageCount: Ee.length - ve.prepared.graphs.filter(se).length,
                 analysisComplete: false
-              }), H = He.length;
-              const ue = [...je.response.illustrations].sort((Ze, dt) => Ze.slotNumber - dt.slotNumber), Oe = { ...je.initial, response: je.response }, Je = G(Oe, ae(je.prepared, ue), He);
-              L.add(je.batchIndex);
-              const $e = `detail-${je.batchIndex}`, et = ue.filter(me).length;
-              X.set($e, { status: et === ue.length ? "completed" : "queued", completed: et, total: ue.length }), J = je.prepared.graphs.filter(me).length + F.size;
-              for (const Ze of Je.planned) {
-                const dt = Ze.graph.slotNumber;
-                V.set(dt, Ze), !me(Ze.graph) && (U = U.then(async () => {
-                  if (!(K || te || u.signal.aborted || je.signal.aborted)) {
-                    q = true, X.set($e, {
-                      ...X.get($e),
+              }), H = Ee.length;
+              const ge = [...ve.response.illustrations].sort((Fe, ut) => Fe.slotNumber - ut.slotNumber), Ve = { ...ve.initial, response: ve.response }, We = $(Ve, re(ve.prepared, ge), Ee);
+              L.add(ve.batchIndex);
+              const Xe = `detail-${ve.batchIndex}`, dt = ge.filter(se).length;
+              Q.set(Xe, { status: dt === ge.length ? "completed" : "queued", completed: dt, total: ge.length }), J = ve.prepared.graphs.filter(se).length + D.size;
+              for (const Fe of We.planned) {
+                const ut = Fe.graph.slotNumber;
+                K.set(ut, Fe), !se(Fe.graph) && (V = V.then(async () => {
+                  if (!(F || Z || u.signal.aborted || ve.signal.aborted)) {
+                    ee = true, Q.set(Xe, {
+                      ...Q.get(Xe),
                       status: "generating",
                       retry: undefined,
                       retryErrors: undefined,
-                      imageIndex: He.indexOf(dt) + 1
-                    }), ee();
+                      imageIndex: Ee.indexOf(ut) + 1
+                    }), Y();
                     try {
-                      const Pe = await T({ ...Je, planned: [Ze] }, Oe, {
+                      const ye = await M({ ...We, planned: [Fe] }, Ve, {
                         keepOpen: true,
-                        seed: je.prepared.seed,
+                        seed: ve.prepared.seed,
                         completedCount: J,
                         totalCount: H,
-                        onRetry: (Q, be) => {
-                          X.set($e, { ...X.get($e), retry: Q, retryErrors: be }), ee();
+                        onRetry: (te, Se) => {
+                          Q.set(Xe, { ...Q.get(Xe), retry: te, retryErrors: Se }), Y();
                         },
                         onSaving: () => {
-                          X.set($e, { ...X.get($e), status: "saving" }), ee();
+                          Q.set(Xe, { ...Q.get(Xe), status: "saving" }), Y();
                         }
                       });
-                      Pe[0] && F.set(dt, Pe[0]), J++;
-                      const Ce = X.get($e);
-                      X.set($e, {
-                        ...Ce,
-                        completed: Ce.completed + 1,
-                        status: Ce.completed + 1 === Ce.total ? "completed" : "queued",
+                      ye[0] && D.set(ut, ye[0]), J++;
+                      const Re = Q.get(Xe);
+                      Q.set(Xe, {
+                        ...Re,
+                        completed: Re.completed + 1,
+                        status: Re.completed + 1 === Re.total ? "completed" : "queued",
                         retry: undefined
                       });
-                    } catch (Pe) {
-                      te = Pe, X.set($e, {
-                        ...X.get($e),
+                    } catch (ye) {
+                      Z = ye, Q.set(Xe, {
+                        ...Q.get(Xe),
                         status: u.signal.aborted ? "cancelled" : "failed",
-                        error: Pe instanceof Error ? Pe.message : String(Pe)
+                        error: ye instanceof Error ? ye.message : String(ye)
                       });
                     } finally {
-                      q = false, ee();
+                      ee = false, Y();
                     }
                   }
                 }));
               }
-              ee();
-            } catch (He) {
-              te = He;
+              Y();
+            } catch (Ee) {
+              Z = Ee;
             }
         };
-        let ge, le;
-        if (B)
+        let he, me;
+        if (G)
           try {
-            const je = await x.run(j, D, (He, ue, Oe) => {
-              const Je = t.get(u.sessionId);
-              Je?.status === "active" && t.setPhase(u, q ? Je.phase : "analyzing-preset", `v5-split:${Oe}`, {
-                completedStages: He,
-                totalStages: ue
+            const ve = await x.run(C, T, (Ee, ge, Ve) => {
+              const We = t.get(u.sessionId);
+              We?.status === "active" && t.setPhase(u, ee ? We.phase : "analyzing-preset", `v5-split:${Ve}`, {
+                completedStages: Ee,
+                totalStages: ge
               });
-            }, (He) => {
-              Y = He, ee();
+            }, (Ee) => {
+              U = Ee, Y();
             }, {
-              ready: se,
+              ready: oe,
               stop: () => {
-                K = true;
+                F = true;
               },
               drain: async () => {
-                K || (M = true, ee()), await U;
+                F || (B = true, Y()), await V;
               },
-              requireRetainedPlan: O.size > 0 || N.size > 0 || Lu(l.analysisConfig) && !!l.pendingGeneratedImages?.size
+              requireRetainedPlan: P.size > 0 || z.size > 0 || Lu(l.analysisConfig) && !!l.pendingGeneratedImages?.size
             });
-            if (ge = je.result, le = ae(je.prepared, ge.response.illustrations), M = true, ee(), await U, te)
-              throw te;
-          } catch (je) {
-            throw K = true, await U, je;
+            if (he = ve.result, me = re(ve.prepared, he.response.illustrations), B = true, Y(), await V, Z)
+              throw Z;
+          } catch (ve) {
+            throw F = true, await V, ve;
           }
         else
-          ge = await v.run(j), le = await D(ge, (je, He) => He());
+          he = await v.run(C), me = await T(he, (ve, Ee) => Ee());
         t.setPhase(u, "planning", "v5-analyzer-complete", {
           completedStages: 1,
           totalStages: 1,
-          imageCount: le.graphs.length,
-          ...rht(ge.cacheNotice),
-          ...nht(ge.transportDiagnostic)
-        }), eI(l, u, "planning", { imageCount: B ? le.graphs.filter((je) => !me(je)).length : le.graphs.length });
-        const Ae = B ? undefined : G(ge, le), { graphs: fe, preparedCharacters: ke } = le, he = Ae?.planned ?? fe.map((je) => V.get(je.slotNumber));
-        let pe = Ae?.continuityState ?? le.continuityBasis;
-        const Ee = B ? [...F.entries()].sort(([je], [He]) => je - He).map(([, je]) => je) : await T(Ae, ge);
-        if (B || ke.some((je) => je.persisted !== false)) {
-          pe = le.continuityBasis;
-          const je = U4(fe, ke.filter((ue) => ue.persisted !== false));
-          let He;
-          for (const [ue, Oe] of je.entries()) {
-            const Je = he[ue];
-            pe = Lre(Kre(ane({
-              scene: Oe,
-              draft: Je.draft,
-              catalog: I,
-              state: pe,
-              eventScopeId: `${u.sessionId}:${Je.token}`,
+          imageCount: me.graphs.length,
+          ...he.requestObservation ? { analyzerRequests: [he.requestObservation] } : {},
+          ...nht(he.transportDiagnostic)
+        }), eI(l, u, "planning", { imageCount: G ? me.graphs.filter((ve) => !se(ve)).length : me.graphs.length });
+        const je = G ? undefined : $(he, me), { graphs: pe, preparedCharacters: Ne } = me, xe = je?.planned ?? pe.map((ve) => K.get(ve.slotNumber));
+        let we = je?.continuityState ?? me.continuityBasis;
+        const fe = G ? [...D.entries()].sort(([ve], [Ee]) => ve - Ee).map(([, ve]) => ve) : await M(je, he);
+        if (G || Ne.some((ve) => ve.persisted !== false)) {
+          we = me.continuityBasis;
+          const ve = U4(pe, Ne.filter((ge) => ge.persisted !== false));
+          let Ee;
+          for (const [ge, Ve] of ve.entries()) {
+            const We = xe[ge];
+            we = Lre(Kre(ane({
+              scene: Ve,
+              draft: We.draft,
+              catalog: k,
+              state: we,
+              eventScopeId: `${u.sessionId}:${We.token}`,
               advanceTurn: l.advanceContinuityTurn,
-              completelyNudeActorIds: Je.projectedContext.completelyNudeActorIds
-            }).continuity.state, Oe, Je.projectedContext, Je.draft), Oe, Je.draft, I), pe = Mre(pe, Oe, Je.draft, I), pe = Tre(He, pe), He = pe;
+              completelyNudeActorIds: We.projectedContext.completelyNudeActorIds
+            }).continuity.state, Ve, We.projectedContext, We.draft), Ve, We.draft, k), we = Mre(we, Ve, We.draft, k), we = Tre(Ee, we), Ee = we;
           }
-          pe = mre(pe, [...je].sort((ue, Oe) => Oe.slotNumber - ue.slotNumber).flatMap((ue) => {
-            const Oe = nne(ue, he.find((Je) => Je.graph.slotNumber === ue.slotNumber).draft);
-            return Oe ? [Oe] : [];
+          we = mre(we, [...ve].sort((ge, Ve) => Ve.slotNumber - ge.slotNumber).flatMap((ge) => {
+            const Ve = nne(ge, xe.find((We) => We.graph.slotNumber === ge.slotNumber).draft);
+            return Ve ? [Ve] : [];
           }));
         }
-        return l.applyV5Continuity && (t.setPhase(u, "applying-continuity", "v5-generation-complete"), eI(l, u, "applying-continuity"), await l.applyV5Continuity(pe)), t.finish(u, "completed", "generation-complete"), eI(l, u, "complete", { imageIndex: Ee.length, imageCount: Ee.length }), { session: u, analyzer: ge, continuity: pe, images: Ee };
-      } catch (g) {
-        const b = u.signal.aborted || xu(g), v = t.get(u.sessionId) ?? u;
-        throw t.finish(u, b ? "cancelled" : "failed", g instanceof Error ? g.message : String(g), b ? null : $bt(g, v.phase, v.progress.splitAnalysis)), g;
+        return l.applyV5Continuity && (t.setPhase(u, "applying-continuity", "v5-generation-complete"), eI(l, u, "applying-continuity"), await l.applyV5Continuity(we)), t.finish(u, "completed", "generation-complete"), eI(l, u, "complete", { imageIndex: fe.length, imageCount: fe.length }), { session: u, analyzer: he, continuity: we, images: fe };
+      } catch (h) {
+        const b = u.signal.aborted || xu(h), v = t.get(u.sessionId) ?? u;
+        throw t.finish(u, b ? "cancelled" : "failed", h instanceof Error ? h.message : String(h), b ? null : $bt(h, v.phase, v.progress.splitAnalysis)), h;
       } finally {
         d && i.set(d, (i.get(d) ?? 1) - 1);
-        for (const [g, b] of o)
-          g !== s && !i.get(g) && (b.dispose(), o.delete(g), i.delete(g));
+        for (const [h, b] of o)
+          h !== s && !i.get(h) && (b.dispose(), o.delete(h), i.delete(h));
         m.release(), l.signal?.removeEventListener("abort", p);
       }
     },
@@ -32692,22 +32902,22 @@ function uO2(e) {
 function wPe2(e, t) {
   return Bu2(Bu2(e.characterPrompt.charxSettings.overrides)[wh2(t)]);
 }
-function xi(e, t) {
-  const r = fy2(e), n = wh2(t), a = wPe2(e, n), o = new Set(uO2(r)[n] ?? []), i = pO(e);
+function xi(e, t, r = wPe2(e, wh2(t))) {
+  const n = fy2(e), a = wh2(t), o = new Set(uO2(n)[a] ?? []), i = pO(e);
   return {
-    nativeAssetVisibility: ol2(r, a, "nativeAssetVisibility", o) ? a.nativeAssetVisibility === "shown" ? "shown" : "hidden" : i.nativeAssetVisibility,
-    freeCharacterGenerationEnabled: ol2(r, a, "freeCharacterGeneration", o) && typeof a.freeCharacterGeneration == "boolean" ? a.freeCharacterGeneration : i.freeCharacterGenerationEnabled,
-    freeOutfitGenerationEnabled: ol2(r, a, "freeOutfitGeneration", o) && typeof a.freeOutfitGeneration == "boolean" ? a.freeOutfitGeneration : i.freeOutfitGenerationEnabled,
-    rosterSelectionEnabled: ol2(r, a, "rosterSelectionEnabled", o) && typeof a.rosterSelectionEnabled == "boolean" ? a.rosterSelectionEnabled : i.rosterSelectionEnabled,
-    fixedRating: ol2(r, a, "fixedRating", o) ? O82(a.fixedRating) : i.fixedRating,
-    nsfwAlwaysEnabled: ol2(r, a, "nsfwAlwaysEnabled", o) && typeof a.nsfwAlwaysEnabled == "boolean" ? a.nsfwAlwaysEnabled : i.nsfwAlwaysEnabled,
-    forceAiChoiceCoordinates: ol2(r, a, "forceAiChoiceCoordinates", o) && typeof a.forceAiChoiceCoordinates == "boolean" ? a.forceAiChoiceCoordinates : i.forceAiChoiceCoordinates,
-    autoRemoveConflictingRegex: ol2(r, a, "autoRemoveConflictingRegex", o) && typeof a.autoRemoveConflictingRegex == "boolean" ? a.autoRemoveConflictingRegex : i.autoRemoveConflictingRegex,
-    fixedResolution: ol2(r, a, "fixedResolution", o) ? LD2(a.fixedResolution, e) : i.fixedResolution,
-    fixedPositivePrompt: ol2(r, a, "fixedPositivePrompt", o) ? kh2(a.fixedPositivePrompt) : i.fixedPositivePrompt,
-    negativePrompt: ol2(r, a, "negativePrompt", o) ? kh2(a.negativePrompt) : i.negativePrompt,
-    animaPositivePrompt: ol2(r, a, "animaPositivePrompt", o) ? kh2(a.animaPositivePrompt) : i.animaPositivePrompt,
-    animaNegativePrompt: ol2(r, a, "animaNegativePrompt", o) ? kh2(a.animaNegativePrompt) : i.animaNegativePrompt
+    nativeAssetVisibility: ol2(n, r, "nativeAssetVisibility", o) ? r.nativeAssetVisibility === "shown" ? "shown" : "hidden" : i.nativeAssetVisibility,
+    freeCharacterGenerationEnabled: ol2(n, r, "freeCharacterGeneration", o) && typeof r.freeCharacterGeneration == "boolean" ? r.freeCharacterGeneration : i.freeCharacterGenerationEnabled,
+    freeOutfitGenerationEnabled: ol2(n, r, "freeOutfitGeneration", o) && typeof r.freeOutfitGeneration == "boolean" ? r.freeOutfitGeneration : i.freeOutfitGenerationEnabled,
+    rosterSelectionEnabled: ol2(n, r, "rosterSelectionEnabled", o) && typeof r.rosterSelectionEnabled == "boolean" ? r.rosterSelectionEnabled : i.rosterSelectionEnabled,
+    fixedRating: ol2(n, r, "fixedRating", o) ? O82(r.fixedRating) : i.fixedRating,
+    nsfwAlwaysEnabled: ol2(n, r, "nsfwAlwaysEnabled", o) && typeof r.nsfwAlwaysEnabled == "boolean" ? r.nsfwAlwaysEnabled : i.nsfwAlwaysEnabled,
+    forceAiChoiceCoordinates: ol2(n, r, "forceAiChoiceCoordinates", o) && typeof r.forceAiChoiceCoordinates == "boolean" ? r.forceAiChoiceCoordinates : i.forceAiChoiceCoordinates,
+    autoRemoveConflictingRegex: ol2(n, r, "autoRemoveConflictingRegex", o) && typeof r.autoRemoveConflictingRegex == "boolean" ? r.autoRemoveConflictingRegex : i.autoRemoveConflictingRegex,
+    fixedResolution: ol2(n, r, "fixedResolution", o) ? LD2(r.fixedResolution, e) : i.fixedResolution,
+    fixedPositivePrompt: ol2(n, r, "fixedPositivePrompt", o) ? kh2(r.fixedPositivePrompt) : i.fixedPositivePrompt,
+    negativePrompt: ol2(n, r, "negativePrompt", o) ? kh2(r.negativePrompt) : i.negativePrompt,
+    animaPositivePrompt: ol2(n, r, "animaPositivePrompt", o) ? kh2(r.animaPositivePrompt) : i.animaPositivePrompt,
+    animaNegativePrompt: ol2(n, r, "animaNegativePrompt", o) ? kh2(r.animaNegativePrompt) : i.animaNegativePrompt
   };
 }
 function pO(e) {
@@ -33011,8 +33221,8 @@ function NZ(e, t = "") {
     prompt: e.prompt,
     uc: e.uc,
     artist_negative_candidate: oD(e.uc, t),
-    charCaptions: e.charCaptions,
-    negativeCharCaptions: e.negativeCharCaptions,
+    charCaptions: e.charCaptions.filter(Boolean),
+    negativeCharCaptions: e.negativeCharCaptions.filter(Boolean),
     seed: e.seed,
     width: e.width,
     height: e.height,
@@ -33414,7 +33624,7 @@ function WEe(e) {
 }
 function WZ(e, t) {
   const r = cl(cl(e[t]).caption);
-  return (Array.isArray(r.char_captions) ? r.char_captions : []).map((n) => Gu(cl(n).char_caption)).filter(Boolean);
+  return (Array.isArray(r.char_captions) ? r.char_captions : []).map((n) => Gu(cl(n).char_caption));
 }
 function JEe(e, t) {
   const r = cl(e[t]), n = cl(r.caption), a = WEe(r.use_coords);
@@ -33451,7 +33661,7 @@ function JZ(e) {
   if (Object.entries(e).some(([r, n]) => r.trim().toLocaleLowerCase() === "assetmaid" && !!Gu(n)))
     return true;
   const t = _L(e);
-  return !!(t.prompt || t.charCaptions.length);
+  return !!(t.prompt || t.charCaptions.some(Boolean));
 }
 function jL2(e) {
   return e == null ? "" : String(e).trim();
@@ -37668,6 +37878,10 @@ function Hle(e, t) {
     }
   ], { artistId: o, added: true };
 }
+function Pb_91(e) {
+  const t = new Map(e.map((n) => [n.sourceId, n.sourceName])), r = Array.from(t, ([n, a]) => ({ sourceId: n, sourceName: a }));
+  return r.length === 1 ? { sourceId: r[0].sourceId, charxName: r[0].sourceName } : r.length ? { sources: r, charxName: r.map((n) => n.sourceName).join(", ") } : {};
+}
 var Fr = class extends Error {
   code;
   httpStatus;
@@ -39151,7 +39365,7 @@ function Ox(e, t) {
         for (let d = 0;; d++) {
           t.signal.throwIfAborted();
           try {
-            const u = await e.complete(s, c, l);
+            const u = await e.complete(s, c, { ...l, historyAttempt: d + 1 });
             return t.signal.throwIfAborted(), u;
           } catch (u) {
             if (t.signal.throwIfAborted(), d >= r || !Y$2(u))
@@ -39423,82 +39637,83 @@ function $et(e) {
         await e.ensureSourceHydrated?.(), Kb(c.signal);
         const m = Ket(e.sourceCatalog, s) ?? await e.sourceCatalog.load({ force: s.forceCatalog === true });
         Kb(c.signal);
-        const p = nB(s.sourceId) || m.currentSourceId, g = m.sources.find((D) => D.id === p);
-        if (!g)
+        const p = nB(s.sourceId) || m.currentSourceId, h = m.sources.find((T) => T.id === p);
+        if (!h)
           throw new Error("작가 프롬프트를 추출할 charx를 찾지 못했습니다.");
-        const b = tB(g), v = Ni(b.map((D) => D.asset));
+        const b = tB(h), v = Ni(b.map((T) => T.asset));
         if (!v.length)
           throw new Error("작가 프롬프트를 추출할 이미지가 없습니다.");
-        let x = e.config.getCurrentSnapshot(), w = ome(x), I = nme(g, x.characterPrompt, w);
-        const S = I ? [] : v.filter((D) => !w.has(tr(D))), A = S.length > 0;
+        let x = e.config.getCurrentSnapshot(), w = ome(x), k = nme(h, x.characterPrompt, w);
+        const I = k ? [] : v.filter((T) => !w.has(tr(T))), A = I.length > 0;
         if (i({
           sourceId: p,
-          label: A ? `작가 프롬프트 메타데이터 확인 중 · ${g.name}` : `작가 프롬프트 이미지 선택 중 · ${g.name}`,
-          totalMetadata: S.length,
+          label: A ? `작가 프롬프트 메타데이터 확인 중 · ${h.name}` : `작가 프롬프트 이미지 선택 중 · ${h.name}`,
+          totalMetadata: I.length,
           progress: A ? 0.05 : 0.66
         }), A) {
-          u = UC((B) => i(B));
-          const D = await e.metadata.scan(S, {
+          u = UC((G) => i(G));
+          const T = await e.metadata.scan(I, {
             signal: c.signal,
             origin: "artist-prompt-analysis",
             concurrency: s.metadataConcurrency ?? 4,
-            onProgress(B, G) {
-              u?.schedule({ completedMetadata: B, totalMetadata: G, progress: G ? 0.05 + B / G * 0.6 : 0.65 });
+            onProgress(G, $) {
+              u?.schedule({ completedMetadata: G, totalMetadata: $, progress: $ ? 0.05 + G / $ * 0.6 : 0.65 });
             }
           });
-          u.flush(), Kb(c.signal), x = e.config.update((B) => {
-            const G = mo(B);
-            return ime(G, b, D.assets), G;
-          }, { domains: ["metadata-cache"], persistence: "debounced" }), Kb(c.signal), e.priorityAssets?.refreshMetadataAvailability(), w = ome(x), I = nme(g, x.characterPrompt, w);
+          u.flush(), Kb(c.signal), x = e.config.update((G) => {
+            const $ = mo(G);
+            return ime($, b, T.assets), $;
+          }, { domains: ["metadata-cache"], persistence: "debounced" }), Kb(c.signal), e.priorityAssets?.refreshMetadataAvailability(), w = ome(x), k = nme(h, x.characterPrompt, w);
         }
-        const P = [
-          ...I ? [I] : [],
-          ...b.filter((D) => w.get(tr(D.asset))?.hasMetadata === true && (!I || D.memberKey !== I.memberKey || tr(D.asset) !== tr(I.asset)))
+        const O = [
+          ...k ? [k] : [],
+          ...b.filter((T) => w.get(tr(T.asset))?.hasMetadata === true && (!k || T.memberKey !== k.memberKey || tr(T.asset) !== tr(k.asset)))
         ];
-        let k = null, C = null;
-        const j = [];
-        for (const D of P) {
+        let S = null, _ = null;
+        const C = [];
+        for (const T of O) {
           Kb(c.signal);
           try {
-            const B = await e.metadata.inspect(D.asset, c.signal);
-            if (B.summary) {
-              k = D, C = B.summary;
+            const G = await e.metadata.inspect(T.asset, c.signal);
+            if (G.summary) {
+              S = T, _ = G.summary;
               break;
             }
-            const G = sme(D, "NovelAI metadata not found.");
-            j.push(G), w.set(tr(D.asset), G);
-          } catch (B) {
-            if (ame(B) || c.signal.aborted)
-              throw B;
-            const G = sme(D, B instanceof Error ? B.message : String(B));
-            j.push(G), w.set(tr(D.asset), G);
+            const $ = sme(T, "NovelAI metadata not found.");
+            C.push($), w.set(tr(T.asset), $);
+          } catch (G) {
+            if (ame(G) || c.signal.aborted)
+              throw G;
+            const $ = sme(T, G instanceof Error ? G.message : String(G));
+            C.push($), w.set(tr(T.asset), $);
           }
         }
-        if (j.length && (x = e.config.update((D) => {
-          const B = mo(D);
-          return ime(B, b, j), B;
-        }, { domains: ["metadata-cache"], persistence: "debounced" }), Kb(c.signal), e.priorityAssets?.refreshMetadataAvailability()), !k || !C)
+        if (C.length && (x = e.config.update((T) => {
+          const G = mo(T);
+          return ime(G, b, C), G;
+        }, { domains: ["metadata-cache"], persistence: "debounced" }), Kb(c.signal), e.priorityAssets?.refreshMetadataAvailability()), !S || !_)
           throw new Error("명시적 작가 태그를 확인할 NovelAI 메타데이터 이미지가 없습니다.");
         i({
-          label: `작가 프롬프트 AI 분석 중 · ${k.asset.name}`,
-          completedMetadata: S.length,
-          totalMetadata: S.length,
-          sourceAssetName: k.asset.name,
+          label: `작가 프롬프트 AI 분석 중 · ${S.asset.name}`,
+          completedMetadata: I.length,
+          totalMetadata: I.length,
+          sourceAssetName: S.asset.name,
           progress: 0.78
         });
-        const O = await d.complete(x.analysis, Det(C, g, k, x), {
+        const P = await d.complete(x.analysis, Det(_, h, S, x), {
+          historyContext: { sourceId: h.id, charxName: h.name },
           signal: c.signal,
           timeoutMs: Fs,
           timeoutPolicy: "settings",
           diagnostic: { sessionId: l, analysisKind: "artist-prompt", phase: "metadata" }
         });
         Kb(c.signal);
-        const N = Let(O.parsed, C, xi(x, g.id).negativePrompt);
+        const z = Let(P.parsed, _, xi(x, h.id).negativePrompt);
         i({ label: "작가 프롬프트 결과 적용 중", progress: 0.93 });
         let R;
-        return e.config.update((D) => {
-          const B = mo(D);
-          return R = Fet(B, g, k, N), B;
+        return e.config.update((T) => {
+          const G = mo(T);
+          return R = Fet(G, h, S, z), G;
         }, { domains: ["artists", "asset-analysis"], persistence: "manual" }), await e.config.flushSave(["artists", "asset-analysis"]), Kb(c.signal), e.priorityAssets?.refreshMetadataAvailability(), i({
           status: "success",
           label: `작가 프롬프트 추출 완료 · ${R.artistTitle}`,
@@ -40039,21 +40254,21 @@ function ptt(e) {
   const t = new Set, r = new Map, n = new Map, a = new Map;
   let o = false, i = 0, s = 0, c = null, l = hM;
   const d = (p) => {
-    i += 1, l = { ...l, ...p, revision: i }, t.forEach((g) => g());
-  }, u = (p, g) => {
+    i += 1, l = { ...l, ...p, revision: i }, t.forEach((h) => h());
+  }, u = (p, h) => {
     const b = dg(p);
     if (!b)
       return;
     const v = a.get(b);
-    if (v && (clearTimeout(v), a.delete(b)), s += 1, n.set(b, { ...g, revision: s }), r.get(b)?.forEach((x) => x()), g.status === "success") {
+    if (v && (clearTimeout(v), a.delete(b)), s += 1, n.set(b, { ...h, revision: s }), r.get(b)?.forEach((x) => x()), h.status === "success") {
       const x = s;
       a.set(b, setTimeout(() => {
         a.delete(b), n.get(b)?.revision === x && (s += 1, n.set(b, { ...lme, revision: s }), r.get(b)?.forEach((w) => w()));
       }, Zet));
     }
-  }, m = (p, g) => {
+  }, m = (p, h) => {
     for (const b of p)
-      u(b, g);
+      u(b, h);
   };
   return {
     getSnapshot() {
@@ -40065,83 +40280,83 @@ function ptt(e) {
     getRowNotice(p) {
       return n.get(dg(p)) ?? lme;
     },
-    subscribeRowNotice(p, g) {
+    subscribeRowNotice(p, h) {
       const b = dg(p);
       if (!b)
         return () => {};
       let v = r.get(b);
-      return v || (v = new Set, r.set(b, v)), v.add(g), () => {
-        v?.delete(g), v?.size || r.delete(b);
+      return v || (v = new Set, r.set(b, v)), v.add(h), () => {
+        v?.delete(h), v?.size || r.delete(b);
       };
     },
     async analyzePrompts(p = {}) {
       if (o || c)
         return false;
-      const g = new AbortController, b = Xk("character-prompt");
-      c = g;
+      const h = new AbortController, b = Xk("character-prompt");
+      c = h;
       const v = Ox(e.analyzer, {
         retryCount: e.config.getCurrentSnapshot().runtime.generationAutoRetryCount,
-        signal: g.signal,
-        onRetry: (j) => {
-          !o && c === g && d({ retry: j });
+        signal: h.signal,
+        onRetry: (C) => {
+          !o && c === h && d({ retry: C });
         }
       });
       let x = null, w = [];
-      const I = new Map, S = new Set;
-      let A = 0, P = false;
-      const k = p.scope ?? "current-source", C = p.evidenceMode ?? "image";
+      const k = new Map, I = new Set;
+      let A = 0, O = false;
+      const S = p.scope ?? "current-source", _ = p.evidenceMode ?? "image";
       d({
         ...hM,
         revision: i,
         status: "running",
-        evidenceMode: C,
-        effectiveEvidenceMode: C,
+        evidenceMode: _,
+        effectiveEvidenceMode: _,
         fallbackUsed: false,
-        scope: k,
+        scope: S,
         sourceId: dg(p.sourceId),
         label: "프롬프트 분석 준비 중"
       });
       try {
         await e.ensureSourceHydrated?.();
-        const j = Fu(e.config);
-        if (du(g.signal), k === "all-sources" && typeof e.sourceCatalog.hasCharacterDirectory == "function" && !e.sourceCatalog.hasCharacterDirectory())
+        const C = Fu(e.config);
+        if (du(h.signal), S === "all-sources" && typeof e.sourceCatalog.hasCharacterDirectory == "function" && !e.sourceCatalog.hasCharacterDirectory())
           throw new Error("Charx rail catalog is not ready for all-source prompt analysis.");
-        const O = Bce(e.sourceCatalog, p) ?? (k === "all-sources" ? await e.sourceCatalog.loadAllSources() : await e.sourceCatalog.load({ force: p.forceCatalog === true }));
-        du(g.signal);
-        const N = dg(p.sourceId) || O.currentSourceId, R = k === "all-sources" ? O.sources : O.sources.filter(($e) => $e.id === N), D = new Map((p.runtimeSources ?? []).map(($e) => [$e.id, $e])), B = Yet(rtt(R.map(($e) => D.get($e.id) ?? $e), e.config.getCurrentSnapshot(), e.priorityAssets, p.promptKeys ? new Set(p.promptKeys) : undefined, C), ($e) => $e.promptKey, p.promptOrder);
-        w = B.map(($e) => $e.promptKey), m(w, { status: "running", outfitCount: 0 });
-        const G = B.reduce(($e, et) => $e + et.selectedAssets.length, 0);
+        const P = Bce(e.sourceCatalog, p) ?? (S === "all-sources" ? await e.sourceCatalog.loadAllSources() : await e.sourceCatalog.load({ force: p.forceCatalog === true }));
+        du(h.signal);
+        const z = dg(p.sourceId) || P.currentSourceId, R = S === "all-sources" ? P.sources : P.sources.filter((Xe) => Xe.id === z), T = new Map((p.runtimeSources ?? []).map((Xe) => [Xe.id, Xe])), G = Yet(rtt(R.map((Xe) => T.get(Xe.id) ?? Xe), e.config.getCurrentSnapshot(), e.priorityAssets, p.promptKeys ? new Set(p.promptKeys) : undefined, _), (Xe) => Xe.promptKey, p.promptOrder);
+        w = G.map((Xe) => Xe.promptKey), m(w, { status: "running", outfitCount: 0 });
+        const $ = G.reduce((Xe, dt) => Xe + dt.selectedAssets.length, 0);
         if (d({
-          sourceId: N,
-          totalMetadata: G,
-          totalPrompts: B.length,
-          totalAnalysisUnits: C === "text" ? B.length : G,
-          label: B.length ? C === "image" ? `직접 이미지 분석 준비 중 · ${B.length}개 캐릭터` : C === "text" ? `로어북 본문 분석 준비 중 · ${B.length}개 캐릭터` : `프롬프트 메타데이터 분석 중 · ${B.length}개 캐릭터` : C === "text" ? "분석할 로어북 본문이 없습니다" : "분석할 이미지가 선택되지 않았습니다."
-        }), !B.length)
+          sourceId: z,
+          totalMetadata: $,
+          totalPrompts: G.length,
+          totalAnalysisUnits: _ === "text" ? G.length : $,
+          label: G.length ? _ === "image" ? `직접 이미지 분석 준비 중 · ${G.length}개 캐릭터` : _ === "text" ? `로어북 본문 분석 준비 중 · ${G.length}개 캐릭터` : `프롬프트 메타데이터 분석 중 · ${G.length}개 캐릭터` : _ === "text" ? "분석할 로어북 본문이 없습니다" : "분석할 이미지가 선택되지 않았습니다."
+        }), !G.length)
           throw new Error(l.label);
-        x = UC(($e) => d($e));
-        let T = await att(B, e.metadata, g.signal, p.metadataConcurrency ?? 3, C, ($e, et) => x?.schedule({ completedMetadata: $e, totalMetadata: et }));
-        x.flush(), du(g.signal);
-        const F = Ni(T.flatMap(uu)).length;
+        x = UC((Xe) => d(Xe));
+        let M = await att(G, e.metadata, h.signal, p.metadataConcurrency ?? 3, _, (Xe, dt) => x?.schedule({ completedMetadata: Xe, totalMetadata: dt }));
+        x.flush(), du(h.signal);
+        const D = Ni(M.flatMap(uu)).length;
         d({
-          completedMetadata: G,
-          totalImages: F,
-          label: F ? `직접 이미지 입력 준비 중 · ${F}개 이미지` : `프롬프트 AI 분석 준비 중 · ${T.length}개 캐릭터`,
+          completedMetadata: $,
+          totalImages: D,
+          label: D ? `직접 이미지 입력 준비 중 · ${D}개 이미지` : `프롬프트 AI 분석 준비 중 · ${M.length}개 캐릭터`,
           progress: 0
         });
-        let L = T.filter(($e) => C === "metadata" ? $e.summaries.length > 0 || uu($e).length > 0 || $e.loreContent.trim().length > 0 : C === "image" && uu($e).length > 0 || $e.loreContent.trim().length > 0);
-        const V = e.config.getCurrentSnapshot();
+        let L = M.filter((Xe) => _ === "metadata" ? Xe.summaries.length > 0 || uu(Xe).length > 0 || Xe.loreContent.trim().length > 0 : _ === "image" && uu(Xe).length > 0 || Xe.loreContent.trim().length > 0);
+        const K = e.config.getCurrentSnapshot();
         if (!L.length)
-          return j(), e.config.update(($e) => {
-            const et = mo($e);
-            return aB(et, T), et;
+          return C(), e.config.update((Xe) => {
+            const dt = mo(Xe);
+            return aB(dt, M), dt;
           }, { domains: ["asset-analysis"], persistence: "debounced" }), d({
             status: "success",
-            label: C === "text" ? "분석 가능한 로어북 본문이 없습니다" : "선택한 이미지에서 분석할 정보를 찾지 못했습니다.",
-            completedMetadata: G,
-            totalMetadata: G,
-            completedImages: F,
-            totalImages: F,
+            label: _ === "text" ? "분석 가능한 로어북 본문이 없습니다" : "선택한 이미지에서 분석할 정보를 찾지 못했습니다.",
+            completedMetadata: $,
+            totalMetadata: $,
+            completedImages: D,
+            totalImages: D,
             completedPrompts: 0,
             totalPrompts: 0,
             completedAnalysisUnits: 0,
@@ -40151,280 +40366,289 @@ function ptt(e) {
         d({
           label: `프롬프트 AI 분석 중 · ${L.length}개 캐릭터`,
           completedImages: 0,
-          totalImages: F,
+          totalImages: D,
           totalPrompts: L.length,
           progress: 0
         });
-        const X = C === "text" ? ctt(L) : C === "metadata" ? ume(L) : [], Y = C === "text" ? [] : L.filter(($e) => uu($e).length > 0), M = l1(X, () => 0), q = Jet(Y, ($e) => uu($e).length, 18), te = C === "text" ? "text" : "metadata", K = n_(X, te), H = Y.reduce(($e, et) => $e + uu(et).length, 0), J = M.length + q.length, U = [];
-        let ee = [], ae = [], me = [];
-        const se = new Set(L.filter(($e) => C === "metadata" ? $e.summaries.length === 0 && uu($e).length === 0 : C === "image" ? uu($e).length === 0 : false).map(($e) => $e.promptKey));
-        let ge = 0, le = 0, Ae = 0;
-        const fe = new Set;
-        let ke = 0, he = false;
-        const pe = async ($e, et, Ze, dt) => {
-          for (const kt of et)
-            kt.status === "no_evidence" && (S.add(kt.promptKey), u(kt.promptKey, { status: "no_evidence", outfitCount: 0 }));
-          const Pe = et.filter((kt) => kt.status !== "no_evidence");
-          if (!Pe.length)
+        const Q = _ === "text" ? ctt(L) : _ === "metadata" ? ume(L) : [], U = _ === "text" ? [] : L.filter((Xe) => uu(Xe).length > 0), B = l1(Q, () => 0), ee = Jet(U, (Xe) => uu(Xe).length, 18), Z = _ === "text" ? "text" : "metadata", F = n_(Q, Z), H = U.reduce((Xe, dt) => Xe + uu(dt).length, 0), J = B.length + ee.length, V = [];
+        let Y = [], re = [], se = [];
+        const oe = new Set(L.filter((Xe) => _ === "metadata" ? Xe.summaries.length === 0 && uu(Xe).length === 0 : _ === "image" ? uu(Xe).length === 0 : false).map((Xe) => Xe.promptKey));
+        let he = 0, me = 0, je = 0;
+        const pe = new Set;
+        let Ne = 0, xe = false;
+        const we = async (Xe, dt, Fe, ut) => {
+          for (const Rt of dt)
+            Rt.status === "no_evidence" && (I.add(Rt.promptKey), u(Rt.promptKey, { status: "no_evidence", outfitCount: 0 }));
+          const ye = dt.filter((Rt) => Rt.status !== "no_evidence");
+          if (!ye.length)
             return;
-          const Ce = $e === "metadata" ? [...ee, ...Pe] : ee, Q = $e === "image" ? [...ae, ...Pe] : ae, be = $e === "text" ? [...me, ...Pe] : me, Me = utt(Ce, Q, be, C), Ie = [...new Set(Pe.map((kt) => kt.promptKey))], ze = new Map(Me.map((kt) => [kt.promptKey, kt])), ie = Ie.map((kt) => {
-            const De = ze.get(kt);
-            if (!De)
-              throw new Error(`Merged analysis result is missing: ${kt}`);
-            return De;
-          }), nt = new Map(Ze.map((kt) => [kt.promptKey, kt])), re = new Map(L.map((kt) => [kt.promptKey, kt])), Se = Ie.map((kt) => {
-            const De = nt.get(kt) ?? re.get(kt);
-            if (!De)
-              throw new Error(`Analysis item is missing: ${kt}`);
-            return De;
-          }), _e = ntt(e.config.getCurrentSnapshot(), Ie), ne = new Map(_e.map((kt) => [kt.promptKey, kt])), tt = ie.map((kt) => {
-            const De = ne.get(kt.promptKey);
-            if (!De)
-              throw new Error(`Form analysis capture is missing: ${kt.promptKey}`);
-            const vt = Pe.find((zt) => zt.promptKey === kt.promptKey);
-            if (!vt)
-              throw new Error(`Batch analysis result is missing: ${kt.promptKey}`);
+          const Re = Xe === "metadata" ? [...Y, ...ye] : Y, te = Xe === "image" ? [...re, ...ye] : re, Se = Xe === "text" ? [...se, ...ye] : se, Ce = utt(Re, te, Se, _), be = [...new Set(ye.map((Rt) => Rt.promptKey))], ze = new Map(Ce.map((Rt) => [Rt.promptKey, Rt])), ae = be.map((Rt) => {
+            const Oe = ze.get(Rt);
+            if (!Oe)
+              throw new Error(`Merged analysis result is missing: ${Rt}`);
+            return Oe;
+          }), et = new Map(Fe.map((Rt) => [Rt.promptKey, Rt])), ne = new Map(L.map((Rt) => [Rt.promptKey, Rt])), _e = be.map((Rt) => {
+            const Oe = et.get(Rt) ?? ne.get(Rt);
+            if (!Oe)
+              throw new Error(`Analysis item is missing: ${Rt}`);
+            return Oe;
+          }), ot = ntt(e.config.getCurrentSnapshot(), be), de = new Map(ot.map((Rt) => [Rt.promptKey, Rt])), At = ae.map((Rt) => {
+            const Oe = de.get(Rt.promptKey);
+            if (!Oe)
+              throw new Error(`Form analysis capture is missing: ${Rt.promptKey}`);
+            const Ae = ye.find((De) => De.promptKey === Rt.promptKey);
+            if (!Ae)
+              throw new Error(`Batch analysis result is missing: ${Rt.promptKey}`);
             return {
-              ownerRef: De.ownerRef,
-              ...$e === "text" ? { lorebookBody: nt.get(kt.promptKey)?.loreContent ?? "" } : {},
-              existingForms: De.comparison.items,
-              observations: j$(vt)
+              ownerRef: Oe.ownerRef,
+              ...Xe === "text" ? { lorebookBody: et.get(Rt.promptKey)?.loreContent ?? "" } : {},
+              existingForms: Oe.comparison.items,
+              observations: j$(Ae)
             };
           });
-          d({ label: `완료 배치의 캐릭터 폼 판정 중 · ${ie.length}개 캐릭터` });
-          const Ue = await v.complete(V.analysis, _fe(tt), {
-            signal: g.signal,
+          d({ label: `완료 배치의 캐릭터 폼 판정 중 · ${ae.length}개 캐릭터` });
+          const rt = await v.complete(K.analysis, _fe(At), {
+            historyContext: Pb_91(_e),
+            signal: h.signal,
             timeoutMs: Fs,
             timeoutPolicy: "settings",
-            diagnostic: { sessionId: b, analysisKind: "character-prompt", phase: `${dt}-form-resolution` }
+            diagnostic: { sessionId: b, analysisKind: "character-prompt", phase: `${ut}-form-resolution` }
           });
-          du(g.signal);
-          const We = jfe(Ue.parsed, tt);
-          if (k === "current-source" && e.sourceCatalog.getSnapshot()?.currentSourceId !== N)
+          du(h.signal);
+          const tt = jfe(rt.parsed, At);
+          if (S === "current-source" && e.sourceCatalog.getSnapshot()?.currentSourceId !== z)
             throw new DOMException("Character prompt analysis source changed.", "AbortError");
-          j();
-          const mt = await ftt(e.config, Se, ie, new Map(tt.map((kt, De) => [ie[De].promptKey, kt.observations])), _e, We);
-          ee = Ce, ae = Q, me = be;
-          for (const kt of ie)
-            I.set(kt.promptKey, kt), u(kt.promptKey, { status: "success", outfitCount: kt.outfits.length });
-          A += mt.artistCount, P = true, d({ completedPrompts: I.size });
+          C();
+          const $t = await ftt(e.config, _e, ae, new Map(At.map((Rt, Oe) => [ae[Oe].promptKey, Rt.observations])), ot, tt);
+          Y = Re, re = te, se = Se;
+          for (const Rt of ae)
+            k.set(Rt.promptKey, Rt), u(Rt.promptKey, { status: "success", outfitCount: Rt.outfits.length });
+          A += $t.artistCount, O = true, d({ completedPrompts: k.size });
         };
-        for (const [$e, et] of M.entries()) {
+        for (const [Xe, dt] of B.entries()) {
           d({
-            effectiveEvidenceMode: te,
+            effectiveEvidenceMode: Z,
             fallbackUsed: false,
-            completedAnalysisUnits: le,
-            totalAnalysisUnits: K,
-            progress: zx(le, K)
+            completedAnalysisUnits: me,
+            totalAnalysisUnits: F,
+            progress: zx(me, F)
           }), d({
-            label: C === "text" ? `로어북 본문 AI 분석 배치 ${ge + 1}/${J}` : `메타데이터 프롬프트 AI 분석 배치 ${ge + 1}/${J}`
+            label: _ === "text" ? `로어북 본문 AI 분석 배치 ${he + 1}/${J}` : `메타데이터 프롬프트 AI 분석 배치 ${he + 1}/${J}`
           });
           try {
-            const Ze = await v.complete(V.analysis, Yk(et, V), {
-              signal: g.signal,
+            const Fe = await v.complete(K.analysis, Yk(dt, K), {
+              historyContext: Pb_91(dt),
+              signal: h.signal,
               timeoutMs: Fs,
               timeoutPolicy: "settings",
-              diagnostic: { sessionId: b, analysisKind: "character-prompt", phase: `${C}-${$e + 1}-of-${M.length}` }
+              diagnostic: { sessionId: b, analysisKind: "character-prompt", phase: `${_}-${Xe + 1}-of-${B.length}` }
             });
-            du(g.signal), await pe(te, Zk(Ze.parsed, et, V), et, `${C}-${$e + 1}-of-${M.length}`), ge += 1;
-          } catch (Ze) {
-            if (Ex(Ze) || g.signal.aborted)
-              throw Ze;
-            U.push(`${C === "text" ? "텍스트" : "메타데이터"} AI 배치 ${$e + 1}: ${a_(Ze)}`), ge += 1;
+            du(h.signal), await we(Z, Zk(Fe.parsed, dt, K), dt, `${_}-${Xe + 1}-of-${B.length}`), he += 1;
+          } catch (Fe) {
+            if (Ex(Fe) || h.signal.aborted)
+              throw Fe;
+            V.push(`${_ === "text" ? "텍스트" : "메타데이터"} AI 배치 ${Xe + 1}: ${a_(Fe)}`), he += 1;
           }
-          le += n_(et, te), d({ completedAnalysisUnits: le, progress: zx(le, K) });
+          me += n_(dt, Z), d({ completedAnalysisUnits: me, progress: zx(me, F) });
         }
-        const Ee = q.length > 0 && r_2(V.analysis) === "unsupported";
-        Ee && (he = true, Y.filter(($e) => C !== "metadata" || $e.summaries.length === 0).forEach(($e) => se.add($e.promptKey)), d({ completedImages: F }));
-        for (const [$e, et] of q.entries()) {
-          if (Ee)
+        const fe = ee.length > 0 && r_2(K.analysis) === "unsupported";
+        fe && (xe = true, U.filter((Xe) => _ !== "metadata" || Xe.summaries.length === 0).forEach((Xe) => oe.add(Xe.promptKey)), d({ completedImages: D }));
+        for (const [Xe, dt] of ee.entries()) {
+          if (fe)
             break;
-          let Ze = [], dt = [];
-          const Pe = et.reduce((Ce, Q) => Ce + uu(Q).length, 0);
+          let Fe = [], ut = [];
+          const ye = dt.reduce((Re, te) => Re + uu(te).length, 0);
           try {
-            const Ce = fe.size, Q = Ni(et.flatMap(uu)), be = Q.filter((ie) => !fe.has(tr(ie))).length;
+            const Re = pe.size, te = Ni(dt.flatMap(uu)), Se = te.filter((ae) => !pe.has(tr(ae))).length;
             d({
               effectiveEvidenceMode: "image",
-              fallbackUsed: C !== "image",
-              completedAnalysisUnits: Ae,
+              fallbackUsed: _ !== "image",
+              completedAnalysisUnits: je,
               totalAnalysisUnits: H,
-              progress: zx(Ae, H),
-              label: `이미지 입력 준비 배치 ${$e + 1}/${q.length}`
-            }), Ze = await ott(et, e.images, g.signal, p.imageConcurrency ?? 3, (ie) => d({ completedImages: Math.min(F, Ce + Math.min(ie, be)), totalImages: F })), du(g.signal);
-            for (const ie of Q)
-              fe.add(tr(ie));
-            d({ completedImages: fe.size, totalImages: F }), ke += n_(Ze, "image");
-            const Me = new Map(Ze.map((ie) => [ie.promptKey, { ...ie, imageEvidence: [] }]));
-            L = L.map((ie) => Me.get(ie.promptKey) ?? ie);
-            for (const ie of Ze)
-              ie.imageEvidence.length === 0 && (C !== "metadata" || ie.summaries.length === 0) && se.add(ie.promptKey);
-            if (dt = itt(Ze), !dt.length) {
-              ge += 1, Ae += Pe, d({ completedAnalysisUnits: Ae, progress: zx(Ae, H) });
+              progress: zx(je, H),
+              label: `이미지 입력 준비 배치 ${Xe + 1}/${ee.length}`
+            }), Fe = await ott(dt, e.images, h.signal, p.imageConcurrency ?? 3, (ae) => d({ completedImages: Math.min(D, Re + Math.min(ae, Se)), totalImages: D })), du(h.signal);
+            for (const ae of te)
+              pe.add(tr(ae));
+            d({ completedImages: pe.size, totalImages: D }), Ne += n_(Fe, "image");
+            const Ce = new Map(Fe.map((ae) => [ae.promptKey, { ...ae, imageEvidence: [] }]));
+            L = L.map((ae) => Ce.get(ae.promptKey) ?? ae);
+            for (const ae of Fe)
+              ae.imageEvidence.length === 0 && (_ !== "metadata" || ae.summaries.length === 0) && oe.add(ae.promptKey);
+            if (ut = itt(Fe), !ut.length) {
+              he += 1, je += ye, d({ completedAnalysisUnits: je, progress: zx(je, H) });
               continue;
             }
-            d({ label: `이미지 프롬프트 AI 분석 배치 ${ge + 1}/${J}` });
-            const Ie = await v.complete(V.analysis, Yk(dt, V), {
-              signal: g.signal,
-              timeoutMs: Fs,
-              timeoutPolicy: "settings",
-              diagnostic: { sessionId: b, analysisKind: "character-prompt", phase: `image-${$e + 1}-of-${q.length}` }
-            });
-            du(g.signal), Fb2(V.analysis, "supported");
-            const ze = Zk(Ie.parsed, dt, V);
-            for (const ie of Ze)
-              ie.imageEvidence.length = 0;
-            await pe("image", ze, dt, `image-${$e + 1}-of-${q.length}`), ge += 1;
-          } catch (Ce) {
-            if (Ex(Ce) || g.signal.aborted)
-              throw Ce;
-            if (mM2(Ce)) {
-              Fb2(V.analysis, "unsupported"), he = true;
-              for (const Q of q.slice($e))
-                Q.filter((be) => C !== "metadata" || be.summaries.length === 0).forEach((be) => se.add(be.promptKey));
-              break;
-            }
-            U.push(`이미지 AI 배치 ${$e + 1}: ${a_(Ce)}`), ge += 1;
-          } finally {
-            for (const Ce of Ze)
-              Ce.imageEvidence.length = 0;
-            Ze = [], dt = [];
-          }
-          Ae += Pe, d({ completedAnalysisUnits: Ae, progress: zx(Ae, H) });
-        }
-        if (C === "image" && se.size > 0) {
-          d({
-            effectiveEvidenceMode: "metadata",
-            fallbackUsed: true,
-            label: `이미지 대체 메타 확인 중 · ${se.size}개 캐릭터`
-          }), L = await stt(L, se, e.metadata, g.signal, p.metadataConcurrency ?? 3, (dt, Pe) => d({ completedMetadata: dt, totalMetadata: Pe })), du(g.signal);
-          const $e = ume(L).filter((dt) => se.has(dt.promptKey)), et = new Set($e.map((dt) => dt.promptKey)), Ze = l1($e, () => 0);
-          for (const [dt, Pe] of Ze.entries()) {
-            d({
-              effectiveEvidenceMode: "metadata",
-              fallbackUsed: true,
-              label: `이미지 대체 메타 분석 ${dt + 1}/${Ze.length}`
-            });
-            try {
-              const Ce = await v.complete(V.analysis, Yk(Pe, V), {
-                signal: g.signal,
-                timeoutMs: Fs,
-                timeoutPolicy: "settings",
-                diagnostic: {
-                  sessionId: b,
-                  analysisKind: "character-prompt",
-                  phase: `metadata-fallback-${dt + 1}-of-${Ze.length}`
-                }
-              });
-              du(g.signal), await pe("metadata", Zk(Ce.parsed, Pe, V), Pe, `metadata-fallback-${dt + 1}-of-${Ze.length}`);
-            } catch (Ce) {
-              if (Ex(Ce) || g.signal.aborted)
-                throw Ce;
-              U.push(`메타데이터 fallback ${dt + 1}: ${a_(Ce)}`);
-            }
-          }
-          et.forEach((dt) => se.delete(dt));
-        }
-        const je = ltt(L, se), He = l1(je, () => 0), ue = n_(je, "text");
-        let Oe = 0;
-        for (const [$e, et] of He.entries()) {
-          d({
-            effectiveEvidenceMode: "text",
-            fallbackUsed: true,
-            completedAnalysisUnits: Oe,
-            totalAnalysisUnits: ue,
-            progress: zx(Oe, ue)
-          });
-          try {
-            const Ze = await v.complete(V.analysis, Yk(et, V), {
-              signal: g.signal,
+            d({ label: `이미지 프롬프트 AI 분석 배치 ${he + 1}/${J}` });
+            const be = await v.complete(K.analysis, Yk(ut, K), {
+              historyContext: Pb_91(Fe),
+              signal: h.signal,
               timeoutMs: Fs,
               timeoutPolicy: "settings",
               diagnostic: {
                 sessionId: b,
                 analysisKind: "character-prompt",
-                phase: `text-fallback-${$e + 1}-of-${He.length}`
+                phase: `image-${Xe + 1}-of-${ee.length}`
               }
             });
-            du(g.signal), await pe("text", Zk(Ze.parsed, et, V), et, `text-fallback-${$e + 1}-of-${He.length}`);
-          } catch (Ze) {
-            if (Ex(Ze) || g.signal.aborted)
-              throw Ze;
-            U.push(`텍스트 fallback ${$e + 1}: ${a_(Ze)}`);
+            du(h.signal), Fb2(K.analysis, "supported");
+            const ze = Zk(be.parsed, ut, K);
+            for (const ae of Fe)
+              ae.imageEvidence.length = 0;
+            await we("image", ze, ut, `image-${Xe + 1}-of-${ee.length}`), he += 1;
+          } catch (Re) {
+            if (Ex(Re) || h.signal.aborted)
+              throw Re;
+            if (mM2(Re)) {
+              Fb2(K.analysis, "unsupported"), xe = true;
+              for (const te of ee.slice(Xe))
+                te.filter((Se) => _ !== "metadata" || Se.summaries.length === 0).forEach((Se) => oe.add(Se.promptKey));
+              break;
+            }
+            V.push(`이미지 AI 배치 ${Xe + 1}: ${a_(Re)}`), he += 1;
+          } finally {
+            for (const Re of Fe)
+              Re.imageEvidence.length = 0;
+            Fe = [], ut = [];
           }
-          Oe += n_(et, "text"), d({ completedAnalysisUnits: Oe, progress: zx(Oe, ue) });
+          je += ye, d({ completedAnalysisUnits: je, progress: zx(je, H) });
         }
-        if (!P && !S.size && !U.length && !he && ke === 0)
-          return j(), e.config.update(($e) => {
-            const et = mo($e);
-            return aB(et, L), et;
+        if (_ === "image" && oe.size > 0) {
+          d({
+            effectiveEvidenceMode: "metadata",
+            fallbackUsed: true,
+            label: `이미지 대체 메타 확인 중 · ${oe.size}개 캐릭터`
+          }), L = await stt(L, oe, e.metadata, h.signal, p.metadataConcurrency ?? 3, (ut, ye) => d({ completedMetadata: ut, totalMetadata: ye })), du(h.signal);
+          const Xe = ume(L).filter((ut) => oe.has(ut.promptKey)), dt = new Set(Xe.map((ut) => ut.promptKey)), Fe = l1(Xe, () => 0);
+          for (const [ut, ye] of Fe.entries()) {
+            d({
+              effectiveEvidenceMode: "metadata",
+              fallbackUsed: true,
+              label: `이미지 대체 메타 분석 ${ut + 1}/${Fe.length}`
+            });
+            try {
+              const Re = await v.complete(K.analysis, Yk(ye, K), {
+                historyContext: Pb_91(ye),
+                signal: h.signal,
+                timeoutMs: Fs,
+                timeoutPolicy: "settings",
+                diagnostic: {
+                  sessionId: b,
+                  analysisKind: "character-prompt",
+                  phase: `metadata-fallback-${ut + 1}-of-${Fe.length}`
+                }
+              });
+              du(h.signal), await we("metadata", Zk(Re.parsed, ye, K), ye, `metadata-fallback-${ut + 1}-of-${Fe.length}`);
+            } catch (Re) {
+              if (Ex(Re) || h.signal.aborted)
+                throw Re;
+              V.push(`메타데이터 fallback ${ut + 1}: ${a_(Re)}`);
+            }
+          }
+          dt.forEach((ut) => oe.delete(ut));
+        }
+        const ve = ltt(L, oe), Ee = l1(ve, () => 0), ge = n_(ve, "text");
+        let Ve = 0;
+        for (const [Xe, dt] of Ee.entries()) {
+          d({
+            effectiveEvidenceMode: "text",
+            fallbackUsed: true,
+            completedAnalysisUnits: Ve,
+            totalAnalysisUnits: ge,
+            progress: zx(Ve, ge)
+          });
+          try {
+            const Fe = await v.complete(K.analysis, Yk(dt, K), {
+              historyContext: Pb_91(dt),
+              signal: h.signal,
+              timeoutMs: Fs,
+              timeoutPolicy: "settings",
+              diagnostic: {
+                sessionId: b,
+                analysisKind: "character-prompt",
+                phase: `text-fallback-${Xe + 1}-of-${Ee.length}`
+              }
+            });
+            du(h.signal), await we("text", Zk(Fe.parsed, dt, K), dt, `text-fallback-${Xe + 1}-of-${Ee.length}`);
+          } catch (Fe) {
+            if (Ex(Fe) || h.signal.aborted)
+              throw Fe;
+            V.push(`텍스트 fallback ${Xe + 1}: ${a_(Fe)}`);
+          }
+          Ve += n_(dt, "text"), d({ completedAnalysisUnits: Ve, progress: zx(Ve, ge) });
+        }
+        if (!O && !I.size && !V.length && !xe && Ne === 0)
+          return C(), e.config.update((Xe) => {
+            const dt = mo(Xe);
+            return aB(dt, L), dt;
           }, { domains: ["asset-analysis"], persistence: "debounced" }), d({
             status: "success",
-            label: C === "text" ? "분석 가능한 로어북 본문이 없습니다" : "선택한 이미지에서 분석할 정보를 찾지 못했습니다.",
-            completedMetadata: G,
-            totalMetadata: G,
-            completedImages: F,
-            totalImages: F,
+            label: _ === "text" ? "분석 가능한 로어북 본문이 없습니다" : "선택한 이미지에서 분석할 정보를 찾지 못했습니다.",
+            completedMetadata: $,
+            totalMetadata: $,
+            completedImages: D,
+            totalImages: D,
             completedPrompts: 0,
             totalPrompts: 0,
             completedAnalysisUnits: 0,
             totalAnalysisUnits: 0,
             progress: 1
           }), m(w, { status: "error", outfitCount: 0 }), true;
-        if (!P && (!S.size || U.length))
-          throw new Error(U.join(" / ") || "AI 분석 결과가 없습니다.");
-        const Je = fme(I, A);
-        for (const $e of w) {
-          const et = I.get($e);
-          u($e, {
-            status: et ? "success" : S.has($e) ? "no_evidence" : "error",
-            outfitCount: et?.outfits.length ?? 0
+        if (!O && (!I.size || V.length))
+          throw new Error(V.join(" / ") || "AI 분석 결과가 없습니다.");
+        const We = fme(k, A);
+        for (const Xe of w) {
+          const dt = k.get(Xe);
+          u(Xe, {
+            status: dt ? "success" : I.has(Xe) ? "no_evidence" : "error",
+            outfitCount: dt?.outfits.length ?? 0
           });
         }
         return d({
           status: "success",
-          label: `프롬프트 분석 ${U.length ? "일부 완료" : "완료"} · ${Je.promptCount}개 캐릭터 · 정보 없음 ${[...S].filter(($e) => !I.has($e)).length}개`,
-          completedMetadata: G,
-          totalMetadata: G,
-          completedImages: F,
-          totalImages: F,
-          completedPrompts: Je.promptCount,
+          label: `프롬프트 분석 ${V.length ? "일부 완료" : "완료"} · ${We.promptCount}개 캐릭터 · 정보 없음 ${[...I].filter((Xe) => !k.has(Xe)).length}개`,
+          completedMetadata: $,
+          totalMetadata: $,
+          completedImages: D,
+          totalImages: D,
+          completedPrompts: We.promptCount,
           totalPrompts: L.length,
-          mainPromptCount: Je.mainPromptCount,
-          outfitCount: Je.outfitCount,
-          artistCount: Je.artistCount,
-          error: U.join(" / "),
+          mainPromptCount: We.mainPromptCount,
+          outfitCount: We.outfitCount,
+          artistCount: We.artistCount,
+          error: V.join(" / "),
           progress: 1
         }), true;
-      } catch (j) {
-        if (Ex(j) || g.signal.aborted) {
-          for (const O of w) {
-            const N = I.get(O);
-            u(O, N ? { status: "success", outfitCount: N.outfits.length } : { status: S.has(O) ? "no_evidence" : "cancelled", outfitCount: 0 });
+      } catch (C) {
+        if (Ex(C) || h.signal.aborted) {
+          for (const P of w) {
+            const z = k.get(P);
+            u(P, z ? { status: "success", outfitCount: z.outfits.length } : { status: I.has(P) ? "no_evidence" : "cancelled", outfitCount: 0 });
           }
           return d({ status: "cancelled", label: "프롬프트 분석 취소됨" }), false;
         }
-        if (P) {
-          const O = fme(I, A);
-          for (const N of w) {
-            const R = I.get(N);
-            u(N, R ? { status: "success", outfitCount: R.outfits.length } : { status: S.has(N) ? "no_evidence" : "error", outfitCount: 0 });
+        if (O) {
+          const P = fme(k, A);
+          for (const z of w) {
+            const R = k.get(z);
+            u(z, R ? { status: "success", outfitCount: R.outfits.length } : { status: I.has(z) ? "no_evidence" : "error", outfitCount: 0 });
           }
           return d({
             status: "success",
-            label: `프롬프트 분석 일부 완료 · ${O.promptCount}개 캐릭터`,
-            completedPrompts: O.promptCount,
-            mainPromptCount: O.mainPromptCount,
-            outfitCount: O.outfitCount,
-            artistCount: O.artistCount,
-            error: a_(j),
+            label: `프롬프트 분석 일부 완료 · ${P.promptCount}개 캐릭터`,
+            completedPrompts: P.promptCount,
+            mainPromptCount: P.mainPromptCount,
+            outfitCount: P.outfitCount,
+            artistCount: P.artistCount,
+            error: a_(C),
             progress: 1
           }), true;
         }
-        for (const O of w)
-          u(O, { status: S.has(O) ? "no_evidence" : "error", outfitCount: 0 });
-        return d({ status: "error", label: "프롬프트 분석 실패", error: j instanceof Error ? j.message : String(j) }), false;
+        for (const P of w)
+          u(P, { status: I.has(P) ? "no_evidence" : "error", outfitCount: 0 });
+        return d({ status: "error", label: "프롬프트 분석 실패", error: C instanceof Error ? C.message : String(C) }), false;
       } finally {
-        x?.cancel(), c === g && (c = null);
+        x?.cancel(), c === h && (c = null);
       }
     },
     cancel() {
@@ -40437,9 +40661,9 @@ function ptt(e) {
       if (l.status === "running")
         return;
       const p = [...n.keys()];
-      a.forEach((g) => clearTimeout(g)), a.clear(), n.clear();
-      for (const g of p)
-        r.get(g)?.forEach((b) => b());
+      a.forEach((h) => clearTimeout(h)), a.clear(), n.clear();
+      for (const h of p)
+        r.get(h)?.forEach((b) => b());
       d({ ...hM, revision: i });
     },
     dispose() {
@@ -40707,7 +40931,7 @@ function Att({ sourceCatalog: e, metadata: t, images: r, analyzer: n, config: a,
         return false;
       const p = new AbortController;
       l = p;
-      const g = Ox(n, {
+      const h = Ox(n, {
         retryCount: a.getCurrentSnapshot().runtime.generationAutoRetryCount,
         signal: p.signal,
         onRetry: (x) => {
@@ -40724,172 +40948,179 @@ function Att({ sourceCatalog: e, metadata: t, images: r, analyzer: n, config: a,
         label: `페르소나 ${v} 분석 준비 중`
       });
       try {
-        const x = e.refreshPersonas ? await e.refreshPersonas({ force: m.forceCatalog === true }) : await e.load({ force: m.forceCatalog === true, refreshPersona: true }), w = a.getCurrentSnapshot(), I = hf(m.sourceId ?? w.characterPrompt.selectedSourceId), S = new Set((m.personaKeys ?? []).map(hf).filter(Boolean)), A = x.persona.records.flatMap((J) => {
-          if (S.size && !S.has(J.key))
+        const x = e.refreshPersonas ? await e.refreshPersonas({ force: m.forceCatalog === true }) : await e.load({ force: m.forceCatalog === true, refreshPersona: true }), w = a.getCurrentSnapshot(), k = hf(m.sourceId ?? w.characterPrompt.selectedSourceId), I = { sourceId: k, charxName: x.sources.find((V) => V.id === k)?.name }, A = new Set((m.personaKeys ?? []).map(hf).filter(Boolean)), O = x.persona.records.flatMap((V) => {
+          if (A.size && !A.has(V.key))
             return [];
-          const U = m.assetSelection === "analysis" ? a5 : Vqe, ee = m.assetSelection !== "analysis" && b !== "text" ? mtt(w, I, J) : undefined, ae = U(w, I, J), me = ee ? [...new Map(ee.flatMap(_x).map((ge) => [tr(ge), ge])).values()] : ae.assets, se = ae.outfitAssetNames;
-          return (b === "text" ? J.personaPrompt.trim() : me.length) ? [{ persona: J, referenceTargets: ee, assets: me, outfitAssetNames: se }] : [];
+          const Y = m.assetSelection === "analysis" ? a5 : Vqe, re = m.assetSelection !== "analysis" && b !== "text" ? mtt(w, k, V) : undefined, se = Y(w, k, V), oe = re ? [...new Map(re.flatMap(_x).map((me) => [tr(me), me])).values()] : se.assets, he = se.outfitAssetNames;
+          return (b === "text" ? V.personaPrompt.trim() : oe.length) ? [{ persona: V, referenceTargets: re, assets: oe, outfitAssetNames: he }] : [];
         });
         if (u({
-          total: A.length,
-          label: A.length ? `페르소나 ${v} 근거 준비 중 · ${A.length}개` : "분석할 페르소나가 없습니다"
-        }), !A.length)
+          total: O.length,
+          label: O.length ? `페르소나 ${v} 근거 준비 중 · ${O.length}개` : "분석할 페르소나가 없습니다"
+        }), !O.length)
           return u({ status: "success", progress: 1 }), true;
-        const P = await Promise.all(A.map(({ assets: J }) => Promise.all(J.map(async (U) => {
+        const S = await Promise.all(O.map(({ assets: V }) => Promise.all(V.map(async (Y) => {
           if (b !== "metadata" && b !== "image")
             return null;
           try {
-            return (await t.inspect(U, p.signal)).summary;
-          } catch (ee) {
-            if (bM(ee))
-              throw ee;
+            return (await t.inspect(Y, p.signal)).summary;
+          } catch (re) {
+            if (bM(re))
+              throw re;
             return null;
           }
-        })))), k = await Promise.all(A.map(({ assets: J }, U) => Promise.all(J.map(async (ee, ae) => {
-          if (!(b === "image" || b === "metadata" && !P[U]?.[ae]))
+        })))), _ = await Promise.all(O.map(({ assets: V }, Y) => Promise.all(V.map(async (re, se) => {
+          if (!(b === "image" || b === "metadata" && !S[Y]?.[se]))
             return null;
           try {
-            return await Stt(ee, o, p.signal);
-          } catch (me) {
-            if (bM(me))
-              throw me;
+            return await Stt(re, o, p.signal);
+          } catch (oe) {
+            if (bM(oe))
+              throw oe;
             return null;
           }
-        })))), C = A.flatMap(({ assets: J }, U) => J.filter((ee, ae) => !k[U]?.[ae] && (b === "image" || b === "metadata" && !P[U]?.[ae]))), j = C.length ? await r.load(C, { signal: p.signal, concurrency: 3 }) : { evidence: [], failures: [] }, O = new Map(j.evidence.map((J) => [J.assetKey, J])), N = A.map(({ persona: J, referenceTargets: U, assets: ee, outfitAssetNames: ae }, me) => {
-          const se = ee.flatMap((ge, le) => {
-            const Ae = k[me]?.[le] ?? O.get(tr(ge)) ?? [...O.values()].find((fe) => fe.assetName === ge.name);
-            return Ae ? [{ assetKey: Ae.assetKey, assetName: Ae.assetName, data: Ae.data, mimeType: Ae.mimeType }] : [];
+        })))), C = O.flatMap(({ assets: V }, Y) => V.filter((re, se) => !_[Y]?.[se] && (b === "image" || b === "metadata" && !S[Y]?.[se]))), P = C.length ? await r.load(C, { signal: p.signal, concurrency: 3 }) : { evidence: [], failures: [] }, z = new Map(P.evidence.map((V) => [V.assetKey, V])), R = O.map(({ persona: V, referenceTargets: Y, assets: re, outfitAssetNames: se }, oe) => {
+          const he = re.flatMap((me, je) => {
+            const pe = _[oe]?.[je] ?? z.get(tr(me)) ?? [...z.values()].find((Ne) => Ne.assetName === me.name);
+            return pe ? [{ assetKey: pe.assetKey, assetName: pe.assetName, data: pe.data, mimeType: pe.mimeType }] : [];
           });
           return {
-            persona: J,
-            referenceTargets: U,
-            assets: ee,
-            outfitAssetNames: ae,
-            body: J.personaPrompt,
-            metadata: (P[me] ?? []).filter((ge) => !!ge),
-            images: se
+            persona: V,
+            referenceTargets: Y,
+            assets: re,
+            outfitAssetNames: se,
+            body: V.personaPrompt,
+            metadata: (S[oe] ?? []).filter((me) => !!me),
+            images: he
           };
-        }).filter((J) => b === "metadata" ? !!(J.metadata.length || J.images.length || J.body.trim()) : b === "image" ? !!(J.images.length || J.metadata.length || J.body.trim()) : !!J.body.trim());
+        }).filter((V) => b === "metadata" ? !!(V.metadata.length || V.images.length || V.body.trim()) : b === "image" ? !!(V.images.length || V.metadata.length || V.body.trim()) : !!V.body.trim());
         if (u({
-          total: N.length,
-          label: N.length ? `페르소나 ${v} 분석 준비 중 · ${N.length}개` : `${v} 분석 입력을 준비할 수 있는 페르소나가 없습니다`
-        }), !N.length)
+          total: R.length,
+          label: R.length ? `페르소나 ${v} 분석 준비 중 · ${R.length}개` : `${v} 분석 입력을 준비할 수 있는 페르소나가 없습니다`
+        }), !R.length)
           return u({ status: "success", label: `${v} 분석 입력을 준비할 수 있는 페르소나가 없습니다`, progress: 1 }), true;
-        const R = {
-          image: N.filter((J) => J.images.length > 0),
-          metadata: N.filter((J) => J.images.length === 0 && J.metadata.length > 0),
-          text: N.filter((J) => J.images.length === 0 && J.metadata.length === 0 && !!J.body.trim())
-        }, D = g$(b).flatMap((J) => b === "image" && J === "image" ? [
-          N.filter((U) => U.images.length > 0 && U.metadata.length > 0),
-          N.filter((U) => U.images.length > 0 && U.metadata.length === 0 && !!U.body.trim()),
-          N.filter((U) => U.images.length > 0 && U.metadata.length === 0 && !U.body.trim())
-        ].filter((U) => U.length > 0).map((U) => ({ evidenceMode: "image", targets: U })) : [
+        const T = {
+          image: R.filter((V) => V.images.length > 0),
+          metadata: R.filter((V) => V.images.length === 0 && V.metadata.length > 0),
+          text: R.filter((V) => V.images.length === 0 && V.metadata.length === 0 && !!V.body.trim())
+        }, G = g$(b).flatMap((V) => b === "image" && V === "image" ? [
+          R.filter((Y) => Y.images.length > 0 && Y.metadata.length > 0),
+          R.filter((Y) => Y.images.length > 0 && Y.metadata.length === 0 && !!Y.body.trim()),
+          R.filter((Y) => Y.images.length > 0 && Y.metadata.length === 0 && !Y.body.trim())
+        ].filter((Y) => Y.length > 0).map((Y) => ({ evidenceMode: "image", targets: Y })) : [
           {
-            evidenceMode: J,
-            targets: b === "metadata" ? J === "metadata" ? N.filter((U) => U.metadata.length > 0) : J === "image" ? N.filter((U) => U.metadata.length === 0 && U.images.length > 0) : N.filter((U) => U.metadata.length === 0 && U.images.length === 0 && !!U.body.trim()) : b === "text" ? N : R[J]
+            evidenceMode: V,
+            targets: b === "metadata" ? V === "metadata" ? R.filter((Y) => Y.metadata.length > 0) : V === "image" ? R.filter((Y) => Y.metadata.length === 0 && Y.images.length > 0) : R.filter((Y) => Y.metadata.length === 0 && Y.images.length === 0 && !!Y.body.trim()) : b === "text" ? R : T[V]
           }
-        ]), B = [];
-        for (const J of D) {
-          if (J.evidenceMode !== "image") {
-            J.targets.length && B.push(J);
+        ]), $ = [];
+        for (const V of G) {
+          if (V.evidenceMode !== "image") {
+            V.targets.length && $.push(V);
             continue;
           }
-          for (const U of htt(J.targets, (ee) => ee.images.length, 18))
-            B.push({ evidenceMode: J.evidenceMode, targets: U });
+          for (const Y of htt(V.targets, (re) => re.images.length, 18))
+            $.push({ evidenceMode: V.evidenceMode, targets: Y });
         }
-        let G = 0, T = 0, F = 0;
-        const L = [], V = new Set, X = [], Y = a.getCurrentSnapshot(), M = wtt(Y, N), q = new Map(M.map((J) => [J.personaKey, J])), te = new Map(N.map((J) => [J.persona.key, J])), K = Y.analysis, H = (J) => J.every((U) => U.metadata.length > 0) ? { mode: "metadata", targets: [...J] } : J.every((U) => !!U.body.trim()) ? { mode: "text", targets: [...J] } : { mode: "text", targets: [] };
-        for (const [J, U] of B.entries())
+        let M = 0, D = 0, L = 0;
+        const K = [], Q = new Set, U = [], B = a.getCurrentSnapshot(), ee = wtt(B, R), Z = new Map(ee.map((V) => [V.personaKey, V])), F = new Map(R.map((V) => [V.persona.key, V])), H = B.analysis, J = (V) => V.every((Y) => Y.metadata.length > 0) ? { mode: "metadata", targets: [...V] } : V.every((Y) => !!Y.body.trim()) ? { mode: "text", targets: [...V] } : { mode: "text", targets: [] };
+        for (const [V, Y] of $.entries())
           try {
-            let { evidenceMode: ee, targets: ae } = U;
-            if (ee === "image" && r_2(K) === "unsupported") {
-              const ke = H(U.targets);
-              ee = ke.mode, ae = ke.targets;
+            let { evidenceMode: re, targets: se } = Y;
+            if (re === "image" && r_2(H) === "unsupported") {
+              const xe = J(Y.targets);
+              re = xe.mode, se = xe.targets;
             }
-            if (ae.length !== U.targets.length)
+            if (se.length !== Y.targets.length)
               throw new Error("이미지 분석을 메타 또는 본문으로 전환할 근거가 없습니다.");
             u({
-              effectiveEvidenceMode: ee,
-              fallbackUsed: ee !== b,
-              label: `페르소나 ${v} 분석 ${J + 1}/${B.length}`
+              effectiveEvidenceMode: re,
+              fallbackUsed: re !== b,
+              label: `페르소나 ${v} 분석 ${V + 1}/${$.length}`
             });
-            let me;
+            let oe;
             try {
-              me = await g.complete(K, bme(ae, ee, Y), {
+              oe = await h.complete(H, bme(se, re, B), {
+                historyContext: I,
                 signal: p.signal,
                 timeoutMs: Fs,
                 timeoutPolicy: "settings"
-              }), ee === "image" && Fb2(K, "supported");
-            } catch (ke) {
-              if (ee !== "image" || !mM2(ke))
-                throw ke;
-              Fb2(K, "unsupported");
-              const he = H(U.targets);
-              if (ee = he.mode, ae = he.targets, ae.length !== U.targets.length)
-                throw new Error("이미지 분석을 메타 또는 본문으로 전환할 근거가 없습니다.", { cause: ke });
-              u({ effectiveEvidenceMode: ee, fallbackUsed: true }), me = await g.complete(K, bme(ae, ee, Y), {
+              }), re === "image" && Fb2(H, "supported");
+            } catch (xe) {
+              if (re !== "image" || !mM2(xe))
+                throw xe;
+              Fb2(H, "unsupported");
+              const we = J(Y.targets);
+              if (re = we.mode, se = we.targets, se.length !== Y.targets.length)
+                throw new Error("이미지 분석을 메타 또는 본문으로 전환할 근거가 없습니다.", { cause: xe });
+              u({ effectiveEvidenceMode: re, fallbackUsed: true }), oe = await h.complete(H, bme(se, re, B), {
+                historyContext: I,
                 signal: p.signal,
                 timeoutMs: Fs,
                 timeoutPolicy: "settings"
               });
             }
             o_(p.signal);
-            const se = ktt(me.parsed, ae, ee, Y);
-            for (const ke of se)
-              ke.analysisResult.status === "no_evidence" && V.add(ke.personaKey);
-            const ge = se.filter((ke) => ke.analysisResult.status !== "no_evidence");
-            if (!ge.length)
+            const he = ktt(oe.parsed, se, re, B);
+            for (const xe of he)
+              xe.analysisResult.status === "no_evidence" && Q.add(xe.personaKey);
+            const me = he.filter((xe) => xe.analysisResult.status !== "no_evidence");
+            if (!me.length)
               continue;
-            const le = ge.filter((ke) => !ke.referenceResults).map((ke) => {
-              const he = q.get(ke.personaKey);
-              if (!he)
-                throw new Error(`Persona form capture is missing: ${ke.personaKey}`);
+            const je = me.filter((xe) => !xe.referenceResults).map((xe) => {
+              const we = Z.get(xe.personaKey);
+              if (!we)
+                throw new Error(`Persona form capture is missing: ${xe.personaKey}`);
               return {
-                ownerRef: he.ownerRef,
-                ...ee === "text" ? { lorebookBody: ae.find((pe) => pe.persona.key === ke.personaKey)?.body ?? "" } : {},
-                existingForms: he.comparison.items,
-                observations: j$(ke.analysisResult)
+                ownerRef: we.ownerRef,
+                ...re === "text" ? { lorebookBody: se.find((fe) => fe.persona.key === xe.personaKey)?.body ?? "" } : {},
+                existingForms: we.comparison.items,
+                observations: j$(xe.analysisResult)
               };
             });
-            let Ae = [];
-            if (le.length) {
-              u({ label: `페르소나 폼 판정 ${J + 1}/${B.length}` });
-              const ke = await g.complete(K, _fe(le), { signal: p.signal, timeoutMs: Fs, timeoutPolicy: "settings" });
-              o_(p.signal), Ae = jfe(ke.parsed, le);
+            let pe = [];
+            if (je.length) {
+              u({ label: `페르소나 폼 판정 ${V + 1}/${$.length}` });
+              const xe = await h.complete(H, _fe(je), {
+                historyContext: I,
+                signal: p.signal,
+                timeoutMs: Fs,
+                timeoutPolicy: "settings"
+              });
+              o_(p.signal), pe = jfe(xe.parsed, je);
             }
-            const fe = new Map(Ae.map((ke) => [ke.ownerRef, ke]));
-            for (const ke of ge) {
+            const Ne = new Map(pe.map((xe) => [xe.ownerRef, xe]));
+            for (const xe of me) {
               o_(p.signal);
-              const he = q.get(ke.personaKey), pe = te.get(ke.personaKey), Ee = he ? fe.get(he.ownerRef) : undefined, je = e.getSnapshot()?.persona.records.some((He) => He.key === ke.personaKey) === true;
-              if (!he || !pe || !Ee && !ke.referenceResults || !je) {
-                X.push(`${pe?.persona.name ?? ke.personaKey}: 분석 대상이 변경되었습니다.`);
+              const we = Z.get(xe.personaKey), fe = F.get(xe.personaKey), ve = we ? Ne.get(we.ownerRef) : undefined, Ee = e.getSnapshot()?.persona.records.some((ge) => ge.key === xe.personaKey) === true;
+              if (!we || !fe || !ve && !xe.referenceResults || !Ee) {
+                U.push(`${fe?.persona.name ?? xe.personaKey}: 분석 대상이 변경되었습니다.`);
                 continue;
               }
               try {
-                let He;
-                const ue = [`persona-profile:${he.personaKey}`, `persona-outfits:${he.personaKey}`];
-                a.update((Oe) => (He = Itt(Oe, [pe], [ke], [he], Ee ? [Ee] : []), He.config), {
+                let ge;
+                const Ve = [`persona-profile:${we.personaKey}`, `persona-outfits:${we.personaKey}`];
+                a.update((We) => (ge = Itt(We, [fe], [xe], [we], ve ? [ve] : []), ge.config), {
                   domains: ["settings"],
                   persistence: "manual",
-                  topics: ue
-                }), await a.flushSave(["settings"]), T += He.promptCount, F += He.outfitCount, L.push(ke.personaKey), u({ promptCount: T, outfitCount: F, completedPersonaKeys: [...L] });
-              } catch (He) {
-                X.push(`${pe.persona.name}: ${He instanceof Error ? He.message : String(He)}`);
+                  topics: Ve
+                }), await a.flushSave(["settings"]), D += ge.promptCount, L += ge.outfitCount, K.push(xe.personaKey), u({ promptCount: D, outfitCount: L, completedPersonaKeys: [...K] });
+              } catch (ge) {
+                U.push(`${fe.persona.name}: ${ge instanceof Error ? ge.message : String(ge)}`);
               }
             }
-          } catch (ee) {
-            if (p.signal.aborted || bM(ee))
-              throw ee;
-            X.push(`배치 ${J + 1}: ${ee instanceof Error ? ee.message : String(ee)}`);
+          } catch (re) {
+            if (p.signal.aborted || bM(re))
+              throw re;
+            U.push(`배치 ${V + 1}: ${re instanceof Error ? re.message : String(re)}`);
           } finally {
-            G += U.targets.length, u({ completed: G, progress: G / N.length });
+            M += Y.targets.length, u({ completed: M, progress: M / R.length });
           }
-        if (!L.length && (!V.size || X.length))
-          throw new Error(X.join(" / ") || "Persona analysis did not return every requested result.");
+        if (!K.length && (!Q.size || U.length))
+          throw new Error(U.join(" / ") || "Persona analysis did not return every requested result.");
         return u({
           status: "success",
-          label: X.length ? `페르소나 분석 일부 완료 · ${L.length}명` : `페르소나 분석 완료 · 프롬프트 ${T}개 · 의상 ${F}개 · 정보 없음 ${V.size}명`,
-          error: X.join(" / "),
+          label: U.length ? `페르소나 분석 일부 완료 · ${K.length}명` : `페르소나 분석 완료 · 프롬프트 ${D}개 · 의상 ${L}개 · 정보 없음 ${Q.size}명`,
+          error: U.join(" / "),
           progress: 1
         }), true;
       } catch (x) {
@@ -41149,162 +41380,164 @@ function Ntt(e) {
         const p = Fu(e.config);
         if (u1(c.signal), m === "all-sources" && typeof e.sourceCatalog.hasCharacterDirectory == "function" && !e.sourceCatalog.hasCharacterDirectory())
           throw new Error("Charx rail catalog is not ready for all-source reference analysis.");
-        const g = Bce(e.sourceCatalog, s) ?? (m === "all-sources" ? await e.sourceCatalog.loadAllSources() : await e.sourceCatalog.load({ force: s.forceCatalog === true }));
+        const h = Bce(e.sourceCatalog, s) ?? (m === "all-sources" ? await e.sourceCatalog.loadAllSources() : await e.sourceCatalog.load({ force: s.forceCatalog === true }));
         u1(c.signal);
-        const b = i_(s.sourceId) || g.currentSourceId, v = m === "all-sources" ? g.sources : g.sources.filter((Ae) => Ae.id === b), x = new Map((s.runtimeSources ?? []).map((Ae) => [Ae.id, Ae])), w = v.map((Ae) => x.get(Ae.id) ?? Ae), I = e.config.getCurrentSnapshot(), S = s.evidenceMode ?? "image", A = JYe(w, I, new Set((s.promptKeys ?? []).map(i_).filter(Boolean)), S), P = Ni(A.flatMap(_x)), k = S === "metadata" ? P.length : 0, C = S === "metadata" ? "메타데이터" : S === "image" ? "이미지" : "텍스트";
+        const b = i_(s.sourceId) || h.currentSourceId, v = m === "all-sources" ? h.sources : h.sources.filter((je) => je.id === b), x = new Map((s.runtimeSources ?? []).map((je) => [je.id, je])), w = v.map((je) => x.get(je.id) ?? je), k = e.config.getCurrentSnapshot(), I = s.evidenceMode ?? "image", A = JYe(w, k, new Set((s.promptKeys ?? []).map(i_).filter(Boolean)), I), O = Ni(A.flatMap(_x)), S = I === "metadata" ? O.length : 0, _ = I === "metadata" ? "메타데이터" : I === "image" ? "이미지" : "텍스트";
         if (i({
           sourceId: b,
-          totalMetadata: k,
+          totalMetadata: S,
           totalPrompts: A.length,
-          label: A.length ? `프롬프트 ${C} 분석 준비 중 · ${A.length}개 캐릭터` : "분석할 프롬프트가 없습니다"
+          label: A.length ? `프롬프트 ${_} 분석 준비 중 · ${A.length}개 캐릭터` : "분석할 프롬프트가 없습니다"
         }), !A.length)
           return i({ status: "success", progress: 1 }), true;
-        u = UC((Ae) => i(Ae));
-        const j = await cB(P, e.metadata, c.signal, S, s.metadataConcurrency ?? 4, (Ae, fe) => u?.schedule({ completedMetadata: Ae, totalMetadata: fe }));
+        u = UC((je) => i(je));
+        const C = await cB(O, e.metadata, c.signal, I, s.metadataConcurrency ?? 4, (je, pe) => u?.schedule({ completedMetadata: je, totalMetadata: pe }));
         u.flush(), u1(c.signal);
-        const O = Ptt(A, j.summaryByAssetKey, S);
+        const P = Ptt(A, C.summaryByAssetKey, I);
         i({
-          completedMetadata: k,
-          totalImages: O.length,
-          label: O.length ? `프롬프트 이미지 준비 중 · ${O.length}개 이미지` : `프롬프트 ${C} AI 분석 준비 중 · ${A.length}개 캐릭터`
+          completedMetadata: S,
+          totalImages: P.length,
+          label: P.length ? `프롬프트 이미지 준비 중 · ${P.length}개 이미지` : `프롬프트 ${_} AI 분석 준비 중 · ${A.length}개 캐릭터`
         });
-        const N = O.length ? await e.images.load(O, {
+        const z = P.length ? await e.images.load(P, {
           signal: c.signal,
           concurrency: s.imageConcurrency ?? 3,
-          onProgress: (Ae, fe) => i({ completedImages: Ae, totalImages: fe })
+          onProgress: (je, pe) => i({ completedImages: je, totalImages: pe })
         }) : { evidence: [], failures: [] };
         u1(c.signal);
-        const R = new Map(N.evidence.map((Ae) => [Ae.assetKey, Ae])), D = new Set(N.failures.map((Ae) => Ae.assetKey));
-        if (S === "image" && D.size > 0) {
-          const Ae = await cB(O.filter((fe) => D.has(tr(fe))), e.metadata, c.signal, "metadata", s.metadataConcurrency ?? 4, (fe, ke) => i({ completedMetadata: fe, totalMetadata: ke }));
-          Ae.summaryByAssetKey.forEach((fe, ke) => j.summaryByAssetKey.set(ke, fe)), Ae.availabilityByAssetKey.forEach((fe, ke) => j.availabilityByAssetKey.set(ke, fe));
+        const R = new Map(z.evidence.map((je) => [je.assetKey, je])), T = new Set(z.failures.map((je) => je.assetKey));
+        if (I === "image" && T.size > 0) {
+          const je = await cB(P.filter((pe) => T.has(tr(pe))), e.metadata, c.signal, "metadata", s.metadataConcurrency ?? 4, (pe, Ne) => i({ completedMetadata: pe, totalMetadata: Ne }));
+          je.summaryByAssetKey.forEach((pe, Ne) => C.summaryByAssetKey.set(Ne, pe)), je.availabilityByAssetKey.forEach((pe, Ne) => C.availabilityByAssetKey.set(Ne, pe));
         }
-        const B = xme(A, j.summaryByAssetKey, R, D).filter((Ae) => S === "text" ? !!Ae.loreContent?.trim() : S === "metadata" ? !!(Ae.defaultSummary || Ae.outfitSummaries.length || Ae.defaultImageEvidence || Ae.outfitImageEvidence.length || Ae.loreContent?.trim()) : !!(Ae.defaultImageEvidence || Ae.outfitImageEvidence.length || Ae.loreContent?.trim()));
-        if (!B.length)
-          throw new Error(`프롬프트 ${C} 분석 입력을 준비하지 못했습니다.`);
+        const G = xme(A, C.summaryByAssetKey, R, T).filter((je) => I === "text" ? !!je.loreContent?.trim() : I === "metadata" ? !!(je.defaultSummary || je.outfitSummaries.length || je.defaultImageEvidence || je.outfitImageEvidence.length || je.loreContent?.trim()) : !!(je.defaultImageEvidence || je.outfitImageEvidence.length || je.loreContent?.trim()));
+        if (!G.length)
+          throw new Error(`프롬프트 ${_} 분석 입력을 준비하지 못했습니다.`);
         i({
-          label: `프롬프트 ${C} AI 분석 중 · ${B.length}개 캐릭터`,
-          completedImages: O.length,
-          totalImages: O.length,
-          totalPrompts: B.length
+          label: `프롬프트 ${_} AI 분석 중 · ${G.length}개 캐릭터`,
+          completedImages: P.length,
+          totalImages: P.length,
+          totalPrompts: G.length
         });
-        const G = S === "metadata" || S === "image" ? wme(B) : [], T = S === "metadata" || S === "image" ? Ett(Ott(B)) : [], F = new Set([...G.map((Ae) => Ae.promptKey), ...T.map((Ae) => Ae.promptKey)]), L = S === "text" ? B : kme(B.filter((Ae) => !F.has(Ae.promptKey))), V = l1(G, () => 0), X = l1(T, Ime), Y = l1(L, () => 0), M = {
-          metadata: V.map((Ae, fe) => ({ batch: Ae, phase: "metadata", phaseIndex: fe, phaseTotal: V.length })),
-          image: X.map((Ae, fe) => ({ batch: Ae, phase: "image", phaseIndex: fe, phaseTotal: X.length })),
-          text: Y.map((Ae, fe) => ({ batch: Ae, phase: "text", phaseIndex: fe, phaseTotal: Y.length }))
-        }, q = [];
-        for (const Ae of g$(S))
-          q.push(...M[Ae]);
-        const te = q.reduce((Ae, fe) => Ae + Sme(fe.batch, fe.phase), 0), K = e.config.getCurrentSnapshot(), H = K.analysis, J = new Set, U = new Set, ee = [];
-        let ae = 0, me = 0, se = 0, ge = 0;
-        const le = async (Ae) => {
-          const fe = await cB(Ni(Ae.flatMap(_x)), e.metadata, c.signal, "metadata", s.metadataConcurrency ?? 4, (he, pe) => i({ completedMetadata: he, totalMetadata: pe }));
-          fe.summaryByAssetKey.forEach((he, pe) => j.summaryByAssetKey.set(pe, he)), fe.availabilityByAssetKey.forEach((he, pe) => j.availabilityByAssetKey.set(pe, he));
-          const ke = wme(xme(Ae, fe.summaryByAssetKey, new Map, new Set));
-          return ke.length ? { batch: ke, phase: "metadata" } : { batch: kme(Ae), phase: "text" };
+        const $ = I === "metadata" || I === "image" ? wme(G) : [], M = I === "metadata" || I === "image" ? Ett(Ott(G)) : [], D = new Set([...$.map((je) => je.promptKey), ...M.map((je) => je.promptKey)]), L = I === "text" ? G : kme(G.filter((je) => !D.has(je.promptKey))), K = l1($, () => 0), Q = l1(M, Ime), U = l1(L, () => 0), B = {
+          metadata: K.map((je, pe) => ({ batch: je, phase: "metadata", phaseIndex: pe, phaseTotal: K.length })),
+          image: Q.map((je, pe) => ({ batch: je, phase: "image", phaseIndex: pe, phaseTotal: Q.length })),
+          text: U.map((je, pe) => ({ batch: je, phase: "text", phaseIndex: pe, phaseTotal: U.length }))
+        }, ee = [];
+        for (const je of g$(I))
+          ee.push(...B[je]);
+        const Z = ee.reduce((je, pe) => je + Sme(pe.batch, pe.phase), 0), F = e.config.getCurrentSnapshot(), H = F.analysis, J = new Set, V = new Set, Y = [];
+        let re = 0, se = 0, oe = 0, he = 0;
+        const me = async (je) => {
+          const pe = await cB(Ni(je.flatMap(_x)), e.metadata, c.signal, "metadata", s.metadataConcurrency ?? 4, (xe, we) => i({ completedMetadata: xe, totalMetadata: we }));
+          pe.summaryByAssetKey.forEach((xe, we) => C.summaryByAssetKey.set(we, xe)), pe.availabilityByAssetKey.forEach((xe, we) => C.availabilityByAssetKey.set(we, xe));
+          const Ne = wme(xme(je, pe.summaryByAssetKey, new Map, new Set));
+          return Ne.length ? { batch: Ne, phase: "metadata" } : { batch: kme(je), phase: "text" };
         };
-        i({ completedAnalysisUnits: ge, totalAnalysisUnits: te, progress: vM(ge, te) });
-        for (const [Ae, fe] of q.entries()) {
-          const { batch: ke, phase: he, phaseIndex: pe, phaseTotal: Ee } = fe, je = Sme(ke, he);
-          let He = ke, ue = he;
-          if (ue === "image" && r_2(H) === "unsupported") {
-            const Oe = await le(ke);
-            He = Oe.batch, ue = Oe.phase;
+        i({ completedAnalysisUnits: he, totalAnalysisUnits: Z, progress: vM(he, Z) });
+        for (const [je, pe] of ee.entries()) {
+          const { batch: Ne, phase: xe, phaseIndex: we, phaseTotal: fe } = pe, ve = Sme(Ne, xe);
+          let Ee = Ne, ge = xe;
+          if (ge === "image" && r_2(H) === "unsupported") {
+            const Ve = await me(Ne);
+            Ee = Ve.batch, ge = Ve.phase;
           }
-          if (!He.length) {
-            ee.push(`배치 ${Ae + 1}: 텍스트 fallback 본문이 없습니다.`), ge += je, i({ completedAnalysisUnits: ge, progress: vM(ge, te) });
+          if (!Ee.length) {
+            Y.push(`배치 ${je + 1}: 텍스트 fallback 본문이 없습니다.`), he += ve, i({ completedAnalysisUnits: he, progress: vM(he, Z) });
             continue;
           }
           i({
-            effectiveEvidenceMode: ue,
-            fallbackUsed: ue !== S,
-            label: `프롬프트 ${C} AI 분석 배치 ${Ae + 1}/${q.length}`,
-            completedAnalysisUnits: ge,
-            totalAnalysisUnits: te,
-            progress: vM(ge, te)
+            effectiveEvidenceMode: ge,
+            fallbackUsed: ge !== I,
+            label: `프롬프트 ${_} AI 분석 배치 ${je + 1}/${ee.length}`,
+            completedAnalysisUnits: he,
+            totalAnalysisUnits: Z,
+            progress: vM(he, Z)
           });
           try {
-            let Oe;
+            let Ve;
             try {
-              Oe = await d.complete(H, P$(He, K), {
+              Ve = await d.complete(H, P$(Ee, F), {
+                historyContext: Pb_91(Ee),
                 signal: c.signal,
                 timeoutMs: Fs,
                 timeoutPolicy: "settings",
                 diagnostic: {
                   sessionId: l,
                   analysisKind: "reference-image",
-                  phase: `prompt-${ue}-${pe + 1}-of-${Ee}`
+                  phase: `prompt-${ge}-${we + 1}-of-${fe}`
                 }
-              }), ue === "image" && Fb2(H, "supported");
-            } catch (et) {
-              if (ue !== "image" || !mM2(et))
-                throw et;
+              }), ge === "image" && Fb2(H, "supported");
+            } catch (dt) {
+              if (ge !== "image" || !mM2(dt))
+                throw dt;
               Fb2(H, "unsupported");
-              const Ze = await le(ke);
-              if (He = Ze.batch, ue = Ze.phase, !He.length)
-                throw new Error("이미지 분석을 메타 또는 본문으로 전환할 근거가 없습니다.", { cause: et });
-              i({ effectiveEvidenceMode: ue, fallbackUsed: true }), Oe = await d.complete(H, P$(He, K), {
+              const Fe = await me(Ne);
+              if (Ee = Fe.batch, ge = Fe.phase, !Ee.length)
+                throw new Error("이미지 분석을 메타 또는 본문으로 전환할 근거가 없습니다.", { cause: dt });
+              i({ effectiveEvidenceMode: ge, fallbackUsed: true }), Ve = await d.complete(H, P$(Ee, F), {
+                historyContext: Pb_91(Ee),
                 signal: c.signal,
                 timeoutMs: Fs,
                 timeoutPolicy: "settings",
                 diagnostic: {
                   sessionId: l,
                   analysisKind: "reference-image",
-                  phase: `prompt-${ue}-fallback-${pe + 1}-of-${Ee}`
+                  phase: `prompt-${ge}-fallback-${we + 1}-of-${fe}`
                 }
               });
             }
             u1(c.signal);
-            const Je = Dfe(Oe.parsed, He, K);
+            const We = Dfe(Ve.parsed, Ee, F);
             if (m === "current-source" && e.sourceCatalog.getSnapshot()?.currentSourceId !== b)
               throw new DOMException("Reference analysis source changed.", "AbortError");
-            const $e = Je.filter((et) => et.status !== "no_evidence");
-            if ($e.length) {
-              const et = new Set($e.map((Ce) => Ce.analysisId)), Ze = He.filter((Ce) => et.has(Ce.analysisId)), dt = ["prompts", "metadata-cache"];
-              $e.some((Ce) => Ce.artistPrompts.length > 0) && dt.push("artists");
-              let Pe;
-              p(), e.config.update((Ce) => {
-                const Q = mo(Ce);
-                return Pe = Lfe(Q, Ze, $e), S !== "text" && ztt(Q, Ze), j.availabilityByAssetKey.size > 0 && Ctt(Q, Ze, j.availabilityByAssetKey), Q;
-              }, { domains: dt, persistence: "manual" }), await e.config.flushSave(dt), ae += Pe.mainPromptCount, me += Pe.artistCount, e.priorityAssets?.refreshMetadataAvailability();
+            const Xe = We.filter((dt) => dt.status !== "no_evidence");
+            if (Xe.length) {
+              const dt = new Set(Xe.map((Re) => Re.analysisId)), Fe = Ee.filter((Re) => dt.has(Re.analysisId)), ut = ["prompts", "metadata-cache"];
+              Xe.some((Re) => Re.artistPrompts.length > 0) && ut.push("artists");
+              let ye;
+              p(), e.config.update((Re) => {
+                const te = mo(Re);
+                return ye = Lfe(te, Fe, Xe), I !== "text" && ztt(te, Fe), C.availabilityByAssetKey.size > 0 && Ctt(te, Fe, C.availabilityByAssetKey), te;
+              }, { domains: ut, persistence: "manual" }), await e.config.flushSave(ut), re += ye.mainPromptCount, se += ye.artistCount, e.priorityAssets?.refreshMetadataAvailability();
             }
-            se += Je.length - $e.length;
-            for (const et of $e) {
-              J.add(et.promptKey);
-              for (const Ze of et.outfits)
-                U.add(`${et.promptKey}\x00${i_(Ze.id)}`);
+            oe += We.length - Xe.length;
+            for (const dt of Xe) {
+              J.add(dt.promptKey);
+              for (const Fe of dt.outfits)
+                V.add(`${dt.promptKey}\x00${i_(Fe.id)}`);
             }
-            i({ completedPrompts: J.size, mainPromptCount: ae, outfitCount: U.size, artistCount: me });
-          } catch (Oe) {
-            if (sB(Oe) || c.signal.aborted)
-              throw Oe;
-            ee.push(`배치 ${Ae + 1}: ${Oe instanceof Error ? Oe.message : String(Oe)}`);
+            i({ completedPrompts: J.size, mainPromptCount: re, outfitCount: V.size, artistCount: se });
+          } catch (Ve) {
+            if (sB(Ve) || c.signal.aborted)
+              throw Ve;
+            Y.push(`배치 ${je + 1}: ${Ve instanceof Error ? Ve.message : String(Ve)}`);
           }
-          ge += je, i({ completedAnalysisUnits: ge, progress: vM(ge, te) });
+          he += ve, i({ completedAnalysisUnits: he, progress: vM(he, Z) });
         }
-        if (!J.size && (!se || ee.length))
-          throw new Error(ee.join(" / ") || "레퍼런스 AI 분석 결과가 없습니다.");
+        if (!J.size && (!oe || Y.length))
+          throw new Error(Y.join(" / ") || "레퍼런스 AI 분석 결과가 없습니다.");
         if (m === "current-source" && e.sourceCatalog.getSnapshot()?.currentSourceId !== b)
           throw new DOMException("Reference analysis source changed.", "AbortError");
         return J.size ? (i({
           status: "success",
-          label: ee.length ? `프롬프트 ${C} 분석 일부 완료 · ${J.size}개 캐릭터` : `프롬프트 ${C} 분석 완료 · ${J.size}개 캐릭터 · 정보 없음 ${se}개`,
-          completedMetadata: k,
-          totalMetadata: k,
-          completedImages: O.length,
-          totalImages: O.length,
+          label: Y.length ? `프롬프트 ${_} 분석 일부 완료 · ${J.size}개 캐릭터` : `프롬프트 ${_} 분석 완료 · ${J.size}개 캐릭터 · 정보 없음 ${oe}개`,
+          completedMetadata: S,
+          totalMetadata: S,
+          completedImages: P.length,
+          totalImages: P.length,
           completedPrompts: J.size,
-          totalPrompts: B.length,
-          completedAnalysisUnits: te,
-          totalAnalysisUnits: te,
-          mainPromptCount: ae,
-          outfitCount: U.size,
-          artistCount: me,
-          error: ee.join(" / "),
+          totalPrompts: G.length,
+          completedAnalysisUnits: Z,
+          totalAnalysisUnits: Z,
+          mainPromptCount: re,
+          outfitCount: V.size,
+          artistCount: se,
+          error: Y.join(" / "),
           progress: 1
         }), true) : (i({
           status: "success",
-          label: `레퍼런스 분석 완료 · 정보 없음 ${se}개`,
+          label: `레퍼런스 분석 완료 · 정보 없음 ${oe}개`,
           completedPrompts: 0,
           progress: 1
         }), true);
@@ -41580,51 +41813,55 @@ function Ort(e) {
   const l = () => e.chatImageGenerationSettings.getSnapshot().autoGenerationEnabled;
   let d = l();
   const u = (w) => {
-    n += 1, s = { ...s, ...w, revision: n }, t.forEach((I) => I());
-  }, m = (w) => w.size ? (e.config.update((I) => ({
-    ...I,
+    n += 1, s = { ...s, ...w, revision: n }, t.forEach((k) => k());
+  }, m = (w) => w.size ? (e.config.update((k) => ({
+    ...k,
     characterPrompt: {
-      ...I.characterPrompt,
-      charxAssetRegexAnalysis: Utt(I.characterPrompt.charxAssetRegexAnalysis, w)
+      ...k.characterPrompt,
+      charxAssetRegexAnalysis: Utt(k.characterPrompt.charxAssetRegexAnalysis, w)
     }
-  }), { domains: ["charx-analysis"], persistence: "manual" }), e.config.flushSave(["charx-analysis"]).then(() => {})) : Promise.resolve(), p = async (w, I) => {
+  }), { domains: ["charx-analysis"], persistence: "manual" }), e.config.flushSave(["charx-analysis"]).then(() => {})) : Promise.resolve(), p = async (w, k) => {
     if (w.scope === "current-character") {
-      const C = lB(w.currentCharacter ?? await e.data.getCurrentCharacter().catch(() => null));
-      return { sourceId: C?.id ?? "", targets: C ? [C] : [] };
+      const _ = lB(w.currentCharacter ?? await e.data.getCurrentCharacter().catch(() => null));
+      return { sourceId: _?.id ?? "", sourceName: _?.name, targets: _ ? [_] : [] };
     }
-    let S = e.sourceCatalog.getSnapshot();
-    if (!S) {
+    let I = e.sourceCatalog.getSnapshot();
+    if (!I) {
       if (w.scope === "all-sources")
         throw new Error("Charx rail catalog is not ready for all-source regex analysis.");
-      const C = lB(await e.data.getCurrentCharacter().catch(() => null));
-      return { sourceId: C?.id ?? "", targets: C ? [C] : [] };
+      const _ = lB(await e.data.getCurrentCharacter().catch(() => null));
+      return { sourceId: _?.id ?? "", sourceName: _?.name, targets: _ ? [_] : [] };
     }
-    w.scope === "all-sources" && !e.sourceCatalog.hasAllSources() && (S = await e.sourceCatalog.loadAllSources());
-    const A = ege(w.sourceId) || S.currentSourceId, P = w.scope === "all-sources" ? S.sources : S.sources.filter((C) => C.id === A), k = new Map;
-    for (const C of P.flatMap((j) => j.members)) {
-      if (I.aborted)
+    w.scope === "all-sources" && !e.sourceCatalog.hasAllSources() && (I = await e.sourceCatalog.loadAllSources());
+    const A = ege(w.sourceId) || I.currentSourceId, O = w.scope === "all-sources" ? I.sources : I.sources.filter((_) => _.id === A), S = new Map;
+    for (const _ of O.flatMap((C) => C.members)) {
+      if (k.aborted)
         throw new DOMException("Cancelled", "AbortError");
-      const j = lB(e.sourceCatalog.getCachedCharacter(C.characterTarget)?.character ?? null);
-      j && k.set(j.id, j);
+      const C = lB(e.sourceCatalog.getCachedCharacter(_.characterTarget)?.character ?? null);
+      C && S.set(C.id, C);
     }
-    return { sourceId: w.scope === "all-sources" ? "" : A, targets: [...k.values()] };
-  }, g = async (w, I, S, A) => {
-    const P = w.scope ?? "current-source", k = () => !r && a === I, C = () => {
-      if (!k() || I.signal.aborted || S === "chat" && !l())
+    return {
+      sourceId: w.scope === "all-sources" ? "" : A,
+      sourceName: O.length === 1 ? O[0].name : undefined,
+      targets: [...S.values()]
+    };
+  }, h = async (w, k, I, A) => {
+    const O = w.scope ?? "current-source", S = () => !r && a === k, _ = () => {
+      if (!S() || k.signal.aborted || I === "chat" && !l())
         throw new DOMException("Cancelled", "AbortError");
-    }, j = (G) => {
-      k() && u(G);
-    }, O = Ox(e.analyzer, {
+    }, C = ($) => {
+      S() && u($);
+    }, P = Ox(e.analyzer, {
       retryCount: e.config.getCurrentSnapshot().runtime.generationAutoRetryCount,
-      signal: I.signal,
-      onRetry: (G) => {
-        I.signal.aborted || j({ retry: G });
+      signal: k.signal,
+      onRetry: ($) => {
+        k.signal.aborted || C({ retry: $ });
       }
-    }), N = Xk("charx-regex");
-    j({
+    }), z = Xk("charx-regex");
+    C({
       status: "running",
-      origin: S,
-      scope: P,
+      origin: I,
+      scope: O,
       sourceId: ege(w.sourceId),
       label: "charx 정규식 분석 대상 확인 중",
       completed: 0,
@@ -41633,102 +41870,103 @@ function Ort(e) {
       error: "",
       retry: undefined
     });
-    let R = [], D = false, B = () => {
+    let R = [], T = false, G = () => {
       throw new Error("Source scope is not ready.");
     };
     try {
-      C(), B = Fu(e.config);
-      const G = A ?? await p({ ...w, scope: P }, I.signal);
-      C();
-      const T = Cme({ targets: G.targets, analysisMap: SM(e.config), force: w.force });
-      if (R = T.aiTargets, j({
-        sourceId: G.sourceId,
-        total: T.missing.length,
-        label: T.missing.length ? `charx 정규식 분석 중 · ${T.missing.length}개` : "charx 정규식 분석 데이터가 이미 있습니다"
-      }), C(), !T.missing.length) {
-        const X = zme(SM(e.config));
-        return j({ status: "success", done: X.done, notApplicable: X.notApplicable, errorCount: X.error, progress: 1 }), true;
+      _(), G = Fu(e.config);
+      const $ = A ?? await p({ ...w, scope: O }, k.signal);
+      _();
+      const M = Cme({ targets: $.targets, analysisMap: SM(e.config), force: w.force });
+      if (R = M.aiTargets, C({
+        sourceId: $.sourceId,
+        total: M.missing.length,
+        label: M.missing.length ? `charx 정규식 분석 중 · ${M.missing.length}개` : "charx 정규식 분석 데이터가 이미 있습니다"
+      }), _(), !M.missing.length) {
+        const Q = zme(SM(e.config));
+        return C({ status: "success", done: Q.done, notApplicable: Q.notApplicable, errorCount: Q.error, progress: 1 }), true;
       }
-      const F = new Map;
-      T.notApplicableTargets.forEach((X) => {
-        F.set(X.id, Gtt(X));
-      }), C(), B(), await m(F), C();
-      let L = T.notApplicableTargets.length;
-      if (j({ completed: L, progress: L / T.missing.length }), R.length) {
-        C();
-        const X = await O.complete(e.config.getCurrentSnapshot().analysis, Htt(R), {
-          signal: I.signal,
+      const D = new Map;
+      M.notApplicableTargets.forEach((Q) => {
+        D.set(Q.id, Gtt(Q));
+      }), _(), G(), await m(D), _();
+      let L = M.notApplicableTargets.length;
+      if (C({ completed: L, progress: L / M.missing.length }), R.length) {
+        _();
+        const Q = await P.complete(e.config.getCurrentSnapshot().analysis, Htt(R), {
+          historyContext: $.sourceId ? { sourceId: $.sourceId, charxName: $.sourceName } : Pb_91(R.map((ee) => ({ sourceId: ee.id, sourceName: ee.name }))),
+          signal: k.signal,
           timeoutMs: Fs,
           timeoutPolicy: "settings",
-          diagnostic: { sessionId: N, analysisKind: "charx-regex", phase: "customscript" }
+          diagnostic: { sessionId: z, analysisKind: "charx-regex", phase: "customscript" }
         });
-        C();
-        const Y = qtt(R, X.parsed);
-        B();
-        const M = m(Y);
-        D = true, await M, C(), L += R.length;
+        _();
+        const U = qtt(R, Q.parsed);
+        G();
+        const B = m(U);
+        T = true, await B, _(), L += R.length;
       }
-      const V = zme(SM(e.config));
-      return j({
+      const K = zme(SM(e.config));
+      return C({
         status: "success",
-        label: `charx 정규식 분석 완료 · 감지 가능 ${V.done} · 대상 없음 ${V.notApplicable}`,
+        label: `charx 정규식 분석 완료 · 감지 가능 ${K.done} · 대상 없음 ${K.notApplicable}`,
         completed: L,
-        total: T.missing.length,
-        done: V.done,
-        notApplicable: V.notApplicable,
-        errorCount: V.error,
+        total: M.missing.length,
+        done: K.done,
+        notApplicable: K.notApplicable,
+        errorCount: K.error,
         progress: 1
       }), true;
-    } catch (G) {
-      if (!k())
+    } catch ($) {
+      if (!S())
         return false;
-      if (Crt(G) || I.signal.aborted)
-        return j({ status: "cancelled", label: "charx 정규식 분석 취소됨", retry: undefined }), false;
-      if (R.length && !D) {
-        const F = new Map;
-        R.forEach((L) => F.set(L.id, Eme(L, G)));
+      if (Crt($) || k.signal.aborted)
+        return C({ status: "cancelled", label: "charx 정규식 분석 취소됨", retry: undefined }), false;
+      if (R.length && !T) {
+        const D = new Map;
+        R.forEach((L) => D.set(L.id, Eme(L, $)));
         try {
-          C(), B(), await m(F);
+          _(), G(), await m(D);
         } catch {}
       }
-      if (!k() || I.signal.aborted)
+      if (!S() || k.signal.aborted)
         return false;
-      const T = G instanceof Error ? G.message : String(G);
-      return j({ status: "error", label: "charx 정규식 분석 실패", error: T, progress: 1 }), await e.log?.(`[Asset Maid React] Charx regex analysis failed: ${T}`), false;
+      const M = $ instanceof Error ? $.message : String($);
+      return C({ status: "error", label: "charx 정규식 분석 실패", error: M, progress: 1 }), await e.log?.(`[Asset Maid React] Charx regex analysis failed: ${M}`), false;
     }
-  }, b = (w, I, S) => {
-    if (r || I === "chat" && !l())
+  }, b = (w, k, I) => {
+    if (r || k === "chat" && !l())
       return Promise.resolve(false);
     if (o)
       return o;
     const A = new AbortController;
     a = A;
-    const P = g(w, A, I, S).finally(() => {
-      a === A && (a = null), o === P && (o = null);
+    const O = h(w, A, k, I).finally(() => {
+      a === A && (a = null), o === O && (o = null);
     });
-    return a === A && (o = P), P;
+    return a === A && (o = O), O;
   }, v = async () => {
-    const w = c, I = () => !r && l() && w === c;
-    if (!I() || (o && await o, !I()))
+    const w = c, k = () => !r && l() && w === c;
+    if (!k() || (o && await o, !k()))
       return false;
     try {
-      const S = new AbortController, A = await p({ scope: "current-source" }, S.signal);
-      if (!I())
+      const I = new AbortController, A = await p({ scope: "current-source" }, I.signal);
+      if (!k())
         return false;
-      const P = A.targets.filter((k) => k.customscript.length > 0);
-      return Cme({ targets: P, analysisMap: SM(e.config) }).missing.length ? b({ scope: "current-source", sourceId: A.sourceId }, "chat", { ...A, targets: P }) : true;
-    } catch (S) {
-      if (!I())
+      const O = A.targets.filter((S) => S.customscript.length > 0);
+      return Cme({ targets: O, analysisMap: SM(e.config) }).missing.length ? b({ scope: "current-source", sourceId: A.sourceId }, "chat", { ...A, targets: O }) : true;
+    } catch (I) {
+      if (!k())
         return false;
-      const A = S instanceof Error ? S.message : String(S);
+      const A = I instanceof Error ? I.message : String(I);
       return u({ status: "error", origin: "chat", label: "charx 정규식 분석 실패", error: A, progress: 1 }), await e.log?.(`[Asset Maid React] Charx regex readiness check failed: ${A}`), false;
     }
   }, x = e.chatImageGenerationSettings.subscribe(() => {
     const w = l();
     if (w === d || (d = w, w) || (c += 1, i = null, s.origin !== "chat"))
       return;
-    const I = a;
-    a = null, o = null, I?.abort(), u({ ...gB, retry: undefined });
+    const k = a;
+    a = null, o = null, k?.abort(), u({ ...gB, retry: undefined });
   });
   return {
     getSnapshot() {
@@ -41740,8 +41978,8 @@ function Ort(e) {
     async loadTargets(w = {}) {
       if (r)
         return [];
-      const I = new AbortController;
-      return (await p({ ...w, scope: w.scope ?? "current-source" }, I.signal)).targets;
+      const k = new AbortController;
+      return (await p({ ...w, scope: w.scope ?? "current-source" }, k.signal)).targets;
     },
     analyzeRegex(w = {}) {
       return o ? Promise.resolve(false) : b({ ...w, scope: w.scope ?? "current-source" }, "settings");
@@ -41807,12 +42045,12 @@ function Hrt(e) {
   let r = false, n = 0, a = null, o = null, i = ige;
   const s = (u) => {
     n += 1, i = { ...i, ...u, revision: n }, t.forEach((m) => m());
-  }, c = (u, m, p, g) => {
+  }, c = (u, m, p, h) => {
     e.config.update((b) => ({
       ...b,
       characterPrompt: {
         ...b.characterPrompt,
-        lorebookImageFilters: { ...b.characterPrompt.lorebookImageFilters, [u]: bqe(m, p, vB(b, u), g) }
+        lorebookImageFilters: { ...b.characterPrompt.lorebookImageFilters, [u]: bqe(m, p, vB(b, u), h) }
       }
     }), { domains: ["asset-matching"], persistence: "manual" });
   }, l = async (u, m) => {
@@ -41822,7 +42060,7 @@ function Hrt(e) {
       onRetry: (w) => {
         !r && a === m && s({ retry: w });
       }
-    }), g = Xk("asset-matching"), b = u.scope ?? "current-source";
+    }), h = Xk("asset-matching"), b = u.scope ?? "current-source";
     let v = false;
     v || (v = true, s({
       status: "running",
@@ -41846,116 +42084,118 @@ function Hrt(e) {
       const w = Fu(e.config);
       if (b === "all-sources" && typeof e.sourceCatalog.hasCharacterDirectory == "function" && !e.sourceCatalog.hasCharacterDirectory())
         throw new Error("Charx rail catalog is not ready for all-source asset matching.");
-      const I = Brt(e.sourceCatalog, u) ?? (b === "all-sources" ? await e.sourceCatalog.loadAllSources() : await e.sourceCatalog.load({ force: u.forceCatalog === true }));
+      const k = Brt(e.sourceCatalog, u) ?? (b === "all-sources" ? await e.sourceCatalog.loadAllSources() : await e.sourceCatalog.load({ force: u.forceCatalog === true }));
       if (m.signal.aborted)
         throw new DOMException("Cancelled", "AbortError");
-      const S = String(u.sourceId ?? "").trim() || I.currentSourceId, A = b === "all-sources" ? I.sources : I.sources.filter((L) => L.id === S), P = new Map((u.runtimeSources ?? []).map((L) => [L.id, L])), k = A.map((L) => P.get(L.id) ?? L), C = e.config.getCurrentSnapshot(), j = k.flatMap((L) => {
-        const V = vB(C, L.id), X = iqe(L, C.characterPrompt, {
+      const I = String(u.sourceId ?? "").trim() || k.currentSourceId, A = b === "all-sources" ? k.sources : k.sources.filter((L) => L.id === I), O = new Map((u.runtimeSources ?? []).map((L) => [L.id, L])), S = A.map((L) => O.get(L.id) ?? L), _ = e.config.getCurrentSnapshot(), C = S.flatMap((L) => {
+        const K = vB(_, L.id), Q = iqe(L, _.characterPrompt, {
           force: u.force === true,
           onlyPromptKeys: u.onlyPromptKeys,
-          existingRecord: V
-        }), Y = sqe(X.target);
-        return X.promptKeys.length ? [{ source: L, selection: X, batches: Y }] : [];
-      }), O = j.reduce((L, V) => L + new Set(V.selection.promptKeys).size, 0);
-      let N = 0;
-      const R = (L) => s({ completedAnalysisUnits: N + L, totalAnalysisUnits: O, progress: O ? (N + L) / O : 0 });
-      let D = j.reduce((L, V) => L + V.batches.length, 0);
+          existingRecord: K
+        }), U = sqe(Q.target);
+        return Q.promptKeys.length ? [{ source: L, selection: Q, batches: U }] : [];
+      }), P = C.reduce((L, K) => L + new Set(K.selection.promptKeys).size, 0);
+      let z = 0;
+      const R = (L) => s({ completedAnalysisUnits: z + L, totalAnalysisUnits: P, progress: P ? (z + L) / P : 0 });
+      let T = C.reduce((L, K) => L + K.batches.length, 0);
       if (s({
-        sourceId: S,
-        sourceCount: j.length,
-        totalAnalysisUnits: O,
-        totalBatches: D,
-        label: D ? `에셋 분류 중 · ${j.length}개 charx` : j.length ? `에셋 분류 로컬 규칙 적용 중 · ${j.length}개 charx` : "변경된 로어북 선택이 없습니다."
-      }), !j.length)
+        sourceId: I,
+        sourceCount: C.length,
+        totalAnalysisUnits: P,
+        totalBatches: T,
+        label: T ? `에셋 분류 중 · ${C.length}개 charx` : C.length ? `에셋 분류 로컬 규칙 적용 중 · ${C.length}개 charx` : "변경된 로어북 선택이 없습니다."
+      }), !C.length)
         return s({ status: "success", progress: 1 }), true;
-      let B = 0, G = 0, T = 0;
-      const F = new Set;
-      for (const L of j) {
-        const V = new Set(L.selection.promptKeys), X = new Set(L.selection.analysisPromptKeys), Y = new Set(L.selection.promptKeys.filter((U) => !X.has(U)));
-        s({ phase: "identity", completedPhaseUnits: Y.size, totalPhaseUnits: V.size });
-        const M = vB(e.config.getCurrentSnapshot(), L.source.id);
-        let q = mqe(M, { source: L.source, selection: L.selection });
-        for (let U = 0;U < L.batches.length; U += 1) {
+      let G = 0, $ = 0, M = 0;
+      const D = new Set;
+      for (const L of C) {
+        const K = new Set(L.selection.promptKeys), Q = new Set(L.selection.analysisPromptKeys), U = new Set(L.selection.promptKeys.filter((V) => !Q.has(V)));
+        s({ phase: "identity", completedPhaseUnits: U.size, totalPhaseUnits: K.size });
+        const B = vB(e.config.getCurrentSnapshot(), L.source.id);
+        let ee = mqe(B, { source: L.source, selection: L.selection });
+        for (let V = 0;V < L.batches.length; V += 1) {
           if (m.signal.aborted)
             throw new DOMException("Cancelled", "AbortError");
-          const ee = L.batches[U], ae = await p.complete(e.config.getCurrentSnapshot().analysis, cqe(ee), {
+          const Y = L.batches[V], re = await p.complete(e.config.getCurrentSnapshot().analysis, cqe(Y), {
+            historyContext: { sourceId: L.source.id, charxName: L.source.name },
             signal: m.signal,
             timeoutMs: Fs,
             timeoutPolicy: "settings",
-            diagnostic: { sessionId: g, analysisKind: "asset-matching", phase: `identity-batch-${U + 1}` }
+            diagnostic: { sessionId: h, analysisKind: "asset-matching", phase: `identity-batch-${V + 1}` }
           });
-          q = gqe(q, ae.parsed, {
-            target: ee,
+          ee = gqe(ee, re.parsed, {
+            target: Y,
             allowedPromptKeys: L.selection.analysisPromptKeys,
-            previousRecord: M,
-            onNoEvidence(se) {
-              se.forEach((ge) => F.add(ge));
+            previousRecord: B,
+            onNoEvidence(oe) {
+              oe.forEach((he) => D.add(he));
             }
           });
-          for (const se of ee.lorebooks)
-            for (const ge of se.prompt_keys)
-              V.has(ge) && Y.add(ge);
-          B += 1;
-          const me = BF(q);
+          for (const oe of Y.lorebooks)
+            for (const he of oe.prompt_keys)
+              K.has(he) && U.add(he);
+          G += 1;
+          const se = BF(ee);
           s({
             label: `에셋 분류 중 · ${L.source.name}`,
-            completedPhaseUnits: Y.size,
-            completedBatches: B,
-            promptCount: G + me.promptCount,
-            ruleCount: T + me.ruleCount
+            completedPhaseUnits: U.size,
+            completedBatches: G,
+            promptCount: $ + se.promptCount,
+            ruleCount: M + se.ruleCount
           });
         }
-        const te = dqe(L.source, e.config.getCurrentSnapshot().characterPrompt, q, L.selection.analysisPromptKeys), K = new Map;
-        for (const U of te)
-          for (const ee of new Set(U.identities.map((ae) => ae.prompt_key)))
-            K.set(ee, (K.get(ee) ?? 0) + 1);
-        const H = new Set(L.selection.promptKeys.filter((U) => !K.has(U)));
-        R(H.size), te.length && (D += te.length, s({
+        const Z = dqe(L.source, e.config.getCurrentSnapshot().characterPrompt, ee, L.selection.analysisPromptKeys), F = new Map;
+        for (const V of Z)
+          for (const Y of new Set(V.identities.map((re) => re.prompt_key)))
+            F.set(Y, (F.get(Y) ?? 0) + 1);
+        const H = new Set(L.selection.promptKeys.filter((V) => !F.has(V)));
+        R(H.size), Z.length && (T += Z.length, s({
           phase: "filename-grounding",
           completedPhaseUnits: 0,
-          totalPhaseUnits: te.reduce((U, ee) => U + ee.asset_file_names.length, 0),
-          totalBatches: D,
+          totalPhaseUnits: Z.reduce((V, Y) => V + Y.asset_file_names.length, 0),
+          totalBatches: T,
           label: `파일명 기반 에셋 분류 보강 중 · ${L.source.name}`
         }));
-        for (let U = 0;U < te.length; U += 1) {
+        for (let V = 0;V < Z.length; V += 1) {
           if (m.signal.aborted)
             throw new DOMException("Cancelled", "AbortError");
-          const ee = te[U], ae = await p.complete(e.config.getCurrentSnapshot().analysis, uqe(ee), {
+          const Y = Z[V], re = await p.complete(e.config.getCurrentSnapshot().analysis, uqe(Y), {
+            historyContext: { sourceId: L.source.id, charxName: L.source.name },
             signal: m.signal,
             timeoutMs: Fs,
             timeoutPolicy: "settings",
-            diagnostic: { sessionId: g, analysisKind: "asset-matching", phase: `filename-grounding-${U + 1}` }
+            diagnostic: { sessionId: h, analysisKind: "asset-matching", phase: `filename-grounding-${V + 1}` }
           });
-          q = pqe(q, ae.parsed, ee);
-          const me = i.completedPhaseUnits + ee.asset_file_names.length;
-          for (const ge of new Set(ee.identities.map((le) => le.prompt_key))) {
-            const le = (K.get(ge) ?? 1) - 1;
-            K.set(ge, le), le === 0 && L.selection.promptKeys.includes(ge) && H.add(ge);
+          ee = pqe(ee, re.parsed, Y);
+          const se = i.completedPhaseUnits + Y.asset_file_names.length;
+          for (const he of new Set(Y.identities.map((me) => me.prompt_key))) {
+            const me = (F.get(he) ?? 1) - 1;
+            F.set(he, me), me === 0 && L.selection.promptKeys.includes(he) && H.add(he);
           }
-          R(H.size), B += 1;
-          const se = BF(q);
+          R(H.size), G += 1;
+          const oe = BF(ee);
           s({
             label: `파일명 기반 에셋 분류 보강 중 · ${L.source.name}`,
-            completedPhaseUnits: me,
-            completedBatches: B,
-            totalBatches: D,
-            promptCount: G + se.promptCount,
-            ruleCount: T + se.ruleCount
+            completedPhaseUnits: se,
+            completedBatches: G,
+            totalBatches: T,
+            promptCount: $ + oe.promptCount,
+            ruleCount: M + oe.ruleCount
           });
         }
-        q = hqe(q, L.selection.promptKeys);
-        const J = BF(q);
-        G += J.promptCount, T += J.ruleCount, w(), c(L.source.id, M, q, L.selection.promptKeys), N += H.size;
+        ee = hqe(ee, L.selection.promptKeys);
+        const J = BF(ee);
+        $ += J.promptCount, M += J.ruleCount, w(), c(L.source.id, B, ee, L.selection.promptKeys), z += H.size;
       }
-      if (s({ phase: "saving", label: "에셋 분류 저장 중", completedPhaseUnits: N, totalPhaseUnits: O }), await e.config.flushSave(["asset-matching"]), m.signal.aborted)
+      if (s({ phase: "saving", label: "에셋 분류 저장 중", completedPhaseUnits: z, totalPhaseUnits: P }), await e.config.flushSave(["asset-matching"]), m.signal.aborted)
         throw new DOMException("Cancelled", "AbortError");
       return e.priorityAssets.refreshMatchingProfiles(), s({
         status: "success",
-        label: `에셋 분류 완료 · ${G}개 프롬프트 · ${T}개 규칙 · 본문 식별 근거 없음 ${F.size}개`,
-        completedBatches: D,
-        totalBatches: D,
-        promptCount: G,
-        ruleCount: T,
+        label: `에셋 분류 완료 · ${$}개 프롬프트 · ${M}개 규칙 · 본문 식별 근거 없음 ${D.size}개`,
+        completedBatches: T,
+        totalBatches: T,
+        promptCount: $,
+        ruleCount: M,
         progress: 1
       }), true;
     } catch (w) {
@@ -42006,7 +42246,7 @@ function Bge(e) {
       ...o,
       ...p,
       retry: p.running === false || p.activityStatus === "idle" ? undefined : ("retry" in p) ? p.retry : o.retry
-    }, a.forEach((g) => g());
+    }, a.forEach((h) => h());
   }, u = () => {
     c++, s?.abort(), s = null;
   }, m = {
@@ -42035,20 +42275,20 @@ function Bge(e) {
     async start() {
       if (o.running || e.blocked() || !e.context().available)
         return;
-      const p = e.context(), g = ++c;
+      const p = e.context(), h = ++c;
       s?.abort();
       const b = new AbortController;
       s = b;
       const v = Ox(e.analyzer, {
         retryCount: t.getCurrentSnapshot().runtime.generationAutoRetryCount,
         signal: b.signal,
-        onRetry: (I) => {
-          g === c && !b.signal.aborted && d({ retry: I });
+        onRetry: (k) => {
+          h === c && !b.signal.aborted && d({ retry: k });
         }
       });
       i = l();
       const x = i, w = () => {
-        if (g !== c || b.signal.aborted)
+        if (h !== c || b.signal.aborted)
           throw new L5("AI 재분류를 중지했습니다.");
         if (x !== l())
           throw new L5(Cat);
@@ -42063,57 +42303,58 @@ function Bge(e) {
       });
       try {
         w(), r.flush();
-        const I = n.capture(t.getCurrentSnapshot(), p).filter((O) => O.fragments.length > 0);
-        if (!I.length) {
+        const k = n.capture(t.getCurrentSnapshot(), p).filter((P) => P.fragments.length > 0);
+        if (!k.length) {
           d({ activityStatus: "warning", message: "선택 영역에 재분류할 프롬프트가 없습니다." });
           return;
         }
-        const S = structuredClone(t.getCurrentSnapshot().analysis), A = _Ye(I, { ...wfe }), P = [];
-        for (const O of A) {
-          let N = O;
-          const R = () => d({ total: I.length, completed: P.length, message: `AI 재분류 중 · ${P.length}/${I.length}` });
+        const I = structuredClone(t.getCurrentSnapshot().analysis), A = _Ye(k, { ...wfe }), O = [];
+        for (const P of A) {
+          let z = P;
+          const R = () => d({ total: k.length, completed: O.length, message: `AI 재분류 중 · ${O.length}/${k.length}` });
           R();
-          for (let D = 0;D < 2; D++) {
+          for (let T = 0;T < 2; T++) {
             w();
-            const B = await v.complete(S, [
+            const G = await v.complete(I, [
               {
                 role: "system",
-                content: jYe + (D ? `
+                content: jYe + (T ? `
 These partitions failed validation or were missing. Return every requested partitionRef with assignments and valid newOutfit metadata. Reclassify only these original partitions; do not include previously successful partitions.` : "")
               },
-              { role: "user", content: JSON.stringify(w$(N)) }
+              { role: "user", content: JSON.stringify(w$(z)) }
             ], {
               signal: b.signal,
               timeoutMs: Fs,
               timeoutPolicy: "settings",
               cacheSourceId: p.sourceId,
+              historyContext: { sourceId: p.sourceId, charxName: p.sourceName },
               beforeRequest: w
             });
             w();
-            const G = PYe(N, B.parsed);
-            if (P.push(...G.classified), N = G.failed, R(), !N.length)
+            const $ = PYe(z, G.parsed);
+            if (O.push(...$.classified), z = $.failed, R(), !z.length)
               break;
-            if (D === 1)
+            if (T === 1)
               throw new Error("재분류 응답에 누락되거나 유효하지 않은 폼이 있습니다. 다시 실행해 주세요.");
           }
         }
-        w(), P.sort((O, N) => Number(O.partitionRef.slice(1)) - Number(N.partitionRef.slice(1)));
-        let k = t.getCurrentSnapshot();
-        const C = r.projectPending(k), j = new Set;
-        for (const O of P) {
-          const N = O.snapshot;
-          Nte(N, n.collection(C, N.promptKey));
-          const R = n.collection(k, N.promptKey), D = oTe(N, O.assignments, O.newOutfit, R);
-          D !== R && (k = n.store(k, N.promptKey, D), n.topics(N, D).forEach((B) => j.add(B)));
+        w(), O.sort((P, z) => Number(P.partitionRef.slice(1)) - Number(z.partitionRef.slice(1)));
+        let S = t.getCurrentSnapshot();
+        const _ = r.projectPending(S), C = new Set;
+        for (const P of O) {
+          const z = P.snapshot;
+          Nte(z, n.collection(_, z.promptKey));
+          const R = n.collection(S, z.promptKey), T = oTe(z, P.assignments, P.newOutfit, R);
+          T !== R && (S = n.store(S, z.promptKey, T), n.topics(z, T).forEach((G) => C.add(G)));
         }
-        j.size && t.update(() => k, { domains: [n.domain], persistence: "manual", topics: [...j] }), d({ activityStatus: "success", message: `AI 재분류 완료 · ${P.length}/${I.length}` });
-      } catch (I) {
-        if (g === c && !b.signal.aborted) {
-          const S = I instanceof Error ? I.message : "재분류 요청에 실패했습니다.";
-          d({ activityStatus: "error", message: S, error: S });
+        C.size && t.update(() => S, { domains: [n.domain], persistence: "manual", topics: [...C] }), d({ activityStatus: "success", message: `AI 재분류 완료 · ${O.length}/${k.length}` });
+      } catch (k) {
+        if (h === c && !b.signal.aborted) {
+          const I = k instanceof Error ? k.message : "재분류 요청에 실패했습니다.";
+          d({ activityStatus: "error", message: I, error: I });
         }
       } finally {
-        g === c && (s = null, d({ running: false }));
+        h === c && (s = null, d({ running: false }));
       }
     },
     dismissError() {
@@ -45044,10 +45285,12 @@ async function setCustomCharactersWorkspaceEnabled(services, characterId, ids, e
     return;
   await services.storage.updateCharacterDocument(characterId, (doc) => ({ ...doc, customCharacters: setCustomWorkspaceEnabled(doc.customCharacters, ids, enabled, Array.isArray(ids) && ids.length === 1) }), { reason: "custom-character" });
 }
-async function promoteCustomCharacters(services, characterId, ids) {
+async function promoteCustomCharacters(services, characterId, ids, bulk = false) {
+  if (Array.isArray(ids) && !ids.length)
+    return;
   await services.storage.updateCharacterDocument(characterId, (doc) => {
     const wanted = ids === "all" ? null : new Set(ids);
-    if (wanted) {
+    if (wanted && wanted.size === 1 && !bulk) {
       for (const id of wanted)
         if (!doc.customCharacters.some((c) => c.id === id))
           amFail("not-found", "The custom character to promote was not found.", "승격할 커스텀 캐릭터를 찾을 수 없습니다.");
@@ -46409,8 +46652,8 @@ function messageUiState(doc, input) {
 function buildAnalyzerContextInputs2(input) {
   return buildAnalyzerContextInputs(input);
 }
-function resolveSourceGenerationSettings2(config, sourceId) {
-  return resolveSourceGenerationSettings(config, sourceId);
+function resolveSourceGenerationSettings2(config, sourceId, overrides) {
+  return overrides === undefined ? resolveSourceGenerationSettings(config, sourceId) : resolveSourceGenerationSettings(config, sourceId, overrides);
 }
 function resolveSourceFixedRating(config, sourceId) {
   return resolveFixedRating(resolveSourceGenerationSettings2(config, sourceId));
@@ -46496,17 +46739,17 @@ function createBuiltInLibrary() {
 function resolveStoredLibrary(config) {
   return call(resolveStoredAnalysisDocument, config);
 }
-function resolveLibrary(config) {
-  return call(resolveAnalysisDocument, config, undefined);
+function resolveLibrary(config, presetId) {
+  return call(resolveAnalysisDocument, config, presetId);
 }
-function readActivePresetRules(config) {
-  return call(readAtelierDirectingRules, config);
+function readActivePresetRules(config, presetId) {
+  return presetId === undefined ? call(readAtelierDirectingRules, config) : call(vS_91, config, presetId);
 }
 function overlayPresetRules(library, rules) {
   return call(mergeDirectingRules, library, rules);
 }
-function commitLibrary(config, library, ownerId, restoreId) {
-  return call(hS, config, library, ownerId, restoreId);
+function commitLibrary(config, library, presetId, restoreId) {
+  return call(hS, config, library, presetId, restoreId);
 }
 function validateLibraryEdit(current, next) {
   call(jAe, current, next);
@@ -46618,6 +46861,7 @@ var EXACT = Object.freeze({
   "저장된 메이드 아틀리에 목록 형식이 올바르지 않습니다.": "The stored Atelier list is invalid.",
   "프리셋의 저장 기준이 달라졌습니다. 초안을 보관한 뒤 최신 값을 불러오세요.": "The preset's saved base changed. Keep your draft, then load the latest values.",
   "활성 연출 프리셋을 찾을 수 없습니다.": "The active directing preset was not found.",
+  "편집하던 프리셋이 없어 규칙을 저장하지 못했습니다.": "The preset being edited no longer exists, so its rules could not be saved.",
   "파일은 2 MiB 이하여야 합니다.": "The file must be 2 MiB or smaller.",
   "중첩 또는 항목 수 한도를 초과했습니다.": "The JSON exceeds the nesting or item count limit.",
   "예약된 키는 사용할 수 없습니다.": "Reserved keys cannot be used.",
@@ -47209,7 +47453,20 @@ function createAtelierService(deps) {
         return {};
       }
     })();
-    const ownedRuleIds = Object.fromEntries(Object.entries(owned).map(([direction, rules]) => [direction, rules.map((r) => String(r.id))]));
+    const ruleIds = (rules) => Object.fromEntries(Object.entries(rules).map(([direction, list]) => [direction, Array.isArray(list) ? list.map((r) => String(r?.id)) : []]));
+    const ownedRuleIds = ruleIds(owned);
+    const presetLibraries = {};
+    for (const doc of store.catalog.documents) {
+      let rules = {};
+      try {
+        rules = readActivePresetRules(am, doc.id)?.rules ?? {};
+      } catch {}
+      try {
+        presetLibraries[doc.id] = { library: resolveLibrary(am, doc.id), ownedRuleIds: ruleIds(rules) };
+      } catch (error) {
+        presetLibraries[doc.id] = { ownedRuleIds: ruleIds(rules), error: atelierMessage(error).message };
+      }
+    }
     const execution = executionOf(store, config);
     const selected = library.scene.items[library.scene.selected];
     const mode = sceneOutputMode(selected) === "comic" ? "comic" : execution.mode === "comic" ? "default" : execution.mode;
@@ -47225,6 +47482,7 @@ function createAtelierService(deps) {
       catalog: { activeId: store.catalog.activeId, documents },
       library,
       ownedRuleIds,
+      presetLibraries,
       freeGeneration,
       execution: { mode, controls: execution.controls },
       pendingDefaults,
@@ -47286,19 +47544,22 @@ function createAtelierService(deps) {
     };
     return { am: committed, merged };
   }
+  const ownerOf = (am, presetId) => presetId ?? catalogOf(am).activeId;
   function commitLibraryEdit(am, mutate, options = {}) {
     return attempt(() => {
-      const current = resolveLibrary(am);
+      const owner = ownerOf(am, options.presetId);
+      const current = resolveLibrary(am, owner);
       const draft = jsonClone2(current);
       const next = mutate(draft) ?? draft;
       validateLibraryEdit(current, next);
+      const committed = commitLibrary(am, next, owner, options.restoreId);
       if (options.checkPreset) {
-        const active = catalogOf(am).documents.find((d) => d.id === catalogOf(am).activeId);
+        const active = catalogOf(committed).documents.find((d) => d.id === catalogOf(committed).activeId);
         if (!active)
           throw new Error("활성 연출 프리셋을 찾을 수 없습니다.");
-        assertLibraryRules(next, compilePresetOrThrow(active.json).catalog, next.scene.selected);
+        assertLibraryRules(resolveLibrary(committed), compilePresetOrThrow(active.json).catalog, next.scene.selected);
       }
-      return commitLibrary(am, next, catalogOf(am).activeId, options.restoreId);
+      return committed;
     });
   }
   function commitFree(am, mutate) {
@@ -47329,9 +47590,9 @@ function createAtelierService(deps) {
     requireReadable(issues, "free-generation");
     return { store: storeFrom(fn(amOf(store, config)), store), result: undefined };
   });
-  const sceneCopy = (am, library, fromId, toId) => {
+  const sceneCopy = (am, library, fromId, toId, presetId) => {
     const item = jsonClone2(library.scene.items[fromId]);
-    const owned = new Set((readActivePresetRules(am)?.rules[fromId] ?? []).map((r) => String(r.id)));
+    const owned = new Set((readActivePresetRules(am, ownerOf(am, presetId))?.rules[fromId] ?? []).map((r) => String(r.id)));
     const system = rec3(item.system);
     if (Array.isArray(system.rules))
       system.rules = system.rules.filter((r) => !owned.has(String(rec3(r).id)));
@@ -47440,7 +47701,7 @@ function createAtelierService(deps) {
       const { store } = await read();
       const doc = docOf(store.catalog, p.id);
       const am = amOf(store, config);
-      const library = attempt(() => resolveLibrary(am));
+      const library = attempt(() => resolveStoredLibrary(am));
       const free = attempt(() => resolveFreeGenerationLibrary(am));
       const exported = attempt(() => exportPresetDocument(p.json ?? doc.json, library, doc.name, p.selection, free));
       return { fileName: `${fileSafe(doc.name)}.json`, json: JSON.stringify(exported.document, null, 2) };
@@ -47466,7 +47727,7 @@ function createAtelierService(deps) {
         if (!lib[kind].items[p.id])
           throw new Error("지침을 찾을 수 없습니다.");
         lib[kind].selected = p.id;
-      }, { checkPreset: kind === "scene" }));
+      }, { checkPreset: kind === "scene", presetId: p.presetId }));
       return { state };
     },
     async createGuideline(p) {
@@ -47486,8 +47747,8 @@ function createAtelierService(deps) {
           const source = p.copyOf ? lib.scene.items[p.copyOf] : undefined;
           if (p.copyOf && !source)
             throw new Error("복제할 지침을 찾을 수 없습니다.");
-          lib.scene.items[id] = source ? { ...sceneCopy(am, lib, p.copyOf, id), name: ATELIER_NAMES.copyOf(String(source.name)).slice(0, 80) } : { name: ATELIER_NAMES.newScene, instruction: "", outputMode: "illustration", system: emptySceneSystem() };
-        }));
+          lib.scene.items[id] = source ? { ...sceneCopy(am, lib, p.copyOf, id, p.presetId), name: ATELIER_NAMES.copyOf(String(source.name)).slice(0, 80) } : { name: ATELIER_NAMES.newScene, instruction: "", outputMode: "illustration", system: emptySceneSystem() };
+        }, { presetId: p.presetId }));
         return { state, id };
       }
       if (p.kind !== "imageRatio")
@@ -47497,7 +47758,7 @@ function createAtelierService(deps) {
         if (p.copyOf && !source)
           throw new Error("비율 지침을 찾을 수 없습니다.");
         lib.imageRatio.items[id] = source ? { ...jsonClone2(source), name: ATELIER_NAMES.copyOf(String(source.name)).slice(0, 80) } : { name: ATELIER_NAMES.newRatio, instruction: "", allowedSizeIds: [1, 2, 5] };
-      }));
+      }, { presetId: p.presetId }));
       return { state, id };
     },
     async removeGuideline(p) {
@@ -47524,7 +47785,7 @@ function createAtelierService(deps) {
         delete lib[kind].items[p.id];
         if (lib[kind].selected === p.id)
           lib[kind].selected = fallback;
-      }));
+      }, { presetId: p.presetId }));
       return { state };
     },
     async saveGuidelines(p) {
@@ -47569,7 +47830,7 @@ function createAtelierService(deps) {
             fieldConflict(kind, e.id, e.field, e.before, current, "다른 화면에서 지침이 변경되었습니다. 초안은 유지됩니다. 최신 내용과 비교해주세요.");
           writeGuidelineField(item, e.field, e.value);
         }
-      }));
+      }, { presetId: p.presetId }));
       return { state };
     },
     async setOutputMode(p) {
@@ -47580,7 +47841,7 @@ function createAtelierService(deps) {
         if (!item)
           throw new Error("지침을 찾을 수 없습니다.");
         item.outputMode = p.mode;
-      }));
+      }, { presetId: p.presetId }));
       return { state };
     },
     async setSystems(p) {
@@ -47596,7 +47857,7 @@ function createAtelierService(deps) {
             incomplete.push(id);
           item.system = { ...s, rules };
         }
-      }));
+      }, { presetId: p.presetId }));
       return { state, incomplete };
     },
     async setOption(p) {
@@ -47605,7 +47866,7 @@ function createAtelierService(deps) {
         if (!Array.isArray(system.options) || !system.options.some((o) => o.id === p.optionId))
           throw new Error("연출 옵션을 찾을 수 없습니다.");
         system.values = { ...system.values, [p.optionId]: p.value === true };
-      }));
+      }, { presetId: p.presetId }));
       return { state };
     },
     async setSizes(p) {
@@ -47618,18 +47879,19 @@ function createAtelierService(deps) {
         const allowed = Array.isArray(p.allowedSizeIds) ? p.allowedSizeIds : [];
         item.allowedSizeIds = allowed;
         item.customSizes = normalizeCustomSizes([...p.customSizes ?? [], ...(config.runtime.customImageSizes ?? []).filter((s) => allowed.includes(s.id))]);
-      }));
+      }, { presetId: p.presetId }));
       return { state };
     },
     async restoreGuideline(p) {
       const { state } = await libraryWrite((am) => {
         if (!isDefaultSceneId(p.id) && !providedSceneSystem(p.id))
           fail2("bad-request", "Only built-in directing guidelines can be restored.", { detailCode: "atelier-validation" });
-        const current = resolveLibrary(am).scene.items[p.id];
+        const owner = ownerOf(am, p.presetId);
+        const current = resolveLibrary(am, owner).scene.items[p.id];
         if (!same2(current, p.expected))
           fieldConflict("scene", p.id, "*", p.expected, current, "다른 화면에서 연출이 변경되었습니다. 최신 내용을 확인해주세요.");
         return commitLibraryEdit(am, (lib) => {
-          const owned = readActivePresetRules(am)?.rules;
+          const owned = readActivePresetRules(am, owner)?.rules;
           const ownedIds = new Set((owned?.[p.id] ?? []).map((r) => String(r.id)));
           const restored = jsonClone2(rec3(p.expected));
           const system = rec3(restored.system);
@@ -47637,7 +47899,7 @@ function createAtelierService(deps) {
             system.rules = system.rules.filter((r) => !ownedIds.has(String(rec3(r).id)));
           lib.scene.items[p.id] = restoreBuiltInSceneItem(restored, p.id);
           lib.scene.items[p.id] = overlayPresetRules(lib, owned && { [p.id]: owned[p.id] ?? [] }).scene.items[p.id];
-        }, { restoreId: p.id });
+        }, { restoreId: p.id, presetId: p.presetId });
       });
       return { state };
     },
@@ -47711,6 +47973,680 @@ function atelierServiceOf(s) {
   let service = services.get(s.storage);
   if (!service)
     services.set(s.storage, service = createAtelierService({ storage: s.storage, events: s.events, log: s.log }));
+  return service;
+}
+
+// src/engine/text/json.ts
+var AnalyzerClientErrorClass = AnalyzerClientError;
+function parseLenientJson2(raw) {
+  return parseLenientJson(raw);
+}
+
+// src/backend/services/llm.ts
+var DEFAULT_RETRY_COUNT = 5;
+var MAX_RETRY_COUNT = 10;
+var RETRY_DELAY_MS = 100;
+var DEFAULT_TEST_MESSAGE = "Hello. Please greet me briefly.";
+var CAPABILITY_RETRY_MS = 30 * 60000;
+function supportsJsonMode(provider, _model) {
+  return !/anthropic|claude/.test(provider.toLowerCase());
+}
+function omitsTemperature(model, provider = "") {
+  const full = model.trim().toLowerCase();
+  const m = full.split("/").at(-1) ?? "";
+  if (/^claude-(?:fable|mythos)-5(?:[-.]|$)/.test(m) || /^claude-(?:sonnet|opus|haiku)-5(?:[-.]|$)/.test(m) || /^claude-opus-4-(?:7|8)(?:[-.]|$)/.test(m) || /^gemini-3(?:[.-]|$)/.test(m) || /^gemini-4-(?:argon|carbon|hydrogen)$/.test(m))
+    return true;
+  if (/anthropic|claude|google|gemini|vertex/i.test(provider))
+    return false;
+  return /(?:^|\/)gpt-oss(?::|[-.]|$)/.test(full) || !/^gpt-6(?:\.1-terra|-(?:sol|luna))(?:$|-)/.test(m) && /^(?:o[134](?:[-.]|$)|gpt-5(?:-mini|-nano|-pro)?(?:$|-20)|gpt-6(?:[-.]|$))/.test(m) || /^gemini-(?:3|2\.5-pro)(?:[.-]|$)/.test(m) || /^glm-5\.3(?:[-:]|$)/.test(m);
+}
+function reasoningDto(reasoning) {
+  if (reasoning.mode === "off")
+    return { source: "off" };
+  if (reasoning.mode === "custom")
+    return { source: "custom", apiReasoning: true, effort: reasoning.effort };
+  return { source: "inherit" };
+}
+function textParts(value) {
+  if (typeof value === "string")
+    return value;
+  return asArray2(value).map((part) => {
+    const r = asRecord3(part);
+    if (r.type === "thinking" || r.type === "reasoning")
+      return "";
+    return typeof r.text === "string" ? r.text : typeof r.content === "string" ? r.content : "";
+  }).filter(Boolean).join(`
+`);
+}
+function extractText(result) {
+  if (typeof result === "string")
+    return result;
+  const root = asRecord3(result);
+  for (const key of ["content", "text", "output_text", "output", "message"]) {
+    const value = root[key];
+    if (typeof value === "string")
+      return value;
+    const text = textParts(value) || (value && typeof value === "object" && !Array.isArray(value) ? textParts(asRecord3(value).content) : "");
+    if (text)
+      return text;
+  }
+  const choice = asRecord3(asArray2(root.choices)[0]);
+  return textParts(asRecord3(choice.message).content) || (typeof choice.text === "string" ? choice.text : "");
+}
+function extractUsage(result) {
+  const usage = asRecord3(asRecord3(result).usage);
+  const out = {};
+  for (const [key, value] of Object.entries(usage)) {
+    const n = Number(value);
+    if (typeof value === "number" || typeof value === "string" && value.trim() !== "") {
+      if (Number.isFinite(n))
+        out[key] = n;
+    }
+  }
+  const details = asRecord3(usage.prompt_tokens_details);
+  for (const key of ["cached_tokens", "cache_write_tokens"]) {
+    const n = Number(details[key]);
+    if (Number.isFinite(n) && details[key] !== undefined)
+      out[key] = n;
+  }
+  return out;
+}
+function extractFinishReason(result) {
+  const root = asRecord3(result);
+  if (typeof root.finish_reason === "string")
+    return root.finish_reason;
+  if (typeof root.finishReason === "string")
+    return root.finishReason;
+  const first = asRecord3(asArray2(root.choices)[0]);
+  return typeof first.finish_reason === "string" ? first.finish_reason : "";
+}
+function declaredVisionSupport(metadata) {
+  const record = asRecord3(metadata);
+  const pick = (root, keys) => {
+    for (const key of keys)
+      if (typeof root[key] === "boolean")
+        return root[key];
+    return null;
+  };
+  const direct = pick(record, ["vision", "supportsVision", "supports_vision", "multimodal", "supportsImages", "supports_images"]);
+  if (direct !== null)
+    return direct;
+  const capabilities = asRecord3(record.capabilities);
+  const nested = pick(capabilities, ["vision", "image", "images", "multimodal"]);
+  if (nested !== null)
+    return nested;
+  const modalities = [record.input_modalities, record.inputModalities, capabilities.input_modalities, capabilities.inputModalities].flatMap((v) => asArray2(v).map((x) => str3(x).toLowerCase()));
+  if (modalities.includes("image") || modalities.includes("vision"))
+    return true;
+  if (modalities.length > 0 && modalities.every((v) => v === "text"))
+    return false;
+  return null;
+}
+function unsupportedVisionError(error) {
+  const message = errorMessage(error);
+  if (/no endpoints found that support image/i.test(message))
+    return true;
+  if (![400, 415, 422].includes(httpStatusOf(error)))
+    return false;
+  return [
+    /(?:image|image_url|vision|multimodal|visual|modality).{0,160}(?:not supported|unsupported|does not support|isn't supported|not allowed|only supports? text)/iu,
+    /(?:not supported|unsupported|does not support|isn't supported|not allowed|only supports? text).{0,160}(?:image|image_url|vision|multimodal|visual|modality)/iu,
+    /(?:image|image_url|vision).{0,160}only supported by.{0,80}models?/iu,
+    /model.{0,120}(?:is not multimodal|is text[- ]only)/iu
+  ].some((pattern) => pattern.test(message));
+}
+var SAFE_IMAGE_TYPES = new Set(["image/png", "image/jpeg"]);
+function rejectedImageTypes(error, messages) {
+  const message = errorMessage(error);
+  if (!/\bmime\b|\bmedia[ _-]?type|image\/[a-z]|\bformats?\b|\b(?:gif|avif|webp|heic|heif|bmp|tiff?|svg)\b/i.test(message))
+    return null;
+  const sent = new Set(messages.flatMap((m) => Array.isArray(m.content) ? m.content.filter((p) => p.type === "image").map((p) => p.mime_type.toLowerCase()) : []));
+  const named = [...sent].filter((type) => message.toLowerCase().includes(type));
+  const namedUnusual = named.filter((type) => !SAFE_IMAGE_TYPES.has(type));
+  if (namedUnusual.length || named.length)
+    return new Set(namedUnusual.length ? namedUnusual : named);
+  const unusual = [...sent].filter((type) => !SAFE_IMAGE_TYPES.has(type));
+  return new Set(unusual.length ? unusual : sent);
+}
+function dropImageTypes(messages, types) {
+  if (!types.size)
+    return messages;
+  return messages.map((m) => {
+    if (!Array.isArray(m.content) || !m.content.some((p) => p.type === "image" && types.has(p.mime_type.toLowerCase())))
+      return m;
+    const kept = m.content.filter((p) => p.type !== "image" || !types.has(p.mime_type.toLowerCase()));
+    return { ...m, content: kept.every((p) => p.type === "text") && kept.length === 1 ? kept[0].text : kept };
+  });
+}
+function isJsonModeRejection(error) {
+  return /response_format|json_object|json[ _-]?mode|response_?mime_?type|structured output/i.test(errorMessage(error));
+}
+function mayBeJsonModeRejection(error) {
+  return httpStatusOf(error) === 400 && /format|invalid.*(?:argument|parameter)/i.test(errorMessage(error));
+}
+function httpStatusOf(error) {
+  const r = asRecord3(error);
+  for (const key of ["status", "statusCode", "httpStatus"]) {
+    const n = Number(r[key]);
+    if (Number.isInteger(n) && n >= 100 && n <= 599)
+      return n;
+  }
+  const message = errorMessage(error);
+  const m = /(?:\(|\bHTTP\s*|\bstatus(?: code)?[:\s]*|\berror\s+)([1-5]\d\d)\b/i.exec(message) ?? /\b(400|401|402|403|404|408|409|413|415|422|429|500|502|503|504|529)\b/.exec(message);
+  return m ? Number(m[1]) : 0;
+}
+function isNetworkError(error) {
+  if (error instanceof TypeError)
+    return true;
+  return /fetch failed|network error|failed to fetch|econnreset|econnrefused|socket hang up|socket connection was closed|terminated|etimedout/i.test(errorMessage(error));
+}
+function makeAnalyzerError(message, extra) {
+  return new AnalyzerClientErrorClass(message, extra);
+}
+function classifyLlmError(error) {
+  if (error instanceof AnalyzerClientErrorClass)
+    return error;
+  const code = str3(asRecord3(error).code);
+  if (/^ANALYZER_/.test(code))
+    return makeAnalyzerError(errorMessage(error), { code, httpStatus: httpStatusOf(error), cause: error });
+  const status = httpStatusOf(error);
+  if (status)
+    return makeAnalyzerError(`Analyzer HTTP ${status}: ${errorMessage(error).slice(0, 500)}`, { code: "ANALYZER_HTTP", httpStatus: status, responseText: errorMessage(error).slice(0, 2000), cause: error });
+  if (isNetworkError(error))
+    return makeAnalyzerError(errorMessage(error), { code: "ANALYZER_NETWORK", cause: error });
+  return makeAnalyzerError(errorMessage(error) || "Analyzer request failed.", { code: "ANALYZER_ERROR", cause: error });
+}
+function isRetryableLlmError(error) {
+  switch (error.code) {
+    case "ANALYZER_HTTP":
+      return error.httpStatus === 408 || error.httpStatus === 429 || error.httpStatus >= 500;
+    case "ANALYZER_TIMEOUT":
+    case "ANALYZER_PROVIDER_INTERRUPTED":
+    case "ANALYZER_NETWORK":
+      return true;
+    default:
+      return false;
+  }
+}
+function llmErrorToRpc(error) {
+  let code = "provider-error";
+  if (error.code === "ANALYZER_TIMEOUT")
+    code = "timeout";
+  else if (error.code === "ANALYZER_VISION_UNSUPPORTED")
+    code = "unsupported";
+  else if (error.code === "ANALYZER_CONNECTION_MISSING" || error.code === "ANALYZER_MODEL_MISSING")
+    code = "bad-request";
+  else if (error.code === "ANALYZER_HTTP" && (error.httpStatus === 401 || error.httpStatus === 403))
+    code = "permission-denied";
+  const details = {};
+  if (error.httpStatus)
+    details.httpStatus = error.httpStatus;
+  if (error.analyzerRaw)
+    details.analyzerRaw = error.analyzerRaw.slice(0, 3000);
+  if (error.responseText)
+    details.responseText = error.responseText.slice(0, 3000);
+  return {
+    code,
+    message: error.message,
+    detailCode: error.code,
+    retryable: isRetryableLlmError(error),
+    ...Object.keys(details).length ? { details } : {}
+  };
+}
+function hasImages(messages) {
+  return messages.some((m) => Array.isArray(m.content) && m.content.some((p) => p.type === "image"));
+}
+function dropImages(messages) {
+  return messages.map((m) => {
+    if (!Array.isArray(m.content))
+      return m;
+    const texts = m.content.filter((p) => p.type === "text");
+    return { ...m, content: texts.length === 1 ? texts[0].text : texts };
+  });
+}
+function toLlmMessage(message) {
+  const role = message.role === "system" || message.role === "assistant" ? message.role : "user";
+  if (typeof message.content === "string")
+    return { role, content: message.content };
+  const parts = [];
+  for (const raw of asArray2(message.content)) {
+    const p = asRecord3(raw);
+    if (p.type === "image") {
+      const data = String(p.data ?? "").replace(/^data:[^;,]+;base64,/, "");
+      const mime = str3(p.mime_type) || str3(p.mimeType) || "image/png";
+      if (data)
+        parts.push({ type: "image", data, mime_type: mime });
+    } else if (typeof p.text === "string")
+      parts.push({ type: "text", text: p.text });
+  }
+  return { role, content: parts };
+}
+function partitionMessages(partition) {
+  const p = asRecord3(partition);
+  if (!Array.isArray(p.cacheSegments) || !Array.isArray(p.liveMessages) || !p.liveMessages.length)
+    return null;
+  const messages = [];
+  const cacheBreakpoints = [];
+  for (const segment of p.cacheSegments) {
+    const segmentMessages = asRecord3(segment).messages;
+    if (!Array.isArray(segmentMessages))
+      return null;
+    if (!segmentMessages.length)
+      continue;
+    messages.push(...segmentMessages.map((m) => toLlmMessage(asRecord3(m))));
+    cacheBreakpoints.push(messages.length - 1);
+  }
+  messages.push(...p.liveMessages.map((m) => toLlmMessage(asRecord3(m))));
+  return { messages, cacheBreakpoints };
+}
+function engineAnalysisConfig(analysis, target) {
+  if (!target || !/vertex/i.test(target.provider))
+    return analysis;
+  const name = target.model.trim().toLowerCase().split("/").pop();
+  return name === "gemini-4-argon" ? { ...analysis, provider: "vertex_ai", model: "gemini-4-argon" } : analysis;
+}
+function prefixPreparationModel(model) {
+  return /^(?:google\/|models\/|(?:projects\/[^/]+\/locations\/[^/]+\/)?publishers\/google\/models\/)?gemini-4-(?:carbon|argon|hydrogen)$/i.test(model.trim());
+}
+function applyPrefixPreparation(partition, staticBlocksToSystem) {
+  const { prefixPreparation, ...rest } = asRecord3(partition);
+  if (!prefixPreparation || !Array.isArray(rest.cacheSegments))
+    return partition;
+  const preparation = asRecord3(prefixPreparation);
+  const instruction = { role: "system", content: preparation.instruction };
+  return {
+    ...rest,
+    cacheSegments: rest.cacheSegments.map((segment) => {
+      const s = asRecord3(segment);
+      if (!Array.isArray(s.messages))
+        return segment;
+      if (s.kind === "app-static")
+        return { ...s, messages: [instruction, ...s.messages] };
+      return staticBlocksToSystem ? { ...s, messages: s.messages.map((m) => ({ ...asRecord3(m), role: "system" })) } : segment;
+    }),
+    liveMessages: [...asArray2(preparation.turns), ...asArray2(rest.liveMessages)]
+  };
+}
+function mergeLeadingSystemMessages(messages, breakpoints = []) {
+  const firstOther = messages.findIndex((m) => m.role !== "system");
+  const run = firstOther < 0 ? messages.length : firstOther;
+  if (run < 2)
+    return { messages: [...messages], cacheBreakpoints: [...breakpoints] };
+  const head = messages.slice(0, run);
+  const content = head.every((m) => typeof m.content === "string") ? head.map((m) => m.content).join(`
+
+`) : head.flatMap((m) => typeof m.content === "string" ? [{ type: "text", text: m.content }] : m.content).map((part, i) => i && part.type === "text" ? { ...part, text: `
+
+${part.text}` } : part);
+  return {
+    messages: [{ role: "system", content }, ...messages.slice(run)],
+    cacheBreakpoints: [...new Set(breakpoints.map((i) => i < run ? 0 : i - run + 1))]
+  };
+}
+function prefixPreparedMessages(partition, model, provider) {
+  const preparation = asRecord3(asRecord3(partition).prefixPreparation);
+  if (!asRecord3(partition).prefixPreparation || !prefixPreparationModel(model))
+    return null;
+  const staticToSystem = preparation.staticBlocksInSystem === true && !/anthropic|claude/i.test(provider);
+  const prepared = partitionMessages(applyPrefixPreparation(partition, staticToSystem));
+  if (!prepared)
+    return null;
+  return staticToSystem ? mergeLeadingSystemMessages(prepared.messages, prepared.cacheBreakpoints) : prepared;
+}
+var MAX_CACHE_BREAKPOINTS = 4;
+var EPHEMERAL = Object.freeze({ type: "ephemeral" });
+function withCacheBreakpoints(messages, breakpoints, connection) {
+  if (!breakpoints?.length || !/anthropic/i.test(connection.provider))
+    return messages;
+  const budget = connection.metadata.prompt_caching ? MAX_CACHE_BREAKPOINTS - 2 : MAX_CACHE_BREAKPOINTS;
+  const valid = [...new Set(breakpoints)].filter((i) => Number.isInteger(i) && i >= 0 && i < messages.length).sort((a, b) => a - b);
+  const chosen = new Set(valid.length > budget ? [...valid.slice(0, budget - 1), valid.at(-1)] : valid);
+  if (!chosen.size)
+    return messages;
+  return messages.map((message, index) => {
+    if (!chosen.has(index))
+      return message;
+    if (typeof message.content === "string")
+      return { ...message, cache_control: EPHEMERAL };
+    const last = message.content.length - 1;
+    if (last < 0)
+      return message;
+    return { ...message, content: message.content.map((part, i) => i === last ? { ...part, cache_control: EPHEMERAL } : part) };
+  });
+}
+function clampRetries(value, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n))
+    return fallback;
+  return Math.max(0, Math.min(MAX_RETRY_COUNT, Math.floor(n)));
+}
+function createLlmService(deps) {
+  const { host, userId } = deps;
+  const connectionCache = new TtlCache(5000, 32);
+  const jsonModeRejected = new Map;
+  const visionCache = new Map;
+  const partitionRejected = new Set;
+  const now = deps.now ?? Date.now;
+  const wait = deps.sleep ?? sleep2;
+  const log = (level, message, details) => deps.log?.append(level, "llm", message, details);
+  async function resolveConnection(connectionId) {
+    const key = connectionId || "\x00default";
+    const cached = connectionCache.get(key);
+    if (cached)
+      return cached;
+    let dto = null;
+    try {
+      if (connectionId)
+        dto = asRecord3(await host.connections.get(connectionId, userId));
+      else {
+        const list = asArray2(await host.connections.list(userId));
+        dto = list.find((c) => c.is_default === true) ?? list[0] ?? null;
+      }
+    } catch (error) {
+      throw new RpcFailure({ code: "provider-error", message: `Could not read the LLM connection: ${errorMessage(error)}`, detailCode: "ANALYZER_CONNECTION_MISSING" });
+    }
+    if (!dto || !str3(dto.id)) {
+      throw new RpcFailure({
+        code: "bad-request",
+        message: connectionId ? "The selected LLM connection no longer exists. Select another connection in the model settings." : "No LLM connection is configured. Add one in Lumiverse and select it in the model settings.",
+        detailCode: "ANALYZER_CONNECTION_MISSING"
+      });
+    }
+    return connectionCache.set(key, { id: str3(dto.id), name: str3(dto.name), provider: str3(dto.provider), model: str3(dto.model), metadata: asRecord3(dto.metadata) });
+  }
+  async function effectiveSettings(overrides) {
+    const config = await deps.loadConfig();
+    const settings = normalizeAnalyzerSettings({ ...config.analysis, ...overrides ?? {}, reasoning: { ...config.analysis.reasoning, ...overrides?.reasoning ?? {} } });
+    return { settings, retryDefault: clampRetries(config.runtime.generationAutoRetryCount, DEFAULT_RETRY_COUNT) };
+  }
+  function visionKey(connection, model) {
+    return JSON.stringify([connection.id, model]);
+  }
+  function visionFor(settings, connection, model) {
+    if (settings.vision === "supported")
+      return true;
+    if (settings.vision === "unsupported")
+      return false;
+    const key = visionKey(connection, model);
+    const cached = visionCache.get(key);
+    if (cached && !cached.value && now() - cached.at >= CAPABILITY_RETRY_MS)
+      visionCache.delete(key);
+    else if (cached)
+      return cached.value;
+    const declared = declaredVisionSupport(connection.metadata);
+    if (declared !== null)
+      return declared;
+    return !/deepseek/i.test(`${connection.provider} ${model}`) || /vl|vision/i.test(model);
+  }
+  async function oneAttempt(input) {
+    if (input.signal?.aborted)
+      throw abortError(input.signal.reason);
+    const controller = new AbortController;
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, input.timeoutMs);
+    const onAbort = () => controller.abort();
+    input.signal?.addEventListener("abort", onAbort, { once: true });
+    try {
+      const request = {
+        type: "raw",
+        provider: input.connection.provider,
+        model: input.model,
+        connection_id: input.connection.id,
+        messages: input.messages,
+        parameters: input.parameters,
+        reasoning: input.reasoning,
+        userId,
+        signal: controller.signal
+      };
+      return await new Promise((resolve, reject) => {
+        controller.signal.addEventListener("abort", () => reject(abortError()), { once: true });
+        host.generate.raw(request).then(resolve, reject);
+      });
+    } catch (error) {
+      if (timedOut && !input.signal?.aborted)
+        throw makeAnalyzerError(`Analyzer timed out after ${input.timeoutMs} ms`, { code: "ANALYZER_TIMEOUT" });
+      if (input.signal?.aborted || isAbortLike(error))
+        throw abortError(input.signal?.reason);
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      input.signal?.removeEventListener("abort", onAbort);
+    }
+  }
+  async function run(request, options, defaultRetries) {
+    const started = Date.now();
+    const { settings, retryDefault } = await effectiveSettings(request.settings);
+    let connection;
+    try {
+      connection = await resolveConnection(settings.connectionId);
+    } catch (error) {
+      if (error instanceof RpcFailure)
+        throw makeAnalyzerError(error.message, { code: error.error.detailCode ?? "ANALYZER_CONNECTION_MISSING", cause: error });
+      throw error;
+    }
+    const model = settings.model || connection.model;
+    if (!model)
+      throw makeAnalyzerError("Analyzer model is empty. Select a model in the model settings.", { code: "ANALYZER_MODEL_MISSING" });
+    const retries = request.retries !== undefined ? clampRetries(request.retries, 0) : defaultRetries === "config" ? retryDefault : defaultRetries;
+    const total = retries + 1;
+    const timeoutMs = Math.max(ANALYZER_TIMEOUT_MIN_MS, Math.min(ANALYZER_TIMEOUT_MAX_MS, Math.round(settings.timeoutMs)));
+    const reasoning = reasoningDto(settings.reasoning);
+    const capKey = JSON.stringify([connection.provider, model]);
+    const flat = request.flatMessages;
+    let partitionFallback = false;
+    let source = request.messages;
+    let breakpoints = request.cacheBreakpoints;
+    const prepared = request.cachePartition === undefined ? null : prefixPreparedMessages(request.cachePartition, model, connection.provider);
+    if (prepared)
+      [source, breakpoints] = [prepared.messages, prepared.cacheBreakpoints];
+    if (flat && partitionRejected.has(capKey))
+      [source, breakpoints] = [flat, undefined];
+    let textOnly = false;
+    const rejectedTypes = new Set;
+    const prepare = () => withCacheBreakpoints(textOnly ? dropImages(source) : dropImageTypes(source, rejectedTypes), breakpoints, connection);
+    let imagesDropped = false;
+    if (hasImages(source) && !visionFor(settings, connection, model)) {
+      if (request.visionFallback === "fail")
+        throw makeAnalyzerError("The selected analyzer model cannot read images.", { code: "ANALYZER_VISION_UNSUPPORTED" });
+      textOnly = true;
+      imagesDropped = true;
+      log("info", `Images dropped: ${model} cannot read images (${request.purpose}).`);
+    }
+    let messages = prepare();
+    const baseParameters = { ...request.parameters ?? {} };
+    const temperature = request.temperature ?? settings.temperature;
+    if (baseParameters.temperature === undefined && Number.isFinite(temperature) && !omitsTemperature(model, connection.provider))
+      baseParameters.temperature = temperature;
+    const maxTokens = request.maxTokens ?? settings.maxTokens;
+    if (baseParameters.max_tokens === undefined && maxTokens > 0)
+      baseParameters.max_tokens = Math.floor(maxTokens);
+    let attempt = 0;
+    for (;; ) {
+      attempt += 1;
+      let jsonMode = request.responseMode === "json" && settings.jsonMode && baseParameters.response_format === undefined && supportsJsonMode(connection.provider, model) && now() - (jsonModeRejected.get(capKey) ?? -Infinity) >= CAPABILITY_RETRY_MS;
+      try {
+        let result;
+        for (;; ) {
+          const parameters = jsonMode ? { ...baseParameters, response_format: { type: "json_object" } } : baseParameters;
+          try {
+            result = await oneAttempt({ connection, model, messages, parameters, reasoning, timeoutMs, signal: options.signal });
+            break;
+          } catch (error) {
+            if (isAbortLike(error) || error instanceof AnalyzerClientErrorClass)
+              throw error;
+            if (hasImages(messages) && unsupportedVisionError(error)) {
+              const types = rejectedImageTypes(error, messages);
+              if (types) {
+                const before = rejectedTypes.size;
+                for (const type of types)
+                  rejectedTypes.add(type);
+                if (rejectedTypes.size === before)
+                  textOnly = true;
+                messages = prepare();
+                if (request.visionFallback === "fail" && !hasImages(messages))
+                  throw classifyLlmError(error);
+                imagesDropped = true;
+                log("warn", `${model} rejected ${textOnly ? "the images" : [...types].join(", ")}; resending without ${textOnly ? "them" : "those"} (${request.purpose}).`, errorMessage(error));
+                continue;
+              }
+              visionCache.set(visionKey(connection, model), { value: false, at: now() });
+              if (request.visionFallback === "fail")
+                throw makeAnalyzerError("The selected analyzer model cannot read images.", { code: "ANALYZER_VISION_UNSUPPORTED", cause: error });
+              textOnly = true;
+              messages = prepare();
+              imagesDropped = true;
+              log("warn", `${model} rejected images; resending text-only (${request.purpose}).`, errorMessage(error));
+              continue;
+            }
+            if (jsonMode && (isJsonModeRejection(error) || mayBeJsonModeRejection(error))) {
+              const named = isJsonModeRejection(error);
+              if (named)
+                jsonModeRejected.set(capKey, now());
+              jsonMode = false;
+              log("warn", `${named ? "JSON mode rejected" : "Possible JSON mode rejection"} by ${connection.provider}/${model}; resending without it.`, errorMessage(error));
+              continue;
+            }
+            if (flat && source !== flat && httpStatusOf(error) === 400 && !isJsonModeRejection(error) && !unsupportedVisionError(error)) {
+              [source, breakpoints] = [flat, undefined];
+              partitionFallback = true;
+              messages = prepare();
+              log("warn", `${connection.provider}/${model} rejected the cache partition; resending the flat messages.`, errorMessage(error));
+              continue;
+            }
+            throw classifyLlmError(error);
+          }
+        }
+        if (partitionFallback)
+          partitionRejected.add(capKey);
+        if (hasImages(messages) && settings.vision === "auto")
+          visionCache.set(visionKey(connection, model), { value: true, at: now() });
+        const raw = extractText(result);
+        const finishReason = extractFinishReason(result);
+        if (!raw.trim()) {
+          if (finishReason === "length" && /deepseek/i.test(connection.provider))
+            throw makeAnalyzerError("The analyzer response was truncated before any output.", { code: "ANALYZER_OUTPUT_TRUNCATED" });
+          if (finishReason === "content_filter")
+            throw makeAnalyzerError("The provider filtered the analyzer response.", { code: "ANALYZER_CONTENT_FILTERED" });
+          throw makeAnalyzerError(`The analyzer returned an empty response${finishReason ? ` (${finishReason})` : ""}.`, { code: "ANALYZER_EMPTY_RESPONSE" });
+        }
+        const parsed = request.responseMode === "json" ? parseLenientJson2(raw) : raw;
+        log("debug", `${request.purpose}: ${model} answered (${raw.length} chars, attempt ${attempt}/${total}).`);
+        return { raw, parsed, connectionId: connection.id, model, attempts: attempt, usage: extractUsage(result), finishReason, jsonMode, imagesDropped, latencyMs: Date.now() - started };
+      } catch (error) {
+        if (isAbortLike(error) || options.signal?.aborted)
+          throw abortError(options.signal?.reason);
+        const classified = classifyLlmError(error);
+        if (attempt >= total || !isRetryableLlmError(classified)) {
+          log("error", `${request.purpose}: ${classified.message}`, { code: classified.code, attempts: attempt, model });
+          classified.attempts = attempt;
+          throw classified;
+        }
+        options.onRetry?.({ attempt, total: retries, error: llmErrorToRpc(classified) });
+        log("warn", `${request.purpose}: retry ${attempt}/${retries} after ${classified.code}.`, classified.message);
+        await wait(RETRY_DELAY_MS, options.signal);
+      }
+    }
+  }
+  const service = {
+    async complete(request, options = {}) {
+      try {
+        return await run(request, options, "config");
+      } catch (error) {
+        if (isAbortLike(error))
+          throw error;
+        if (error instanceof RpcFailure)
+          throw error;
+        const classified = classifyLlmError(error);
+        throw new RpcFailure(llmErrorToRpc(classified), { cause: classified });
+      }
+    },
+    analyzerClient(clientOptions = {}) {
+      return {
+        async complete(_config, messages, options = {}) {
+          const o = asRecord3(options);
+          const signal = o.signal ?? clientOptions.signal;
+          const timeoutMs = Number(o.timeoutMs);
+          const maxOutputTokens = Number(o.maxOutputTokens ?? o.maxTokens);
+          const partitioned = partitionMessages(o.cachePartition);
+          const result = await run({
+            purpose: str3(o.purpose) || clientOptions.purpose || "analyzer",
+            messages: partitioned?.messages ?? messages.map(toLlmMessage),
+            ...partitioned ? { cacheBreakpoints: partitioned.cacheBreakpoints, flatMessages: messages.map(toLlmMessage), cachePartition: o.cachePartition } : {},
+            responseMode: o.responseMode === "text" ? "text" : "json",
+            ...o.structuredOutputSchema && typeof o.structuredOutputSchema === "object" ? { schema: o.structuredOutputSchema } : {},
+            ...Number.isFinite(maxOutputTokens) && maxOutputTokens > 0 ? { maxTokens: maxOutputTokens } : {},
+            ...Number.isFinite(timeoutMs) && timeoutMs > 0 ? { settings: { timeoutMs } } : {},
+            ...o.retries !== undefined ? { retries: Number(o.retries) } : {}
+          }, { signal, onRetry: clientOptions.onRetry }, 0).catch((error) => {
+            if (error instanceof AnalyzerClientErrorClass && error.code === "ANALYZER_NETWORK")
+              throw new TypeError(error.message, { cause: error });
+            throw error;
+          });
+          return { raw: result.raw, parsed: result.parsed, model: result.model, attempts: result.attempts, usage: result.usage };
+        }
+      };
+    },
+    async supportsVision(overrides) {
+      const { settings } = await effectiveSettings(overrides);
+      if (settings.vision !== "auto")
+        return settings.vision === "supported";
+      const connection = await resolveConnection(settings.connectionId);
+      return visionFor(settings, connection, settings.model || connection.model);
+    },
+    async analyzerTarget(overrides) {
+      const { settings } = await effectiveSettings(overrides);
+      const connection = await resolveConnection(settings.connectionId);
+      return { provider: connection.provider, model: settings.model || connection.model };
+    },
+    async listConnections() {
+      try {
+        const list = asArray2(await host.connections.list(userId));
+        return list.map((c) => ({ id: str3(c.id), name: str3(c.name), provider: str3(c.provider), model: str3(c.model), isDefault: c.is_default === true, hasApiKey: c.has_api_key === true }));
+      } catch (error) {
+        throw new RpcFailure({ code: "provider-error", message: `Could not list LLM connections: ${errorMessage(error)}` });
+      }
+    },
+    async listModels(connectionId) {
+      const connection = await resolveConnection(str3(connectionId));
+      const out = [];
+      const seen = new Set;
+      const add = (id, label = id) => {
+        if (id && !seen.has(id)) {
+          seen.add(id);
+          out.push({ id, label });
+        }
+      };
+      add(connection.model);
+      try {
+        if (host.connections.getModels) {
+          for (const model of await host.connections.getModels(connection.id, userId))
+            add(model.id, model.label || model.id);
+        } else if (deps.getJson) {
+          const result = asRecord3(await deps.getJson(`/api/v1/connections/${encodeURIComponent(connection.id)}/models`, { timeoutMs: 20000 }));
+          const labels = asRecord3(result.model_labels);
+          for (const id of asArray2(result.models))
+            if (typeof id === "string")
+              add(id, str3(labels[id]) || id);
+        }
+      } catch (error) {
+        log("warn", `Model list of ${connection.name || connection.id} unavailable.`, errorMessage(error));
+      }
+      return out;
+    },
+    async testMessage(text, settings) {
+      const started = Date.now();
+      try {
+        const result = await run({ purpose: "message-test", messages: [{ role: "user", content: str3(text) || DEFAULT_TEST_MESSAGE }], responseMode: "text", retries: 0, ...settings ? { settings } : {} }, {}, 0);
+        return { ok: true, latencyMs: Date.now() - started, reply: result.raw };
+      } catch (error) {
+        const rpc = isAbortLike(error) ? { code: "cancelled", message: "The test was cancelled." } : error instanceof RpcFailure ? error.error : llmErrorToRpc(classifyLlmError(error));
+        return { ok: false, latencyMs: Date.now() - started, error: rpc };
+      }
+    }
+  };
   return service;
 }
 
@@ -47812,11 +48748,6 @@ function detectImageTokens(text, options = {}) {
 }
 function buildCharxAssetRegexDetectors2(input) {
   return buildCharxAssetRegexDetectors(input);
-}
-// src/engine/text/json.ts
-var AnalyzerClientErrorClass = AnalyzerClientError;
-function parseLenientJson2(raw) {
-  return parseLenientJson(raw);
 }
 // src/engine/engine.ts
 function withPreparedBatchItems(executor, prepare) {
@@ -48069,6 +49000,7 @@ var FREEFORM_CLOTHING_POLICY = Object.freeze({
   clothing_in_natural_language: "Natural language must not name, recolor or restyle legwear, footwear or other garments that the actor's selected outfit already renders through outfit_parts; refer to them generically (her socks, her shoes) or with the registered wording. Never introduce legwear or footwear the selected outfit does not register.",
   clothing_state: "When an actor's legs or feet are visible and the registered legwear or footwear is not simply worn, say so explicitly in that actor's free tags (barefoot, no shoes, bare legs)."
 });
+var FREEFORM_CLOTHING_TEXT = Object.values(FREEFORM_CLOTHING_POLICY).join(" ");
 var OUTFIT_PARTS_INPUT_DEFAULT = "forms[].outfit_parts maps an outfit ID to its registered garments by body part; an omitted part has no registered garment.";
 function augmentCatalog(catalog, lookup) {
   let added = false;
@@ -48113,6 +49045,8 @@ function applyOutfitPartPolicy(payload) {
       Object.assign(policy.outfits, OUTFIT_PART_POLICY);
     if (policy.freeform && typeof policy.freeform === "object")
       Object.assign(policy.freeform, FREEFORM_CLOTHING_POLICY);
+    else if (typeof policy.freeform === "string" && !policy.freeform.includes(FREEFORM_CLOTHING_TEXT))
+      policy.freeform = `${policy.freeform} ${FREEFORM_CLOTHING_TEXT}`;
   }
   if (contract.inputDefaults && typeof contract.inputDefaults === "object")
     contract.inputDefaults.outfit_parts = OUTFIT_PARTS_INPUT_DEFAULT;
@@ -49872,22 +50806,22 @@ function uO3(e) {
 function wPe3(e, t) {
   return Bu3(Bu3(e.characterPrompt.charxSettings.overrides)[wh3(t)]);
 }
-function xi2(e, t) {
-  const r = fy3(e), n = wh3(t), a = wPe3(e, n), o = new Set(uO3(r)[n] ?? []), i = pO2(e);
+function xi2(e, t, r = wPe3(e, wh3(t))) {
+  const n = fy3(e), a = wh3(t), o = new Set(uO3(n)[a] ?? []), i = pO2(e);
   return {
-    nativeAssetVisibility: ol3(r, a, "nativeAssetVisibility", o) ? a.nativeAssetVisibility === "shown" ? "shown" : "hidden" : i.nativeAssetVisibility,
-    freeCharacterGenerationEnabled: ol3(r, a, "freeCharacterGeneration", o) && typeof a.freeCharacterGeneration == "boolean" ? a.freeCharacterGeneration : i.freeCharacterGenerationEnabled,
-    freeOutfitGenerationEnabled: ol3(r, a, "freeOutfitGeneration", o) && typeof a.freeOutfitGeneration == "boolean" ? a.freeOutfitGeneration : i.freeOutfitGenerationEnabled,
-    rosterSelectionEnabled: ol3(r, a, "rosterSelectionEnabled", o) && typeof a.rosterSelectionEnabled == "boolean" ? a.rosterSelectionEnabled : i.rosterSelectionEnabled,
-    fixedRating: ol3(r, a, "fixedRating", o) ? O83(a.fixedRating) : i.fixedRating,
-    nsfwAlwaysEnabled: ol3(r, a, "nsfwAlwaysEnabled", o) && typeof a.nsfwAlwaysEnabled == "boolean" ? a.nsfwAlwaysEnabled : i.nsfwAlwaysEnabled,
-    forceAiChoiceCoordinates: ol3(r, a, "forceAiChoiceCoordinates", o) && typeof a.forceAiChoiceCoordinates == "boolean" ? a.forceAiChoiceCoordinates : i.forceAiChoiceCoordinates,
-    autoRemoveConflictingRegex: ol3(r, a, "autoRemoveConflictingRegex", o) && typeof a.autoRemoveConflictingRegex == "boolean" ? a.autoRemoveConflictingRegex : i.autoRemoveConflictingRegex,
-    fixedResolution: ol3(r, a, "fixedResolution", o) ? LD3(a.fixedResolution, e) : i.fixedResolution,
-    fixedPositivePrompt: ol3(r, a, "fixedPositivePrompt", o) ? kh3(a.fixedPositivePrompt) : i.fixedPositivePrompt,
-    negativePrompt: ol3(r, a, "negativePrompt", o) ? kh3(a.negativePrompt) : i.negativePrompt,
-    animaPositivePrompt: ol3(r, a, "animaPositivePrompt", o) ? kh3(a.animaPositivePrompt) : i.animaPositivePrompt,
-    animaNegativePrompt: ol3(r, a, "animaNegativePrompt", o) ? kh3(a.animaNegativePrompt) : i.animaNegativePrompt
+    nativeAssetVisibility: ol3(n, r, "nativeAssetVisibility", o) ? r.nativeAssetVisibility === "shown" ? "shown" : "hidden" : i.nativeAssetVisibility,
+    freeCharacterGenerationEnabled: ol3(n, r, "freeCharacterGeneration", o) && typeof r.freeCharacterGeneration == "boolean" ? r.freeCharacterGeneration : i.freeCharacterGenerationEnabled,
+    freeOutfitGenerationEnabled: ol3(n, r, "freeOutfitGeneration", o) && typeof r.freeOutfitGeneration == "boolean" ? r.freeOutfitGeneration : i.freeOutfitGenerationEnabled,
+    rosterSelectionEnabled: ol3(n, r, "rosterSelectionEnabled", o) && typeof r.rosterSelectionEnabled == "boolean" ? r.rosterSelectionEnabled : i.rosterSelectionEnabled,
+    fixedRating: ol3(n, r, "fixedRating", o) ? O83(r.fixedRating) : i.fixedRating,
+    nsfwAlwaysEnabled: ol3(n, r, "nsfwAlwaysEnabled", o) && typeof r.nsfwAlwaysEnabled == "boolean" ? r.nsfwAlwaysEnabled : i.nsfwAlwaysEnabled,
+    forceAiChoiceCoordinates: ol3(n, r, "forceAiChoiceCoordinates", o) && typeof r.forceAiChoiceCoordinates == "boolean" ? r.forceAiChoiceCoordinates : i.forceAiChoiceCoordinates,
+    autoRemoveConflictingRegex: ol3(n, r, "autoRemoveConflictingRegex", o) && typeof r.autoRemoveConflictingRegex == "boolean" ? r.autoRemoveConflictingRegex : i.autoRemoveConflictingRegex,
+    fixedResolution: ol3(n, r, "fixedResolution", o) ? LD3(r.fixedResolution, e) : i.fixedResolution,
+    fixedPositivePrompt: ol3(n, r, "fixedPositivePrompt", o) ? kh3(r.fixedPositivePrompt) : i.fixedPositivePrompt,
+    negativePrompt: ol3(n, r, "negativePrompt", o) ? kh3(r.negativePrompt) : i.negativePrompt,
+    animaPositivePrompt: ol3(n, r, "animaPositivePrompt", o) ? kh3(r.animaPositivePrompt) : i.animaPositivePrompt,
+    animaNegativePrompt: ol3(n, r, "animaNegativePrompt", o) ? kh3(r.animaNegativePrompt) : i.animaNegativePrompt
   };
 }
 function pO2(e) {
@@ -52160,6 +53094,7 @@ async function generateMessageIllustrations(deps, req) {
     const runtime = decorate(auto ? auto.store.getCurrentSnapshot() : buildRuntimeConfig(config, primaryDoc, { resolvedImageModel: imageTarget.model }));
     const getConfig = () => auto ? decorate(auto.store.getCurrentSnapshot()) : runtime;
     const amConfig = runtime;
+    const analysisConfig = req.analysisConfig ?? amConfig;
     const sourceId = primaryId;
     const ne = resolveSourceGenerationSettings2(amConfig, sourceId);
     const fixedRating = resolveSourceFixedRating(amConfig, sourceId);
@@ -52305,7 +53240,7 @@ async function generateMessageIllustrations(deps, req) {
         matchedAssetCount: W.min,
         totalAssetCount: W.max
       },
-      analysisConfig: config.analysis,
+      analysisConfig: engineAnalysisConfig(config.analysis, await services.llm.analyzerTarget().catch(() => null)),
       novelAIConfig: { ...resolveNovelAIRunConfig2(amConfig, { sourceId }), apiKey: "lumiverse-connection" },
       ...req.revision ? {
         revisionDirection: req.revision.direction,
@@ -52490,7 +53425,7 @@ async function generateMessageIllustrations(deps, req) {
         forceRating: () => fixedRating,
         ...req.ground ? { ground: req.ground } : {},
         ...req.infill ? { infill: req.infill } : {},
-        analysisConfig: amConfig
+        analysisConfig
       }, config);
       await req.assertTarget();
     } catch (e) {
@@ -52525,6 +53460,7 @@ async function generateMessageIllustrations(deps, req) {
       ...errorKo && !cancelled ? { errorKo } : {},
       ...failure ? { failure } : {},
       ...analyzerCompleted ? { analyzerCompleted: true } : {},
+      analysisConfig,
       ...cancelled ? { cancelled: true } : {},
       ...commitContinuity ? { commitContinuity } : {}
     };
@@ -53004,6 +53940,7 @@ function createChatPipelineController(services, engine, options = {}) {
     if (attemptKind === "retry" && !opts.settings && !memory?.settings)
       log("info", "No settings snapshot for this retry; it uses the current chat image settings.", { chatId, planKey });
     const settings = opts.settings ?? memory?.settings ?? await services.storage.loadChatImageGenerationSettings();
+    const analysisConfig = opts.revision ? undefined : opts.analysisConfig ?? memory?.analysisConfig;
     const runSettings = opts.countPolicy ? { ...settings, countPolicy: opts.countPolicy } : settings;
     const split = runSettings.analysisMode === "split" && !opts.revision;
     const countPolicy = split ? fixedCountPolicy(runSettings.splitAnalysis.totalCount ?? 1) : runSettings.countPolicy;
@@ -53025,11 +53962,12 @@ function createChatPipelineController(services, engine, options = {}) {
       const record = {
         settings: memory?.settings ?? jsonClone(runSettings),
         ...splitRevisionId ? { splitRevisionId } : {},
-        ...memory?.analyzerCompleted ? { analyzerCompleted: true } : {}
+        ...memory?.analyzerCompleted ? { analyzerCompleted: true } : {},
+        ...analysisConfig !== undefined ? { analysisConfig } : {}
       };
       retryMemory.delete(skey);
       retryMemory.set(skey, record);
-      job.retryFrom = { settings: record.settings, ...splitRevisionId ? { splitRevisionId } : {} };
+      job.retryFrom = { settings: record.settings, ...splitRevisionId ? { splitRevisionId } : {}, ...analysisConfig !== undefined ? { analysisConfig } : {} };
       while (retryMemory.size > MAX_SETTINGS_SNAPSHOTS) {
         const victim = [...retryMemory.keys()].find((key) => key !== skey && !messageJobs.has(key));
         if (!victim)
@@ -53074,6 +54012,7 @@ function createChatPipelineController(services, engine, options = {}) {
         deletedSlotIndices: attemptKind === "retry" ? plan.revisions.find((r) => r.revisionId === revisionId)?.deletedSlotIndices ?? [] : [],
         ...split ? { splitAnalysis: { totalCount: countPolicy.max, batchSize: runSettings.splitAnalysis.batchSize, retries: config.runtime.generationAutoRetryCount, revision: revisionId } } : {},
         ...opts.revision ? { revision: opts.revision } : {},
+        ...analysisConfig !== undefined ? { analysisConfig } : {},
         jobId: job.snapshot.jobId,
         activityLabel,
         config,
@@ -53101,6 +54040,12 @@ function createChatPipelineController(services, engine, options = {}) {
         kept.analyzerCompleted = true;
       else if (kept)
         delete kept.analyzerCompleted;
+      if (!opts.revision && result.analysisConfig !== undefined) {
+        if (kept)
+          kept.analysisConfig = result.analysisConfig;
+        if (job.retryFrom)
+          job.retryFrom.analysisConfig = result.analysisConfig;
+      }
       if (result.cancelled || signal.aborted) {
         await savePlan(chatId, { ...plan, status: previous.status, error: previous.error });
         return { kind: "cancelled" };
@@ -54052,11 +54997,17 @@ function createChatPipelineController(services, engine, options = {}) {
       const job = jobs.get(jobId) ?? fail2("not-found", `Job not found: ${jobId}`);
       if (messageBusy(job.target.chatId, job.planKey) || messageLocked(job.target.chatId, job.target.messageId, job.planKey))
         throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
-      const snapshot = job.retryFrom?.settings ?? retryMemory.get(k(job.target.chatId, job.planKey))?.settings;
+      const from = job.retryFrom?.settings ? job.retryFrom : retryMemory.get(k(job.target.chatId, job.planKey));
+      const snapshot = from?.settings;
       if (!snapshot)
         throw new RpcFailure(labelError("conflict", PIPELINE_TEXT.noRestartSnapshot));
       job.dismissed = true;
-      const next = startMessageJob(job.target, job.planKey, { automatic: false, attemptKind: "reroll", settings: snapshot });
+      const next = startMessageJob(job.target, job.planKey, {
+        automatic: false,
+        attemptKind: "reroll",
+        settings: snapshot,
+        ...from?.analysisConfig !== undefined ? { analysisConfig: from.analysisConfig } : {}
+      });
       return { jobId: next.snapshot.jobId };
     },
     dismiss(jobId) {
@@ -56524,7 +57475,7 @@ var workspaceHandlers = {
     return loadWorkspaceSnapshot(ctx, p.characterId);
   },
   "customCharacters.promote": async (p, ctx) => {
-    await promoteCustomCharacters(ctx, requireId2(p.characterId, "characterId"), p.customIds);
+    await promoteCustomCharacters(ctx, requireId2(p.characterId, "characterId"), p.customIds, p.bulk === true);
     return loadWorkspaceSnapshot(ctx, p.characterId);
   },
   "prompts.saveForms": (p, ctx) => saveForms(ctx, requireId2(p.characterId, "characterId"), requireId2(p.promptKey, "promptKey"), p.collection, String(p.baseRevision ?? "")),
@@ -56597,6 +57548,9 @@ function requireKind(value) {
     fail2("bad-request", `Unknown guideline kind: ${String(value)}`);
   return value;
 }
+function presetOf(p) {
+  return p.presetId !== undefined ? { presetId: requireString(p.presetId, "presetId") } : {};
+}
 var atelierHandlers = {
   "atelier.get": async (_p, ctx) => ({ state: await atelierServiceOf(ctx).getState() }),
   "atelier.getBaseline": (_p, ctx) => atelierServiceOf(ctx).baseline(),
@@ -56610,31 +57564,31 @@ var atelierHandlers = {
   "atelier.documents.activate": (p, ctx) => atelierServiceOf(ctx).activateDocument({ baseRevision: requireRevision(p.baseRevision), id: requireString(p.id, "id") }),
   "atelier.documents.export": (p, ctx) => atelierServiceOf(ctx).exportDocument({ id: requireString(p.id, "id"), ...typeof p.json === "string" ? { json: p.json } : {}, ...p.selection ? { selection: p.selection } : {} }),
   "atelier.documents.rawSource": (p, ctx) => atelierServiceOf(ctx).rawSource({ id: requireString(p.id, "id") }),
-  "atelier.instructions.select": (p, ctx) => atelierServiceOf(ctx).selectGuideline({ kind: requireKind(p.kind), id: requireString(p.id, "id") }),
-  "atelier.instructions.create": (p, ctx) => atelierServiceOf(ctx).createGuideline({ kind: requireKind(p.kind), ...p.copyOf !== undefined ? { copyOf: requireString(p.copyOf, "copyOf") } : {} }),
-  "atelier.instructions.remove": (p, ctx) => atelierServiceOf(ctx).removeGuideline({ kind: requireKind(p.kind), id: requireString(p.id, "id") }),
+  "atelier.instructions.select": (p, ctx) => atelierServiceOf(ctx).selectGuideline({ kind: requireKind(p.kind), id: requireString(p.id, "id"), ...presetOf(p) }),
+  "atelier.instructions.create": (p, ctx) => atelierServiceOf(ctx).createGuideline({ kind: requireKind(p.kind), ...p.copyOf !== undefined ? { copyOf: requireString(p.copyOf, "copyOf") } : {}, ...presetOf(p) }),
+  "atelier.instructions.remove": (p, ctx) => atelierServiceOf(ctx).removeGuideline({ kind: requireKind(p.kind), id: requireString(p.id, "id"), ...presetOf(p) }),
   "atelier.instructions.save": (p, ctx) => {
     if (!Array.isArray(p.edits))
       fail2("bad-request", "edits is required.");
-    return atelierServiceOf(ctx).saveGuidelines({ kind: requireKind(p.kind), edits: p.edits.map((e) => ({ id: requireString(e?.id, "edits.id"), field: requireString(e?.field, "edits.field"), before: e.before, value: e.value })) });
+    return atelierServiceOf(ctx).saveGuidelines({ kind: requireKind(p.kind), edits: p.edits.map((e) => ({ id: requireString(e?.id, "edits.id"), field: requireString(e?.field, "edits.field"), before: e.before, value: e.value })), ...presetOf(p) });
   },
   "atelier.instructions.setOutputMode": (p, ctx) => {
     if (p.mode !== "illustration" && p.mode !== "comic")
       fail2("bad-request", "mode must be illustration or comic.");
-    return atelierServiceOf(ctx).setOutputMode({ id: requireString(p.id, "id"), mode: p.mode });
+    return atelierServiceOf(ctx).setOutputMode({ id: requireString(p.id, "id"), mode: p.mode, ...presetOf(p) });
   },
   "atelier.instructions.setSystems": (p, ctx) => {
     if (!p.systems || typeof p.systems !== "object" || Array.isArray(p.systems))
       fail2("bad-request", "systems is required.");
-    return atelierServiceOf(ctx).setSystems({ systems: p.systems });
+    return atelierServiceOf(ctx).setSystems({ systems: p.systems, ...presetOf(p) });
   },
-  "atelier.instructions.setOption": (p, ctx) => atelierServiceOf(ctx).setOption({ id: requireString(p.id, "id"), optionId: requireString(p.optionId, "optionId"), value: p.value === true }),
+  "atelier.instructions.setOption": (p, ctx) => atelierServiceOf(ctx).setOption({ id: requireString(p.id, "id"), optionId: requireString(p.optionId, "optionId"), value: p.value === true, ...presetOf(p) }),
   "atelier.instructions.setSizes": (p, ctx) => {
     if (!Array.isArray(p.allowedSizeIds))
       fail2("bad-request", "allowedSizeIds is required.");
-    return atelierServiceOf(ctx).setSizes({ id: requireString(p.id, "id"), allowedSizeIds: p.allowedSizeIds, ...Array.isArray(p.customSizes) ? { customSizes: p.customSizes } : {} });
+    return atelierServiceOf(ctx).setSizes({ id: requireString(p.id, "id"), allowedSizeIds: p.allowedSizeIds, ...Array.isArray(p.customSizes) ? { customSizes: p.customSizes } : {}, ...presetOf(p) });
   },
-  "atelier.instructions.restore": (p, ctx) => atelierServiceOf(ctx).restoreGuideline({ id: requireString(p.id, "id"), expected: p.expected }),
+  "atelier.instructions.restore": (p, ctx) => atelierServiceOf(ctx).restoreGuideline({ id: requireString(p.id, "id"), expected: p.expected, ...presetOf(p) }),
   "atelier.instructions.importLegacyDirections": (p, ctx) => atelierServiceOf(ctx).importLegacyDirections({ baseRevision: requireRevision(p.baseRevision) }),
   "atelier.execution.set": (p, ctx) => {
     if (!p.patch || typeof p.patch !== "object")
@@ -57434,607 +58388,6 @@ function createImageService(deps) {
         return { ok: true, latencyMs: now() - started };
       } catch (error) {
         return { ok: false, latencyMs: now() - started, error: toRpcError(error) };
-      }
-    }
-  };
-  return service;
-}
-
-// src/backend/services/llm.ts
-var DEFAULT_RETRY_COUNT = 5;
-var MAX_RETRY_COUNT = 10;
-var RETRY_DELAY_MS = 100;
-var DEFAULT_TEST_MESSAGE = "Hello. Please greet me briefly.";
-var CAPABILITY_RETRY_MS = 30 * 60000;
-function supportsJsonMode(provider, _model) {
-  return !/anthropic|claude/.test(provider.toLowerCase());
-}
-function omitsTemperature(model) {
-  const m = model.trim().toLowerCase().split("/").at(-1) ?? "";
-  return /^claude-(?:fable|mythos)-5(?:[-.]|$)/.test(m) || /^claude-(?:sonnet|opus)-5(?:[-.]|$)/.test(m) || /^claude-opus-4-(?:7|8)(?:[-.]|$)/.test(m) || /^gemini-3(?:[.-]|$)/.test(m) || m === "gemini-4-argon";
-}
-function reasoningDto(reasoning) {
-  if (reasoning.mode === "off")
-    return { source: "off" };
-  if (reasoning.mode === "custom")
-    return { source: "custom", apiReasoning: true, effort: reasoning.effort };
-  return { source: "inherit" };
-}
-function textParts(value) {
-  if (typeof value === "string")
-    return value;
-  return asArray2(value).map((part) => {
-    const r = asRecord3(part);
-    if (r.type === "thinking" || r.type === "reasoning")
-      return "";
-    return typeof r.text === "string" ? r.text : typeof r.content === "string" ? r.content : "";
-  }).filter(Boolean).join(`
-`);
-}
-function extractText(result) {
-  if (typeof result === "string")
-    return result;
-  const root = asRecord3(result);
-  for (const key of ["content", "text", "output_text", "output", "message"]) {
-    const value = root[key];
-    if (typeof value === "string")
-      return value;
-    const text = textParts(value) || (value && typeof value === "object" && !Array.isArray(value) ? textParts(asRecord3(value).content) : "");
-    if (text)
-      return text;
-  }
-  const choice = asRecord3(asArray2(root.choices)[0]);
-  return textParts(asRecord3(choice.message).content) || (typeof choice.text === "string" ? choice.text : "");
-}
-function extractUsage(result) {
-  const usage = asRecord3(asRecord3(result).usage);
-  const out = {};
-  for (const [key, value] of Object.entries(usage)) {
-    const n = Number(value);
-    if (typeof value === "number" || typeof value === "string" && value.trim() !== "") {
-      if (Number.isFinite(n))
-        out[key] = n;
-    }
-  }
-  const details = asRecord3(usage.prompt_tokens_details);
-  for (const key of ["cached_tokens", "cache_write_tokens"]) {
-    const n = Number(details[key]);
-    if (Number.isFinite(n) && details[key] !== undefined)
-      out[key] = n;
-  }
-  return out;
-}
-function extractFinishReason(result) {
-  const root = asRecord3(result);
-  if (typeof root.finish_reason === "string")
-    return root.finish_reason;
-  if (typeof root.finishReason === "string")
-    return root.finishReason;
-  const first = asRecord3(asArray2(root.choices)[0]);
-  return typeof first.finish_reason === "string" ? first.finish_reason : "";
-}
-function declaredVisionSupport(metadata) {
-  const record = asRecord3(metadata);
-  const pick = (root, keys) => {
-    for (const key of keys)
-      if (typeof root[key] === "boolean")
-        return root[key];
-    return null;
-  };
-  const direct = pick(record, ["vision", "supportsVision", "supports_vision", "multimodal", "supportsImages", "supports_images"]);
-  if (direct !== null)
-    return direct;
-  const capabilities = asRecord3(record.capabilities);
-  const nested = pick(capabilities, ["vision", "image", "images", "multimodal"]);
-  if (nested !== null)
-    return nested;
-  const modalities = [record.input_modalities, record.inputModalities, capabilities.input_modalities, capabilities.inputModalities].flatMap((v) => asArray2(v).map((x) => str3(x).toLowerCase()));
-  if (modalities.includes("image") || modalities.includes("vision"))
-    return true;
-  if (modalities.length > 0 && modalities.every((v) => v === "text"))
-    return false;
-  return null;
-}
-function unsupportedVisionError(error) {
-  const message = errorMessage(error);
-  if (/no endpoints found that support image/i.test(message))
-    return true;
-  if (![400, 415, 422].includes(httpStatusOf(error)))
-    return false;
-  return [
-    /(?:image|image_url|vision|multimodal|visual|modality).{0,160}(?:not supported|unsupported|does not support|isn't supported|not allowed|only supports? text)/iu,
-    /(?:not supported|unsupported|does not support|isn't supported|not allowed|only supports? text).{0,160}(?:image|image_url|vision|multimodal|visual|modality)/iu,
-    /(?:image|image_url|vision).{0,160}only supported by.{0,80}models?/iu,
-    /model.{0,120}(?:is not multimodal|is text[- ]only)/iu
-  ].some((pattern) => pattern.test(message));
-}
-var SAFE_IMAGE_TYPES = new Set(["image/png", "image/jpeg"]);
-function rejectedImageTypes(error, messages) {
-  const message = errorMessage(error);
-  if (!/\bmime\b|\bmedia[ _-]?type|image\/[a-z]|\bformats?\b|\b(?:gif|avif|webp|heic|heif|bmp|tiff?|svg)\b/i.test(message))
-    return null;
-  const sent = new Set(messages.flatMap((m) => Array.isArray(m.content) ? m.content.filter((p) => p.type === "image").map((p) => p.mime_type.toLowerCase()) : []));
-  const named = [...sent].filter((type) => message.toLowerCase().includes(type));
-  const namedUnusual = named.filter((type) => !SAFE_IMAGE_TYPES.has(type));
-  if (namedUnusual.length || named.length)
-    return new Set(namedUnusual.length ? namedUnusual : named);
-  const unusual = [...sent].filter((type) => !SAFE_IMAGE_TYPES.has(type));
-  return new Set(unusual.length ? unusual : sent);
-}
-function dropImageTypes(messages, types) {
-  if (!types.size)
-    return messages;
-  return messages.map((m) => {
-    if (!Array.isArray(m.content) || !m.content.some((p) => p.type === "image" && types.has(p.mime_type.toLowerCase())))
-      return m;
-    const kept = m.content.filter((p) => p.type !== "image" || !types.has(p.mime_type.toLowerCase()));
-    return { ...m, content: kept.every((p) => p.type === "text") && kept.length === 1 ? kept[0].text : kept };
-  });
-}
-function isJsonModeRejection(error) {
-  return /response_format|json_object|json[ _-]?mode|response_?mime_?type|structured output/i.test(errorMessage(error));
-}
-function mayBeJsonModeRejection(error) {
-  return httpStatusOf(error) === 400 && /format|invalid.*(?:argument|parameter)/i.test(errorMessage(error));
-}
-function httpStatusOf(error) {
-  const r = asRecord3(error);
-  for (const key of ["status", "statusCode", "httpStatus"]) {
-    const n = Number(r[key]);
-    if (Number.isInteger(n) && n >= 100 && n <= 599)
-      return n;
-  }
-  const message = errorMessage(error);
-  const m = /(?:\(|\bHTTP\s*|\bstatus(?: code)?[:\s]*|\berror\s+)([1-5]\d\d)\b/i.exec(message) ?? /\b(400|401|402|403|404|408|409|413|415|422|429|500|502|503|504|529)\b/.exec(message);
-  return m ? Number(m[1]) : 0;
-}
-function isNetworkError(error) {
-  if (error instanceof TypeError)
-    return true;
-  return /fetch failed|network error|failed to fetch|econnreset|econnrefused|socket hang up|socket connection was closed|terminated|etimedout/i.test(errorMessage(error));
-}
-function makeAnalyzerError(message, extra) {
-  return new AnalyzerClientErrorClass(message, extra);
-}
-function classifyLlmError(error) {
-  if (error instanceof AnalyzerClientErrorClass)
-    return error;
-  const code = str3(asRecord3(error).code);
-  if (/^ANALYZER_/.test(code))
-    return makeAnalyzerError(errorMessage(error), { code, httpStatus: httpStatusOf(error), cause: error });
-  const status = httpStatusOf(error);
-  if (status)
-    return makeAnalyzerError(`Analyzer HTTP ${status}: ${errorMessage(error).slice(0, 500)}`, { code: "ANALYZER_HTTP", httpStatus: status, responseText: errorMessage(error).slice(0, 2000), cause: error });
-  if (isNetworkError(error))
-    return makeAnalyzerError(errorMessage(error), { code: "ANALYZER_NETWORK", cause: error });
-  return makeAnalyzerError(errorMessage(error) || "Analyzer request failed.", { code: "ANALYZER_ERROR", cause: error });
-}
-function isRetryableLlmError(error) {
-  switch (error.code) {
-    case "ANALYZER_HTTP":
-      return error.httpStatus === 408 || error.httpStatus === 429 || error.httpStatus >= 500;
-    case "ANALYZER_TIMEOUT":
-    case "ANALYZER_PROVIDER_INTERRUPTED":
-    case "ANALYZER_NETWORK":
-      return true;
-    default:
-      return false;
-  }
-}
-function llmErrorToRpc(error) {
-  let code = "provider-error";
-  if (error.code === "ANALYZER_TIMEOUT")
-    code = "timeout";
-  else if (error.code === "ANALYZER_VISION_UNSUPPORTED")
-    code = "unsupported";
-  else if (error.code === "ANALYZER_CONNECTION_MISSING" || error.code === "ANALYZER_MODEL_MISSING")
-    code = "bad-request";
-  else if (error.code === "ANALYZER_HTTP" && (error.httpStatus === 401 || error.httpStatus === 403))
-    code = "permission-denied";
-  const details = {};
-  if (error.httpStatus)
-    details.httpStatus = error.httpStatus;
-  if (error.analyzerRaw)
-    details.analyzerRaw = error.analyzerRaw.slice(0, 3000);
-  if (error.responseText)
-    details.responseText = error.responseText.slice(0, 3000);
-  return {
-    code,
-    message: error.message,
-    detailCode: error.code,
-    retryable: isRetryableLlmError(error),
-    ...Object.keys(details).length ? { details } : {}
-  };
-}
-function hasImages(messages) {
-  return messages.some((m) => Array.isArray(m.content) && m.content.some((p) => p.type === "image"));
-}
-function dropImages(messages) {
-  return messages.map((m) => {
-    if (!Array.isArray(m.content))
-      return m;
-    const texts = m.content.filter((p) => p.type === "text");
-    return { ...m, content: texts.length === 1 ? texts[0].text : texts };
-  });
-}
-function toLlmMessage(message) {
-  const role = message.role === "system" || message.role === "assistant" ? message.role : "user";
-  if (typeof message.content === "string")
-    return { role, content: message.content };
-  const parts = [];
-  for (const raw of asArray2(message.content)) {
-    const p = asRecord3(raw);
-    if (p.type === "image") {
-      const data = String(p.data ?? "").replace(/^data:[^;,]+;base64,/, "");
-      const mime = str3(p.mime_type) || str3(p.mimeType) || "image/png";
-      if (data)
-        parts.push({ type: "image", data, mime_type: mime });
-    } else if (typeof p.text === "string")
-      parts.push({ type: "text", text: p.text });
-  }
-  return { role, content: parts };
-}
-function partitionMessages(partition) {
-  const p = asRecord3(partition);
-  if (!Array.isArray(p.cacheSegments) || !Array.isArray(p.liveMessages) || !p.liveMessages.length)
-    return null;
-  const messages = [];
-  const cacheBreakpoints = [];
-  for (const segment of p.cacheSegments) {
-    const segmentMessages = asRecord3(segment).messages;
-    if (!Array.isArray(segmentMessages))
-      return null;
-    if (!segmentMessages.length)
-      continue;
-    messages.push(...segmentMessages.map((m) => toLlmMessage(asRecord3(m))));
-    cacheBreakpoints.push(messages.length - 1);
-  }
-  messages.push(...p.liveMessages.map((m) => toLlmMessage(asRecord3(m))));
-  return { messages, cacheBreakpoints };
-}
-var MAX_CACHE_BREAKPOINTS = 4;
-var EPHEMERAL = Object.freeze({ type: "ephemeral" });
-function withCacheBreakpoints(messages, breakpoints, connection) {
-  if (!breakpoints?.length || !/anthropic/i.test(connection.provider))
-    return messages;
-  const budget = connection.metadata.prompt_caching ? MAX_CACHE_BREAKPOINTS - 2 : MAX_CACHE_BREAKPOINTS;
-  const valid = [...new Set(breakpoints)].filter((i) => Number.isInteger(i) && i >= 0 && i < messages.length).sort((a, b) => a - b);
-  const chosen = new Set(valid.length > budget ? [...valid.slice(0, budget - 1), valid.at(-1)] : valid);
-  if (!chosen.size)
-    return messages;
-  return messages.map((message, index) => {
-    if (!chosen.has(index))
-      return message;
-    if (typeof message.content === "string")
-      return { ...message, cache_control: EPHEMERAL };
-    const last = message.content.length - 1;
-    if (last < 0)
-      return message;
-    return { ...message, content: message.content.map((part, i) => i === last ? { ...part, cache_control: EPHEMERAL } : part) };
-  });
-}
-function clampRetries(value, fallback) {
-  const n = Number(value);
-  if (!Number.isFinite(n))
-    return fallback;
-  return Math.max(0, Math.min(MAX_RETRY_COUNT, Math.floor(n)));
-}
-function createLlmService(deps) {
-  const { host, userId } = deps;
-  const connectionCache = new TtlCache(5000, 32);
-  const jsonModeRejected = new Map;
-  const visionCache = new Map;
-  const partitionRejected = new Set;
-  const now = deps.now ?? Date.now;
-  const wait = deps.sleep ?? sleep2;
-  const log = (level, message, details) => deps.log?.append(level, "llm", message, details);
-  async function resolveConnection(connectionId) {
-    const key = connectionId || "\x00default";
-    const cached = connectionCache.get(key);
-    if (cached)
-      return cached;
-    let dto = null;
-    try {
-      if (connectionId)
-        dto = asRecord3(await host.connections.get(connectionId, userId));
-      else {
-        const list = asArray2(await host.connections.list(userId));
-        dto = list.find((c) => c.is_default === true) ?? list[0] ?? null;
-      }
-    } catch (error) {
-      throw new RpcFailure({ code: "provider-error", message: `Could not read the LLM connection: ${errorMessage(error)}`, detailCode: "ANALYZER_CONNECTION_MISSING" });
-    }
-    if (!dto || !str3(dto.id)) {
-      throw new RpcFailure({
-        code: "bad-request",
-        message: connectionId ? "The selected LLM connection no longer exists. Select another connection in the model settings." : "No LLM connection is configured. Add one in Lumiverse and select it in the model settings.",
-        detailCode: "ANALYZER_CONNECTION_MISSING"
-      });
-    }
-    return connectionCache.set(key, { id: str3(dto.id), name: str3(dto.name), provider: str3(dto.provider), model: str3(dto.model), metadata: asRecord3(dto.metadata) });
-  }
-  async function effectiveSettings(overrides) {
-    const config = await deps.loadConfig();
-    const settings = normalizeAnalyzerSettings({ ...config.analysis, ...overrides ?? {}, reasoning: { ...config.analysis.reasoning, ...overrides?.reasoning ?? {} } });
-    return { settings, retryDefault: clampRetries(config.runtime.generationAutoRetryCount, DEFAULT_RETRY_COUNT) };
-  }
-  function visionKey(connection, model) {
-    return JSON.stringify([connection.id, model]);
-  }
-  function visionFor(settings, connection, model) {
-    if (settings.vision === "supported")
-      return true;
-    if (settings.vision === "unsupported")
-      return false;
-    const key = visionKey(connection, model);
-    const cached = visionCache.get(key);
-    if (cached && !cached.value && now() - cached.at >= CAPABILITY_RETRY_MS)
-      visionCache.delete(key);
-    else if (cached)
-      return cached.value;
-    const declared = declaredVisionSupport(connection.metadata);
-    if (declared !== null)
-      return declared;
-    return !/deepseek/i.test(`${connection.provider} ${model}`) || /vl|vision/i.test(model);
-  }
-  async function oneAttempt(input) {
-    if (input.signal?.aborted)
-      throw abortError(input.signal.reason);
-    const controller = new AbortController;
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, input.timeoutMs);
-    const onAbort = () => controller.abort();
-    input.signal?.addEventListener("abort", onAbort, { once: true });
-    try {
-      const request = {
-        type: "raw",
-        provider: input.connection.provider,
-        model: input.model,
-        connection_id: input.connection.id,
-        messages: input.messages,
-        parameters: input.parameters,
-        reasoning: input.reasoning,
-        userId,
-        signal: controller.signal
-      };
-      return await new Promise((resolve, reject) => {
-        controller.signal.addEventListener("abort", () => reject(abortError()), { once: true });
-        host.generate.raw(request).then(resolve, reject);
-      });
-    } catch (error) {
-      if (timedOut && !input.signal?.aborted)
-        throw makeAnalyzerError(`Analyzer timed out after ${input.timeoutMs} ms`, { code: "ANALYZER_TIMEOUT" });
-      if (input.signal?.aborted || isAbortLike(error))
-        throw abortError(input.signal?.reason);
-      throw error;
-    } finally {
-      clearTimeout(timer);
-      input.signal?.removeEventListener("abort", onAbort);
-    }
-  }
-  async function run(request, options, defaultRetries) {
-    const started = Date.now();
-    const { settings, retryDefault } = await effectiveSettings(request.settings);
-    let connection;
-    try {
-      connection = await resolveConnection(settings.connectionId);
-    } catch (error) {
-      if (error instanceof RpcFailure)
-        throw makeAnalyzerError(error.message, { code: error.error.detailCode ?? "ANALYZER_CONNECTION_MISSING", cause: error });
-      throw error;
-    }
-    const model = settings.model || connection.model;
-    if (!model)
-      throw makeAnalyzerError("Analyzer model is empty. Select a model in the model settings.", { code: "ANALYZER_MODEL_MISSING" });
-    const retries = request.retries !== undefined ? clampRetries(request.retries, 0) : defaultRetries === "config" ? retryDefault : defaultRetries;
-    const total = retries + 1;
-    const timeoutMs = Math.max(ANALYZER_TIMEOUT_MIN_MS, Math.min(ANALYZER_TIMEOUT_MAX_MS, Math.round(settings.timeoutMs)));
-    const reasoning = reasoningDto(settings.reasoning);
-    const capKey = JSON.stringify([connection.provider, model]);
-    const flat = request.flatMessages;
-    let partitionFallback = false;
-    let source = request.messages;
-    let breakpoints = request.cacheBreakpoints;
-    if (flat && partitionRejected.has(capKey))
-      [source, breakpoints] = [flat, undefined];
-    let textOnly = false;
-    const rejectedTypes = new Set;
-    const prepare = () => withCacheBreakpoints(textOnly ? dropImages(source) : dropImageTypes(source, rejectedTypes), breakpoints, connection);
-    let imagesDropped = false;
-    if (hasImages(source) && !visionFor(settings, connection, model)) {
-      if (request.visionFallback === "fail")
-        throw makeAnalyzerError("The selected analyzer model cannot read images.", { code: "ANALYZER_VISION_UNSUPPORTED" });
-      textOnly = true;
-      imagesDropped = true;
-      log("info", `Images dropped: ${model} cannot read images (${request.purpose}).`);
-    }
-    let messages = prepare();
-    const baseParameters = { ...request.parameters ?? {} };
-    const temperature = request.temperature ?? settings.temperature;
-    if (baseParameters.temperature === undefined && Number.isFinite(temperature) && !omitsTemperature(model))
-      baseParameters.temperature = temperature;
-    const maxTokens = request.maxTokens ?? settings.maxTokens;
-    if (baseParameters.max_tokens === undefined && maxTokens > 0)
-      baseParameters.max_tokens = Math.floor(maxTokens);
-    let attempt = 0;
-    for (;; ) {
-      attempt += 1;
-      let jsonMode = request.responseMode === "json" && settings.jsonMode && baseParameters.response_format === undefined && supportsJsonMode(connection.provider, model) && now() - (jsonModeRejected.get(capKey) ?? -Infinity) >= CAPABILITY_RETRY_MS;
-      try {
-        let result;
-        for (;; ) {
-          const parameters = jsonMode ? { ...baseParameters, response_format: { type: "json_object" } } : baseParameters;
-          try {
-            result = await oneAttempt({ connection, model, messages, parameters, reasoning, timeoutMs, signal: options.signal });
-            break;
-          } catch (error) {
-            if (isAbortLike(error) || error instanceof AnalyzerClientErrorClass)
-              throw error;
-            if (hasImages(messages) && unsupportedVisionError(error)) {
-              const types = rejectedImageTypes(error, messages);
-              if (types) {
-                const before = rejectedTypes.size;
-                for (const type of types)
-                  rejectedTypes.add(type);
-                if (rejectedTypes.size === before)
-                  textOnly = true;
-                messages = prepare();
-                if (request.visionFallback === "fail" && !hasImages(messages))
-                  throw classifyLlmError(error);
-                imagesDropped = true;
-                log("warn", `${model} rejected ${textOnly ? "the images" : [...types].join(", ")}; resending without ${textOnly ? "them" : "those"} (${request.purpose}).`, errorMessage(error));
-                continue;
-              }
-              visionCache.set(visionKey(connection, model), { value: false, at: now() });
-              if (request.visionFallback === "fail")
-                throw makeAnalyzerError("The selected analyzer model cannot read images.", { code: "ANALYZER_VISION_UNSUPPORTED", cause: error });
-              textOnly = true;
-              messages = prepare();
-              imagesDropped = true;
-              log("warn", `${model} rejected images; resending text-only (${request.purpose}).`, errorMessage(error));
-              continue;
-            }
-            if (jsonMode && (isJsonModeRejection(error) || mayBeJsonModeRejection(error))) {
-              const named = isJsonModeRejection(error);
-              if (named)
-                jsonModeRejected.set(capKey, now());
-              jsonMode = false;
-              log("warn", `${named ? "JSON mode rejected" : "Possible JSON mode rejection"} by ${connection.provider}/${model}; resending without it.`, errorMessage(error));
-              continue;
-            }
-            if (flat && source !== flat && httpStatusOf(error) === 400 && !isJsonModeRejection(error) && !unsupportedVisionError(error)) {
-              [source, breakpoints] = [flat, undefined];
-              partitionFallback = true;
-              messages = prepare();
-              log("warn", `${connection.provider}/${model} rejected the cache partition; resending the flat messages.`, errorMessage(error));
-              continue;
-            }
-            throw classifyLlmError(error);
-          }
-        }
-        if (partitionFallback)
-          partitionRejected.add(capKey);
-        if (hasImages(messages) && settings.vision === "auto")
-          visionCache.set(visionKey(connection, model), { value: true, at: now() });
-        const raw = extractText(result);
-        const finishReason = extractFinishReason(result);
-        if (!raw.trim()) {
-          if (finishReason === "length" && /deepseek/i.test(connection.provider))
-            throw makeAnalyzerError("The analyzer response was truncated before any output.", { code: "ANALYZER_OUTPUT_TRUNCATED" });
-          if (finishReason === "content_filter")
-            throw makeAnalyzerError("The provider filtered the analyzer response.", { code: "ANALYZER_CONTENT_FILTERED" });
-          throw makeAnalyzerError(`The analyzer returned an empty response${finishReason ? ` (${finishReason})` : ""}.`, { code: "ANALYZER_EMPTY_RESPONSE" });
-        }
-        const parsed = request.responseMode === "json" ? parseLenientJson2(raw) : raw;
-        log("debug", `${request.purpose}: ${model} answered (${raw.length} chars, attempt ${attempt}/${total}).`);
-        return { raw, parsed, connectionId: connection.id, model, attempts: attempt, usage: extractUsage(result), finishReason, jsonMode, imagesDropped, latencyMs: Date.now() - started };
-      } catch (error) {
-        if (isAbortLike(error) || options.signal?.aborted)
-          throw abortError(options.signal?.reason);
-        const classified = classifyLlmError(error);
-        if (attempt >= total || !isRetryableLlmError(classified)) {
-          log("error", `${request.purpose}: ${classified.message}`, { code: classified.code, attempts: attempt, model });
-          classified.attempts = attempt;
-          throw classified;
-        }
-        options.onRetry?.({ attempt, total: retries, error: llmErrorToRpc(classified) });
-        log("warn", `${request.purpose}: retry ${attempt}/${retries} after ${classified.code}.`, classified.message);
-        await wait(RETRY_DELAY_MS, options.signal);
-      }
-    }
-  }
-  const service = {
-    async complete(request, options = {}) {
-      try {
-        return await run(request, options, "config");
-      } catch (error) {
-        if (isAbortLike(error))
-          throw error;
-        if (error instanceof RpcFailure)
-          throw error;
-        const classified = classifyLlmError(error);
-        throw new RpcFailure(llmErrorToRpc(classified), { cause: classified });
-      }
-    },
-    analyzerClient(clientOptions = {}) {
-      return {
-        async complete(_config, messages, options = {}) {
-          const o = asRecord3(options);
-          const signal = o.signal ?? clientOptions.signal;
-          const timeoutMs = Number(o.timeoutMs);
-          const maxOutputTokens = Number(o.maxOutputTokens ?? o.maxTokens);
-          const partitioned = partitionMessages(o.cachePartition);
-          const result = await run({
-            purpose: str3(o.purpose) || clientOptions.purpose || "analyzer",
-            messages: partitioned?.messages ?? messages.map(toLlmMessage),
-            ...partitioned ? { cacheBreakpoints: partitioned.cacheBreakpoints, flatMessages: messages.map(toLlmMessage) } : {},
-            responseMode: o.responseMode === "text" ? "text" : "json",
-            ...o.structuredOutputSchema && typeof o.structuredOutputSchema === "object" ? { schema: o.structuredOutputSchema } : {},
-            ...Number.isFinite(maxOutputTokens) && maxOutputTokens > 0 ? { maxTokens: maxOutputTokens } : {},
-            ...Number.isFinite(timeoutMs) && timeoutMs > 0 ? { settings: { timeoutMs } } : {},
-            ...o.retries !== undefined ? { retries: Number(o.retries) } : {}
-          }, { signal, onRetry: clientOptions.onRetry }, 0).catch((error) => {
-            if (error instanceof AnalyzerClientErrorClass && error.code === "ANALYZER_NETWORK")
-              throw new TypeError(error.message, { cause: error });
-            throw error;
-          });
-          return { raw: result.raw, parsed: result.parsed, model: result.model, attempts: result.attempts, usage: result.usage };
-        }
-      };
-    },
-    async supportsVision(overrides) {
-      const { settings } = await effectiveSettings(overrides);
-      if (settings.vision !== "auto")
-        return settings.vision === "supported";
-      const connection = await resolveConnection(settings.connectionId);
-      return visionFor(settings, connection, settings.model || connection.model);
-    },
-    async listConnections() {
-      try {
-        const list = asArray2(await host.connections.list(userId));
-        return list.map((c) => ({ id: str3(c.id), name: str3(c.name), provider: str3(c.provider), model: str3(c.model), isDefault: c.is_default === true, hasApiKey: c.has_api_key === true }));
-      } catch (error) {
-        throw new RpcFailure({ code: "provider-error", message: `Could not list LLM connections: ${errorMessage(error)}` });
-      }
-    },
-    async listModels(connectionId) {
-      const connection = await resolveConnection(str3(connectionId));
-      const out = [];
-      const seen = new Set;
-      const add = (id, label = id) => {
-        if (id && !seen.has(id)) {
-          seen.add(id);
-          out.push({ id, label });
-        }
-      };
-      add(connection.model);
-      try {
-        if (host.connections.getModels) {
-          for (const model of await host.connections.getModels(connection.id, userId))
-            add(model.id, model.label || model.id);
-        } else if (deps.getJson) {
-          const result = asRecord3(await deps.getJson(`/api/v1/connections/${encodeURIComponent(connection.id)}/models`, { timeoutMs: 20000 }));
-          const labels = asRecord3(result.model_labels);
-          for (const id of asArray2(result.models))
-            if (typeof id === "string")
-              add(id, str3(labels[id]) || id);
-        }
-      } catch (error) {
-        log("warn", `Model list of ${connection.name || connection.id} unavailable.`, errorMessage(error));
-      }
-      return out;
-    },
-    async testMessage(text, settings) {
-      const started = Date.now();
-      try {
-        const result = await run({ purpose: "message-test", messages: [{ role: "user", content: str3(text) || DEFAULT_TEST_MESSAGE }], responseMode: "text", retries: 0, ...settings ? { settings } : {} }, {}, 0);
-        return { ok: true, latencyMs: Date.now() - started, reply: result.raw };
-      } catch (error) {
-        const rpc = isAbortLike(error) ? { code: "cancelled", message: "The test was cancelled." } : error instanceof RpcFailure ? error.error : llmErrorToRpc(classifyLlmError(error));
-        return { ok: false, latencyMs: Date.now() - started, error: rpc };
       }
     }
   };
