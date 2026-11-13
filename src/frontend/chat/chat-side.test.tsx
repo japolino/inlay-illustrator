@@ -393,6 +393,19 @@ describe("chat side (DOM, dev mock)", () => {
     expect(q(toast)).not.toBeNull();
   });
 
+  test("a failed toast can be closed from its row without retrying", async () => {
+    const r = rig();
+    await until(() => q(".ii-am-chat-footer"));
+    r.mock.emit("generation.finished", { jobId: "job-x", chatId: "chat-1", messageKey: "illustration:msg-4@0", result: "failed", error: { code: "provider-error", message: "HTTP 500", retryable: true } });
+    const toast = '[data-ii-toast-key="generation:job-x"]';
+    const close = await until(() => q(`${toast} .ii-am-chat-toast__action[data-ii-toast-action="dismiss"]`));
+    expect(q(`${toast} [data-ii-toast-action="retry"]`)).not.toBeNull();
+    close.click();
+    await until(() => !q(toast));
+    expect(calls(r, "generation.dismiss").map((c) => c.params)).toEqual([{ jobId: "job-x" }]);
+    expect(calls(r, "generation.retry").length).toBe(0);
+  });
+
   test("Generate right after a host swipe starts the swipe on screen, not the one of the old footer state", async () => {
     const r = rig();
     const button = await until(() => q('[data-message-id="msg-4"] .ii-am-chat-footer__generate'));

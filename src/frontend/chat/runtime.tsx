@@ -205,6 +205,12 @@ function RuntimeToast({ toast, expanded, historyExpanded, lastCopy, onToggle, on
               {toast.action === "retry" ? <RetryIcon /> : toast.action === "dismiss" ? <span aria-hidden="true">×</span> : null}
             </button>
           ) : null}
+          {/* Inlay: a failed toast can be closed from the row itself; AM only offers it inside the expanded error details. */}
+          {toast.action === "retry" ? (
+            <button type="button" class="ii-am-chat-toast__action" data-ii-toast-action="dismiss" aria-label={TOAST_LABELS.dismiss} title={TOAST_LABELS.dismiss} onClick={() => onCommand("dismiss")}>
+              <span aria-hidden="true">×</span>
+            </button>
+          ) : null}
         </span>
       </div>
       {hasDetails && expanded ? (

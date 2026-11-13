@@ -346,7 +346,7 @@ export const CHAT_SIDE_CSS = String.raw`
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 14px minmax(0, 1fr) 28px;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
   align-items: center;
   min-height: 36px;
   padding: 4px 5px 4px 12px;
@@ -670,7 +670,8 @@ export const CHAT_SIDE_CSS = String.raw`
     gap: 6px;
   }
   .ii-am-root .ii-am-chat-toast { min-height: 44px; }
-  .ii-am-root .ii-am-chat-toast__content { grid-template-columns: 16px minmax(0, 1fr) 44px; min-height: 44px; padding: 4px 4px 4px 12px; gap: 6px; }
+  .ii-am-root .ii-am-chat-toast__content { grid-template-columns: 16px minmax(0, 1fr) auto; min-height: 44px; padding: 4px 4px 4px 12px; gap: 6px; }
+  .ii-am-root .ii-am-chat-toast__actions { min-width: 44px; }
   .ii-am-root .ii-am-chat-toast__action { width: 44px; height: 44px; }
   .ii-am-root .ii-am-chat-count:not([data-ii-floating="true"]) { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); bottom: var(--ii-am-composer-inset, calc(64px + env(safe-area-inset-bottom, 0px))); display: grid; justify-items: end; }
   .ii-am-root .ii-am-chat-count:not([data-ii-floating="true"]) .ii-am-chat-count__panel { top: auto; right: 0; bottom: calc(100% + 8px); max-width: calc(100dvw - max(12px, env(safe-area-inset-right, 0px)) - max(12px, env(safe-area-inset-left, 0px))); }
