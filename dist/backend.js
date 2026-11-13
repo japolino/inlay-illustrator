@@ -53121,6 +53121,30 @@ function checkpointPolicyFor(kind) {
 function generationTypeFor(origin, forced, revision) {
   return revision ? "ai-prompt-edit" : origin === "retry" ? "illustration-retry" : forced ? "manual-all" : "chat-auto";
 }
+function isLostSplitPlan(error, depth = 0) {
+  if (!error || typeof error !== "object" || depth > 4)
+    return false;
+  const e = error;
+  if (e.name === "SplitAnalysisError" && e.scope === "expired")
+    return true;
+  if (typeof e.message === "string" && e.message.includes("부분 생성의 분석 계획"))
+    return true;
+  return isLostSplitPlan(e.cause, depth + 1);
+}
+function remainderAnalyzerContext(context, skipSlotNumbers, total) {
+  const skipped = new Set(skipSlotNumbers);
+  const candidateSlots = context.candidateSlots.filter((slot) => !skipped.has(slot.slot_number));
+  const count = Math.min(candidateSlots.length, total - skipped.size);
+  if (count <= 0)
+    return null;
+  return {
+    ...context,
+    candidateSlots,
+    targetImageCount: count,
+    imageCountConstraint: { mode: "fixed", min: count, max: count },
+    ...context.splitAnalysis ? { splitAnalysis: { ...context.splitAnalysis, totalCount: count } } : {}
+  };
+}
 function isCancellation(error, depth = 0) {
   if (!error || typeof error !== "object" || depth > 4)
     return false;
@@ -53594,20 +53618,30 @@ async function generateMessageIllustrations(deps, req) {
           });
       }
     };
+    const runEngine = (engineInput) => engine.run(engineInput, {
+      engineProvider,
+      purpose: req.revision ? "regenerate" : "chat",
+      connectionId: imageTarget.connectionId,
+      model: imageTarget.model,
+      ownerChatId: req.chatId,
+      ownerCharacterId: primaryId,
+      comfyuiWorkflowId: imageTarget.comfyuiWorkflowId,
+      forceRating: () => fixedRating,
+      ...req.ground ? { ground: req.ground } : {},
+      ...req.infill ? { infill: req.infill } : {},
+      analysisConfig
+    }, config);
     try {
-      await engine.run(input, {
-        engineProvider,
-        purpose: req.revision ? "regenerate" : "chat",
-        connectionId: imageTarget.connectionId,
-        model: imageTarget.model,
-        ownerChatId: req.chatId,
-        ownerCharacterId: primaryId,
-        comfyuiWorkflowId: imageTarget.comfyuiWorkflowId,
-        forceRating: () => fixedRating,
-        ...req.ground ? { ground: req.ground } : {},
-        ...req.infill ? { infill: req.infill } : {},
-        analysisConfig
-      }, config);
+      try {
+        await runEngine(input);
+      } catch (e) {
+        if (!isLostSplitPlan(e) || !skipSlotIndexes.length || entries.length || req.signal.aborted)
+          throw e;
+        const context = remainderAnalyzerContext(assembled.context, skipSlotIndexes, W.max);
+        services.log.append("warn", "pipeline", context ? `The saved analysis plan of this partial run is gone (the extension restarted, or the settings changed). Analyzing again for the ${context.targetImageCount} missing image(s); the saved ones are kept.` : "The saved analysis plan of this partial run is gone, and no image is missing; nothing to generate.");
+        if (context)
+          await runEngine({ ...input, skipSlotNumbers: [], analyzerInput: { ...rec6(input.analyzerInput), checkpointPolicy: "restart-analysis", context } });
+      }
       await req.assertTarget();
     } catch (e) {
       if (isCancellation(e) || req.signal.aborted)
