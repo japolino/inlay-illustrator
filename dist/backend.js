@@ -47991,6 +47991,9 @@ var CAPABILITY_RETRY_MS = 30 * 60000;
 function supportsJsonMode(provider, _model) {
   return !/anthropic|claude/.test(provider.toLowerCase());
 }
+function jsonModeParameters(provider) {
+  return /^google(?:_vertex)?$/.test(provider.trim().toLowerCase()) ? { responseMimeType: "application/json" } : { response_format: { type: "json_object" } };
+}
 function omitsTemperature(model, provider = "") {
   const full = model.trim().toLowerCase();
   const m = full.split("/").at(-1) ?? "";
@@ -48466,11 +48469,11 @@ function createLlmService(deps) {
     let attempt = 0;
     for (;; ) {
       attempt += 1;
-      let jsonMode = request.responseMode === "json" && settings.jsonMode && baseParameters.response_format === undefined && supportsJsonMode(connection.provider, model) && now() - (jsonModeRejected.get(capKey) ?? -Infinity) >= CAPABILITY_RETRY_MS;
+      let jsonMode = request.responseMode === "json" && settings.jsonMode && baseParameters.response_format === undefined && baseParameters.responseMimeType === undefined && supportsJsonMode(connection.provider, model) && now() - (jsonModeRejected.get(capKey) ?? -Infinity) >= CAPABILITY_RETRY_MS;
       try {
         let result;
         for (;; ) {
-          const parameters = jsonMode ? { ...baseParameters, response_format: { type: "json_object" } } : baseParameters;
+          const parameters = jsonMode ? { ...baseParameters, ...jsonModeParameters(connection.provider) } : baseParameters;
           try {
             result = await oneAttempt({ connection, model, messages, parameters, reasoning, timeoutMs, signal: options.signal });
             break;
