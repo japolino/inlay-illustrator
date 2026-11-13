@@ -8,6 +8,7 @@ import {
   imageRequestTimeoutMs,
   isConcurrentLockError,
   isRetryableImageError,
+  LOCKED_WAIT_BUDGET_MS,
   normalizeNovelAiSampler,
   NOVELAI_REQUEST_TIMEOUT_MS,
   parseSeed,
@@ -259,7 +260,7 @@ describe("image service", () => {
     expect(fake.deletedImageIds).toEqual(["late"]);
   });
 
-  test("NovelAI's account lock is retried after 2, 4, 6 ... s; other errors keep 100 ms", async () => {
+  test("NovelAI's account lock is waited out after 2, 4, 6 ... s without using up attempts; other errors keep 100 ms", async () => {
     const { fake, images, sleeps } = setup({ runtime: { generationAutoRetryCount: 5 } });
     const locked = () => new Error("NovelAI image generate failed (429): Concurrent generation is locked");
     expect(isConcurrentLockError(locked())).toBe(true);
@@ -268,8 +269,30 @@ describe("image service", () => {
     const labels: string[] = [];
     const result = await images.generate({ purpose: "chat", prompt: "p", negativePrompt: "", width: 512, height: 512 }, { onProgress: (p) => labels.push(p.label) });
     expect(result.imageId).toBe("ok");
-    expect(sleeps).toEqual([2000, 100, 6000, 8000]);
+    expect(sleeps).toEqual([2000, 100, 4000, 6000]);
+    expect(result.attempts).toBe(2);
     expect(labels).toContain("NovelAI is busy with another image, waiting");
+  });
+
+  test("a busy account is waited out when the caller retries itself (retries: 0, the chat pipeline)", async () => {
+    const { fake, images, sleeps } = setup({ runtime: { generationAutoRetryCount: 5 } });
+    const locked = () => new Error("NovelAI image generate failed (429): Concurrent generation is locked");
+    fake.scriptImageGen(locked(), locked(), locked(), { imageDataUrl: "", model: "m", provider: "novelai", imageId: "ok", imageUrl: "/x" } as never);
+    const result = await images.generate({ purpose: "chat", prompt: "p", negativePrompt: "", width: 512, height: 512, retries: 0, queue: true });
+    expect([result.imageId, result.attempts]).toEqual(["ok", 1]);
+    expect(sleeps).toEqual([2000, 4000, 6000]);
+  });
+
+  test("an account that stays busy fails after the wait budget, as a lock error the caller may retry", async () => {
+    const { fake, images, sleeps } = setup();
+    const locked = () => new Error("NovelAI image generate failed (429): Concurrent generation is locked");
+    fake.scriptImageGen(...Array.from({ length: 40 }, locked));
+    const failure = await images.generate({ purpose: "chat", prompt: "p", negativePrompt: "", width: 512, height: 512, retries: 0, queue: true }).catch((e) => e);
+    expect(failure.error).toMatchObject({ retryable: true });
+    expect(failure.error.message).toContain("Concurrent generation is locked");
+    expect(sleeps.reduce((a, b) => a + b, 0)).toBe(LOCKED_WAIT_BUDGET_MS);
+    expect(sleeps.slice(0, 6)).toEqual([2000, 4000, 6000, 8000, 10000, 10000]);
+    expect(fake.imageGenCalls.length).toBe(sleeps.length + 1);
   });
 
   /** NovelAI service whose 60 s hold cap only ends when the test says so; other waits are instant. */

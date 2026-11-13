@@ -253,6 +253,43 @@ function dropImageTypes(messages: LlmMessage[], types: ReadonlySet<string>): Llm
   });
 }
 
+/** A reply that took at least this share of the timeout is logged as a warning. */
+export const SLOW_ANSWER_SHARE = 0.6;
+
+/** Text size of a request (image parts not counted). */
+export function messageChars(messages: readonly LlmMessage[]): number {
+  let chars = 0;
+  for (const m of messages) {
+    if (typeof m.content === "string") chars += m.content.length;
+    else for (const part of m.content) if (part.type === "text") chars += part.text.length;
+  }
+  return chars;
+}
+
+/** One line about an answered request: time, size, tokens (thinking = total - input - output when the provider reports a total). */
+export function answerSummary(a: {
+  provider: string;
+  model: string;
+  elapsedMs: number;
+  timeoutMs: number;
+  chars: number;
+  usage: Record<string, number>;
+  finishReason: string;
+  jsonMode: boolean;
+  attempt: number;
+  total: number;
+}): string {
+  const n = (v: number) => Math.round(v).toLocaleString("en-US");
+  const input = a.usage.prompt_tokens;
+  const output = a.usage.completion_tokens;
+  const thinking = a.usage.reasoning_tokens ?? (a.usage.total_tokens !== undefined && input !== undefined && output !== undefined ? a.usage.total_tokens - input - output : undefined);
+  const tokens = [input !== undefined ? `in ${n(input)}` : "", output !== undefined ? `out ${n(output)}` : "", thinking !== undefined && thinking > 0 ? `thinking ${n(thinking)}` : ""].filter(Boolean).join(", ");
+  const parts = [`${n(a.chars)} chars`, tokens ? `tokens ${tokens}` : "", a.finishReason ? `finish ${a.finishReason}` : "", `JSON mode ${a.jsonMode ? "on" : "off"}`, `attempt ${a.attempt}/${a.total}`].filter(Boolean);
+  const seconds = (a.elapsedMs / 1000).toFixed(1);
+  const slow = a.elapsedMs >= a.timeoutMs * SLOW_ANSWER_SHARE ? ` of the ${Math.round(a.timeoutMs / 1000)} s timeout` : "";
+  return `${a.provider}/${a.model} answered in ${seconds} s${slow} (${parts.join("; ")}).`;
+}
+
 /** A rejection that names JSON mode: remembered per provider/model. */
 function isJsonModeRejection(error: unknown): boolean {
   return /response_format|json_object|json[ _-]?mode|response_?mime_?type|structured output/i.test(errorMessage(error));
@@ -655,6 +692,7 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
     let attempt = 0;
     for (;;) {
       attempt += 1;
+      const attemptStarted = Date.now();
       let jsonMode =
         request.responseMode === "json" && settings.jsonMode && baseParameters.response_format === undefined && baseParameters.responseMimeType === undefined && supportsJsonMode(connection.provider, model) && now() - (jsonModeRejected.get(capKey) ?? -Infinity) >= CAPABILITY_RETRY_MS;
       try {
@@ -717,18 +755,23 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
           throw makeAnalyzerError(`The analyzer returned an empty response${finishReason ? ` (${finishReason})` : ""}.`, { code: "ANALYZER_EMPTY_RESPONSE" });
         }
         const parsed = request.responseMode === "json" ? parseLenientJson(raw) : raw;
-        log("debug", `${request.purpose}: ${model} answered (${raw.length} chars, attempt ${attempt}/${total}).`);
-        return { raw, parsed, connectionId: connection.id, model, attempts: attempt, usage: extractUsage(result), finishReason, jsonMode, imagesDropped, latencyMs: Date.now() - started };
+        const usage = extractUsage(result);
+        const elapsedMs = Date.now() - attemptStarted;
+        // A reply that used most of the timeout is a warning, so it reaches the host console before requests start failing.
+        log(elapsedMs >= timeoutMs * SLOW_ANSWER_SHARE ? "warn" : "info", `${request.purpose}: ${answerSummary({ provider: connection.provider, model, elapsedMs, timeoutMs, chars: raw.length, usage, finishReason, jsonMode, attempt, total })}`);
+        return { raw, parsed, connectionId: connection.id, model, attempts: attempt, usage, finishReason, jsonMode, imagesDropped, latencyMs: Date.now() - started };
       } catch (error) {
         if (isAbortLike(error) || options.signal?.aborted) throw abortError(options.signal?.reason);
         const classified = classifyLlmError(error);
+        // What was asked of which model: a timeout says nothing else about itself.
+        const context = classified.code === "ANALYZER_TIMEOUT" ? ` (${connection.provider}/${model}, request ${messageChars(messages).toLocaleString("en-US")} chars, JSON mode ${jsonMode ? "on" : "off"}, attempt ${attempt}/${total})` : "";
         if (attempt >= total || !isRetryableLlmError(classified)) {
-          log("error", `${request.purpose}: ${classified.message}`, { code: classified.code, attempts: attempt, model });
+          log("error", `${request.purpose}: ${classified.message}${context}`, { code: classified.code, attempts: attempt, model });
           (classified as AnalyzerClientError & { attempts?: number }).attempts = attempt;
           throw classified;
         }
         options.onRetry?.({ attempt, total: retries, error: llmErrorToRpc(classified) });
-        log("warn", `${request.purpose}: retry ${attempt}/${retries} after ${classified.code}.`, classified.message);
+        log("warn", `${request.purpose}: retry ${attempt}/${retries} after ${classified.code}${context}.`, classified.message);
         await wait(RETRY_DELAY_MS, options.signal);
       }
     }
