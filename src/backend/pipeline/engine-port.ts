@@ -16,6 +16,7 @@ import { createAssetMaidEngine, type AssetMaidEngine, type ImageProviderId, type
 import type { BackendServices } from "../services/types.js";
 import { createComfyReferencePreparer, createImageProviderAdapters, ProviderRunRegistry, type ProviderRunContext } from "./providers.js";
 import { OutfitIndexRegistry, withOutfitAwareness, type RunOutfitIndex } from "./outfit-awareness.js";
+import { FormWatchRegistry, withFormAwareness, type RunFormWatch } from "./form-awareness.js";
 import { repairBatchItems } from "./outfit-visibility.js";
 
 export type { OrchestratorRunInputLike, OrchestratorRunResult } from "../../engine/index.js";
@@ -87,6 +88,8 @@ export function createEnginePort(services: BackendServices, options: EnginePortO
   const runConfigs = new Map<string, InlayConfig>();
   // Outfit parts of the runs in flight (outfit-awareness.ts): read by the analyzer wrapper and the batch repair.
   const outfitRuns = new OutfitIndexRegistry();
+  // Form state of the runs in flight (form-awareness.ts): read by the analyzer wrapper.
+  const formRuns = new FormWatchRegistry();
   const repairItems = (input: Record<string, unknown>, items: readonly unknown[]): unknown[] => {
     try {
       return repairBatchItems(items, input.outfitIndex as RunOutfitIndex | undefined, (log) =>
@@ -101,16 +104,26 @@ export function createEnginePort(services: BackendServices, options: EnginePortO
   const engineFor = (): AssetMaidEngine => {
     if (current) return current;
     const engine = (options.createEngine ?? createAssetMaidEngine)({
-      analyzerClient: withOutfitAwareness(
-        services.llm.analyzerClient({ purpose: "analyzer" }),
-        outfitRuns,
-        (n) => services.log.append("info", "pipeline", `Analyzer request: outfit parts of ${n} registered outfit(s) added.`),
-        (repairs) =>
+      analyzerClient: withFormAwareness(
+        withOutfitAwareness(
+          services.llm.analyzerClient({ purpose: "analyzer" }),
+          outfitRuns,
+          (n) => services.log.append("info", "pipeline", `Analyzer request: outfit parts of ${n} registered outfit(s) added.`),
+          (repairs) =>
+            services.log.append(
+              "warn",
+              "pipeline",
+              `Analyzer reply: ${repairs.length} outfit proposal problem(s) repaired instead of failing the analysis.`,
+              repairs.map((r) => `${r.proposalKey || "inline proposal"} for ${r.candidateKey || "(no character)"}: ${r.action}, ${r.reason}`).join("; "),
+            ),
+        ),
+        formRuns,
+        (proposals, rejected) =>
           services.log.append(
-            "warn",
+            "info",
             "pipeline",
-            `Analyzer reply: ${repairs.length} outfit proposal problem(s) repaired instead of failing the analysis.`,
-            repairs.map((r) => `${r.proposalKey || "inline proposal"} for ${r.candidateKey || "(no character)"}: ${r.action}, ${r.reason}`).join("; "),
+            `Analyzer reply: ${proposals.length} new appearance form(s) proposed for a lasting body change; the analysis starts again with them.`,
+            [...proposals.map((p) => `${p.candidateKey}: "${p.label}"${p.copyFrom ? ` (look of ${p.copyFrom.candidateKey})` : ""}${p.evidence ? `, ${p.evidence}` : ""}`), ...rejected.map((r) => `not used, ${r}`)].join("; "),
           ),
       ) as never,
       imageProviders: adapters,
@@ -137,6 +150,8 @@ export function createEnginePort(services: BackendServices, options: EnginePortO
       runConfigs.set(ref.queueScopeKey, config);
       const outfitIndex = (input as { outfitIndex?: RunOutfitIndex }).outfitIndex;
       const releaseOutfits = outfitIndex ? outfitRuns.register(outfitIndex) : undefined;
+      const formWatch = (input as { formWatch?: RunFormWatch }).formWatch;
+      const releaseForms = formWatch ? formRuns.register(formWatch) : undefined;
       // JEV roster progress and retry errors only update the generation session (AM setPhase(..., {jevSelection}),
       // {imageRetry, retryErrors}, {splitAnalysis}); they emit no run event. Forward each change of this run's session.
       const sessions = engine.parts.sessions as { subscribe(listener: () => void): () => void };
@@ -171,6 +186,7 @@ export function createEnginePort(services: BackendServices, options: EnginePortO
       } finally {
         unsubscribe();
         releaseOutfits?.();
+        releaseForms?.();
         runConfigs.delete(ref.queueScopeKey);
         registry.release(runId);
       }

@@ -69,6 +69,8 @@ import type { BackendServices, ChatInfo, PersonaInfo, ResolvedImageTarget } from
 import type { BackendModules } from "../rpc/types.js";
 import type { EnginePort } from "./engine-port.js";
 import { createRunOutfitIndex, recordPreparedOutfits, reuseSameOutfits, withoutAbsenceProposals } from "./outfit-awareness.js";
+import { createRunFormWatch, formRestartAbort, type CreatedForm } from "./form-awareness.js";
+import { saveProposedForms, type FormRestart, type SavedForm } from "./form-save.js";
 import { openAutoGeneration, type AutoGeneration } from "./auto.js";
 import type { ChatMessageView } from "./host-chat.js";
 import { cleanMessageContent } from "./markup.js";
@@ -391,7 +393,47 @@ export interface GeneratorDeps {
   replayOutfits?: Map<string, Map<string, unknown>>;
 }
 
+/** Form layer input of one pass (form-awareness.ts): forms made by the pass before, and whether this one may propose. */
+interface FormPass {
+  created: readonly CreatedForm[];
+  allowProposals: boolean;
+}
+
+/**
+ * Illustrations of one message. When the analyzer reports a registered character whose body lastingly changed, the
+ * first pass stops before any image, the new appearance form is saved on its owner, and the message is analyzed once
+ * more with that form registered (Inlay form layer; AM can only pick an existing form).
+ */
 export async function generateMessageIllustrations(deps: GeneratorDeps, req: GenerateMessageRequest): Promise<GenerateMessageResult> {
+  const { services } = deps;
+  const { formRestart, ...first } = await generateOnce(deps, req, { created: [], allowProposals: true });
+  if (!formRestart) return first;
+  let created: SavedForm[] = [];
+  let skipped: string[] = [];
+  try {
+    ({ created, skipped } = await saveProposedForms(services, formRestart));
+  } catch (e) {
+    services.log.append("warn", "pipeline", "The proposed appearance form could not be saved; the message is analyzed without it.", { error: e instanceof Error ? e.message : String(e) });
+  }
+  if (skipped.length) services.log.append("warn", "pipeline", `Appearance form proposals not used: ${skipped.join("; ")}`);
+  for (const form of created.filter((f) => f.added)) {
+    services.log.append("info", "pipeline", `New appearance form "${form.label}" added to ${form.ownerName} (${form.identityKey}) for a lasting body change in the story.`);
+    try {
+      services.events.emit("notice", { tone: "info", message: `New form for ${form.ownerName}: ${form.label}`, key: `form:${form.identityKey}:${form.label}` });
+    } catch {
+      /* a notice is optional */
+    }
+  }
+  if (req.signal.aborted) throw new DOMException("Image generation preparation was cancelled.", "AbortError");
+  // Persona forms live in the global config, so the second pass reads them fresh; everything else stays the job's snapshot.
+  const config = created.some((f) => f.persona && f.added)
+    ? { ...req.config, characterPrompt: { ...req.config.characterPrompt, personaSettings: (await services.storage.loadConfig()).characterPrompt.personaSettings } }
+    : req.config;
+  const { formRestart: _again, ...second } = await generateOnce(deps, { ...req, config }, { created, allowProposals: false });
+  return second;
+}
+
+async function generateOnce(deps: GeneratorDeps, req: GenerateMessageRequest, forms: FormPass): Promise<GenerateMessageResult & { formRestart?: FormRestart }> {
   const { services, engine } = deps;
   const W = resolveImageCountConstraint(req.countPolicy, req.slots.length);
   let resolvedCount = W.max;
@@ -544,6 +586,15 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
     assembled.context.freeCharacterGenerationEnabled = freeCharacters;
     // Inlay outfit layer: registered outfit parts for the analyzer request and the image-prompt repair.
     const outfitIndex = config.runtime.outfitAwarenessDisabled ? undefined : createRunOutfitIndex(assembled.context);
+    // Inlay form layer: the analyzer may report a lasting body change; its reply then stops this run for a restart.
+    const runAbort = new AbortController();
+    const forwardAbort = () => runAbort.abort(req.signal.reason);
+    if (req.signal.aborted) forwardAbort();
+    else req.signal.addEventListener("abort", forwardAbort, { once: true });
+    const formWatch =
+      !config.runtime.formDetectionDisabled && !req.revision && (forms.allowProposals || forms.created.length)
+        ? createRunFormWatch(assembled.context, { created: forms.created, allowProposals: forms.allowProposals, stop: () => runAbort.abort(formRestartAbort()) })
+        : undefined;
     const revisionImage = req.revision?.image && (await services.llm.supportsVision().catch(() => false)) ? [await req.revision.image()] : [];
     if (req.signal.aborted) throw new DOMException("Image generation preparation was cancelled.", "AbortError");
 
@@ -674,6 +725,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       ...(prepareCharacters ? { prepareCharacters } : {}),
       ...(prepareOutfits ? { prepareOutfits } : {}),
       ...(outfitIndex ? { outfitIndex } : {}),
+      ...(formWatch ? { formWatch } : {}),
       v5PromptContext: ft.v5PromptContext,
       references: ft.references,
       outfitReference: ft.outfitReference,
@@ -785,7 +837,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       },
       skipSlotNumbers: skipSlotIndexes,
       cancelPrevious: true,
-      signal: req.signal,
+      signal: runAbort.signal,
       onEvent(e: Rec) {
         if (e.type === "jev-selection") {
           req.onJevSelection?.(jevSelectionProgress(rec(e.jevSelection)));
@@ -867,7 +919,9 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       }
       await req.assertTarget();
     } catch (e) {
-      if (isCancellation(e) || req.signal.aborted) cancelled = true;
+      if (formWatch?.stopped && !req.signal.aborted && !entries.length) {
+        // Stopped by the form layer before any image: the caller saves the form and analyzes again.
+      } else if (isCancellation(e) || req.signal.aborted) cancelled = true;
       else {
         error = e instanceof Error ? e.message : String(e);
         failure = e;
@@ -882,7 +936,26 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
 
     const done = new Set([...(req.attemptKind === "retry" ? req.existingEntries : []), ...entries].map((e) => e.slotId));
     const missing = Math.max(0, resolvedCount - done.size - (req.attemptKind === "retry" ? req.deletedSlotIndices.length : 0));
-    if (!cancelled && !error && missing) {
+    req.signal.removeEventListener("abort", forwardAbort);
+    const formRestart: FormRestart | undefined =
+      formWatch?.stopped && !req.signal.aborted && !entries.length
+        ? {
+            proposals: formWatch.proposals,
+            rejected: formWatch.rejected,
+            owners: formWatch.owners,
+            nameOf: idLabel,
+            documentOf: (key) =>
+              memberIds.find((id, i) => {
+                const doc = docs.get(id);
+                return (
+                  rawSources[i]?.members.some((m) => m.key === key || m.lorebooks.some((l) => (l.runtimePromptKey || `${m.key}::lore::${l.id}`) === key)) ||
+                  doc?.customCharacters.some((c) => c.id === key) ||
+                  Object.hasOwn(doc?.characterPrompt.characterForms ?? {}, key)
+                );
+              }) ?? primaryId,
+          }
+        : undefined;
+    if (!cancelled && !error && missing && !formRestart) {
       const label = formatLabel(PIPELINE_TEXT.failedCount, { n: missing });
       error = label.en;
       errorKo = label.ko;
@@ -899,6 +972,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       analysisConfig,
       ...(cancelled ? { cancelled: true } : {}),
       ...(commitContinuity ? { commitContinuity } : {}),
+      ...(formRestart ? { formRestart } : {}),
     };
   } finally {
     // Every exit (early result, cancellation, failure) releases this run's share of the character's free-generation stores.

@@ -421,7 +421,8 @@ export async function saveForms(services: BackendServices, characterId: string, 
   return { collection: saved!, revision: formCollectionRevision(saved!) };
 }
 
-function withForms(doc: CharacterDocument, promptKey: string, edit: (c: FormCollection) => FormCollection): CharacterDocument {
+/** The document with a prompt key's collection edited (legacy per-key maps dropped, as `saveForms` does). */
+export function withForms(doc: CharacterDocument, promptKey: string, edit: (c: FormCollection) => FormCollection): CharacterDocument {
   const next = edit(currentForms(doc, promptKey));
   const cp = { ...doc.characterPrompt, characterForms: { ...doc.characterPrompt.characterForms, [promptKey]: normalizeFormCollection(next) } } as Any;
   for (const map of LEGACY_PROMPT_MAPS) {

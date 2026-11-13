@@ -135,6 +135,9 @@ export function SystemSettingsPage() {
         <SystemRow title={S.nsfw.title} description={S.nsfw.description}>
           <Switch aria-label={S.nsfw.title} checked={runtime.nsfwAlwaysEnabled} onCheckedChange={(checked) => void setNsfw(checked)} />
         </SystemRow>
+        <SystemRow title={S.formDetection.title} description={S.formDetection.description}>
+          <Switch aria-label={S.formDetection.title} data-form-detection="" checked={runtime.formDetectionDisabled !== true} onCheckedChange={(checked) => void form.apply({ runtime: { formDetectionDisabled: !checked } })} />
+        </SystemRow>
         <SystemRow
           title={S.developerMode.title}
           description={S.developerMode.description}

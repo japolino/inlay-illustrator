@@ -506,6 +506,11 @@ export interface RuntimeSettings {
    * text clothing evidence of outfit analysis (backend/analysis/outfit-evidence.ts).
    */
   outfitAwarenessDisabled?: boolean;
+  /**
+   * Turns off the Inlay form layer (backend/pipeline/form-awareness.ts): a registered character whose body lastingly
+   * changes in the story no longer gets a new appearance form.
+   */
+  formDetectionDisabled?: boolean;
 }
 
 /** Persisted global settings (userStorage `config/model.json` + `config/settings.json` + artists files). */
@@ -898,6 +903,7 @@ export function normalizeConfigWithIssues(raw: unknown): ConfigNormalizeResult {
     ...(normalizeAnalysisExecution(rt.analysisExecution) ? { analysisExecution: normalizeAnalysisExecution(rt.analysisExecution) } : {}),
     ...(rt.devPromptOnly === true ? { devPromptOnly: true } : {}),
     ...(rt.outfitAwarenessDisabled === true ? { outfitAwarenessDisabled: true } : {}),
+    ...(rt.formDetectionDisabled === true ? { formDetectionDisabled: true } : {}),
   };
 
   const config: InlayConfig = {
