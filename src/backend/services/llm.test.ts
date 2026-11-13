@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { normalizeConfig, type InlayConfig } from "../../shared/contract/index.js";
 import { createFakeHost } from "../testing/fake-host.js";
 import {
+  answerSummary,
   applyPrefixPreparation,
   CAPABILITY_RETRY_MS,
   createLlmService,
@@ -11,6 +12,7 @@ import {
   httpStatusOf,
   jsonModeParameters,
   mergeLeadingSystemMessages,
+  messageChars,
   omitsTemperature,
   prefixPreparationModel,
   prefixPreparedMessages,
@@ -82,6 +84,15 @@ describe("llm helpers", () => {
     for (const [provider, model] of unchanged) expect([provider, model, engineAnalysisConfig(analysis, { provider, model })]).toEqual([provider, model, analysis]);
     expect(engineAnalysisConfig(analysis, null)).toBe(analysis);
     expect(analysis).toEqual({ connectionId: "vx", model: "", temperature: 0.4 });
+  });
+
+  test("request size and the answered-request line: time, tokens with thinking, slow replies name the timeout", () => {
+    expect(messageChars([{ role: "system", content: "abc" }, { role: "user", content: [{ type: "text", text: "de" }, { type: "image", data: "AAAA", mime_type: "image/png" }] }])).toBe(5);
+    const base = { provider: "google_vertex", model: "gemini-4-carbon", timeoutMs: 180000, chars: 12345, finishReason: "stop", jsonMode: true, attempt: 1, total: 6 };
+    expect(answerSummary({ ...base, elapsedMs: 42100, usage: { prompt_tokens: 30000, completion_tokens: 4000, total_tokens: 41000 } })).toBe(
+      "google_vertex/gemini-4-carbon answered in 42.1 s (12,345 chars; tokens in 30,000, out 4,000, thinking 7,000; finish stop; JSON mode on; attempt 1/6).",
+    );
+    expect(answerSummary({ ...base, elapsedMs: 150000, usage: {}, finishReason: "", jsonMode: false })).toBe("google_vertex/gemini-4-carbon answered in 150.0 s of the 180 s timeout (12,345 chars; JSON mode off; attempt 1/6).");
   });
 
   test("http status, vision metadata and errors, text extraction", () => {
@@ -199,6 +210,23 @@ describe("llm service", () => {
     fake.scriptLlm({ content: "", finish_reason: "length" });
     await expect(llm.complete({ purpose: "t", messages: [], responseMode: "json" })).rejects.toMatchObject({ error: { detailCode: "ANALYZER_EMPTY_RESPONSE" } });
     expect(fake.generateCalls).toHaveLength(1);
+  });
+
+  test("the log says how long an answer took and, on a timeout, what was asked of which model", async () => {
+    const fake = createFakeHost();
+    fake.llmConnections.push({ id: "vx", name: "Vertex", provider: "google_vertex", api_url: "", model: "gemini-4-carbon", preset_id: null, is_default: true, has_api_key: true, metadata: {}, reasoning_bindings: null, created_at: 0, updated_at: 0 });
+    const lines: Array<{ level: string; message: string }> = [];
+    const log = { append: (level: string, _scope: string, message: string) => (lines.push({ level, message }), {}), list: () => [], clear: () => undefined };
+    const llm = createLlmService({ host: fake.host, userId: fake.userId, loadConfig: async () => normalizeConfig({ analysis: { timeoutMs: 1000 }, runtime: { generationAutoRetryCount: 0 } }), sleep: async () => undefined, log: log as never });
+    fake.scriptLlm({ content: "{}", finish_reason: "stop", usage: { prompt_tokens: 10, completion_tokens: 2, total_tokens: 20 } });
+    await llm.complete({ purpose: "image-generation", messages: [{ role: "user", content: "hello" }], responseMode: "json" });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]!.level).toBe("info");
+    expect(lines[0]!.message).toMatch(/^image-generation: google_vertex\/gemini-4-carbon answered in \d+\.\d s \(2 chars; tokens in 10, out 2, thinking 8; finish stop; JSON mode on; attempt 1\/1\)\.$/);
+    lines.length = 0;
+    fake.scriptLlm(() => new Promise(() => undefined));
+    await expect(llm.complete({ purpose: "image-generation", messages: [{ role: "user", content: "hello" }], responseMode: "json" })).rejects.toMatchObject({ error: { detailCode: "ANALYZER_TIMEOUT" } });
+    expect(lines).toEqual([{ level: "error", message: "image-generation: Analyzer timed out after 1000 ms (google_vertex/gemini-4-carbon, request 5 chars, JSON mode on, attempt 1/1)" }]);
   });
 
   test("own timeout -> ANALYZER_TIMEOUT; caller abort -> AbortError without retry", async () => {

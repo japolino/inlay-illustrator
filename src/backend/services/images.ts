@@ -23,8 +23,9 @@
  * `runtime.novelaiParallelIntervalSec` between the end of one request and the start of the next.
  * Retries: AM dispatcher `_yt.generate` @120130-120173 / `byt` @120076: `generationAutoRetryCount` (0..10) extra attempts, fixed
  * 100 ms, on transient errors; exhausted -> IMAGE_REQUEST_RETRY_EXHAUSTED. `retries: 0` when an outer dispatcher retries.
- * Port: NovelAI's "Concurrent generation is locked" (another image runs on the account) waits 2, 4, 6, 8, 10 s instead, so a
- * busy account is waited out rather than failing after five 100 ms retries.
+ * Port: NovelAI's "Concurrent generation is locked" (another image runs on the account) is not an attempt: the request
+ * waits 2, 4, 6, 8, 10, 10, ... s, up to LOCKED_WAIT_BUDGET_MS in total, also when the caller retries itself (`retries: 0`),
+ * so a busy or shared account is waited out rather than failing after a few 100 ms retries.
  * Abort: `imageGen.generate` has no signal, so an abort stops waiting (queue / retry / request) and discards a late result
  * (the persisted host image is deleted best effort). NovelAI keeps drawing an image we stopped waiting for (abort, timeout):
  * the queue stays closed until it settles (at most 60 s), so the next request does not run into the account lock.
@@ -52,6 +53,8 @@ export const IMAGE_RETRY_DELAY_MS = 100;
 /** Retry wait after NovelAI's account lock: 2 s per attempt, at most 10 s. */
 export const LOCKED_RETRY_STEP_MS = 2000;
 export const LOCKED_RETRY_MAX_MS = 10_000;
+/** How long one request waits in total for a busy NovelAI account before the lock counts as a failed attempt. */
+export const LOCKED_WAIT_BUDGET_MS = 120_000;
 /** Longest the queue waits for a NovelAI request we stopped waiting for. */
 export const ABANDONED_REQUEST_HOLD_MS = 60_000;
 /** AM `kmt` 138113: each NovelAI attempt times out after 120 s (retryable). */
@@ -602,6 +605,8 @@ export function createImageService(deps: ImageServiceDeps): ImageService {
       };
 
       const attemptLoop = async (): Promise<{ result: Record<string, unknown>; attempts: number }> => {
+        let lockWaits = 0;
+        let lockWaitedMs = 0;
         for (let attempt = 1; ; attempt += 1) {
           if (signal?.aborted) throw abortError(signal.reason);
           onProgress?.({ label: attempt === 1 ? "Generating image" : `Generating image (retry ${attempt - 1}/${retries})`, labelKo: "이미지 생성 중", ...(attempt > 1 ? { retry: { attempt: attempt - 1, total: retries }, retryCount: `${attempt - 1}/${retries}` } : {}) });
@@ -611,6 +616,18 @@ export function createImageService(deps: ImageServiceDeps): ImageService {
             return { result, attempts: attempt };
           } catch (error) {
             if (isAbortLike(error) || signal?.aborted) throw abortError(signal?.reason);
+            // Another image is being drawn on the account (a shared key, another device): that is a wait, not a failed
+            // attempt, so it is waited out here even when the caller does the retrying (`retries: 0`, the chat pipeline).
+            if (isConcurrentLockError(error) && lockWaitedMs < LOCKED_WAIT_BUDGET_MS) {
+              lockWaits += 1;
+              const delay = Math.min(LOCKED_RETRY_MAX_MS, LOCKED_RETRY_STEP_MS * lockWaits, LOCKED_WAIT_BUDGET_MS - lockWaitedMs);
+              lockWaitedMs += delay;
+              log("warn", `NovelAI is busy with another image on this account; trying again in ${delay / 1000} s (${lockWaitedMs / 1000} of ${LOCKED_WAIT_BUDGET_MS / 1000} s).`);
+              onProgress?.({ label: "NovelAI is busy with another image, waiting", labelKo: "NovelAI가 다른 이미지를 생성 중이라 대기 중" });
+              await wait(delay, signal);
+              attempt -= 1;
+              continue;
+            }
             if (attempt > retries || !isRetryableImageError(error)) {
               const base = toRpcError(error);
               const rpc: RpcError =
