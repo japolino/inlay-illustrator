@@ -9,6 +9,7 @@ import {
   engineAnalysisConfig,
   extractText,
   httpStatusOf,
+  jsonModeParameters,
   mergeLeadingSystemMessages,
   omitsTemperature,
   prefixPreparationModel,
@@ -119,6 +120,27 @@ describe("llm service", () => {
     setConfig({ analysis: { connectionId: "cl" } });
     expect(await llm.analyzerTarget()).toEqual({ provider: "anthropic", model: "claude-x" });
     await expect(llm.analyzerTarget({ connectionId: "gone" })).rejects.toMatchObject({ error: { detailCode: "ANALYZER_CONNECTION_MISSING" } });
+  });
+
+  test("JSON mode goes to Google and Vertex connections as responseMimeType, to every other provider as response_format", async () => {
+    expect(jsonModeParameters("google_vertex")).toEqual({ responseMimeType: "application/json" });
+    expect(jsonModeParameters(" Google ")).toEqual({ responseMimeType: "application/json" });
+    for (const provider of ["openai", "openrouter", "custom", "deepseek", ""]) expect([provider, jsonModeParameters(provider)]).toEqual([provider, { response_format: { type: "json_object" } }]);
+    const parametersFor = async (provider: string, analysis: Record<string, unknown> = {}) => {
+      const { fake, llm } = setup({ analysis: { connectionId: "g", ...analysis } });
+      fake.llmConnections.push({ id: "g", name: "G", provider, api_url: "", model: "gemini-4-carbon", preset_id: null, is_default: false, has_api_key: true, metadata: {}, reasoning_bindings: null, created_at: 0, updated_at: 0 });
+      fake.scriptLlm({ content: "{}" });
+      const result = await llm.complete({ purpose: "t", messages: [{ role: "user", content: "hi" }], responseMode: "json" });
+      return { jsonMode: result.jsonMode, parameters: fake.generateCalls[0]!.input.parameters as Record<string, unknown> };
+    };
+    for (const provider of ["google_vertex", "google"]) {
+      const sent = await parametersFor(provider);
+      expect([provider, sent.jsonMode, sent.parameters.responseMimeType, sent.parameters.response_format]).toEqual([provider, true, "application/json", undefined]);
+    }
+    const openrouter = await parametersFor("openrouter");
+    expect([openrouter.parameters.responseMimeType, openrouter.parameters.response_format]).toEqual([undefined, { type: "json_object" }]);
+    const off = await parametersFor("google_vertex", { jsonMode: false });
+    expect([off.jsonMode, off.parameters.responseMimeType, off.parameters.response_format]).toEqual([false, undefined, undefined]);
   });
 
   test("JSON mode rejection: resent without response_format, remembered, not a retry", async () => {

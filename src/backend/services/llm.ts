@@ -4,7 +4,8 @@
  * - Transport: `spindle.generate.raw` with an explicit model (`settings.model || connection.model`): the host uses
  *   `input.model` verbatim for raw calls and does not merge preset parameters (lumiverse-host §2).
  * - Reasoning: `config.analysis.reasoning` -> Lumiverse reasoning DTO (inherit / off / custom + effort). Replaces AM `vk`/`iEe`.
- * - JSON mode: `response_format: {type:"json_object"}` for OpenAI-compatible / Gemini / DeepSeek providers (AM forced JSON mode
+ * - JSON mode: `response_format: {type:"json_object"}` for OpenAI-format providers, `responseMimeType: "application/json"`
+ *   for Lumiverse's `google` / `google_vertex` providers (`jsonModeParameters`) (AM forced JSON mode
  *   where the provider had one, Claude got none, spec/llm.md §0.2). A rejection is resent once without it (not counted as a
  *   retry) and remembered per provider/model only when the error names JSON mode.
  * - Parsing: the engine's lenient parser (AM `iQe` @79678) -> ANALYZER_JSON_PARSE with `analyzerRaw`.
@@ -87,11 +88,20 @@ interface ResolvedConnection {
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * JSON mode (`response_format: {type:"json_object"}`) for every connection except Anthropic, as AM sends it to every
+ * JSON mode (see `jsonModeParameters` for its form) for every connection except Anthropic, as AM sends it to every
  * OpenAI-format provider including custom endpoints (81884). A provider that rejects it is resent without it and remembered.
  */
 export function supportsJsonMode(provider: string, _model: string): boolean {
   return !/anthropic|claude/.test(provider.toLowerCase());
+}
+
+/**
+ * The JSON mode parameter in the form the connection's Lumiverse provider understands. The `google` and `google_vertex`
+ * providers build a Gemini body: they put `responseMimeType` into `generationConfig` and copy every key they don't know
+ * (`response_format` included) into the body as it is, which Gemini answers with a 400. Every other provider is OpenAI-format.
+ */
+export function jsonModeParameters(provider: string): Record<string, unknown> {
+  return /^google(?:_vertex)?$/.test(provider.trim().toLowerCase()) ? { responseMimeType: "application/json" } : { response_format: { type: "json_object" } };
 }
 
 /**
@@ -646,11 +656,11 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
     for (;;) {
       attempt += 1;
       let jsonMode =
-        request.responseMode === "json" && settings.jsonMode && baseParameters.response_format === undefined && supportsJsonMode(connection.provider, model) && now() - (jsonModeRejected.get(capKey) ?? -Infinity) >= CAPABILITY_RETRY_MS;
+        request.responseMode === "json" && settings.jsonMode && baseParameters.response_format === undefined && baseParameters.responseMimeType === undefined && supportsJsonMode(connection.provider, model) && now() - (jsonModeRejected.get(capKey) ?? -Infinity) >= CAPABILITY_RETRY_MS;
       try {
         let result: unknown;
         for (;;) {
-          const parameters = jsonMode ? { ...baseParameters, response_format: { type: "json_object" } } : baseParameters;
+          const parameters = jsonMode ? { ...baseParameters, ...jsonModeParameters(connection.provider) } : baseParameters;
           try {
             result = await oneAttempt({ connection, model, messages, parameters, reasoning, timeoutMs, signal: options.signal });
             break;
