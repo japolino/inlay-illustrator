@@ -1,16 +1,31 @@
-// Hand-written checks of the split-analysis multi-depiction units (0.9.89.5 names l5/eve/Fyt/$yt/Kyt = 0.9.90 B4/Jxe/abt/ibt/obt).
+// Hand-written checks of the split-analysis units. 0.9.89.5 names l5/eve/Fyt/$yt/Kyt = 0.9.90 B4/Jxe/abt/ibt/obt;
+// Asset Maid 0.9.91 removed Jxe (phase contract v8) in favour of uwe_91 (v10, slot_context-based initial/detail
+// texts, n90 @162029) and added $vt_91 (initial-plan note normalisation, @161979), qvt_91/Yxe (8 MiB response
+// limit, @162040), gyt_91 (deduplicated scene paragraphs + index slot_context, @163328) and byt_91 (history
+// validation outcome promise wrapped around every analyzer run, @163504).
 import { describe, expect, test } from "bun:test";
 import {
+  $vt_91,
   B4,
-  Jxe,
+  Yxe,
   abt,
+  byt_91,
+  gyt_91,
   ibt,
-  obt,
+  qvt_91,
+  uwe_91,
 } from "../core/asset-maid-core.js";
 
 describe("Domain 3: Split Analysis Pipeline & Multi-Depiction", () => {
-  test("Split analysis contract version is bumped to 8", () => {
-    expect(Jxe.version).toBe(8);
+  test("Split analysis phase contract is version 10 and speaks in slot_context indices", () => {
+    expect(uwe_91.version).toBe(10);
+    expect(Object.isFrozen(uwe_91)).toBe(true);
+    expect(uwe_91.initial).toContain(
+      "Choose image_count distinct slot numbers from slot_context; before and after are zero-based indices into the scene paragraph array.",
+    );
+    expect(uwe_91.initial).toContain("Leave pose, expression, camera, coordinates, modifiers and tags for detail.");
+    expect(uwe_91.detail).toContain("Read the locked definitions and slot_context before/after source paragraphs");
+    expect(uwe_91.detail).toContain("Never borrow unassigned slots to fill coverage.");
   });
 
   test("Split detail preamble uses universal multi-depiction fyt text", () => {
@@ -254,5 +269,94 @@ describe("Domain 3: Split Analysis Pipeline & Multi-Depiction", () => {
     expect(result.illustrations.length).toBe(1);
     expect(result.illustrations[0].actor_roster.length).toBe(2);
     expect(result.illustrations[0].actor_roster[1].actorId).toBe("actor_2");
+  });
+});
+
+describe("0.9.91 split helpers", () => {
+  test("$vt_91 normalises initial-plan notes and strips evidence/source quotes", () => {
+    const out = $vt_91({
+      slot_number: 2,
+      sceneIntent: ["  Alice waves  ", "Alice waves", ""],
+      temporal_state: " Morning ",
+      stateConstraints: "Rain stopped",
+      evidence: "quoted line",
+      sourceQuote: "q",
+      source_quote: "q2",
+      occurrences: [],
+    });
+    expect(out.scene_intent).toBe("Alice waves");
+    expect(out.temporal_state).toBe("Morning");
+    expect(out.state_constraints).toEqual(["Rain stopped"]);
+    expect("evidence" in out).toBe(false);
+    expect("sourceQuote" in out).toBe(false);
+    expect("source_quote" in out).toBe(false);
+    expect(out.occurrences).toEqual([]);
+  });
+
+  test("$vt_91 joins multi-line intents and keeps an empty constraint list", () => {
+    const out = $vt_91({ slot_number: 0, scene_intent: ["A", "B"], temporal_state: null, state_constraints: null });
+    expect(out.scene_intent).toBe(["A", "B"].join(String.fromCharCode(10)));
+    expect(out.temporal_state).toBe("");
+    expect(out.state_constraints).toEqual([]);
+  });
+
+  test("gyt_91 deduplicates scene paragraphs and maps slot_context to indices", () => {
+    const { scene, slot_context } = gyt_91([
+      { slot_number: 0, before: "p0", after: "p1" },
+      { slot_number: 1, before: "p1", after: "p2" },
+      { slot_number: 2, before: "p2", after: "p2" },
+    ]);
+    expect(scene).toEqual(["p0", "p1", "p2"]);
+    expect(slot_context).toEqual([
+      { slot_number: 0, before: 0, after: 1 },
+      { slot_number: 1, before: 1, after: 2 },
+      { slot_number: 2, before: 2, after: 2 },
+    ]);
+  });
+
+  test("qvt_91 / Yxe reject split responses above 8 MiB as non-retryable SPLIT_RESOURCE_LIMIT", () => {
+    const big = "x".repeat(8 * 1024 * 1024 + 1);
+    let caught: any;
+    try {
+      qvt_91(big);
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught?.message).toBe("분할 분석 응답이 8MiB를 초과했습니다.");
+    expect(caught?.code).toBe("SPLIT_RESOURCE_LIMIT");
+    expect(caught?.retryable).toBe(false);
+    expect(() => Yxe(big)).toThrow("분할 분석 응답이 8MiB를 초과했습니다.");
+    expect(() => qvt_91("x".repeat(1024))).not.toThrow();
+    expect(Yxe('{"illustrations":[]}') as unknown).toEqual({ illustrations: [] });
+    expect(Yxe('{"conflict":"plan contradicts source"}') as unknown).toEqual({ conflict: "plan contradicts source" });
+  });
+
+  test("byt_91 resolves the history validation promise with undefined on success", async () => {
+    let seen: Promise<string | undefined> | undefined;
+    const value = await byt_91({}, async (validation: Promise<string | undefined>) => {
+      seen = validation;
+      return 7;
+    });
+    expect(value).toBe(7);
+    expect(await seen).toBeUndefined();
+  });
+
+  test("byt_91 labels failures by stage and abort state", async () => {
+    const run = async (input: any, error: unknown) => {
+      let seen!: Promise<string | undefined>;
+      await expect(
+        byt_91(input, async (validation: Promise<string | undefined>) => {
+          seen = validation;
+          throw error;
+        }),
+      ).rejects.toBe(error);
+      return seen;
+    };
+    expect(await run({}, new Error("boom"))).toBe("V5 분석 응답 검증 실패");
+    expect(await run({ splitStage: { phase: "detail" } }, new Error("boom"))).toBe("분할 분석 응답 검증 실패");
+    expect(await run({}, new SyntaxError("bad json"))).toBe("응답 형식 오류");
+    const controller = new AbortController();
+    controller.abort();
+    expect(await run({ signal: controller.signal }, new Error("boom"))).toBe("요청 취소");
   });
 });

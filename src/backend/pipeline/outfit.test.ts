@@ -5,6 +5,7 @@ import type { AnalyzerClientLike } from "../services/types.js";
 import {
   augmentV5AnalyzerMessages,
   createRunOutfitIndex,
+  FREEFORM_CLOTHING_POLICY,
   OutfitIndexRegistry,
   recordPreparedOutfits,
   reuseSameOutfits,
@@ -354,6 +355,21 @@ describe("analyzer outfit awareness", () => {
     expect(augmented.find((m) => m.role === "system")).toBe(messages.find((m) => m.role === "system"));
   });
 
+  test("the compact Argon contract (AM 0.9.91: freeform is one string) keeps upstream's text and gets the clothing rules and the part policy", () => {
+    const compact = buildV5AnalyzerMessages(build.request as never, { argonContract: true }).messages as unknown as typeof messages;
+    const before = payloadOf(compact).response_contract.analysis_policy;
+    expect(typeof before.freeform).toBe("string");
+    expect(typeof payloadOf(messages).response_contract.analysis_policy.freeform).toBe("object");
+    const augmented = augmentV5AnalyzerMessages(compact, (k, f, o) => index.wire(k, f, o))!;
+    const after = payloadOf(augmented).response_contract.analysis_policy;
+    expect(after.freeform).toBe(`${before.freeform} ${Object.values(FREEFORM_CLOTHING_POLICY).join(" ")}`);
+    expect(after.outfits.part_contradiction).toContain("black stockings vs. white knee-high socks");
+    expect(after.outfits.select).toBe(before.outfits.select);
+    for (const key of ["evidence", "continuity", "interactions", "frame_placement", "output"]) expect(after[key]).toBe(before[key]);
+    // Applying it to an already augmented request adds nothing more.
+    expect(payloadOf(augmentV5AnalyzerMessages(augmented, (k, f, o) => index.wire(k, f, o))!).response_contract.analysis_policy.freeform).toBe(after.freeform);
+  });
+
   test("the cache partition the client sends gets the same parts and policy as the flat request", async () => {
     const payload = payloadOf(messages);
     const { analyzer_catalog, response_contract, appearance_catalog, ...live } = payload;
@@ -366,6 +382,8 @@ describe("analyzer outfit awareness", () => {
         { kind: "outfit-static", messages: [{ role: "user", content: `STATIC V5 APPEARANCE CATALOG\n${JSON.stringify({ appearance_catalog })}` }] },
       ],
       liveMessages: [{ role: "user", content: [{ type: "text", text: `CURRENT V5 ANALYSIS INPUT\n${JSON.stringify(live)}` }, { type: "image_url", image_url: { url: "data:," } }] }],
+      // AM 0.9.91 `Vpe`: the transport applies it for Gemini 4 (llm.ts), so augmentation must hand it on untouched.
+      prefixPreparation: { staticBlocksInSystem: true, instruction: "I", turns: [{ role: "user", content: 'V5 CACHE PREPARATION\n{"mode":"prepare"}' }, { role: "assistant", content: '{"ready":true}' }] },
     };
     const sent: Array<Record<string, unknown> | undefined> = [];
     const client: AnalyzerClientLike = { complete: async (_c, _ms, o) => (sent.push(o as Record<string, unknown>), { raw: "{}", parsed: {} }) };
@@ -382,6 +400,9 @@ describe("analyzer outfit awareness", () => {
     const liveParts = out.liveMessages[0]!.content as Array<Record<string, unknown>>;
     expect(liveParts[1]).toBe(partition.liveMessages[0]!.content[1]);
     expect(out.namespace).toBe("test");
+    expect(out).not.toBe(partition);
+    expect(out.prefixPreparation).toBe(partition.prefixPreparation);
+    expect(out.liveMessages).toHaveLength(1);
     // Nothing registered: the partition passes through untouched.
     await withOutfitAwareness(client, registry).complete({}, messages, { cachePartition: partition });
     expect(sent[1]!.cachePartition).toBe(partition);

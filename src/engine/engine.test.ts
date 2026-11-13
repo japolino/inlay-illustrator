@@ -1,5 +1,5 @@
-// Generator: bun S/engine-build/gen/engine-e2e.mjs (S = the am990 scratch dir)
-// (runs the ORIGINAL 0.9.90 bundle wired like Asset Maid's boot code, p120 @185030-185085, with the same driver).
+// Generator: bun tmp-audit/upstream/harness/rec-engine.mjs (AM_VER=990 reproduces the previous 0.9.90 fixtures exactly)
+// (runs the ORIGINAL 0.9.91 bundle wired like Asset Maid's boot code, n90.p120 @187600-187642, with the same driver).
 import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";

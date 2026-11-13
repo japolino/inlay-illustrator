@@ -6,11 +6,14 @@ import {
   STORAGE_PATHS,
   V5_SCENE_PRESETS,
   type AtelierChangedEvent,
+  type AtelierState,
   type InlayConfig,
+  type InstructionLibrary,
 } from "../../shared/contract/index.js";
 import { createFakeHost } from "../testing/fake-host.js";
 import { RpcFailure } from "../rpc/errors.js";
 import { createAtelierService } from "./atelier.js";
+import { atelierMessage } from "./atelier-messages.js";
 import { createRunLog } from "./run-log.js";
 import { createStorageService } from "./storage.js";
 import type { EventBus } from "./types.js";
@@ -355,5 +358,113 @@ describe("legacy V5 directions migration (0.9.89 -> Atelier guideline library)",
     expect(created.scene.length).toBe(2);
     expect(state.library.scene.selected).toBe(s0.library.scene.selected);
     expect(Object.keys(state.library.scene.items).length).toBe(Object.keys(s0.library.scene.items).length + 2);
+  });
+});
+
+/** A preset document whose directing rules (`content.analysis.scene.rules`) target the guideline `direction`. */
+function presetWithRules(title: string, direction: string, ruleId: string): string {
+  return JSON.stringify({
+    format: PRESET_FORMAT,
+    title,
+    content: {
+      analysis: {
+        scene: { selected: "default", items: {}, rules: { [direction]: [{ id: ruleId, condition: { direction }, effect: { kind: "path", action: "remove", path: "actor.text.dialogue" } }] } },
+        imageRatio: { selected: "default", items: {} },
+      },
+    },
+  });
+}
+const sceneRules = (json: string, direction: string) => (JSON.parse(json).content.analysis.scene.rules?.[direction] ?? []) as Array<{ id: string; enabled?: boolean }>;
+
+describe("atelier directing rules of the preset open in the Atelier (AM 0.9.91)", () => {
+  /** Active preset P (rule p-rule) and inactive preset Q (rule q-rule), both on the built-in "default" direction. */
+  async function twoPresets() {
+    const ctx = setup();
+    const { atelier } = ctx;
+    const direction = "default";
+    let state = await atelier.getState();
+    const p = await atelier.createDocument({ baseRevision: state.revision, name: "P", json: presetWithRules("P", direction, "p-rule") });
+    const q = await atelier.createDocument({ baseRevision: p.state.revision, name: "Q", json: presetWithRules("Q", direction, "q-rule") });
+    state = (await atelier.activateDocument({ baseRevision: q.state.revision, id: p.id })).state;
+    return { ...ctx, direction, p: p.id, q: q.id, state };
+  }
+  const docJson = (state: AtelierState, id: string) => state.catalog.documents.find((d) => d.id === id)!.json;
+
+  test("a stored preset with malformed rules does not break the state: it owns nothing and the other presets still load", async () => {
+    const { stored, direction, p, q } = await twoPresets();
+    const file = stored();
+    const broken = file.catalog.documents.find((d: { id: string }) => d.id === q);
+    const json = JSON.parse(broken.json);
+    json.content.analysis.scene.rules = { [direction]: null };
+    broken.json = JSON.stringify(json);
+    const { atelier } = setup({ [STORAGE_PATHS.atelier]: file });
+    const state = await atelier.getState();
+    expect(state.presetLibraries?.[q]?.ownedRuleIds[direction]).toEqual([]);
+    expect(state.presetLibraries?.[p]?.ownedRuleIds[direction]).toEqual(["p-rule"]);
+    expect(state.ownedRuleIds[direction]).toEqual(["p-rule"]);
+  });
+
+  test("the state carries the library and owned rule ids of every preset; the active ones stay in library / ownedRuleIds", async () => {
+    const { state, direction, p, q } = await twoPresets();
+    expect(state.ownedRuleIds[direction]).toEqual(["p-rule"]);
+    expect(state.presetLibraries?.[p]?.ownedRuleIds[direction]).toEqual(["p-rule"]);
+    expect(state.presetLibraries?.[q]?.ownedRuleIds[direction]).toEqual(["q-rule"]);
+    const rulesOf = (lib: InstructionLibrary | undefined) => (lib?.scene.items[direction]?.system?.rules ?? []).map((r) => r.id);
+    expect(rulesOf(state.library)).toEqual(["p-rule"]);
+    expect(rulesOf(state.presetLibraries?.[q]?.library)).toEqual(["q-rule"]);
+  });
+
+  test("an edit with a non-active presetId resolves and commits with that preset: its rules change, the active preset's stay", async () => {
+    const { atelier, state, direction, p, q } = await twoPresets();
+    const shown = state.presetLibraries![q]!.library!.scene.items[direction]!.system!;
+    const toggled = { ...shown, rules: shown.rules.map((r) => (r.id === "q-rule" ? { ...r, enabled: false } : r)) };
+    const { state: next } = await atelier.setSystems({ presetId: q, systems: { [direction]: toggled } });
+    expect(sceneRules(docJson(next, q), direction)).toMatchObject([{ id: "q-rule", enabled: false }]);
+    expect(docJson(next, p)).toBe(docJson(state, p));
+    expect(next.revision).toBe(state.revision + 1);
+    expect(next.ownedRuleIds[direction]).toEqual(["p-rule"]);
+    expect(next.presetLibraries?.[q]?.library?.scene.items[direction]?.system?.rules).toMatchObject([{ id: "q-rule", enabled: false }]);
+    // Preset-owned rules are not copied into the stored (user) library.
+    expect(next.presetLibraries?.[p]?.library?.scene.items[direction]?.system?.rules.map((r) => r.id)).toEqual(["p-rule"]);
+  });
+
+  test("option, output mode and guideline edits with a presetId keep both presets' rules", async () => {
+    const { atelier, state, direction, p, q } = await twoPresets();
+    const { id: custom } = await atelier.createGuideline({ kind: "scene", presetId: q });
+    const s1 = (await atelier.setOutputMode({ presetId: q, id: custom, mode: "comic" })).state;
+    const before = s1.library.scene.items[direction]!.instruction;
+    const s2 = (await atelier.saveGuidelines({ presetId: q, kind: "scene", edits: [{ id: direction, field: "instruction", before, value: "Rain." }] })).state;
+    for (const s of [s1, s2]) {
+      expect(sceneRules(docJson(s, p), direction).map((r) => r.id)).toEqual(["p-rule"]);
+      expect(sceneRules(docJson(s, q), direction).map((r) => r.id)).toEqual(["q-rule"]);
+    }
+    expect(s2.library.scene.items[direction]).toMatchObject({ instruction: "Rain." });
+    expect(s2.library.scene.items[custom]).toMatchObject({ outputMode: "comic" });
+    expect(docJson(s2, p)).toBe(docJson(state, p));
+  });
+
+  test("restore with a presetId compares against that preset's view", async () => {
+    const { atelier, state, q } = await twoPresets();
+    const expected = state.presetLibraries![q]!.library!.scene.items["system-pov"]!;
+    const { state: next } = await atelier.restoreGuideline({ presetId: q, id: "system-pov", expected });
+    expect(next.library.scene.items["system-pov"]).toBeDefined();
+  });
+
+  test("a commit for a preset that no longer exists fails with the English message and the Korean original", async () => {
+    const { atelier, state, direction, p } = await twoPresets();
+    const failure = await rejects(atelier.setSystems({ presetId: "gone", systems: { [direction]: state.library.scene.items[direction]!.system! } }));
+    expect(failure).toMatchObject({ code: "bad-request", detailCode: "atelier-validation", message: "The preset being edited no longer exists, so its rules could not be saved.", messageKo: "편집하던 프리셋이 없어 규칙을 저장하지 못했습니다." });
+    expect(docJson(await atelier.getState(), p)).toBe(docJson(state, p));
+    expect(atelierMessage(new Error("편집하던 프리셋이 없어 규칙을 저장하지 못했습니다."))).toEqual({ message: "The preset being edited no longer exists, so its rules could not be saved.", messageKo: "편집하던 프리셋이 없어 규칙을 저장하지 못했습니다." });
+  });
+
+  test("export bundles the user library without the active preset's rules", async () => {
+    const { atelier, direction, q } = await twoPresets();
+    const out = JSON.parse((await atelier.exportDocument({ id: q, selection: { scene: [direction], imageRatio: [] } })).json);
+    // The bundled built-in item carries user changes only (before 0.9.91 the active preset's p-rule came along).
+    expect(Object.keys(out.content.analysis.scene.items)).toEqual([direction]);
+    expect(JSON.stringify(out.content.analysis.scene.items)).not.toContain("p-rule");
+    // Q's own rules travel in its document.
+    expect(out.content.analysis.scene.rules[direction].map((r: { id: string }) => r.id)).toEqual(["q-rule"]);
   });
 });

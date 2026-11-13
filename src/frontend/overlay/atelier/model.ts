@@ -4,7 +4,7 @@
  * output order (AM `K_` / `Qst` / `ect` with the `FP` list-move diff and the `une` move apply), export selection,
  * error classification. The preset JSON itself is validated by the backend (`atelier.validateDocument`, AM `rZ`).
  */
-import type { AtelierDocumentSelection, AtelierState, GuidelineKind, PresetDiagnostic } from "../../../shared/contract/atelier.js";
+import type { AtelierDocumentSelection, AtelierState, GuidelineKind, InstructionLibrary, PresetDiagnostic } from "../../../shared/contract/atelier.js";
 import type { RpcError } from "../../../shared/contract/rpc.js";
 import { ATELIER_LABELS as L } from "./labels.js";
 
@@ -114,6 +114,44 @@ export function parsePreset(json: string): { doc?: PresetDocument; error?: strin
 }
 
 export const isContentEmpty = (content: unknown): boolean => !isRec(content) || Object.keys(content).length === 0;
+
+/** Preset JSON without its directing rules `content.analysis.scene.rules` (AM 0.9.91 `Jve_91`). Throws on invalid JSON. */
+export function stripSceneRules(json: string): string {
+  const doc = JSON.parse(json) as { content?: { analysis?: { scene?: Rec } } };
+  if (doc.content?.analysis?.scene) delete doc.content.analysis.scene.rules;
+  return JSON.stringify(doc);
+}
+
+/** Directing rules of a preset JSON (`content.analysis.scene.rules`; undefined when absent). */
+export function sceneRulesOf(json: string): unknown {
+  return (JSON.parse(json) as { content?: { analysis?: { scene?: { rules?: unknown } } } }).content?.analysis?.scene?.rules;
+}
+
+/**
+ * The draft document with the directing rules of a newer stored version (AM 0.9.91 `Jlt_91` `patch`): rules absent ->
+ * removed; else `content.analysis` is created when missing and the rules are replaced.
+ */
+export function withSceneRules(doc: PresetDocument, rules: unknown): PresetDocument {
+  const next = clone(doc);
+  const content = next.content as PresetContent & { analysis?: { scene: Rec; imageRatio?: Rec } & Rec };
+  if (rules === undefined) {
+    if (isRec(content.analysis) && isRec(content.analysis.scene)) delete content.analysis.scene.rules;
+  } else {
+    content.analysis ??= { scene: { selected: "default", items: {} }, imageRatio: { selected: "default", items: {} } };
+    content.analysis.scene.rules = clone(rules);
+  }
+  return next;
+}
+
+/**
+ * The guideline library as the Atelier shows it with preset `documentId` open (AM 0.9.91 `qst(e, shownId)`): that
+ * preset's directing rules overlaid, and the rule ids it owns. Falls back to the active preset's view (older states).
+ */
+export function presetLibraryOf(state: AtelierState, documentId: string): { library: InstructionLibrary; ownedRuleIds: Record<string, string[]>; error?: string } {
+  const entry = state.presetLibraries?.[documentId];
+  if (!entry) return { library: state.library, ownedRuleIds: state.ownedRuleIds };
+  return { library: entry.library ?? state.library, ownedRuleIds: entry.ownedRuleIds, ...(entry.error ? { error: entry.error } : {}) };
+}
 
 /**
  * Editable document: an empty `content` means "the bundled baseline" (AM `nw`), so the editor starts from the baseline

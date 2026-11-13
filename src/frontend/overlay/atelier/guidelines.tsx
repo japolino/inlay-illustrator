@@ -13,7 +13,7 @@ import { Badge, Checkbox } from "../workspace/parts.js";
 import { SearchField } from "../shell/filters.js";
 import { ATELIER_HELP, ATELIER_LABELS as L } from "./labels.js";
 import { Choice, CountChip, EmptyRow, FieldRow, HelpCard, Notice, Row, RowActions, Section, Table, Td, Th } from "./kit.js";
-import { guidelineName, guidelineRows, isBuiltInGuideline, isFixedDefault, restoreDescription, textMatches } from "./model.js";
+import { guidelineName, guidelineRows, isBuiltInGuideline, isFixedDefault, presetLibraryOf, restoreDescription, textMatches } from "./model.js";
 import { guidelineDraftKey, useAtelier, useAtelierStore, type GuidelineTab } from "./store.js";
 
 export function guidelineKindOf(tab: GuidelineTab, free: FreeGenerationKind): GuidelineKind {
@@ -72,8 +72,11 @@ export function GuidelinesPage() {
 
 export function GuidelineEditor({ kind, id }: { kind: GuidelineKind; id: string }) {
   const state = useAppState((s) => s.atelier);
+  const documentId = useAtelier((s) => s.documentId);
   if (!state) return null;
-  const exists = kind === "scene" || kind === "imageRatio" ? !!state.library[kind].items[id] : !!state.freeGeneration[kind].items[id];
+  // AM 0.9.91: the guideline view shows the library with the open preset's directing rules (`zc(snapshot, shownId)`).
+  const library = presetLibraryOf(state, documentId).library;
+  const exists = kind === "scene" || kind === "imageRatio" ? !!library[kind].items[id] : !!state.freeGeneration[kind].items[id];
   if (!exists) return <Notice tone="warning">{L.guidelines.notFound}</Notice>;
   return (
     <div class="grid gap-3" data-atelier-editor="guideline" data-atelier-guideline={`${kind}:${id}`}>
@@ -130,9 +133,11 @@ function GuidelineSaveBar({ kind, id }: { kind: GuidelineKind; id: string }) {
 function DirectingEditor({ id }: { id: string }) {
   const atelier = useAtelierStore();
   const state = useAppState((s) => s.atelier)!;
+  const documentId = useAtelier((s) => s.documentId);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const item = state.library.scene.items[id] as SceneInstruction;
+  const library = presetLibraryOf(state, documentId).library;
+  const item = library.scene.items[id] as SceneInstruction;
   const fixed = isFixedDefault("scene", id);
   const builtIn = isBuiltInGuideline("scene", id);
   const mode = item.outputMode ?? "illustration";
@@ -144,7 +149,7 @@ function DirectingEditor({ id }: { id: string }) {
         <Choice label={L.fields.format} value={mode} disabled={fixed} options={[{ value: "illustration", label: L.fields.illustration }, { value: "comic", label: L.fields.comic }]} onChange={(m) => void atelier.setOutputMode(id, m)} />
       </FieldRow>
       <DraftText kind="scene" id={id} field="instruction" label={L.guidelines.text} multiline />
-      {state.library.scene.selected === id && (mode === "comic" || id === "system-pov") ? (
+      {library.scene.selected === id && (mode === "comic" || id === "system-pov") ? (
         <Section title={L.guidelines.executionTitle}>
           {mode === "comic" ? (
             <FieldRow label={L.guidelines.comicFrame}>
@@ -176,8 +181,9 @@ function RatioEditor({ id }: { id: string }) {
   const atelier = useAtelierStore();
   const state = useAppState((s) => s.atelier)!;
   const customImageSizes = useAppState((s) => s.config?.runtime.customImageSizes ?? []);
+  const documentId = useAtelier((s) => s.documentId);
   const [error, setError] = useState<string | null>(null);
-  const item = state.library.imageRatio.items[id]!;
+  const item = presetLibraryOf(state, documentId).library.imageRatio.items[id]!;
   const fixed = id === "default";
   const carried = normalizeCustomImageSizes(item.customSizes ?? []);
   const candidates = sizeCandidates([...customImageSizes, ...carried.filter((c) => !customImageSizes.some((x) => x.id === c.id))]);

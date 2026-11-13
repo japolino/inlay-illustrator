@@ -1,6 +1,7 @@
 // Parity fixtures: src/engine/__fixtures__/v5/analyzer.{request.*,runs,recovery,split,misc}.json (+ inputs.json)
-// Generator: bun S/engine-build/gen/v5/inputs.mjs && bun S/engine-build/gen/v5/analyzer.mjs (ORIGINAL 0.9.90 bundle,
-// default Atelier preset runtime)
+// Generator: bun tmp-audit/upstream/harness/rec-analyzer.mjs (ORIGINAL Asset Maid 0.9.91 bundle run through an eval
+// harness, default Atelier preset runtime; AM_VER=990 reproduces the previous 0.9.90 fixtures exactly). recovery and
+// misc are unchanged from the 0.9.90 generator (their units did not change in 0.9.91).
 import { afterEach, describe, expect, test } from "bun:test";
 import inputs from "../__fixtures__/v5/inputs.json";
 import misc from "../__fixtures__/v5/analyzer.misc.json";
@@ -28,6 +29,7 @@ import {
   type V5AnalyzerRunInput,
   type V5DirectionSettings,
   type V5RevisionPromptChannel,
+  type V5SplitStage,
 } from "./analyzer";
 import type { V5RecoveryMode } from "./runtime";
 
@@ -62,8 +64,10 @@ describe("v5 analyzer request", () => {
       const v = f.variant;
       const userDirections = directions(v.directions);
       expect(plain(userDirections)).toEqual(f.userDirections);
-      const build = buildV5AnalyzerRequest({ runtime, context: ctxWith(v.contextPatch), continuitySnapshot: v.continuitySnapshot ?? null, config: v.config, userDirections });
-      const messages = buildV5AnalyzerMessages(build.request, { revisionDirection: v.revisionDirection, revisionPromptChannels: v.revisionPromptChannels });
+      const build = buildV5AnalyzerRequest({ runtime, context: ctxWith(v.contextPatch), continuitySnapshot: v.continuitySnapshot ?? null, config: v.config, userDirections, revisionDirection: v.revisionDirection });
+      const messages = buildV5AnalyzerMessages(build, { revisionDirection: v.revisionDirection, revisionPromptChannels: v.revisionPromptChannels });
+      expect(build.argonContract).toBe(false);
+      expect(build.splitStage).toBeUndefined();
       expect(build.request.systemInstruction).toBe(f.systemInstruction);
       expect(plain(build.request.enabledModifierRefs)).toEqual(f.enabledModifierRefs);
       expect(plain(build.request.localRecovery)).toEqual(f.localRecovery);
@@ -94,9 +98,12 @@ describe("v5 analyzer request", () => {
   }
 });
 
-// Same table as gen/v5/analyzer.mjs run(...) calls.
+// Same table as rec-analyzer.mjs runCases.
+const singleSlot = { targetImageCount: 1, imageCountConstraint: { mode: "fixed", min: 1, max: 1 } };
+const argonConfig = { provider: "vertex_ai", model: "gemini-4-argon" };
+const splitStages = (inputs as unknown as { splitStages: Record<string, V5SplitStage> }).splitStages;
 const revisionChannels: V5RevisionPromptChannel[] = [{ id: "c1", kind: "character", label: "Alice", actorIndex: 0, positive: "1girl, silver hair", negative: "" }];
-const runCases: Record<string, { response: string; directionsKey?: string; contextPatch?: Record<string, unknown>; config?: Record<string, unknown>; revision?: boolean; continuity?: boolean }> = {
+const runCases: Record<string, { response: string; directionsKey?: string; contextPatch?: Record<string, unknown>; config?: Record<string, unknown>; revision?: boolean; continuity?: boolean; splitStage?: string }> = {
   default: { response: "default" },
   pov: { response: "pov", directionsKey: "pov" },
   comic: { response: "comic", directionsKey: "comic" },
@@ -110,6 +117,10 @@ const runCases: Record<string, { response: string; directionsKey?: string; conte
   "freechar-disabled": { response: "generatedActor" },
   revision: { response: "default", revision: true },
   continuity: { response: "continuity", continuity: true },
+  argon: { response: "default", config: argonConfig },
+  "split-initial": { response: "splitInitial", contextPatch: singleSlot, splitStage: "initial" },
+  "split-detail": { response: "splitDetail", contextPatch: singleSlot, splitStage: "detail" },
+  "argon-split-detail": { response: "splitDetail", contextPatch: singleSlot, splitStage: "detail", config: argonConfig },
 };
 
 describe("v5 analyzer run (c0e) with a fake LLM client", () => {
@@ -119,10 +130,12 @@ describe("v5 analyzer run (c0e) with a fake LLM client", () => {
       setEngineEnv(seededEnv(expected.input.seed));
       const response = responses[rc.response];
       const sent: { config: unknown; messages: unknown; options: Record<string, unknown> }[] = [];
+      const validations: Promise<string | undefined>[] = [];
       const analyzer = createV5Analyzer(
         {
         async complete(config, messages, options) {
-          const { signal: _s, onRequestProgress: _p, beforeRequest: _b, ...rest } = options;
+          const { signal: _s, onRequestProgress: _p, beforeRequest: _b, historyValidation, ...rest } = options;
+          validations.push(historyValidation);
           sent.push({ config, messages, options: rest });
           return typeof response === "string" ? { raw: response, parsed: null } : { raw: JSON.stringify(response), parsed: response };
         },
@@ -137,6 +150,7 @@ describe("v5 analyzer run (c0e) with a fake LLM client", () => {
         checkpointContext: inputs.checkpointContext,
         checkpointPolicy: "restart-analysis",
         ...(rc.revision ? { revisionDirection: "Make her smile", revisionPromptChannels: revisionChannels } : {}),
+        ...(rc.splitStage ? { splitStage: splitStages[rc.splitStage] } : {}),
       };
       let result: unknown = null;
       let error: unknown = null;
@@ -156,10 +170,13 @@ describe("v5 analyzer run (c0e) with a fake LLM client", () => {
       const r = result as { requestPayload?: unknown } | null;
       expect(r && { ...plain(r), requestPayload: hash(r.requestPayload) }).toEqual(expected.result);
       expect(plain(error)).toEqual(expected.error);
+      // 0.9.91 byt_91: every request carries a promise that settles with the run outcome.
+      expect((await Promise.all(validations)).map((v) => v ?? null)).toEqual(expected.historyValidation);
 
       // The standalone request builder reproduces exactly what c0e sent.
-      const build = buildV5AnalyzerRequest({ runtime, context: input.context, continuitySnapshot: input.continuitySnapshot, config: input.config, userDirections: input.userDirections });
-      const messages = buildV5AnalyzerMessages(build.request, { revisionDirection: input.revisionDirection, revisionPromptChannels: input.revisionPromptChannels });
+      const build = buildV5AnalyzerRequest({ runtime, context: input.context, continuitySnapshot: input.continuitySnapshot, config: input.config, userDirections: input.userDirections, splitStage: input.splitStage, revisionDirection: input.revisionDirection });
+      expect(build.argonContract).toBe(rc.config === argonConfig && rc.splitStage !== "initial");
+      const messages = buildV5AnalyzerMessages(build, { revisionDirection: input.revisionDirection, revisionPromptChannels: input.revisionPromptChannels });
       expect({ messages: hash(messages.messages), schema: hash(build.structuredOutputSchema), cachePartition: hash(messages.cachePartition) }).toEqual(expected.sent[0].hashes);
     });
   }
@@ -201,7 +218,7 @@ describe("v5 split analysis", () => {
       runtime: { catalogFingerprint },
       captureSelectionSettings: () => undefined,
       async run(R: any): Promise<any> {
-        calls.push({ phase: R.splitStage.phase, assignedSlots: R.splitStage.assignedSlots ?? null, targetImageCount: R.context.targetImageCount, imageCountConstraint: R.context.imageCountConstraint, slots: R.context.candidateSlots.map((s: any) => s.slot_number) });
+        calls.push({ phase: R.splitStage.phase, assignedSlots: R.splitStage.assignedSlots ?? null, slotContext: R.splitStage.slotContext ?? null, historyStage: R.historyStage ?? null, historyAttempt: R.historyAttempt ?? null, targetImageCount: R.context.targetImageCount, imageCountConstraint: R.context.imageCountConstraint, slots: R.context.candidateSlots.map((s: any) => s.slot_number) });
         if (R.splitStage.phase === "initial")
           return { splitPlan: { illustrations: R.context.candidateSlots.map((s: any) => ({ slot_number: s.slot_number, actor_roster: [] })) }, response: { illustrations: [], diagnostics: [] }, localProjection: {}, catalogFingerprint: "x" };
         return { response: { illustrations: R.splitStage.assignedSlots.map((n: number) => ({ slotNumber: n, status: "recovered", diagnostics: [] })), diagnostics: [{ code: "batch", impact: "recovered", path: "$", message: String(R.splitStage.assignedSlots) }] } };
@@ -214,7 +231,7 @@ describe("v5 split analysis", () => {
       { context: { ...context, candidateSlots: slots, splitAnalysis: { totalCount: 4, batchSize: 3, retries: 2 } }, config: { provider: "openai" }, userDirections: {}, continuitySnapshot: null, checkpointContext: { chatKey: "chat-key", messageId: "msg-9", pendingKey: "resp-9" } },
       async (initial: any, prepare) => ({ prepared: await prepare("characters", async () => "prepared-characters"), initialSlots: initial.splitPlan.illustrations.map((i: any) => i.slot_number) }),
       (done, total, label) => stages.push({ done, total, label }),
-      (p) => progress.push({ phase: p.phase, steps: p.steps.map((s: any) => ({ id: s.id, status: s.status, firstImage: s.firstImage, imageCount: s.imageCount })) }),
+      (p) => progress.push({ phase: p.phase, steps: p.steps.map((s: any) => ({ id: s.id, status: s.status, firstImage: s.firstImage, imageCount: s.imageCount, attempt: s.attempt, historyAttempt: s.historyAttempt ?? null })) }),
     );
     runner.dispose();
     expect(plain({ calls, stages, progress, result: out, error })).toEqual(split.runner);

@@ -33,6 +33,9 @@ export const ROSTER_LABELS = {
   editPerson: "Edit person", // 인물 편집
   viewInfo: "View info", // 정보 보기
   promote: "Promote to registered person", // 등록 인물로 승격
+  aiPeople: "AI-generated people", // AI 생성 인물
+  bulkPromote: (n: number) => `Bulk promote (${n})`, // 일괄 승격 (N명)
+  bulkPromoteTitle: (n: number) => `Promote ${n} AI people to registered people`, // AI 인물 N명을 등록 인물로 승격
   deletePerson: "Delete person", // 인물 삭제
   deleteConfirm: "Delete this person?", // 이 인물을 삭제할까요?
   confirmDelete: "Confirm delete", // 삭제 확인

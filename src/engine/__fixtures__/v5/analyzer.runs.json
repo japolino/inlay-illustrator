@@ -18,6 +18,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -27,9 +28,12 @@
     "hashes": {
      "messages": "fnv1a64-e58662a967da6f1f",
      "schema": "fnv1a64-e3706e91f82d9a05",
-     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
+     "cachePartition": "fnv1a64-b576c842cfc30a8c"
     }
    }
+  ],
+  "historyValidation": [
+   null
   ],
   "result": {
    "profile": "v5-hybrid",
@@ -493,6 +497,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -502,9 +507,12 @@
     "hashes": {
      "messages": "fnv1a64-ec48fb4a012350cd",
      "schema": "fnv1a64-e3706e91f82d9a05",
-     "cachePartition": "fnv1a64-7bd275d37dfca0ba"
+     "cachePartition": "fnv1a64-6c6f45b97b3ff78e"
     }
    }
+  ],
+  "historyValidation": [
+   null
   ],
   "result": {
    "profile": "v5-hybrid",
@@ -836,6 +844,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -845,9 +854,12 @@
     "hashes": {
      "messages": "fnv1a64-744c1b86a2010f2b",
      "schema": "fnv1a64-cc31d8acd1e241d9",
-     "cachePartition": "fnv1a64-ecbdcedb425ad834"
+     "cachePartition": "fnv1a64-2e8353b3aebffae0"
     }
    }
+  ],
+  "historyValidation": [
+   null
   ],
   "result": {
    "profile": "v5-hybrid",
@@ -1273,6 +1285,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -1282,9 +1295,12 @@
     "hashes": {
      "messages": "fnv1a64-9ecab3062b2dd75c",
      "schema": "fnv1a64-e3706e91f82d9a05",
-     "cachePartition": "fnv1a64-26b06bab7e08e4b3"
+     "cachePartition": "fnv1a64-0290ee159efc3c57"
     }
    }
+  ],
+  "historyValidation": [
+   null
   ],
   "result": {
    "profile": "v5-hybrid",
@@ -1709,6 +1725,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -1718,9 +1735,12 @@
     "hashes": {
      "messages": "fnv1a64-a97c1eb03eb92f35",
      "schema": "fnv1a64-c99bbf5f8bad9f07",
-     "cachePartition": "fnv1a64-59d8a1e65b919982"
+     "cachePartition": "fnv1a64-9fefff2a2a9ad616"
     }
    }
+  ],
+  "historyValidation": [
+   null
   ],
   "result": {
    "profile": "v5-hybrid",
@@ -1963,6 +1983,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -1972,9 +1993,12 @@
     "hashes": {
      "messages": "fnv1a64-e58662a967da6f1f",
      "schema": "fnv1a64-e3706e91f82d9a05",
-     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
+     "cachePartition": "fnv1a64-b576c842cfc30a8c"
     }
    }
+  ],
+  "historyValidation": [
+   null
   ],
   "result": {
    "profile": "v5-hybrid",
@@ -2279,6 +2303,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -2288,9 +2313,12 @@
     "hashes": {
      "messages": "fnv1a64-e58662a967da6f1f",
      "schema": "fnv1a64-e3706e91f82d9a05",
-     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
+     "cachePartition": "fnv1a64-b576c842cfc30a8c"
     }
    }
+  ],
+  "historyValidation": [
+   null
   ],
   "result": {
    "profile": "v5-hybrid",
@@ -2667,6 +2695,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -2676,9 +2705,12 @@
     "hashes": {
      "messages": "fnv1a64-e58662a967da6f1f",
      "schema": "fnv1a64-e3706e91f82d9a05",
-     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
+     "cachePartition": "fnv1a64-b576c842cfc30a8c"
     }
    }
+  ],
+  "historyValidation": [
+   "V5 분석 응답 검증 실패"
   ],
   "result": null,
   "error": {
@@ -2732,6 +2764,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -2741,9 +2774,12 @@
     "hashes": {
      "messages": "fnv1a64-e58662a967da6f1f",
      "schema": "fnv1a64-e3706e91f82d9a05",
-     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
+     "cachePartition": "fnv1a64-b576c842cfc30a8c"
     }
    }
+  ],
+  "historyValidation": [
+   "V5 분석 응답 검증 실패"
   ],
   "result": null,
   "error": {
@@ -2781,6 +2817,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -2790,9 +2827,12 @@
     "hashes": {
      "messages": "fnv1a64-e58662a967da6f1f",
      "schema": "fnv1a64-e3706e91f82d9a05",
-     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
+     "cachePartition": "fnv1a64-b576c842cfc30a8c"
     }
    }
+  ],
+  "historyValidation": [
+   null
   ],
   "result": {
    "profile": "v5-hybrid",
@@ -3202,6 +3242,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -3211,9 +3252,12 @@
     "hashes": {
      "messages": "fnv1a64-e58662a967da6f1f",
      "schema": "fnv1a64-e3706e91f82d9a05",
-     "cachePartition": "fnv1a64-cb52b5ad4d1100d8"
+     "cachePartition": "fnv1a64-b576c842cfc30a8c"
     }
    }
+  ],
+  "historyValidation": [
+   null
   ],
   "result": {
    "profile": "v5-hybrid",
@@ -3623,6 +3667,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -3632,9 +3677,12 @@
     "hashes": {
      "messages": "fnv1a64-ed3f5d5686e99a55",
      "schema": "fnv1a64-e3706e91f82d9a05",
-     "cachePartition": "fnv1a64-2446727dc6577ad2"
+     "cachePartition": "fnv1a64-2e6b26d225bf38a6"
     }
    }
+  ],
+  "historyValidation": [
+   null
   ],
   "result": {
    "profile": "v5-hybrid",
@@ -4098,6 +4146,7 @@
     },
     "options": {
      "purpose": "image-generation",
+     "streamOutput": false,
      "cacheSourceId": "char-123",
      "diagnostic": {
       "analysisKind": "chat-image-v5",
@@ -4107,9 +4156,12 @@
     "hashes": {
      "messages": "fnv1a64-584cf2b2cb6e66da",
      "schema": "fnv1a64-e3706e91f82d9a05",
-     "cachePartition": "fnv1a64-db0df4e0c5246c5d"
+     "cachePartition": "fnv1a64-3781c83877fbd1d9"
     }
    }
+  ],
+  "historyValidation": [
+   null
   ],
   "result": {
    "profile": "v5-hybrid",
@@ -4326,6 +4378,1578 @@
     "actor.1fmv888.fk4pvw": "persona::p1"
    },
    "requestPayload": "fnv1a64-c344255f9cc7d66c",
+   "localProjection": {
+    "allowedSizeIds": [
+     1,
+     2,
+     5
+    ],
+    "characterCoordinates": "fixed"
+   },
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
+  },
+  "error": null
+ },
+ "argon": {
+  "input": {
+   "response": "<object>",
+   "directionsKey": "default",
+   "contextPatch": null,
+   "config": {
+    "provider": "vertex_ai",
+    "model": "gemini-4-argon"
+   },
+   "revisionDirection": null,
+   "continuitySnapshot": false,
+   "seed": 5
+  },
+  "sent": [
+   {
+    "config": {
+     "provider": "vertex_ai",
+     "model": "gemini-4-argon"
+    },
+    "options": {
+     "purpose": "image-generation",
+     "streamOutput": false,
+     "cacheSourceId": "char-123",
+     "diagnostic": {
+      "analysisKind": "chat-image-v5",
+      "phase": "v5-interaction-led"
+     }
+    },
+    "hashes": {
+     "messages": "fnv1a64-28362b19332ba057",
+     "schema": "fnv1a64-e3706e91f82d9a05",
+     "cachePartition": "fnv1a64-b3651e59164b2954"
+    }
+   }
+  ],
+  "historyValidation": [
+   null
+  ],
+  "result": {
+   "profile": "v5-hybrid",
+   "response": {
+    "illustrations": [
+     {
+      "slotNumber": 0,
+      "status": "recovered",
+      "presentationMode": "single-frame",
+      "actors": [
+       {
+        "actorId": "actor_1",
+        "candidateKey": "actor.g00nx3.1d3zc2v",
+        "formId": "form_default",
+        "sex": "female",
+        "continuityIdentity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "outfit": {
+         "selectedId": "outfit_1"
+        }
+       },
+       {
+        "actorId": "actor_2",
+        "candidateKey": "actor.1fmv888.fk4pvw",
+        "formId": "form_default",
+        "sex": "male",
+        "continuityIdentity": {
+         "kind": "persona_reference",
+         "value": "persona::p1"
+        },
+        "outfit": {
+         "selectedId": "outfit_1"
+        }
+       }
+      ],
+      "interactions": [
+       {
+        "interactionRef": "interaction:0",
+        "id": "arm_hug",
+        "mode": "directed",
+        "sourceActorId": "actor_1",
+        "targetActorId": "actor_2",
+        "bindingStatus": "complete",
+        "unresolvedActorRefs": [],
+        "modifiers": []
+       },
+       {
+        "interactionRef": "interaction:1",
+        "id": "sleeve_grab",
+        "mode": "directed",
+        "sourceActorId": "actor_1",
+        "targetActorId": "actor_2",
+        "bindingStatus": "complete",
+        "unresolvedActorRefs": [],
+        "modifiers": []
+       }
+      ],
+      "location": {
+       "modifiers": [
+        {
+         "id": "scene.rating",
+         "options": [
+          "sfw"
+         ]
+        },
+        {
+         "id": "environment.setting",
+         "options": [
+          "outdoors"
+         ]
+        },
+        {
+         "id": "environment.time",
+         "options": [
+          "morning"
+         ]
+        }
+       ],
+       "freeTags": [
+        "school_gate",
+        "cherry_blossoms"
+       ],
+       "instruction": "Brick school gate with morning sunlight.",
+       "comicPageInstruction": "",
+       "comicPageModifiers": [],
+       "comicPanels": [],
+       "comicCrossPanelActors": []
+      },
+      "analyzerSizeId": 2,
+      "framePlacement": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "center": {
+         "x": 0.35,
+         "y": 0.5
+        },
+        "source": "analyzer",
+        "instruction": ""
+       },
+       {
+        "actorId": "actor_2",
+        "placementIndex": 1,
+        "center": {
+         "x": 0.68,
+         "y": 0.52
+        },
+        "source": "analyzer",
+        "instruction": ""
+       }
+      ],
+      "actorDetails": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "actions": [],
+        "modifiers": [
+         {
+          "id": "gaze.direction",
+          "options": [
+           "looking_at_another"
+          ]
+         },
+         {
+          "id": "expression.general",
+          "options": [
+           "light_smile"
+          ]
+         },
+         {
+          "id": "expression.mouth.openness",
+          "options": [
+           "open_mouth"
+          ]
+         },
+         {
+          "id": "pose.body",
+          "options": [
+           "standing"
+          ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
+        "poseInstruction": "leaning forward slightly",
+        "objects": [],
+        "dialogueInstruction": ""
+       },
+       {
+        "actorId": "actor_2",
+        "placementIndex": 1,
+        "actions": [],
+        "modifiers": [
+         {
+          "id": "expression.general",
+          "options": [
+           "surprised"
+          ]
+         },
+         {
+          "id": "pose.body",
+          "options": [
+           "standing"
+          ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
+        "poseInstruction": "",
+        "objects": [],
+        "dialogueInstruction": ""
+       }
+      ],
+      "camera": {
+       "modifiers": [
+        {
+         "id": "camera.view",
+         "options": [
+          "from_side"
+         ]
+        }
+       ],
+       "instruction": "Eye-level camera at the gate facing both actors."
+      },
+      "diagnostics": [
+       {
+        "code": "tag-canonicalized",
+        "impact": "recovered",
+        "path": "$.illustrations[0].frame_placement.freeTags[0]",
+        "message": "Canonicalized a free tag to 'school_gate'."
+       },
+       {
+        "code": "tag-canonicalized",
+        "impact": "recovered",
+        "path": "$.illustrations[0].frame_placement.freeTags[1]",
+        "message": "Canonicalized a free tag to 'cherry_blossoms'."
+       }
+      ]
+     },
+     {
+      "slotNumber": 1,
+      "status": "degraded",
+      "presentationMode": "single-frame",
+      "actors": [
+       {
+        "actorId": "actor_1",
+        "candidateKey": "actor.m0ais.6ynrym",
+        "formId": "form_default",
+        "sex": "male",
+        "continuityIdentity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:bob"
+        },
+        "outfit": {
+         "selectedId": "outfit_1"
+        }
+       }
+      ],
+      "interactions": [],
+      "location": {
+       "modifiers": [
+        {
+         "id": "scene.rating",
+         "options": [
+          "sfw"
+         ]
+        },
+        {
+         "id": "environment.setting",
+         "options": [
+          "indoors"
+         ]
+        }
+       ],
+       "freeTags": [
+        "staff_room",
+        "window"
+       ],
+       "instruction": "",
+       "comicPageInstruction": "",
+       "comicPageModifiers": [],
+       "comicPanels": [],
+       "comicCrossPanelActors": []
+      },
+      "analyzerSizeId": 1,
+      "framePlacement": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "center": {
+         "x": 0.5,
+         "y": 0.45
+        },
+        "facing": {
+         "id": "facing_away"
+        },
+        "source": "analyzer",
+        "instruction": ""
+       }
+      ],
+      "actorDetails": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "actions": [],
+        "modifiers": [
+         {
+          "id": "gaze.direction",
+          "options": [
+           "looking_down"
+          ]
+         },
+         {
+          "id": "expression.general",
+          "options": [
+           "exhausted"
+          ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
+        "poseInstruction": "hands on the window sill",
+        "objects": [],
+        "dialogueInstruction": ""
+       }
+      ],
+      "camera": {
+       "modifiers": [],
+       "instruction": "Camera behind the actor looking out the window."
+      },
+      "diagnostics": [
+       {
+        "code": "modifier-stage-mismatch",
+        "impact": "degraded",
+        "path": "$.illustrations[1].frame_placement.modifiers[2]",
+        "message": "Omitted 'framing.crop' from 'frame_placement' because its compiled owner is 'actor_detail'."
+       },
+       {
+        "code": "tag-canonicalized",
+        "impact": "recovered",
+        "path": "$.illustrations[1].frame_placement.freeTags[0]",
+        "message": "Canonicalized a free tag to 'staff_room'."
+       }
+      ]
+     }
+    ],
+    "diagnostics": []
+   },
+   "attempts": 1,
+   "resumedFromCheckpoint": false,
+   "candidateBindings": [
+    {
+     "candidateKey": "actor.1fmv888.fk4pvw",
+     "identityReferences": [
+      "persona::p1",
+      "Shouta",
+      "p1"
+     ],
+     "sex": "male",
+     "continuityIdentity": {
+      "kind": "persona_reference",
+      "value": "persona::p1"
+     },
+     "outfitCandidateIds": [
+      "Casual hoodie"
+     ],
+     "allowOutfitCreation": true,
+     "appearanceForms": [
+      {
+       "formRef": "unknown_form_1",
+       "formId": "form_default",
+       "sex": "male",
+       "defaultOutfitRef": "Casual hoodie",
+       "outfits": [
+        {
+         "outfitRef": "Casual hoodie",
+         "outfitId": "outfit_1"
+        }
+       ]
+      }
+     ],
+     "defaultFormRef": "unknown_form_1"
+    },
+    {
+     "candidateKey": "actor.g00nx3.1d3zc2v",
+     "identityReferences": [
+      "lore:alice",
+      "Alice",
+      "Ally"
+     ],
+     "sex": "female",
+     "continuityIdentity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:alice"
+     },
+     "outfitCandidateIds": [
+      "Navy sailor school uniform",
+      "White summer sundress"
+     ],
+     "allowOutfitCreation": true,
+     "appearanceForms": [
+      {
+       "formRef": "silver_hair,_blue_eyes",
+       "formId": "form_default",
+       "sex": "female",
+       "defaultOutfitRef": "Navy sailor school uniform",
+       "outfits": [
+        {
+         "outfitRef": "Navy sailor school uniform",
+         "outfitId": "outfit_1"
+        },
+        {
+         "outfitRef": "White summer sundress",
+         "outfitId": "outfit_2"
+        }
+       ]
+      }
+     ],
+     "defaultFormRef": "silver_hair,_blue_eyes"
+    },
+    {
+     "candidateKey": "actor.m0ais.6ynrym",
+     "identityReferences": [
+      "lore:bob",
+      "Bob"
+     ],
+     "sex": "male",
+     "continuityIdentity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:bob"
+     },
+     "outfitCandidateIds": [
+      "Grey business suit"
+     ],
+     "allowOutfitCreation": true,
+     "appearanceForms": [
+      {
+       "formRef": "black_hair,_tall",
+       "formId": "form_default",
+       "sex": "male",
+       "defaultOutfitRef": "Grey business suit",
+       "outfits": [
+        {
+         "outfitRef": "Grey business suit",
+         "outfitId": "outfit_1"
+        }
+       ]
+      }
+     ],
+     "defaultFormRef": "black_hair,_tall"
+    }
+   ],
+   "candidateSourceKeys": {
+    "actor.g00nx3.1d3zc2v": "lore:alice",
+    "actor.m0ais.6ynrym": "lore:bob",
+    "actor.1fmv888.fk4pvw": "persona::p1"
+   },
+   "requestPayload": "fnv1a64-420a363b97613771",
+   "localProjection": {
+    "allowedSizeIds": [
+     1,
+     2,
+     5
+    ],
+    "characterCoordinates": "fixed"
+   },
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
+  },
+  "error": null
+ },
+ "split-initial": {
+  "input": {
+   "response": "<object>",
+   "directionsKey": "default",
+   "contextPatch": {
+    "targetImageCount": 1,
+    "imageCountConstraint": {
+     "mode": "fixed",
+     "min": 1,
+     "max": 1
+    }
+   },
+   "config": {
+    "provider": "openai"
+   },
+   "revisionDirection": null,
+   "continuitySnapshot": false,
+   "splitStage": "initial",
+   "seed": 5
+  },
+  "sent": [
+   {
+    "config": {
+     "provider": "openai"
+    },
+    "options": {
+     "purpose": "image-generation",
+     "streamOutput": false,
+     "cacheSourceId": "char-123",
+     "diagnostic": {
+      "analysisKind": "chat-image-v5",
+      "phase": "v5-split-initial"
+     }
+    },
+    "hashes": {
+     "messages": "fnv1a64-e6edd1f9bf500b03",
+     "schema": "fnv1a64-af52a71edf55045d",
+     "cachePartition": "fnv1a64-618f4f44a5f96b67"
+    }
+   }
+  ],
+  "historyValidation": [
+   null
+  ],
+  "result": {
+   "splitPlan": {
+    "illustrations": [
+     {
+      "slot_number": 0,
+      "actor_roster": [
+       {
+        "actorId": "actor_1",
+        "candidateKey": "actor.g00nx3.1d3zc2v",
+        "formRef": "silver_hair,_blue_eyes",
+        "outfit": {
+         "id": "Navy sailor school uniform"
+        }
+       },
+       {
+        "actorId": "actor_2",
+        "candidateKey": "actor.1fmv888.fk4pvw",
+        "formRef": "unknown_form_1",
+        "outfit": {
+         "id": "Casual hoodie"
+        }
+       }
+      ],
+      "scene_intent": "Alice greets Shouta at the school gate.",
+      "temporal_state": "Morning, before class.",
+      "state_constraints": [],
+      "occurrences": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0
+       },
+       {
+        "actorId": "actor_2",
+        "placementIndex": 1
+       }
+      ]
+     }
+    ]
+   },
+   "profile": "v5-hybrid",
+   "response": {
+    "illustrations": [
+     {
+      "slotNumber": 0,
+      "status": "degraded",
+      "presentationMode": "single-frame",
+      "actors": [
+       {
+        "actorId": "actor_1",
+        "candidateKey": "actor.g00nx3.1d3zc2v",
+        "formId": "form_default",
+        "sex": "female",
+        "continuityIdentity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "outfit": {
+         "selectedId": "outfit_1"
+        }
+       },
+       {
+        "actorId": "actor_2",
+        "candidateKey": "actor.1fmv888.fk4pvw",
+        "formId": "form_default",
+        "sex": "male",
+        "continuityIdentity": {
+         "kind": "persona_reference",
+         "value": "persona::p1"
+        },
+        "outfit": {
+         "selectedId": "outfit_1"
+        }
+       }
+      ],
+      "interactions": [],
+      "location": {
+       "modifiers": [
+        {
+         "id": "scene.rating",
+         "options": [
+          "sfw"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "instruction": "",
+       "comicPageInstruction": "",
+       "comicPageModifiers": [],
+       "comicPanels": [],
+       "comicCrossPanelActors": []
+      },
+      "framePlacement": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "center": {
+         "x": 0.5,
+         "y": 0.5
+        },
+        "source": "analyzer",
+        "instruction": ""
+       },
+       {
+        "actorId": "actor_2",
+        "placementIndex": 1,
+        "center": {
+         "x": 0.5,
+         "y": 0.5
+        },
+        "source": "analyzer",
+        "instruction": ""
+       }
+      ],
+      "actorDetails": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "actions": [],
+        "modifiers": [
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
+        "poseInstruction": "",
+        "objects": [],
+        "dialogueInstruction": ""
+       },
+       {
+        "actorId": "actor_2",
+        "placementIndex": 1,
+        "actions": [],
+        "modifiers": [
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
+        "poseInstruction": "",
+        "objects": [],
+        "dialogueInstruction": ""
+       }
+      ],
+      "camera": {
+       "modifiers": [],
+       "instruction": ""
+      },
+      "diagnostics": [
+       {
+        "code": "size-id-missing-local-fallback",
+        "impact": "degraded",
+        "path": "$.illustrations[0].frame_placement.sizeId",
+        "message": "Omitted an unavailable Analyzer sizeId; the Free Scene compiler will use its local size resolver."
+       },
+       {
+        "code": "scene-rating-defaulted",
+        "impact": "recovered",
+        "path": "$.illustrations[0].frame_placement.modifiers",
+        "message": "Applied the effective 'sfw' scene rating because the Analyzer omitted it."
+       }
+      ]
+     }
+    ],
+    "diagnostics": []
+   },
+   "attempts": 1,
+   "resumedFromCheckpoint": false,
+   "candidateBindings": [
+    {
+     "candidateKey": "actor.1fmv888.fk4pvw",
+     "identityReferences": [
+      "persona::p1",
+      "Shouta",
+      "p1"
+     ],
+     "sex": "male",
+     "continuityIdentity": {
+      "kind": "persona_reference",
+      "value": "persona::p1"
+     },
+     "outfitCandidateIds": [
+      "Casual hoodie"
+     ],
+     "allowOutfitCreation": true,
+     "appearanceForms": [
+      {
+       "formRef": "unknown_form_1",
+       "formId": "form_default",
+       "sex": "male",
+       "defaultOutfitRef": "Casual hoodie",
+       "outfits": [
+        {
+         "outfitRef": "Casual hoodie",
+         "outfitId": "outfit_1"
+        }
+       ]
+      }
+     ],
+     "defaultFormRef": "unknown_form_1"
+    },
+    {
+     "candidateKey": "actor.g00nx3.1d3zc2v",
+     "identityReferences": [
+      "lore:alice",
+      "Alice",
+      "Ally"
+     ],
+     "sex": "female",
+     "continuityIdentity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:alice"
+     },
+     "outfitCandidateIds": [
+      "Navy sailor school uniform",
+      "White summer sundress"
+     ],
+     "allowOutfitCreation": true,
+     "appearanceForms": [
+      {
+       "formRef": "silver_hair,_blue_eyes",
+       "formId": "form_default",
+       "sex": "female",
+       "defaultOutfitRef": "Navy sailor school uniform",
+       "outfits": [
+        {
+         "outfitRef": "Navy sailor school uniform",
+         "outfitId": "outfit_1"
+        },
+        {
+         "outfitRef": "White summer sundress",
+         "outfitId": "outfit_2"
+        }
+       ]
+      }
+     ],
+     "defaultFormRef": "silver_hair,_blue_eyes"
+    },
+    {
+     "candidateKey": "actor.m0ais.6ynrym",
+     "identityReferences": [
+      "lore:bob",
+      "Bob"
+     ],
+     "sex": "male",
+     "continuityIdentity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:bob"
+     },
+     "outfitCandidateIds": [
+      "Grey business suit"
+     ],
+     "allowOutfitCreation": true,
+     "appearanceForms": [
+      {
+       "formRef": "black_hair,_tall",
+       "formId": "form_default",
+       "sex": "male",
+       "defaultOutfitRef": "Grey business suit",
+       "outfits": [
+        {
+         "outfitRef": "Grey business suit",
+         "outfitId": "outfit_1"
+        }
+       ]
+      }
+     ],
+     "defaultFormRef": "black_hair,_tall"
+    }
+   ],
+   "candidateSourceKeys": {
+    "actor.g00nx3.1d3zc2v": "lore:alice",
+    "actor.m0ais.6ynrym": "lore:bob",
+    "actor.1fmv888.fk4pvw": "persona::p1"
+   },
+   "requestPayload": "fnv1a64-cb8082738421d4ff",
+   "localProjection": {
+    "allowedSizeIds": [
+     1,
+     2,
+     5
+    ],
+    "characterCoordinates": "fixed"
+   },
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
+  },
+  "error": null
+ },
+ "split-detail": {
+  "input": {
+   "response": "<object>",
+   "directionsKey": "default",
+   "contextPatch": {
+    "targetImageCount": 1,
+    "imageCountConstraint": {
+     "mode": "fixed",
+     "min": 1,
+     "max": 1
+    }
+   },
+   "config": {
+    "provider": "openai"
+   },
+   "revisionDirection": null,
+   "continuitySnapshot": false,
+   "splitStage": "detail",
+   "seed": 5
+  },
+  "sent": [
+   {
+    "config": {
+     "provider": "openai"
+    },
+    "options": {
+     "purpose": "image-generation",
+     "streamOutput": false,
+     "cacheSourceId": "char-123",
+     "diagnostic": {
+      "analysisKind": "chat-image-v5",
+      "phase": "v5-split-detail"
+     }
+    },
+    "hashes": {
+     "messages": "fnv1a64-2099eb0260b1397e",
+     "schema": "fnv1a64-a74025470b7f2e0b",
+     "cachePartition": "fnv1a64-a82ce2f7be59954f"
+    }
+   }
+  ],
+  "historyValidation": [
+   null
+  ],
+  "result": {
+   "profile": "v5-hybrid",
+   "response": {
+    "illustrations": [
+     {
+      "slotNumber": 0,
+      "status": "recovered",
+      "presentationMode": "single-frame",
+      "actors": [
+       {
+        "actorId": "actor_1",
+        "candidateKey": "actor.g00nx3.1d3zc2v",
+        "formId": "form_default",
+        "sex": "female",
+        "continuityIdentity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "outfit": {
+         "selectedId": "outfit_1"
+        }
+       },
+       {
+        "actorId": "actor_2",
+        "candidateKey": "actor.1fmv888.fk4pvw",
+        "formId": "form_default",
+        "sex": "male",
+        "continuityIdentity": {
+         "kind": "persona_reference",
+         "value": "persona::p1"
+        },
+        "outfit": {
+         "selectedId": "outfit_1"
+        }
+       }
+      ],
+      "interactions": [
+       {
+        "interactionRef": "interaction:0",
+        "id": "arm_hug",
+        "mode": "directed",
+        "sourceActorId": "actor_1",
+        "targetActorId": "actor_2",
+        "bindingStatus": "complete",
+        "unresolvedActorRefs": [],
+        "modifiers": []
+       },
+       {
+        "interactionRef": "interaction:1",
+        "id": "sleeve_grab",
+        "mode": "directed",
+        "sourceActorId": "actor_1",
+        "targetActorId": "actor_2",
+        "bindingStatus": "complete",
+        "unresolvedActorRefs": [],
+        "modifiers": []
+       }
+      ],
+      "location": {
+       "modifiers": [
+        {
+         "id": "scene.rating",
+         "options": [
+          "sfw"
+         ]
+        },
+        {
+         "id": "environment.setting",
+         "options": [
+          "outdoors"
+         ]
+        },
+        {
+         "id": "environment.time",
+         "options": [
+          "morning"
+         ]
+        }
+       ],
+       "freeTags": [
+        "school_gate",
+        "cherry_blossoms"
+       ],
+       "instruction": "Brick school gate with morning sunlight.",
+       "comicPageInstruction": "",
+       "comicPageModifiers": [],
+       "comicPanels": [],
+       "comicCrossPanelActors": []
+      },
+      "analyzerSizeId": 2,
+      "framePlacement": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "center": {
+         "x": 0.35,
+         "y": 0.5
+        },
+        "source": "analyzer",
+        "instruction": ""
+       },
+       {
+        "actorId": "actor_2",
+        "placementIndex": 1,
+        "center": {
+         "x": 0.68,
+         "y": 0.52
+        },
+        "source": "analyzer",
+        "instruction": ""
+       }
+      ],
+      "actorDetails": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "actions": [],
+        "modifiers": [
+         {
+          "id": "gaze.direction",
+          "options": [
+           "looking_at_another"
+          ]
+         },
+         {
+          "id": "expression.general",
+          "options": [
+           "light_smile"
+          ]
+         },
+         {
+          "id": "expression.mouth.openness",
+          "options": [
+           "open_mouth"
+          ]
+         },
+         {
+          "id": "pose.body",
+          "options": [
+           "standing"
+          ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
+        "poseInstruction": "leaning forward slightly",
+        "objects": [],
+        "dialogueInstruction": ""
+       },
+       {
+        "actorId": "actor_2",
+        "placementIndex": 1,
+        "actions": [],
+        "modifiers": [
+         {
+          "id": "expression.general",
+          "options": [
+           "surprised"
+          ]
+         },
+         {
+          "id": "pose.body",
+          "options": [
+           "standing"
+          ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
+        "poseInstruction": "",
+        "objects": [],
+        "dialogueInstruction": ""
+       }
+      ],
+      "camera": {
+       "modifiers": [
+        {
+         "id": "camera.view",
+         "options": [
+          "from_side"
+         ]
+        }
+       ],
+       "instruction": "Eye-level camera at the gate facing both actors."
+      },
+      "diagnostics": [
+       {
+        "code": "tag-canonicalized",
+        "impact": "recovered",
+        "path": "$.illustrations[0].frame_placement.freeTags[0]",
+        "message": "Canonicalized a free tag to 'school_gate'."
+       },
+       {
+        "code": "tag-canonicalized",
+        "impact": "recovered",
+        "path": "$.illustrations[0].frame_placement.freeTags[1]",
+        "message": "Canonicalized a free tag to 'cherry_blossoms'."
+       }
+      ]
+     }
+    ],
+    "diagnostics": []
+   },
+   "attempts": 1,
+   "resumedFromCheckpoint": false,
+   "candidateBindings": [
+    {
+     "candidateKey": "actor.1fmv888.fk4pvw",
+     "identityReferences": [
+      "persona::p1",
+      "Shouta",
+      "p1"
+     ],
+     "sex": "male",
+     "continuityIdentity": {
+      "kind": "persona_reference",
+      "value": "persona::p1"
+     },
+     "outfitCandidateIds": [
+      "Casual hoodie"
+     ],
+     "allowOutfitCreation": true,
+     "appearanceForms": [
+      {
+       "formRef": "unknown_form_1",
+       "formId": "form_default",
+       "sex": "male",
+       "defaultOutfitRef": "Casual hoodie",
+       "outfits": [
+        {
+         "outfitRef": "Casual hoodie",
+         "outfitId": "outfit_1"
+        }
+       ]
+      }
+     ],
+     "defaultFormRef": "unknown_form_1"
+    },
+    {
+     "candidateKey": "actor.g00nx3.1d3zc2v",
+     "identityReferences": [
+      "lore:alice",
+      "Alice",
+      "Ally"
+     ],
+     "sex": "female",
+     "continuityIdentity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:alice"
+     },
+     "outfitCandidateIds": [
+      "Navy sailor school uniform",
+      "White summer sundress"
+     ],
+     "allowOutfitCreation": true,
+     "appearanceForms": [
+      {
+       "formRef": "silver_hair,_blue_eyes",
+       "formId": "form_default",
+       "sex": "female",
+       "defaultOutfitRef": "Navy sailor school uniform",
+       "outfits": [
+        {
+         "outfitRef": "Navy sailor school uniform",
+         "outfitId": "outfit_1"
+        },
+        {
+         "outfitRef": "White summer sundress",
+         "outfitId": "outfit_2"
+        }
+       ]
+      }
+     ],
+     "defaultFormRef": "silver_hair,_blue_eyes"
+    },
+    {
+     "candidateKey": "actor.m0ais.6ynrym",
+     "identityReferences": [
+      "lore:bob",
+      "Bob"
+     ],
+     "sex": "male",
+     "continuityIdentity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:bob"
+     },
+     "outfitCandidateIds": [
+      "Grey business suit"
+     ],
+     "allowOutfitCreation": true,
+     "appearanceForms": [
+      {
+       "formRef": "black_hair,_tall",
+       "formId": "form_default",
+       "sex": "male",
+       "defaultOutfitRef": "Grey business suit",
+       "outfits": [
+        {
+         "outfitRef": "Grey business suit",
+         "outfitId": "outfit_1"
+        }
+       ]
+      }
+     ],
+     "defaultFormRef": "black_hair,_tall"
+    }
+   ],
+   "candidateSourceKeys": {
+    "actor.g00nx3.1d3zc2v": "lore:alice",
+    "actor.m0ais.6ynrym": "lore:bob",
+    "actor.1fmv888.fk4pvw": "persona::p1"
+   },
+   "requestPayload": "fnv1a64-cb8082738421d4ff",
+   "localProjection": {
+    "allowedSizeIds": [
+     1,
+     2,
+     5
+    ],
+    "characterCoordinates": "fixed"
+   },
+   "catalogFingerprint": "v5.fnv1a64-012361ced34fd132"
+  },
+  "error": null
+ },
+ "argon-split-detail": {
+  "input": {
+   "response": "<object>",
+   "directionsKey": "default",
+   "contextPatch": {
+    "targetImageCount": 1,
+    "imageCountConstraint": {
+     "mode": "fixed",
+     "min": 1,
+     "max": 1
+    }
+   },
+   "config": {
+    "provider": "vertex_ai",
+    "model": "gemini-4-argon"
+   },
+   "revisionDirection": null,
+   "continuitySnapshot": false,
+   "splitStage": "detail",
+   "seed": 5
+  },
+  "sent": [
+   {
+    "config": {
+     "provider": "vertex_ai",
+     "model": "gemini-4-argon"
+    },
+    "options": {
+     "purpose": "image-generation",
+     "streamOutput": false,
+     "cacheSourceId": "char-123",
+     "diagnostic": {
+      "analysisKind": "chat-image-v5",
+      "phase": "v5-split-detail"
+     }
+    },
+    "hashes": {
+     "messages": "fnv1a64-3cd1f33f8c32c6de",
+     "schema": "fnv1a64-a74025470b7f2e0b",
+     "cachePartition": "fnv1a64-2a6a6eae8bc5c26f"
+    }
+   }
+  ],
+  "historyValidation": [
+   null
+  ],
+  "result": {
+   "profile": "v5-hybrid",
+   "response": {
+    "illustrations": [
+     {
+      "slotNumber": 0,
+      "status": "recovered",
+      "presentationMode": "single-frame",
+      "actors": [
+       {
+        "actorId": "actor_1",
+        "candidateKey": "actor.g00nx3.1d3zc2v",
+        "formId": "form_default",
+        "sex": "female",
+        "continuityIdentity": {
+         "kind": "lorebook_prompt_key",
+         "value": "lore:alice"
+        },
+        "outfit": {
+         "selectedId": "outfit_1"
+        }
+       },
+       {
+        "actorId": "actor_2",
+        "candidateKey": "actor.1fmv888.fk4pvw",
+        "formId": "form_default",
+        "sex": "male",
+        "continuityIdentity": {
+         "kind": "persona_reference",
+         "value": "persona::p1"
+        },
+        "outfit": {
+         "selectedId": "outfit_1"
+        }
+       }
+      ],
+      "interactions": [
+       {
+        "interactionRef": "interaction:0",
+        "id": "arm_hug",
+        "mode": "directed",
+        "sourceActorId": "actor_1",
+        "targetActorId": "actor_2",
+        "bindingStatus": "complete",
+        "unresolvedActorRefs": [],
+        "modifiers": []
+       },
+       {
+        "interactionRef": "interaction:1",
+        "id": "sleeve_grab",
+        "mode": "directed",
+        "sourceActorId": "actor_1",
+        "targetActorId": "actor_2",
+        "bindingStatus": "complete",
+        "unresolvedActorRefs": [],
+        "modifiers": []
+       }
+      ],
+      "location": {
+       "modifiers": [
+        {
+         "id": "scene.rating",
+         "options": [
+          "sfw"
+         ]
+        },
+        {
+         "id": "environment.setting",
+         "options": [
+          "outdoors"
+         ]
+        },
+        {
+         "id": "environment.time",
+         "options": [
+          "morning"
+         ]
+        }
+       ],
+       "freeTags": [
+        "school_gate",
+        "cherry_blossoms"
+       ],
+       "instruction": "Brick school gate with morning sunlight.",
+       "comicPageInstruction": "",
+       "comicPageModifiers": [],
+       "comicPanels": [],
+       "comicCrossPanelActors": []
+      },
+      "analyzerSizeId": 2,
+      "framePlacement": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "center": {
+         "x": 0.35,
+         "y": 0.5
+        },
+        "source": "analyzer",
+        "instruction": ""
+       },
+       {
+        "actorId": "actor_2",
+        "placementIndex": 1,
+        "center": {
+         "x": 0.68,
+         "y": 0.52
+        },
+        "source": "analyzer",
+        "instruction": ""
+       }
+      ],
+      "actorDetails": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0,
+        "actions": [],
+        "modifiers": [
+         {
+          "id": "gaze.direction",
+          "options": [
+           "looking_at_another"
+          ]
+         },
+         {
+          "id": "expression.general",
+          "options": [
+           "light_smile"
+          ]
+         },
+         {
+          "id": "expression.mouth.openness",
+          "options": [
+           "open_mouth"
+          ]
+         },
+         {
+          "id": "pose.body",
+          "options": [
+           "standing"
+          ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
+        "poseInstruction": "leaning forward slightly",
+        "objects": [],
+        "dialogueInstruction": ""
+       },
+       {
+        "actorId": "actor_2",
+        "placementIndex": 1,
+        "actions": [],
+        "modifiers": [
+         {
+          "id": "expression.general",
+          "options": [
+           "surprised"
+          ]
+         },
+         {
+          "id": "pose.body",
+          "options": [
+           "standing"
+          ]
+         },
+         {
+          "id": "framing.crop",
+          "options": [
+           "cowboy_shot"
+          ]
+         }
+        ],
+        "poseInstruction": "",
+        "objects": [],
+        "dialogueInstruction": ""
+       }
+      ],
+      "camera": {
+       "modifiers": [
+        {
+         "id": "camera.view",
+         "options": [
+          "from_side"
+         ]
+        }
+       ],
+       "instruction": "Eye-level camera at the gate facing both actors."
+      },
+      "diagnostics": [
+       {
+        "code": "tag-canonicalized",
+        "impact": "recovered",
+        "path": "$.illustrations[0].frame_placement.freeTags[0]",
+        "message": "Canonicalized a free tag to 'school_gate'."
+       },
+       {
+        "code": "tag-canonicalized",
+        "impact": "recovered",
+        "path": "$.illustrations[0].frame_placement.freeTags[1]",
+        "message": "Canonicalized a free tag to 'cherry_blossoms'."
+       }
+      ]
+     }
+    ],
+    "diagnostics": []
+   },
+   "attempts": 1,
+   "resumedFromCheckpoint": false,
+   "candidateBindings": [
+    {
+     "candidateKey": "actor.1fmv888.fk4pvw",
+     "identityReferences": [
+      "persona::p1",
+      "Shouta",
+      "p1"
+     ],
+     "sex": "male",
+     "continuityIdentity": {
+      "kind": "persona_reference",
+      "value": "persona::p1"
+     },
+     "outfitCandidateIds": [
+      "Casual hoodie"
+     ],
+     "allowOutfitCreation": true,
+     "appearanceForms": [
+      {
+       "formRef": "unknown_form_1",
+       "formId": "form_default",
+       "sex": "male",
+       "defaultOutfitRef": "Casual hoodie",
+       "outfits": [
+        {
+         "outfitRef": "Casual hoodie",
+         "outfitId": "outfit_1"
+        }
+       ]
+      }
+     ],
+     "defaultFormRef": "unknown_form_1"
+    },
+    {
+     "candidateKey": "actor.g00nx3.1d3zc2v",
+     "identityReferences": [
+      "lore:alice",
+      "Alice",
+      "Ally"
+     ],
+     "sex": "female",
+     "continuityIdentity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:alice"
+     },
+     "outfitCandidateIds": [
+      "Navy sailor school uniform",
+      "White summer sundress"
+     ],
+     "allowOutfitCreation": true,
+     "appearanceForms": [
+      {
+       "formRef": "silver_hair,_blue_eyes",
+       "formId": "form_default",
+       "sex": "female",
+       "defaultOutfitRef": "Navy sailor school uniform",
+       "outfits": [
+        {
+         "outfitRef": "Navy sailor school uniform",
+         "outfitId": "outfit_1"
+        },
+        {
+         "outfitRef": "White summer sundress",
+         "outfitId": "outfit_2"
+        }
+       ]
+      }
+     ],
+     "defaultFormRef": "silver_hair,_blue_eyes"
+    },
+    {
+     "candidateKey": "actor.m0ais.6ynrym",
+     "identityReferences": [
+      "lore:bob",
+      "Bob"
+     ],
+     "sex": "male",
+     "continuityIdentity": {
+      "kind": "lorebook_prompt_key",
+      "value": "lore:bob"
+     },
+     "outfitCandidateIds": [
+      "Grey business suit"
+     ],
+     "allowOutfitCreation": true,
+     "appearanceForms": [
+      {
+       "formRef": "black_hair,_tall",
+       "formId": "form_default",
+       "sex": "male",
+       "defaultOutfitRef": "Grey business suit",
+       "outfits": [
+        {
+         "outfitRef": "Grey business suit",
+         "outfitId": "outfit_1"
+        }
+       ]
+      }
+     ],
+     "defaultFormRef": "black_hair,_tall"
+    }
+   ],
+   "candidateSourceKeys": {
+    "actor.g00nx3.1d3zc2v": "lore:alice",
+    "actor.m0ais.6ynrym": "lore:bob",
+    "actor.1fmv888.fk4pvw": "persona::p1"
+   },
+   "requestPayload": "fnv1a64-cb8082738421d4ff",
    "localProjection": {
     "allowedSizeIds": [
      1,

@@ -5,6 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import type { InlayConfig } from "../../shared/contract/index.js";
 import type { StorageService } from "../services/types.js";
+import { atelierServiceOf } from "../services/atelier.js";
 import { createFakeServices } from "../testing/fake-services.js";
 import { createEnginePort } from "./engine-port.js";
 import { createPipelineModule, type PipelineModuleOptions } from "./index.js";
@@ -89,6 +90,39 @@ describe("retry memory (#3)", () => {
     const restart = await pipeline.restart(jobs[0]!);
     await waitFor(() => finished(fx, restart.jobId).length > 0);
     expect(splitOf(engine.runs.at(-1)!.input)).toBeDefined();
+  });
+});
+
+describe("analysis preparation of retries and restarts (AM 0.9.91 179676)", () => {
+  test("retry and restart prepare the analyzer from the failed run's snapshot, not the Atelier changed since", async () => {
+    const { fx, engine, pipeline } = setup({ messages: replies(2) });
+    await useSplit(fx.services.storage);
+    engine.beforeImages = rejected;
+    const failed = await pipeline.start({ chatId: CHAT_ID, messageId: "m1", swipeIndex: 0 });
+    await waitFor(() => finished(fx, failed.jobId).length > 0);
+    const original = engine.runs[0]!.context.analysisConfig;
+    expect(original).toBeDefined();
+    const before = JSON.stringify(original);
+
+    // Another scene guideline selected after the failure.
+    const atelier = atelierServiceOf(fx.services);
+    const { id } = await atelier.createGuideline({ kind: "scene" });
+    await atelier.saveGuidelines({ kind: "scene", edits: [{ id, field: "instruction", before: "", value: "Quokka guideline." }] });
+    await atelier.selectGuideline({ kind: "scene", id });
+
+    const retry = await pipeline.retry(failed.jobId);
+    await waitFor(() => finished(fx, retry.jobId).length > 0);
+    expect(engine.runs.at(-1)!.context.analysisConfig).toBe(original);
+    const restart = await pipeline.restart(retry.jobId);
+    await waitFor(() => finished(fx, restart.jobId).length > 0);
+    expect(engine.runs.at(-1)!.context.analysisConfig).toBe(original);
+    expect(JSON.stringify(original)).toBe(before);
+
+    // A fresh run sees the new guideline.
+    const fresh = await pipeline.start({ chatId: CHAT_ID, messageId: "m2", swipeIndex: 0 });
+    await waitFor(() => finished(fx, fresh.jobId).length > 0);
+    expect(JSON.stringify(engine.runs.at(-1)!.context.analysisConfig)).toContain("Quokka guideline.");
+    expect(before).not.toContain("Quokka guideline.");
   });
 });
 

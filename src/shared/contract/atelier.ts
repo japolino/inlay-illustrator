@@ -297,6 +297,9 @@ export interface AtelierDocumentView extends AtelierDocumentRef {
   diagnostics?: PresetDiagnostic[];
 }
 
+/** The guideline library seen from one preset (see `AtelierState.presetLibraries`). */
+export interface AtelierPresetLibrary { library?: InstructionLibrary; ownedRuleIds: Record<string, string[]>; error?: string }
+
 /** Read failures of the stored file (AM `failureKind: "read"`). */
 export interface AtelierReadFailure { code: AtelierIssueCode; message: string }
 
@@ -309,6 +312,12 @@ export interface AtelierState {
   library: InstructionLibrary;
   /** Direction id -> rule ids owned by the active preset (`eS`; edits of these write back into the preset). */
   ownedRuleIds: Record<string, string[]>;
+  /**
+   * Per document id: the library as the Atelier editor shows it with that preset open (`zc(config, id)`: stored + that
+   * preset's directing rules) and the rule ids that preset owns (`vS_91(config, id)`). AM 0.9.91 `qst(e, shownId)`.
+   * `library` is absent (with `error`) when that preset's rules cannot be applied. Absent in older states / mocks.
+   */
+  presetLibraries?: Record<string, AtelierPresetLibrary>;
   /** Effective free-generation library (`Dv`), including "default". */
   freeGeneration: FreeGenerationLibrary;
   /** Mode (from the selected directing guideline) + controls. */

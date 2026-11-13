@@ -8,7 +8,7 @@ import type { RosterItem, RosterSource, WorkspaceSnapshot } from "../../../share
 import { matchesQuery } from "../../lib/text-match.js";
 import { useApp, useAppState } from "../../state/app-state.js";
 import { FilterPopover, SearchField, matchFlag, useFilteredList, type FilterGroup, type FilterValues } from "../shell/filters.js";
-import { ArrowLeftIcon, Button, CollapseIcon, ExpandIcon, GridIcon, IconButton, ListIcon, PackageIcon, PlusIcon, UserPlusIcon, UsersIcon, cn } from "../ui/index.js";
+import { ArrowLeftIcon, Button, ChevronsUpIcon, CollapseIcon, ExpandIcon, GridIcon, IconButton, ListIcon, PackageIcon, PlusIcon, SpinnerIcon, UserPlusIcon, UsersIcon, cn } from "../ui/index.js";
 import { useSourceUi, useWorkspaceUi, useWorkspaceUiStore, type NavigationView } from "../workspace-ui.js";
 import { RosterCard, RosterRow, type RosterItemProps } from "./items.js";
 import { ROSTER_LABELS as L } from "./labels.js";
@@ -186,6 +186,27 @@ export function RosterSidebar({ referenceMode = false, canExpand = false }: { re
   const bulkItems = visible;
   const bulkAllSelected = bulkItems.length > 0 && bulkItems.every((item) => isSelected(item, view));
 
+  // Bulk promote (AM 0.9.91 `eQe` `Ir`/`nr`/`Sr`/`Tr`/`Pe`/`Ge` + `Met_91`): the visible AI-generated custom rows,
+  // with-thumbnail first; shown in the roster and custom views only, never in reference mode.
+  const aiItems = sections.filter((s) => s.id.startsWith("ai")).flatMap((s) => s.items);
+  const firstAiSection = sections.find((s) => s.id.startsWith("ai"))?.id;
+  const aiIds = aiItems.map((item) => item.selectionId);
+  const showBulkPromote = !referenceMode && ready && (view === "characters" || view === "custom") && aiIds.length > 0;
+  const promoting = pending.size > 0;
+  const promoteAll = () => {
+    if (!characterId || promoting) return;
+    void run(aiItems.map((item) => item.promptKey), () => app.mutateWorkspace("customCharacters.promote", { characterId, customIds: aiIds, bulk: true })).catch(() => undefined);
+  };
+  const promoteIcon = promoting ? <SpinnerIcon /> : <ChevronsUpIcon />;
+  const promoteHeader = showBulkPromote && !expanded ? (
+    <div key="ai-promotion-header" class="flex min-w-0 items-center justify-between gap-2" data-character-ai-promotion-header="">
+      <span class="text-3xs font-semibold text-muted-foreground">{L.aiPeople}</span>
+      <Button size="sm" variant="ghost" className="text-3xs" data-character-bulk-promote="" disabled={promoting} aria-label={L.bulkPromoteTitle(aiIds.length)} title={L.bulkPromoteTitle(aiIds.length)} onClick={promoteAll}>
+        {promoteIcon}{L.bulkPromote(aiIds.length)}
+      </Button>
+    </div>
+  ) : null;
+
   const title = referenceMode ? L.references : view === "characters" ? L.roster : view === "modules" ? L.loadModules : L.registerPeople;
   const badge = view === "modules" ? null : view === "characters" ? L.active(selectedCount) : L.registered(selectedCount);
 
@@ -208,9 +229,10 @@ export function RosterSidebar({ referenceMode = false, canExpand = false }: { re
   } else {
     body = (
       <div class="grid gap-3 px-2.5 pb-4">
-        {sections.map((section) => {
+        {sections.flatMap((section) => {
           const cards = grid && /^withThumbnail$|WithThumbnail$/u.test(section.id);
-          return (
+          return [
+            section.id === firstAiSection ? promoteHeader : null,
             <section key={section.id} data-roster-section={section.id} {...(section.id.startsWith("custom") || section.id.startsWith("ai") ? { "data-roster-custom-section": "" } : {})}>
               <div class={cn(cards ? (expanded ? "grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2" : "grid grid-cols-3 gap-1.5 max-md:grid-cols-2") : grid ? (expanded ? "grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-1.5" : "grid grid-cols-2 gap-1.5") : "grid gap-0.5")}>
                 {section.items.map((item) => (cards
@@ -218,7 +240,7 @@ export function RosterSidebar({ referenceMode = false, canExpand = false }: { re
                   : <RosterRow key={item.promptKey} tile={grid} {...itemProps(item, section.badge)} />))}
               </div>
             </section>
-          );
+          ];
         })}
       </div>
     );
@@ -279,9 +301,16 @@ export function RosterSidebar({ referenceMode = false, canExpand = false }: { re
             {view === "custom" ? <Button size="sm" variant="ghost" className="px-1.5" onClick={() => openEditor()}><PlusIcon />{L.addPerson}</Button> : null}
             {view === "lorebooks" ? <Button size="sm" variant="ghost" className="px-1.5" onClick={() => setView("modules")}><PackageIcon />{L.loadModules}</Button> : null}
             {bulkItems.length > 0 ? (
-              <Button size="sm" variant="ghost" className="ml-auto px-1.5" data-roster-bulk="" disabled={pending.size > 0} onClick={() => void setItems(bulkItems, !bulkAllSelected).catch(() => undefined)}>
-                {bulkLabel(view, bulkAllSelected, filterActive, query.trim() !== "")}
-              </Button>
+              <div class="ml-auto flex items-center gap-1">
+                {showBulkPromote && expanded ? (
+                  <IconButton size="sm" className="w-7 px-0" label={L.bulkPromoteTitle(aiIds.length)} data-character-bulk-promote="" disabled={promoting} onClick={promoteAll}>
+                    {promoteIcon}
+                  </IconButton>
+                ) : null}
+                <Button size="sm" variant="ghost" className="px-1.5" data-roster-bulk="" disabled={pending.size > 0} onClick={() => void setItems(bulkItems, !bulkAllSelected).catch(() => undefined)}>
+                  {bulkLabel(view, bulkAllSelected, filterActive, query.trim() !== "")}
+                </Button>
+              </div>
             ) : null}
           </div>
         ) : null}

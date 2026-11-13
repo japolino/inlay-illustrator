@@ -30,6 +30,7 @@ export const XIcon = (p: IconProps) => <Icon {...p}><path d="M18 6 6 18" /><path
 export const CheckIcon = (p: IconProps) => <Icon {...p}><path d="M20 6 9 17l-5-5" /></Icon>;
 export const ChevronDownIcon = (p: IconProps) => <Icon {...p}><path d="m6 9 6 6 6-6" /></Icon>;
 export const ChevronUpIcon = (p: IconProps) => <Icon {...p}><path d="m18 15-6-6-6 6" /></Icon>;
+export const ChevronsUpIcon = (p: IconProps) => <Icon {...p}><path d="m17 11-5-5-5 5" /><path d="m17 18-5-5-5 5" /></Icon>;
 export const ArrowLeftIcon = (p: IconProps) => <Icon {...p}><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></Icon>;
 export const MenuIcon = (p: IconProps) => <Icon {...p}><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" /></Icon>;
 export const PanelLeftIcon = (p: IconProps) => <Icon {...p}><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18" /></Icon>;

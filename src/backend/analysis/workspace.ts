@@ -366,13 +366,18 @@ export async function setCustomCharactersWorkspaceEnabled(services: BackendServi
   );
 }
 
-/** AM `promoteGenerated` L37858 / `promoteAllGenerated` L37869. */
-export async function promoteCustomCharacters(services: BackendServices, characterId: string, ids: string[] | "all"): Promise<void> {
+/**
+ * AM `promoteGenerated` L37858 (one person: a missing id fails) / `promoteAllGenerated` 0.9.91 L31139 (`"all"`, or the
+ * roster's bulk promote with `bulk`: only `ai-auto` entries among the ids change, unknown ids are skipped, also when
+ * the list holds a single id). Several ids without `bulk` are treated as bulk too.
+ */
+export async function promoteCustomCharacters(services: BackendServices, characterId: string, ids: string[] | "all", bulk = false): Promise<void> {
+  if (Array.isArray(ids) && !ids.length) return;
   await services.storage.updateCharacterDocument(
     characterId,
     (doc) => {
       const wanted = ids === "all" ? null : new Set(ids);
-      if (wanted) for (const id of wanted) if (!doc.customCharacters.some((c) => c.id === id)) amFail("not-found", "The custom character to promote was not found.", "승격할 커스텀 캐릭터를 찾을 수 없습니다.");
+      if (wanted && wanted.size === 1 && !bulk) for (const id of wanted) if (!doc.customCharacters.some((c) => c.id === id)) amFail("not-found", "The custom character to promote was not found.", "승격할 커스텀 캐릭터를 찾을 수 없습니다.");
       return { ...doc, customCharacters: doc.customCharacters.map((c) => (!wanted || wanted.has(c.id) ? promoteCustomCharacter(c) : c)) };
     },
     { reason: "custom-character" },

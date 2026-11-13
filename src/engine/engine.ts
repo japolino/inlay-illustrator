@@ -1,11 +1,12 @@
 /**
- * Engine factory: the same object graph Asset Maid 0.9.90 wires at boot (`S` @185030-185085 of the p120 bundle),
- * minus the RisuAI-specific transports. Every host effect is injected:
+ * Engine factory: the same object graph Asset Maid wires at boot (0.9.90 p120 @185030-185085 = 0.9.91 n90.p120
+ * @187600-187642 inside `d1t`; the wiring is unchanged in 0.9.91), minus the RisuAI-specific transports. Every host
+ * effect is injected:
  *
  *   Ce = createGenerationSessions()                                         fht
  *   Ie = createImageGenerationDispatcher(providers, createProviderQueues({getIntervalMs}), getRetryCount)   Oht / Lxe
- *   ie = createGenerationBatchExecutor(Ie, Ce, comfyUIReferences)           vht @158121
- *   nt = createV5Analyzer(analyzerClient, undefined, jev)                   c0e @161195 (bundled catalog `uz()`)
+ *   ie = createGenerationBatchExecutor(Ie, Ce, comfyUIReferences)           vht
+ *   nt = createV5Analyzer(analyzerClient, undefined, jev)                   c0e 0.9.91 @163523 (bundled catalog `uz()`)
  *   ne(config) = analyzer of the active Atelier preset: compiles `aZ(nZ(config.presetCatalog))` when `kind + json`
  *                changed, rebuilds `c0e(client, Hne({catalog}), jev)`, then checks `C8(zc(config), catalog, selected)`
  *   tt = createV5Orchestrator(nt, Ce, ie, undefined, {prepareAnalysis: () => rW(config, ne)(), onSplitResumeState})  Ubt
@@ -43,6 +44,10 @@ export interface AnalyzerMessage {
  * The analyzer transport (`C = nP(network, storage)` in the original; `.complete`, spec/llm.md §1.4).
  * Must resolve `{ raw, parsed }` where `parsed = options.responseMode === "text" ? raw : parseLenientJson(raw)`
  * and throw an error with `code` (ANALYZER_JSON_PARSE, ANALYZER_EMPTY_RESPONSE, ANALYZER_REFUSAL, ...) on failure.
+ * The V5 analyzer's options are typed by `V5CompleteOptions` (v5/analyzer.ts). 0.9.91 adds `historyContext`,
+ * `historyStage`, `historyAttempt`, `historyValidation` (a promise settled with the run's validation outcome) and
+ * `streamOutput`; `cachePartition.prefixPreparation` may describe a cache preparation protocol. The result may carry
+ * `requestObservation` (0.9.91 replacement of the cache notice).
  */
 export interface AnalyzerClient {
   complete(

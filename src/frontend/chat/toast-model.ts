@@ -3,7 +3,7 @@
  * spec/ui.md §5.2 and §6.3): generation jobs (running + finished), notices and chat-side errors.
  */
 import type { AttemptKind, GenerationJobSnapshot, GenerationPhase, GenerationResultKind, GenerationRetryError, JevSelectionProgress, RpcError } from "../../shared/contract/rpc.js";
-import { fill, JEV_LABELS, PHASE_LABELS, RETRY_DETAIL_STAGE_LABEL, RETRY_STAGE_LABELS, TOAST_LABELS } from "./labels.js";
+import { fill, JEV_LABELS, PHASE_LABELS, RETRY_DETAIL_BATCH_STAGE_LABEL, RETRY_DETAIL_STAGE_LABEL, RETRY_STAGE_LABELS, TOAST_LABELS } from "./labels.js";
 
 export type RuntimeToastTone = "running" | "success" | "warning" | "danger";
 export type RuntimeToastAction = "cancel" | "retry" | "dismiss" | "none";
@@ -76,9 +76,13 @@ function clip(text: string): string {
   return text.slice(0, 3000).trim();
 }
 
+/** English stage of a retry error: the split steps' `세부N 분석` / `상세 분석 n/m` forms, else the fixed names. */
 function retryStageLabel(stage: string): string {
   const detail = /^세부(\d+) 분석$/u.exec(stage);
-  return detail ? fill(RETRY_DETAIL_STAGE_LABEL, { n: detail[1]! }) : (RETRY_STAGE_LABELS[stage] ?? stage);
+  if (detail) return fill(RETRY_DETAIL_STAGE_LABEL, { n: detail[1]! });
+  const batch = /^상세 분석 (\d+)\/(\d+)$/u.exec(stage);
+  if (batch) return fill(RETRY_DETAIL_BATCH_STAGE_LABEL, { n: batch[1]!, total: batch[2]! });
+  return RETRY_STAGE_LABELS[stage] ?? stage;
 }
 
 /** AM `ygt` 115452: one failed attempt; the diagnostic lines only in developer mode. */

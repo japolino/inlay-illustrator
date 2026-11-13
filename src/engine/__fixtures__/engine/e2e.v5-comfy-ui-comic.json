@@ -792,7 +792,9 @@
      }
     ],
     "options": {
+     "historyValidation": {},
      "purpose": "image-generation",
+     "streamOutput": true,
      "cachePartition": {
       "namespace": "novelai-v5-interaction-led",
       "protocolVersion": 1,
@@ -837,9 +839,23 @@
       "liveMessages": [
        {
         "role": "user",
-        "content": "CURRENT V5 ANALYSIS INPUT\n{\"outfit_creation_candidates\":[\"actor.1fmv888.fk4pvw\",\"actor.g00nx3.1d3zc2v\",\"actor.m0ais.6ynrym\"],\"scene\":\"Alice waved at Shouta from the school gate, her silver hair catching the morning light.\\n\\n<slot_number: 0>\\n\\n\\\"You're late again!\\\" she laughed, grabbing his sleeve.\\n\\n<slot_number: 1>\\n\\nMr. Bob watched them from the window of the staff room, sighing.\",\"image_count\":{\"min\":1,\"max\":2},\"active_persona_candidate_key\":\"actor.1fmv888.fk4pvw\",\"slot_hints\":{\"0\":[\"actor.g00nx3.1d3zc2v\"]}}"
+        "content": "CURRENT V5 ANALYSIS INPUT\n{\"scene\":\"Alice waved at Shouta from the school gate, her silver hair catching the morning light.\\n\\n<slot_number: 0>\\n\\n\\\"You're late again!\\\" she laughed, grabbing his sleeve.\\n\\n<slot_number: 1>\\n\\nMr. Bob watched them from the window of the staff room, sighing.\",\"outfit_creation_candidates\":[\"actor.1fmv888.fk4pvw\",\"actor.g00nx3.1d3zc2v\",\"actor.m0ais.6ynrym\"],\"image_count\":{\"min\":1,\"max\":2},\"active_persona_candidate_key\":\"actor.1fmv888.fk4pvw\",\"slot_hints\":{\"0\":[\"actor.g00nx3.1d3zc2v\"]}}"
        }
       ],
+      "prefixPreparation": {
+       "staticBlocksInSystem": true,
+       "instruction": "# Experiment preparation protocol\nDetermine the task from the LAST user message. If it is exactly V5 CACHE PREPARATION followed by {\"mode\":\"prepare\"}, do not perform scene analysis: return exactly {\"ready\":true}. In every other case apply the complete V5 analysis instructions below to the CURRENT V5 ANALYSIS INPUT, return the full required analysis, and do not imitate the preparation acknowledgement. Earlier preparation messages and acknowledgements are transport preparation only, never scene evidence or continuity.",
+       "turns": [
+        {
+         "role": "user",
+         "content": "V5 CACHE PREPARATION\n{\"mode\":\"prepare\"}"
+        },
+        {
+         "role": "assistant",
+         "content": "{\"ready\":true}"
+        }
+       ]
+      },
       "layout": {
        "prefixRoutingSegmentCount": 2,
        "resourceCachedSegmentCount": 4
@@ -7295,15 +7311,9 @@
     "providerValue": 0,
     "providerMax": 0,
     "providerProgress": 0,
-    "analyzerCacheNoticeId": "",
     "analyzerPdf": false,
     "analyzerPdfBytes": 0,
     "analyzerPdfPages": 0,
-    "analyzerInputTokens": 0,
-    "analyzerInputTokensComplete": false,
-    "analyzerCacheReadTokens": 0,
-    "analyzerCacheWriteTokens": 0,
-    "analyzerCacheStatus": "",
     "analyzerStructuredOutputFallback": false,
     "analyzerStructuredOutputFallbackProtocol": "",
     "analyzerStructuredOutputFallbackHttpStatus": 0,

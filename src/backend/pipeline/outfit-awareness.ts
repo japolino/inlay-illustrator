@@ -248,6 +248,8 @@ export const FREEFORM_CLOTHING_POLICY = Object.freeze({
     "When an actor's legs or feet are visible and the registered legwear or footwear is not simply worn, say so explicitly in that actor's free tags (barefoot, no shoes, bare legs).",
 });
 
+const FREEFORM_CLOTHING_TEXT = Object.values(FREEFORM_CLOTHING_POLICY).join(" ");
+
 export const OUTFIT_PARTS_INPUT_DEFAULT = "forms[].outfit_parts maps an outfit ID to its registered garments by body part; an omitted part has no registered garment.";
 
 type Lookup = (candidateKey: string, formRef: string, outfitRef: string) => OutfitParts | undefined;
@@ -293,6 +295,8 @@ function applyOutfitPartPolicy(payload: Rec): boolean {
   if (contract.analysis_policy === policy) {
     if (policy.outfits && typeof policy.outfits === "object") Object.assign(policy.outfits as Rec, OUTFIT_PART_POLICY);
     if (policy.freeform && typeof policy.freeform === "object") Object.assign(policy.freeform as Rec, FREEFORM_CLOTHING_POLICY);
+    // AM 0.9.91 compact contract (Gemini 4 Argon on Vertex, `bwe_91`): `freeform` is one string, so the clothing rules are appended.
+    else if (typeof policy.freeform === "string" && !policy.freeform.includes(FREEFORM_CLOTHING_TEXT)) policy.freeform = `${policy.freeform} ${FREEFORM_CLOTHING_TEXT}`;
   }
   if (contract.inputDefaults && typeof contract.inputDefaults === "object") (contract.inputDefaults as Rec).outfit_parts = OUTFIT_PARTS_INPUT_DEFAULT;
   return true;

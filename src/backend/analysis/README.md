@@ -1,4 +1,9 @@
-# src/backend/analysis — asset analysis, workspace and outfit images (Asset Maid port; analysis slice from 0.9.89.6)
+# src/backend/analysis — asset analysis, workspace and outfit images (Asset Maid port; analysis slice from 0.9.91)
+
+> The generated slice now comes from Asset Maid 0.9.91 with the port's 0.9.90 names (`src/engine/core/tooling/README.md`).
+> The unit names in the text below were written for 0.9.89 and several differ today: trust the `// AM <name>` tags in
+> `core/analysis-core.ts`. Regenerate from the repository root with
+> `bun src/backend/analysis/core/tooling/slice-analysis.mjs src/backend/analysis/core/tooling/slice-config.json`.
 
 Owner: `analysis` (sub-agent of the backend lead). Specs: `spec/data.md` Part A + "Asset analysis", `spec/ui.md` §1-§3,
 `spec/novelai.md` §9 F. RPC handlers: `src/backend/rpc/handlers/workspace.ts`.

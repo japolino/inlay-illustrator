@@ -457,33 +457,28 @@ export const CHAT_SIDE_CSS = String.raw`
   font: 600 12px/1.2 ui-sans-serif, system-ui, sans-serif;
   pointer-events: none;
 }
-/* Panel widths per mode (incl. the generate and overview buttons); the floating panel uses them to stay right-aligned with its toggle (AM 0.9.89). */
-.ii-am-root .ii-am-chat-count[data-ii-count-mode="fixed"] { --ii-am-floating-panel-width: 244px; }
-.ii-am-root .ii-am-chat-count[data-ii-count-mode="range"],
-.ii-am-root .ii-am-chat-count[data-ii-count-mode="split"] { --ii-am-floating-panel-width: 330px; }
-.ii-am-root .ii-am-chat-count[data-ii-count-mode="fixed"][data-ii-scene-available="true"] { --ii-am-floating-panel-width: 314px; }
-.ii-am-root .ii-am-chat-count[data-ii-count-mode="range"][data-ii-scene-available="true"],
-.ii-am-root .ii-am-chat-count[data-ii-count-mode="split"][data-ii-scene-available="true"] { --ii-am-floating-panel-width: 400px; }
-@media (max-width: 640px) {
-  .ii-am-root .ii-am-chat-count[data-ii-count-mode="fixed"] { --ii-am-floating-panel-width: 296px; }
-  .ii-am-root .ii-am-chat-count[data-ii-count-mode="range"],
-  .ii-am-root .ii-am-chat-count[data-ii-count-mode="split"] { --ii-am-floating-panel-width: 412px; }
-  .ii-am-root .ii-am-chat-count[data-ii-count-mode="fixed"][data-ii-scene-available="true"] { --ii-am-floating-panel-width: 366px; }
-  .ii-am-root .ii-am-chat-count[data-ii-count-mode="range"][data-ii-scene-available="true"],
-  .ii-am-root .ii-am-chat-count[data-ii-count-mode="split"][data-ii-scene-available="true"] { --ii-am-floating-panel-width: 482px; }
-}
+/* AM 0.9.91 Wwt: two groups (settings, quantity) that wrap onto a second row instead of scrolling sideways. The
+   docked panel is anchored by its bottom edge, so the second row grows upward (top corners: downward). */
+.ii-am-root .ii-am-chat-count__panel-anchor { display: contents; }
 .ii-am-root .ii-am-chat-count__panel {
+  box-sizing: border-box;
   position: absolute;
-  top: 0;
+  bottom: 0;
   right: 50px;
   display: flex;
-  height: 42px;
+  width: max-content;
+  min-width: 0;
+  max-width: calc(100dvw - 84px);
+  min-height: 42px;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   padding: 4px;
   border-radius: 8px;
   pointer-events: auto;
 }
+.ii-am-root .ii-am-chat-count__settings,
+.ii-am-root .ii-am-chat-count__quantity { display: flex; min-width: 0; max-width: 100%; align-items: center; gap: 4px; }
 .ii-am-root .ii-am-chat-count__panel::before {
   content: "";
   position: absolute;
@@ -495,7 +490,7 @@ export const CHAT_SIDE_CSS = String.raw`
   -webkit-backdrop-filter: blur(var(--ii-am-chat-blur));
   pointer-events: none;
 }
-.ii-am-root .ii-am-chat-count__panel > * { position: relative; z-index: 1; }
+.ii-am-root .ii-am-chat-count__panel > * { position: relative; }
 .ii-am-root .ii-am-chat-count[data-ii-expanded="false"] .ii-am-chat-count__panel { display: none; }
 .ii-am-root .ii-am-chat-count__option,
 .ii-am-root .ii-am-chat-count__step-button,
@@ -515,9 +510,10 @@ export const CHAT_SIDE_CSS = String.raw`
   transition: background .14s ease, color .14s ease;
 }
 .ii-am-root .ii-am-chat-count__option { flex: 0 0 auto; width: 42px; height: 32px; border-radius: 8px; background: var(--ii-am-chat-control-bg); font: var(--ii-am-chat-font); }
-.ii-am-root .ii-am-chat-count__scene { position: relative; flex: 0 0 auto; }
-.ii-am-root .ii-am-chat-count__scene-button { width: auto; min-width: 66px; max-width: 104px; height: 32px; overflow: hidden; padding: 0 8px; border-radius: 8px; background: var(--ii-am-chat-control-bg); font: var(--ii-am-chat-font); white-space: nowrap; }
+.ii-am-root .ii-am-chat-count__scene { position: relative; flex: 0 1 auto; min-width: 42px; }
+.ii-am-root .ii-am-chat-count__scene-button { width: auto; min-width: 42px; max-width: min(104px, 100%); height: 32px; overflow: hidden; padding: 0 8px; border-radius: 8px; background: var(--ii-am-chat-control-bg); font: var(--ii-am-chat-font); white-space: nowrap; }
 .ii-am-root .ii-am-chat-count__scene-label { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.ii-am-root .ii-am-chat-count__option.ii-am-chat-count__retry { width: auto; padding-inline: 10px; white-space: nowrap; }
 .ii-am-root .ii-am-chat-count__mode { position: relative; flex: 0 0 auto; }
 .ii-am-root .ii-am-chat-count__resolution { position: relative; flex: 0 0 auto; }
 .ii-am-root .ii-am-chat-count__resolution-button svg,
@@ -582,13 +578,23 @@ export const CHAT_SIDE_CSS = String.raw`
   min-height: 0;
 }
 .ii-am-root .ii-am-chat-count[data-ii-floating="true"] .ii-am-chat-count__toggle { width: 44px; height: 44px; cursor: grab; touch-action: none; }
-.ii-am-root .ii-am-chat-count[data-ii-floating="true"] .ii-am-chat-count__panel {
+/* AM 0.9.91 Hwt: the panel ends at the handle's right edge (pushed right at the screen's left edge) and is anchored
+   by its edge nearest the handle (count-model floatingStyle), so it grows away from the handle. */
+.ii-am-root .ii-am-chat-count[data-ii-floating="true"] .ii-am-chat-count__panel-anchor {
   position: fixed;
-  top: clamp(8px, var(--ii-am-floating-panel-top), max(8px, calc(100dvh - 56px)));
-  left: clamp(8px, calc(var(--ii-am-floating-left) + 44px - var(--ii-am-floating-panel-width)), max(8px, calc(100dvw - var(--ii-am-floating-panel-width) - 8px)));
-  right: auto;
-  width: min(var(--ii-am-floating-panel-width), calc(100dvw - 16px));
-  height: 48px;
+  top: var(--ii-am-floating-panel-top, auto);
+  bottom: var(--ii-am-floating-panel-bottom, auto);
+  left: 8px;
+  right: 8px;
+  display: grid;
+  grid-template-columns: minmax(max-content, calc(var(--ii-am-floating-left) + 36px));
+  justify-items: end;
+}
+.ii-am-root .ii-am-chat-count[data-ii-floating="true"] .ii-am-chat-count__panel {
+  position: relative;
+  inset: auto;
+  width: max-content;
+  max-width: calc(100dvw - 16px);
 }
 .ii-am-root .ii-am-chat-count[data-ii-floating-below="true"] .ii-am-chat-count__menu { top: calc(100% + 6px); bottom: auto; }
 .ii-am-root .ii-am-chat-count__generate,
@@ -605,6 +611,7 @@ export const CHAT_SIDE_CSS = String.raw`
 .ii-am-root.ii-am-chat-runtime-host[data-ii-corner$="-left"] .ii-am-chat-count:not([data-ii-floating="true"]) { justify-content: flex-start; }
 .ii-am-root.ii-am-chat-runtime-host[data-ii-corner$="-left"] .ii-am-chat-count:not([data-ii-floating="true"]) .ii-am-chat-count__panel { right: auto; left: 50px; }
 .ii-am-root.ii-am-chat-runtime-host[data-ii-corner^="top-"] .ii-am-chat-count:not([data-ii-floating="true"]) { z-index: 1; }
+.ii-am-root.ii-am-chat-runtime-host[data-ii-corner^="top-"] .ii-am-chat-count:not([data-ii-floating="true"]) .ii-am-chat-count__panel { top: 0; bottom: auto; }
 .ii-am-root.ii-am-chat-runtime-host[data-ii-corner^="top-"] .ii-am-chat-count:not([data-ii-floating="true"]) .ii-am-chat-count__menu { top: calc(100% + 6px); bottom: auto; }
 
 /* error dialog */
@@ -666,9 +673,7 @@ export const CHAT_SIDE_CSS = String.raw`
   .ii-am-root .ii-am-chat-toast__content { grid-template-columns: 16px minmax(0, 1fr) 44px; min-height: 44px; padding: 4px 4px 4px 12px; gap: 6px; }
   .ii-am-root .ii-am-chat-toast__action { width: 44px; height: 44px; }
   .ii-am-root .ii-am-chat-count:not([data-ii-floating="true"]) { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); bottom: var(--ii-am-composer-inset, calc(64px + env(safe-area-inset-bottom, 0px))); display: grid; justify-items: end; }
-  .ii-am-root .ii-am-chat-count:not([data-ii-floating="true"]) .ii-am-chat-count__panel { top: auto; right: 0; bottom: calc(100% + 8px); height: 48px; max-width: calc(100vw - 24px); overflow-x: auto; scrollbar-width: none; }
-  .ii-am-root .ii-am-chat-count[data-ii-menu="count"] .ii-am-chat-count__panel,
-  .ii-am-root .ii-am-chat-count[data-ii-menu="scene"] .ii-am-chat-count__panel { overflow: visible; }
+  .ii-am-root .ii-am-chat-count:not([data-ii-floating="true"]) .ii-am-chat-count__panel { top: auto; right: 0; bottom: calc(100% + 8px); max-width: calc(100dvw - max(12px, env(safe-area-inset-right, 0px)) - max(12px, env(safe-area-inset-left, 0px))); }
   .ii-am-root .ii-am-chat-count__option { width: 44px; height: 40px; }
   .ii-am-root .ii-am-chat-count__step-button { width: 36px; height: 40px; }
   .ii-am-root .ii-am-chat-count__step-output { min-width: 28px; height: 40px; }
@@ -683,9 +688,9 @@ export const CHAT_SIDE_CSS = String.raw`
   .ii-am-root.ii-am-chat-runtime-host[data-ii-corner$="-left"] .ii-am-chat-count:not([data-ii-floating="true"]) .ii-am-chat-count__panel { right: auto; left: 0; }
   .ii-am-root.ii-am-chat-runtime-host[data-ii-corner^="top-"] .ii-am-chat-count:not([data-ii-floating="true"]) { top: calc(env(safe-area-inset-top, 0px) + 56px); bottom: auto; }
   .ii-am-root.ii-am-chat-runtime-host[data-ii-corner^="top-"] .ii-am-chat-count:not([data-ii-floating="true"]) .ii-am-chat-count__panel { top: calc(100% + 8px); bottom: auto; }
-  /* Top corners: toasts below the toggle (and below the open panel). */
+  /* Top corners: toasts below the toggle (and below the open panel, which wraps to two 40px rows here: 108 + 92 + 8). */
   .ii-am-root.ii-am-chat-runtime-host[data-ii-corner^="top-"] .ii-am-chat-runtime[data-ii-count="true"] .ii-am-chat-toast-stack { top: calc(env(safe-area-inset-top, 0px) + 108px); max-height: min(216px, calc(100dvh - 184px)); }
-  .ii-am-root.ii-am-chat-runtime-host[data-ii-corner^="top-"] .ii-am-chat-runtime[data-ii-count="true"]:has(.ii-am-chat-count[data-ii-expanded="true"]) .ii-am-chat-toast-stack { top: calc(env(safe-area-inset-top, 0px) + 164px); }
+  .ii-am-root.ii-am-chat-runtime-host[data-ii-corner^="top-"] .ii-am-chat-runtime[data-ii-count="true"]:has(.ii-am-chat-count[data-ii-expanded="true"]) .ii-am-chat-toast-stack { top: calc(env(safe-area-inset-top, 0px) + 208px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .ii-am-root .ii-am-chat-spinner,

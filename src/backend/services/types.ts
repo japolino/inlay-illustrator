@@ -154,6 +154,11 @@ export interface LlmCompleteRequest {
   cacheBreakpoints?: number[];
   /** The same request as plain messages, for providers that reject the cache partition's message shape (sent once on a 400). */
   flatMessages?: LlmMessage[];
+  /**
+   * The engine cache partition `messages` was built from (AM `Vpe`). Read only for its `prefixPreparation`: on Gemini 4
+   * Argon/Carbon/Hydrogen the partition is sent prepared instead (AM `fXe_91`, 0.9.91); every other model sends `messages`.
+   */
+  cachePartition?: unknown;
 }
 
 export interface LlmCompleteResult {
@@ -185,6 +190,12 @@ export interface AnalyzerClientLike {
   ): Promise<{ raw: string; parsed: unknown; [key: string]: unknown }>;
 }
 
+/** Where an analyzer call goes: Lumiverse provider id of the connection ("google_vertex", "openrouter", ...) and the model id. */
+export interface AnalyzerTarget {
+  provider: string;
+  model: string;
+}
+
 export interface LlmService {
   /** One logical call: retries (408/429/5xx/timeout/empty/parse) with a fixed 100 ms delay, own timeout, abort. */
   complete(request: LlmCompleteRequest, options?: LlmCallOptions): Promise<LlmCompleteResult>;
@@ -192,6 +203,8 @@ export interface LlmService {
   analyzerClient(options?: LlmCallOptions & { purpose?: string }): AnalyzerClientLike;
   /** `analysis.vision` auto/supported/unsupported + connection metadata (spec/llm.md §2). */
   supportsVision(settings?: Partial<AnalyzerSettings>): Promise<boolean>;
+  /** The connection's Lumiverse provider id and the model an analyzer call would use now (rejects when the connection can't be read). */
+  analyzerTarget(settings?: Partial<AnalyzerSettings>): Promise<AnalyzerTarget>;
   listConnections(): Promise<LlmConnectionSummary[]>;
   listModels(connectionId: string): Promise<ModelOption[]>;
   /** Settings "message test" (AM T0t). `settings` = unsaved draft merged over `config.analysis` for this call only. */

@@ -303,6 +303,9 @@ export function createFakeServices(overrides: FakeServicesOverrides = {}): FakeS
     async supportsVision() {
       return fx.visionSupported.value;
     },
+    async analyzerTarget() {
+      return { provider: "openai", model: "fake-model" };
+    },
     async listConnections() {
       return [{ id: "fake-llm", name: "Fake LLM", provider: "openai", model: "fake-model", isDefault: true, hasApiKey: true }];
     },

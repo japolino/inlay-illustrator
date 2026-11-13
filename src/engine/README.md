@@ -1,4 +1,4 @@
-# src/engine — Asset Maid 0.9.90 core (pure, deterministic, parity-tested)
+# src/engine — Asset Maid 0.9.91 core (pure, deterministic, parity-tested)
 
 The engine is a faithful port of Asset Maid's pure core: the NovelAI V5 catalog and Maid Atelier presets, the
 directing document, the V5 rule runtime, analyzer request building and response recovery, prompt composition and
@@ -10,15 +10,18 @@ the NSFW prefix (replaced by a per-source fixed rating). The port follows: there
 
 ## How the port is built (read this first)
 
-- `core/asset-maid-core.ts` is **generated**. It is a verbatim slice of the ORIGINAL AM 0.9.90 bundle
-  (`0.9.90.p120.js`: prettier 3.7.4, width 120, original minified names; there is no rename layer any more), made by
-  `core/tooling/slice.mjs` (acorn + eslint-scope) with `core/tooling/slice-config.json` (174 roots, 140 renames).
-  The slicer emits the full top-level dependency closure of the roots in original order: **1715 declarations,
-  36381 lines** (0.9.89.6: ~2450 / ~54k), including the data literals (`Gl`, `Od`, `nw`, prompt texts). Algorithms,
-  prompt texts and data tables are byte-identical by construction.
+- `core/asset-maid-core.ts` is **generated**. It is a verbatim slice of the ORIGINAL AM 0.9.91 bundle, made by
+  `core/tooling/slice.mjs` (acorn + eslint-scope) with `core/tooling/slice-config.json`. The slicer emits the full
+  top-level dependency closure of the roots in original order (1827 units), including the data literals (`Gl`, `Od`,
+  `nw`, prompt texts). Algorithms, prompt texts and data tables are byte-identical by construction.
+- **Names are the 0.9.90 names.** Upstream's minifier renames everything in each release, so a new bundle is first
+  rewritten to the names the port already uses (`0.9.91.n90.p120.js`); a unit that is new in 0.9.91 has a `_91` suffix
+  when its own name was taken (`uwe_91`, `byt_91`). Units upstream did not touch keep their 0.9.90 text. The whole
+  procedure for the next release is in **`core/tooling/README.md`**.
 - Only top-level identifiers listed in `renames` get readable names; the semantic names are the same as in the 0.9.89
   port wherever the concept still exists. Every other unit is exported under its **p120 name**. Every declaration has the
-  comment `// AM <p120 name> @<p120 line>`. `core/names.json` lists every unit (`orig`, `name`, `line`).
+  comment `// AM <p120 name> @<line>` (line in `0.9.91.n90.p120.js`). `core/names.json` lists every unit (`orig`,
+  `name`, `line`) and is written by the slicer.
   Beware: p120 reuses short names for different functions than 0.9.89 did (e.g. `Vi` is now isAnimaFlat, `pbt` is now
   the split detail payload) — always check `names.json` before importing a minified name.
 - `Date.now`, `Math.random`, `crypto.*` and `performance.now` in the slice are rewritten to `amEnv.*` (`core/env.ts`).
@@ -29,11 +32,13 @@ the NSFW prefix (replaced by a per-source fixed rating). The port follows: there
   parity-tested against it).
 - `core/data/`: `v5-raw-config.json` (`Gl`, raw), `v5-normalized-raw-config.json` (`Od = L2e(Gl)`, the source of the
   bundled catalog), `default-preset.json` (`{builtin: r2, document: nw}`).
-- Regenerate the core: `bun core/tooling/slice.mjs core/tooling/slice-config.json` (needs acorn + eslint-scope; the
-  `source` / `out` paths are absolute). Do not edit `asset-maid-core.ts` by hand.
-- Golden fixtures are recorded from the ORIGINAL 0.9.90 bundle through an eval harness (`am_harness990.js` = p120 with
-  the boot call replaced by an eval hook). Generators live in the scratch folder `S/engine-build/gen/**`
-  (S = `.../scratchpad/am990`); they use p120 names directly.
+- Regenerate the core from the repository root: `bun src/engine/core/tooling/slice.mjs
+  src/engine/core/tooling/slice-config.json` (acorn + eslint-scope are devDependencies; config paths are relative to
+  the root). Do not edit `asset-maid-core.ts` by hand.
+- Golden fixtures are recorded from the ORIGINAL bundle through an eval harness (the formatted bundle with the boot
+  call replaced by an eval hook). The 0.9.91 analyzer request / run / split fixtures and the three engine e2e fixtures
+  were re-recorded that way (`tmp-audit/upstream/harness/`, gitignored: `make-harness.mjs`, `rec-analyzer.mjs`,
+  `rec-engine.mjs`); the recovery and misc fixtures are still the 0.9.90 recordings because their units did not change.
 
 ## Module map
 
@@ -58,7 +63,9 @@ Same graph as Asset Maid's boot code: `fht` sessions → `Oht`+`Lxe` dispatcher 
 
 Options (injected host effects):
 - `analyzerClient.complete(config, messages, options) → {raw, parsed}` (LLM transport). The V5 analyzer passes
-  `options.structuredOutputSchema`, `cachePartition`, `cacheSourceId`, `purpose: "image-generation"`.
+  `options.structuredOutputSchema`, `cachePartition` (0.9.91: may carry `prefixPreparation`), `cacheSourceId`,
+  `purpose: "image-generation"`, and since 0.9.91 `historyContext`, `historyStage`, `historyAttempt`,
+  `historyValidation` (a promise) and `streamOutput`. The port's client ignores the history and stream options.
 - `imageProviders: { novelai?, "comfy-ui"? }`: adapters `{provider, serializesRequests?, generate(request, {signal, onEvent}) → result}`.
   NovelAI request: `{provider, providerRef, prompt, negativePrompt, seed, width, height, maxAttempts, config, forceRating,
   session, references, imageToImage?, queueMeta}`; ComfyUI adds `transport: "direct-workflow", endpoint, profile,
@@ -95,8 +102,9 @@ Options (injected host effects):
   `rebuildContinuityFromChatStore`, `commitContinuityCheckpoint`.
 - Text: `splitParagraphSlots`, `buildIllustrationSlots`, `parseLenientJson`.
 
-## Parity coverage (`bun test src/engine`: 207 tests, 1227 assertions)
-All golden fixtures come from the ORIGINAL 0.9.90 bundle with the seeded clock/RNG installed on both sides.
+## Parity coverage (`bun test src/engine`: 217 tests)
+All golden fixtures come from the ORIGINAL bundle (0.9.91 for analyzer requests, runs, split and e2e; 0.9.90 for the
+unchanged recovery and misc units) with the seeded clock/RNG installed on both sides.
 - core (5): raw / normalized config dumps, bundled and default-preset catalog hashes + fingerprints, compiler `-v3`.
 - engine e2e (3): `createAssetMaidEngine` against the original boot wiring (v5 novelai, v5 comfy-ui comic, and a
   config-driven run with a non-default active Atelier preset, a POV + portrait directing document and fixed rating `nsfw`).
@@ -106,6 +114,20 @@ All golden fixtures come from the ORIGINAL 0.9.90 bundle with the seeded clock/R
   multi-depiction unit checks.
 - compose (18), context (4), continuity (3: two-turn chat sequence through persist / commit / rebuild, checkpoint
   push, normalization), text (63).
+
+## 0.9.91 changes at the engine level
+
+- Split analysis: the first step is one "split initial analysis" (`분할 초기 분석`) that chooses slots from
+  `slot_context` (the paragraphs next to each candidate slot) and no longer returns an evidence quote. The separate
+  character / outfit preparation stage is gone; it runs inside that step with status `validating`
+  (`분석 결과 확인 중`). Detail steps are labelled `상세 분석 i/n`. Phase contract v10, partition namespace v11.
+- `V5AnalyzerResult.cacheNotice` is replaced by `requestObservation`; the session progress no longer has the
+  `analyzerCache*` / `analyzerInputTokens*` fields.
+- A compact "Argon" response contract applies only for provider `vertex_ai` with model `gemini-4-argon`. The port's
+  analyzer config has no `provider`, so it is inert here.
+- Directing rules can be read and committed for an explicit preset id (`resolveAnalysisDocument`, `resolveLibrary`,
+  `readActivePresetRules` take `presetId?`; `commitLibrary` takes `restoreId?`).
+- `resolveSourceGenerationSettings(config, sourceId, overrides?)`.
 
 ## Gaps / known limits
 - Fixture inputs reuse the 0.9.89 scenarios (context, prompt context, analyzer responses). Responses were translated to

@@ -43,6 +43,7 @@ import {
   type AtelierExecution,
   type AtelierExecutionControls,
   type AtelierIssue,
+  type AtelierPresetLibrary,
   type AtelierRuntimeOverlay,
   type AtelierState,
   type AtelierStoreDocument,
@@ -111,15 +112,19 @@ export interface AtelierService {
   activateDocument(p: { baseRevision: number; id: string }): Promise<{ state: AtelierState }>;
   exportDocument(p: { id: string; json?: string; selection?: DocumentSelection }): Promise<{ fileName: string; json: string }>;
   rawSource(p: { id: string }): Promise<{ fileName: string; json: string }>;
-  selectGuideline(p: { kind: GuidelineKind; id: string }): Promise<{ state: AtelierState }>;
-  createGuideline(p: { kind: GuidelineKind; copyOf?: string }): Promise<{ state: AtelierState; id: string }>;
-  removeGuideline(p: { kind: GuidelineKind; id: string }): Promise<{ state: AtelierState }>;
-  saveGuidelines(p: { kind: GuidelineKind; edits: GuidelineEdit[] }): Promise<{ state: AtelierState }>;
-  setOutputMode(p: { id: string; mode: OutputMode }): Promise<{ state: AtelierState }>;
-  setSystems(p: { systems: Record<string, SceneSystem> }): Promise<{ state: AtelierState; incomplete: string[] }>;
-  setOption(p: { id: string; optionId: string; value: boolean }): Promise<{ state: AtelierState }>;
-  setSizes(p: { id: string; allowedSizeIds: number[]; customSizes?: Array<{ id: number; width: number; height: number }> }): Promise<{ state: AtelierState }>;
-  restoreGuideline(p: { id: string; expected: unknown }): Promise<{ state: AtelierState }>;
+  /*
+   * Guideline library edits. `presetId` = the preset open in the Atelier (AM 0.9.91 `qst(e, shownId)`): the edit reads
+   * the library with that preset's directing rules and writes owned rules back into it (default: the active preset).
+   */
+  selectGuideline(p: { kind: GuidelineKind; id: string; presetId?: string }): Promise<{ state: AtelierState }>;
+  createGuideline(p: { kind: GuidelineKind; copyOf?: string; presetId?: string }): Promise<{ state: AtelierState; id: string }>;
+  removeGuideline(p: { kind: GuidelineKind; id: string; presetId?: string }): Promise<{ state: AtelierState }>;
+  saveGuidelines(p: { kind: GuidelineKind; edits: GuidelineEdit[]; presetId?: string }): Promise<{ state: AtelierState }>;
+  setOutputMode(p: { id: string; mode: OutputMode; presetId?: string }): Promise<{ state: AtelierState }>;
+  setSystems(p: { systems: Record<string, SceneSystem>; presetId?: string }): Promise<{ state: AtelierState; incomplete: string[] }>;
+  setOption(p: { id: string; optionId: string; value: boolean; presetId?: string }): Promise<{ state: AtelierState }>;
+  setSizes(p: { id: string; allowedSizeIds: number[]; customSizes?: Array<{ id: number; width: number; height: number }>; presetId?: string }): Promise<{ state: AtelierState }>;
+  restoreGuideline(p: { id: string; expected: unknown; presetId?: string }): Promise<{ state: AtelierState }>;
   importLegacyDirections(p: { baseRevision: number }): Promise<{ state: AtelierState; created: { scene: string[]; imageRatio: string[] } }>;
   setExecution(p: { patch: AtelierExecutionPatch }): Promise<{ state: AtelierState }>;
   setExecutionMode(p: { mode: "default" | "comic" }): Promise<{ state: AtelierState }>;
@@ -483,7 +488,24 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
         return {};
       }
     })();
-    const ownedRuleIds = Object.fromEntries(Object.entries(owned).map(([direction, rules]) => [direction, rules.map((r) => String(r.id))]));
+    // A stored preset may be malformed (old or hand-edited file): a direction whose rules are not a list owns nothing.
+    const ruleIds = (rules: Record<string, Rec[]>) => Object.fromEntries(Object.entries(rules).map(([direction, list]) => [direction, Array.isArray(list) ? list.map((r) => String(r?.id)) : []]));
+    const ownedRuleIds = ruleIds(owned);
+    // AM 0.9.91 `qst(e, shownId)`: the Atelier editor shows (and edits) the library with the open preset's rules.
+    const presetLibraries: Record<string, AtelierPresetLibrary> = {};
+    for (const doc of store.catalog.documents) {
+      let rules: Record<string, Rec[]> = {};
+      try {
+        rules = A.readActivePresetRules(am, doc.id)?.rules ?? {};
+      } catch {
+        /* unreadable document: no owned rules */
+      }
+      try {
+        presetLibraries[doc.id] = { library: A.resolveLibrary(am, doc.id) as unknown as InstructionLibrary, ownedRuleIds: ruleIds(rules) };
+      } catch (error) {
+        presetLibraries[doc.id] = { ownedRuleIds: ruleIds(rules), error: atelierMessage(error).message };
+      }
+    }
     const execution = executionOf(store, config);
     const selected = library.scene.items[library.scene.selected];
     const mode = A.sceneOutputMode(selected as never) === "comic" ? "comic" : execution.mode === "comic" ? "default" : execution.mode;
@@ -499,6 +521,7 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
       catalog: { activeId: store.catalog.activeId, documents },
       library,
       ownedRuleIds,
+      presetLibraries,
       freeGeneration,
       execution: { mode, controls: execution.controls },
       pendingDefaults,
@@ -559,19 +582,30 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
     return { am: committed, merged };
   }
 
-  /** AM `qst.A` (library commit): mutate the effective library, validate (`jAe`, optional `C8`), commit (`hS`). */
-  function commitLibraryEdit(am: Rec, mutate: (library: A.AtelierLibrary) => A.AtelierLibrary | void, options: { checkPreset?: boolean; restoreId?: string } = {}): Rec {
+  /** Preset whose directing rules a library edit reads and writes back (AM 0.9.91 `qst` `t`; default: the active one). */
+  const ownerOf = (am: Rec, presetId?: string): string => presetId ?? catalogOf(am).activeId;
+
+  /**
+   * AM `qst.S` (0.9.91 library commit): mutate the library seen from preset `presetId` (`zc(config, t)`), validate
+   * (`jAe`), commit (`hS(config, next, t)`: owned rules go back into that preset). The resolve id and the commit id must
+   * be the same: `v2e` derives the rules it writes back from the library it is given. `checkPreset` (`qst.I`, scene
+   * selection) checks the effective ACTIVE library after the commit against the active preset (`C8(zc(hS(...)))`).
+   * A `presetId` no longer in the catalog fails with "편집하던 프리셋이 없어 규칙을 저장하지 못했습니다." (`v2e`).
+   */
+  function commitLibraryEdit(am: Rec, mutate: (library: A.AtelierLibrary) => A.AtelierLibrary | void, options: { checkPreset?: boolean; restoreId?: string; presetId?: string } = {}): Rec {
     return attempt(() => {
-      const current = A.resolveLibrary(am);
+      const owner = ownerOf(am, options.presetId);
+      const current = A.resolveLibrary(am, owner);
       const draft = jsonClone(current);
       const next = mutate(draft) ?? draft;
       A.validateLibraryEdit(current, next);
+      const committed = A.commitLibrary(am, next, owner, options.restoreId);
       if (options.checkPreset) {
-        const active = catalogOf(am).documents.find((d) => d.id === catalogOf(am).activeId);
+        const active = catalogOf(committed).documents.find((d) => d.id === catalogOf(committed).activeId);
         if (!active) throw new Error("활성 연출 프리셋을 찾을 수 없습니다.");
-        A.assertLibraryRules(next, A.compilePresetOrThrow(active.json).catalog, next.scene.selected);
+        A.assertLibraryRules(A.resolveLibrary(committed), A.compilePresetOrThrow(active.json).catalog, next.scene.selected);
       }
-      return A.commitLibrary(am, next, catalogOf(am).activeId, options.restoreId);
+      return committed;
     });
   }
 
@@ -613,10 +647,10 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
       return { store: storeFrom(fn(amOf(store, config)), store), result: undefined };
     });
 
-  /** Scene item copy without the rules owned by the active preset (AM `qst.v`). */
-  const sceneCopy = (am: Rec, library: A.AtelierLibrary, fromId: string, toId: string) => {
+  /** Scene item copy without the rules owned by the edited preset (AM `qst.w`, 0.9.91 `vS_91(config, t)`). */
+  const sceneCopy = (am: Rec, library: A.AtelierLibrary, fromId: string, toId: string, presetId?: string) => {
     const item = jsonClone(library.scene.items[fromId]!);
-    const owned = new Set((A.readActivePresetRules(am)?.rules[fromId] ?? []).map((r) => String(r.id)));
+    const owned = new Set((A.readActivePresetRules(am, ownerOf(am, presetId))?.rules[fromId] ?? []).map((r) => String(r.id)));
     const system = rec(item.system);
     if (Array.isArray(system.rules)) system.rules = system.rules.filter((r) => !owned.has(String(rec(r).id)));
     return A.copySceneItem(item, fromId, toId);
@@ -733,7 +767,9 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
       const { store } = await read();
       const doc = docOf(store.catalog, p.id);
       const am = amOf(store, config);
-      const library = attempt(() => A.resolveLibrary(am));
+      // AM 0.9.91 `hct` export: the user library without preset-owned rules (`w8` / `qst.exportLibrary`); before, the
+      // active preset's rules were bundled into every export.
+      const library = attempt(() => A.resolveStoredLibrary(am));
       const free = attempt(() => A.resolveFreeGenerationLibrary(am));
       const exported = attempt(() => A.exportPresetDocument(p.json ?? doc.json, library, doc.name, p.selection as never, free));
       return { fileName: `${fileSafe(doc.name)}.json`, json: JSON.stringify(exported.document, null, 2) };
@@ -764,7 +800,7 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
             if (!lib[kind].items[p.id]) throw new Error("지침을 찾을 수 없습니다.");
             lib[kind].selected = p.id;
           },
-          { checkPreset: kind === "scene" },
+          { checkPreset: kind === "scene", presetId: p.presetId },
         ),
       );
       return { state };
@@ -791,9 +827,9 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
             const source = p.copyOf ? lib.scene.items[p.copyOf] : undefined;
             if (p.copyOf && !source) throw new Error("복제할 지침을 찾을 수 없습니다.");
             lib.scene.items[id] = source
-              ? { ...sceneCopy(am, lib, p.copyOf!, id), name: ATELIER_NAMES.copyOf(String(source.name)).slice(0, 80) }
+              ? { ...sceneCopy(am, lib, p.copyOf!, id, p.presetId), name: ATELIER_NAMES.copyOf(String(source.name)).slice(0, 80) }
               : { name: ATELIER_NAMES.newScene, instruction: "", outputMode: "illustration", system: A.emptySceneSystem() };
-          }),
+          }, { presetId: p.presetId }),
         );
         return { state, id };
       }
@@ -803,7 +839,7 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
           const source = p.copyOf ? lib.imageRatio.items[p.copyOf] : undefined;
           if (p.copyOf && !source) throw new Error("비율 지침을 찾을 수 없습니다.");
           lib.imageRatio.items[id] = source ? { ...jsonClone(source), name: ATELIER_NAMES.copyOf(String(source.name)).slice(0, 80) } : { name: ATELIER_NAMES.newRatio, instruction: "", allowedSizeIds: [1, 2, 5] };
-        }),
+        }, { presetId: p.presetId }),
       );
       return { state, id };
     },
@@ -830,7 +866,7 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
           const fallback = kind === "scene" && lib.scene.items[p.id] && A.sceneOutputMode(lib.scene.items[p.id]) === "comic" ? "default-comic" : "default";
           delete lib[kind].items[p.id];
           if (lib[kind].selected === p.id) lib[kind].selected = fallback;
-        }),
+        }, { presetId: p.presetId }),
       );
       return { state };
     },
@@ -868,7 +904,7 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
             if (!same(current, e.before) && !same(current, e.value)) fieldConflict(kind, e.id, e.field, e.before, current, "다른 화면에서 지침이 변경되었습니다. 초안은 유지됩니다. 최신 내용과 비교해주세요.");
             A.writeGuidelineField(item, e.field, e.value);
           }
-        }),
+        }, { presetId: p.presetId }),
       );
       return { state };
     },
@@ -880,7 +916,7 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
           const item = lib.scene.items[p.id];
           if (!item) throw new Error("지침을 찾을 수 없습니다.");
           item.outputMode = p.mode;
-        }),
+        }, { presetId: p.presetId }),
       );
       return { state };
     },
@@ -897,7 +933,7 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
             if (rules.length !== (Array.isArray(s.rules) ? s.rules.length : 0)) incomplete.push(id);
             item.system = { ...s, rules } as unknown as Rec;
           }
-        }),
+        }, { presetId: p.presetId }),
       );
       return { state, incomplete };
     },
@@ -908,7 +944,7 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
           const system = rec(lib.scene.items[p.id]?.system) as unknown as SceneSystem;
           if (!Array.isArray(system.options) || !system.options.some((o) => o.id === p.optionId)) throw new Error("연출 옵션을 찾을 수 없습니다.");
           system.values = { ...system.values, [p.optionId]: p.value === true };
-        }),
+        }, { presetId: p.presetId }),
       );
       return { state };
     },
@@ -922,7 +958,7 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
           const allowed = Array.isArray(p.allowedSizeIds) ? p.allowedSizeIds : [];
           item.allowedSizeIds = allowed;
           item.customSizes = A.normalizeCustomSizes([...(p.customSizes ?? []), ...(config.runtime.customImageSizes ?? []).filter((s) => allowed.includes(s.id))]);
-        }),
+        }, { presetId: p.presetId }),
       );
       return { state };
     },
@@ -930,12 +966,13 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
     async restoreGuideline(p) {
       const { state } = await libraryWrite((am) => {
         if (!A.isDefaultSceneId(p.id) && !A.providedSceneSystem(p.id)) fail("bad-request", "Only built-in directing guidelines can be restored.", { detailCode: "atelier-validation" });
-        const current = A.resolveLibrary(am).scene.items[p.id];
+        const owner = ownerOf(am, p.presetId);
+        const current = A.resolveLibrary(am, owner).scene.items[p.id];
         if (!same(current, p.expected)) fieldConflict("scene", p.id, "*", p.expected, current, "다른 화면에서 연출이 변경되었습니다. 최신 내용을 확인해주세요.");
         return commitLibraryEdit(
           am,
           (lib) => {
-            const owned = A.readActivePresetRules(am)?.rules;
+            const owned = A.readActivePresetRules(am, owner)?.rules;
             const ownedIds = new Set((owned?.[p.id] ?? []).map((r) => String(r.id)));
             const restored = jsonClone(rec(p.expected));
             const system = rec(restored.system);
@@ -943,7 +980,7 @@ export function createAtelierService(deps: AtelierServiceDeps): AtelierService {
             lib.scene.items[p.id] = A.restoreBuiltInSceneItem(restored, p.id);
             lib.scene.items[p.id] = A.overlayPresetRules(lib, owned && { [p.id]: owned[p.id] ?? [] }).scene.items[p.id]!;
           },
-          { restoreId: p.id },
+          { restoreId: p.id, presetId: p.presetId },
         );
       });
       return { state };

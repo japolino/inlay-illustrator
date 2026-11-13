@@ -11,6 +11,7 @@ import {
   PRESET_MAX_BYTES,
   RECOVERY_FORMAT,
   type AtelierDocumentSelection,
+  type AtelierDocumentView,
   type AtelierExecutionPatch,
   type AtelierFieldConflict,
   type AtelierState,
@@ -32,10 +33,14 @@ import {
   formatRulesJson,
   parsePreset,
   parseRulesJson,
+  presetLibraryOf,
   safeFileName,
+  sceneRulesOf,
   serializePreset,
+  stripSceneRules,
   systemCatalog,
   utf8Size,
+  withSceneRules,
   type PresetDocument,
   type SystemCatalog
 } from "./model.js";
@@ -233,10 +238,26 @@ export class AtelierStore {
       return;
     }
     if (draft && draft.id === documentId && draft.dirty && draft.baseJson !== stored.json) {
-      this.store.patch({ documentId, stale: true });
+      const rebased = s.saving ? null : this.rebaseRules(draft, stored);
+      this.store.patch(rebased ? { documentId, draft: rebased, stale: false } : { documentId, stale: true });
       return;
     }
     this.store.patch({ documentId, draft: this.buildDraft(documentId, stored.json, stored.readError), stale: false });
+  }
+
+  /**
+   * AM 0.9.91 `pct` `syncPresetRules` (`Jlt_91`): when the stored document changed in its directing rules only
+   * (`content.analysis.scene.rules`, written back by guideline edits), the dirty draft takes the new rules and the new
+   * base instead of going stale. Not when the raw editor holds edited text. Null = a real conflict.
+   */
+  private rebaseRules(draft: DocumentDraft, stored: AtelierDocumentView): DocumentDraft | null {
+    if (!draft.doc || stored.readError || (draft.rawText !== null && draft.rawText !== draft.baseJson)) return null;
+    try {
+      if (stripSceneRules(draft.baseJson) !== stripSceneRules(stored.json)) return null;
+      return { ...draft, doc: withSceneRules(draft.doc, sceneRulesOf(stored.json)), baseJson: stored.json, rawText: draft.rawText !== null ? stored.json : null };
+    } catch {
+      return null;
+    }
   }
 
   private buildDraft(id: string, json: string, readError?: string): DocumentDraft {
@@ -517,8 +538,9 @@ export class AtelierStore {
   }
 
   /**
-   * JSON import (AM file input 124938): 2 MiB limit, validation errors returned for the import dialog; the imported
-   * document becomes active and is shown.
+   * JSON import (AM 0.9.91 file input `Ict` + `hct.xr`): 2 MiB limit; the file is validated first (`kbe`), then pending
+   * edits are saved (`De`, no "unsaved changes" question any more), the state is reloaded (`c.reload()`) and the document
+   * is imported, made active and shown. Errors are returned for the import dialog.
    */
   async importFile(file: { name: string; size?: number; text: () => Promise<string> }): Promise<{ ok: boolean; errors: string[]; merged?: number }> {
     if ((file.size ?? 0) > PRESET_MAX_BYTES) return { ok: false, errors: [L.importing.tooLarge] };
@@ -529,10 +551,17 @@ export class AtelierStore {
       return { ok: false, errors: [L.importing.readFailed] };
     }
     if (utf8Size(json) > PRESET_MAX_BYTES) return { ok: false, errors: [L.importing.tooLarge] };
-    const state = this.state;
-    if (!state) return { ok: false, errors: [L.importing.saveFailed] };
+    if (!this.state) return { ok: false, errors: [L.importing.saveFailed] };
     this.store.patch({ busy: ++this.busyCount > 0 });
     try {
+      const checked = await this.app.call("atelier.validateDocument", { json });
+      if (!checked.valid) {
+        const errors = checked.diagnostics.filter((d) => d.severity === "error").map((d) => (d.sourcePath ? `${d.sourcePath}: ${d.message}` : d.message));
+        return { ok: false, errors: errors.length ? errors : [L.raw.invalid] };
+      }
+      if (this.hasUnsaved() && !(await this.saveAll())) return { ok: false, errors: [L.importing.saveFailed] };
+      const state = await this.app.loadAtelier();
+      if (!state) return { ok: false, errors: [L.importing.saveFailed] };
       const r = await this.app.call("atelier.documents.import", { baseRevision: state.revision, fileName: file.name.replace(/\.json$/i, ""), json, activate: true });
       this.app.applyAtelier(r.state);
       this.selectDocument(r.id);
@@ -595,16 +624,28 @@ export class AtelierStore {
     }
   }
 
+  /**
+   * The preset open in the Atelier: guideline edits read and write its directing rules (AM 0.9.91 `qst(e, shownId)`),
+   * not the active preset's.
+   */
+  private get presetId(): string {
+    return this.snapshot.documentId;
+  }
+  /** The guideline library with the open preset's directing rules, and the rule ids that preset owns. */
+  presetLibrary(state: AtelierState | null = this.state): ReturnType<typeof presetLibraryOf> | null {
+    return state ? presetLibraryOf(state, this.snapshot.documentId) : null;
+  }
+
   selectGuideline(kind: GuidelineKind, id: string): Promise<unknown> {
-    return this.libraryCall(() => this.app.call("atelier.instructions.select", { kind, id }));
+    return this.libraryCall(() => this.app.call("atelier.instructions.select", { kind, id, presetId: this.presetId }));
   }
   async createGuideline(kind: GuidelineKind, copyOf?: string): Promise<string | null> {
-    const r = await this.libraryCall(() => this.app.call("atelier.instructions.create", { kind, ...(copyOf ? { copyOf } : {}) }));
+    const r = await this.libraryCall(() => this.app.call("atelier.instructions.create", { kind, ...(copyOf ? { copyOf } : {}), presetId: this.presetId }));
     if (r) this.openEditor({ type: "guideline", kind, id: r.id });
     return r?.id ?? null;
   }
   async removeGuideline(kind: GuidelineKind, id: string): Promise<boolean> {
-    const r = await this.libraryCall(() => this.app.call("atelier.instructions.remove", { kind, id }));
+    const r = await this.libraryCall(() => this.app.call("atelier.instructions.remove", { kind, id, presetId: this.presetId }));
     if (r) {
       this.dropGuidelineDrafts(kind, id);
       const editor = this.snapshot.view.editor;
@@ -613,16 +654,16 @@ export class AtelierStore {
     return !!r;
   }
   setOutputMode(id: string, mode: "illustration" | "comic"): Promise<unknown> {
-    return this.libraryCall(() => this.app.call("atelier.instructions.setOutputMode", { id, mode }));
+    return this.libraryCall(() => this.app.call("atelier.instructions.setOutputMode", { id, mode, presetId: this.presetId }));
   }
   setSizes(id: string, allowedSizeIds: number[], customSizes: Array<{ id: number; width: number; height: number }> = []): Promise<unknown> {
-    return this.libraryCall(() => this.app.call("atelier.instructions.setSizes", { id, allowedSizeIds, ...(customSizes.length ? { customSizes } : {}) }));
+    return this.libraryCall(() => this.app.call("atelier.instructions.setSizes", { id, allowedSizeIds, ...(customSizes.length ? { customSizes } : {}), presetId: this.presetId }));
   }
   setOption(id: string, optionId: string, value: boolean): Promise<unknown> {
-    return this.libraryCall(() => this.app.call("atelier.instructions.setOption", { id, optionId, value }));
+    return this.libraryCall(() => this.app.call("atelier.instructions.setOption", { id, optionId, value, presetId: this.presetId }));
   }
   async setSystem(id: string, system: SceneSystem): Promise<string[] | null> {
-    const r = await this.libraryCall(() => this.app.call("atelier.instructions.setSystems", { systems: { [id]: system } }));
+    const r = await this.libraryCall(() => this.app.call("atelier.instructions.setSystems", { systems: { [id]: system }, presetId: this.presetId }));
     return r ? r.incomplete : null;
   }
   async restoreGuideline(id: string): Promise<boolean> {
@@ -630,9 +671,9 @@ export class AtelierStore {
       this.store.patch({ guidelineError: { message: L.guidelines.saveBeforeRestore } });
       return false;
     }
-    const expected = this.state?.library.scene.items[id] as SceneInstruction | undefined;
+    const expected = this.presetLibrary()?.library.scene.items[id] as SceneInstruction | undefined;
     if (!expected) return false;
-    return !!(await this.libraryCall(() => this.app.call("atelier.instructions.restore", { id, expected })));
+    return !!(await this.libraryCall(() => this.app.call("atelier.instructions.restore", { id, expected, presetId: this.presetId })));
   }
   setExecution(patch: AtelierExecutionPatch): Promise<unknown> {
     return this.libraryCall(() => this.app.call("atelier.execution.set", { patch }));
@@ -646,7 +687,7 @@ export class AtelierStore {
   guidelineValue(kind: GuidelineKind, id: string, field: string): unknown {
     const state = this.state;
     if (!state) return undefined;
-    const item = (kind === "scene" || kind === "imageRatio" ? state.library[kind].items[id] : state.freeGeneration[kind].items[id]) as unknown as Record<string, unknown> | undefined;
+    const item = (kind === "scene" || kind === "imageRatio" ? presetLibraryOf(state, this.snapshot.documentId).library[kind].items[id] : state.freeGeneration[kind].items[id]) as unknown as Record<string, unknown> | undefined;
     return item?.[field];
   }
   editGuideline(kind: GuidelineKind, id: string, field: string, value: unknown): void {
@@ -665,7 +706,7 @@ export class AtelierStore {
   async saveGuideline(kind: GuidelineKind, id: string): Promise<boolean> {
     const edits = Object.values(this.snapshot.guidelineDrafts).filter((d) => d.kind === kind && d.id === id).map(({ id: itemId, field, before, value }) => ({ id: itemId, field, before, value }));
     if (!edits.length) return true;
-    const r = await this.libraryCall(() => this.app.call("atelier.instructions.save", { kind, edits }));
+    const r = await this.libraryCall(() => this.app.call("atelier.instructions.save", { kind, edits, presetId: this.presetId }));
     if (r) this.dropGuidelineDrafts(kind, id);
     return !!r;
   }

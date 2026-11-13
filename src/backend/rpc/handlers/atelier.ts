@@ -19,6 +19,10 @@ function requireKind(value: unknown): GuidelineKind {
   if (!GUIDELINE_KINDS.includes(value as GuidelineKind)) fail("bad-request", `Unknown guideline kind: ${String(value)}`);
   return value as GuidelineKind;
 }
+/** Optional id of the preset open in the Atelier (AM 0.9.91 guideline editing reads and writes that preset's rules). */
+function presetOf(p: { presetId?: unknown }): { presetId?: string } {
+  return p.presetId !== undefined ? { presetId: requireString(p.presetId, "presetId") } : {};
+}
 
 export const atelierHandlers: HandlerGroup = {
   "atelier.get": async (_p, ctx) => ({ state: await atelierServiceOf(ctx).getState() }),
@@ -37,27 +41,27 @@ export const atelierHandlers: HandlerGroup = {
   "atelier.documents.export": (p, ctx) => atelierServiceOf(ctx).exportDocument({ id: requireString(p.id, "id"), ...(typeof p.json === "string" ? { json: p.json } : {}), ...(p.selection ? { selection: p.selection } : {}) }),
   "atelier.documents.rawSource": (p, ctx) => atelierServiceOf(ctx).rawSource({ id: requireString(p.id, "id") }),
 
-  "atelier.instructions.select": (p, ctx) => atelierServiceOf(ctx).selectGuideline({ kind: requireKind(p.kind), id: requireString(p.id, "id") }),
-  "atelier.instructions.create": (p, ctx) => atelierServiceOf(ctx).createGuideline({ kind: requireKind(p.kind), ...(p.copyOf !== undefined ? { copyOf: requireString(p.copyOf, "copyOf") } : {}) }),
-  "atelier.instructions.remove": (p, ctx) => atelierServiceOf(ctx).removeGuideline({ kind: requireKind(p.kind), id: requireString(p.id, "id") }),
+  "atelier.instructions.select": (p, ctx) => atelierServiceOf(ctx).selectGuideline({ kind: requireKind(p.kind), id: requireString(p.id, "id"), ...presetOf(p) }),
+  "atelier.instructions.create": (p, ctx) => atelierServiceOf(ctx).createGuideline({ kind: requireKind(p.kind), ...(p.copyOf !== undefined ? { copyOf: requireString(p.copyOf, "copyOf") } : {}), ...presetOf(p) }),
+  "atelier.instructions.remove": (p, ctx) => atelierServiceOf(ctx).removeGuideline({ kind: requireKind(p.kind), id: requireString(p.id, "id"), ...presetOf(p) }),
   "atelier.instructions.save": (p, ctx) => {
     if (!Array.isArray(p.edits)) fail("bad-request", "edits is required.");
-    return atelierServiceOf(ctx).saveGuidelines({ kind: requireKind(p.kind), edits: p.edits.map((e) => ({ id: requireString(e?.id, "edits.id"), field: requireString(e?.field, "edits.field"), before: e.before, value: e.value })) });
+    return atelierServiceOf(ctx).saveGuidelines({ kind: requireKind(p.kind), edits: p.edits.map((e) => ({ id: requireString(e?.id, "edits.id"), field: requireString(e?.field, "edits.field"), before: e.before, value: e.value })), ...presetOf(p) });
   },
   "atelier.instructions.setOutputMode": (p, ctx) => {
     if (p.mode !== "illustration" && p.mode !== "comic") fail("bad-request", "mode must be illustration or comic.");
-    return atelierServiceOf(ctx).setOutputMode({ id: requireString(p.id, "id"), mode: p.mode });
+    return atelierServiceOf(ctx).setOutputMode({ id: requireString(p.id, "id"), mode: p.mode, ...presetOf(p) });
   },
   "atelier.instructions.setSystems": (p, ctx) => {
     if (!p.systems || typeof p.systems !== "object" || Array.isArray(p.systems)) fail("bad-request", "systems is required.");
-    return atelierServiceOf(ctx).setSystems({ systems: p.systems });
+    return atelierServiceOf(ctx).setSystems({ systems: p.systems, ...presetOf(p) });
   },
-  "atelier.instructions.setOption": (p, ctx) => atelierServiceOf(ctx).setOption({ id: requireString(p.id, "id"), optionId: requireString(p.optionId, "optionId"), value: p.value === true }),
+  "atelier.instructions.setOption": (p, ctx) => atelierServiceOf(ctx).setOption({ id: requireString(p.id, "id"), optionId: requireString(p.optionId, "optionId"), value: p.value === true, ...presetOf(p) }),
   "atelier.instructions.setSizes": (p, ctx) => {
     if (!Array.isArray(p.allowedSizeIds)) fail("bad-request", "allowedSizeIds is required.");
-    return atelierServiceOf(ctx).setSizes({ id: requireString(p.id, "id"), allowedSizeIds: p.allowedSizeIds, ...(Array.isArray(p.customSizes) ? { customSizes: p.customSizes } : {}) });
+    return atelierServiceOf(ctx).setSizes({ id: requireString(p.id, "id"), allowedSizeIds: p.allowedSizeIds, ...(Array.isArray(p.customSizes) ? { customSizes: p.customSizes } : {}), ...presetOf(p) });
   },
-  "atelier.instructions.restore": (p, ctx) => atelierServiceOf(ctx).restoreGuideline({ id: requireString(p.id, "id"), expected: p.expected }),
+  "atelier.instructions.restore": (p, ctx) => atelierServiceOf(ctx).restoreGuideline({ id: requireString(p.id, "id"), expected: p.expected, ...presetOf(p) }),
   "atelier.instructions.importLegacyDirections": (p, ctx) => atelierServiceOf(ctx).importLegacyDirections({ baseRevision: requireRevision(p.baseRevision) }),
 
   "atelier.execution.set": (p, ctx) => {

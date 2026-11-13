@@ -2495,6 +2495,266 @@
      "instruction": ""
     }
    }
+  },
+  "splitInitial": {
+   "illustrations": [
+    {
+     "slot_number": 0,
+     "actor_roster": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v",
+       "formRef": "silver_hair,_blue_eyes",
+       "outfit": {
+        "id": "Navy sailor school uniform"
+       }
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.1fmv888.fk4pvw",
+       "formRef": "unknown_form_1",
+       "outfit": {
+        "id": "Casual hoodie"
+       }
+      }
+     ],
+     "scene_intent": [
+      "  Alice greets Shouta at the school gate.  ",
+      "Alice greets Shouta at the school gate."
+     ],
+     "temporal_state": "Morning, before class.",
+     "state_constraints": [],
+     "occurrences": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1
+      }
+     ],
+     "evidence": "Alice waved at Shouta from the school gate, her silver hair catching the morning light.",
+     "source_quote": "\"You're late again!\" she laughed, grabbing his sleeve."
+    }
+   ]
+  },
+  "splitDetail": {
+   "illustrations": [
+    {
+     "slot_number": 0,
+     "interaction": {
+      "items": [
+       {
+        "id": "arm_hug",
+        "mode": "directed",
+        "sourceActorId": "actor_1",
+        "targetActorId": "actor_2"
+       },
+       {
+        "id": "sleeve_grab",
+        "mode": "directed",
+        "sourceActorId": "actor_1",
+        "targetActorId": "actor_2"
+       }
+      ],
+      "modifiers": [],
+      "instructions": [
+       {
+        "interactionIndex": 1,
+        "participantDetails": [
+         {
+          "actorId": "actor_1",
+          "text": "fingers pinching the hoodie sleeve"
+         }
+        ]
+       }
+      ]
+     },
+     "frame_placement": {
+      "sizeId": 2,
+      "modifiers": [
+       {
+        "id": "scene.rating",
+        "options": [
+         "sfw"
+        ]
+       },
+       {
+        "id": "environment.setting",
+        "options": [
+         "outdoors"
+        ]
+       },
+       {
+        "id": "environment.time",
+        "options": [
+         "morning"
+        ]
+       }
+      ],
+      "freeTags": [
+       "school gate",
+       "cherry blossoms"
+      ],
+      "instruction": "Brick school gate with morning sunlight.",
+      "items": [
+       {
+        "actorId": "actor_1",
+        "center": {
+         "x": 0.35,
+         "y": 0.5
+        },
+        "instruction": "left of the gate pillar"
+       },
+       {
+        "actorId": "actor_2",
+        "center": {
+         "x": 0.68,
+         "y": 0.52
+        }
+       }
+      ]
+     },
+     "actor_detail": [
+      {
+       "actorId": "actor_1",
+       "placementIndex": 0,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "gaze.direction",
+         "options": [
+          "looking_at_another"
+         ]
+        },
+        {
+         "id": "expression.general",
+         "options": [
+          "light_smile"
+         ]
+        },
+        {
+         "id": "expression.mouth.openness",
+         "options": [
+          "open_mouth"
+         ]
+        },
+        {
+         "id": "pose.body",
+         "options": [
+          "standing"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "poseInstruction": "leaning forward slightly",
+       "actionInstruction": "waving one hand high",
+       "objectInstruction": ""
+      },
+      {
+       "actorId": "actor_2",
+       "placementIndex": 1,
+       "actions": [],
+       "modifiers": [
+        {
+         "id": "expression.general",
+         "options": [
+          "surprised"
+         ]
+        },
+        {
+         "id": "pose.body",
+         "options": [
+          "standing"
+         ]
+        }
+       ],
+       "freeTags": [],
+       "poseInstruction": "",
+       "actionInstruction": "running toward the gate",
+       "objectInstruction": ""
+      }
+     ],
+     "camera": {
+      "modifiers": [
+       {
+        "id": "camera.view",
+        "options": [
+         "from_side"
+        ]
+       }
+      ],
+      "instruction": "Eye-level camera at the gate facing both actors."
+     },
+     "actor_roster": [
+      {
+       "actorId": "actor_1",
+       "candidateKey": "actor.g00nx3.1d3zc2v"
+      },
+      {
+       "actorId": "actor_2",
+       "candidateKey": "actor.1fmv888.fk4pvw"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "splitStages": {
+  "initial": {
+   "phase": "initial"
+  },
+  "detail": {
+   "phase": "detail",
+   "plan": {
+    "illustrations": [
+     {
+      "slot_number": 0,
+      "actor_roster": [
+       {
+        "actorId": "actor_1",
+        "candidateKey": "actor.g00nx3.1d3zc2v",
+        "formRef": "silver_hair,_blue_eyes",
+        "outfit": {
+         "id": "Navy sailor school uniform"
+        }
+       },
+       {
+        "actorId": "actor_2",
+        "candidateKey": "actor.1fmv888.fk4pvw",
+        "formRef": "unknown_form_1",
+        "outfit": {
+         "id": "Casual hoodie"
+        }
+       }
+      ],
+      "scene_intent": "Alice greets Shouta at the school gate.",
+      "temporal_state": "Morning, before class.",
+      "state_constraints": [],
+      "occurrences": [
+       {
+        "actorId": "actor_1",
+        "placementIndex": 0
+       },
+       {
+        "actorId": "actor_2",
+        "placementIndex": 1
+       }
+      ]
+     }
+    ]
+   },
+   "assignedSlots": [
+    0
+   ],
+   "slotContext": [
+    {
+     "slot_number": 0,
+     "before": "Alice waved at Shouta from the school gate, her silver hair catching the morning light.",
+     "after": "\"You're late again!\" she laughed, grabbing his sleeve."
+    }
+   ]
   }
  }
 }

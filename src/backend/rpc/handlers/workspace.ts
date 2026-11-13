@@ -88,7 +88,7 @@ export const workspaceHandlers: HandlerGroup = {
     return loadWorkspaceSnapshot(ctx, p.characterId);
   },
   "customCharacters.promote": async (p, ctx) => {
-    await promoteCustomCharacters(ctx, requireId(p.characterId, "characterId"), p.customIds);
+    await promoteCustomCharacters(ctx, requireId(p.characterId, "characterId"), p.customIds, p.bulk === true);
     return loadWorkspaceSnapshot(ctx, p.characterId);
   },
 

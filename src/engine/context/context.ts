@@ -261,9 +261,13 @@ export interface SourceGenerationSettings {
  * Per-character-source generation settings (AM `xi` @12476): `characterPrompt.charxSettings.overrides[sourceId]`
  * over the defaults `characterPrompt.charxGenerationDefaults` (AM `pO` @12520). 0.9.90: no `stateAccumulationEnabled`,
  * new `fixedRating`, `rosterSelectionEnabled` defaults to `config.jevConnection.rosterSelectionDefault`.
+ * 0.9.91 (`xi` @12576): optional `overrides` replaces the stored override record of the source (AM uses it while seeding
+ * the analysis execution, `CPe`); omitted = `charxSettings.overrides[sourceId]` as before.
  */
-export function resolveSourceGenerationSettings(config: AssetMaidConfig, sourceId: string): SourceGenerationSettings {
-  return coreResolveSourceGenerationSettings(config, sourceId) as SourceGenerationSettings;
+export function resolveSourceGenerationSettings(config: AssetMaidConfig, sourceId: string, overrides?: Readonly<Record<string, unknown>>): SourceGenerationSettings {
+  return (overrides === undefined
+    ? coreResolveSourceGenerationSettings(config, sourceId)
+    : coreResolveSourceGenerationSettings(config, sourceId, overrides)) as SourceGenerationSettings;
 }
 
 /** Defaults part only (AM `pO` @12520). */

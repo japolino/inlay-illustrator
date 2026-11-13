@@ -226,17 +226,48 @@ export function resolutionIconRect(resolution: ExecutionResolution | null): { wi
   return { width: Math.max(4, Math.round(resolution.width * scale)), height: Math.max(4, Math.round(resolution.height * scale)) };
 }
 
-/** Floating position (normalized 0..1) -> CSS custom properties (AM `OIe` 176544). */
+/**
+ * Floating position (normalized 0..1) -> CSS custom properties (AM `OIe` 176544; panel anchor AM 0.9.91 `Uke` 183713).
+ * The panel opens below the handle in the upper half (top edge anchored) and above it otherwise (bottom edge
+ * anchored), so a wrapped second row grows away from the handle. No stored position counts as the lower half.
+ */
 export function floatingStyle(position: { x: number; y: number } | null): Record<string, string> {
+  const below = !!position && Math.min(1, Math.max(0, position.y)) < 0.5;
+  const panel = {
+    "--ii-am-floating-panel-top": below ? "calc(var(--ii-am-floating-top) + 52px)" : "auto",
+    "--ii-am-floating-panel-bottom": below ? "auto" : "calc(100dvh - var(--ii-am-floating-top) + 8px)"
+  };
   if (!position) {
-    return { "--ii-am-floating-left": "max(8px, calc(100vw - 62px))", "--ii-am-floating-top": "max(8px, calc(100vh - 110px))", "--ii-am-floating-panel-top": "calc(var(--ii-am-floating-top) - 56px)" };
+    return { "--ii-am-floating-left": "max(8px, calc(100vw - 62px))", "--ii-am-floating-top": "max(8px, calc(100vh - 110px))", ...panel };
   }
   const x = Math.min(1, Math.max(0, position.x));
   const y = Math.min(1, Math.max(0, position.y));
   return {
     "--ii-am-floating-left": `clamp(8px, calc(${(x * 100).toFixed(3)}vw - 22px), calc(100vw - 52px))`,
     "--ii-am-floating-top": `clamp(8px, calc(${(y * 100).toFixed(3)}vh - 22px), calc(100vh - 52px))`,
-    "--ii-am-floating-panel-top": y >= 0.5 ? "calc(var(--ii-am-floating-top) - 56px)" : "calc(var(--ii-am-floating-top) + 52px)"
+    ...panel
+  };
+}
+
+export interface MenuRect { top: number; bottom: number; left: number; width: number; height: number }
+export interface MenuPlacement { top: number | null; bottom: number | null; left: number; maxHeight: number }
+
+/**
+ * Where an open count-panel menu goes (AM 0.9.91 `Fke` 183148), in viewport pixels for a `position: fixed` menu. The
+ * free space is measured from the whole panel, not the menu's button, so a menu never covers the panel's other row:
+ * above when that space fits the menu (at most 352px of it) or is not smaller than the space below. The menu starts
+ * at its button's left edge, kept 8px inside the viewport.
+ */
+export function placeCountMenu(panel: MenuRect, button: MenuRect, menu: Pick<MenuRect, "width" | "height">, viewport: { width: number; height: number }): MenuPlacement {
+  const above = panel.top - 8;
+  const below = viewport.height - panel.bottom - 8;
+  const up = above >= Math.min(menu.height, 352) || above >= below;
+  const left = Math.max(8, Math.min(button.left, viewport.width - menu.width - 8));
+  return {
+    top: up ? null : panel.bottom + 6,
+    bottom: up ? viewport.height - panel.top + 6 : null,
+    left,
+    maxHeight: Math.max(0, (up ? above : below) - 8)
   };
 }
 

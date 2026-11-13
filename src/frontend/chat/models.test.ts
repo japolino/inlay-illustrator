@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createDefaultChatImageGenerationSettings } from "../../shared/contract/config.js";
 import { findScopeViolations } from "../../build/css-scope.js";
 import type { GenerationJobSnapshot } from "../../shared/contract/rpc.js";
-import { applyCountAction, applyExecutionAction, countLimits, countToggleText, countView, executionView, resolutionIconRect } from "./count-model.js";
+import { applyCountAction, applyExecutionAction, countLimits, countToggleText, countView, executionView, floatingStyle, placeCountMenu, resolutionIconRect } from "./count-model.js";
 import { historyIdOfKey, jobForMessage, uniqueBubbles } from "./dom.js";
 import { CHAT_SIDE_CSS } from "./styles.js";
 import { buildToastStack, errorDetailText, errorLogText, finishedToast, generationProgress, hasErrorDetails, retryErrorText, runningMessage, runningToast, type FinishedGeneration } from "./toast-model.js";
@@ -128,6 +128,12 @@ describe("retry error details (AM 0.9.89.5)", () => {
     expect(retryErrorText({ ...runError, stage: "초기 결정" }, false).split("\n")[0]).toBe("Initial decision · Request attempt 2 failed");
   });
 
+  test("AM 0.9.91 split stages: the initial step and the detail batches the engine core records", () => {
+    expect(retryErrorText({ ...runError, stage: "분할 초기 분석" }, false)).toBe("Split initial analysis · Request attempt 2 failed\nAnalyzer response was not JSON");
+    expect(retryErrorText({ ...runError, stage: "상세 분석 1/2" }, false).split("\n")[0]).toBe("Detail analysis 1/2 · Request attempt 2 failed");
+    expect(retryErrorText({ ...runError, stage: "상세 분석 12/30" }, false).split("\n")[0]).toBe("Detail analysis 12/30 · Request attempt 2 failed");
+  });
+
   test("running job: newest error is the detail, older ones are previous errors; image number while generating (AM lSe)", () => {
     const toast = runningToast(job({ completedSlots: 1, retryErrors: [imageError, { ...imageError, attempt: 2, message: "HTTP 500" }] }), 1);
     expect(toast.errorDetail).toBe("Image 2\nImage generation · Request attempt 2 failed\nHTTP 500");
@@ -228,5 +234,33 @@ describe("toolbar resolution / AI coordinates reducer (AM 0.9.90 Xwt$990)", () =
     expect(applyExecutionAction(view, { type: "resolution", value: "1000000000" })).toEqual({ resolution: { id: 1e9, width: 640, height: 960 }, aiCoordinates: true });
     expect(applyExecutionAction(view, { type: "resolution", value: "nope" })).toBeNull();
     expect(applyExecutionAction(view, { type: "resolution", value: "2" })).toBeNull();
+  });
+});
+
+describe("generation-count panel placement (AM 0.9.91 Uke / Fke)", () => {
+  test("floating panel: anchored by its edge nearest the handle", () => {
+    const upper = floatingStyle({ x: 0.5, y: 0.3 });
+    expect(upper["--ii-am-floating-panel-top"]).toBe("calc(var(--ii-am-floating-top) + 52px)");
+    expect(upper["--ii-am-floating-panel-bottom"]).toBe("auto");
+    const lower = floatingStyle({ x: 0.5, y: 0.8 });
+    expect(lower["--ii-am-floating-panel-top"]).toBe("auto");
+    expect(lower["--ii-am-floating-panel-bottom"]).toBe("calc(100dvh - var(--ii-am-floating-top) + 8px)");
+    // No stored position: the default handle sits low, so the panel opens above it.
+    expect(floatingStyle(null)["--ii-am-floating-panel-top"]).toBe("auto");
+    expect(floatingStyle(null)["--ii-am-floating-panel-bottom"]).toBe("calc(100dvh - var(--ii-am-floating-top) + 8px)");
+  });
+
+  test("menus open above or below the whole panel, from the space around the panel", () => {
+    const viewport = { width: 1000, height: 800 };
+    const rect = (top: number, height: number, left = 600, width = 300) => ({ top, bottom: top + height, left, width, height });
+    // Two-row panel low on the screen: above, measured from the panel top (not the button in the lower row).
+    expect(placeCountMenu(rect(700, 84), rect(742, 32, 650, 42), { width: 132, height: 120 }, viewport)).toEqual({ top: null, bottom: 106, left: 650, maxHeight: 684 });
+    // Panel near the top: below the panel bottom, max height from the space below.
+    expect(placeCountMenu(rect(20, 84), rect(24, 32, 650, 42), { width: 132, height: 120 }, viewport)).toEqual({ top: 110, bottom: null, left: 650, maxHeight: 680 });
+    // Space above fits a tall menu only up to 352px: 360px above beats 400px below.
+    expect(placeCountMenu(rect(368, 32), rect(368, 32), { width: 132, height: 500 }, viewport).bottom).toBe(438);
+    // Left edge follows the button, kept 8px inside the viewport.
+    expect(placeCountMenu(rect(700, 42), rect(704, 32, 950, 42), { width: 132, height: 120 }, viewport).left).toBe(860);
+    expect(placeCountMenu(rect(700, 42), rect(704, 32, 2, 42), { width: 132, height: 120 }, viewport).left).toBe(8);
   });
 });

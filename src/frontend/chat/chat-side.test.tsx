@@ -197,6 +197,41 @@ describe("chat side (DOM, dev mock)", () => {
     await until(() => q(".ii-am-chat-count__toggle")?.textContent?.includes("2"));
   });
 
+  test("count panel: settings and quantity groups; a failed save shows 'Save failed · Retry' beside the auto toggle (AM 0.9.91)", async () => {
+    const r = rig();
+    await r.app.init();
+    (await until(() => q(".ii-am-chat-count__toggle"))).click();
+    await until(() => q('.ii-am-chat-count[data-ii-expanded="true"]'));
+    const panel = q(".ii-am-chat-count__panel-anchor > .ii-am-chat-count__panel")!;
+    expect([...panel.children].map((c) => c.className)).toEqual(["ii-am-chat-count__settings", "ii-am-chat-count__quantity"]);
+    expect(panel.querySelector(".ii-am-chat-count__settings .ii-am-chat-count__resolution")).not.toBeNull();
+    expect(panel.querySelector(".ii-am-chat-count__quantity .ii-am-chat-count__mode + .ii-am-chat-count__values")).not.toBeNull();
+    const realSet = r.mock.handlers["chatImageGeneration.set"]!;
+    r.mock.handlers["chatImageGeneration.set"] = (_params, ctx) => ctx.fail("internal", "Disk full");
+    q('[aria-label="Increase generation count"]')!.click();
+    const retry = await until(() => q(".ii-am-chat-count__retry"));
+    expect(retry.textContent).toBe("Save failed · Retry");
+    expect(retry.getAttribute("aria-label")).toBe("Settings save failed: retry save");
+    expect(retry.getAttribute("title")).toBe("Retry settings save");
+    expect(retry.previousElementSibling?.className).toBe("ii-am-chat-count__quantity");
+    expect(q(".ii-am-chat-count__settings .ii-am-chat-count__auto")?.textContent).toBe("Auto");
+    r.mock.handlers["chatImageGeneration.set"] = realSet;
+    retry.click();
+    await until(() => calls(r, "chatImageGeneration.set").length === 2 && !q(".ii-am-chat-count__retry"));
+    expect((calls(r, "chatImageGeneration.set")[1]!.params as { settings: { countPolicy: { max: number } } }).settings.countPolicy.max).toBe(2);
+  });
+
+  test("floating count panel: the panel sits in a fixed anchor that opens away from the handle (AM 0.9.91)", async () => {
+    const r = rig();
+    r.mock.db.config.ui.floatingGenerationCountEnabled = true;
+    r.mock.db.config.ui.floatingGenerationCountPosition = { x: 0.9, y: 0.2 };
+    await r.app.init();
+    const section = await until(() => q('.ii-am-chat-count[data-ii-floating="true"]'));
+    expect(section.style.getPropertyValue("--ii-am-floating-panel-top")).toBe("calc(var(--ii-am-floating-top) + 52px)");
+    expect(section.style.getPropertyValue("--ii-am-floating-panel-bottom")).toBe("auto");
+    expect(q(".ii-am-chat-count__panel-anchor > .ii-am-chat-count__panel")).not.toBeNull();
+  });
+
   test("toolbar resolution and AI coordinates: seeded from the CharX values, saved globally (AM 0.9.90)", async () => {
     const r = rig();
     const defaults = r.mock.db.config.characterPrompt.charxGenerationDefaults;

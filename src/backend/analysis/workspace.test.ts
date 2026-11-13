@@ -151,6 +151,24 @@ describe("custom characters", () => {
     expect(doc.customCharacters).toEqual([]);
     expect(doc.characterPrompt.seedSettings[c.id]).toBeUndefined();
   });
+
+  test("bulk promote (several ids) skips unknown ids and non-listed entries; one missing id still fails", async () => {
+    const fx = createAnalysisFixture();
+    const a = await createCustomCharacterEntry(fx.services, CHAR, { title: "Ann", recognitionKeys: "ann" });
+    const b = await createCustomCharacterEntry(fx.services, CHAR, { title: "Ben", recognitionKeys: "ben" });
+    await fx.services.storage.updateCharacterDocument(CHAR, (d) => ({ ...d, customCharacters: d.customCharacters.map((x) => ({ ...x, origin: "ai-auto" as const })) }));
+    await promoteCustomCharacters(fx.services, CHAR, [a.id, "character_missing"]);
+    const origins = () => Object.fromEntries(fx.documents.get(CHAR)!.customCharacters.map((x) => [x.id, x.origin]));
+    expect(origins()).toEqual({ [a.id]: undefined, [b.id]: "ai-auto" });
+    const err = await promoteCustomCharacters(fx.services, CHAR, ["character_missing"]).catch((e) => e);
+    expect((err as RpcFailure).error.code).toBe("not-found");
+    expect(origins()[b.id]).toBe("ai-auto");
+    // The roster's bulk promote with one visible AI person whose entry is gone: skipped, like upstream's promoteAllGenerated.
+    await promoteCustomCharacters(fx.services, CHAR, ["character_missing"], true);
+    expect(origins()[b.id]).toBe("ai-auto");
+    await promoteCustomCharacters(fx.services, CHAR, [b.id], true);
+    expect(origins()[b.id]).toBeUndefined();
+  });
 });
 
 describe("prompts tab", () => {

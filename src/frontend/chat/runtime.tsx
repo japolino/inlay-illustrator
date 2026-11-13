@@ -3,11 +3,11 @@
  * spec/ui.md §6.3), generation-count panel (AM `SCt`/`kCt`, §6.2, incl. floating mode §6.2.6) and the
  * runtime error dialog (AM `aOt`, §6.4). Styles: ./styles.ts.
  */
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import { analysisExecutionNeedsSeed, generationProviderFromLumiverse, type AnalysisExecution, type ChatImageGenerationSettings, type EffectiveCharxSettings, type InlayConfig } from "../../shared/contract/config.js";
 import type { AppController } from "../state/app-state.js";
 import { useSelector } from "../state/store.js";
-import { applyCountAction, applyExecutionAction, countLimits, countToggleText, countView, executionView, floatingStyle, normalizeFloatingPoint, resolutionIconRect, type CountAction, type CountView, type ExecutionAction } from "./count-model.js";
+import { applyCountAction, applyExecutionAction, countLimits, countToggleText, countView, executionView, floatingStyle, normalizeFloatingPoint, placeCountMenu, resolutionIconRect, type CountAction, type CountView, type ExecutionAction } from "./count-model.js";
 import { COUNT_LABELS, ERROR_DIALOG_LABELS, fill, TOAST_LABELS } from "./labels.js";
 import type { ChatRuntimeStore } from "./runtime-store.js";
 import { buildToastStack, errorDetailText, errorLogText, hasErrorDetails, type RuntimeToastModel } from "./toast-model.js";
@@ -427,6 +427,36 @@ function CountPanel({ app, settings, config, chatId, generateLatest, openOvervie
     void app.updateConfig({ ui: { floatingGenerationCountPosition: next } }).then(() => setLivePosition(null));
   };
 
+  // Open menus are placed from the whole panel edge (AM 0.9.91 `Fke`): the panel can wrap onto two rows, and a menu
+  // anchored to its own button would cover the other row. Without a measurable layout the CSS position stays.
+  const panelRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    const win = panel?.ownerDocument.defaultView;
+    if (!panel || !win || !expanded || menu === "none") return;
+    const place = () => {
+      const menuEl = panel.querySelector<HTMLElement>(".ii-am-chat-count__menu");
+      const button = menuEl?.parentElement?.querySelector<HTMLElement>('[aria-haspopup="menu"]');
+      if (!menuEl || !button) return;
+      menuEl.style.maxHeight = "";
+      const panelRect = panel.getBoundingClientRect();
+      const menuRect = menuEl.getBoundingClientRect();
+      if (!panelRect.width || !menuRect.width || !menuRect.height) return;
+      const at = placeCountMenu(panelRect, button.getBoundingClientRect(), menuRect, { width: win.innerWidth, height: win.innerHeight });
+      Object.assign(menuEl.style, {
+        position: "fixed",
+        top: at.top === null ? "auto" : `${at.top}px`,
+        bottom: at.bottom === null ? "auto" : `${at.bottom}px`,
+        left: `${at.left}px`,
+        right: "auto",
+        maxHeight: `${at.maxHeight}px`
+      });
+    };
+    place();
+    win.addEventListener("resize", place);
+    return () => win.removeEventListener("resize", place);
+  }, [expanded, menu, position?.x, position?.y, view.mode, sceneLabel, failed]);
+
   const style = floating ? floatingStyle(position ?? null) : undefined;
   return (
     <section
@@ -446,149 +476,154 @@ function CountPanel({ app, settings, config, chatId, generateLatest, openOvervie
         else setExpanded(false);
       }}
     >
-      <div class="ii-am-chat-count__panel" aria-hidden={expanded ? undefined : "true"} {...(expanded ? {} : { inert: true })}>
-        {generateLatest ? (
-          <button
-            type="button"
-            class="ii-am-chat-count__option ii-am-chat-count__generate"
-            aria-label={COUNT_LABELS.generateLatest}
-            title={COUNT_LABELS.generateLatest}
-            disabled={chatBusy || starting}
-            onClick={() => {
-              setStarting(true);
-              void generateLatest().finally(() => setStarting(false));
-            }}
-          >
-            <GenerateIcon />
-          </button>
-        ) : null}
-        {openOverview ? (
-          <button
-            type="button"
-            class="ii-am-chat-count__option ii-am-chat-count__overview"
-            aria-label={COUNT_LABELS.openOverview}
-            title={COUNT_LABELS.openOverview}
-            onClick={openOverview}
-          >
-            <OverviewIcon />
-          </button>
-        ) : null}
-        {sceneAvailable ? (
-          <span class="ii-am-chat-count__scene">
-            <button
-              type="button"
-              class="ii-am-chat-count__scene-button"
-              aria-label={COUNT_LABELS.sceneButton}
-              title={COUNT_LABELS.sceneButton}
-              aria-haspopup="menu"
-              aria-expanded={menu === "scene"}
-              aria-disabled={sceneSaving ? "true" : undefined}
-              onClick={() => { if (!sceneSaving) setMenu(menu === "scene" ? "none" : "scene"); }}
-            >
-              <span class="ii-am-chat-count__scene-label">{sceneLabel}</span>
-            </button>
-            {menu === "scene" ? (
-              <div class="ii-am-chat-count__menu ii-am-chat-count__scene-menu" role="menu" aria-label={COUNT_LABELS.sceneMenu}>
-                {options.map((option) => (
-                  <button key={option.value} type="button" role="menuitemradio" aria-checked={option.value === sceneSelection} class="ii-am-chat-count__menu-item" aria-disabled={sceneSaving ? "true" : undefined} onClick={() => void selectScene(option.value)}>
-                    {option.label}
-                  </button>
-                ))}
-              </div>
+      <div class="ii-am-chat-count__panel-anchor">
+        <div ref={panelRef} class="ii-am-chat-count__panel" aria-hidden={expanded ? undefined : "true"} {...(expanded ? {} : { inert: true })}>
+          <div class="ii-am-chat-count__settings">
+            {generateLatest ? (
+              <button
+                type="button"
+                class="ii-am-chat-count__option ii-am-chat-count__generate"
+                aria-label={COUNT_LABELS.generateLatest}
+                title={COUNT_LABELS.generateLatest}
+                disabled={chatBusy || starting}
+                onClick={() => {
+                  setStarting(true);
+                  void generateLatest().finally(() => setStarting(false));
+                }}
+              >
+                <GenerateIcon />
+              </button>
             ) : null}
-          </span>
-        ) : null}
-        <span class="ii-am-chat-count__resolution">
-          <button
-            type="button"
-            class="ii-am-chat-count__option ii-am-chat-count__resolution-button"
-            aria-label={fill(COUNT_LABELS.resolutionButton, { value: execution.view.resolutionLabel })}
-            title={COUNT_LABELS.resolution}
-            aria-haspopup="menu"
-            aria-expanded={menu === "resolution"}
-            data-am-action="toggle-resolution"
-            onClick={() => setMenu(menu === "resolution" ? "none" : "resolution")}
-          >
-            <ResolutionIcon rect={resolutionIconRect(execution.view.resolution)} auto={!execution.view.resolution} />
-          </button>
-          {menu === "resolution" ? (
-            <div class="ii-am-chat-count__menu ii-am-chat-count__resolution-menu" role="menu" aria-label={COUNT_LABELS.resolutionMenu}>
-              {execution.view.options.map((option) => (
-                <button key={option.value} type="button" role="menuitemradio" aria-checked={option.value === execution.view.resolutionValue} class="ii-am-chat-count__menu-item"
-                  data-am-action="select-resolution" data-am-resolution={option.value}
-                  onClick={() => { setMenu("none"); execution.apply({ type: "resolution", value: option.value }); }}>
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </span>
-        {execution.novelai ? (
-          <button
-            type="button"
-            class="ii-am-chat-count__option ii-am-chat-count__coordinates"
-            aria-label={COUNT_LABELS.aiCoordinates}
-            title={COUNT_LABELS.aiCoordinatesTitle}
-            aria-pressed={execution.view.aiCoordinates}
-            data-am-action="toggle-coordinates"
-            onClick={() => execution.apply({ type: "coordinates" })}
-          >
-            <CrosshairIcon />
-          </button>
-        ) : null}
-        {failed ? (
-          <button type="button" class="ii-am-chat-count__option" aria-label={COUNT_LABELS.retrySave} title={COUNT_LABELS.retrySave} onClick={retrySave}>↻</button>
-        ) : (
-          <button type="button" class="ii-am-chat-count__option" aria-label={view.auto ? COUNT_LABELS.toManual : COUNT_LABELS.toAuto} title={view.auto ? COUNT_LABELS.toManual : COUNT_LABELS.toAuto} aria-pressed={view.auto} onClick={() => run("toggle-auto")}>
-            {view.auto ? COUNT_LABELS.auto : COUNT_LABELS.manual}
-          </button>
-        )}
-        <span class="ii-am-chat-count__mode">
-          <button
-            type="button"
-            class="ii-am-chat-count__option"
-            aria-label={fill(COUNT_LABELS.modeButton, { mode: MODE_LABEL[view.mode] })}
-            title={COUNT_LABELS.modeTitle}
-            aria-haspopup="menu"
-            aria-expanded={menu === "count"}
-            onClick={() => setMenu(menu === "count" ? "none" : "count")}
-          >
-            {MODE_LABEL[view.mode]}
-          </button>
-          {menu === "count" ? (
-            <div class="ii-am-chat-count__menu ii-am-chat-count__mode-menu" role="menu" aria-label={COUNT_LABELS.modeMenu}>
-              {(["fixed", "range", "split"] as const).map((mode) => (
+            {openOverview ? (
+              <button
+                type="button"
+                class="ii-am-chat-count__option ii-am-chat-count__overview"
+                aria-label={COUNT_LABELS.openOverview}
+                title={COUNT_LABELS.openOverview}
+                onClick={openOverview}
+              >
+                <OverviewIcon />
+              </button>
+            ) : null}
+            {sceneAvailable ? (
+              <span class="ii-am-chat-count__scene">
                 <button
-                  key={mode}
                   type="button"
-                  role="menuitemradio"
-                  aria-checked={view.mode === mode}
-                  class="ii-am-chat-count__menu-item"
-                  onClick={() => { setMenu("none"); run(`select-${mode}`); }}
+                  class="ii-am-chat-count__scene-button"
+                  aria-label={COUNT_LABELS.sceneButton}
+                  title={COUNT_LABELS.sceneButton}
+                  aria-haspopup="menu"
+                  aria-expanded={menu === "scene"}
+                  aria-disabled={sceneSaving ? "true" : undefined}
+                  onClick={() => { if (!sceneSaving) setMenu(menu === "scene" ? "none" : "scene"); }}
                 >
-                  {MODE_LABEL[mode]}
+                  <span class="ii-am-chat-count__scene-label">{sceneLabel}</span>
                 </button>
-              ))}
-            </div>
+                {menu === "scene" ? (
+                  <div class="ii-am-chat-count__menu ii-am-chat-count__scene-menu" role="menu" aria-label={COUNT_LABELS.sceneMenu}>
+                    {options.map((option) => (
+                      <button key={option.value} type="button" role="menuitemradio" aria-checked={option.value === sceneSelection} class="ii-am-chat-count__menu-item" aria-disabled={sceneSaving ? "true" : undefined} onClick={() => void selectScene(option.value)}>
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </span>
+            ) : null}
+            <span class="ii-am-chat-count__resolution">
+              <button
+                type="button"
+                class="ii-am-chat-count__option ii-am-chat-count__resolution-button"
+                aria-label={fill(COUNT_LABELS.resolutionButton, { value: execution.view.resolutionLabel })}
+                title={COUNT_LABELS.resolution}
+                aria-haspopup="menu"
+                aria-expanded={menu === "resolution"}
+                data-am-action="toggle-resolution"
+                onClick={() => setMenu(menu === "resolution" ? "none" : "resolution")}
+              >
+                <ResolutionIcon rect={resolutionIconRect(execution.view.resolution)} auto={!execution.view.resolution} />
+              </button>
+              {menu === "resolution" ? (
+                <div class="ii-am-chat-count__menu ii-am-chat-count__resolution-menu" role="menu" aria-label={COUNT_LABELS.resolutionMenu}>
+                  {execution.view.options.map((option) => (
+                    <button key={option.value} type="button" role="menuitemradio" aria-checked={option.value === execution.view.resolutionValue} class="ii-am-chat-count__menu-item"
+                      data-am-action="select-resolution" data-am-resolution={option.value}
+                      onClick={() => { setMenu("none"); execution.apply({ type: "resolution", value: option.value }); }}>
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </span>
+            {execution.novelai ? (
+              <button
+                type="button"
+                class="ii-am-chat-count__option ii-am-chat-count__coordinates"
+                aria-label={COUNT_LABELS.aiCoordinates}
+                title={COUNT_LABELS.aiCoordinatesTitle}
+                aria-pressed={execution.view.aiCoordinates}
+                data-am-action="toggle-coordinates"
+                onClick={() => execution.apply({ type: "coordinates" })}
+              >
+                <CrosshairIcon />
+              </button>
+            ) : null}
+            <button type="button" class="ii-am-chat-count__option ii-am-chat-count__auto" aria-label={view.auto ? COUNT_LABELS.toManual : COUNT_LABELS.toAuto} title={view.auto ? COUNT_LABELS.toManual : COUNT_LABELS.toAuto} aria-pressed={view.auto} onClick={() => run("toggle-auto")}>
+              {view.auto ? COUNT_LABELS.auto : COUNT_LABELS.manual}
+            </button>
+          </div>
+          <div class="ii-am-chat-count__quantity">
+            <span class="ii-am-chat-count__mode">
+              <button
+                type="button"
+                class="ii-am-chat-count__option"
+                aria-label={fill(COUNT_LABELS.modeButton, { mode: MODE_LABEL[view.mode] })}
+                title={COUNT_LABELS.modeTitle}
+                aria-haspopup="menu"
+                aria-expanded={menu === "count"}
+                onClick={() => setMenu(menu === "count" ? "none" : "count")}
+              >
+                {MODE_LABEL[view.mode]}
+              </button>
+              {menu === "count" ? (
+                <div class="ii-am-chat-count__menu ii-am-chat-count__mode-menu" role="menu" aria-label={COUNT_LABELS.modeMenu}>
+                  {(["fixed", "range", "split"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={view.mode === mode}
+                      class="ii-am-chat-count__menu-item"
+                      onClick={() => { setMenu("none"); run(`select-${mode}`); }}
+                    >
+                      {MODE_LABEL[mode]}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </span>
+            <span class="ii-am-chat-count__values">
+              {view.mode === "fixed" ? (
+                <Stepper value={view.fixed} bounds={view.bounds.fixed} label={COUNT_LABELS.count} decLabel={COUNT_LABELS.countDecrease} incLabel={COUNT_LABELS.countIncrease} onStep={(d) => run(d > 0 ? "fixed-increment" : "fixed-decrement")} />
+              ) : view.mode === "range" ? (
+                <>
+                  <Stepper value={view.min} bounds={view.bounds.min} label={COUNT_LABELS.min} decLabel={COUNT_LABELS.minDecrease} incLabel={COUNT_LABELS.minIncrease} onStep={(d) => run(d > 0 ? "min-increment" : "min-decrement")} />
+                  <span class="ii-am-chat-count__separator" aria-hidden="true">–</span>
+                  <Stepper value={view.max} bounds={view.bounds.max} label={COUNT_LABELS.max} decLabel={COUNT_LABELS.maxDecrease} incLabel={COUNT_LABELS.maxIncrease} onStep={(d) => run(d > 0 ? "max-increment" : "max-decrement")} />
+                </>
+              ) : (
+                <>
+                  <Stepper value={view.total} bounds={view.bounds.total} label={COUNT_LABELS.total} decLabel={COUNT_LABELS.totalDecrease} incLabel={COUNT_LABELS.totalIncrease} onStep={(d) => run(d > 0 ? "total-increment" : "total-decrement")} />
+                  <span class="ii-am-chat-count__separator" aria-hidden="true">/</span>
+                  <Stepper value={view.batch} bounds={view.bounds.batch} label={COUNT_LABELS.batch} decLabel={COUNT_LABELS.batchDecrease} incLabel={COUNT_LABELS.batchIncrease} onStep={(d) => run(d > 0 ? "batch-increment" : "batch-decrement")} />
+                </>
+              )}
+            </span>
+          </div>
+          {failed ? (
+            <button type="button" class="ii-am-chat-count__option ii-am-chat-count__retry" aria-label={COUNT_LABELS.retrySave} title={COUNT_LABELS.retrySaveTitle} onClick={retrySave}>{COUNT_LABELS.retrySaveText}</button>
           ) : null}
-        </span>
-        <span class="ii-am-chat-count__values">
-          {view.mode === "fixed" ? (
-            <Stepper value={view.fixed} bounds={view.bounds.fixed} label={COUNT_LABELS.count} decLabel={COUNT_LABELS.countDecrease} incLabel={COUNT_LABELS.countIncrease} onStep={(d) => run(d > 0 ? "fixed-increment" : "fixed-decrement")} />
-          ) : view.mode === "range" ? (
-            <>
-              <Stepper value={view.min} bounds={view.bounds.min} label={COUNT_LABELS.min} decLabel={COUNT_LABELS.minDecrease} incLabel={COUNT_LABELS.minIncrease} onStep={(d) => run(d > 0 ? "min-increment" : "min-decrement")} />
-              <span class="ii-am-chat-count__separator" aria-hidden="true">–</span>
-              <Stepper value={view.max} bounds={view.bounds.max} label={COUNT_LABELS.max} decLabel={COUNT_LABELS.maxDecrease} incLabel={COUNT_LABELS.maxIncrease} onStep={(d) => run(d > 0 ? "max-increment" : "max-decrement")} />
-            </>
-          ) : (
-            <>
-              <Stepper value={view.total} bounds={view.bounds.total} label={COUNT_LABELS.total} decLabel={COUNT_LABELS.totalDecrease} incLabel={COUNT_LABELS.totalIncrease} onStep={(d) => run(d > 0 ? "total-increment" : "total-decrement")} />
-              <span class="ii-am-chat-count__separator" aria-hidden="true">/</span>
-              <Stepper value={view.batch} bounds={view.bounds.batch} label={COUNT_LABELS.batch} decLabel={COUNT_LABELS.batchDecrease} incLabel={COUNT_LABELS.batchIncrease} onStep={(d) => run(d > 0 ? "batch-increment" : "batch-decrement")} />
-            </>
-          )}
-        </span>
+        </div>
       </div>
       <button
         type="button"

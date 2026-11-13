@@ -2,7 +2,7 @@
  * NovelAI V5 post-analysis composition: prompt context (identity/outfit/artist/fixed entries), executed prompt
  * plans, NovelAI config, provider prompts, and a host-free run of the real V5 orchestrator.
  *
- * `composeV5Images` runs the verbatim 0.9.90 `createV5Orchestrator` (`Ubt` @162706) with
+ * `composeV5Images` runs the verbatim 0.9.91 `createV5Orchestrator` (`Ubt` 0.9.91 n90 @165082) with
  *   - the real generation sessions (`fht`) and the real batch executor (`vht`),
  *   - an analyzer that is either the real V5 analyzer (`c0e`) over a caller-supplied LLM client, or a stub that
  *     returns a precomputed analyzer result,
@@ -311,6 +311,12 @@ export interface V5ComposeRunInput {
     readonly context: Record<string, any>;
     readonly checkpointContext: { readonly chatKey: string; readonly messageId: string; readonly [key: string]: unknown };
     readonly imageParts?: readonly unknown[];
+    /**
+     * 0.9.91: LLM request-history context and attempt, forwarded by `Ubt` to the analyzer run and from there to
+     * `client.complete` (AM chat flow: `historyContext = {sourceId, charxName, chatName}` per request owner).
+     */
+    readonly historyContext?: unknown;
+    readonly historyAttempt?: number;
     readonly [key: string]: unknown;
   };
   /** Prompt context source per identity key list (`MAt.v5PromptContext`). Required. */
@@ -360,7 +366,9 @@ export interface ComposeV5ImagesResult {
  * Run the V5 orchestrator (`Ubt.run`) without host calls and return per-image decision, actors, prompt plans,
  * NovelAI config, provider prompt and the captured image request.
  * `run.applyV5Continuity` is supplied internally (captures the continuity state); a caller value is ignored.
- * Original: `Ubt` (createV5Orchestrator) @162706 with `fht` and `vht` @158121.
+ * 0.9.91: the planning phase reports `analyzerRequests: [result.requestObservation]` instead of the cache-notice token
+ * counters (the session progress no longer has `analyzerCacheNoticeId` / `analyzerInputTokens*` / `analyzerCache*`).
+ * Original: `Ubt` (createV5Orchestrator) 0.9.91 @165082 with `fht` and `vht`.
  */
 export async function composeV5Images(input: ComposeV5ImagesInput): Promise<ComposeV5ImagesResult> {
   const runtime = input.runtime ?? createV5RuleRuntime();

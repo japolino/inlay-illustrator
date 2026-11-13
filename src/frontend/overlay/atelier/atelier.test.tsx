@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
 import type { SpindleFrontendContext } from "lumiverse-spindle-types";
+import type { AtelierState } from "../../../shared/contract/atelier.js";
 import { AppController } from "../../state/app-state.js";
 import { RpcClient } from "../../rpc/client.js";
 import { createFullMockBackend } from "../../dev/mock/index.js";
@@ -169,6 +170,51 @@ describe("Maid Atelier screens (DOM)", () => {
     expect(q("[data-v5-direction]")).toBeNull();
     (card.querySelector("[data-open-atelier-guidelines]") as HTMLButtonElement).click();
     await until(() => q('[data-atelier-section="guidelines"]'));
+    controller.destroy();
+  });
+});
+
+describe("Maid Atelier screens: AM 0.9.91 changes (DOM)", () => {
+  test("import with unsaved edits asks nothing: the draft is saved first, then the file is imported", async () => {
+    const { mock, controller } = await openSamplePreset();
+    button(L.expressions.addGroup)!.click();
+    await until(() => !(q("[data-atelier-save-button]") as HTMLButtonElement).disabled);
+    const from = mock.calls.length;
+    const input = q("[data-atelier-import-input]") as HTMLInputElement;
+    const json = JSON.stringify({ format: "asset-maid-preset", title: "Imported", content: {} });
+    Object.defineProperty(input, "files", { configurable: true, value: [{ name: "imported.json", size: json.length, text: async () => json }] });
+    input.dispatchEvent(new win.Event("change", { bubbles: true }) as unknown as Event);
+    await until(() => mock.calls.some((c, i) => i >= from && c.method === "atelier.documents.import"));
+    expect(q("[data-atelier-discard]")).toBeNull();
+    expect(doc.body.textContent).not.toContain(L.save.guardTitle);
+    const order = mock.calls.slice(from).map((c) => c.method).filter((m) => m === "atelier.documents.save" || m === "atelier.documents.import");
+    expect(order).toEqual(["atelier.documents.save", "atelier.documents.import"]);
+    const saved = JSON.parse((mock.calls.find((c, i) => i >= from && c.method === "atelier.documents.save")!.params as { json: string }).json) as { content: { definitions: unknown[] } };
+    expect(saved.content.definitions).toHaveLength(4);
+    controller.destroy();
+  });
+
+  test("directing rules list the rules of the preset open in the Atelier, and a toggle edits that preset", async () => {
+    const { mock, app, controller } = await openSamplePreset();
+    const shownRule = { id: "sample-rule", condition: { direction: "default" }, effect: { kind: "path", action: "remove", path: "actor.text.dialogue" } };
+    const withPresetLibraries = (state: AtelierState): AtelierState => {
+      const library = JSON.parse(JSON.stringify(state.library)) as AtelierState["library"];
+      library.scene.items.default!.system = { options: [], values: {}, rules: [shownRule] } as never;
+      return { ...state, presetLibraries: { default: { library: state.library, ownedRuleIds: {} }, "mock-1": { library, ownedRuleIds: { default: ["sample-rule"] } } } };
+    };
+    const get = mock.handlers["atelier.get"]!;
+    mock.handlers["atelier.get"] = async (params, ctx) => ({ state: withPresetLibraries((await get(params, ctx)).state) });
+    const current = app.state.atelier!;
+    app.applyAtelier(withPresetLibraries({ ...current, storeRevision: current.storeRevision + 1 }));
+    ([...doc.querySelectorAll('[role="tab"]')].find((t) => t.textContent?.trim() === L.tabs.rules) as HTMLElement).click();
+    (await until(() => [...doc.querySelectorAll('[role="radio"]')].find((b) => b.textContent?.trim() === L.rules.directing) as HTMLButtonElement | undefined)).click();
+    const row = await until(() => q('[data-atelier-row="sample-rule"]'));
+    expect(row.textContent).toContain(L.expressions.scopePreset);
+    (row.querySelector('[role="switch"]') as HTMLButtonElement).click();
+    await until(() => mock.calls.some((c) => c.method === "atelier.instructions.setSystems"));
+    const sent = mock.calls.find((c) => c.method === "atelier.instructions.setSystems")!.params as { presetId?: string; systems: Record<string, { rules: Array<{ id: string; enabled?: boolean }> }> };
+    expect(sent.presetId).toBe("mock-1");
+    expect(sent.systems.default!.rules).toMatchObject([{ id: "sample-rule", enabled: false }]);
     controller.destroy();
   });
 });

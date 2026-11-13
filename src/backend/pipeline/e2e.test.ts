@@ -173,6 +173,36 @@ describe("pipeline end to end over the real engine", () => {
     }
   }, 30000);
 
+  test("Gemini 4 Argon on a Vertex connection gets the compact response contract; any other target keeps the full one", async () => {
+    const freeformOf = async (target: { provider: string; model: string } | Error) => {
+      setEngineEnv(seededEnv(9));
+      try {
+        const fx = createPipelineFixture({
+          config: { image: { provider: "novelai", model: "nai-diffusion-5-full", connectionId: "img-1" }, novelai: { analysisProfile: "v5-hybrid" }, runtime: { generationAutoRetryCount: 0 } },
+        });
+        fx.services.llm.analyzerTarget = async () => {
+          if (target instanceof Error) throw target;
+          return target;
+        };
+        fx.llmReplies.push((request: LlmCompleteRequest) => scriptedV5Analyzer(request));
+        const { pipeline } = createPipelineModule(fx.services);
+        await pipeline.handleGenerationEnded({ chatId: CHAT_ID, messageId: "m1", generationType: "normal" });
+        await waitFor(() => finished(fx).length > 0, 20000);
+        expect(finished(fx)[0]!.result).toBe("completed");
+        const last = fx.llmRequests[0]!.messages[fx.llmRequests[0]!.messages.length - 1]!;
+        const text = typeof last.content === "string" ? last.content : last.content.map((part) => (part.type === "text" ? part.text : "")).join("");
+        pipeline.dispose();
+        return JSON.parse(text.slice(text.indexOf("{"))).response_contract.analysis_policy.freeform as unknown;
+      } finally {
+        setEngineEnv(null);
+      }
+    };
+    expect(typeof (await freeformOf({ provider: "google_vertex", model: "gemini-4-argon" }))).toBe("string");
+    expect(typeof (await freeformOf({ provider: "google_vertex", model: "gemini-4-carbon" }))).toBe("object");
+    expect(typeof (await freeformOf({ provider: "openrouter", model: "google/gemini-4-argon" }))).toBe("object");
+    expect(typeof (await freeformOf(new Error("connection unreadable")))).toBe("object");
+  }, 90000);
+
   test("Maid Atelier: a non-default active preset and a user directing guideline change the analyzer request; the AI selection history is kept", async () => {
     setEngineEnv(seededEnv(9));
     try {

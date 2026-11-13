@@ -8,6 +8,7 @@ const EXACT: Readonly<Record<string, string>> = Object.freeze({
   "저장된 메이드 아틀리에 목록 형식이 올바르지 않습니다.": "The stored Atelier list is invalid.",
   "프리셋의 저장 기준이 달라졌습니다. 초안을 보관한 뒤 최신 값을 불러오세요.": "The preset's saved base changed. Keep your draft, then load the latest values.",
   "활성 연출 프리셋을 찾을 수 없습니다.": "The active directing preset was not found.",
+  "편집하던 프리셋이 없어 규칙을 저장하지 못했습니다.": "The preset being edited no longer exists, so its rules could not be saved.",
   "파일은 2 MiB 이하여야 합니다.": "The file must be 2 MiB or smaller.",
   "중첩 또는 항목 수 한도를 초과했습니다.": "The JSON exceeds the nesting or item count limit.",
   "예약된 키는 사용할 수 없습니다.": "Reserved keys cannot be used.",

@@ -68,6 +68,7 @@ import {
   resolveStoredAnalysisDocument as w8,
   resolveAnalysisDocument as zc,
   readAtelierDirectingRules as eS,
+  vS_91,
   mergeDirectingRules as VP,
   stripAnalysisDocumentVersions as QI,
   assertDirectingRules as C8,
@@ -147,25 +148,34 @@ export function createBuiltInLibrary(): AtelierLibrary {
 export function resolveStoredLibrary(config: unknown): AtelierLibrary {
   return call(w8, config);
 }
-/** Effective library (stored + the active preset's directing rules). Original: `zc` @4147. */
-export function resolveLibrary(config: unknown): AtelierLibrary {
-  return call(zc, config, undefined);
+/**
+ * Effective library (stored + the directing rules of the active preset, or of `presetId`: 0.9.91 guideline editing
+ * reads the preset being edited). Original: `zc(config, presetId)` 0.9.91 @4224.
+ */
+export function resolveLibrary(config: unknown, presetId?: string): AtelierLibrary {
+  return call(zc, config, presetId);
 }
-/** Active preset's own directing rules `{document, parsed, rules}` or undefined. Original: `eS` @902. */
-export function readActivePresetRules(config: unknown): { document: { id: string; name: string; json: string }; parsed: Rec; rules: Record<string, Rec[]> } | undefined {
-  return call(eS, config);
+/**
+ * Directing rules `{document, parsed, rules}` of the active preset (or of `presetId`), or undefined.
+ * Original: `eS` = `vS_91(config)`; with `presetId`: `vS_91(config, presetId)` 0.9.91 @975.
+ */
+export function readActivePresetRules(config: unknown, presetId?: string): { document: { id: string; name: string; json: string }; parsed: Rec; rules: Record<string, Rec[]> } | undefined {
+  return presetId === undefined ? call(eS, config) : call(vS_91, config, presetId);
 }
 /** Overlay preset rules onto a library. Original: `VP` @910. */
 export function overlayPresetRules(library: AtelierLibrary, rules: Record<string, Rec[]> | undefined): AtelierLibrary {
   return call(VP, library, rules);
 }
 /**
- * Library commit (`hS` @3881): preset rule write-back (`v2e`), output-mode normalization (`JV`),
+ * Library commit (`hS` 0.9.91 @3957): preset rule write-back (`v2e`), output-mode normalization (`JV`),
  * `runtime.instructionChanges = Rv(L0(), tW(lib, false), previous)` (with `restoreId`: the item's change is dropped
  * first, `KP`), `analysisExecution` mode from the selected item. Returns the next config.
+ * 0.9.91: the third argument (unused in 0.9.90) is the id of the preset being edited: its directing rules receive the
+ * write-back (default: the active preset); throws "편집하던 프리셋이 없어 규칙을 저장하지 못했습니다." when the catalog no
+ * longer has that preset.
  */
-export function commitLibrary<T extends object>(config: T, library: AtelierLibrary, ownerId?: string, restoreId?: string): T {
-  return call(hS, config, library, ownerId, restoreId);
+export function commitLibrary<T extends object>(config: T, library: AtelierLibrary, presetId?: string, restoreId?: string): T {
+  return call(hS, config, library, presetId, restoreId);
 }
 /** Validate a library edit against the current effective library (`bS` stored + changed rules). Original: `jAe` @4043. */
 export function validateLibraryEdit(current: AtelierLibrary, next: AtelierLibrary): void {

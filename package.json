@@ -32,6 +32,8 @@
     "zod": "^4.4.3"
   },
   "dependencies": {
+    "acorn": "8.18.0",
+    "eslint-scope": "9.1.2",
     "preact": "^11.0.0",
     "tailwind-merge": "^3.7.0"
   }

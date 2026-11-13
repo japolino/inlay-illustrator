@@ -18,6 +18,7 @@ import {
   moveItem,
   newRule,
   parseRulesJson,
+  presetLibraryOf,
   refLabel,
   ruleAllowsActors,
   ruleChannelWarning,
@@ -286,16 +287,20 @@ function DirectingRules() {
   const atelier = useAtelierStore();
   const state = useAppState((s) => s.atelier);
   const view = useAtelier((s) => s.view);
+  const documentId = useAtelier((s) => s.documentId);
   const [text, setText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [incomplete, setIncomplete] = useState<string[]>([]);
-  const items = state?.library.scene.items ?? {};
-  const id = items[view.rulesDirection] ? view.rulesDirection : state?.library.scene.selected ?? "default";
+  // AM 0.9.91: the rules of the preset open in the Atelier (its own rules overlaid), not the active preset's.
+  const shown = state ? presetLibraryOf(state, documentId) : null;
+  const items = shown?.library.scene.items ?? {};
+  const id = items[view.rulesDirection] ? view.rulesDirection : shown?.library.scene.selected ?? "default";
   const item = items[id];
-  useEffect(() => { setText(null); setError(null); }, [id, state?.storeRevision]);
-  if (!state || !item) return null;
+  useEffect(() => { setText(null); setError(null); }, [id, documentId, state?.storeRevision]);
+  useEffect(() => { setIncomplete([]); }, [documentId]);
+  if (!state || !shown || !item) return null;
   const system: SceneSystem = item.system ?? { options: [], values: {}, rules: [] };
-  const owned = new Set(state.ownedRuleIds[id] ?? []);
+  const owned = new Set(shown.ownedRuleIds[id] ?? []);
   const query = view.query.directing ?? "";
   const rules = system.rules.filter((r) => textMatches(query, r.id, effectSummary(r)));
   const save = async (next: SceneSystem) => {
@@ -310,6 +315,7 @@ function DirectingRules() {
         <SearchField className="min-w-40 flex-1" label={L.rules.search} placeholder={L.rules.searchPlaceholder} value={query} onChange={(v) => atelier.setQuery("directing", v)} />
       </div>
       <p class="text-2xs text-muted-foreground">{L.rules.directingNote}</p>
+      {shown.error ? <Notice tone="warning">{shown.error}</Notice> : null}
       {incomplete.length ? <Notice tone="warning">{L.rules.incomplete(incomplete.join(", "))}</Notice> : null}
       <Table label={L.rules.directingTable} head={<><Th className="w-12">{L.table.active}</Th><Th>ID</Th><Th>{L.rules.condition}</Th><Th>{L.rules.effect}</Th></>}>
         {rules.length === 0 ? <EmptyRow colSpan={4} filtered={!!query.trim()} hint={L.rules.directingEmpty} onClear={() => atelier.setQuery("directing", "")} /> : null}

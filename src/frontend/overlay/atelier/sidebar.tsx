@@ -55,10 +55,11 @@ export function AtelierSidebar({ guarded, onSettings }: { guarded: (action: () =
           const file = input.files?.[0];
           input.value = "";
           if (!file) return;
-          guarded(() => void atelier.importFile(file).then((r) => {
+          // AM 0.9.91: no "unsaved changes" question; the import saves pending edits itself (`hct.xr`).
+          void atelier.importFile(file).then((r) => {
             if (!r.ok) setImportErrors(r.errors);
             else atelier.app.notify({ tone: "success", message: [L.importing.imported(file.name), r.merged ? L.importing.merged(r.merged) : ""].filter(Boolean).join(" ") });
-          }));
+          });
         }} />
       </footer>
       <Dialog open={importErrors !== null} onOpenChange={() => setImportErrors(null)} title={L.importing.title} role="alertdialog" footer={<Button onClick={() => setImportErrors(null)}>{L.importing.close}</Button>}>

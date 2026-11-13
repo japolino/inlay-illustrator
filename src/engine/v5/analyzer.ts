@@ -3,10 +3,11 @@
  * structured output schema, response recovery, the analyzer run (`Egt`) over an injected LLM client, and the
  * split-analysis helpers.
  *
- * `buildV5AnalyzerRequest` composes the verbatim core builders in the same order as `c0e.run` (0.9.90 @161195):
- * `o0e` → `kbt` → `wbt` → continuity projections (`hbt`, `BE`, `V3e`, `W3e`, `J3e`, `Fre`, `q3e`) →
- * `rt.buildAnalyzerRequest` (`p3e`) → `qOe` schema (+ split `sbt` / `lbt` / `pbt`). Parity with the messages that
- * `c0e` actually sends is tested.
+ * `buildV5AnalyzerRequest` composes the verbatim core builders in the same order as `c0e.run` (0.9.91 n90 @163523):
+ * split initial `slotContext` default → `o0e` → `kbt` → `wbt` → continuity projections (`hbt`, `BE`, `V3e`, `W3e`,
+ * `J3e`, `Fre`, `q3e`) → `rt.buildAnalyzerRequest` (`p3e`) → `qOe` schema (+ split `sbt` / `lbt` / `pbt`) → the
+ * Gemini Argon contract flag. Parity with the messages that `c0e` actually sends is tested.
+ * Line numbers marked "0.9.91" are 0.9.91 n90.p120 lines; unmarked ones are 0.9.90 p120 lines.
  */
 import {
   buildV5ActorCandidates,
@@ -43,6 +44,8 @@ import {
   renderV5AnalyzerSystemInstruction as coreRenderV5AnalyzerSystemInstruction,
   buildV5InstructionModules as coreBuildV5InstructionModules,
   Rbt as planSplitBatchSizes,
+  DN as isAnalyzerPdfInputEnabled,
+  Zr as trimText,
 } from "../core/asset-maid-core";
 import { getSharedV5RuleRuntime, type V5AnalyzerRequest, type V5ContinuitySnapshot, type V5RecoveryMode, type V5RuleRuntime } from "./runtime";
 import type { V5RecoveredResponse } from "./types";
@@ -173,9 +176,12 @@ export function resolveStoredAnalysisDocument(config: unknown): V5AnalysisDocume
   return coreResolveStoredAnalysisDocument(config) as V5AnalysisDocument;
 }
 
-/** Effective directing document (stored + active preset's scene rules). Original: `zc` (resolveAnalysisDocument) @4147. */
-export function resolveAnalysisDocument(config: unknown): V5AnalysisDocument {
-  return coreResolveAnalysisDocument(config, undefined) as V5AnalysisDocument;
+/**
+ * Effective directing document (stored + the scene rules of the active preset, or of `presetId` when given: 0.9.91
+ * editing passes the preset being edited). Original: `zc` (resolveAnalysisDocument) 0.9.91 @4224 (`vS_91`).
+ */
+export function resolveAnalysisDocument(config: unknown, presetId?: string): V5AnalysisDocument {
+  return coreResolveAnalysisDocument(config, presetId) as V5AnalysisDocument;
 }
 
 /** Validate a directing document; throws on invalid input. Original: `mC` (validateAnalysisDocument) @3605. */
@@ -234,11 +240,26 @@ export interface V5AnalyzerContext {
   readonly [key: string]: unknown;
 }
 
-/** Split stage passed to the analyzer (`Bgt` → `Egt`). */
+/** One source position of a split stage (`slot_context`): the paragraphs before / after an insertable slot. */
+export interface V5SplitSlotContext {
+  readonly slot_number: number;
+  readonly before: string;
+  readonly after: string;
+}
+
+/**
+ * Split stage passed to the analyzer by the split runner (`Lbt` → `c0e`).
+ * 0.9.91: the initial stage carries `assignedSlots` only when a retained plan is resumed, and `slotContext` (the
+ * candidate slots' before/after paragraphs; `c0e` fills it from `context.candidateSlots` when absent). The initial
+ * message sends it as `scene` (deduplicated paragraph array) + `slot_context` index pairs (`gyt_91`); the detail stage
+ * gets the assigned slots' `slotContext` objects from the runner and sends them verbatim. The initial response no
+ * longer carries `evidence` quotes (`$vt_91` strips them).
+ */
 export interface V5SplitStage {
   readonly phase: "initial" | "detail";
   readonly plan?: unknown;
   readonly assignedSlots?: readonly number[];
+  readonly slotContext?: readonly V5SplitSlotContext[];
   readonly validationFeedback?: string;
 }
 
@@ -246,11 +267,18 @@ export interface V5SplitStage {
 export interface V5AnalyzerRequestInput {
   readonly context: V5AnalyzerContext;
   readonly continuitySnapshot?: V5ContinuitySnapshot | null;
-  /** Analysis LLM config; `provider` "ollama_local" / "ollama_cloud" switches to the slot-map envelope. */
-  readonly config?: { readonly provider?: string; readonly [key: string]: unknown };
+  /**
+   * Analysis LLM config; `provider` "ollama_local" / "ollama_cloud" switches to the slot-map envelope, provider
+   * "vertex_ai" with model "gemini-4-argon" selects the Argon response contract (see `argonContract`).
+   */
+  readonly config?: { readonly provider?: string; readonly model?: string; readonly [key: string]: unknown };
   readonly userDirections?: V5UserDirections;
   readonly splitStage?: V5SplitStage;
   readonly runtime?: V5RuleRuntime;
+  /** Image parts of the run (revision images); only their presence matters here (Argon contract gate). */
+  readonly imageParts?: readonly unknown[];
+  /** Revision direction of the run (Argon contract gate, default recovery mode). */
+  readonly revisionDirection?: string;
 }
 
 /** Candidate bindings (`o0e`). */
@@ -287,20 +315,44 @@ export interface V5AnalyzerRequestBuild {
   readonly request: V5AnalyzerRequest;
   /** Structured output schema passed to `client.complete` (`structuredOutputSchema`). */
   readonly structuredOutputSchema: Record<string, unknown>;
+  /** Slot numbers of the schema: the split stage's `assignedSlots`, else the candidate slots (`[0]` when none). */
   readonly slotNumbers: readonly number[];
+  /**
+   * The split stage as `c0e` uses it: an initial stage without `slotContext` gets the candidate slots' before/after
+   * paragraphs. `buildV5AnalyzerMessages(build)` uses it.
+   */
+  readonly splitStage?: V5SplitStage;
+  /**
+   * Gemini Argon contract (0.9.91 `c0e` `z`): config provider "vertex_ai" + model "gemini-4-argon", paragraph-slot scope,
+   * not the split initial stage, no image parts unless a revision direction is given, and no analyzer PDF input
+   * (`DN(config, "image-generation")`). The messages then carry the compact Argon response contract (`eyt_91`, split
+   * detail: `bwe_91` analysis policy); the structured output schema is unchanged.
+   */
+  readonly argonContract: boolean;
+  /** Slot numbers `c0e` hands to response recovery: `context.candidateSlots[].slot_number` (split stages included). */
+  readonly recoverySlotNumbers: readonly number[];
+  /** A revision direction was given (recovery then preserves response membership, like split stages). */
+  readonly revision: boolean;
 }
 
 /**
  * Build the V5 analyzer request for one message exactly as `c0e.run` does before the LLM call (no JEV roster pass).
- * Reads context fields: candidateSlots, targetImageCount, imageCountConstraint, actorCandidates, personaCandidates,
- * v5PersonaCatalogCandidates, v5OutfitCatalogCandidates, personaPromptKey, freeCharacterGenerationEnabled,
- * freeOutfitGenerationEnabled, knownCharacterIdentities, replayGeneratedOutfits.
- * Originals: `o0e`, `kbt`, `wbt`, `hbt`, `BE`, `V3e`, `W3e`, `J3e`, `Fre`, `q3e`, `Hne().buildAnalyzerRequest` (`p3e`),
- * `qOe`, `sbt`/`lbt`/`pbt` (split phases).
+ * Reads context fields: scope, candidateSlots, targetImageCount, imageCountConstraint, actorCandidates,
+ * personaCandidates, v5PersonaCatalogCandidates, v5OutfitCatalogCandidates, personaPromptKey,
+ * freeCharacterGenerationEnabled, freeOutfitGenerationEnabled, knownCharacterIdentities, replayGeneratedOutfits.
+ * Originals (0.9.91 `c0e` @163523): split initial `slotContext` default, `o0e`, `kbt`, `wbt`, `hbt`, `BE`, `V3e`, `W3e`,
+ * `J3e`, `Fre`, `q3e`, `Hne().buildAnalyzerRequest` (`p3e`), `qOe`, `sbt`/`lbt`/`pbt` (split phases), Argon flag `z`.
  */
 export function buildV5AnalyzerRequest(input: V5AnalyzerRequestInput): V5AnalyzerRequestBuild {
   const runtime = input.runtime ?? getSharedV5RuleRuntime();
-  const { context, splitStage } = input;
+  const { context } = input;
+  const splitStage: V5SplitStage | undefined =
+    input.splitStage?.phase === "initial" && !input.splitStage.slotContext
+      ? {
+          ...input.splitStage,
+          slotContext: context.candidateSlots.map(({ slot_number, before, after }) => ({ slot_number, before, after })),
+        }
+      : input.splitStage;
   const snapshot = input.continuitySnapshot ?? null;
   const userDirections = input.userDirections ?? {};
   const provider = input.config?.provider;
@@ -345,7 +397,29 @@ export function buildV5AnalyzerRequest(input: V5AnalyzerRequestInput): V5Analyze
   });
   const structuredOutputSchema =
     splitStage?.phase === "initial" ? toInitialPhaseSchema(schema) : splitStage?.phase === "detail" ? toDetailPhaseSchema(schema, splitStage.plan) : schema;
-  return { runtime, candidates: u, imageCount: m, scene: h, requestContext, request, structuredOutputSchema, slotNumbers };
+  const config = input.config ?? {};
+  const revision = !!trimText(input.revisionDirection);
+  const argonContract =
+    config.provider === "vertex_ai" &&
+    (config.model as string | undefined)?.trim().toLowerCase() === "gemini-4-argon" &&
+    context.scope === "paragraph-slot-illustration" &&
+    splitStage?.phase !== "initial" &&
+    (!input.imageParts?.length || revision) &&
+    !isAnalyzerPdfInputEnabled(config, "image-generation");
+  return {
+    runtime,
+    candidates: u,
+    imageCount: m,
+    scene: h,
+    requestContext,
+    request,
+    structuredOutputSchema,
+    slotNumbers,
+    ...(splitStage ? { splitStage } : {}),
+    argonContract,
+    recoverySlotNumbers: context.candidateSlots.map(({ slot_number }) => slot_number),
+    revision,
+  };
 }
 
 /** Revision prompt channel (`revision_request.current_prompt[]`). */
@@ -372,33 +446,47 @@ export interface V5AnalyzerMessages {
   readonly cachePartition: Record<string, unknown>;
 }
 
+/** Options of `buildV5AnalyzerMessages` (the trailing `s0e` arguments). */
+export interface V5AnalyzerMessagesOptions {
+  /** Image parts appended to the user message (revision images). */
+  readonly imageParts?: readonly unknown[];
+  readonly revisionDirection?: string;
+  readonly revisionPromptChannels?: readonly V5RevisionPromptChannel[];
+  /** Split stage (default when a build is passed: `build.splitStage`). */
+  readonly splitStage?: V5SplitStage;
+  /** JEV roster snapshot of the run (`c0e` `_`); switches to the roster cache partition. */
+  readonly rosterSnapshot?: unknown;
+  readonly rosterDetail?: boolean;
+  /** Gemini Argon response contract (default when a build is passed: `build.argonContract`). */
+  readonly argonContract?: boolean;
+}
+
 /**
  * Render the analyzer messages: `[system, user(JSON wire payload [+ revision_request / split fields])]` and the
  * cache partition (app-static / config-static / character-static / outfit-static + live input).
- * @param request `build.request` (or `rt.buildAnalyzerRequest` result).
- * @param options.imageParts Image parts appended to the user message (revision images).
- * Original: `s0e` (buildV5AnalyzerMessages) @161028.
+ * 0.9.91: the live input starts with `scene`; split stages add `slot_context` (initial: `scene` paragraph array +
+ * index pairs) and phase contract v10 (`uwe_91`), namespace `...-split-<phase>-v11`; the cache partition carries a
+ * `prefixPreparation` protocol (unsplit without images or with a revision: `Fq_91`; split without images/revision:
+ * initial `myt_91`, detail `hyt_91`); with `argonContract` the response contract is the compact Argon form.
+ * @param request `build` (recommended: its `splitStage` and `argonContract` are applied) or `build.request`.
+ * Original: `s0e` (buildV5AnalyzerMessages) 0.9.91 @163340.
  */
-export function buildV5AnalyzerMessages(
-  request: V5AnalyzerRequest,
-  options: {
-    readonly imageParts?: readonly unknown[];
-    readonly revisionDirection?: string;
-    readonly revisionPromptChannels?: readonly V5RevisionPromptChannel[];
-    readonly splitStage?: V5SplitStage;
-    readonly rosterSnapshot?: unknown;
-    readonly rosterDetail?: boolean;
-  } = {},
-): V5AnalyzerMessages {
+export function buildV5AnalyzerMessages(request: V5AnalyzerRequest | V5AnalyzerRequestBuild, options: V5AnalyzerMessagesOptions = {}): V5AnalyzerMessages {
+  const build = isRequestBuild(request) ? request : undefined;
   return (coreBuildV5AnalyzerMessages as AnyFn)(
-    request,
+    build ? build.request : request,
     options.imageParts ?? [],
     options.revisionDirection ?? "",
     options.revisionPromptChannels ?? [],
-    options.splitStage,
+    options.splitStage ?? build?.splitStage,
     options.rosterSnapshot,
     options.rosterDetail ?? false,
+    options.argonContract ?? build?.argonContract ?? false,
   ) as V5AnalyzerMessages;
+}
+
+function isRequestBuild(value: V5AnalyzerRequest | V5AnalyzerRequestBuild): value is V5AnalyzerRequestBuild {
+  return "request" in value && "runtime" in value && "candidates" in value;
 }
 
 /** Compact wire payload (`KE` toV5AnalyzerWirePayload). */
@@ -422,11 +510,14 @@ export function buildV5InstructionModules(input: unknown): unknown {
 /* ------------------------------------------------------------------------------------------------ recovery */
 
 /**
- * Recover a raw analyzer response (string or object) against a request build, with the same arguments `Egt` uses:
- * candidates, enabled modifier refs, source scene, local recovery, slot hints, requested slot numbers.
- * @param options.mode "complete-from-request" (normal) or "preserve-response-membership" (split / revision).
- * Original: `Hne().recoverAnalyzerResponse` → `ZTe` (recoverV5AnalyzerResponseCore); `systemDirection` from the
- * local recovery is copied onto every illustration.
+ * Recover a raw analyzer response (string or object) against a request build, with the same arguments `c0e` uses:
+ * candidates, enabled modifier refs, source scene, local recovery, slot hints, the candidate slot numbers
+ * (`build.recoverySlotNumbers`), recovery mode, free character generation.
+ * @param options.mode default as in `c0e`: "preserve-response-membership" for a split stage or a revision direction,
+ *   else "complete-from-request".
+ * Split stages: `c0e` first converts the raw phase response (initial `obt` → `t0e`, detail `ibt`); this function takes
+ * the converted response. Original: `Hne().recoverAnalyzerResponse` → `ZTe` (recoverV5AnalyzerResponseCore);
+ * `systemDirection` from the local recovery is copied onto every illustration.
  */
 export function recoverV5AnalyzerResponse(
   response: unknown,
@@ -440,23 +531,36 @@ export function recoverV5AnalyzerResponse(
     build.request.payload.scene,
     build.request.localRecovery,
     build.request.payload.slot_hints,
-    build.slotNumbers,
-    options.mode ?? "complete-from-request",
+    build.recoverySlotNumbers,
+    options.mode ?? (build.splitStage || build.revision ? "preserve-response-membership" : "complete-from-request"),
     options.freeCharacterGenerationEnabled ?? build.requestContext.freeCharacterGenerationEnabled === true,
   );
 }
 
 /* ------------------------------------------------------------------------------------------------ analyzer run */
 
-/** Options passed to `client.complete` by the analyzer. */
+/**
+ * Options passed to `client.complete` by the analyzer (0.9.91 `c0e` @163523).
+ * 0.9.91 adds the LLM request-history fields: `historyContext` (run input / `analyzerInput.historyContext`, AM:
+ * `{sourceId, charxName, chatName}`), `historyStage` / `historyAttempt` (split runner stage label and cumulative
+ * attempt), `historyValidation` (resolves when the analyzer run settles: `undefined` on success, else a Korean failure
+ * label: "요청 취소" when aborted, an `HK_91` error label, or "분할 분석 응답 검증 실패" / "V5 분석 응답 검증 실패"), and
+ * `streamOutput` (`!!onRequestProgress`). The cache partition may carry `prefixPreparation` (see `buildV5AnalyzerMessages`).
+ */
 export interface V5CompleteOptions {
+  readonly historyContext?: unknown;
+  readonly historyStage?: string;
+  readonly historyAttempt?: number;
+  readonly historyValidation: Promise<string | undefined>;
   readonly purpose: "image-generation";
   readonly signal?: AbortSignal;
   readonly onRequestProgress?: (progress: unknown) => void;
+  readonly streamOutput: boolean;
   readonly beforeRequest?: () => void;
   readonly cachePartition: Record<string, unknown>;
   readonly cacheSourceId: string;
   readonly structuredOutputSchema: Record<string, unknown>;
+  /** `phase`: "v5-interaction-led", or "v5-split-initial" / "v5-split-detail" (the wire `analysis_stage`). */
   readonly diagnostic: { readonly sessionId?: string; readonly analysisKind: string; readonly phase: string };
 }
 
@@ -466,10 +570,17 @@ export interface V5AnalyzerClient {
     config: Readonly<Record<string, unknown>>,
     messages: readonly V5ChatMessage[],
     options: V5CompleteOptions,
-  ): Promise<{ readonly raw?: string; readonly parsed?: unknown; readonly transportDiagnostic?: unknown; readonly [key: string]: unknown }>;
+  ): Promise<{
+    readonly raw?: string;
+    readonly parsed?: unknown;
+    readonly transportDiagnostic?: unknown;
+    /** 0.9.91: request observation (replaces the 0.9.90 cache notice); copied onto the result. */
+    readonly requestObservation?: unknown;
+    readonly [key: string]: unknown;
+  }>;
 }
 
-/** Analyzer result (`c0e.run` return). */
+/** Analyzer result (`c0e.run` return). 0.9.91: `requestObservation` replaces `cacheNotice`. */
 export interface V5AnalyzerResult {
   readonly profile: "v5-hybrid";
   readonly response: V5RecoveredResponse;
@@ -481,7 +592,7 @@ export interface V5AnalyzerResult {
   readonly localProjection: V5AnalyzerRequest["localProjection"];
   readonly catalogFingerprint: string;
   readonly splitPlan?: unknown;
-  readonly cacheNotice?: unknown;
+  readonly requestObservation?: unknown;
   readonly transportDiagnostic?: unknown;
 }
 
@@ -501,7 +612,15 @@ export interface V5AnalyzerRunInput {
   readonly signal?: AbortSignal;
   readonly beforeRequest?: () => void;
   readonly onEvent?: (event: { kind: string; detail?: unknown }) => void;
+  /** "queued" → "requesting" → "validating". */
+  readonly onRequestState?: (state: string) => void;
+  readonly onRequestFailure?: (error: unknown) => void;
+  readonly onRequestProgress?: (progress: unknown) => void;
   readonly diagnostic?: { readonly sessionId?: string; readonly analysisKind?: string };
+  /** 0.9.91 request-history fields forwarded to `client.complete` (see `V5CompleteOptions`). */
+  readonly historyContext?: unknown;
+  readonly historyStage?: string;
+  readonly historyAttempt?: number;
   readonly [key: string]: unknown;
 }
 
@@ -517,7 +636,7 @@ export interface V5Analyzer {
  * (code `V5_ANALYZER_NO_USABLE_ILLUSTRATION`, `diagnostics`) when nothing usable is recovered.
  * The JEV roster pre-pass is disabled (no JEV dependencies are passed); with `rosterSelectionEnabled` the run
  * fails with `JEV_UNAVAILABLE`, as in Asset Maid without a JEV connection.
- * Original: `c0e` (createV5Analyzer) @161195.
+ * Original: `c0e` (createV5Analyzer) 0.9.91 @163523 (run wrapped by `byt_91`, which settles `historyValidation`).
  */
 export function createV5Analyzer(client: V5AnalyzerClient, runtime?: V5RuleRuntime, jev?: unknown): V5Analyzer {
   return (coreCreateV5Analyzer as AnyFn)(client, runtime ?? undefined, jev) as V5Analyzer;
@@ -533,26 +652,57 @@ export function planV5SplitBatches(totalCount: number, batchSize: number): numbe
   return planSplitBatchSizes(totalCount, batchSize) as number[];
 }
 
-/** System instruction of a split phase ("initial" | "detail"). Original: `mbt` @160391. */
+/**
+ * System instruction of a split phase ("initial" | "detail"). 0.9.91: the initial phase is titled
+ * "# V5 Split Initial Slot, Actor and Outfit Plan" and selects slots from `slot_context` (no evidence quotes).
+ * Original: `mbt` 0.9.91 @162667.
+ */
 export function renderV5SplitPhaseSystemInstruction(request: V5AnalyzerRequest, phase: "initial" | "detail"): string {
   return coreRenderV5SplitPhaseSystemInstruction(request, phase) as string;
 }
 
-/** Split runner (`Lbt`): initial call → preparation callback → parallel detail batches. */
+/** One step of the split progress (`analysisProgress.steps[]`). */
+export interface V5SplitProgressStep {
+  readonly id: string;
+  readonly phase: "initial" | "detail";
+  readonly index: number;
+  readonly firstImage: number;
+  readonly imageCount: number;
+  /** "queued" | "requesting" | "validating" | "retrying" | "completed" | "reused" | "failed" | "cancelled". */
+  readonly status: string;
+  readonly attempt: number;
+  readonly retryLimit?: number;
+  /** 0.9.91: cumulative attempt across resumed runs (also sent to the client as `historyAttempt`). */
+  readonly historyAttempt?: number;
+  readonly error?: string;
+  readonly requests: readonly unknown[];
+  readonly history: readonly unknown[];
+  readonly retryErrors?: readonly unknown[];
+  readonly [key: string]: unknown;
+}
+
+/**
+ * Split runner (`Lbt`): initial call → preparation callback → parallel detail batches → validation.
+ * 0.9.91 progress: phases "initial" → "detail" → "validation" (no "preparation" phase any more; the initial step is
+ * "validating" while `prepare` runs, then "completed" / "reused"). Stage labels (`onStage`): "분할 초기 분석" (or
+ * "후보 부족: N장 중 M장 분석"), "상세 분석 i/n", "분석 결과 확인 중"; the old "초기 결정" / "인물·의상 준비" labels are gone.
+ * Each analyzer call gets `historyStage` (the stage label) and `historyAttempt`; detail stages get `slotContext`.
+ */
 export interface V5SplitAnalysisRunner {
   dispose(): void;
   run(
     input: V5AnalyzerRunInput,
     prepare: (initial: V5AnalyzerResult, cached: <T>(key: string, compute: () => Promise<T>) => Promise<T>) => Promise<unknown>,
     onStage?: (completed: number, total: number, label: string) => void,
-    onProgress?: (progress: { phase: string; steps: readonly Record<string, unknown>[] }) => void,
+    onProgress?: (progress: { phase: "initial" | "detail" | "validation" | string; steps: readonly V5SplitProgressStep[] }) => void,
     control?: { ready?: (batch: unknown) => void; stop?: () => void; drain?: () => Promise<void>; requireRetainedPlan?: boolean },
   ): Promise<{ prepared: unknown; result: V5AnalyzerResult }>;
 }
 
 /**
  * Create the split-analysis runner over an analyzer (`run` is called with `splitStage`), so a fake analyzer can
- * drive it. `onResumeState(responseKey, message)` receives resume hints. Original: `Lbt` @162200.
+ * drive it. `onResumeState(responseKey, message)` receives resume hints. Resume key protocol 11.
+ * Original: `Lbt` 0.9.91 @164552.
  */
 export function createV5SplitAnalysisRunner(
   analyzer: Pick<V5Analyzer, "run"> & { readonly runtime?: { readonly catalogFingerprint?: string }; captureSelectionSettings?: () => unknown },

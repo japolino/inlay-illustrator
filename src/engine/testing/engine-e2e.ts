@@ -1,8 +1,8 @@
 /**
  * End-to-end parity driver for the engine factory (analyzer LLM call -> plan -> compose -> image requests).
  *
- * The SAME driver runs against (a) the ORIGINAL 0.9.90 bundle objects wired exactly like Asset Maid's boot code
- * (p120 @185030-185085; see the generator S/engine-build/gen/engine-e2e.mjs) and (b) `createAssetMaidEngine`.
+ * The SAME driver runs against (a) the ORIGINAL 0.9.91 bundle objects wired exactly like Asset Maid's boot code
+ * (n90.p120 @187600-187642; see the generator tmp-audit/upstream/harness/rec-engine.mjs) and (b) `createAssetMaidEngine`.
  * A scripted analyzer client returns canned raw responses; capturing provider adapters record every ImageRequest.
  */
 import { toPlain } from "./plain";

@@ -251,7 +251,8 @@ export interface GenerationJobSnapshot {
 /**
  * One failed attempt (AM 0.9.89.5 `FC` @115421; lists are capped at 20 by `LH`). `message` and the string fields are
  * sanitized (`c0`: credentials redacted, max 3000 chars). `stage` is AM's Korean stage text:
- * "이미지 생성" (image request), "분석·생성" (whole-run auto retry), "초기 결정" / "세부N 분석" (split analysis steps).
+ * "이미지 생성" (image request), "분석·생성" (whole-run auto retry), "분할 초기 분석" / "상세 분석 N/M" (split analysis
+ * steps, AM 0.9.91; "초기 결정" in errors stored before) and "세부N 분석" (split detail row).
  */
 export interface GenerationRetryError {
   attempt: number;
@@ -441,7 +442,8 @@ export interface RpcMethods {
   "customCharacters.remove": { params: { characterId: string; customId: string; baseUpdatedAt?: string }; result: WorkspaceSnapshot };
   "customCharacters.setRosterRegistered": { params: { characterId: string; customIds: string[] | "all"; registered: boolean }; result: WorkspaceSnapshot };
   "customCharacters.setWorkspaceEnabled": { params: { characterId: string; customIds: string[] | "all"; enabled: boolean }; result: WorkspaceSnapshot };
-  "customCharacters.promote": { params: { characterId: string; customIds: string[] | "all" }; result: WorkspaceSnapshot };
+  /** `bulk`: the roster's bulk promote; ids that no longer exist are skipped instead of failing (also for a single id). */
+  "customCharacters.promote": { params: { characterId: string; customIds: string[] | "all"; bulk?: boolean }; result: WorkspaceSnapshot };
 
   /* prompts tab (forms, outfits, references, seeds) */
   /** Save a whole FormCollection edited client-side with the pure form ops; `baseRevision` = formCollectionRevision of the edited base. */
@@ -572,15 +574,15 @@ export interface RpcMethods {
   "atelier.documents.activate": { params: { baseRevision: number; id: string }; result: { state: AtelierState } };
   "atelier.documents.export": { params: { id: string; json?: string; selection?: AtelierDocumentSelection }; result: { fileName: string; json: string } };
   "atelier.documents.rawSource": { params: { id: string }; result: { fileName: string; json: string } };
-  "atelier.instructions.select": { params: { kind: GuidelineKind; id: string }; result: { state: AtelierState } };
-  "atelier.instructions.create": { params: { kind: GuidelineKind; copyOf?: string }; result: { state: AtelierState; id: string } };
-  "atelier.instructions.remove": { params: { kind: GuidelineKind; id: string }; result: { state: AtelierState } };
-  "atelier.instructions.save": { params: { kind: GuidelineKind; edits: AtelierGuidelineEdit[] }; result: { state: AtelierState } };
-  "atelier.instructions.setOutputMode": { params: { id: string; mode: OutputMode }; result: { state: AtelierState } };
-  "atelier.instructions.setSystems": { params: { systems: Record<string, SceneSystem> }; result: { state: AtelierState; incomplete: string[] } };
-  "atelier.instructions.setOption": { params: { id: string; optionId: string; value: boolean }; result: { state: AtelierState } };
-  "atelier.instructions.setSizes": { params: { id: string; allowedSizeIds: number[]; customSizes?: Array<{ id: number; width: number; height: number }> }; result: { state: AtelierState } };
-  "atelier.instructions.restore": { params: { id: string; expected: SceneInstruction }; result: { state: AtelierState } };
+  "atelier.instructions.select": { params: { kind: GuidelineKind; id: string; presetId?: string }; result: { state: AtelierState } };
+  "atelier.instructions.create": { params: { kind: GuidelineKind; copyOf?: string; presetId?: string }; result: { state: AtelierState; id: string } };
+  "atelier.instructions.remove": { params: { kind: GuidelineKind; id: string; presetId?: string }; result: { state: AtelierState } };
+  "atelier.instructions.save": { params: { kind: GuidelineKind; edits: AtelierGuidelineEdit[]; presetId?: string }; result: { state: AtelierState } };
+  "atelier.instructions.setOutputMode": { params: { id: string; mode: OutputMode; presetId?: string }; result: { state: AtelierState } };
+  "atelier.instructions.setSystems": { params: { systems: Record<string, SceneSystem>; presetId?: string }; result: { state: AtelierState; incomplete: string[] } };
+  "atelier.instructions.setOption": { params: { id: string; optionId: string; value: boolean; presetId?: string }; result: { state: AtelierState } };
+  "atelier.instructions.setSizes": { params: { id: string; allowedSizeIds: number[]; customSizes?: Array<{ id: number; width: number; height: number }>; presetId?: string }; result: { state: AtelierState } };
+  "atelier.instructions.restore": { params: { id: string; expected: SceneInstruction; presetId?: string }; result: { state: AtelierState } };
   "atelier.instructions.importLegacyDirections": { params: { baseRevision: number }; result: { state: AtelierState; created: { scene: string[]; imageRatio: string[] } } };
   "atelier.execution.set": { params: { patch: AtelierExecutionPatch }; result: { state: AtelierState } };
   "atelier.execution.setMode": { params: { mode: "default" | "comic" }; result: { state: AtelierState } };

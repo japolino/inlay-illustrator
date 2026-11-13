@@ -37,6 +37,7 @@ import {
 import { isAbortLike, RpcFailure } from "../rpc/errors.js";
 import type {
   AnalyzerClientLike,
+  AnalyzerTarget,
   LlmCallOptions,
   LlmCompleteRequest,
   LlmCompleteResult,
@@ -93,15 +94,35 @@ export function supportsJsonMode(provider: string, _model: string): boolean {
   return !/anthropic|claude/.test(provider.toLowerCase());
 }
 
-/** AM `sqe` (Claude 5 family, Opus 4.7/4.8) and `Ree` (Gemini 3, Gemini 4 Argon): models sent without `temperature`. */
-export function omitsTemperature(model: string): boolean {
-  const m = model.trim().toLowerCase().split("/").at(-1) ?? "";
-  return (
+/**
+ * Models sent without `temperature` (AM 0.9.91):
+ * - `rYe` @88735: Claude Fable/Mythos 5, Sonnet/Opus/Haiku 5, Opus 4.7/4.8;
+ * - `jW` @5662 / `kD_91` @5651: Gemini 3 and Gemini 4 Argon/Carbon/Hydrogen (exact names); testing the last path segment
+ *   also covers `lJ_91` @5654 (`google/gemini-4-hydrogen` on OpenRouter / OpenAI-compatible endpoints);
+ * - `_S` @5666 `mandatory`, new in the OpenAI-format bodies of 0.9.91 (`fYe` @90174): gpt-oss, o1/o3/o4, GPT-5 (base,
+ *   mini, nano, pro), GPT-6 except 6-sol / 6-luna / 6.1-terra, Gemini 3 / 2.5 Pro and GLM 5.3. Only when `provider` is
+ *   neither Anthropic nor native Google: AM's Claude and Google bodies do not use it. AM also reads the provider's
+ *   `reasoning.mandatory` model metadata, which Lumiverse connections do not carry; testing the model id without its
+ *   `vendor/` prefix stands in for it on OpenRouter-style ids.
+ * AM picks the rule by request format; Lumiverse hides the format, so the Claude and Gemini lists apply to every provider.
+ */
+export function omitsTemperature(model: string, provider = ""): boolean {
+  const full = model.trim().toLowerCase();
+  const m = full.split("/").at(-1) ?? "";
+  if (
     /^claude-(?:fable|mythos)-5(?:[-.]|$)/.test(m) ||
-    /^claude-(?:sonnet|opus)-5(?:[-.]|$)/.test(m) ||
+    /^claude-(?:sonnet|opus|haiku)-5(?:[-.]|$)/.test(m) ||
     /^claude-opus-4-(?:7|8)(?:[-.]|$)/.test(m) ||
     /^gemini-3(?:[.-]|$)/.test(m) ||
-    m === "gemini-4-argon"
+    /^gemini-4-(?:argon|carbon|hydrogen)$/.test(m)
+  )
+    return true;
+  if (/anthropic|claude|google|gemini|vertex/i.test(provider)) return false;
+  return (
+    /(?:^|\/)gpt-oss(?::|[-.]|$)/.test(full) ||
+    (!/^gpt-6(?:\.1-terra|-(?:sol|luna))(?:$|-)/.test(m) && /^(?:o[134](?:[-.]|$)|gpt-5(?:-mini|-nano|-pro)?(?:$|-20)|gpt-6(?:[-.]|$))/.test(m)) ||
+    /^gemini-(?:3|2\.5-pro)(?:[.-]|$)/.test(m) ||
+    /^glm-5\.3(?:[-:]|$)/.test(m)
   );
 }
 
@@ -352,6 +373,85 @@ export function partitionMessages(partition: unknown): { messages: LlmMessage[];
   return { messages, cacheBreakpoints };
 }
 
+/**
+ * The engine analyzer config of a run. Asset Maid 0.9.91 sends Gemini 4 Argon on Vertex AI a compact response contract:
+ * `c0e` tests `config.provider === "vertex_ai"` and `config.model === "gemini-4-argon"`, then `s0e` applies `eyt_91` /
+ * `bwe_91`. The port's settings name a Lumiverse connection, not a provider, so that pair is filled in here from the
+ * resolved connection (Lumiverse provider id `google_vertex`; the model may carry a Google path prefix). Every other
+ * target returns the settings unchanged: no `provider` is set, so the core's other provider checks stay off.
+ */
+export function engineAnalysisConfig<T extends object>(analysis: T, target: AnalyzerTarget | null | undefined): T {
+  if (!target || !/vertex/i.test(target.provider)) return analysis;
+  const name = target.model.trim().toLowerCase().split("/").pop();
+  return name === "gemini-4-argon" ? { ...analysis, provider: "vertex_ai", model: "gemini-4-argon" } : analysis;
+}
+
+/** AM `TK_91` @70456: the Gemini 4 models whose cache partition gets its `prefixPreparation` (exact names, optional Google path prefix). */
+export function prefixPreparationModel(model: string): boolean {
+  return /^(?:google\/|models\/|(?:projects\/[^/]+\/locations\/[^/]+\/)?publishers\/google\/models\/)?gemini-4-(?:carbon|argon|hydrogen)$/i.test(model.trim());
+}
+
+/**
+ * AM `fXe_91` @71660: the partition without `prefixPreparation`, with the preparation instruction as a system message at
+ * the start of every `app-static` segment, the messages of every other segment turned into system messages when
+ * `staticBlocksToSystem`, and the preparation turns put before the live messages. Unchanged when there is no preparation.
+ */
+export function applyPrefixPreparation(partition: unknown, staticBlocksToSystem: boolean): unknown {
+  const { prefixPreparation, ...rest } = asRecord(partition);
+  if (!prefixPreparation || !Array.isArray(rest.cacheSegments)) return partition;
+  const preparation = asRecord(prefixPreparation);
+  const instruction = { role: "system", content: preparation.instruction };
+  return {
+    ...rest,
+    cacheSegments: rest.cacheSegments.map((segment: unknown) => {
+      const s = asRecord(segment);
+      if (!Array.isArray(s.messages)) return segment;
+      if (s.kind === "app-static") return { ...s, messages: [instruction, ...s.messages] };
+      return staticBlocksToSystem ? { ...s, messages: s.messages.map((m: unknown) => ({ ...asRecord(m), role: "system" })) } : segment;
+    }),
+    liveMessages: [...asArray(preparation.turns), ...asArray(rest.liveMessages)],
+  };
+}
+
+/**
+ * AM `vZe_91` @88241: the leading run of system messages (when there are at least two) merged into one. String contents
+ * are joined with a blank line; part arrays are concatenated with a blank line before the text of every part after the first.
+ * `breakpoints` (message indices) are moved to match.
+ */
+export function mergeLeadingSystemMessages(messages: LlmMessage[], breakpoints: readonly number[] = []): { messages: LlmMessage[]; cacheBreakpoints: number[] } {
+  const firstOther = messages.findIndex((m) => m.role !== "system");
+  const run = firstOther < 0 ? messages.length : firstOther;
+  if (run < 2) return { messages: [...messages], cacheBreakpoints: [...breakpoints] };
+  const head = messages.slice(0, run);
+  const content: LlmMessage["content"] = head.every((m) => typeof m.content === "string")
+    ? head.map((m) => m.content).join("\n\n")
+    : head
+        .flatMap((m) => (typeof m.content === "string" ? [{ type: "text" as const, text: m.content }] : m.content))
+        .map((part, i) => (i && part.type === "text" ? { ...part, text: `\n\n${part.text}` } : part));
+  return {
+    messages: [{ role: "system", content }, ...messages.slice(run)],
+    cacheBreakpoints: [...new Set(breakpoints.map((i) => (i < run ? 0 : i - run + 1)))],
+  };
+}
+
+/**
+ * The messages of AM's Gemini 4 prefix preparation (`fYe` @89233-89243, 0.9.91), or null when it does not apply: the
+ * partition has no `prefixPreparation` or the model is not Gemini 4 Argon/Carbon/Hydrogen (`uXe_91` -> `TK_91`).
+ * Static blocks go to the system role when the preparation asks for it (`staticBlocksInSystem`) on a provider that can
+ * serve Gemini 4: AM allows custom_api, openrouter, google_cloud and vertex_ai (always automatic-prefix for Gemini 4), so
+ * every Lumiverse provider but Anthropic qualifies. The leading system messages are then merged into one (`vZe_91`, AM's
+ * OpenAI-format body; Lumiverse maps system messages for Google itself, so one merged message is sent to every provider).
+ * AM also skips requests with PDF parts (none here) and custom_api with cache mode "off" (no cache mode in Lumiverse).
+ */
+export function prefixPreparedMessages(partition: unknown, model: string, provider: string): { messages: LlmMessage[]; cacheBreakpoints: number[] } | null {
+  const preparation = asRecord(asRecord(partition).prefixPreparation);
+  if (!asRecord(partition).prefixPreparation || !prefixPreparationModel(model)) return null;
+  const staticToSystem = preparation.staticBlocksInSystem === true && !/anthropic|claude/i.test(provider);
+  const prepared = partitionMessages(applyPrefixPreparation(partition, staticToSystem));
+  if (!prepared) return null;
+  return staticToSystem ? mergeLeadingSystemMessages(prepared.messages, prepared.cacheBreakpoints) : prepared;
+}
+
 /** Anthropic allows four cache breakpoints per request. */
 const MAX_CACHE_BREAKPOINTS = 4;
 const EPHEMERAL = Object.freeze({ type: "ephemeral" });
@@ -521,6 +621,8 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
     let partitionFallback = false;
     let source = request.messages;
     let breakpoints = request.cacheBreakpoints;
+    const prepared = request.cachePartition === undefined ? null : prefixPreparedMessages(request.cachePartition, model, connection.provider);
+    if (prepared) [source, breakpoints] = [prepared.messages, prepared.cacheBreakpoints];
     if (flat && partitionRejected.has(capKey)) [source, breakpoints] = [flat, undefined];
     let textOnly = false;
     const rejectedTypes = new Set<string>();
@@ -536,7 +638,7 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
 
     const baseParameters: Record<string, unknown> = { ...(request.parameters ?? {}) };
     const temperature = request.temperature ?? settings.temperature;
-    if (baseParameters.temperature === undefined && Number.isFinite(temperature) && !omitsTemperature(model)) baseParameters.temperature = temperature;
+    if (baseParameters.temperature === undefined && Number.isFinite(temperature) && !omitsTemperature(model, connection.provider)) baseParameters.temperature = temperature;
     const maxTokens = request.maxTokens ?? settings.maxTokens;
     if (baseParameters.max_tokens === undefined && maxTokens > 0) baseParameters.max_tokens = Math.floor(maxTokens);
 
@@ -646,7 +748,7 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
             {
               purpose: str(o.purpose) || clientOptions.purpose || "analyzer",
               messages: partitioned?.messages ?? messages.map(toLlmMessage),
-              ...(partitioned ? { cacheBreakpoints: partitioned.cacheBreakpoints, flatMessages: messages.map(toLlmMessage) } : {}),
+              ...(partitioned ? { cacheBreakpoints: partitioned.cacheBreakpoints, flatMessages: messages.map(toLlmMessage), cachePartition: o.cachePartition } : {}),
               responseMode: o.responseMode === "text" ? "text" : "json",
               ...(o.structuredOutputSchema && typeof o.structuredOutputSchema === "object" ? { schema: o.structuredOutputSchema as Record<string, unknown> } : {}),
               ...(Number.isFinite(maxOutputTokens) && maxOutputTokens > 0 ? { maxTokens: maxOutputTokens } : {}),
@@ -671,6 +773,12 @@ export function createLlmService(deps: LlmServiceDeps): LlmService {
       // A connection that can't be read rejects with that error: it says nothing about vision.
       const connection = await resolveConnection(settings.connectionId);
       return visionFor(settings, connection, settings.model || connection.model);
+    },
+
+    async analyzerTarget(overrides) {
+      const { settings } = await effectiveSettings(overrides);
+      const connection = await resolveConnection(settings.connectionId);
+      return { provider: connection.provider, model: settings.model || connection.model };
     },
 
     async listConnections() {

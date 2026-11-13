@@ -52,6 +52,7 @@ import {
   type PersonaRecord,
 } from "../../engine/context/index.js";
 import { atelierServiceOf } from "../services/atelier.js";
+import { engineAnalysisConfig } from "../services/llm.js";
 import { analysisRecordOf } from "./selection-summary.js";
 import { BUNDLED_COMFY_WORKFLOW_PROFILE, resolveImageCountConstraint, resolveImageSize } from "../../engine/compose/index.js";
 import {
@@ -188,6 +189,12 @@ export interface GenerateMessageRequest {
   ground?: RequestGround;
   /** Drawn into another picture's setting (NovelAI). */
   infill?: Infill;
+  /**
+   * Analyzer preparation snapshot of the run being retried or restarted (a previous result's `analysisConfig`): the run
+   * prepares its analyzer from it instead of this run's config (AM 0.9.91 restart passes the original run's
+   * `prepareAnalysis` 179676; a retry reuses it since 0.9.90, `Sr` 179620). Everything else uses current data.
+   */
+  analysisConfig?: unknown;
 }
 
 /** AM session `progress.jevSelection` -> job snapshot shape. */
@@ -216,6 +223,8 @@ export interface GenerateMessageResult {
   errorKo?: string;
   failure?: unknown;
   analyzerCompleted?: boolean;
+  /** The snapshot the run's analyzer was prepared from (AM `prepareAnalysis` of the run), for a retry or restart. */
+  analysisConfig?: unknown;
   cancelled?: boolean;
   commitContinuity?: ContinuityCommit;
 }
@@ -424,6 +433,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
     const runtime = decorate(auto ? (auto.store.getCurrentSnapshot() as Rec) : (buildRuntimeConfig(config, primaryDoc, { resolvedImageModel: imageTarget.model }) as unknown as Rec));
     const getConfig = () => (auto ? decorate(auto.store.getCurrentSnapshot() as Rec) : runtime) as unknown as AssetMaidConfig;
     const amConfig = runtime as unknown as AssetMaidConfig;
+    const analysisConfig: unknown = req.analysisConfig ?? amConfig;
     const sourceId = primaryId;
     const ne = resolveSourceGenerationSettings(amConfig, sourceId);
     const fixedRating = resolveSourceFixedRating(amConfig, sourceId);
@@ -596,7 +606,9 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
         matchedAssetCount: W.min,
         totalAssetCount: W.max,
       },
-      analysisConfig: config.analysis,
+      // Gemini 4 Argon on a Vertex connection gets the compact response contract (AM 0.9.91 `c0e`); an unreadable connection
+      // leaves the config as it is and fails later, in the analyzer call, with its own message.
+      analysisConfig: engineAnalysisConfig(config.analysis, await services.llm.analyzerTarget().catch(() => null)),
       novelAIConfig: { ...resolveNovelAIRunConfig(amConfig, { sourceId }), apiKey: "lumiverse-connection" },
       ...(req.revision
         ? {
@@ -802,8 +814,9 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
         forceRating: () => fixedRating,
         ...(req.ground ? { ground: req.ground } : {}),
         ...(req.infill ? { infill: req.infill } : {}),
-        // AM `rW`: the analyzer of the active Atelier preset, prepared from the job-start config snapshot.
-        analysisConfig: amConfig,
+        // AM `rW`: the analyzer of the active Atelier preset, prepared from the job-start config snapshot, or from the
+        // original run's snapshot on a retry / restart.
+        analysisConfig,
       }, config);
       await req.assertTarget();
     } catch (e) {
@@ -836,6 +849,7 @@ export async function generateMessageIllustrations(deps: GeneratorDeps, req: Gen
       ...(errorKo && !cancelled ? { errorKo } : {}),
       ...(failure ? { failure } : {}),
       ...(analyzerCompleted ? { analyzerCompleted: true } : {}),
+      analysisConfig,
       ...(cancelled ? { cancelled: true } : {}),
       ...(commitContinuity ? { commitContinuity } : {}),
     };

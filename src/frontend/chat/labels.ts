@@ -124,10 +124,13 @@ export const TOAST_LABELS = {
 export const RETRY_STAGE_LABELS: Record<string, string> = {
   "이미지 생성": "Image generation", // 이미지 생성
   "분석·생성": "Analysis & generation", // 분석·생성
-  "초기 결정": "Initial decision" // 초기 결정
+  "분할 초기 분석": "Split initial analysis", // 분할 초기 분석 (AM 0.9.91 split initial step)
+  "초기 결정": "Initial decision" // 초기 결정 (AM 0.9.90 name, still in errors stored by older runs)
 };
-/** Split detail step `세부{n} 분석`. */
+/** Split detail step `세부{n} 분석` (AM split toast rows). */
 export const RETRY_DETAIL_STAGE_LABEL = "Detail {n} analysis";
+/** Split detail batch `상세 분석 {n}/{total}` (stage of the engine core's detail retry errors, AM 0.9.91 `Lbt`). */
+export const RETRY_DETAIL_BATCH_STAGE_LABEL = "Detail analysis {n}/{total}"; // 상세 분석 {n}/{total}
 
 /** Generation-count panel (spec/ui.md §6.2.4). */
 export const COUNT_LABELS = {
@@ -140,6 +143,8 @@ export const COUNT_LABELS = {
   toManual: "Switch to global manual generation", // 전역 수동 생성으로 변경
   toAuto: "Switch to global automatic generation", // 전역 자동 생성으로 변경
   retrySave: "Settings save failed: retry save", // 설정 저장 실패: 저장 재시도
+  retrySaveText: "Save failed · Retry", // 저장 실패 · 재시도 (AM 0.9.91)
+  retrySaveTitle: "Retry settings save", // 설정 저장 재시도
   modeButton: "Select count mode: {mode}", // 장수 방식 선택: {mode}
   modeTitle: "Select count mode", // 장수 방식 선택
   modeMenu: "Count mode", // 장수 방식

@@ -1,8 +1,8 @@
 {
- "source": "C:/Users/eme4/AppData/Local/Temp/claude/C--Users-eme4-inlay-illustrator/1319e1c1-3da5-4417-860e-b82811eeee24/scratchpad/am990/0.9.90.p120.js",
- "sourceLabel": "AssetMaid 0.9.90 (0.9.90.p120.js: prettier 3.7.4 width 120 of the original 0.9.90 bundle, original 0.9.90 minified names; kept in the am990 scratch dir)",
- "out": "C:/Users/eme4/inlay-illustrator/.claude/worktrees/agent-aefb374acdbdfdea7/src/backend/pipeline/core/auto-core.ts",
- "manifest": "C:/Users/eme4/AppData/Local/Temp/claude/C--Users-eme4-inlay-illustrator/1319e1c1-3da5-4417-860e-b82811eeee24/scratchpad/am990/engine-build/manifest-slice-config.auto-core.json",
+ "source": "tmp-audit/upstream/pretty/0.9.91.n90.p120.js",
+ "sourceLabel": "AssetMaid 0.9.91 (0.9.91.n90.p120.js: prettier 3.7.4 width 120 of the original 0.9.91 bundle, top-level names rewritten to the 0.9.90 names the port uses; names ending in _91 are new in 0.9.91; see src/engine/core/tooling/README.md)",
+ "out": "src/backend/pipeline/core/auto-core.ts",
+ "manifest": "tmp-audit/upstream/out/manifest-auto.json",
  "envImport": "../../../engine/core/env",
  "roots": [
   "kyt",

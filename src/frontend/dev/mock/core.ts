@@ -251,8 +251,10 @@ export function coreMockHandlers(): MockHandlers {
       });
       return buildSnapshot(ctx.db, characterId, ctx);
     },
-    "customCharacters.promote": ({ characterId, customIds: ids }, ctx) => {
+    "customCharacters.promote": ({ characterId, customIds: ids, bulk }, ctx) => {
       const doc = documentFor(ctx.db, characterId);
+      // Like the backend: one id must exist; a bulk promote (or several ids) skips unknown ones.
+      if (!bulk && Array.isArray(ids) && ids.length === 1 && !doc.customCharacters.some((c) => c.id === ids[0])) ctx.fail("not-found", "The custom character to promote was not found.");
       const set = customIds(doc, ids);
       doc.customCharacters = doc.customCharacters.map((c) => {
         if (!set.has(c.id)) return c;

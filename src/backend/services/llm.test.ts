@@ -1,7 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import { normalizeConfig, type InlayConfig } from "../../shared/contract/index.js";
 import { createFakeHost } from "../testing/fake-host.js";
-import { CAPABILITY_RETRY_MS, createLlmService, declaredVisionSupport, extractText, httpStatusOf, omitsTemperature, supportsJsonMode, unsupportedVisionError } from "./llm.js";
+import {
+  applyPrefixPreparation,
+  CAPABILITY_RETRY_MS,
+  createLlmService,
+  declaredVisionSupport,
+  engineAnalysisConfig,
+  extractText,
+  httpStatusOf,
+  mergeLeadingSystemMessages,
+  omitsTemperature,
+  prefixPreparationModel,
+  prefixPreparedMessages,
+  supportsJsonMode,
+  unsupportedVisionError,
+} from "./llm.js";
 
 function setup(configPatch: Record<string, unknown> = {}) {
   const fake = createFakeHost();
@@ -16,7 +30,7 @@ function setup(configPatch: Record<string, unknown> = {}) {
 }
 
 describe("llm helpers", () => {
-  test("json mode support, http status, vision metadata and errors, text extraction", () => {
+  test("json mode support and temperature omission", () => {
     expect(supportsJsonMode("openai", "gpt-4o")).toBe(true);
     expect(supportsJsonMode("anthropic", "claude-3")).toBe(false);
     expect(supportsJsonMode("custom", "deepseek-chat")).toBe(true);
@@ -26,6 +40,50 @@ describe("llm helpers", () => {
     expect(omitsTemperature("gemini-3.5-flash")).toBe(true);
     expect(omitsTemperature("gemini-2.5-flash")).toBe(false);
     expect(omitsTemperature("gpt-5.6-luna")).toBe(false);
+  });
+
+  test("temperature omission follows AM 0.9.91 (rYe with Haiku 5, jW/kD_91 Gemini 4, OpenAI-format mandatory reasoning)", () => {
+    // rYe @88735: Haiku 5 joins Sonnet/Opus 5.
+    expect(omitsTemperature("claude-haiku-5")).toBe(true);
+    expect(omitsTemperature("claude-haiku-5-5")).toBe(true);
+    expect(omitsTemperature("claude-haiku-4-5")).toBe(false);
+    // kD_91 @5651 (exact names, any case) and lJ_91 @5654 (google/ prefix).
+    for (const m of ["gemini-4-argon", "gemini-4-carbon", "gemini-4-hydrogen", "google/gemini-4-hydrogen", "Gemini-4-Argon"]) expect(omitsTemperature(m)).toBe(true);
+    expect(omitsTemperature("gemini-4-argon-preview")).toBe(false);
+    expect(omitsTemperature("gemini-4-neon")).toBe(false);
+    expect(omitsTemperature("gemini-4-hydrogen-0601")).toBe(false);
+    // _S `mandatory` (new in the OpenAI-format bodies): only off Anthropic and native Google connections.
+    for (const m of ["gpt-5", "gpt-5-mini", "gpt-5-2025-08-07", "o3-mini", "o1", "gpt-6", "gpt-6.2", "openai/gpt-oss-120b", "gpt-oss:20b", "gemini-2.5-pro", "glm-5.3", "openai/gpt-5"]) {
+      expect([m, omitsTemperature(m, "openai")]).toEqual([m, true]);
+    }
+    for (const m of ["gpt-6-sol", "gpt-6-luna-mini", "gpt-6.1-terra", "gpt-5.6-luna", "gpt-5.1", "gpt-4o", "glm-5.2", "gemini-2.5-flash", "o2"]) {
+      expect([m, omitsTemperature(m, "openrouter")]).toEqual([m, false]);
+    }
+    expect(omitsTemperature("gpt-5", "anthropic")).toBe(false);
+    expect(omitsTemperature("gemini-2.5-pro", "google")).toBe(false);
+    expect(omitsTemperature("gpt-5")).toBe(true);
+  });
+
+  test("engine analyzer config: only Gemini 4 Argon on a Vertex connection gets the vertex_ai / gemini-4-argon pair (AM c0e, 0.9.91)", () => {
+    const analysis = { connectionId: "vx", model: "", temperature: 0.4 };
+    for (const model of ["gemini-4-argon", "Gemini-4-Argon ", "google/gemini-4-argon", "publishers/google/models/gemini-4-argon"]) {
+      expect<unknown>([model, engineAnalysisConfig(analysis, { provider: "google_vertex", model })]).toEqual([model, { ...analysis, provider: "vertex_ai", model: "gemini-4-argon" }]);
+    }
+    const unchanged: Array<[string, string]> = [
+      ["google_vertex", "gemini-4-carbon"],
+      ["google_vertex", "gemini-4-hydrogen"],
+      ["google_vertex", "gemini-4-argon-0601"],
+      ["google_vertex", ""],
+      ["google", "gemini-4-argon"],
+      ["openrouter", "google/gemini-4-argon"],
+      ["ollama_local", "gemini-4-argon"],
+    ];
+    for (const [provider, model] of unchanged) expect([provider, model, engineAnalysisConfig(analysis, { provider, model })]).toEqual([provider, model, analysis]);
+    expect(engineAnalysisConfig(analysis, null)).toBe(analysis);
+    expect(analysis).toEqual({ connectionId: "vx", model: "", temperature: 0.4 });
+  });
+
+  test("http status, vision metadata and errors, text extraction", () => {
     expect(httpStatusOf(new Error("OpenAI generate failed (429): slow down"))).toBe(429);
     expect(httpStatusOf({ status: 503 })).toBe(503);
     expect(httpStatusOf(new Error("nothing here"))).toBe(0);
@@ -52,6 +110,15 @@ describe("llm service", () => {
     expect(fake.generateCalls[0]!.kind).toBe("raw");
     expect(input).toMatchObject({ type: "raw", provider: "openai", model: "gpt-x", connection_id: "oa", reasoning: { source: "custom", apiReasoning: true, effort: "high" }, parameters: { temperature: 0.5, max_tokens: 900, response_format: { type: "json_object" } } });
     expect(input.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  test("analyzerTarget: the connection's provider with the settings model, else the connection's model; a missing connection rejects", async () => {
+    const { llm, setConfig } = setup();
+    expect(await llm.analyzerTarget()).toEqual({ provider: "openai", model: "gpt-x" });
+    expect(await llm.analyzerTarget({ connectionId: "cl", model: "claude-y" })).toEqual({ provider: "anthropic", model: "claude-y" });
+    setConfig({ analysis: { connectionId: "cl" } });
+    expect(await llm.analyzerTarget()).toEqual({ provider: "anthropic", model: "claude-x" });
+    await expect(llm.analyzerTarget({ connectionId: "gone" })).rejects.toMatchObject({ error: { detailCode: "ANALYZER_CONNECTION_MISSING" } });
   });
 
   test("JSON mode rejection: resent without response_format, remembered, not a retry", async () => {
@@ -248,6 +315,93 @@ describe("llm service", () => {
     fake.scriptLlm({ content: "{}" });
     await llm.analyzerClient().complete({}, [{ role: "user", content: "FLAT" }], { cachePartition: { cacheSegments: "bad" } });
     expect(sentMessages(fake)).toEqual([{ role: "user", content: "FLAT" }]);
+  });
+
+  test("temperature is left out for mandatory-reasoning models on OpenAI-format connections only", async () => {
+    const { fake, llm, setConfig } = setup({ analysis: { connectionId: "oa", model: "gpt-5", temperature: 0.4 } });
+    const temperature = () => (fake.generateCalls.at(-1)!.input.parameters as Record<string, unknown>).temperature;
+    fake.scriptLlm({ content: "ok" }, { content: "ok" }, { content: "ok" });
+    await llm.complete({ purpose: "t", messages: [{ role: "user", content: "x" }], responseMode: "text" });
+    expect(temperature()).toBeUndefined();
+    setConfig({ analysis: { connectionId: "cl", model: "gpt-5", temperature: 0.4 } });
+    await llm.complete({ purpose: "t", messages: [{ role: "user", content: "x" }], responseMode: "text" });
+    expect(temperature()).toBe(0.4);
+    setConfig({ analysis: { connectionId: "cl", model: "claude-haiku-5", temperature: 0.4 } });
+    await llm.complete({ purpose: "t", messages: [{ role: "user", content: "x" }], responseMode: "text" });
+    expect(temperature()).toBeUndefined();
+  });
+
+  describe("Gemini 4 prefix preparation (AM fXe_91 / vZe_91, 0.9.91)", () => {
+    const turns = [
+      { role: "user", content: 'V5 CACHE PREPARATION\n{"mode":"prepare"}' },
+      { role: "assistant", content: '{"ready":true}' },
+    ];
+    const prepPartition = (staticBlocksInSystem?: boolean) => ({
+      namespace: "v5",
+      cacheSegments: [
+        { kind: "app-static", messages: [{ role: "system", content: "SYS" }] },
+        { kind: "config-static", messages: [{ role: "user", content: "STATIC" }] },
+      ],
+      liveMessages: [{ role: "user", content: "LIVE" }],
+      prefixPreparation: { ...(staticBlocksInSystem === undefined ? {} : { staticBlocksInSystem }), instruction: "I", turns },
+    });
+    const flat = [{ role: "system" as const, content: "SYS" }, { role: "user" as const, content: "STATIC+LIVE" }];
+    const run = async (provider: string, model: string, partitionValue: unknown) => {
+      const { fake, llm } = setup({ analysis: { connectionId: "g", model, jsonMode: false } });
+      fake.llmConnections.push({ id: "g", name: "G", provider, api_url: "", model: "", preset_id: null, is_default: false, has_api_key: true, metadata: {}, reasoning_bindings: null, created_at: 0, updated_at: 0 });
+      fake.scriptLlm({ content: "{}" });
+      await llm.analyzerClient().complete({}, flat, { cachePartition: partitionValue });
+      return sentMessages(fake);
+    };
+
+    test("static blocks go to one leading system message, then the preparation turns, then the live input", async () => {
+      const expected = [
+        { role: "system", content: "I\n\nSYS\n\nSTATIC" },
+        { role: "user", content: 'V5 CACHE PREPARATION\n{"mode":"prepare"}' },
+        { role: "assistant", content: '{"ready":true}' },
+        { role: "user", content: "LIVE" },
+      ];
+      expect(await run("openrouter", "gemini-4-argon", prepPartition(true))).toEqual(expected);
+      expect(await run("openrouter", "google/gemini-4-hydrogen", prepPartition(true))).toEqual(expected);
+      expect(await run("google", "models/gemini-4-carbon", prepPartition(true))).toEqual(expected);
+    });
+
+    test("without staticBlocksInSystem the static blocks keep their roles and nothing is merged", async () => {
+      expect(await run("openrouter", "gemini-4-argon", prepPartition())).toEqual([
+        { role: "system", content: "I" },
+        { role: "system", content: "SYS" },
+        { role: "user", content: "STATIC" },
+        ...turns,
+        { role: "user", content: "LIVE" },
+      ]);
+    });
+
+    test("other models send the partition unchanged", async () => {
+      const unchanged = [{ role: "system", content: "SYS" }, { role: "user", content: "STATIC" }, { role: "user", content: "LIVE" }];
+      expect(await run("google", "gemini-3.5-flash", prepPartition(true))).toEqual(unchanged);
+      expect(await run("openai", "gpt-x", prepPartition(true))).toEqual(unchanged);
+      expect(await run("openrouter", "gemini-4-argon-preview", prepPartition(true))).toEqual(unchanged);
+    });
+
+    test("pure helpers: fXe_91 shape, vZe_91 part arrays and breakpoints", () => {
+      expect(prefixPreparationModel("projects/p/locations/us/publishers/google/models/gemini-4-argon")).toBe(true);
+      expect(prefixPreparationModel("vendor/gemini-4-argon")).toBe(false);
+      const p = prepPartition(true);
+      expect(applyPrefixPreparation({ ...p, prefixPreparation: undefined }, true)).toEqual({ ...p, prefixPreparation: undefined });
+      const applied = applyPrefixPreparation(p, false) as Record<string, unknown>;
+      expect("prefixPreparation" in applied).toBe(false);
+      expect(applied.namespace).toBe("v5");
+      expect(mergeLeadingSystemMessages(
+        [{ role: "system", content: "A" }, { role: "system", content: [{ type: "text", text: "B" }, { type: "text", text: "C" }] }, { role: "user", content: "U" }],
+        [0, 1, 2],
+      )).toEqual({
+        messages: [{ role: "system", content: [{ type: "text", text: "A" }, { type: "text", text: "\n\nB" }, { type: "text", text: "\n\nC" }] }, { role: "user", content: "U" }],
+        cacheBreakpoints: [0, 1],
+      });
+      const single = [{ role: "system" as const, content: "A" }, { role: "user" as const, content: "U" }];
+      expect(mergeLeadingSystemMessages(single).messages).toEqual(single);
+      expect(prefixPreparedMessages(p, "gemini-4-argon", "anthropic")!.messages[2]).toEqual({ role: "user", content: "STATIC" });
+    });
   });
 
   test("Anthropic gets cache breakpoints at segment ends, two when Lumiverse prompt caching is on", async () => {

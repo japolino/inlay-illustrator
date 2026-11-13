@@ -226,7 +226,7 @@ interface JobRecord {
   done: Promise<void>;
   dismissed?: boolean;
   /** Settings and split revision of the job's run: Retry / Restart still work after the message's retry memory was evicted. */
-  retryFrom?: { settings: ChatImageGenerationSettings; splitRevisionId?: string };
+  retryFrom?: { settings: ChatImageGenerationSettings; splitRevisionId?: string; analysisConfig?: unknown };
 }
 
 /**
@@ -237,6 +237,8 @@ interface RetryMemory {
   settings?: ChatImageGenerationSettings;
   splitRevisionId?: string;
   analyzerCompleted?: boolean;
+  /** The run's analyzer preparation snapshot (AM `zt.prepareAnalysis`), reused by Retry and Restart. */
+  analysisConfig?: unknown;
 }
 
 interface CleanupRecord {
@@ -529,6 +531,8 @@ export function createChatPipelineController(services: BackendServices, engine: 
     countPolicy?: CountPolicy;
     /** Restart: the saved settings snapshot (AM `mt`). */
     settings?: ChatImageGenerationSettings;
+    /** Restart: the original run's analyzer preparation snapshot (AM 0.9.91 `Qr.prepareAnalysis` 179676). */
+    analysisConfig?: unknown;
     revision?: RevisionInput;
     /** Auto-retry: wait out a generation streaming in the chat, as an automatic run does. */
     waitForChat?: boolean;
@@ -633,6 +637,8 @@ export function createChatPipelineController(services: BackendServices, engine: 
     if (attemptKind === "retry" && !opts.settings && !memory?.settings)
       log("info", "No settings snapshot for this retry; it uses the current chat image settings.", { chatId, planKey });
     const settings = opts.settings ?? memory?.settings ?? (await services.storage.loadChatImageGenerationSettings());
+    // AM `Sr` 179620: the restart's own preparation, else a retry's remembered one, else (undefined) this run's config.
+    const analysisConfig = opts.revision ? undefined : (opts.analysisConfig ?? memory?.analysisConfig);
     const runSettings: ChatImageGenerationSettings = opts.countPolicy ? { ...settings, countPolicy: opts.countPolicy } : settings;
     const split = runSettings.analysisMode === "split" && !opts.revision;
     const countPolicy = split ? fixedCountPolicy(runSettings.splitAnalysis.totalCount ?? 1) : runSettings.countPolicy;
@@ -666,10 +672,11 @@ export function createChatPipelineController(services: BackendServices, engine: 
         settings: memory?.settings ?? jsonClone(runSettings),
         ...(splitRevisionId ? { splitRevisionId } : {}),
         ...(memory?.analyzerCompleted ? { analyzerCompleted: true } : {}),
+        ...(analysisConfig !== undefined ? { analysisConfig } : {}),
       };
       retryMemory.delete(skey);
       retryMemory.set(skey, record);
-      job.retryFrom = { settings: record.settings!, ...(splitRevisionId ? { splitRevisionId } : {}) };
+      job.retryFrom = { settings: record.settings!, ...(splitRevisionId ? { splitRevisionId } : {}), ...(analysisConfig !== undefined ? { analysisConfig } : {}) };
       while (retryMemory.size > MAX_SETTINGS_SNAPSHOTS) {
         const victim = [...retryMemory.keys()].find((key) => key !== skey && !messageJobs.has(key));
         if (!victim) break;
@@ -716,6 +723,7 @@ export function createChatPipelineController(services: BackendServices, engine: 
             ? { splitAnalysis: { totalCount: countPolicy.max, batchSize: runSettings.splitAnalysis.batchSize, retries: config.runtime.generationAutoRetryCount, revision: revisionId } }
             : {}),
           ...(opts.revision ? { revision: opts.revision } : {}),
+          ...(analysisConfig !== undefined ? { analysisConfig } : {}),
           jobId: job.snapshot.jobId,
           activityLabel,
           config,
@@ -741,6 +749,11 @@ export function createChatPipelineController(services: BackendServices, engine: 
       const kept = retryMemory.get(skey);
       if (kept && result.error && result.analyzerCompleted) kept.analyzerCompleted = true;
       else if (kept) delete kept.analyzerCompleted;
+      // Keep the snapshot the run was prepared with for its Retry / Restart.
+      if (!opts.revision && result.analysisConfig !== undefined) {
+        if (kept) kept.analysisConfig = result.analysisConfig;
+        if (job.retryFrom) job.retryFrom.analysisConfig = result.analysisConfig;
+      }
       if (result.cancelled || signal.aborted) {
         await savePlan(chatId, { ...plan, status: previous.status, error: previous.error });
         return { kind: "cancelled" };
@@ -1725,11 +1738,18 @@ export function createChatPipelineController(services: BackendServices, engine: 
     async restart(jobId) {
       const job = jobs.get(jobId) ?? fail("not-found", `Job not found: ${jobId}`);
       if (messageBusy(job.target.chatId, job.planKey) || messageLocked(job.target.chatId, job.target.messageId, job.planKey)) throw new RpcFailure(labelError("busy", PIPELINE_TEXT.busy));
-      // The job's own run first (what its Restart button offered), else the message's snapshot (AM `ee`).
-      const snapshot = job.retryFrom?.settings ?? retryMemory.get(k(job.target.chatId, job.planKey))?.settings;
+      // The job's own run first (what its Restart button offered), else the message's snapshot (AM `ee`). AM 0.9.91 also
+      // hands the restart the original run's analysis preparation (179676), so the analyzer stays the one it failed with.
+      const from = job.retryFrom?.settings ? job.retryFrom : retryMemory.get(k(job.target.chatId, job.planKey));
+      const snapshot = from?.settings;
       if (!snapshot) throw new RpcFailure(labelError("conflict", PIPELINE_TEXT.noRestartSnapshot));
       job.dismissed = true;
-      const next = startMessageJob(job.target, job.planKey, { automatic: false, attemptKind: "reroll", settings: snapshot });
+      const next = startMessageJob(job.target, job.planKey, {
+        automatic: false,
+        attemptKind: "reroll",
+        settings: snapshot,
+        ...(from?.analysisConfig !== undefined ? { analysisConfig: from.analysisConfig } : {}),
+      });
       return { jobId: next.snapshot.jobId };
     },
 
