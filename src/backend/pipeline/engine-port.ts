@@ -101,8 +101,17 @@ export function createEnginePort(services: BackendServices, options: EnginePortO
   const engineFor = (): AssetMaidEngine => {
     if (current) return current;
     const engine = (options.createEngine ?? createAssetMaidEngine)({
-      analyzerClient: withOutfitAwareness(services.llm.analyzerClient({ purpose: "analyzer" }), outfitRuns, (n) =>
-        services.log.append("info", "pipeline", `Analyzer request: outfit parts of ${n} registered outfit(s) added.`),
+      analyzerClient: withOutfitAwareness(
+        services.llm.analyzerClient({ purpose: "analyzer" }),
+        outfitRuns,
+        (n) => services.log.append("info", "pipeline", `Analyzer request: outfit parts of ${n} registered outfit(s) added.`),
+        (repairs) =>
+          services.log.append(
+            "warn",
+            "pipeline",
+            `Analyzer reply: ${repairs.length} outfit proposal problem(s) repaired instead of failing the analysis.`,
+            repairs.map((r) => `${r.proposalKey || "inline proposal"} for ${r.candidateKey || "(no character)"}: ${r.action}, ${r.reason}`).join("; "),
+          ),
       ) as never,
       imageProviders: adapters,
       comfyUIReferences: references,

@@ -227,15 +227,29 @@ export class OutfitIndexRegistry {
   }
 }
 
+/**
+ * Who may get a new outfit. The core rejects a proposal for anyone else, and in split analysis that fails the whole
+ * initial step (AM `wTe` -> `c0e` "초기 결정의 인물·폼·의상 검증 실패"), so the part rules must not ask for one.
+ */
+const PROPOSAL_ELIGIBILITY =
+  "Propose only for an Actor whose candidateKey is listed in outfit_creation_candidates, bound to that Actor's selected form. For any other Actor, including one declared in generated_actor_proposals (its clothes belong in its profile.defaultOutfit), keep the best-matching existing outfit and return no outfit proposal.";
+
+/** The part rules when the request allows no new outfits (`analysis_policy.outfits.creation_enabled === false`). */
+const NO_CREATION_PART_POLICY = Object.freeze({
+  part_contradiction:
+    "Outfit creation is disabled: when the source contradicts a registered part of the best-matching outfit, still select that outfit and return no outfit proposal.",
+  part_completion: "Outfit creation is disabled: never return an outfit proposal to complete missing legwear or footwear.",
+});
+
 /** Policy keys added to `response_contract.analysis_policy.outfits` when at least one outfit has parts. */
 export const OUTFIT_PART_POLICY = Object.freeze({
   registered_parts:
     "forms[].outfit_parts maps outfit IDs to the garments the image prompt renders for that outfit, by body part (head, top, bottom, legs, feet). They are drawn verbatim whenever that body part is visible, so compare the source's clothing evidence with them part by part.",
   absence_parts: "A registered part such as bare legs or barefoot describes uncovered anatomy, not a garment; treat it as unspecified when matching the source's clothing.",
   part_contradiction:
-    "If the source explicitly describes the actor currently wearing an item that contradicts a registered part of the otherwise best-matching outfit (a different garment type or color for the same body part, e.g. black stockings vs. white knee-high socks, sneakers vs. loafers), that outfit does not match: propose a new outfit that copies every non-contradicted part verbatim and replaces only the contradicted part with the source-stated item. This overrides existing_match_instruction, current_outfit_when and proposal_when. Removing an item is not a contradiction (see temporary_state).",
+    `If the source explicitly describes the actor currently wearing an item that contradicts a registered part of the otherwise best-matching outfit (a different garment type or color for the same body part, e.g. black stockings vs. white knee-high socks, sneakers vs. loafers), that outfit does not match: propose a new outfit that copies every non-contradicted part verbatim and replaces only the contradicted part with the source-stated item. This overrides existing_match_instruction, current_outfit_when and proposal_when. Removing an item is not a contradiction (see temporary_state). ${PROPOSAL_ELIGIBILITY}`,
   part_completion:
-    "If the best-matching outfit leaves legs or feet empty or registers only absence there, and the source explicitly states legwear or footwear the actor is currently wearing, propose the completed outfit: copy every registered part verbatim and put the stated item in legs or feet.",
+    `If the best-matching outfit leaves legs or feet empty or registers only absence there, and the source explicitly states legwear or footwear the actor is currently wearing, propose the completed outfit: copy every registered part verbatim and put the stated item in legs or feet. ${PROPOSAL_ELIGIBILITY}`,
   temporary_state:
     "Taking off or not wearing shoes, socks or other legwear for a while (indoors, in bed, bathing) is a temporary state of the current outfit, not a new outfit: keep the outfit and state it in that actor's free tags with exactly barefoot (no footwear and no socks), no shoes (legwear still on) or bare legs (legwear off).",
 });
@@ -293,7 +307,10 @@ function applyOutfitPartPolicy(payload: Rec): boolean {
   if (contract !== payload.response_contract) return false;
   const policy = rec(contract.analysis_policy);
   if (contract.analysis_policy === policy) {
-    if (policy.outfits && typeof policy.outfits === "object") Object.assign(policy.outfits as Rec, OUTFIT_PART_POLICY);
+    if (policy.outfits && typeof policy.outfits === "object") {
+      const creationOff = (policy.outfits as Rec).creation_enabled === false || !("generated_outfit_proposals" in rec(contract.root));
+      Object.assign(policy.outfits as Rec, OUTFIT_PART_POLICY, creationOff ? NO_CREATION_PART_POLICY : {});
+    }
     if (policy.freeform && typeof policy.freeform === "object") Object.assign(policy.freeform as Rec, FREEFORM_CLOTHING_POLICY);
     // AM 0.9.91 compact contract (Gemini 4 Argon on Vertex, `bwe_91`): `freeform` is one string, so the clothing rules are appended.
     else if (typeof policy.freeform === "string" && !policy.freeform.includes(FREEFORM_CLOTHING_TEXT)) policy.freeform = `${policy.freeform} ${FREEFORM_CLOTHING_TEXT}`;
@@ -345,22 +362,203 @@ export function augmentV5AnalyzerMessages<M extends Message>(messages: readonly 
   return changed ? out : null;
 }
 
-/** The analyzer client with outfit parts added to V5 requests of registered runs. `onAugment` gets the outfit count. */
-export function withOutfitAwareness(client: AnalyzerClientLike, registry: OutfitIndexRegistry, onAugment?: (outfits: number) => void): AnalyzerClientLike {
+/* ------------------------------------------------------------------------------------------------
+ * Reply repair: outfit proposals the core would reject
+ * ---------------------------------------------------------------------------------------------- */
+
+/** One change `repairOutfitProposals` made to an analyzer reply. */
+export interface OutfitProposalRepair {
+  proposalKey: string;
+  candidateKey: string;
+  action: "dropped" | "moved-to-profile" | "form-fixed";
+  reason: string;
+}
+
+const pick = (o: Rec, keys: readonly string[]): unknown => {
+  for (const k of keys) if (o[k] !== undefined && o[k] !== null) return o[k];
+  return undefined;
+};
+const PROPOSAL_KEY = ["proposalKey", "proposal_key"] as const;
+const PROPOSAL_BODY = ["proposal", "outfitProposal", "outfit_proposal"] as const;
+const CANDIDATE_KEY = ["candidateKey", "candidate_key"] as const;
+const FORM_REF = ["formRef", "form_ref"] as const;
+const OUTFIT_ID = ["id", "outfitId", "outfit_id"] as const;
+
+/** Every object of an illustration that carries an `outfit` object, with the candidate it belongs to ("" when unknown). */
+function eachOutfitHolder(illustration: unknown, visit: (holder: Rec, candidateKey: string) => void): void {
+  const byActor = new Map<string, string>();
+  for (const entry of arr(rec(illustration).actor_roster)) {
+    const r = rec(entry);
+    const actorId = str(pick(r, ["actorId", "actor_id"]));
+    if (actorId) byActor.set(actorId, str(pick(r, CANDIDATE_KEY)));
+  }
+  const walk = (node: unknown, owner: string): void => {
+    if (Array.isArray(node)) return node.forEach((n) => walk(n, owner));
+    if (!node || typeof node !== "object") return;
+    const o = node as Rec;
+    const mine = str(pick(o, CANDIDATE_KEY)) || byActor.get(str(pick(o, ["actorId", "actor_id"]))) || owner;
+    if (rec(o.outfit) === o.outfit) visit(o, mine);
+    for (const [key, value] of Object.entries(o)) if (key !== "outfit") walk(value, mine);
+  };
+  walk(illustration, "");
+}
+
+/**
+ * Removes from a V5 analyzer reply the outfit proposals the core would reject, with the references to them (mutates
+ * `reply`; `payload` is the request's wire payload). The core (AM `wTe`, `Wte`) only omits such a proposal in a normal
+ * analysis, but in split analysis every omission fails the whole initial step ("초기 결정의 인물·폼·의상 검증 실패"), so
+ * one stray proposal from the model costs the message. After the repair the Actor keeps an existing outfit, which is
+ * what a normal analysis ends up with.
+ *
+ * - Owner not in `outfit_creation_candidates`: the proposal is dropped. When the owner is a character declared in this
+ *   reply (`generated_actor_proposals`) without a `profile.defaultOutfit`, the garments move there, where they belong.
+ * - Owner allowed but the form is wrong or missing: the form of the roster entry that wears the proposal is used; an
+ *   unknown form on a single-form Actor is removed (the core then takes the only form).
+ * - An inline `outfit.proposal` on an Actor that may not get new outfits is removed.
+ */
+export function repairOutfitProposals(reply: Rec, payload: Rec): OutfitProposalRepair[] {
+  const repairs: OutfitProposalRepair[] = [];
+  const eligible = new Set(arr(payload.outfit_creation_candidates).map((k) => str(k).toLowerCase()).filter(Boolean));
+  const forms = new Map<string, { refs: Set<string>; count: number }>();
+  for (const list of [payload.actor_candidates, payload.actor_candidate_overlay, payload.appearance_catalog, payload.generated_appearance_catalog]) {
+    for (const entry of arr(list)) {
+      const key = str(pick(rec(entry), CANDIDATE_KEY)).toLowerCase();
+      if (!key) continue;
+      const info = forms.get(key) ?? { refs: new Set<string>(), count: 0 };
+      const entryForms = arr(rec(entry).forms);
+      info.count = Math.max(info.count, entryForms.length);
+      for (const form of entryForms) for (const ref of [str(rec(form).formRef), str(rec(form).appearance)]) if (ref) info.refs.add(ref);
+      forms.set(key, info);
+    }
+  }
+  const newActors = new Map<string, Rec>();
+  for (const entry of arr(reply.generated_actor_proposals)) {
+    const key = str(pick(rec(entry), CANDIDATE_KEY)).toLowerCase();
+    if (key) newActors.set(key, rec(entry));
+  }
+  const illustrations = arr(reply.illustrations);
+  const noCreationReason = eligible.size ? "this character may not get new outfits" : "the request allows no new outfits";
+  const ownProfileReason = "a character declared in this reply takes its clothes from its profile";
+
+  const proposals = reply.generated_outfit_proposals;
+  const dropped = new Set<string>();
+  if (Array.isArray(proposals) && proposals.length) {
+    const kept: unknown[] = [];
+    for (const item of proposals) {
+      const p = rec(item);
+      if (p !== item) {
+        kept.push(item);
+        continue;
+      }
+      const proposalKey = str(pick(p, [...PROPOSAL_KEY, "id"]));
+      const candidateKey = str(pick(p, CANDIDATE_KEY));
+      const owner = candidateKey.toLowerCase();
+      if (!eligible.has(owner)) {
+        const actor = newActors.get(owner);
+        const profile = actor ? rec(actor.profile) : null;
+        const body = rec(pick(p, PROPOSAL_BODY));
+        const moved = !!actor && !!profile && actor.profile === profile && !str(rec(profile.defaultOutfit).name) && !!str(body.name);
+        if (moved) profile.defaultOutfit = { name: str(body.name), head: str(body.head), top: str(body.top), bottom: str(body.bottom), legs: str(body.legs), feet: str(body.feet) };
+        if (proposalKey) dropped.add(proposalKey.toLowerCase());
+        repairs.push({ proposalKey, candidateKey, action: moved ? "moved-to-profile" : "dropped", reason: actor ? ownProfileReason : !candidateKey ? "it names no character" : noCreationReason });
+        continue;
+      }
+      kept.push(item);
+      const info = forms.get(owner);
+      const formRef = str(pick(p, FORM_REF));
+      if (!info || (formRef ? info.refs.has(formRef) : info.count <= 1)) continue;
+      // The form the wearer was given in the roster, first from an entry that wears this proposal.
+      let wearer = "";
+      let sameActor = "";
+      for (const illustration of illustrations) {
+        for (const entry of arr(rec(illustration).actor_roster)) {
+          const r = rec(entry);
+          const ref = str(pick(r, FORM_REF));
+          if (str(pick(r, CANDIDATE_KEY)).toLowerCase() !== owner || !info.refs.has(ref)) continue;
+          sameActor ||= ref;
+          if (proposalKey && str(pick(rec(r.outfit), PROPOSAL_KEY)).toLowerCase() === proposalKey.toLowerCase()) wearer ||= ref;
+        }
+      }
+      const fixed = wearer || sameActor;
+      if (!fixed && !(formRef && info.count === 1)) continue;
+      for (const k of FORM_REF) delete p[k];
+      if (fixed) p.formRef = fixed;
+      repairs.push({ proposalKey, candidateKey, action: "form-fixed", reason: fixed ? `form "${formRef}" replaced by the roster's "${fixed}"` : `unknown form "${formRef}" removed from a single-form character` });
+    }
+    if (kept.length !== proposals.length) {
+      if (kept.length) reply.generated_outfit_proposals = kept;
+      else delete reply.generated_outfit_proposals;
+    }
+  }
+
+  for (const illustration of illustrations) {
+    eachOutfitHolder(illustration, (holder, candidateKey) => {
+      const outfit = holder.outfit as Rec;
+      const reference = str(pick(outfit, PROPOSAL_KEY)).toLowerCase();
+      const hasId = !!str(pick(outfit, OUTFIT_ID));
+      if (reference && dropped.has(reference)) {
+        // The reference goes; an existing outfit ID given next to it stays.
+        if (hasId) for (const k of [...PROPOSAL_KEY, ...PROPOSAL_BODY]) delete outfit[k];
+        else delete holder.outfit;
+        return;
+      }
+      if (reference || hasId || pick(outfit, PROPOSAL_BODY) === undefined || !candidateKey || eligible.has(candidateKey.toLowerCase())) return;
+      delete holder.outfit;
+      repairs.push({ proposalKey: "", candidateKey, action: "dropped", reason: newActors.has(candidateKey.toLowerCase()) ? ownProfileReason : noCreationReason });
+    });
+  }
+  return repairs;
+}
+
+/** The JSON object of a V5 analyzer request's last user message (flat messages), or null. */
+function readV5Payload(messages: readonly Message[]): Rec | null {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const m = messages[i]!;
+    if (m.role !== "user") continue;
+    const text = typeof m.content === "string" ? m.content : arr(m.content).map((part) => (typeof rec(part).text === "string" ? (rec(part).text as string) : "")).join("");
+    const start = text.indexOf("{");
+    const payload = start >= 0 ? parseObject(text.slice(start)) : null;
+    return payload && payload.response_contract ? payload : null;
+  }
+  return null;
+}
+
+/** The analyzer client with outfit parts added to V5 requests of registered runs, and its replies repaired. `onAugment` gets the outfit count. */
+export function withOutfitAwareness(
+  client: AnalyzerClientLike,
+  registry: OutfitIndexRegistry,
+  onAugment?: (outfits: number) => void,
+  onRepair?: (repairs: OutfitProposalRepair[]) => void,
+): AnalyzerClientLike {
   return {
-    complete(config, messages, options) {
-      if (!registry.size) return client.complete(config, messages, options);
-      let outfits = 0;
-      const augmented = augmentV5AnalyzerMessages(messages, (k, f, o) => {
-        const parts = registry.wire(k, f, o);
-        if (parts) outfits += 1;
-        return parts;
-      });
-      if (augmented) onAugment?.(outfits);
-      // The client sends the cache partition when there is one, so it needs the same parts.
-      const cachePartition = (options as { cachePartition?: unknown } | undefined)?.cachePartition;
-      const partition = cachePartition ? augmentPartition(cachePartition, (k, f, o) => registry.wire(k, f, o)) : null;
-      return client.complete(config, augmented ?? messages, partition ? { ...options, cachePartition: partition } : options);
+    async complete(config, messages, options) {
+      let sent = messages;
+      let sentOptions = options;
+      if (registry.size) {
+        let outfits = 0;
+        const augmented = augmentV5AnalyzerMessages(messages, (k, f, o) => {
+          const parts = registry.wire(k, f, o);
+          if (parts) outfits += 1;
+          return parts;
+        });
+        if (augmented) onAugment?.(outfits);
+        // The client sends the cache partition when there is one, so it needs the same parts.
+        const cachePartition = (options as { cachePartition?: unknown } | undefined)?.cachePartition;
+        const partition = cachePartition ? augmentPartition(cachePartition, (k, f, o) => registry.wire(k, f, o)) : null;
+        sent = augmented ?? messages;
+        if (partition) sentOptions = { ...options, cachePartition: partition };
+      }
+      const result = await client.complete(config, sent, sentOptions);
+      const reply = rec(result.parsed);
+      if (reply !== result.parsed || (!Array.isArray(reply.generated_outfit_proposals) && !Array.isArray(reply.illustrations))) return result;
+      const payload = readV5Payload(messages);
+      if (!payload) return result;
+      const repaired = structuredClone(reply);
+      const repairs = repairOutfitProposals(repaired, payload);
+      if (!repairs.length) return result;
+      onRepair?.(repairs);
+      // The core reads `raw` before `parsed`, so the repaired reply replaces both.
+      return { ...result, raw: JSON.stringify(repaired), parsed: repaired };
     },
   };
 }
