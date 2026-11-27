@@ -87,7 +87,14 @@ export const ROSTER_LABELS = {
   importReplacedNote: (n: number) => `${n} existing ${n === 1 ? "appearance" : "appearances"} will be replaced.`,
   importConfirm: (n: number) => `Import ${n}`,
   importing: "Importing…",
-  importFailedTitle: "Could not import the roster",
+  importSavesEdits: (n: number) => `${n} unsaved appearance ${n === 1 ? "edit" : "edits"} on this character will be saved first.`,
+  exportUnsavedTitle: "Unsaved appearance edits",
+  exportUnsavedDescription: (n: number) => `${n} ${n === 1 ? "person has" : "people have"} unsaved edits in the Prompts tab. The file only holds saved appearances.`,
+  saveAndExport: "Save and export",
+  exportSavedVersion: "Export saved version",
+  savingEdits: "Saving…",
+  saveEditsFailed: (error: string) => (error ? `Could not save the appearance edits: ${error}` : "Could not save the appearance edits."),
+  transferFailedTitle: "Roster export / import failed",
   importReadFailed: "The file could not be read.",
   // filters
   filterActive: "Active", // 활성
