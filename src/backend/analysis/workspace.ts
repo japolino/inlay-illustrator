@@ -4,7 +4,9 @@
  * recognition keys `Ife` L88575, custom character store `A5e` L37607-37900 (+ `JJ` L33099 on remove), forms revision `ds`/`GY` L25348.
  */
 import {
+  applyRosterImport,
   compileMainPrompt,
+  parseRosterExport,
   createCustomCharacter,
   customCharacterRosterState,
   effectiveRecognitionKeys,
@@ -22,6 +24,7 @@ import {
   type CustomCharacterInput,
   type FormCollection,
   type MetadataAvailability,
+  type RosterImportSummary,
   type RosterItem,
   type WorkspaceSnapshot,
 } from "../../shared/contract/index.js";
@@ -258,6 +261,27 @@ export async function setRecognitionKeys(services: BackendServices, characterId:
     return;
   }
   await mutateAmConfig(services, characterId, (config) => amFn("Hce")(config, { id: characterId }, promptKey, keys), { reason: "recognition-keys" });
+}
+
+/**
+ * Roster import (port addition): loads a roster file on this character. The target roster projection is taken from
+ * a fresh workspace load (lore rows need the host's world book entries); the write itself is one document update.
+ */
+export async function importRoster(services: BackendServices, characterId: string, input: unknown): Promise<RosterImportSummary> {
+  const parsed = parseRosterExport(input);
+  if (!parsed.ok) fail("bad-request", parsed.error, { detailCode: "ROSTER_IMPORT_INVALID" });
+  const { roster } = await loadWorkspaceSnapshot(services, characterId, { reload: true });
+  let summary: RosterImportSummary | null = null;
+  await services.storage.updateCharacterDocument(
+    characterId,
+    (doc) => {
+      const result = applyRosterImport(doc, roster, parsed.file);
+      summary = result.summary;
+      return result.document;
+    },
+    { reason: "roster-import" },
+  );
+  return summary!;
 }
 
 /* ------------------------------------------------------------------------------------------------

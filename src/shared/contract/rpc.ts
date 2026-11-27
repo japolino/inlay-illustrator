@@ -30,6 +30,7 @@ import type { GenerationOrigin, HistoryTree } from "./history.js";
 import type { ChatMessageUiState } from "./chat-dom.js";
 import type { AutoPickApplyItem, AutoPickSheet, AutoPickState } from "./autopick.js";
 import type { PuppetState } from "./puppet.js";
+import type { RosterExportFile, RosterImportSummary } from "./roster-transfer.js";
 import type {
   AtelierChangedEvent,
   AtelierDocumentSelection,
@@ -435,6 +436,8 @@ export interface RpcMethods {
   /** AM module connect/disconnect -> extra world books as roster sources. */
   "roster.setSourceConnected": { params: { characterId: string; worldBookId: string; connected: boolean }; result: WorkspaceSnapshot };
   "recognitionKeys.set": { params: { characterId: string; promptKey: string; keys: string[] }; result: WorkspaceSnapshot };
+  /** Load a roster file (`buildRosterExport`) on this character: match by world book entry, then name, else create custom people. */
+  "roster.import": { params: { characterId: string; file: RosterExportFile }; result: { summary: RosterImportSummary; snapshot: WorkspaceSnapshot } };
 
   /* custom characters */
   "customCharacters.create": { params: { characterId: string; input: CustomCharacterInput; /** Document revision guard (`CharacterDocument.updatedAt` the UI edited). */ baseUpdatedAt?: string }; result: { character: CustomCharacter; snapshot: WorkspaceSnapshot } };
@@ -655,7 +658,7 @@ export const RPC_METHODS = [
   "session.hello", "session.getStatus", "session.closeHostDrawer",
   "config.get", "config.update", "config.factoryReset", "chatImageGeneration.set", "uiState.set",
   "connections.listLlm", "connections.listDecision", "connections.listImage", "connections.listImageModels", "connections.listLlmModels", "connections.listDecisionModels", "analyzer.testMessage", "decision.testConnection", "image.testConnection",
-  "workspace.listCharacters", "workspace.load", "roster.setRegistered", "roster.setActive", "roster.setSourceConnected", "recognitionKeys.set",
+  "workspace.listCharacters", "workspace.load", "roster.setRegistered", "roster.setActive", "roster.setSourceConnected", "recognitionKeys.set", "roster.import",
   "customCharacters.create", "customCharacters.update", "customCharacters.remove", "customCharacters.setRosterRegistered", "customCharacters.setWorkspaceEnabled", "customCharacters.promote",
   "prompts.saveForms", "prompts.setReferenceEnabled", "prompts.setAnalyzeEnabled", "prompts.setSeed", "prompts.setFramingWeights",
   "assets.list", "assets.setSelection", "assets.clearSelections", "assets.setReference", "assets.inspectMetadata", "assets.clearMetadataRecords", "assets.upload", "assets.saveCrop", "assets.getUrl",

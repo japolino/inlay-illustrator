@@ -5609,6 +5609,7 @@ var RPC_METHODS = [
   "roster.setActive",
   "roster.setSourceConnected",
   "recognitionKeys.set",
+  "roster.import",
   "customCharacters.create",
   "customCharacters.update",
   "customCharacters.remove",
@@ -6087,6 +6088,196 @@ function normalizeAtelierStore(raw, now = new Date(0).toISOString()) {
   return { document: document2, issues };
 }
 var ANALYSIS_RECORD_MAX_BYTES = 512 * 1024;
+// src/shared/contract/roster-transfer.ts
+var ROSTER_EXPORT_SCHEMA = "inlay-illustrator.roster";
+var ROSTER_EXPORT_VERSION = 1;
+var ROSTER_EXPORT_MAX_BYTES = 4 * 1024 * 1024;
+var ROSTER_EXPORT_MAX_PEOPLE = 500;
+var LEGACY_FORM_MAPS = ["basePromptGroups", "lorebookPrompts", "lorebookNegativePrompts", "lorebookPromptGenders", "characterReferences", "outfitPrompts"];
+function hasStoredForms(cp, promptKey) {
+  if (hasOwn(asRecord(cp.characterForms), promptKey))
+    return true;
+  return LEGACY_FORM_MAPS.some((map) => hasOwn(asRecord(cp[map]), promptKey));
+}
+var KINDS = new Set(["lore", "description", "custom"]);
+function parseCustomKeys(value) {
+  if (Array.isArray(value))
+    return splitRecognitionKeys(value);
+  const r = asRecord(value);
+  if (r.version === 1 && r.mode === "replace")
+    return { version: 1, mode: "replace", keys: parseCustomLorebookKeys(value).keys };
+  return;
+}
+function parseRosterExport(input) {
+  let raw = input;
+  if (typeof input === "string") {
+    if (new TextEncoder().encode(input).length > ROSTER_EXPORT_MAX_BYTES)
+      return { ok: false, error: "The roster file is too large." };
+    try {
+      raw = JSON.parse(input);
+    } catch {
+      return { ok: false, error: "The file is not valid JSON." };
+    }
+  }
+  if (!isPlainObject(raw) || raw.schema !== ROSTER_EXPORT_SCHEMA)
+    return { ok: false, error: "This is not an Inlay Illustrator roster file." };
+  if (typeof raw.version !== "number" || raw.version > ROSTER_EXPORT_VERSION)
+    return { ok: false, error: "This roster file comes from a newer version of Inlay Illustrator." };
+  if (raw.version !== ROSTER_EXPORT_VERSION)
+    return { ok: false, error: "Unsupported roster file version." };
+  const rawPeople = asArray(raw.people);
+  if (!Array.isArray(raw.people) || rawPeople.length === 0)
+    return { ok: false, error: "The roster file has no people." };
+  if (rawPeople.length > ROSTER_EXPORT_MAX_PEOPLE)
+    return { ok: false, error: `The roster file has more than ${ROSTER_EXPORT_MAX_PEOPLE} people.` };
+  const people = [];
+  for (const [index, item] of rawPeople.entries()) {
+    const p = asRecord(item);
+    const title = trimString(p.title);
+    const kind = p.kind;
+    if (!title || !KINDS.has(kind))
+      return { ok: false, error: `Person ${index + 1} has no name or an unknown kind.` };
+    const person = {
+      title,
+      kind,
+      active: p.active !== false,
+      recognitionKeys: splitRecognitionKeys(p.recognitionKeys),
+      appearanceDescription: trimString(p.appearanceDescription)
+    };
+    if (kind !== "custom") {
+      const worldBookId = trimString(p.worldBookId);
+      const entryId = trimString(p.entryId);
+      if (worldBookId && entryId)
+        Object.assign(person, { worldBookId, entryId });
+      if (trimString(p.worldBookName))
+        person.worldBookName = trimString(p.worldBookName);
+      const keys = parseCustomKeys(p.customLorebookKeys);
+      if (keys)
+        person.customLorebookKeys = keys;
+    }
+    if (p.forms !== undefined && p.forms !== null) {
+      if (!isPlainObject(p.forms))
+        return { ok: false, error: `Person ${index + 1} (${title}) has invalid appearance forms.` };
+      person.forms = normalizeFormCollection(p.forms);
+    }
+    if (isPlainObject(p.seed))
+      person.seed = { seed: trimString(p.seed.seed), fixed: p.seed.fixed === true };
+    if (p.origin === "ai-auto")
+      person.origin = "ai-auto";
+    people.push(person);
+  }
+  const source = asRecord(raw.source);
+  return {
+    ok: true,
+    file: { schema: ROSTER_EXPORT_SCHEMA, version: ROSTER_EXPORT_VERSION, exportedAt: trimString(raw.exportedAt), source: { characterName: trimString(source.characterName) }, people }
+  };
+}
+var nameKey = (value) => value.normalize("NFKC").trim().toLocaleLowerCase();
+function planRosterImport(file, target) {
+  const claimed = new Set;
+  const byEntry = new Map;
+  for (const row of target.roster)
+    if (row.kind !== "custom" && row.worldBookId && row.entryId)
+      byEntry.set(`${row.worldBookId}\x00${row.entryId}`, row);
+  const byName = new Map;
+  for (const row of [...target.roster.filter((r) => r.kind !== "custom"), ...target.roster.filter((r) => r.kind === "custom")]) {
+    const key = nameKey(row.title);
+    if (key)
+      byName.set(key, [...byName.get(key) ?? [], row]);
+  }
+  return file.people.map((person, index) => {
+    let row;
+    let matchedBy;
+    if (person.worldBookId && person.entryId) {
+      const hit = byEntry.get(`${person.worldBookId}\x00${person.entryId}`);
+      if (hit && !claimed.has(hit.promptKey)) {
+        row = hit;
+        matchedBy = "entry";
+      }
+    }
+    if (!row) {
+      row = (byName.get(nameKey(person.title)) ?? []).find((r) => !claimed.has(r.promptKey));
+      if (row)
+        matchedBy = "name";
+    }
+    if (!row)
+      return { index, title: person.title, action: "create", replacesForms: false };
+    claimed.add(row.promptKey);
+    return {
+      index,
+      title: person.title,
+      action: "match",
+      target: { promptKey: row.promptKey, kind: row.kind, memberKey: row.memberKey, selectionId: row.selectionId, title: row.title },
+      matchedBy,
+      replacesForms: !!person.forms && hasStoredForms(target.document.characterPrompt, row.promptKey)
+    };
+  });
+}
+var setList = (list, id, present) => {
+  const next = (list ?? []).filter((x) => x !== id);
+  return present ? [...next, id] : next;
+};
+function withPersonData(cp, promptKey, person, loreKeys) {
+  let next = cp;
+  if (person.forms) {
+    const out = { ...next, characterForms: { ...next.characterForms, [promptKey]: normalizeFormCollection(person.forms) } };
+    for (const map of LEGACY_FORM_MAPS) {
+      const current = asRecord(out[map]);
+      if (hasOwn(current, promptKey)) {
+        const copy = { ...current };
+        delete copy[promptKey];
+        out[map] = copy;
+      }
+    }
+    next = out;
+  }
+  if (person.seed)
+    next = { ...next, seedSettings: { ...next.seedSettings, [promptKey]: { ...person.seed } } };
+  if (loreKeys && person.customLorebookKeys)
+    next = { ...next, customLorebookKeys: { ...next.customLorebookKeys, [promptKey]: jsonClone(person.customLorebookKeys) } };
+  return next;
+}
+function applyRosterImport(document2, roster, file) {
+  const steps = planRosterImport(file, { roster, document: document2 });
+  let cp = {
+    ...document2.characterPrompt,
+    selectedLorebooks: { ...document2.characterPrompt.selectedLorebooks },
+    workspaceDisabledLorebooks: { ...document2.characterPrompt.workspaceDisabledLorebooks }
+  };
+  let customs = [...document2.customCharacters];
+  const summary = { matched: 0, created: 0, replacedForms: 0, people: [] };
+  for (const step of steps) {
+    const person = file.people[step.index];
+    const existingCustom = step.target?.kind === "custom" ? customs.find((c) => c.id === step.target.selectionId) : undefined;
+    if (step.target && step.target.kind !== "custom") {
+      const { memberKey, selectionId, promptKey } = step.target;
+      cp.selectedLorebooks[memberKey] = setList(cp.selectedLorebooks[memberKey], selectionId, true);
+      cp.workspaceDisabledLorebooks[memberKey] = setList(cp.workspaceDisabledLorebooks[memberKey], selectionId, !person.active);
+      cp = withPersonData(cp, promptKey, person, person.kind !== "custom");
+      summary.matched += 1;
+      if (step.replacesForms)
+        summary.replacedForms += 1;
+      summary.people.push({ title: person.title, action: "match", promptKey });
+      continue;
+    }
+    if (existingCustom) {
+      const { rosterRegistered: _r, workspaceEnabled: _w, ...rest } = existingCustom;
+      customs = customs.map((c) => c.id === existingCustom.id ? { ...rest, ...person.active ? {} : { workspaceEnabled: false } } : c);
+      cp = withPersonData(cp, existingCustom.id, person, false);
+      summary.matched += 1;
+      if (step.replacesForms)
+        summary.replacedForms += 1;
+      summary.people.push({ title: person.title, action: "match", promptKey: existingCustom.id });
+      continue;
+    }
+    const created = createCustomCharacter({ title: person.title, recognitionKeys: person.recognitionKeys.length ? person.recognitionKeys : [person.title], appearanceDescription: person.appearanceDescription }, new Set(customs.map((c) => c.id)));
+    customs = [...customs, { ...created, ...person.active ? {} : { workspaceEnabled: false }, ...person.origin === "ai-auto" ? { origin: "ai-auto" } : {} }];
+    cp = withPersonData(cp, created.id, person, false);
+    summary.created += 1;
+    summary.people.push({ title: person.title, action: "create", promptKey: created.id });
+  }
+  return { document: { ...document2, characterPrompt: cp, customCharacters: customs }, summary };
+}
 // src/backend/rpc/errors.ts
 class RpcFailure extends Error {
   error;
@@ -45179,7 +45370,7 @@ function customIdOf(item) {
     return item.memberKey.slice(VIRTUAL_MEMBER_PREFIX.length) || item.selectionId;
   return null;
 }
-var setList = (list, id, present) => {
+var setList2 = (list, id, present) => {
   const next = (list ?? []).filter((x) => x !== id);
   return present ? [...next, id] : next;
 };
@@ -45190,9 +45381,9 @@ async function setRosterRegistered(services, characterId, items, registered) {
     for (const item of items) {
       if (customIdOf(item))
         continue;
-      cp.selectedLorebooks[item.memberKey] = setList(cp.selectedLorebooks[item.memberKey], item.selectionId, registered);
+      cp.selectedLorebooks[item.memberKey] = setList2(cp.selectedLorebooks[item.memberKey], item.selectionId, registered);
       if (!registered)
-        cp.workspaceDisabledLorebooks[item.memberKey] = setList(cp.workspaceDisabledLorebooks[item.memberKey], item.selectionId, false);
+        cp.workspaceDisabledLorebooks[item.memberKey] = setList2(cp.workspaceDisabledLorebooks[item.memberKey], item.selectionId, false);
     }
     const customCharacters = customIds.length ? setCustomRegistered(doc.customCharacters, customIds, registered) : doc.customCharacters;
     return { ...doc, characterPrompt: cp, customCharacters };
@@ -45208,7 +45399,7 @@ async function setRosterActive(services, characterId, items, active) {
       const registered = (cp.selectedLorebooks[item.memberKey] ?? []).includes(item.selectionId);
       if (!active && !registered)
         continue;
-      cp.workspaceDisabledLorebooks[item.memberKey] = setList(cp.workspaceDisabledLorebooks[item.memberKey], item.selectionId, !active);
+      cp.workspaceDisabledLorebooks[item.memberKey] = setList2(cp.workspaceDisabledLorebooks[item.memberKey], item.selectionId, !active);
     }
     const customCharacters = customIds.length ? setCustomWorkspaceEnabled(doc.customCharacters, customIds, active, false) : doc.customCharacters;
     return { ...doc, characterPrompt: cp, customCharacters };
@@ -45221,7 +45412,7 @@ async function setSourceConnected(services, characterId, worldBookId, connected)
   await services.storage.updateCharacterDocument(characterId, (doc) => {
     const modules = { ...doc.characterPrompt.activeModules };
     const base = Object.hasOwn(modules, characterId) ? modules[characterId] ?? [] : attached;
-    modules[characterId] = setList(base, worldBookId, connected);
+    modules[characterId] = setList2(base, worldBookId, connected);
     return { ...doc, characterPrompt: { ...doc.characterPrompt, activeModules: modules } };
   }, { reason: "roster-source" });
   services.sources.invalidate(characterId);
@@ -45234,6 +45425,19 @@ async function setRecognitionKeys(services, characterId, promptKey, keys) {
     return;
   }
   await mutateAmConfig(services, characterId, (config) => amFn("Hce")(config, { id: characterId }, promptKey, keys), { reason: "recognition-keys" });
+}
+async function importRoster(services, characterId, input) {
+  const parsed = parseRosterExport(input);
+  if (!parsed.ok)
+    fail2("bad-request", parsed.error, { detailCode: "ROSTER_IMPORT_INVALID" });
+  const { roster } = await loadWorkspaceSnapshot(services, characterId, { reload: true });
+  let summary = null;
+  await services.storage.updateCharacterDocument(characterId, (doc) => {
+    const result = applyRosterImport(doc, roster, parsed.file);
+    summary = result.summary;
+    return result.document;
+  }, { reason: "roster-import" });
+  return summary;
 }
 function stripFlags(c) {
   return { id: c.id, title: c.title, recognitionKeys: [...c.recognitionKeys], appearanceDescription: c.appearanceDescription, ...c.origin === "ai-auto" ? { origin: "ai-auto" } : {} };
@@ -58121,6 +58325,10 @@ var workspaceHandlers = {
   "roster.setSourceConnected": async (p, ctx) => {
     await setSourceConnected(ctx, requireId2(p.characterId, "characterId"), requireId2(p.worldBookId, "worldBookId"), p.connected === true);
     return loadWorkspaceSnapshot(ctx, p.characterId);
+  },
+  "roster.import": async (p, ctx) => {
+    const summary = await importRoster(ctx, requireId2(p.characterId, "characterId"), p.file);
+    return { summary, snapshot: await loadWorkspaceSnapshot(ctx, p.characterId) };
   },
   "recognitionKeys.set": async (p, ctx) => {
     await setRecognitionKeys(ctx, requireId2(p.characterId, "characterId"), requireId2(p.promptKey, "promptKey"), Array.isArray(p.keys) ? p.keys : []);

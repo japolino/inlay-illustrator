@@ -14,6 +14,7 @@ Import everything from `src/shared/contract/index.ts`.
 | `rpc.ts` | Frontend<->backend protocol: methods (request/response pairs), events, envelopes, guards. |
 | `chat-dom.ts` | Baked illustration blocks in message content, chat actions, per-message UI state (§10). |
 | `bridge.ts` | Backend -> frontend fetch bridge for same-origin REST JSON (§11). |
+| `roster-transfer.ts` | Roster export / import file (§12, port addition). |
 
 Source references: `spec/data.md` (Part A, Part C §2-§4), `spec/pipeline.md` §4-§5, `spec/novelai.md` §7/§9, `spec/llm.md` §1,
 `spec/ui.md` (action lists). Line numbers in code comments refer to `AssetMaid.pretty.js`.
@@ -365,3 +366,23 @@ Backend -> frontend `{type:"inlay-illustrator:fetch-request", requestId, url}`; 
 `/api/...` URL (`isAllowedBridgeUrl`) as JSON and answers once with `{type:"inlay-illustrator:fetch-response", requestId,
 json | error, status?}`. Used only for REST data without a Spindle API (character gallery, LLM model lists). Image bytes are
 read in the backend with `spindle.images.readBinary`.
+
+## 12. Roster export / import (`roster-transfer.ts`, port addition)
+
+The Roster view's **Export** button downloads `<character>.roster.json`; **Import** loads one on the selected character
+(and so on all its chats) after a preview.
+
+- File: `{schema: "inlay-illustrator.roster", version: 1, exportedAt, source: {characterName}, people}`. A person is a
+  registered roster row: `title`, `kind` (`lore` | `description` | `custom`), `active`, effective `recognitionKeys`,
+  `appearanceDescription` (custom text, or the lore entry text), lore `worldBookId`/`entryId`/`worldBookName` and edited
+  `customLorebookKeys`, stored `forms` (resolved `FormCollection`, legacy maps included; absent = never analysed or
+  edited), `seed`, `origin`. Built by `buildRosterExport`, read by `parseRosterExport` (max 4 MiB, 500 people; a newer
+  version is refused).
+- Matching (`planRosterImport`): same world book entry (shared lorebook), then same name (NFKC, case-insensitive; lore and
+  description rows before custom people), else a new custom person (recognition keys, or the name when there are none).
+  Each target row is used once.
+- Apply (`applyRosterImport`, RPC `roster.import`, one document write): matched rows are registered with the file's
+  active state; forms replace the target's forms (legacy per-key maps are dropped like `saveForms`), seeds and lore
+  recognition keys are copied. Existing custom people keep their id, name and keys.
+- Not carried: asset selections, metadata / matching caches, outfit image history. Asset refs inside forms are Lumiverse
+  image ids or `storage:` keys of the same user, so they work on the same Lumiverse instance only.

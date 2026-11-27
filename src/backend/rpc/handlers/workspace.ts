@@ -8,6 +8,7 @@ import { fail } from "../errors.js";
 import type { HandlerGroup, RpcContext } from "../types.js";
 import {
   createCustomCharacterEntry,
+  importRoster,
   loadWorkspaceSnapshot,
   promoteCustomCharacters,
   removeCustomCharacterEntry,
@@ -60,6 +61,10 @@ export const workspaceHandlers: HandlerGroup = {
   "roster.setSourceConnected": async (p, ctx) => {
     await setSourceConnected(ctx, requireId(p.characterId, "characterId"), requireId(p.worldBookId, "worldBookId"), p.connected === true);
     return loadWorkspaceSnapshot(ctx, p.characterId);
+  },
+  "roster.import": async (p, ctx) => {
+    const summary = await importRoster(ctx, requireId(p.characterId, "characterId"), p.file);
+    return { summary, snapshot: await loadWorkspaceSnapshot(ctx, p.characterId) };
   },
   "recognitionKeys.set": async (p, ctx) => {
     await setRecognitionKeys(ctx, requireId(p.characterId, "characterId"), requireId(p.promptKey, "promptKey"), Array.isArray(p.keys) ? p.keys : []);

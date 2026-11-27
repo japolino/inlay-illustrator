@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { formCollectionRevision, normalizeFormCollection } from "../../shared/contract/index.js";
+import { buildRosterExport, formCollectionRevision, normalizeFormCollection } from "../../shared/contract/index.js";
 import { RpcFailure } from "../rpc/errors.js";
 import {
   createCustomCharacterEntry,
+  importRoster,
   loadWorkspaceSnapshot,
   promoteCustomCharacters,
   removeCustomCharacterEntry,
@@ -186,4 +187,34 @@ describe("prompts tab", () => {
     expect((conflict as RpcFailure).error).toMatchObject({ code: "conflict", detailCode: "FORM_COLLECTION_CHANGED" });
   });
 
+});
+
+describe("roster import", () => {
+  test("a roster exported from one workspace loads on a fresh one: entry match + new custom person", async () => {
+    const from = createAnalysisFixture();
+    await setRosterRegistered(from.services, CHAR, [{ memberKey: CHAR, selectionId: "wb1:e1" }], true);
+    const collection = normalizeFormCollection({ forms: [{ id: "form_default", label: "기본", gender: "female", basePromptGroups: { "hair.color": ["red hair"] } }] });
+    await saveForms(from.services, CHAR, ALICE, collection, formCollectionRevision(normalizeFormCollection({})));
+    await setSeed(from.services, CHAR, ALICE, "7", true);
+    await createCustomCharacterEntry(from.services, CHAR, { title: "Carol", recognitionKeys: "carol" });
+    const file = JSON.parse(JSON.stringify(buildRosterExport(await snapshot(from))));
+
+    const to = createAnalysisFixture();
+    const summary = await importRoster(to.services, CHAR, file);
+    expect(summary).toMatchObject({ matched: 1, created: 1, replacedForms: 0 });
+    const s = await snapshot(to);
+    expect(s.roster.find((r) => r.promptKey === ALICE)).toMatchObject({ registered: true, workspaceEnabled: true, mainPrompt: "red hair" });
+    expect(s.roster.find((r) => r.promptKey === BOB)?.registered).toBe(false);
+    expect(s.roster.find((r) => r.kind === "custom")).toMatchObject({ title: "Carol", registered: true, recognitionKeys: ["carol"] });
+    expect(s.document.characterPrompt.seedSettings[ALICE]).toEqual({ seed: "7", fixed: true });
+  });
+
+  test("an invalid file is refused and nothing is written", async () => {
+    const fx = createAnalysisFixture();
+    const before = await fx.services.storage.loadCharacterDocument(CHAR);
+    const error = await importRoster(fx.services, CHAR, { schema: "something-else", people: [] }).catch((e) => e);
+    expect(error).toBeInstanceOf(RpcFailure);
+    expect((error as RpcFailure).error).toMatchObject({ code: "bad-request", detailCode: "ROSTER_IMPORT_INVALID" });
+    expect((await fx.services.storage.loadCharacterDocument(CHAR)).updatedAt).toBe(before.updatedAt);
+  });
 });

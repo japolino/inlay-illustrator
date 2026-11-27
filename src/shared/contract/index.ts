@@ -14,3 +14,4 @@ export * from "./bridge.js";
 export * from "./puppet.js";
 export * from "./autopick.js";
 export * from "./atelier.js";
+export * from "./roster-transfer.js";

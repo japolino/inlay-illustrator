@@ -159,3 +159,76 @@ describe("bulk promote of AI-generated people (AM 0.9.91 Met_91)", () => {
     render(null, lorebooks.root as unknown as Element);
   });
 });
+
+describe("roster export / import", () => {
+  test("export downloads the registered people as a roster file", async () => {
+    const { root, app } = await mount();
+    const view = win as unknown as { URL: { createObjectURL: (blob: Blob) => string; revokeObjectURL: (url: string) => void } };
+    const blobs: Blob[] = [];
+    const saved = { create: view.URL.createObjectURL, revoke: view.URL.revokeObjectURL };
+    view.URL.createObjectURL = (blob: Blob) => { blobs.push(blob); return "blob:roster"; };
+    view.URL.revokeObjectURL = () => undefined;
+    try {
+      const button = root.querySelector<HTMLButtonElement>("[data-roster-collection-header] [data-roster-export]")!;
+      expect(button.getAttribute("aria-label")).toBe("Export the roster to a file");
+      button.click();
+      await wait();
+      expect(blobs.length).toBe(1);
+      const file = JSON.parse(await blobs[0]!.text());
+      expect(file.schema).toBe("inlay-illustrator.roster");
+      expect(file.people.map((p: { title: string }) => p.title)).toEqual(app.state.workspace!.roster.filter((r) => r.registered).map((r) => r.title));
+    } finally {
+      view.URL.createObjectURL = saved.create;
+      view.URL.revokeObjectURL = saved.revoke;
+    }
+    render(null, root as unknown as Element);
+  });
+
+  test("import previews matches and new people, then loads the file", async () => {
+    const { root, app, mock } = await mount();
+    const snapshot = app.state.workspace!;
+    const registered = snapshot.roster.filter((r) => r.registered);
+    const file = {
+      schema: "inlay-illustrator.roster", version: 1, exportedAt: "", source: { characterName: "Other" },
+      people: [
+        { title: registered[0]!.title, kind: registered[0]!.kind, active: true, recognitionKeys: [], appearanceDescription: "" },
+        { title: "Ben Lazarra", kind: "lore", active: true, recognitionKeys: ["ben"], appearanceDescription: "Guitarist." }
+      ]
+    };
+    const input = root.querySelector<HTMLInputElement>("[data-roster-import-input]")!;
+    const blob = new (win as unknown as { File: typeof File }).File([JSON.stringify(file)], "band.roster.json", { type: "application/json" });
+    Object.defineProperty(input, "files", { value: [blob], configurable: true });
+    input.dispatchEvent(new (win as unknown as { Event: typeof Event }).Event("change", { bubbles: true }));
+    await wait(30);
+    const steps = [...root.querySelectorAll("[data-roster-import-step]")].map((li) => [li.querySelector("strong")!.textContent, li.getAttribute("data-roster-import-step")]);
+    expect(steps).toEqual([[registered[0]!.title, "match"], ["Ben Lazarra", "create"]]);
+    expect(root.querySelector("[data-roster-import-notes]")!.textContent).toContain("1 new custom person will be added.");
+    root.querySelector<HTMLButtonElement>("[data-roster-import-confirm]")!.click();
+    await wait(30);
+    expect(mock.calls.filter((c) => c.method === "roster.import").length).toBe(1);
+    expect(app.state.workspace!.roster.find((r) => r.title === "Ben Lazarra")).toMatchObject({ kind: "custom", registered: true, workspaceEnabled: true, recognitionKeys: ["ben"] });
+    expect(root.querySelector("[data-roster-import-preview]")).toBeNull();
+    render(null, root as unknown as Element);
+  });
+
+  test("a file that is not a roster shows the error and calls nothing", async () => {
+    const { root, mock } = await mount();
+    const input = root.querySelector<HTMLInputElement>("[data-roster-import-input]")!;
+    const blob = new (win as unknown as { File: typeof File }).File(["{\"schema\":\"x\"}"], "x.json", { type: "application/json" });
+    Object.defineProperty(input, "files", { value: [blob], configurable: true });
+    input.dispatchEvent(new (win as unknown as { Event: typeof Event }).Event("change", { bubbles: true }));
+    await wait(30);
+    expect(root.querySelector("[data-roster-import-error]")!.textContent).toBe("This is not an Inlay Illustrator roster file.");
+    expect(mock.calls.some((c) => c.method === "roster.import")).toBe(false);
+    render(null, root as unknown as Element);
+  });
+
+  test("only in the roster view, not in reference mode", async () => {
+    const reference = await mount({ referenceMode: true });
+    expect(reference.root.querySelector("[data-roster-transfer]")).toBeNull();
+    render(null, reference.root as unknown as Element);
+    const lorebooks = await mount({ setup: (u) => u.updateSource("char-seoyeon", { navigationView: "lorebooks", lastRegistrationView: "lorebooks" }) });
+    expect(lorebooks.root.querySelector("[data-roster-transfer]")).toBeNull();
+    render(null, lorebooks.root as unknown as Element);
+  });
+});
