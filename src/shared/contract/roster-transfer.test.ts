@@ -137,7 +137,7 @@ describe("roster import", () => {
     expect(doc.customCharacters).toEqual([]);
   });
 
-  test("apply on an existing custom person re-registers it and keeps its identity", () => {
+  test("apply on an existing custom person re-registers it, keeps its id and takes the file's keys", () => {
     const doc = createEmptyCharacterDocument(DST);
     doc.customCharacters.push({ id: "character_bbb", title: "Vic Havoc", recognitionKeys: ["havoc"], appearanceDescription: "", rosterRegistered: false });
     const roster = [row({ promptKey: "character_bbb", kind: "custom", title: "Vic Havoc" })];
@@ -145,8 +145,30 @@ describe("roster import", () => {
     file.people = [{ ...file.people[2]!, active: true, forms: forms("shaved head") }];
     const { document, summary } = applyRosterImport(doc, roster, file);
     expect(summary).toMatchObject({ matched: 1, created: 0 });
-    expect(document.customCharacters).toEqual([{ id: "character_bbb", title: "Vic Havoc", recognitionKeys: ["havoc"], appearanceDescription: "" }]);
+    expect(document.customCharacters).toEqual([{ id: "character_bbb", title: "Vic Havoc", recognitionKeys: ["vic"], appearanceDescription: "" }]);
     expect(document.characterPrompt.characterForms.character_bbb!.forms[0]!.basePromptGroups["hair.color"]).toEqual(["shaved head"]);
+  });
+
+  test("edited keys follow a person matched by name to another kind of row", () => {
+    const doc = createEmptyCharacterDocument(DST);
+    doc.customCharacters.push({ id: "character_ccc", title: "Mikey", recognitionKeys: ["mikey"], appearanceDescription: "" });
+    const roster = [
+      row({ promptKey: "character_ccc", kind: "custom", title: "Mikey" }),
+      row({ promptKey: `${DST}::lore::wb5:v1`, kind: "lore", title: "Vic Havoc", memberKey: DST, selectionId: "wb5:v1", worldBookId: "wb5", entryId: "v1" }),
+    ];
+    const file = exported();
+    // Lore Mikey (edited keys, other book) -> custom Mikey; custom Vic -> lore Vic.
+    file.people = [{ ...file.people[0]!, worldBookId: "wb9", recognitionKeys: ["mikey", "mike"] }, file.people[2]!];
+    const { document } = applyRosterImport(doc, roster, file);
+    expect(document.customCharacters.find((c) => c.id === "character_ccc")!.recognitionKeys).toEqual(["mikey", "mike"]);
+    expect(document.characterPrompt.customLorebookKeys[`${DST}::lore::wb5:v1`]).toEqual({ version: 1, mode: "replace", keys: ["vic"] });
+  });
+
+  test("lore keys that were never edited are left to the target's entry", () => {
+    const file = exported();
+    file.people = [{ ...file.people[1]!, recognitionKeys: ["zack"] }];
+    const { document } = applyRosterImport(createEmptyCharacterDocument(DST), targetRoster(), file);
+    expect(document.characterPrompt.customLorebookKeys).toEqual({});
   });
 
   test("a person without recognition keys becomes custom with its name as key", () => {

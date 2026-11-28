@@ -209,6 +209,17 @@ describe("roster import", () => {
     expect(s.document.characterPrompt.seedSettings[ALICE]).toEqual({ seed: "7", fixed: true });
   });
 
+  test("edited recognition keys of lorebook and description people are exported", async () => {
+    const from = createAnalysisFixture();
+    await setRosterRegistered(from.services, CHAR, [{ memberKey: CHAR, selectionId: "wb1:e1" }, { memberKey: CHAR, selectionId: "asset-maid:charx-description:v1" }], true);
+    await setRecognitionKeys(from.services, CHAR, ALICE, ["Alice Liddell", "Ally"]);
+    await setRecognitionKeys(from.services, CHAR, HERO, ["Hero", "The Hero"]);
+    const file = buildRosterExport(await snapshot(from));
+    const byTitle = (kind: string) => file.people.find((p) => p.kind === kind)!;
+    expect(byTitle("lore").recognitionKeys).toEqual(["Alice Liddell", "Ally"]);
+    expect(byTitle("description").recognitionKeys).toEqual(["Hero", "The Hero"]);
+  });
+
   test("an invalid file is refused and nothing is written", async () => {
     const fx = createAnalysisFixture();
     const before = await fx.services.storage.loadCharacterDocument(CHAR);

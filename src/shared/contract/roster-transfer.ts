@@ -5,7 +5,8 @@
  * people) with their appearance forms, seed and recognition keys, so the same cast can be loaded on another character.
  * Each person is matched on the target character in this order: the same world book entry (shared lorebook), then
  * the same name (case-insensitive, any roster kind), else a new custom person is created. Matched people are
- * registered and get the imported active state, forms, seed and (lore to lore) recognition keys.
+ * registered and get the imported active state, forms, seed and the recognition keys the user set on the source
+ * (a custom person's keys, or edited lore keys), whatever the kind of the matched row.
  *
  * Asset refs inside the forms (reference / outfit images) are Lumiverse image ids or userStorage keys of the same
  * user: they keep working on the same Lumiverse instance. Asset selections and analysis caches are not exported.
@@ -15,6 +16,7 @@ import {
   createCustomCharacter,
   normalizeFormCollection,
   parseCustomLorebookKeys,
+  replaceRecognitionKeys,
   resolveCharacterForms,
   splitRecognitionKeys,
   type CharacterDocument,
@@ -247,6 +249,15 @@ const setList = (list: readonly string[] | undefined, id: string, present: boole
   return present ? [...next, id] : next;
 };
 
+/** The person's keys were set by the user on the source (custom person, or edited lore keys): they travel with it. */
+const hasOwnKeys = (person: RosterExportPerson): boolean => person.recognitionKeys.length > 0 && (person.kind === "custom" || !!person.customLorebookKeys);
+
+/** Lore keys to store on a lorebook / description target: the source's edit as is, else the person's keys (replace). */
+function loreKeysFor(person: RosterExportPerson): CustomLorebookKeys | undefined {
+  if (person.customLorebookKeys) return jsonClone(person.customLorebookKeys);
+  return hasOwnKeys(person) ? replaceRecognitionKeys(person.recognitionKeys) : undefined;
+}
+
 function withPersonData(cp: CharacterScopedPrompt, promptKey: string, person: RosterExportPerson, loreKeys: boolean): CharacterScopedPrompt {
   let next = cp;
   if (person.forms) {
@@ -262,7 +273,8 @@ function withPersonData(cp: CharacterScopedPrompt, promptKey: string, person: Ro
     next = out as unknown as CharacterScopedPrompt;
   }
   if (person.seed) next = { ...next, seedSettings: { ...next.seedSettings, [promptKey]: { ...person.seed } } };
-  if (loreKeys && person.customLorebookKeys) next = { ...next, customLorebookKeys: { ...next.customLorebookKeys, [promptKey]: jsonClone(person.customLorebookKeys) } };
+  const keys = loreKeys ? loreKeysFor(person) : undefined;
+  if (keys) next = { ...next, customLorebookKeys: { ...next.customLorebookKeys, [promptKey]: keys } };
   return next;
 }
 
@@ -286,7 +298,7 @@ export function applyRosterImport(document: CharacterDocument, roster: readonly 
       const { memberKey, selectionId, promptKey } = step.target;
       cp.selectedLorebooks[memberKey] = setList(cp.selectedLorebooks[memberKey], selectionId, true);
       cp.workspaceDisabledLorebooks[memberKey] = setList(cp.workspaceDisabledLorebooks[memberKey], selectionId, !person.active);
-      cp = withPersonData(cp, promptKey, person, person.kind !== "custom");
+      cp = withPersonData(cp, promptKey, person, true);
       summary.matched += 1;
       if (step.replacesForms) summary.replacedForms += 1;
       summary.people.push({ title: person.title, action: "match", promptKey });
@@ -294,7 +306,8 @@ export function applyRosterImport(document: CharacterDocument, roster: readonly 
     }
     if (existingCustom) {
       const { rosterRegistered: _r, workspaceEnabled: _w, ...rest } = existingCustom;
-      customs = customs.map((c) => (c.id === existingCustom.id ? { ...rest, ...(person.active ? {} : { workspaceEnabled: false as const }) } : c));
+      const keys = hasOwnKeys(person) ? { recognitionKeys: [...person.recognitionKeys] } : {};
+      customs = customs.map((c) => (c.id === existingCustom.id ? { ...rest, ...keys, ...(person.active ? {} : { workspaceEnabled: false as const }) } : c));
       cp = withPersonData(cp, existingCustom.id, person, false);
       summary.matched += 1;
       if (step.replacesForms) summary.replacedForms += 1;

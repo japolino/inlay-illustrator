@@ -1965,6 +1965,9 @@ function effectiveRecognitionKeys(baseKeys, custom, extra = []) {
   const parsed = parseCustomLorebookKeys(custom);
   return parsed.replacesBaseKeys ? parsed.keys : uniqueStringsCaseInsensitive([...baseKeys, ...parsed.keys, ...extra]);
 }
+function replaceRecognitionKeys(keys) {
+  return { version: 1, mode: "replace", keys: splitLoreKeys(keys) };
+}
 var defaultPresets = default_presets_default;
 var DEFAULT_ARTIST_PRESETS = defaultPresets.DEFAULT_ARTIST_PRESETS;
 var DEFAULT_SELECTED_ARTIST_ID = "none";
@@ -6217,6 +6220,12 @@ var setList = (list, id, present) => {
   const next = (list ?? []).filter((x) => x !== id);
   return present ? [...next, id] : next;
 };
+var hasOwnKeys = (person) => person.recognitionKeys.length > 0 && (person.kind === "custom" || !!person.customLorebookKeys);
+function loreKeysFor(person) {
+  if (person.customLorebookKeys)
+    return jsonClone(person.customLorebookKeys);
+  return hasOwnKeys(person) ? replaceRecognitionKeys(person.recognitionKeys) : undefined;
+}
 function withPersonData(cp, promptKey, person, loreKeys) {
   let next = cp;
   if (person.forms) {
@@ -6233,8 +6242,9 @@ function withPersonData(cp, promptKey, person, loreKeys) {
   }
   if (person.seed)
     next = { ...next, seedSettings: { ...next.seedSettings, [promptKey]: { ...person.seed } } };
-  if (loreKeys && person.customLorebookKeys)
-    next = { ...next, customLorebookKeys: { ...next.customLorebookKeys, [promptKey]: jsonClone(person.customLorebookKeys) } };
+  const keys = loreKeys ? loreKeysFor(person) : undefined;
+  if (keys)
+    next = { ...next, customLorebookKeys: { ...next.customLorebookKeys, [promptKey]: keys } };
   return next;
 }
 function applyRosterImport(document2, roster, file) {
@@ -6253,7 +6263,7 @@ function applyRosterImport(document2, roster, file) {
       const { memberKey, selectionId, promptKey } = step.target;
       cp.selectedLorebooks[memberKey] = setList(cp.selectedLorebooks[memberKey], selectionId, true);
       cp.workspaceDisabledLorebooks[memberKey] = setList(cp.workspaceDisabledLorebooks[memberKey], selectionId, !person.active);
-      cp = withPersonData(cp, promptKey, person, person.kind !== "custom");
+      cp = withPersonData(cp, promptKey, person, true);
       summary.matched += 1;
       if (step.replacesForms)
         summary.replacedForms += 1;
@@ -6262,7 +6272,8 @@ function applyRosterImport(document2, roster, file) {
     }
     if (existingCustom) {
       const { rosterRegistered: _r, workspaceEnabled: _w, ...rest } = existingCustom;
-      customs = customs.map((c) => c.id === existingCustom.id ? { ...rest, ...person.active ? {} : { workspaceEnabled: false } } : c);
+      const keys = hasOwnKeys(person) ? { recognitionKeys: [...person.recognitionKeys] } : {};
+      customs = customs.map((c) => c.id === existingCustom.id ? { ...rest, ...keys, ...person.active ? {} : { workspaceEnabled: false } } : c);
       cp = withPersonData(cp, existingCustom.id, person, false);
       summary.matched += 1;
       if (step.replacesForms)

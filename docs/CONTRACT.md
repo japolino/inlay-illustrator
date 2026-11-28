@@ -382,7 +382,10 @@ The Roster view's **Export** button downloads `<character>.roster.json`; **Impor
   description rows before custom people), else a new custom person (recognition keys, or the name when there are none).
   Each target row is used once.
 - Apply (`applyRosterImport`, RPC `roster.import`, one document write): matched rows are registered with the file's
-  active state; forms replace the target's forms (legacy per-key maps are dropped like `saveForms`), seeds and lore
-  recognition keys are copied. Existing custom people keep their id, name and keys.
+  active state; forms replace the target's forms (legacy per-key maps are dropped like `saveForms`) and seeds are
+  copied. Recognition keys set by the user on the source (a custom person's keys, or `customLorebookKeys`) follow the
+  person whatever the target kind: lore / description targets get `customLorebookKeys` (the source's edit as is, else
+  `replace` with the person's keys), existing custom people get them as their keys. Lore keys never edited on the
+  source are left to the target's entry. Existing custom people keep their id and name.
 - Not carried: asset selections, metadata / matching caches, outfit image history. Asset refs inside forms are Lumiverse
   image ids or `storage:` keys of the same user, so they work on the same Lumiverse instance only.
