@@ -14,7 +14,7 @@ replaces the old Lightboard pipeline of 0.9.x.
   AI prompt edit, delete image or slot, and the accumulated chat state.
 - **Character asset manager.** A full-screen workspace per character: roster (lorebook characters, custom characters,
   personas), prompt analysis from text or images, forms and outfits, reference images, outfit image generation,
-  artist presets, per-character settings.
+  artist presets, per-character settings. The roster can be exported to a file and imported on another character.
 - **Count panel** in the chat: how many images per reply (fixed, range or automatic) and the scene preset.
 
 ## Setup

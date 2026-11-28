@@ -13,7 +13,7 @@ function context(overrides: Parameters<typeof createAnalysisFixture>[0] = {}) {
 }
 
 const WORKSPACE_METHODS = [
-  "workspace.load", "roster.setRegistered", "roster.setActive", "roster.setSourceConnected", "recognitionKeys.set",
+  "workspace.load", "roster.setRegistered", "roster.setActive", "roster.setSourceConnected", "recognitionKeys.set", "roster.import",
   "customCharacters.create", "customCharacters.update", "customCharacters.remove", "customCharacters.setRosterRegistered", "customCharacters.setWorkspaceEnabled", "customCharacters.promote",
   "prompts.saveForms", "prompts.setReferenceEnabled", "prompts.setAnalyzeEnabled", "prompts.setSeed", "prompts.setFramingWeights",
   "assets.list", "assets.setSelection", "assets.clearSelections", "assets.setReference", "assets.inspectMetadata", "assets.clearMetadataRecords", "assets.upload", "assets.saveCrop", "assets.getUrl",

@@ -14,6 +14,7 @@ import {
   type CharacterDocument
 } from "../../../shared/contract/character.js";
 import { normalizeConfig, resolveEffectiveCharxSettings, charxScopeFor } from "../../../shared/contract/config.js";
+import { applyRosterImport, parseRosterExport } from "../../../shared/contract/roster-transfer.js";
 import type { RosterItem, RosterSource, WorkspaceSnapshot } from "../../../shared/contract/rpc.js";
 import type { MockContext, MockHandlers } from "../mock-backend.js";
 import { mergePatch } from "../../state/app-state.js";
@@ -202,6 +203,14 @@ export function coreMockHandlers(): MockHandlers {
       cp.activeModules[characterId] = toggle(cp.activeModules[characterId], worldBookId, connected);
       touch(ctx.db, ctx, characterId, "modules");
       return buildSnapshot(ctx.db, characterId, ctx);
+    },
+    "roster.import": ({ characterId, file }, ctx) => {
+      const parsed = parseRosterExport(file);
+      if (!parsed.ok) throw new Error(parsed.error);
+      const { document, summary } = applyRosterImport(documentFor(ctx.db, characterId), buildSnapshot(ctx.db, characterId, ctx).roster, parsed.file);
+      ctx.db.documents[characterId] = document;
+      touch(ctx.db, ctx, characterId, "roster");
+      return { summary, snapshot: buildSnapshot(ctx.db, characterId, ctx) };
     },
     "recognitionKeys.set": ({ characterId, promptKey, keys }, ctx) => {
       const doc = documentFor(ctx.db, characterId);

@@ -271,7 +271,9 @@ describe("overlay open options", () => {
     await app.selectCharacter("char-a");
     const controller = createOverlayController(fakeCtx({ calls: [], visible: [] }), { store: new FrontendStore(), app, doc });
     controller.open({ tab: "prompts", characterId: "char-b" });
-    for (let i = 0; i < 5; i += 1) await new Promise((resolve) => setTimeout(resolve, 5));
+    // The switch runs in an effect and takes ~30 ms; a fixed short sleep raced it. Wait for the result (max 1 s).
+    const selectedTab = () => doc.querySelector('[data-workspace-header] [role="tab"][aria-selected="true"]')?.textContent;
+    for (const start = Date.now(); Date.now() - start < 1000 && (app.state.selectedCharacterId !== "char-b" || selectedTab() !== "Prompts");) await new Promise((resolve) => setTimeout(resolve, 5));
     expect(app.state.selectedCharacterId).toBe("char-b");
     expect(doc.querySelector('[data-workspace-header] [role="tab"][aria-selected="true"]')?.textContent).toBe("Prompts");
     controller.destroy();

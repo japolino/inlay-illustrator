@@ -12,6 +12,7 @@ import { ArrowLeftIcon, Button, ChevronsUpIcon, CollapseIcon, ExpandIcon, GridIc
 import { useSourceUi, useWorkspaceUi, useWorkspaceUiStore, type NavigationView } from "../workspace-ui.js";
 import { RosterCard, RosterRow, type RosterItemProps } from "./items.js";
 import { ROSTER_LABELS as L } from "./labels.js";
+import { RosterTransfer } from "./transfer.js";
 
 type Origin = "lorebook" | "module" | "custom" | "ai-auto";
 
@@ -300,6 +301,7 @@ export function RosterSidebar({ referenceMode = false, canExpand = false }: { re
           <div class="flex flex-wrap items-center justify-between gap-1" data-roster-collection-header="">
             {view === "custom" ? <Button size="sm" variant="ghost" className="px-1.5" onClick={() => openEditor()}><PlusIcon />{L.addPerson}</Button> : null}
             {view === "lorebooks" ? <Button size="sm" variant="ghost" className="px-1.5" onClick={() => setView("modules")}><PackageIcon />{L.loadModules}</Button> : null}
+            {view === "characters" ? <RosterTransfer snapshot={snapshot!} disabled={pending.size > 0} /> : null}
             {bulkItems.length > 0 ? (
               <div class="ml-auto flex items-center gap-1">
                 {showBulkPromote && expanded ? (

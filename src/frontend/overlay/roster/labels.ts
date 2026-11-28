@@ -69,6 +69,33 @@ export const ROSTER_LABELS = {
   deactivateSearch: "Deactivate search results", // 검색 결과 비활성
   activateShown: "Activate shown results", // 표시 결과 활성
   deactivateShown: "Deactivate shown results", // 표시 결과 비활성
+  // roster export / import (port addition)
+  exportRoster: "Export",
+  exportRosterAria: "Export the roster to a file",
+  importRoster: "Import",
+  importRosterAria: "Import a roster file on this character",
+  exported: (n: number) => `Exported ${n} ${n === 1 ? "person" : "people"}.`,
+  imported: (matched: number, created: number) => `Roster imported: ${matched} matched, ${created} added as custom people.`,
+  importTitle: (name: string) => `Import roster on ${name}`,
+  importDescription: (fileName: string, from: string) => (from ? `${fileName} (from ${from}). Matched people are registered and get the file's appearance.` : `${fileName}. Matched people are registered and get the file's appearance.`),
+  importPeople: "People in the file",
+  importMatchEntry: "Same lorebook entry",
+  importMatchName: "Same name",
+  importMatchCustom: "Existing custom person",
+  importCreates: "New custom person",
+  importCreatedNote: (n: number) => `${n} new custom ${n === 1 ? "person" : "people"} will be added.`,
+  importReplacedNote: (n: number) => `${n} existing ${n === 1 ? "appearance" : "appearances"} will be replaced.`,
+  importConfirm: (n: number) => `Import ${n}`,
+  importing: "Importing…",
+  importSavesEdits: (n: number) => `${n} unsaved appearance ${n === 1 ? "edit" : "edits"} on this character will be saved first.`,
+  exportUnsavedTitle: "Unsaved appearance edits",
+  exportUnsavedDescription: (n: number) => `${n} ${n === 1 ? "person has" : "people have"} unsaved edits in the Prompts tab. The file only holds saved appearances.`,
+  saveAndExport: "Save and export",
+  exportSavedVersion: "Export saved version",
+  savingEdits: "Saving…",
+  saveEditsFailed: (error: string) => (error ? `Could not save the appearance edits: ${error}` : "Could not save the appearance edits."),
+  transferFailedTitle: "Roster export / import failed",
+  importReadFailed: "The file could not be read.",
   // filters
   filterActive: "Active", // 활성
   filterInactive: "Inactive", // 비활성
