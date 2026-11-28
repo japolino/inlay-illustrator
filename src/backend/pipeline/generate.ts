@@ -52,6 +52,8 @@ import {
   type PersonaRecord,
 } from "../../engine/context/index.js";
 import { atelierServiceOf } from "../services/atelier.js";
+import { alternateCharacterName } from "../services/card-names.js";
+import { dedupeGroupCast, type GroupCastMember } from "./group-cast.js";
 import { engineAnalysisConfig } from "../services/llm.js";
 import { analysisRecordOf } from "./selection-summary.js";
 import { BUNDLED_COMFY_WORKFLOW_PROFILE, resolveImageCountConstraint, resolveImageSize } from "../../engine/compose/index.js";
@@ -342,18 +344,25 @@ export function nativeDetectorsFor(characterId: string, name: string, document: 
   }
 }
 
-/** Speaking character of a message (group chats: member whose name matches the message speaker). */
+/**
+ * Speaking character of a message (group chats: member whose name matches the message speaker). Lumiverse writes the
+ * card's display name (`alternate_character_name`) as the speaker when it is set, so it is matched after the card names.
+ */
 export async function speakingCharacterId(services: BackendServices, chat: ChatInfo, message: ChatMessageView | undefined): Promise<string> {
   const members = chat.groupCharacterIds.length ? chat.groupCharacterIds : [chat.characterId];
-  if (members.length > 1 && message?.name) {
+  const speaker = message?.name?.trim() ?? "";
+  if (members.length > 1 && speaker) {
+    const infos: Array<{ id: string; name: string; displayName: string }> = [];
     for (const id of members) {
       try {
         const info = await services.sources.getCharacter(id);
-        if (info.name.trim() && info.name.trim() === message.name.trim()) return id;
+        infos.push({ id, name: info.name.trim(), displayName: alternateCharacterName(info.extensions) });
       } catch {
         /* missing member */
       }
     }
+    const hit = infos.find((i) => i.name === speaker) ?? infos.find((i) => i.displayName === speaker);
+    if (hit) return hit.id;
   }
   return chat.characterId || members[0] || "";
 }
@@ -454,15 +463,19 @@ async function generateOnce(deps: GeneratorDeps, req: GenerateMessageRequest, fo
   for (const id of memberIds) docs.set(id, await services.storage.loadCharacterDocument(id));
   const primaryDoc = docs.get(primaryId) ?? null;
   const character = await services.sources.getCharacter(primaryId);
-  const rawSources: CharacterSource[] = [];
-  for (const id of memberIds) rawSources.push((await services.sources.buildSource(id, docs.get(id)!, { chatId: req.chatId })) as unknown as CharacterSource);
+  const castMembers: GroupCastMember[] = [];
+  for (const id of memberIds) castMembers.push({ id, character: await services.sources.getCharacter(id), source: await services.sources.buildSource(id, docs.get(id)!, { chatId: req.chatId }), document: docs.get(id)! });
+  // Group chats: one cast entry per member, copies registered on the other cards are left out (group-cast.ts).
+  const cast = dedupeGroupCast(castMembers);
+  if (cast.dropped.length) services.log.append("debug", "pipeline", `Group chat: ${cast.dropped.length} roster copies of group members left out of the cast.`, { dropped: cast.dropped });
+  const rawSources = cast.sources as unknown as CharacterSource[];
   const primarySource = rawSources[0]!;
   const seenMembers = new Set<string>();
   const source: CharacterSource = {
     ...primarySource,
     members: rawSources.flatMap((s) => s.members).filter((m) => (seenMembers.has(m.key) ? false : (seenMembers.add(m.key), true))),
   };
-  const customCharacters = [...docs.values()].flatMap((d) => d.customCharacters);
+  const customCharacters = cast.customCharacters;
 
   // Free character / outfit generation stores (AM autoCharacter / autoOutfit over the AM config store of the primary
   // character). The config store also backs `getConfig`, so outfits / forms generated during the run are visible.

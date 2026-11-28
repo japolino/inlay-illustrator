@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createEmptyCharacterDocument } from "../../shared/contract/index.js";
 import { answerFetchBridge, createFakeHost } from "../testing/fake-host.js";
 import { createImageBytesService } from "./image-bytes.js";
+import { plainCardName } from "./card-names.js";
 import { createSourcesService, loreRecordsOf, loreScore, memberAliases, splitLoreKeys } from "./sources.js";
 import { createStorageService } from "./storage.js";
 
@@ -108,6 +109,21 @@ describe("sources service", () => {
     expect(source.assetGeneration).toMatch(/^c1:[0-9a-z]+$/);
     const again = await sources.buildSource("c1", doc, { chatId: "chat1" });
     expect(again.assetGeneration).toBe(source.assetGeneration);
+  });
+
+  test("buildSource: the description also answers to the card name without decorations and the Lumiverse display name", async () => {
+    const { fake, sources } = setup();
+    fake.addCharacter({ id: "c3", name: "Bob Stone || Wonderland", description: "A tall guitarist.", extensions: { alternate_character_name: " Bob " } });
+    fake.addCharacter({ id: "c4", name: "Dana", description: "The drummer." });
+    const bob = (await sources.buildSource("c3", createEmptyCharacterDocument("c3"), { chatId: "chat1" })).members[0]!;
+    expect(bob.lorebooks.find((l) => l.kind === "character-description")).toMatchObject({ title: "Bob Stone || Wonderland", keys: ["Bob Stone || Wonderland", "Bob Stone", "Bob"], primaryKeys: ["Bob Stone || Wonderland", "Bob Stone", "Bob"] });
+    expect(bob.aliases).toContain("bob");
+    const dana = (await sources.buildSource("c4", createEmptyCharacterDocument("c4"), { chatId: "chat1" })).members[0]!;
+    expect(dana.lorebooks.find((l) => l.kind === "character-description")?.keys).toEqual(["Dana"]);
+  });
+
+  test("plain card names", () => {
+    expect([plainCardName("Carol Reed || Wonderland?!"), plainCardName("Alice (Wonderland)"), plainCardName("Bob"), plainCardName("[Wonderland] Bob"), plainCardName("A | B")]).toEqual(["Carol Reed", "Alice", "Bob", "", ""]);
   });
 
   test("character images carry AssetRefs; personas; chats", async () => {

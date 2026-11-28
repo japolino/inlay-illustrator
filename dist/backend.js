@@ -48008,6 +48008,97 @@ function atelierServiceOf(s) {
   return service;
 }
 
+// src/backend/services/card-names.ts
+function alternateCharacterName(extensions) {
+  return str3(asRecord3(extensions).alternate_character_name);
+}
+function plainCardName(name) {
+  const head = str3(name).split(/[|([{<]/u)[0].trim();
+  return head.length >= 2 ? head : "";
+}
+
+// src/backend/pipeline/group-cast.ts
+var norm4 = (value) => value.toLocaleLowerCase().replace(/\s+/g, " ").trim();
+function memberForms(character) {
+  const plain = plainCardName(character.name);
+  const first = plain.split(" ")[0] ?? "";
+  return new Set([character.name, plain, first.length >= 3 ? first : "", alternateCharacterName(character.extensions)].map(norm4).filter((f) => f.length >= 2));
+}
+function memberOf(title, forms) {
+  const whole = norm4(title);
+  const tiers = [[whole], [norm4(plainCardName(title))], whole.split(/[\\/|,;:()[\]{}<>]+/g).map((p) => p.trim())];
+  for (const names of tiers) {
+    const wanted = names.filter((n) => n.length >= 2);
+    if (!wanted.length)
+      continue;
+    const ids = new Set(forms.filter((f) => wanted.some((n) => f.forms.has(n))).map((f) => f.id));
+    if (ids.size === 1)
+      return [...ids][0];
+    if (ids.size > 1)
+      return "";
+  }
+  return "";
+}
+function dedupeGroupCast(members) {
+  const customCharacters = members.flatMap((m) => m.document.customCharacters);
+  if (members.length < 2)
+    return { sources: members.map((m) => m.source), customCharacters, dropped: [] };
+  const rosterMap = (pick, memberKey) => {
+    for (const m of members) {
+      const map = pick(m.document) ?? {};
+      if (Object.prototype.hasOwnProperty.call(map, memberKey))
+        return new Set(map[memberKey] ?? []);
+    }
+    return new Set;
+  };
+  const activeLore = (lore, selected, disabled) => {
+    const registered = lore.runtimeSelected === true || selected.has(lore.id) || selected.has(lore.selectionId);
+    return registered && !(disabled.has(lore.id) || disabled.has(lore.selectionId));
+  };
+  const forms = members.map((m) => ({ id: m.id, forms: memberForms(m.character) }));
+  const people = [];
+  for (const m of members) {
+    for (const member of m.source.members) {
+      const selected = rosterMap((d) => d.characterPrompt.selectedLorebooks, member.key);
+      const disabled = rosterMap((d) => d.characterPrompt.workspaceDisabledLorebooks, member.key);
+      for (const lore of member.lorebooks) {
+        if (!activeLore(lore, selected, disabled))
+          continue;
+        const memberId = memberOf(lore.title, forms);
+        if (memberId)
+          people.push({ cardId: m.id, title: lore.title, memberId, drop: { lore: { memberKey: member.key, id: lore.id } } });
+      }
+    }
+  }
+  for (const m of members)
+    for (const custom of m.document.customCharacters) {
+      if (!customCharacterRosterState(custom).workspaceEnabled)
+        continue;
+      const memberId = memberOf(custom.title, forms);
+      if (memberId)
+        people.push({ cardId: m.id, title: custom.title, memberId, drop: { custom: custom.id } });
+    }
+  const dropped = [];
+  for (const { id } of forms) {
+    const copies = people.filter((p) => p.memberId === id);
+    if (copies.length < 2)
+      continue;
+    const own = copies.filter((p) => p.cardId === id);
+    const keep = new Set(own.length ? own : copies.slice(0, 1));
+    dropped.push(...copies.filter((p) => !keep.has(p)));
+  }
+  if (!dropped.length)
+    return { sources: members.map((m) => m.source), customCharacters, dropped: [] };
+  const goneLore = new Set(dropped.flatMap((p) => ("lore" in p.drop) ? [`${p.drop.lore.memberKey}\x00${p.drop.lore.id}`] : []));
+  const goneCustom = new Set(dropped.flatMap((p) => ("custom" in p.drop) ? [p.drop.custom] : []));
+  const sources = members.map((m) => m.source.members.some((member) => member.lorebooks.some((l) => goneLore.has(`${member.key}\x00${l.id}`))) ? { ...m.source, members: m.source.members.map((member) => ({ ...member, lorebooks: member.lorebooks.filter((l) => !goneLore.has(`${member.key}\x00${l.id}`)) })) } : m.source);
+  return {
+    sources,
+    customCharacters: customCharacters.filter((c) => !goneCustom.has(c.id)),
+    dropped: dropped.map((p) => ({ cardId: p.cardId, title: p.title, memberId: p.memberId }))
+  };
+}
+
 // src/engine/text/json.ts
 var AnalyzerClientErrorClass = AnalyzerClientError;
 function parseLenientJson2(raw) {
@@ -53614,14 +53705,18 @@ function nativeDetectorsFor(characterId, name, document2, memberIds = [character
 }
 async function speakingCharacterId(services, chat, message) {
   const members = chat.groupCharacterIds.length ? chat.groupCharacterIds : [chat.characterId];
-  if (members.length > 1 && message?.name) {
+  const speaker = message?.name?.trim() ?? "";
+  if (members.length > 1 && speaker) {
+    const infos = [];
     for (const id of members) {
       try {
         const info = await services.sources.getCharacter(id);
-        if (info.name.trim() && info.name.trim() === message.name.trim())
-          return id;
+        infos.push({ id, name: info.name.trim(), displayName: alternateCharacterName(info.extensions) });
       } catch {}
     }
+    const hit = infos.find((i) => i.name === speaker) ?? infos.find((i) => i.displayName === speaker);
+    if (hit)
+      return hit.id;
   }
   return chat.characterId || members[0] || "";
 }
@@ -53690,16 +53785,20 @@ async function generateOnce(deps, req, forms) {
     docs.set(id, await services.storage.loadCharacterDocument(id));
   const primaryDoc = docs.get(primaryId) ?? null;
   const character = await services.sources.getCharacter(primaryId);
-  const rawSources = [];
+  const castMembers = [];
   for (const id of memberIds)
-    rawSources.push(await services.sources.buildSource(id, docs.get(id), { chatId: req.chatId }));
+    castMembers.push({ id, character: await services.sources.getCharacter(id), source: await services.sources.buildSource(id, docs.get(id), { chatId: req.chatId }), document: docs.get(id) });
+  const cast = dedupeGroupCast(castMembers);
+  if (cast.dropped.length)
+    services.log.append("debug", "pipeline", `Group chat: ${cast.dropped.length} roster copies of group members left out of the cast.`, { dropped: cast.dropped });
+  const rawSources = cast.sources;
   const primarySource = rawSources[0];
   const seenMembers = new Set;
   const source = {
     ...primarySource,
     members: rawSources.flatMap((s) => s.members).filter((m) => seenMembers.has(m.key) ? false : (seenMembers.add(m.key), true))
   };
-  const customCharacters = [...docs.values()].flatMap((d) => d.customCharacters);
+  const customCharacters = cast.customCharacters;
   let auto = null;
   try {
     auto = await openAutoGeneration(services, deps.getModules, primaryId);
@@ -59276,11 +59375,11 @@ function loreRecordsOf(entries, aliases, source) {
     ];
   }).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 }
-function descriptionLore(name, description) {
+function descriptionLore(name, description, extraKeys = []) {
   const content = str3(description);
   if (!content)
     return null;
-  const keys = uniqueTrimmed([name]);
+  const keys = uniqueTrimmed([name, ...extraKeys]);
   return { kind: "character-description", id: CHARACTER_DESCRIPTION_LORE_ID, selectionId: CHARACTER_DESCRIPTION_LORE_ID, title: name, keys, primaryKeys: keys, secondaryKeys: [], selective: false, useRegex: false, content, score: 0, alwaysActive: false, sourceType: "character", sourceName: "" };
 }
 function dedupe(...lists) {
@@ -59583,14 +59682,15 @@ function createSourcesService(deps) {
       const character = await service.getCharacter(characterId);
       const name = displayName(character.name, "Character Chat 1");
       const memberName = displayName(character.name, "Member 1");
-      const aliases = memberAliases({ name: character.name, id: characterId, tags: character.tags });
+      const nickname = alternateCharacterName(character.extensions);
+      const aliases = memberAliases({ name: character.name, nickname, id: characterId, tags: character.tags });
       const books = await service.loadWorldBooks(characterId, document2, options);
       const activeModuleIds = uniqueTrimmed(document2.characterPrompt.activeModules[characterId] ?? []);
       const attached = books.filter((b) => b.scope === "character");
       const modules = books.filter((b) => b.scope !== "character" && activeModuleIds.includes(b.worldBookId));
       const characterLore = loreRecordsOf(attached.flatMap((b) => b.entries), aliases, { sourceType: "character" });
       const moduleLore = modules.flatMap((b) => loreRecordsOf(b.entries, aliases, { sourceType: "module", sourceName: b.name }));
-      const desc = descriptionLore(memberName, character.description);
+      const desc = descriptionLore(memberName, character.description, [plainCardName(memberName), nickname]);
       const seen = new Set;
       const lorebooks = [...characterLore, ...desc ? [desc] : [], ...moduleLore].filter((l) => !(!l.id || seen.has(l.id)) && (seen.add(l.id), true));
       const images = await service.listCharacterImages(characterId, { includeGenerated: true });
