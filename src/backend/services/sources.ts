@@ -45,6 +45,7 @@ import type {
   WorldBookInfo,
 } from "./types.js";
 import { asArray, asRecord, errorMessage, str, TtlCache } from "./util.js";
+import { alternateCharacterName, plainCardName } from "./card-names.js";
 
 export const SOURCES_CACHE_TTL_MS = 30_000;
 const PAGE = 200;
@@ -165,11 +166,14 @@ export function loreRecordsOf(entries: WorldBookEntryInfo[], aliases: string[], 
     .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 }
 
-/** AM `xrt` 86177. */
-export function descriptionLore(name: string, description: string): AmLoreRecord | null {
+/**
+ * AM `xrt` 86177. Port addition: `extraKeys` (the card name without decorations and the Lumiverse display name) join
+ * the card name as default keys, since a decorated card name ("Alice Liddell || Wonderland") never appears in the story.
+ */
+export function descriptionLore(name: string, description: string, extraKeys: string[] = []): AmLoreRecord | null {
   const content = str(description);
   if (!content) return null;
-  const keys = uniqueTrimmed([name]);
+  const keys = uniqueTrimmed([name, ...extraKeys]);
   return { kind: "character-description", id: CHARACTER_DESCRIPTION_LORE_ID, selectionId: CHARACTER_DESCRIPTION_LORE_ID, title: name, keys, primaryKeys: keys, secondaryKeys: [], selective: false, useRegex: false, content, score: 0, alwaysActive: false, sourceType: "character", sourceName: "" };
 }
 
@@ -498,14 +502,15 @@ export function createSourcesService(deps: SourcesServiceDeps): SourcesService {
       const character = await service.getCharacter(characterId);
       const name = displayName(character.name, "Character Chat 1");
       const memberName = displayName(character.name, "Member 1");
-      const aliases = memberAliases({ name: character.name, id: characterId, tags: character.tags });
+      const nickname = alternateCharacterName(character.extensions);
+      const aliases = memberAliases({ name: character.name, nickname, id: characterId, tags: character.tags });
       const books = await service.loadWorldBooks(characterId, document, options);
       const activeModuleIds = uniqueTrimmed(document.characterPrompt.activeModules[characterId] ?? []);
       const attached = books.filter((b) => b.scope === "character");
       const modules = books.filter((b) => b.scope !== "character" && activeModuleIds.includes(b.worldBookId));
       const characterLore = loreRecordsOf(attached.flatMap((b) => b.entries), aliases, { sourceType: "character" });
       const moduleLore = modules.flatMap((b) => loreRecordsOf(b.entries, aliases, { sourceType: "module", sourceName: b.name }));
-      const desc = descriptionLore(memberName, character.description);
+      const desc = descriptionLore(memberName, character.description, [plainCardName(memberName), nickname]);
       const seen = new Set<string>();
       const lorebooks = [...characterLore, ...(desc ? [desc] : []), ...moduleLore].filter((l) => !(!l.id || seen.has(l.id)) && (seen.add(l.id), true));
 

@@ -40,6 +40,12 @@ Tests use `src/backend/testing/fake-host.ts` (in-memory Spindle host) and `fake-
 `src/shared/contract/chat-dom.ts`), `chat-data.ts` (plans <-> Image History), `records.ts` (sidecar `chats/<chatId>/pipeline.json`:
 generation records + zoom drafts), `host-chat.ts` (messages / swipes), `labels.ts`.
 
+Group chats: the speaking member (message speaker = card name, or the Lumiverse display name `alternate_character_name`)
+is the primary character, and the rosters of all members are analyzed together. `group-cast.ts` keeps one cast entry per
+member: copies of a member registered on other cards (lorebook entries, custom characters) are left out of the run when
+the member's own card registers itself, otherwise only the first copy stays. The description pseudo lore also answers to
+the card name without decorations and the display name (`services/card-names.ts`).
+
 ## Asset analysis (`src/backend/analysis`, see its README)
 
 `core/analysis-core.ts` is a generated verbatim slice of the Asset Maid controllers (character prompts, references, persona,
